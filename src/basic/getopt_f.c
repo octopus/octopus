@@ -28,7 +28,7 @@
 #include <unistd.h>
 #endif
 #include <string.h>
-#include "string_f.h"
+#include "string_f.h" /* Fortran <-> c string compatibility issues */
 
 /* GENERAL FUNCTIONS AND VARIABLES */
 
@@ -55,77 +55,6 @@ void FC_FUNC_(clean_clarg, CLEAR_CLARG)()
     free(argv[i]);
   free(argv);
 }
-
-void print_config(){
-#ifdef HAVE_OPENMP
-  printf("openmp ");
-#endif
-#ifdef HAVE_MPI
-  printf("mpi ");
-#endif
-#ifdef HAVE_OPENCL
-  printf("opencl ");
-#endif
-#ifdef HAVE_M128D
-  printf("sse2 ");
-#endif
-#ifdef HAVE_M256D
-  printf("avx ");
-#endif
-#ifdef HAVE_BLUE_GENE
-  printf("bluegene ");
-#endif
-#ifdef HAVE_MPI2
-  printf("mpi2 ");
-#endif
-#ifdef HAVE_SCALAPACK
-  printf("scalapack ");
-#endif
-#ifdef HAVE_NETCDF
-  printf("netcdf ");
-#endif
-#ifdef HAVE_METIS
-  printf("metis ");
-#endif
-#ifdef HAVE_GDLIB
-  printf("gdlib ");
-#endif
-#ifdef HAVE_PAPI
-  printf("papi ");
-#endif
-#ifdef HAVE_SPARSKIT
-  printf("sparskit ");
-#endif
-#ifdef HAVE_ETSF_IO
-  printf("etsf_io ");
-#endif
-#ifdef HAVE_PFFT
-  printf("pfft ");
-#endif
-#ifdef HAVE_NFFT
-  printf("nfft ");
-#endif
-#ifdef HAVE_PNFFT
-  printf("pnfft ");
-#endif
-#ifdef HAVE_ARPACK
-  printf("arpack ");
-#endif  
-#ifdef HAVE_PARPACK
-  printf("parpack ");
-#endif    
-#ifdef HAVE_CLAMDFFT
-  printf("clamdfft ");
-#endif  
-#ifdef HAVE_CLAMDBLAS
-  printf("clamdblas ");
-#endif  
-#ifdef HAVE_NEWUOA
-  printf("newuoa ");
-#endif  
-  printf("\n");
-}
-
 
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 void oscillator_strength_help(){
@@ -456,9 +385,10 @@ void octopus_help(){
 }
 
 void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
-     ()
+     (STR_F_TYPE config_str STR_ARG1)
 {
   int c;
+  char* config_str_c;
 #if defined(HAVE_GETOPT_LONG)
   static struct option long_options[] =
     {
@@ -486,7 +416,8 @@ void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
       exit(0);
       break;
     case 'c':
-      print_config();
+      TO_C_STR1(config_str, config_str_c);
+      printf("%s\n", config_str_c);
       exit(0);
       break;
     }

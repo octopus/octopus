@@ -100,7 +100,8 @@ module command_line_m
   !! Arguments should be intent(inout) since default values are setting by the calling routine,
   !! and are left unchanged if the corresponding option is not given.
   interface
-    subroutine getopt_octopus
+    subroutine getopt_octopus(config_str)
+      character(len=*), intent(in) :: config_str
     end subroutine getopt_octopus
 
     subroutine getopt_casida_spectrum

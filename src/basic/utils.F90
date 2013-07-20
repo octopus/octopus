@@ -42,7 +42,9 @@ module utils_m
     output_dipole,                &
     print_header,                 &
     leading_dimension_is_known,   &
-    lead_dim
+    lead_dim,                     &
+    get_config_opts,              &
+    get_optional_libraries
 
   interface leading_dimension_is_known
     module procedure dleading_dimension_is_known, zleading_dimension_is_known
@@ -189,87 +191,8 @@ contains
          "Build time             : "// trim(conf%build_time)
     call messages_info(3)
 
-    write(message(1), '(a, i1)') &
-         'Configuration options  : max-dim=', MAX_DIM
-!!$
-#ifdef HAVE_OPENMP
-    message(1) = trim(message(1))//' openmp'
-#endif
-#ifdef HAVE_MPI
-    message(1) = trim(message(1))//' mpi'
-#endif
-#ifdef HAVE_OPENCL
-    message(1) = trim(message(1))//' opencl'
-#endif
-#ifdef HAVE_M128D
-    message(1) = trim(message(1))//' sse2'
-#endif
-#ifdef HAVE_M256D
-    message(1) = trim(message(1))//' avx'
-#endif
-#ifdef HAVE_BLUE_GENE
-    message(1) = trim(message(1))//' bluegene'
-#endif
-
-    message(2) = &
-         'Optional libraries     :'
-#ifdef HAVE_MPI2
-    message(2) = trim(message(2))//' mpi2'
-#endif
-#ifdef HAVE_NETCDF
-    message(2) = trim(message(2))//' netcdf'
-#endif
-#ifdef HAVE_METIS
-    message(2) = trim(message(2))//' metis'
-#endif
-#ifdef HAVE_GDLIB
-    message(2) = trim(message(2))//' gdlib'
-#endif
-#ifdef HAVE_PAPI
-    message(2) = trim(message(2))//' papi'
-#endif
-#ifdef HAVE_SPARSKIT
-    message(2) = trim(message(2))//' sparskit'
-#endif
-#ifdef HAVE_ETSF_IO
-    message(2) = trim(message(2))//' etsf_io'
-#endif
-#ifdef HAVE_BERKELEYGW
-    message(2) = trim(message(2))//' berkeleygw'
-#endif
-#ifdef HAVE_PFFT
-    message(2) = trim(message(2))//' pfft'
-#endif
-#ifdef HAVE_NFFT
-    message(2) = trim(message(2))//' nfft'
-#endif
-#ifdef HAVE_PNFFT
-    message(2) = trim(message(2))//' pnfft'
-#endif
-#ifdef HAVE_SCALAPACK
-    message(2) = trim(message(2))//' scalapack'
-#endif
-#ifdef HAVE_ARPACK
-    message(2) = trim(message(2))//' arpack'
-#endif
-#ifdef HAVE_PARPACK
-    message(2) = trim(message(2))//' parpack'
-#endif
-#ifdef HAVE_LIBFM
-    message(2) = trim(message(2))//' libfm'
-#endif
-#ifdef HAVE_PSPIO
-    message(2) = trim(message(2))//' pspio'
-#endif
-#ifdef HAVE_CLAMDFFT
-    message(2) = trim(message(2))//' clamdfft'
-#endif
-#ifdef HAVE_CLAMDBLAS
-    message(2) = trim(message(2))//' clamdblas'
-#endif
-#ifdef HAVE_NEWUOA
-    message(2) = trim(message(2))//' newuoa'
-#endif
+    message(1) = 'Configuration options  : ' // trim(get_config_opts())
+    message(2) = 'Optional libraries     :'  // trim(get_optional_libraries())
 
     message(3) = &
          'Architecture           : '// TOSTRING(OCT_ARCH)
@@ -300,6 +223,97 @@ contains
 
     call print_date("Calculation started on ")
   end subroutine print_header
+
+  character(len=256) function get_config_opts()
+
+    write(get_config_opts, '(a, i1)') 'max-dim=', MAX_DIM
+#ifdef HAVE_OPENMP
+    get_config_opts = trim(get_config_opts)//' openmp'
+#endif
+#ifdef HAVE_MPI
+    get_config_opts = trim(get_config_opts)//' mpi'
+#endif
+#ifdef HAVE_OPENCL
+    get_config_opts = trim(get_config_opts)//' opencl'
+#endif
+#ifdef HAVE_M128D
+    get_config_opts = trim(get_config_opts)//' sse2'
+#endif
+#ifdef HAVE_M256D
+    get_config_opts = trim(get_config_opts)//' avx'
+#endif
+#ifdef HAVE_BLUE_GENE
+    get_config_opts = trim(get_config_opts)//' bluegene'
+#endif
+
+  end function get_config_opts
+
+  character(len=256) function get_optional_libraries()
+
+    ! keep in alphabetical order, for ease in seeing if something is listed
+    get_optional_libraries = ''
+#ifdef HAVE_ARPACK
+    get_optional_libraries = trim(get_optional_libraries)//' arpack'
+#endif
+#ifdef HAVE_BERKELEYGW
+    get_optional_libraries = trim(get_optional_libraries)//' berkeleygw'
+#endif
+#ifdef HAVE_CLAMDFFT
+    get_optional_libraries = trim(get_optional_libraries)//' clamdfft'
+#endif
+#ifdef HAVE_CLAMDBLAS
+    get_optional_libraries = trim(get_optional_libraries)//' clamdblas'
+#endif
+#ifdef HAVE_ETSF_IO
+    get_optional_libraries = trim(get_optional_libraries)//' etsf_io'
+#endif
+#ifdef HAVE_GDLIB
+    get_optional_libraries = trim(get_optional_libraries)//' gdlib'
+#endif
+#ifdef HAVE_LIBFM
+    get_optional_libraries = trim(get_optional_libraries)//' libfm'
+#endif
+#ifdef HAVE_METIS
+    get_optional_libraries = trim(get_optional_libraries)//' metis'
+#endif
+#ifdef HAVE_MPI2
+    get_optional_libraries = trim(get_optional_libraries)//' mpi2'
+#endif
+#ifdef HAVE_NETCDF
+    get_optional_libraries = trim(get_optional_libraries)//' netcdf'
+#endif
+#ifdef HAVE_NEWUOA
+    get_optional_libraries = trim(get_optional_libraries)//' newuoa'
+#endif
+#ifdef HAVE_NFFT
+    get_optional_libraries = trim(get_optional_libraries)//' nfft'
+#endif
+#ifdef HAVE_PAPI
+    get_optional_libraries = trim(get_optional_libraries)//' papi'
+#endif
+#ifdef HAVE_PARMETIS
+    get_optional_libraries = trim(get_optional_libraries)//' parmetis'
+#endif
+#ifdef HAVE_PARPACK
+    get_optional_libraries = trim(get_optional_libraries)//' parpack'
+#endif
+#ifdef HAVE_PFFT
+    get_optional_libraries = trim(get_optional_libraries)//' pfft'
+#endif
+#ifdef HAVE_PNFFT
+    get_optional_libraries = trim(get_optional_libraries)//' pnfft'
+#endif
+#ifdef HAVE_PSPIO
+    get_optional_libraries = trim(get_optional_libraries)//' pspio'
+#endif
+#ifdef HAVE_SCALAPACK
+    get_optional_libraries = trim(get_optional_libraries)//' scalapack'
+#endif
+#ifdef HAVE_SPARSKIT
+    get_optional_libraries = trim(get_optional_libraries)//' sparskit'
+#endif
+
+  end function get_optional_libraries
 
   ! ---------------------------------------------------------
   

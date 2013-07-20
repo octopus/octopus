@@ -37,11 +37,13 @@ program octopus
 
   implicit none
 
+  character*256 :: config_str
   integer :: ns, inp_calc_mode, ierr
   type(block_t) :: blk
 
   call getopt_init(ierr)
-  if(ierr  ==  0) call getopt_octopus()
+  config_str = trim(get_config_opts()) // trim(get_optional_libraries())
+  if(ierr  ==  0) call getopt_octopus(trim(config_str))
   call getopt_end()
 
   call global_init()
