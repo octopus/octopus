@@ -1,16 +1,19 @@
 AC_DEFUN([ACX_ZOLTAN], [
 compile_zoltan=no
 
-AC_ARG_WITH(external_zoltan, [AS_HELP_STRING([--with-external_zoltan=LIB], [external installation of Zoltan mesh-partitioner])])
-case $with_external_zoltan in
-  yes | "") ;;
-  no ) compile_zoltan=yes ;;
-  -* | */* | *.a | *.so | *.so.* | *.o) LIBS_ZOLTAN="$with_external_zoltan";;
-  *) LIBS_ZOLTAN="-l$with_external_zoltan" ;;
-esac
+if test x"$enable_mpi" != x"no"; then
+  AC_ARG_WITH(external_zoltan, [AS_HELP_STRING([--with-external_zoltan=LIB], [external installation of Zoltan mesh-partitioner])])
+  case $with_external_zoltan in
+    yes | "") ;;
+    no ) compile_zoltan=yes ;;
+    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_ZOLTAN="$with_external_zoltan";;
+    *) LIBS_ZOLTAN="-l$with_external_zoltan" ;;
+  esac
+fi
 
-dnl If in parallel, enable Zoltan compilation
+dnl If in parallel, enable Zoltan compilation. Zoltan cannot compile without MPI.
 if test x"$enable_mpi" != x"no" && test x"$compile_zoltan" == x"no"; then
+   echo "enable_mpi = $enable_mpi; compile_zoltan = $compile_zoltan"
   acx_zoltan_save_CPPFLAGS="$CPPFLAGS"
   acx_zoltan_save_LIBS="$LIBS"
 
