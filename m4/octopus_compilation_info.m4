@@ -31,10 +31,10 @@ AC_DEFUN([ACX_OCTOPUS_COMPILATION_INFO],
 [
 AC_MSG_NOTICE([collecting compilation info...])
 
-rev=$(sh ./build/svn_release_number.sh 2> /dev/null)
+rev=$(./build/svn_release_number.sh 2> /dev/null)
 date=`date`
-truecc=$(sh ./build/true_compiler.sh $CC 2> /dev/null)
-truefc=$(sh ./build/true_compiler.sh $FC 2> /dev/null)
+truecc=$(./build/true_compiler.sh $CC 2> /dev/null)
+truefc=$(./build/true_compiler.sh $FC 2> /dev/null)
 
 AC_DEFINE_UNQUOTED([LATEST_SVN], ["$rev"], [subversion revision number])
 AC_DEFINE_UNQUOTED([BUILD_TIME], ["$date"], [date when configure was launched])
