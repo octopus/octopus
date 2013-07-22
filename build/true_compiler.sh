@@ -10,3 +10,9 @@ if echo $1 | grep mpi > /dev/null
 then
 echo -n "("`$1 -show | cut -f 1 -d" "`")"
 fi
+
+# Cray compiler wrappers
+if [ x$1 == xcc -o x$1 == xftn ]
+then
+echo -n "("`$1 -show | grep DRIVERNAME | cut -f 2 -d"="`")"
+fi
