@@ -60,8 +60,6 @@ OCTCurrentFunctional =  oct_curr_square_td
 # minmize current
 OCTCurrentWeight = -5 
 
-OCTControlRepresentation = control_function_parametrized
-
 OCTDirectStep = 0.1
 OCTNumberCheckPoints = 10
 OCTScheme = oct_algorithm_cg

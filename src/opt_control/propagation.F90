@@ -318,6 +318,8 @@ contains
     message(1) = "Info: Forward propagation."
     call messages_info(1)
 
+    call controlfunction_to_realtime(par)
+
     gr => sys%gr
     call propagator_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
@@ -375,6 +377,7 @@ contains
       call controlfunction_end(par_prev)
     end if
 
+    call controlfunction_to_basis(par)
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
     call states_end(chi)
     call propagator_end(tr_chi)
@@ -413,6 +416,8 @@ contains
     message(1) = "Info: Backward propagation."
     call messages_info(1)
 
+    call controlfunction_to_realtime(par_chi)
+
     gr => sys%gr
 
     call propagator_copy(tr_chi, td%tr)
@@ -450,6 +455,7 @@ contains
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh)
 
+    call controlfunction_to_basis(par_chi)
     call states_end(psi)
     call propagator_end(tr_chi)
     POP_SUB(bwd_step)

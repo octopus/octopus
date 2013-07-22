@@ -39,10 +39,6 @@ module opt_control_global_m
             oct_read_inp,             &
             oct_algorithm_is_direct  
 
-  integer, parameter, public :: &
-    oct_ctr_function_real_time       = 1,       &
-    oct_ctr_function_parametrized    = 2
-
   !> These are the possible QOCT schemes or algorithms; the component "algorithm"
   !! of the oct_t datatype can get any of these values.
   integer, parameter, public ::  &
@@ -61,9 +57,6 @@ module opt_control_global_m
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
   type oct_t
-    integer :: ctr_function_rep     !< This is set by the OCTControlRepresentation variable in the inp file.
-                                    !! The control functions may be represented in "real time" (i.e. by setting
-                                    !! their values in a discretized time grid), or by a set of parameters.
     integer :: algorithm            !< The algorithm to optimize depends on whether the control function is
                                     !! represented in real time, or is parametrized. Filled by the OCTScheme input variable.
     logical :: mode_fixed_fluence   !< Whether or not the optimization is performed in the subspace of external fields
@@ -94,32 +87,7 @@ contains
     PUSH_SUB(oct_read_inp)
 
     call messages_print_stress(stdout, "OCT run mode")
-
-
-    !%Variable OCTControlRepresentation
-    !%Type integer
-    !%Section Calculation Modes::Optimal Control
-    !%Default control_function_real_time
-    !%Description
-    !% Optimal Control Theory can be performed with <tt>Octopus</tt> in two different modes:
-    !% either considering the control function to be described in full in real time,
-    !% or to be represented by a set of parameters (which may, or may not be,
-    !% the coefficients of its expansion in a given basis). The particular choice
-    !% for these parameters is specified by variable <tt>OCTParameterRepresentation</tt>
-    !% (this variable will be ignored if the control function is to be represented
-    !% directly in real time).
-    !%Option control_function_real_time 1
-    !% The control functions are represented directly in real time.
-    !%Option control_function_parametrized 2
-    !% The control functions are specified by a set of parameters.
-    !%End
-    call parse_integer(datasets_check('OCTControlRepresentation'), &
-      oct_ctr_function_real_time, oct%ctr_function_rep)
-    if(.not.varinfo_valid_option('OCTControlRepresentation', oct%ctr_function_rep)) &
-      call input_error('OCTControlRepresentation')
-    call messages_print_var_option(stdout, &
-      'OCTControlRepresentation', oct%ctr_function_rep)
-
+    call messages_obsolete_variable('OCTControlRepresentation')
 
     !%Variable OCTScheme
     !%Type integer
@@ -180,11 +148,7 @@ contains
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
     ! time, some others make only sense if the control functions are parameterized.
-    if(oct%ctr_function_rep  ==  oct_ctr_function_real_time) then
-      if(oct%algorithm > oct_algorithm_str_iter) call input_error('OCTScheme')
-    else
-      if(oct%algorithm < oct_algorithm_str_iter) call input_error('OCTScheme')
-    end if
+    ! This check cannot be here any more, and it should be placed somewhere else.
     call messages_print_var_option(stdout, "OCTScheme", oct%algorithm)
     select case(oct%algorithm)
     case(oct_algorithm_mt03)

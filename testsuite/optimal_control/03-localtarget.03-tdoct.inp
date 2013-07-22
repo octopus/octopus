@@ -46,7 +46,6 @@ TDTimeStep = dt
 # OCT parameters
 # --------------
 
-OCTControlRepresentation = control_function_parametrized
 OCTControlFunctionRepresentation = control_fourier_series
 
 OCTPenalty = 1.0

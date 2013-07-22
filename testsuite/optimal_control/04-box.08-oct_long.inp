@@ -24,8 +24,6 @@ TDTimeStep = dt
 # OCT parameters
 # --------------
 
-OCTControlRepresentation = control_function_parametrized
-
 OCTPenalty = 1.0
 OCTEps   = 1.0e-4
 OCTMaxIter = 1

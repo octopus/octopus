@@ -111,8 +111,7 @@ contains
     call oct_read_inp(oct)
 
     ! Read info about, and prepare, the control functions
-    call controlfunction_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence, &
-                             (oct%ctr_function_rep == oct_ctr_function_parametrized) )
+    call controlfunction_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence)
     call controlfunction_init(par, td%dt, td%max_iter)
     call controlfunction_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
@@ -272,7 +271,7 @@ contains
         call controlfunction_set_alpha(par, sqrt( controlfunction_fluence(par) / controlfunction_targetfluence()))
       end if
 
-      call controlfunction_copy(par_new, par)      
+      call controlfunction_copy(par_new, par)
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_wg05(sys, hm, td, psi, par, prop_psi, prop_chi, j1)

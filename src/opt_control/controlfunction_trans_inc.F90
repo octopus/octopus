@@ -26,9 +26,12 @@
 
     PUSH_SUB(controlfunction_basis_to_theta)
 
-    ASSERT(par%current_representation /= ctr_real_time)
+    ASSERT(par%current_representation /= ctr_internal)
 
     select case(par%current_representation)
+    case(ctr_rt)
+      forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
+
     case(ctr_fourier_series_h)
       n = par%dim
       dof = par%dof
@@ -101,10 +104,12 @@
 
     PUSH_SUB(controlfunction_theta_to_basis)
 
-    ASSERT(par%current_representation /= ctr_real_time)
-
+    ASSERT(par%current_representation /= ctr_internal)
 
     select case(par%current_representation)
+    case(ctr_rt)
+      call tdf_set_numerical(par%f(1), par%theta)
+
     case(ctr_fourier_series_h)
 
       n = par%dim
@@ -210,7 +215,7 @@
     type(controlfunction_t), intent(inout) :: par
 
     integer :: i, mm, nn, n, j, k
-    FLOAT :: t, det, w1
+    FLOAT :: t, det, w1, dt
     FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:)
 
     type(tdf_t), allocatable :: fnn(:)
@@ -220,6 +225,18 @@
     ! First, we will construct the matrix u, from which the fluence is computed
     ! as dot_product(x, matmul(u, x)).
     select case(cf_common%representation)
+    case(ctr_rt)
+
+      ! Since it is diagonal, instead of par%u being a matrix, we only store the diagonal.
+      SAFE_ALLOCATE(par%u(1:par%dim, 1))
+      par%u = M_ZERO
+
+      dt = tdf_dt(par%f(1))
+      par%u(1, 1) = M_HALF * dt
+      do mm = 2, par%dim - 1
+        par%u(mm, 1) = dt
+      end do
+      par%u(par%dim, 1) = M_HALF * dt
 
     case(ctr_fourier_series, ctr_fourier_series_h)
 
@@ -408,7 +425,6 @@
           neigenvec(:, k) = neigenvec(:, k)/sqrt(dot_product(neigenvec(:, k),neigenvec(:, k)))
         end do
         eigenvec = neigenvec
-
       end if
 
 

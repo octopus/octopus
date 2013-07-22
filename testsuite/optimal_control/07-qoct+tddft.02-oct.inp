@@ -60,8 +60,6 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 # OCT parameters
 # --------------
 
-OCTControlRepresentation = control_function_parametrized
-
 OCTPenalty = 1.0
 OCTEps = 1.0e-3
 OCTMaxIter = 1

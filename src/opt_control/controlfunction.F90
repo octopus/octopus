@@ -86,11 +86,13 @@ module controlfunction_m
 
 
   integer, public, parameter ::     &
-    ctr_real_time              = 1, &
+    ctr_internal               = 1, &
     ctr_fourier_series_h       = 3, &
     ctr_zero_fourier_series_h  = 4, &
     ctr_fourier_series         = 5, &
-    ctr_zero_fourier_series    = 6
+    ctr_zero_fourier_series    = 6, &
+    ctr_rt                     = 7
+
 
 
   integer, parameter, public :: controlfunction_mode_none      = 0, &
@@ -103,13 +105,11 @@ module controlfunction_m
   !! more or less common to all control functions.
   type controlfunction_common_t
     private
-    integer :: representation      = 0                             !< The "representation" may be any one of the {ctr_real_time,
-                                                                   !! ctr_fourier_series_h, ctr_zero_fourier_series_h, 
+    integer :: representation      = 0                             !< The "representation" may be any one of the {ctr_internal,
+                                                                   !! ctr_rt, ctr_fourier_series_h, ctr_zero_fourier_series_h, 
                                                                    !! ctr_fourier_series, ctr_zero_fourier_series} set. If it is 
                                                                    !! zero, then it is not initialized. This is set by the 
-                                                                   !! OCTControlFunctionRepresentation, unless 
-                                                                   !! OCTControlRepresentation == control_function_real_time, 
-                                                                   !! in which case the representation is obviously ctr_real_time.
+                                                                   !! OCTControlFunctionRepresentation.
     FLOAT   :: omegamax            = M_ZERO                        !< The representations based on Fourier expansions (all the 
                                                                    !! "parametrized" ones) contain Fourier expansion coefficients 
                                                                    !! corresponding to frequencies up to this cut-off frequency.
@@ -188,12 +188,11 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence, parametrized_controls)
+  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence)
     type(epot_t), intent(inout)                   :: ep
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
-    logical, intent(in)                           :: parametrized_controls
 
     character(len=1024) :: expression
     integer :: no_lines, steps, il, idir, ncols, ipar, irow, ierr
@@ -249,12 +248,11 @@ contains
     !% (1) that the zero-frequency component is zero, and (2) the control function, integrated 
     !% in time, adds up to zero (this essentially means that the sum of all the cosine 
     !% coefficients is zero).
+    !%Option control_rt 7
+    !% EXPERIMENTAL
     !%End
-
-
-    if (parametrized_controls) then
-      call parse_integer(datasets_check('OCTControlFunctionRepresentation'), &
-        ctr_fourier_series_h, cf_common%representation)
+    call parse_integer(datasets_check('OCTControlFunctionRepresentation'), &
+      ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
         call input_error('OCTControlFunctionRepresentation')
       select case(cf_common%representation)
@@ -278,12 +276,15 @@ contains
         write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
         write(message(4), '(a)') '      the control function starts and ends at zero.'
         call messages_info(4)
+      case(ctr_rt)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
+        call messages_info(1)
+        call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
+      case default
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
+        call messages_info(1)
+        call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
       end select
-    else
-      cf_common%representation = ctr_real_time
-      write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
-      call messages_info(1)
-    end if
 
     !%Variable OCTControlFunctionOmegaMax
     !%Type float
@@ -294,7 +295,7 @@ contains
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
     call parse_float(datasets_check('OCTControlFunctionOmegaMax'), -M_ONE, cf_common%omegamax)
-    if(cf_common%representation /= ctr_real_time) then
+    if(cf_common%representation /= ctr_rt) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
         units_from_atomic(units_out%energy, cf_common%omegamax), ' ['//trim(units_abbrev(units_out%energy)) // ']'
@@ -345,7 +346,7 @@ contains
     !% and the other one, the envelope.
     !%
     !% Note that, if <tt>OCTControlRepresentation = control_function_real_time</tt>, then the control
-    !% function must <b>always</b> determine the full external field.
+    !% function must <b>always</b> determine the full external field (THIS NEEDS TO BE FIXED).
     !%Option controlfunction_mode_epsilon   1
     !% In this case, the control function determines the full control function: namely,
     !% if we are considering the electric field of a laser, the time-dependent electric field.
@@ -358,7 +359,7 @@ contains
     call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
       call input_error('OCTControlFunctionType')
-    if ( (.not.parametrized_controls)  .and.  (cf_common%mode /= controlfunction_mode_epsilon) ) &
+    if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
       call input_error('OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
@@ -404,16 +405,11 @@ contains
     ! one; it will be the number of lasers found in the input file. Otherwise, if the control function(s)
     ! are parametrized ("OCTControlRepresentation = control_function_parametrized"), we only have one
     ! control function. If there is more than one laser field in the input file, the program stops.
-    if(parametrized_controls) then
-      if(ep%no_lasers > 1) then
-        write(message(1), '(a)') 'If "OCTControlRepresentation = control_function_parametrized", you can'
-        write(message(2), '(a)') 'have only one external field in the input file.'
-        call messages_fatal(2)
-      end if
-      cf_common%no_controlfunctions = 1
-    else
-      cf_common%no_controlfunctions = ep%no_lasers
+    if(ep%no_lasers > 1) then
+      write(message(1), '(a)') 'Currently octopus only accepts one control field.'
+      call messages_fatal(1)
     end if
+    cf_common%no_controlfunctions = 1
 
     mode_fixed_fluence = .false.
     select case(cf_common%representation)
@@ -563,7 +559,7 @@ contains
 
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions
-    cp%current_representation = ctr_real_time
+    cp%current_representation = ctr_internal
     call loct_pointer_copy(cp%alpha, cf_common%alpha)
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
@@ -581,7 +577,7 @@ contains
     ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to 
     ! hyperspherical coordinates). The "dimension" (cp%dim) is the dimension of this basis set.
     select case(cf_common%representation)
-    case(ctr_real_time)
+    case(ctr_internal)
       cp%dim = ntiter + 1
     case(ctr_fourier_series_h, ctr_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
@@ -591,6 +587,8 @@ contains
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! but no zero-frequency component. Total, 2*(nf-1)
       cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
+    case(ctr_rt)
+      cp%dim = ntiter + 1
     case default
       message(1) = "Internal error: invalid representation."
       call messages_fatal(1)
@@ -602,7 +600,7 @@ contains
     ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may 
     ! add further constraints, and do a coordinate transformation to account for them.
     select case(cf_common%representation)
-    case(ctr_real_time)
+    case(ctr_internal)
       cp%dof = cp%no_controlfunctions * cp%dim
     case(ctr_fourier_series_h)
       ! The number of degrees of freedom is one fewer than the number of basis coefficients, since we
@@ -622,20 +620,19 @@ contains
       ! the field to start and end at zero, which amounts to having all the cosine coefficients 
       ! summing up to zero.
       cp%dof = cp%dim - 1
+    case(ctr_rt)
+      cp%dof = cp%no_controlfunctions * cp%dim
     end select
-
 
     if(cp%dof <= 0) then
       write(message(1),'(a)') 'The number of degrees of freedom used to describe the control function'
       write(message(2),'(a)') 'is less than or equal to zero. This should not happen. Please review your input file.'
       call messages_fatal(2)
     else
-      if(cf_common%representation /= ctr_real_time) then
-        write(message(1), '(a)')      'Info: The expansion of the control functions in a Fourier series'
-        write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
-        write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
-        call messages_info(3)
-
+      if(cf_common%representation /= ctr_internal) then
+        write(message(1), '(a,i6,a)') 'The parametrization of the control functions makes use of ', cp%dim, ' basis'
+        write(message(2), '(a,i6,a)') 'functions and ', cp%dof, ' degrees of freedom.'
+        call messages_info(2)
         SAFE_ALLOCATE(cp%theta(1:cp%dof))
         cp%theta = M_ZERO
       end if
@@ -732,7 +729,7 @@ contains
     PUSH_SUB(controlfunction_set_rep)
 
     if(par%current_representation /= cf_common%representation) then
-      if(cf_common%representation  ==  ctr_real_time) then
+      if(cf_common%representation  ==  ctr_internal) then
         call controlfunction_to_realtime(par)
       else
         call controlfunction_to_basis(par)
@@ -752,8 +749,11 @@ contains
 
     PUSH_SUB(controlfunction_to_basis)
 
-    if(par%current_representation == ctr_real_time) then
+    if(par%current_representation == ctr_internal) then
       select case(cf_common%representation)
+      case(ctr_rt)
+        par%current_representation = ctr_rt
+        call controlfunction_basis_to_theta(par)
       case(ctr_fourier_series_h)
         do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_fourier(par%f(ipar))
@@ -795,7 +795,7 @@ contains
     PUSH_SUB(controlfunction_to_realtime)
 
     select case(par%current_representation)
-    case(ctr_real_time)
+    case(ctr_internal)
       POP_SUB(controlfunction_to_realtime)
       return
     case(ctr_fourier_series_h)
@@ -818,9 +818,11 @@ contains
       do ipar = 1, par%no_controlfunctions
         call tdf_zerofourier_to_numerical(par%f(ipar))
       end do
+    case(ctr_rt)
+      call controlfunction_theta_to_basis(par)
     end select
 
-    par%current_representation = ctr_real_time
+    par%current_representation = ctr_internal
     POP_SUB(controlfunction_to_realtime)
   end subroutine controlfunction_to_realtime
   ! ---------------------------------------------------------
@@ -867,12 +869,14 @@ contains
     PUSH_SUB(controlfunction_apply_envelope)
 
     ! Do not apply the envelope if the control functions are represented as a sine-Fourier series.
-    if(cf_common%representation  ==  ctr_real_time) then
+    if(cf_common%representation  ==  ctr_rt) then
+      call controlfunction_to_realtime(cp)
       do ipar = 1, cp%no_controlfunctions
         do iter = 1, tdf_niter(cp%f(ipar)) + 1
           call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(cf_common%td_penalty(ipar), iter) )
         end do
       end do
+      call controlfunction_to_basis(cp)
     end if
 
     POP_SUB(controlfunction_apply_envelope)
@@ -1084,7 +1088,7 @@ contains
     end select
 
     ! Now, in case of a parametrized control function, the parameters.
-    if(cf_common%representation /= ctr_real_time) then
+    if(cf_common%representation /= ctr_rt) then
       iunit = io_open(trim(filename)//'/theta', action='write')
       do idof = 1, par%dof
         write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
@@ -1199,10 +1203,12 @@ contains
 
     PUSH_SUB(controlfunction_set_fluence)
 
+    call controlfunction_to_realtime(par)
     old_fluence = controlfunction_fluence(par) 
     do ipar = 1, par%no_controlfunctions
       call tdf_scalar_multiply( sqrt(cf_common%targetfluence / old_fluence), par%f(ipar) )
     end do
+    call controlfunction_to_basis(par)
 
     POP_SUB(controlfunction_set_fluence)
   end subroutine controlfunction_set_fluence
@@ -1267,7 +1273,7 @@ contains
 
      PUSH_SUB(controlfunction_randomize)
 
-     ASSERT(cf_common%representation /= ctr_real_time)
+     ASSERT(cf_common%representation /= ctr_internal)
 
      call controlfunction_set_rep(par)
 
@@ -1395,9 +1401,13 @@ contains
 
     PUSH_SUB(controlfunction_filter)
 
+    call controlfunction_to_realtime(par)
+
     do ipar = 1, par%no_controlfunctions
       call filter_apply(par%f(ipar), filter)
     end do
+
+    call controlfunction_to_basis(par)
 
     POP_SUB(controlfunction_filter)
   end subroutine controlfunction_filter
@@ -1442,6 +1452,12 @@ contains
     PUSH_SUB(controlfunction_deltaedeltau)
 
     select case(cf_common%representation)
+
+    case(ctr_rt)
+       dedu = M_ZERO
+       do i = 1, par%dim
+         dedu(i, i) = M_ONE
+       end do
 
     case(ctr_fourier_series_h)
        SAFE_ALLOCATE(grad_matrix(1:par%dim - 1, 1:par%dim))
@@ -1523,6 +1539,12 @@ contains
     PUSH_SUB(controlfunction_gradient)
 
     select case(par%current_representation)
+    case(ctr_rt)
+      do jj = 1, par%dof
+        ! Probably we could do without par%u, and write explicitly the values it takes.
+        grad(jj) = M_TWO * controlfunction_alpha(par, 1) * par%u(jj, 1)*par%theta(jj) &
+                 - M_TWO * par%u(jj, 1) * tdf(par_output%f(1), jj)
+      end do
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
