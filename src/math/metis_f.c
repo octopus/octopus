@@ -38,7 +38,7 @@
 void FC_FUNC_(oct_metis_setdefaultoptions, OCT_METIS_SETDEFAULTOPTIONS)
      (idx_t *options)
 {
-  metis_setdefaultoptions(options);
+  METIS_SetDefaultOptions(options);
 }
 
 

@@ -1049,14 +1049,19 @@ axis->direction[2] = (b[0]-a[0])*(c[1]-b[1]) - (b[1]-a[1])*(c[0]-b[0]) ;
  *  of the direction is positive.
  */
 sign = 0 ;
-if( axis->direction[0] <= 0 )
-    if( axis->direction[0] < 0 )
-         sign = 1 ;
-    else if( axis->direction[1] <= 0 )
-             if( axis->direction[1] < 0 )
+if( axis->direction[0] <= 0 ) {
+    if( axis->direction[0] < 0 ) {
+        sign = 1 ;
+    }
+    else if( axis->direction[1] <= 0 ) {
+             if( axis->direction[1] < 0 ) {
+                 sign = 1 ;
+         }
+         else if( axis->direction[2] < 0 ) {
                   sign = 1 ;
-             else if( axis->direction[2] < 0 )
-                      sign = 1 ;
+         }
+    }
+}
 if( sign )
     for( i = 0 ; i < DIMENSION ; i++ )
         axis->direction[i] = -axis->direction[i] ;
