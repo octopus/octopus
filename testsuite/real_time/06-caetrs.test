@@ -2,7 +2,10 @@
 # $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Corrected approximated enforced time-reversal symmetry propagator
-Programs   : octopus_mpi; octopus
+Options    : mpi2
+Programs   : octopus_mpi
+Options    : 
+Programs   : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes
 
