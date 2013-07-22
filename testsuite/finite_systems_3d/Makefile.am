@@ -56,8 +56,6 @@ dist_share_DATA = \
 	09-spinors.test                                \
 	10-fullerene.test                              \
 	10-fullerene.01-gs.inp                         \
-	10-fullerene.02-gs_packed.inp                  \
-	10-fullerene.03-gs_stdlcao.inp                 \
 	11-sic.01-gs.inp \
 	11-sic.test \
 	12-forces.01-N2_gs.inp \
@@ -67,6 +65,10 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
+	14-fullerene_packed.test                      \
+	14-fullerene_packed.01-gs.inp                 \
+	15-fullerene_stdlcao.test                     \
+	15-fullerene_stdlcao.01-gs.inp                \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
@@ -85,6 +87,7 @@ dist_share_DATA = \
 	22-time_propagation.test                     \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
+	23-go-na2.02-simplex.inp                     \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
 	25-multiresolution.01-Hatom.inp \
