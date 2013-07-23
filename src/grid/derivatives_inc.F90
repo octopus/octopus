@@ -251,8 +251,8 @@ contains
 
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
 
-      call MPI_Alltoallv(sendbuffer(1, 1, 1), send_count(1), send_disp(1), R_MPITYPE, &
-        recvbuffer(1, 1, 1), recv_count(1), recv_disp(1), R_MPITYPE, der%mesh%vp%comm, mpi_err)
+      call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
+        recvbuffer, recv_count, recv_disp, R_MPITYPE, der%mesh%vp%comm, mpi_err)
 
       call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
