@@ -35,6 +35,7 @@ module fourier_shell_m
   private
   public ::                           &
        fourier_shell_t,               &
+       fourier_shell_cutoff,          &
        fourier_shell_init,            &
        fourier_shell_end
 
@@ -47,21 +48,42 @@ module fourier_shell_m
 
 contains
 
-  subroutine fourier_shell_init(this, cube, mesh)
-    type(fourier_shell_t), intent(out)   :: this
+  FLOAT function fourier_shell_cutoff(cube, mesh, is_wfn, dg)
+    type(cube_t),    intent(in)  :: cube
+    type(mesh_t),    intent(in)  :: mesh
+    logical,         intent(in)  :: is_wfn
+    FLOAT, optional, intent(out) :: dg(:) !< (3)
+
+    FLOAT :: dg_(3)
+
+    PUSH_SUB(fourier_shell_cutoff)
+
+    ! FIXME: what about anisotropic spacing?
+    dg_(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
+    if(present(dg)) dg(1:3) = dg_(1:3)
+    if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
+      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2-2))**2/M_TWO
+    else
+      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2))**2/M_TWO
+    endif
+
+    POP_SUB(fourier_shell_cutoff)
+  end function fourier_shell_cutoff
+
+  subroutine fourier_shell_init(this, cube, mesh, kk)
+    type(fourier_shell_t), intent(inout) :: this
     type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
+    FLOAT, optional,       intent(in)    :: kk(:) !< (3)
 
     integer :: ig, ix, iy, iz, ixx(1:3), imap
-    FLOAT :: dg(1:3), gmax2, gvec(1:3)
+    FLOAT :: dg(1:3), gvec(1:3)
     FLOAT, allocatable :: modg2(:)
     integer, allocatable :: map(:), ucoords(:, :), ured_gvec(:, :)
 
     PUSH_SUB(fourier_shell_init)
 
-    dg(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
-    gmax2 = (dg(1)*(cube%rs_n_global(1)/2))**2
-    this%ekin_cutoff = gmax2/M_TWO
+    this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk), dg = dg)
 
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
@@ -81,8 +103,13 @@ contains
           ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
           if(2 * ixx(3) == cube%rs_n_global(3)) cycle
 
-          gvec(1:3) = dg(1:3)*ixx(1:3)
-          if(sum(gvec(1:3)**2) <= gmax2 + CNST(1e-10)) then
+          if(present(kk)) then
+            gvec(1:3) = dg(1:3)*(ixx(1:3) + kk(1:3))
+          else
+            gvec(1:3) = dg(1:3)*ixx(1:3)
+          endif
+
+          if(sum(gvec(1:3)**2)/M_TWO <= this%ekin_cutoff + CNST(1e-10)) then
             INCR(ig, 1)
             ucoords(1:3, ig) = (/ ix, iy, iz /)
             ured_gvec(1:3, ig) = ixx(1:3)

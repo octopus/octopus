@@ -859,15 +859,15 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
 #ifdef HAVE_BERKELEYGW
-    integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3)
+    integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3), ngkmax
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character(len=3) :: sheader
-    FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
+    FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48), ecutrho, ecutwfc
     FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
     CMPLX, pointer :: field_g(:,:), zpsi(:,:)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    type(fourier_shell_t) :: shell
+    type(fourier_shell_t) :: shell_density, shell_wfn
 #endif
 
     PUSH_SUB(output_berkeleygw)
@@ -898,6 +898,7 @@ contains
     endif
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
+
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1)
@@ -907,8 +908,9 @@ contains
     call cube_function_alloc_fs(cube, cf)
 
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
-    call fourier_shell_init(shell, cube, gr%mesh)
-    SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
+    call fourier_shell_init(shell_density, cube, gr%mesh)
+    ecutrho = shell_density%ekin_cutoff
+    SAFE_ALLOCATE(field_g(shell_density%ngvectors, st%d%nspin))
 
     call bgw_setup_header()
 
@@ -922,7 +924,7 @@ contains
       call bgw_write_header(sheader, iunit)
     endif
     vxc(:,:) = vxc(:,:) * M_TWO ! convert from Ha to Ry
-    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .false.)
+    call dbgw_write_FS(iunit, vxc, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
     SAFE_DEALLOCATE_P(vxc)
 
@@ -935,12 +937,13 @@ contains
       iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     endif
-    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .false.)
+    call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
-
     message(1) = "BerkeleyGW output: WFN"
-    call messages_info(1)
+    write(message(2),'(a,f12.6,a)') "Wavefunction cutoff for BerkeleyGW: ", &
+      fourier_shell_cutoff(cube, gr%mesh, .true.) * M_TWO, " Ry"
+    call messages_info(2)
 
     if(states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%nspin))
@@ -954,9 +957,14 @@ contains
       call bgw_write_header(sheader, iunit)
     endif
 
+    call fourier_shell_end(shell_density)
+
+    ! FIXME: is parallelization over k-points possible?
     do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
+      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+
       if(mpi_grp_is_root(mpi_world)) &
-        call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+        call write_binary_gvectors(iunit, shell_wfn%ngvectors, shell_wfn%ngvectors, shell_wfn%red_gvec)
       do ist = 1, st%nst
         do is = 1, st%d%nspin
           ikk = ik + is - 1
@@ -967,18 +975,17 @@ contains
           endif
         enddo
         if(states_are_real(st)) then
-          call dbgw_write_FS(iunit, dpsi, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .true.)
+          call dbgw_write_FS(iunit, dpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         else
-          call zbgw_write_FS(iunit, zpsi, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .true.)
+          call zbgw_write_FS(iunit, zpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         endif
       enddo
+      call fourier_shell_end(shell_wfn)
     enddo
 
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
-
     ! deallocate everything
-    call fourier_shell_end(shell)
     call cube_function_free_fs(cube, cf)
     call dcube_function_free_rs(cube, cf)
 
@@ -1025,10 +1032,8 @@ contains
       SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))
       SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
       SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
-      SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
       ifmin(:,:) = 1
       ifmax(:,:) = st%nst
-      ngk(:) = shell%ngvectors
       do ik = 1, st%d%nik
         is = states_dim_get_spin_index(st%d, ik)
         ikk = states_dim_get_kpoint_index(st%d, ik)
@@ -1041,6 +1046,15 @@ contains
           endif
         enddo
       enddo
+
+      SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
+      do ik = 1, st%d%nik, st%d%nspin
+        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+        if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
+        ngk(ik) = shell_wfn%ngvectors
+        call fourier_shell_end(shell_wfn)
+      enddo
+      ngkmax = maxval(ngk)
       
       SAFE_ALLOCATE(atyp(geo%natoms))
       SAFE_ALLOCATE(apos(3, geo%natoms))
@@ -1065,16 +1079,16 @@ contains
       
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
-      call write_binary_header(iunit, sheader, 2, st%d%nspin, shell%ngvectors, &
+      call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
         symmetries_number(gr%sb%symm), 0, geo%natoms, &
-        gr%sb%kpoints%reduced%npoints, st%nst, shell%ngvectors, shell%ekin_cutoff * M_TWO,  &
-        shell%ekin_cutoff * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%shifts, &
+        gr%sb%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
+        ecutwfc * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%shifts, &
         gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
         M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, gr%sb%kpoints%reduced%weight, gr%sb%kpoints%reduced%red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 
-      call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+      call write_binary_gvectors(iunit, shell_density%ngvectors, shell_density%ngvectors, shell_density%red_gvec)
 
       POP_SUB(output_berkeleygw.bgw_write_header)
     end subroutine bgw_write_header

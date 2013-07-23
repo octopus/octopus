@@ -255,7 +255,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 
 
   if(mpi_grp_is_root(mpi_world)) then
-    call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, nspin, field_g)
+    call write_binary_complex_data(iunit, shell%ngvectors, ubound(field_g, 1), nspin, field_g)
   endif
 
   POP_SUB(X(bgw_write_fs))
