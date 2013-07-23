@@ -27,6 +27,7 @@ module opt_control_initst_m
   use grid_m
   use hamiltonian_m
   use messages_m
+  use opt_control_state_m
   use parser_m
   use profiling_m
   use restart_m
@@ -54,10 +55,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine initial_state_init(sys, hm, initial_state)
+  subroutine initial_state_init(sys, hm, qcstate)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: initial_state
+    type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals
@@ -66,11 +67,14 @@ contains
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
 
+    type(states_t), pointer :: psi
+
     PUSH_SUB(initial_state_init)
 
-    call states_copy(initial_state, sys%st)
-    call states_deallocate_wfns(initial_state)
-    call states_allocate_wfns(initial_state, sys%gr%mesh, TYPE_CMPLX)
+    call opt_control_state_init(qcstate, sys%st)
+    psi => opt_control_point_qs(qcstate)
+    call states_deallocate_wfns(psi)
+    call states_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer
@@ -96,7 +100,7 @@ contains
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, ierr, exact = .true.)
+      call restart_read(trim(restart_dir)//GS_DIR, psi, sys%gr, ierr, exact = .true.)
 
     case(oct_is_excited)  
       message(1) = 'Using an excited state as the starting state for an '
@@ -122,17 +126,17 @@ contains
       !%End
       if(parse_isdef(datasets_check('OCTInitialTransformStates')) /= 0) then
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
-          call states_copy(tmp_st, initial_state)
+          call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)
           call restart_look_and_read(tmp_st, sys%gr)
-          SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
+          SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
-          do ist = 1, initial_state%nst
+          do ist = 1, psi%nst
             do jst = 1, parse_block_cols(blk, ist - 1)
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
-          call states_rotate(sys%gr%mesh, initial_state, tmp_st, rotation_matrix)
+          call states_rotate(sys%gr%mesh, psi, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
         else
@@ -173,19 +177,19 @@ contains
           call parse_block_integer(blk, ib - 1, 2, inik)
 
           ! read formula strings and convert to C strings
-          do id = 1, initial_state%d%dim
-            do is = 1, initial_state%nst
-              do ik = 1, initial_state%d%nik   
+          do id = 1, psi%d%dim
+            do is = 1, psi%nst
+              do ik = 1, psi%d%nik   
                 
                 ! does the block entry match and is this node responsible?
                 if(.not. (id  ==  idim .and. is  ==  inst .and. ik  ==  inik    &
-                  .and. initial_state%st_start  <=  is .and. initial_state%st_end >= is) ) cycle
+                  .and. psi%st_start  <=  is .and. psi%st_end >= is) ) cycle
                 
                 ! parse formula string
                 call parse_block_string(                            &
-                  blk, ib - 1, 3, initial_state%user_def_states(id, is, ik))
+                  blk, ib - 1, 3, psi%user_def_states(id, is, ik))
                 ! convert to C string
-                call conv_to_C_string(initial_state%user_def_states(id, is, ik))
+                call conv_to_C_string(psi%user_def_states(id, is, ik))
                 
                 do ip = 1, sys%gr%mesh%np
                   xx = sys%gr%mesh%x(ip, :)
@@ -193,13 +197,13 @@ contains
                   
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
-                    sys%gr%sb%dim, xx, rr, M_ZERO, initial_state%user_def_states(id, is, ik))
+                    sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
-                  initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
+                  psi%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
                 end do
                 ! normalize orbital
-                call zstates_normalize_orbital(sys%gr%mesh, initial_state%d%dim, &
-                  initial_state%zpsi(:,:, is, ik))
+                call zstates_normalize_orbital(sys%gr%mesh, psi%d%dim, &
+                  psi%zpsi(:,:, is, ik))
               end do
             end do
           enddo
@@ -220,26 +224,26 @@ contains
     call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, freeze_orbitals)
+      call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals)
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
-        ' orbitals have been frozen.', initial_state%nst, ' will be propagated.'
+        ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
-      call density_calc(initial_state, sys%gr, initial_state%rho)
-      call v_ks_calc(sys%ks, hm, initial_state, sys%geo, calc_eigenval = .true.)
+      call density_calc(psi, sys%gr, psi%rho)
+      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
-      call density_calc(initial_state, sys%gr, initial_state%rho)
-      call v_ks_calc(sys%ks, hm, initial_state, sys%geo, calc_eigenval = .true.)
-      call states_freeze_orbitals(initial_state, sys%gr, sys%mc, n = initial_state%nst - 1)
+      call density_calc(psi, sys%gr, psi%rho)
+      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
+      call states_freeze_orbitals(psi, sys%gr, sys%mc, n = psi%nst - 1)
       call v_ks_freeze_hxc(sys%ks)
-      call density_calc(initial_state, sys%gr, initial_state%rho)
+      call density_calc(psi, sys%gr, psi%rho)
     else
       ! Normal run.
-      call density_calc(initial_state, sys%gr, initial_state%rho)
-      call v_ks_calc(sys%ks, hm, initial_state, sys%geo, calc_eigenval = .true.)
+      call density_calc(psi, sys%gr, psi%rho)
+      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

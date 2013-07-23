@@ -543,8 +543,6 @@
       call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
     end if
 
-
-
     select case(tg%curr_functional)
     case(oct_no_curr)
       chi(ip, 1, ist, 1) = M_ZERO

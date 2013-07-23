@@ -41,6 +41,7 @@ module opt_control_target_m
   use mesh_function_m
   use messages_m
   use opt_control_global_m
+  use opt_control_state_m
   use output_m
   use parser_m
   use profiling_m
@@ -173,17 +174,21 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, geo, stin, td, w0, tg, oct, ep)
+  subroutine target_init(gr, geo, qcs, td, w0, tg, oct, ep)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
-    type(states_t),   intent(inout) :: stin 
+    type(opt_control_state_t),   intent(inout) :: qcs
     type(td_t),       intent(in)    :: td
     FLOAT,            intent(in)    :: w0
     type(target_t),   intent(inout) :: tg
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
 
+    type(states_t), pointer :: stin
+
     PUSH_SUB(target_init)
+
+    stin => opt_control_point_qs(qcs)
 
     !%Variable OCTTargetOperator
     !%Type integer
@@ -245,6 +250,7 @@ contains
       call target_init_groundstate(gr, tg)
     case(oct_tg_excited) 
       call target_init_excited(gr, tg)
+
     case(oct_tg_exclude_state)
       call target_init_exclude(gr, tg)
     case(oct_tg_gstransformation)
@@ -268,6 +274,7 @@ contains
       call messages_fatal(1)
     end select
 
+    nullify(stin)
     POP_SUB(target_init)
   end subroutine target_init
   ! ----------------------------------------------------------------------

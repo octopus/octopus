@@ -36,6 +36,9 @@ module opt_control_state_m
   private
   public :: opt_control_state_t,    &
             opt_control_state_init, &
+            opt_control_get_qs,     &
+            opt_control_point_qs,   &
+            opt_control_state_copy, &
             opt_control_state_end
 
   !> This is the datatype that contains the objects that are propagated: in principle this
@@ -48,17 +51,32 @@ module opt_control_state_m
 
 contains
 
-  subroutine opt_control_state_init(ocs, initial_state)
+  function opt_control_point_qs(ocs)
+    type(states_t), pointer :: opt_control_point_qs
+    type(opt_control_state_t), target :: ocs
+    opt_control_point_qs => ocs%psi
+  end function opt_control_point_qs
+
+  subroutine opt_control_get_qs(qstate, ocs)
+    type(states_t), intent(inout)         :: qstate
+    type(opt_control_state_t), intent(in) :: ocs
+    PUSH_SUB(opt_control_get_qs)
+
+    call states_copy(qstate, ocs%psi)
+
+    POP_SUB(opt_control_get_qs)
+  end subroutine opt_control_get_qs
+
+  subroutine opt_control_state_init(ocs, qstate)
     type(opt_control_state_t), intent(inout) :: ocs
-    type(states_t), intent(in)               :: initial_state
+    type(states_t), intent(in)               :: qstate
 
     PUSH_SUB(opt_control_state_init)
 
-    call states_copy(ocs%psi, initial_state)
+    call states_copy(ocs%psi, qstate)
 
     POP_SUB(opt_control_state_init)
   end subroutine opt_control_state_init
-
 
   subroutine opt_control_state_end(ocs)
     type(opt_control_state_t), intent(inout) :: ocs
@@ -69,5 +87,13 @@ contains
 
     POP_SUB(opt_control_state_end)
   end subroutine opt_control_state_end
+
+  subroutine opt_control_state_copy(ocsout, ocsin)
+    type(opt_control_state_t), intent(in) :: ocsin
+    type(opt_control_state_t), intent(inout) :: ocsout
+
+    call states_copy(ocsout%psi, ocsin%psi)
+
+  end subroutine opt_control_state_copy
 
 end module opt_control_state_m
