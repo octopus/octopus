@@ -25,6 +25,7 @@
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi    
     FLOAT :: j1, jfunctional, fluence, j2
 
     type(controlfunction_t), pointer :: par
@@ -38,11 +39,13 @@
 
     call oct_iterator_bestpar(par, iterator)
 
-    call opt_control_get_qs(psi, initial_st)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call propagate_forward(sys, hm, td, par, oct_target, qcpsi, write_iter = .true.)
+    call opt_control_get_qs(psi, qcpsi)
 
-    call propagate_forward(sys, hm, td, par, oct_target, psi, write_iter = .true.)
+    j1 = target_j1(oct_target, sys%gr, qcpsi)
+    call opt_control_state_end(qcpsi)
 
-    j1 = target_j1(oct_target, sys%gr, psi)
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
     jfunctional = j1 + j2

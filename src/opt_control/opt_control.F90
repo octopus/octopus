@@ -236,10 +236,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_mt03()
-      type(states_t) :: psi
+      type(opt_control_state_t) :: psi
       PUSH_SUB(opt_control_run.scheme_mt03)
 
-      call opt_control_get_qs(psi, initial_st)
+      call opt_control_state_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
       call oct_prop_init(prop_psi, "psi")
 
@@ -251,7 +251,7 @@ contains
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
       end do ctr_loop
 
-      call states_end(psi)
+      call opt_control_state_end(psi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
@@ -263,10 +263,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_wg05()
-      type(states_t) :: psi
+      type(opt_control_state_t) :: psi
       PUSH_SUB(opt_control_run.scheme_wg05)
 
-      call opt_control_get_qs(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
       call oct_prop_init(prop_psi, "psi")
 
@@ -282,7 +281,7 @@ contains
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
       end do ctr_loop
 
-      call states_end(psi)
+      call opt_control_state_end(psi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
@@ -294,19 +293,19 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98()
-      type(states_t) :: psi
+      type(opt_control_state_t) :: qcpsi
       PUSH_SUB(opt_control_run.scheme_zbr98)
 
-      call opt_control_get_qs(psi, initial_st)
+      call opt_control_state_copy(qcpsi, initial_st)
       call oct_prop_init(prop_chi, "chi")
       call oct_prop_init(prop_psi, "psi")
 
       call controlfunction_copy(par_prev, par)
-      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, psi)
+      call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, qcpsi)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       if(clean_stop(sys%mc%master_comm) .or. stop_loop) then
-        call states_end(psi)
+        call opt_control_state_end(qcpsi)
         call oct_prop_end(prop_chi)
         call oct_prop_end(prop_psi)
         POP_SUB(opt_control_run.scheme_zbr98)
@@ -316,13 +315,13 @@ contains
       call controlfunction_copy(par_new, par)
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
-        call f_zbr98(sys, hm, td, psi, prop_psi, prop_chi, par)
-        j1 = target_j1(oct_target, sys%gr, psi)
+        call f_zbr98(sys, hm, td, qcpsi, prop_psi, prop_chi, par)
+        j1 = target_j1(oct_target, sys%gr, qcpsi)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
       end do ctr_loop
 
-      call states_end(psi)
+      call opt_control_state_end(qcpsi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
@@ -339,16 +338,16 @@ contains
       FLOAT, allocatable :: theta(:)
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
-      type(states_t) :: psi
+      type(opt_control_state_t) :: qcpsi
       PUSH_SUB(opt_control_run.scheme_cg)
 
       call controlfunction_set_rep(par)
 
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi)
-      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)
-      call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
@@ -404,18 +403,18 @@ contains
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT :: f
       integer :: dim
-      type(states_t) :: psi
+      type(opt_control_state_t) :: qcpsi
 
       PUSH_SUB(opt_control_run.scheme_direct)
 
       call controlfunction_set_rep(par)
       dim = controlfunction_dof(par)
 
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi)
-      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)
-      call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_direct)
@@ -473,16 +472,16 @@ contains
       REAL_DOUBLE, allocatable :: x(:), w(:)
       FLOAT, allocatable :: theta(:)
       FLOAT :: f
-      type(states_t) :: psi
+      type(opt_control_state_t) :: qcpsi
       PUSH_SUB(opt_control_run.scheme_newuoa)
 
       call controlfunction_set_rep(par)
 
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi)
-      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys, hm, td, par, oct_target,qcpsi)
+      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)      
-      call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
@@ -530,11 +529,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_zbr98(sys, hm, td, psi, prop_psi, prop_chi, par)
+  subroutine f_zbr98(sys, hm, td, qcpsi, prop_psi, prop_chi, par)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: hm
     type(td_t), intent(inout)                     :: td
-    type(states_t), intent(inout)                 :: psi
+    type(opt_control_state_t), intent(inout)      :: qcpsi
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     type(controlfunction_t), intent(inout)        :: par
 
@@ -547,10 +546,8 @@ contains
 
     call target_get_state(oct_target, chi)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
-
-    call states_end(psi)
-    call opt_control_get_qs(psi, initial_st)
-    call fwd_step(sys, td, hm, oct_target, par, par_chi, psi, prop_chi, prop_psi)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call fwd_step(sys, td, hm, oct_target, par, par_chi, qcpsi, prop_chi, prop_psi)
 
     call states_end(chi)
     call controlfunction_end(par_chi)
@@ -559,26 +556,28 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
+  subroutine f_wg05(sys, hm, td, qcpsi, par, prop_psi, prop_chi, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: hm
     type(td_t), intent(inout)                     :: td
-    type(states_t), intent(inout)                 :: psi
+    type(opt_control_state_t), intent(inout)      :: qcpsi
     type(controlfunction_t), intent(inout)        :: par
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
     FLOAT :: new_penalty
     type(states_t) :: chi
+    type(states_t), pointer :: psi
     type(controlfunction_t) :: parp
 
     PUSH_SUB(f_wg05)
 
+    psi => opt_control_point_qs(qcpsi)
+
     if( oct_iterator_current(iterator)  ==  0) then
-      call states_end(psi)
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, psi)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, qcpsi)
       POP_SUB(f_wg05)
       return
     end if
@@ -601,12 +600,12 @@ contains
     call controlfunction_copy(par, parp)
     call controlfunction_apply_envelope(par)
 
-    call states_end(psi)
-    call opt_control_get_qs(psi, initial_st)
-    call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
-    j1 = target_j1(oct_target, sys%gr, psi)
+    j1 = target_j1(oct_target, sys%gr, qcpsi)
 
+    nullify(psi)
     call states_end(chi)
     call controlfunction_end(parp)
     POP_SUB(f_wg05)
@@ -624,6 +623,7 @@ contains
 
     type(states_t) :: chi
     type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi
     type(controlfunction_t) :: par_chi
     type(oct_prop_t)        :: prop_chi, prop_psi;
 
@@ -637,11 +637,12 @@ contains
     call controlfunction_copy(par_chi, par)
 
     ! First, a forward propagation with the input field.
-    call opt_control_get_qs(psi, initial_st)
-    call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
     ! Check the performance.
-    j1 = target_j1(oct_target, sys%gr, psi, sys%geo)
+    call opt_control_get_qs(psi, qcpsi)
+    j1 = target_j1(oct_target, sys%gr, qcpsi, sys%geo)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
@@ -655,6 +656,7 @@ contains
     ! Copy par_chi to par
     call controlfunction_copy(par, par_chi)
 
+    call opt_control_state_end(qcpsi)
     call controlfunction_end(par_chi)
     call oct_prop_end(prop_chi)
     call oct_prop_end(prop_psi)
@@ -667,25 +669,28 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_iter(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
+  subroutine f_iter(sys, hm, td, qcpsi, par, prop_psi, prop_chi, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: hm
     type(td_t), intent(inout)                     :: td
-    type(states_t), intent(inout)                 :: psi
+    type(opt_control_state_t), intent(inout)      :: qcpsi
     type(controlfunction_t), intent(inout)        :: par
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
     type(states_t) :: chi
     type(controlfunction_t) :: par_chi
+    type(states_t), pointer :: psi
 
     PUSH_SUB(f_iter)
 
+    psi => opt_control_point_qs(qcpsi)
+
+
     if( oct_iterator_current(iterator)  ==  0) then
-      call states_end(psi)
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, psi)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, qcpsi)
       POP_SUB(f_iter)
       return
     end if
@@ -696,12 +701,12 @@ contains
     call target_chi(oct_target, sys%gr, psi, chi, sys%geo)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
 
-    call states_end(psi)
-    call opt_control_get_qs(psi, initial_st)
-    call fwd_step(sys, td, hm, oct_target, par, par_chi, psi, prop_chi, prop_psi)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call fwd_step(sys, td, hm, oct_target, par, par_chi, qcpsi, prop_chi, prop_psi)
 
-    j1 = target_j1(oct_target, sys%gr, psi)
+    j1 = target_j1(oct_target, sys%gr, qcpsi)
 
+    nullify(psi)
     call states_end(chi)
     call controlfunction_end(par_chi)
     POP_SUB(f_iter)

@@ -459,11 +459,15 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, gr, psi, geo) result(j1)
+  FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
     type(target_t), intent(inout)   :: tg
     type(grid_t),   intent(inout)   :: gr
-    type(states_t), intent(inout)   :: psi
+    type(opt_control_state_t), intent(inout)   :: qcpsi
     type(geometry_t), intent(in), optional :: geo
+
+    type(states_t), pointer :: psi
+
+    psi => opt_control_point_qs(qcpsi)
 
     PUSH_SUB(target_j1)
 
@@ -492,6 +496,7 @@ contains
       j1 = target_j1_velocity(tg, geo)
     end select
 
+    nullify(psi)
     POP_SUB(target_j1)
   end function target_j1
   ! ---------------------------------------------------------

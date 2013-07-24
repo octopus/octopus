@@ -28,7 +28,7 @@
 
     FLOAT, allocatable :: theta(:), y(:)
     integer :: dof
-    type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi
 
     PUSH_SUB(opt_control_function_forward)
 
@@ -40,10 +40,9 @@
     theta(index_) = x
 
     call controlfunction_set_theta(par_, theta)
-    call opt_control_get_qs(psi, initial_st)
-    call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
-    f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
-    call states_end(psi)
+    call opt_control_state_copy(qcpsi, initial_st)
+    call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+    f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
 
     SAFE_DEALLOCATE_A(theta)
     SAFE_DEALLOCATE_A(y)
@@ -63,7 +62,7 @@
     type(controlfunction_t) :: par_new
     FLOAT :: j1, dx, fmdf
     FLOAT, allocatable :: theta(:), abserr(:), dfn(:), dff(:)
-    type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi
 
 
     PUSH_SUB(opt_control_cg_calc)
@@ -120,10 +119,10 @@
     else
       theta = x
       call controlfunction_set_theta(par_, theta)
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
-      f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
-      call states_end(psi)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     end if
 
@@ -176,7 +175,7 @@
 
     FLOAT :: j1, delta
     FLOAT, allocatable :: theta(:)
-    type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi
     type(controlfunction_t) :: par_new
 
     PUSH_SUB(opt_control_direct_calc)
@@ -187,11 +186,11 @@
 
     if(oct%delta == M_ZERO) then
       ! We only need the value of the target functional.
-      call opt_control_get_qs(psi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
-      f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+      call opt_control_state_copy(qcpsi, initial_st)
+      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
-      call states_end(psi)
     else
       call controlfunction_copy(par_new, par_)
       call f_striter(sys_, hm_, td_, par_new, j1)

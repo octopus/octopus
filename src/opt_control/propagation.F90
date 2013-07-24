@@ -39,6 +39,7 @@ module opt_control_propagation_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use opt_control_state_m
   use opt_control_target_m
   use profiling_m
   use restart_m
@@ -121,13 +122,13 @@ contains
   !! field specified in par. If write_iter is present and is
   !! set to .true., writes down through the td_write module.
   !! ---------------------------------------------------------
-  subroutine propagate_forward(sys, hm, td, par, tg, psi, prop, write_iter)
+  subroutine propagate_forward(sys, hm, td, par, tg, qcpsi, prop, write_iter)
     type(system_t),             intent(inout)  :: sys
     type(hamiltonian_t),        intent(inout)  :: hm
     type(td_t),                 intent(inout)  :: td
     type(controlfunction_t),    intent(in)     :: par
     type(target_t),             intent(inout)  :: tg
-    type(states_t),             intent(inout)  :: psi
+    type(opt_control_state_t),  intent(inout)  :: qcpsi
     type(oct_prop_t), optional, intent(in)     :: prop
     logical, optional,          intent(in)     :: write_iter
 
@@ -138,6 +139,7 @@ contains
     FLOAT, allocatable :: x_initial(:,:)
     logical :: vel_target_ = .false.
     integer :: iatom
+    type(states_t), pointer :: psi
 
     PUSH_SUB(propagate_forward)
 
@@ -151,6 +153,7 @@ contains
 
     gr => sys%gr
 
+    psi => opt_control_point_qs(qcpsi)
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
@@ -231,6 +234,7 @@ contains
     end if
 
     if(write_iter_) call td_write_end(write_handler)
+    nullify(psi)
     POP_SUB(propagate_forward)
   end subroutine propagate_forward
   ! ---------------------------------------------------------
@@ -240,15 +244,16 @@ contains
   !! Performs a full backward propagation of state psi, with the
   !! external fields specified in Hamiltonian h.
   !! ---------------------------------------------------------
-  subroutine propagate_backward(sys, hm, td, psi, prop)
+  subroutine propagate_backward(sys, hm, td, qcpsi, prop)
     type(system_t),          intent(inout) :: sys
     type(hamiltonian_t),     intent(inout) :: hm
     type(td_t),              intent(inout) :: td
-    type(states_t),          intent(inout) :: psi
+    type(opt_control_state_t), intent(inout) :: qcpsi
     type(oct_prop_t),        intent(in)    :: prop
 
     integer :: istep
     type(grid_t),  pointer :: gr
+    type(states_t), pointer :: psi
 
     PUSH_SUB(propagate_backward)
     
@@ -256,6 +261,7 @@ contains
     call messages_info(1)
 
     gr => sys%gr
+    psi => opt_control_point_qs(qcpsi)
 
     call hamiltonian_adjoint(hm)
 
@@ -275,6 +281,7 @@ contains
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
 
+    nullify(psi)
     POP_SUB(propagate_backward)
   end subroutine propagate_backward
   ! ---------------------------------------------------------
@@ -293,14 +300,14 @@ contains
   !! fly, so that the propagation of psi is performed with the
   !! "new" control functions.
   !! --------------------------------------------------------
-  subroutine fwd_step(sys, td, hm, tg, par, par_chi, psi, prop_chi, prop_psi)
+  subroutine fwd_step(sys, td, hm, tg, par, par_chi, qcpsi, prop_chi, prop_psi)
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(inout)        :: par
     type(controlfunction_t), intent(in)           :: par_chi
-    type(states_t), intent(inout)                 :: psi
+    type(opt_control_state_t), intent(inout)      :: qcpsi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
 
@@ -312,6 +319,7 @@ contains
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(propagator_t) :: tr_psi2
+    type(states_t), pointer :: psi
 
     PUSH_SUB(fwd_step)
 
@@ -320,6 +328,7 @@ contains
 
     call controlfunction_to_realtime(par)
 
+    psi => opt_control_point_qs(qcpsi)
     gr => sys%gr
     call propagator_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
@@ -381,6 +390,7 @@ contains
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
     call states_end(chi)
     call propagator_end(tr_chi)
+    nullify(psi)
     POP_SUB(fwd_step)
   end subroutine fwd_step
   ! ---------------------------------------------------------
