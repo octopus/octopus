@@ -504,13 +504,18 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(tg, gr, psi_in, chi_out, geo)
+  subroutine target_chi(tg, gr, qcpsi_in, qcchi_out, geo)
     type(target_t),    intent(inout) :: tg
     type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(opt_control_state_t), target, intent(inout) :: qcpsi_in
+    type(opt_control_state_t), target, intent(inout) :: qcchi_out
     type(geometry_t),  intent(in)    :: geo
+
+    type(states_t), pointer :: psi_in, chi_out
     PUSH_SUB(target_chi)
+
+    psi_in => opt_control_point_qs(qcpsi_in)
+    chi_out => opt_control_point_qs(qcchi_out)
 
     select case(tg%type)
     case(oct_tg_groundstate)
@@ -537,6 +542,8 @@ contains
       call target_chi_velocity(gr, tg, chi_out, geo)
     end select
 
+    nullify(psi_in)
+    nullify(chi_out)
     POP_SUB(target_chi)
   end subroutine target_chi
 

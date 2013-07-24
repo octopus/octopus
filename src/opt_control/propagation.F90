@@ -405,14 +405,14 @@ contains
   !! par_chi = par_chi[|psi>, |chi>]
   !! |chi> --> U[par_chi](0, T)|chi>
   !! --------------------------------------------------------
-  subroutine bwd_step(sys, td, hm, tg, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step(sys, td, hm, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(in)           :: par
     type(controlfunction_t), intent(inout)        :: par_chi
-    type(states_t), intent(inout)                 :: chi
+    type(opt_control_state_t), intent(inout)      :: qcchi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
 
@@ -420,6 +420,7 @@ contains
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
+    type(states_t), pointer :: chi
 
     PUSH_SUB(bwd_step)
 
@@ -428,6 +429,7 @@ contains
 
     call controlfunction_to_realtime(par_chi)
 
+    chi => opt_control_point_qs(qcchi)
     gr => sys%gr
 
     call propagator_copy(tr_chi, td%tr)
@@ -468,6 +470,7 @@ contains
     call controlfunction_to_basis(par_chi)
     call states_end(psi)
     call propagator_end(tr_chi)
+    nullify(chi)
     POP_SUB(bwd_step)
   end subroutine bwd_step
   ! ---------------------------------------------------------
@@ -485,14 +488,14 @@ contains
   !!
   !! par_chi = par_chi[|psi>, |chi>]
   !! --------------------------------------------------------
-  subroutine bwd_step_2(sys, td, hm, tg, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step_2(sys, td, hm, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(in)           :: par
     type(controlfunction_t), intent(inout)        :: par_chi
-    type(states_t), intent(inout)                 :: chi
+    type(opt_control_state_t), target, intent(inout) :: qcchi
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
 
@@ -501,6 +504,7 @@ contains
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
     type(states_t) :: st_ref
+    type(states_t), pointer :: chi
     FLOAT, allocatable :: vhxc(:, :)
 
     PUSH_SUB(bwd_step_2)
@@ -508,6 +512,7 @@ contains
     message(1) = "Info: Backward propagation."
     call messages_info(1)
 
+    chi => opt_control_point_qs(qcchi)
     gr => sys%gr
 
     call propagator_copy(tr_chi, td%tr)
@@ -566,6 +571,7 @@ contains
     SAFE_DEALLOCATE_A(vhxc)
     call states_end(psi)
 
+    nullify(chi)
     POP_SUB(bwd_step_2)
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
