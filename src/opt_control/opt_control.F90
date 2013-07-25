@@ -546,7 +546,7 @@ contains
     call controlfunction_copy(par_chi, par)
 
     call target_get_state(oct_target, chi)
-    call opt_control_state_init(qcchi, chi)
+    call opt_control_state_init(qcchi, chi, sys%geo)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, qcchi, prop_chi, prop_psi)
     call opt_control_state_copy(qcpsi, initial_st)
     call fwd_step(sys, td, hm, oct_target, par, par_chi, qcpsi, prop_chi, prop_psi)

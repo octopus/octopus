@@ -26,9 +26,11 @@
 !! and velocities, also, so that one can propagate (and optimize) simultaneously the quantum
 !! and classical subsystems.
 module opt_control_state_m
-
+  use geometry_m
   use global_m
+  use loct_pointer_m
   use messages_m
+  use profiling_m
   use states_m
 
   implicit none
@@ -47,6 +49,9 @@ module opt_control_state_m
   type opt_control_state_t
     private
     type(states_t) :: psi
+    FLOAT, allocatable :: q(:, :)
+    FLOAT, allocatable :: p(:, :)
+    integer :: natoms, ndim
   end type opt_control_state_t
 
 contains
@@ -67,14 +72,24 @@ contains
     POP_SUB(opt_control_get_qs)
   end subroutine opt_control_get_qs
 
-  subroutine opt_control_state_init(ocs, qstate)
+  subroutine opt_control_state_init(ocs, qstate, geo)
     type(opt_control_state_t), intent(inout) :: ocs
     type(states_t), intent(in)               :: qstate
+    type(geometry_t), intent(in)             :: geo
 
     PUSH_SUB(opt_control_state_init)
 
     call states_copy(ocs%psi, qstate)
 
+    SAFE_DEALLOCATE_A(ocs%q)
+    SAFE_DEALLOCATE_A(ocs%p)
+
+    ocs%ndim   = geo%space%dim
+    ocs%natoms = geo%natoms
+
+    SAFE_ALLOCATE(ocs%q(1:ocs%natoms, 1:ocs%ndim))
+    SAFE_ALLOCATE(ocs%p(1:ocs%natoms, 1:ocs%ndim))
+    
     POP_SUB(opt_control_state_init)
   end subroutine opt_control_state_init
 
@@ -85,6 +100,9 @@ contains
 
     call states_end(ocs%psi)
 
+    SAFE_DEALLOCATE_A(ocs%q)
+    SAFE_DEALLOCATE_A(ocs%p)
+
     POP_SUB(opt_control_state_end)
   end subroutine opt_control_state_end
 
@@ -93,6 +111,18 @@ contains
     type(opt_control_state_t), intent(inout) :: ocsout
 
     call states_copy(ocsout%psi, ocsin%psi)
+    ocsout%ndim = ocsin%ndim
+    ocsout%natoms = ocsin%natoms
+    SAFE_DEALLOCATE_A(ocsout%q)
+    SAFE_DEALLOCATE_A(ocsout%p)
+    if(allocated(ocsin%q)) then
+      SAFE_ALLOCATE(ocsout%q(1:ocsout%natoms, 1:ocsout%ndim))
+      ocsout%q = ocsin%q
+    end if
+    if(allocated(ocsin%p)) then
+      SAFE_ALLOCATE(ocsout%p(1:ocsout%natoms, 1:ocsout%ndim))
+      ocsout%p = ocsin%p
+    end if
 
   end subroutine opt_control_state_copy
 

@@ -71,7 +71,7 @@ contains
 
     PUSH_SUB(initial_state_init)
 
-    call opt_control_state_init(qcstate, sys%st)
+    call opt_control_state_init(qcstate, sys%st, sys%geo)
     psi => opt_control_point_qs(qcstate)
     call states_deallocate_wfns(psi)
     call states_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
