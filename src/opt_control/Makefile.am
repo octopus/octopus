@@ -44,7 +44,7 @@ opt_control_iter.o : opt_control_iter.F90 controlfunction.o opt_control_global.o
 target.o : target.F90 target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 \
   target_groundstate_inc.F90 target_excited_inc.F90 target_gstransformation_inc.F90 \
   target_exclude_inc.F90 target_userdefined_inc.F90 target_local_inc.F90 \
-  target_tdlocal_inc.F90 opt_control_global.o 
+  target_tdlocal_inc.F90 opt_control_global.o opt_control_state.o
 initst.o : initst.F90 opt_control_state.o
 opt_control_state.o : opt_control_state.F90
 propagation.o : propagation.F90 controlfunction.o target.o opt_control_global.o 
