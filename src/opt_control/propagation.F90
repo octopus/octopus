@@ -275,7 +275,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep-1, td%ions, sys%geo)
       call oct_prop_output(prop, istep - 1, psi, gr)
       call v_ks_calc(sys%ks, hm, psi, sys%geo)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
@@ -454,11 +454,11 @@ contains
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
@@ -546,11 +546,11 @@ contains
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       st_ref%zpsi = psi%zpsi
       vhxc(:, :) = hm%vhxc(:, :)
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
