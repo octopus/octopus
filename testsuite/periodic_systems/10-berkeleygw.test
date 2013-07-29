@@ -38,21 +38,25 @@ match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ;  0.008457
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.123205
 match ; Eigenvalue 18 ; GREP(static/info, '#k =   2', 12, 18) ;  0.196285
 
-# BerkeleyGW files are binary, so we cannot easily test the contents, but
-# at least we can check that this run finished without crashing,
-# and test the size.
-
+# These files are binary, so we cannot easily test the contents.
 match ; WFN  ; SIZE(static/WFN)  ;  337964
 match ; RHO  ; SIZE(static/RHO)  ;   41812
 match ; VXC  ; SIZE(static/VXC)  ;   41812
 
-match ; vxc k 1 z       ; LINE(static/vxc.dat,   1, 50);    0.25
-match ; vxc k 1 diag    ; LINE(static/vxc.dat,   2, 1);    18
-match ; vxc k 1 offdiag ; LINE(static/vxc.dat,   2, 15);  324
-match ; vxc k 1 2 9 Re  ; LINE(static/vxc.dat,  47, 12);   -0.004731
-match ; vxc k 1 2 9 Im  ; LINE(static/vxc.dat,  47, 24);   -0.189760
+# The two k-points are equivalent by time-reversal symmetry,
+# so results should be identical between them.
 
-match ; vxc k 2 z       ; LINE(static/vxc.dat, 345, 50);   -0.25
-match ; vxc k 2 diag    ; LINE(static/vxc.dat, 346, 1);    18
-match ; vxc k 2 offdiag ; LINE(static/vxc.dat, 346, 15);  324
-match ; vxc k 1 4 Re    ; LINE(static/vxc.dat, 350, 26);  -10.7742175493283
+match ; vxc k 1 z       ; LINEFIELD(static/vxc.dat,   1, 3);     0.25
+match ; vxc k 1 diag    ; LINEFIELD(static/vxc.dat,   1, 4);    18
+match ; vxc k 1 offdiag ; LINEFIELD(static/vxc.dat,   1, 5);   324
+match ; vxc k 1 2 Re    ; LINEFIELD(static/vxc.dat,   3, 3);   -10.77421748
+match ; vxc k 1 2 Im    ; LINEFIELD(static/vxc.dat,   3, 4);     0.0
+match ; vxc k 1 8 8 Re  ; LINEFIELD(static/vxc.dat, 153, 4);   -10.6717566
+match ; vxc k 1 8 8 Im  ; LINEFIELD(static/vxc.dat, 153, 5);     0.0
+# unfortunately, offdiagonals are dependent on arbitrary phases, cannot be tested
+
+match ; vxc k 2 z       ; LINEFIELD(static/vxc.dat, 344, 3);    -0.25
+match ; vxc k 2 diag    ; LINEFIELD(static/vxc.dat, 344, 4);    18
+match ; vxc k 2 offdiag ; LINEFIELD(static/vxc.dat, 344, 5);   324
+match ; vxc k 1 1 Re    ; LINEFIELD(static/vxc.dat, 352, 3);   -10.671756
+match ; vxc k 1 1 Im    ; LINEFIELD(static/vxc.dat, 352, 4);     0.0
