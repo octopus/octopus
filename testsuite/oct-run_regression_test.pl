@@ -483,7 +483,7 @@ sub run_match_new(){
     $pre_command = $par[0];
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
-    if($par[1] < 0) {
+    if($par[1] < 0) { # negative number means from end of file
       $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
       $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1)' $par[0]";
     } else {
@@ -491,11 +491,26 @@ sub run_match_new(){
     }
     $pre_command .= " | cut -b $par[2]-";
 
+  }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
+    if($par[1] < 0) { # negative number means from end of file
+      $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
+      $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
+    } else {
+      $pre_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
+    }
+
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
     my $off = 1*$par[3];
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]-";
+
+  }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, offset>)
+    my $off = 1*$par[3];
+    # -a means even if the file is considered binary due to a stray funny character, it will work
+    $pre_command = "grep -a -A$off $par[1] $par[0]";
+    $pre_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
+    # if there are multiple occurrences found by grep, we will only be taking the first one via awk
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
