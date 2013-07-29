@@ -40,10 +40,10 @@ module opt_control_m
   use minimizer_m
   use opt_control_global_m
   use opt_control_state_m
-  use opt_control_propagation_m
+  use propagation_m
   use opt_control_iter_m
-  use opt_control_target_m
-  use opt_control_initst_m
+  use target_m
+  use initst_m
   use profiling_m
   use propagator_m
   use restart_m

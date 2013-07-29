@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module opt_control_target_m
+module target_m
   use datasets_m
   use density_m
   use derivatives_m
@@ -611,7 +611,7 @@ contains
 #include "target_local_inc.F90"
 #include "target_tdlocal_inc.F90"
 
-end module opt_control_target_m
+end module target_m
 
 !! Local Variables:
 !! mode: f90

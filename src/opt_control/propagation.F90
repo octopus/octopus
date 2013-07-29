@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module opt_control_propagation_m
+module propagation_m
   use controlfunction_m
   use datasets_m
   use density_m
@@ -40,7 +40,7 @@ module opt_control_propagation_m
   use messages_m
   use mpi_m
   use opt_control_state_m
-  use opt_control_target_m
+  use target_m
   use profiling_m
   use restart_m
   use species_m
@@ -913,7 +913,7 @@ contains
   ! ---------------------------------------------------------
 
 
-end module opt_control_propagation_m
+end module propagation_m
 
 !! Local Variables:
 !! mode: f90

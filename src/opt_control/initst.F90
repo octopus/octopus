@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module opt_control_initst_m
+module initst_m
   use datasets_m
   use density_m
   use geometry_m
@@ -249,7 +249,7 @@ contains
     POP_SUB(initial_state_init)
   end subroutine initial_state_init
 
-end module opt_control_initst_m
+end module initst_m
 
 !! Local Variables:
 !! mode: f90
