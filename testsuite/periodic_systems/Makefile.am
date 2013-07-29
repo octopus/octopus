@@ -47,6 +47,10 @@ dist_share_DATA =                                \
 	07-tb09.01-gs_symm.inp                   \
 	07-tb09.02-gs_nosymm.inp                 \
         08-benzene_supercell.test                \
-        08-benzene_supercell.01-gs.inp
+        08-benzene_supercell.01-gs.inp           \
+        09-etsf_io.test                          \
+        09-etsf_io.01-gs.inp                     \
+        10-berkeleygw.test                       \
+        10-berkeleygw.01-gs.inp
 
 CLEANFILES = *~ *.bak

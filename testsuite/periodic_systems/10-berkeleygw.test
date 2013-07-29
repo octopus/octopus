@@ -1,0 +1,58 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : BerkeleyGW
+Options    : berkeleygw
+Programs   : octopus; octopus_mpi
+TestGroups : long-run, periodic_systems
+Enabled    : Yes
+
+Processors : 1
+
+Input      : 10-berkeleygw.01-gs.inp
+
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 8
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.14778536
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.79951714
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.06745253
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   2.21105822
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -8.13952857
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.50024588
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.47687684
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.39639832
+
+match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ;  0.250000
+match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ;  0.250000
+match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ;  0.250000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.257309
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  0.008457
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.123205
+match ; Eigenvalue 18 ; GREP(static/info, '#k =   1', 12, 18) ;  0.196285
+
+match ; k-point 2 (x) ; GREP(static/info, '#k =   2', 18) ;  0.250000
+match ; k-point 2 (y) ; GREP(static/info, '#k =   2', 30) ;  0.250000
+match ; k-point 2 (z) ; GREP(static/info, '#k =   2', 42) ; -0.250000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.25730
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ;  0.008457
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.123205
+match ; Eigenvalue 18 ; GREP(static/info, '#k =   2', 12, 18) ;  0.196285
+
+# BerkeleyGW files are binary, so we cannot easily test the contents, but
+# at least we can check that this run finished without crashing,
+# and test the size.
+
+match ; WFN  ; SIZE(static/WFN)  ;  337964
+match ; RHO  ; SIZE(static/RHO)  ;   41812
+match ; VXC  ; SIZE(static/VXC)  ;   41812
+
+match ; vxc k 1 z       ; LINE(static/vxc.dat,   1, 50);    0.25
+match ; vxc k 1 diag    ; LINE(static/vxc.dat,   2, 1);    18
+match ; vxc k 1 offdiag ; LINE(static/vxc.dat,   2, 15);  324
+match ; vxc k 1 2 9 Re  ; LINE(static/vxc.dat,  47, 12);   -0.004731
+match ; vxc k 1 2 9 Im  ; LINE(static/vxc.dat,  47, 24);   -0.189760
+
+match ; vxc k 2 z       ; LINE(static/vxc.dat, 345, 50);   -0.25
+match ; vxc k 2 diag    ; LINE(static/vxc.dat, 346, 1);    18
+match ; vxc k 2 offdiag ; LINE(static/vxc.dat, 346, 15);  324
+match ; vxc k 1 4 Re    ; LINE(static/vxc.dat, 350, 26);  -10.7742175493283
