@@ -31,16 +31,18 @@ module opt_control_state_m
   use loct_pointer_m
   use messages_m
   use profiling_m
+  use species_m
   use states_m
 
   implicit none
 
   private
-  public :: opt_control_state_t,    &
-            opt_control_state_init, &
-            opt_control_get_qs,     &
-            opt_control_point_qs,   &
-            opt_control_state_copy, &
+  public :: opt_control_state_t,       &
+            opt_control_state_init,    &
+            opt_control_get_qs,        &
+            opt_control_get_classical, &
+            opt_control_point_qs,      &
+            opt_control_state_copy,    &
             opt_control_state_end
 
   !> This is the datatype that contains the objects that are propagated: in principle this
@@ -72,11 +74,29 @@ contains
     POP_SUB(opt_control_get_qs)
   end subroutine opt_control_get_qs
 
+  subroutine opt_control_get_classical(geo, ocs)
+    type(geometry_t), intent(inout)       :: geo
+    type(opt_control_state_t), intent(in) :: ocs
+
+    integer :: idim, iatom
+    PUSH_SUB(opt_control_get_classical)
+
+    do idim = 1, geo%space%dim
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%x(idim) = ocs%q(iatom, idim)
+        geo%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_weight(geo%atom(iatom)%spec)
+      end do
+    end do
+
+    POP_SUB(opt_control_get_classical)
+  end subroutine opt_control_get_classical
+
   subroutine opt_control_state_init(ocs, qstate, geo)
     type(opt_control_state_t), intent(inout) :: ocs
     type(states_t), intent(in)               :: qstate
     type(geometry_t), intent(in)             :: geo
 
+    integer :: iatom, idim
     PUSH_SUB(opt_control_state_init)
 
     call states_copy(ocs%psi, qstate)
@@ -89,6 +109,13 @@ contains
 
     SAFE_ALLOCATE(ocs%q(1:ocs%natoms, 1:ocs%ndim))
     SAFE_ALLOCATE(ocs%p(1:ocs%natoms, 1:ocs%ndim))
+
+    do idim = 1, geo%space%dim
+      do iatom = 1, geo%natoms
+        ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
+        ocs%p(iatom, idim) = species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%v(idim)
+      end do
+    end do
     
     POP_SUB(opt_control_state_init)
   end subroutine opt_control_state_init

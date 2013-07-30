@@ -154,6 +154,8 @@ contains
     gr => sys%gr
 
     psi => opt_control_point_qs(qcpsi)
+    call opt_control_get_classical(sys%geo, qcpsi)
+
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
@@ -166,6 +168,7 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
+    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm%ep, psi, M_ZERO, td%dt)
 
     if(target_type(tg)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
@@ -199,6 +202,7 @@ contains
     ii = 1
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
+
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
       if(present(prop)) call oct_prop_output(prop, istep, psi, gr)
@@ -223,7 +227,7 @@ contains
         end if
       end if
 
-      if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
+      if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
 
     if(vel_target_) then
@@ -536,7 +540,10 @@ contains
 
     call states_copy(st_ref, psi)
 
+    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm%ep, psi, td%max_iter*abs(td%dt), td%dt)
+
     do i = td%max_iter, 1, -1
+
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
@@ -548,15 +555,14 @@ contains
       vhxc(:, :) = hm%vhxc(:, :)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
+
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
-
     call states_end(st_ref)
-
 
     td%dt = -td%dt
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
