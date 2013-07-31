@@ -55,7 +55,9 @@ module ion_dynamics_m
     ion_dynamics_restore_state,            &
     ion_dynamics_ions_move,                &
     ion_dynamics_temperature,              &
-    ion_dynamics_kinetic_energy
+    ion_dynamics_kinetic_energy,           &
+    ion_dynamics_freeze,                   &
+    ion_dynamics_unfreeze
 
   integer, parameter ::   &
     THERMO_NONE     = 0,  &
@@ -588,6 +590,28 @@ contains
     temperature = CNST(2.0)/CNST(3.0)*ion_dynamics_kinetic_energy(geo)/geo%natoms
     
   end function ion_dynamics_temperature
+
+
+  ! ---------------------------------------------------------
+  !> Freezes the ionic movement.
+  logical function ion_dynamics_freeze(this) result(freeze)
+    type(ion_dynamics_t), intent(inout)   :: this
+    if(this%move_ions) then
+      this%move_ions = .false.
+      freeze = .true.
+    else
+      freeze = .false.
+    end if
+  end function ion_dynamics_freeze
+
+
+  ! ---------------------------------------------------------
+  !> Unfreezes the ionic movement.
+  subroutine ion_dynamics_unfreeze(this)
+    type(ion_dynamics_t), intent(inout)   :: this
+    this%move_ions = .true.
+  end subroutine ion_dynamics_unfreeze
+
 
 end module ion_dynamics_m
 

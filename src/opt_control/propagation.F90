@@ -503,6 +503,7 @@ contains
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
 
+    logical :: freeze
     integer :: i
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
@@ -558,7 +559,9 @@ contains
 
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
+      freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+      if(freeze) call ion_dynamics_unfreeze(td%ions)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
