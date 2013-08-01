@@ -342,7 +342,7 @@ contains
           gg(1:3) = temp(1:3)*ixx(1:3)
 
           gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-          do idim = 1, 2
+          do idim = 1, 3
             gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
           end do
 
