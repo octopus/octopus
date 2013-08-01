@@ -190,18 +190,24 @@
     type(target_t),   intent(inout) :: tg
     type(geometry_t), intent(in)    :: geo
 
+    integer :: i
     FLOAT :: f_re, dummy(3)
+    FLOAT, allocatable :: x(:, :)
     character(len=4096) :: inp_string
     PUSH_SUB(target_j1_velocity)
+
+    SAFE_ALLOCATE(x(geo%space%dim, MAX_DIM))
+    forall(i=1: geo%natoms) x(i, 1:geo%space%dim) = geo%atom(i)%v(1:geo%space%dim)
 
     f_re = M_ZERO
     dummy(:) = M_ZERO
     inp_string = tg%vel_input_string
-    call target_parse_velocity(inp_string, geo)
+    call parse_array(inp_string, x, 'v')
     call conv_to_C_string(inp_string)
     call parse_expression(f_re, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
     j1 = f_re
 
+    SAFE_DEALLOCATE_A(x)
     POP_SUB(target_j1_velocity)
   end function target_j1_velocity
 
@@ -217,12 +223,16 @@
     integer :: ip, idim, ist, jst, ik
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
+    FLOAT, allocatable :: x(:, :)
     PUSH_SUB(target_chi_velocity)
 
     !we have a time-dependent target --> Chi(T)=0
     forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
        chi_out%zpsi(ip, idim, ist, ik) = M_z0
     end forall
+
+    SAFE_ALLOCATE(x(geo%space%dim, MAX_DIM))
+    forall(ip=1: geo%natoms) x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
       
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
     df_dv = M_ZERO
@@ -231,13 +241,14 @@
     do ist=1, geo%natoms
       do jst=1, gr%sb%dim
         temp_string = tg%vel_der_array(ist, jst)
-        call target_parse_velocity(temp_string, geo)
+        call parse_array(temp_string, x, 'v')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
         tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
       end do
     end do
 
+    SAFE_DEALLOCATE_A(x)
     POP_SUB(target_chi_velocity)
   end subroutine target_chi_velocity
 
@@ -292,46 +303,6 @@
 
     POP_SUB(target_tdcalc_velocity)
   end subroutine target_tdcalc_velocity
-  ! ----------------------------------------------------------------------
-
-
-  ! ----------------------------------------------------------------------
-  ! replaces the "v[:,:]" from inp_string by the corresponding
-  ! numbers from geo%atom(:)%v(:) so that the parser can handle inp_string
-  ! ----------------------------------------------------------------------
-  subroutine target_parse_velocity(inp_string, geo)
-    character(len=*), intent(inout)  :: inp_string  ! input string --> OCTVelocityTarget
-    type(geometry_t), intent(in)     :: geo         ! velocities of the atoms --> geo%atom(n_atom)%v(coord)
-    integer              :: i,m,n_atom,coord,string_length
-    character (LEN=100)  :: v_string
-
-    PUSH_SUB(target_parse_velocity)
-    
-    string_length = len(inp_string)
-    do i=1, string_length - 1
-       if(inp_string(i:i+1) == "v[") then
-          m = 0
-          if(inp_string(i+3:i+3) == ",") m = 1
-          if(inp_string(i+4:i+4) == ",") m = 2
-          if(m == 0) then
-             message(1) = "OCTVelocityTarget Input error!"
-             message(2) = "Atom number is either larger than 99 or not defined."
-             call messages_fatal(2)
-          end if
-          read(inp_string(i+2:i+1+m),*) n_atom
-          read(inp_string(i+3+m:i+3+m),*) coord
-          if(coord < 1 .or. coord > 3) then
-             message(1) = "OCTVelocityTarget Input error!"
-             message(2) = "Vector component is either larger than 3 or smaller than 1."
-             call messages_fatal(2)
-          end if
-          write(v_string,*) geo%atom(n_atom)%v(coord)
-          inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
-       end if
-    end do
-
-    POP_SUB(target_parse_velocity)
-  end subroutine target_parse_velocity
   ! ----------------------------------------------------------------------
 
 

@@ -66,7 +66,8 @@ module parser_m
     parse_block_cmplx,   &
     parse_block_string,  &
     parse_block_logical, &
-    parse_expression
+    parse_expression,    &
+    parse_array
 
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
@@ -488,6 +489,43 @@ contains
     re = real(re8, 4)
     im = real(im8, 4)
   end subroutine oct_parse_expression14
+
+
+  ! ----------------------------------------------------------------------
+  !> A very primitive way to "preprocess" a string that contains reference
+  !  to the elements of a two-dimensional array, substitutiting them with
+  !  the values of the array x. This way the string can be processed by
+  !  the parser later.
+  subroutine parse_array(inp_string, x, arraychar)
+    character(len=*), intent(inout)  :: inp_string
+    FLOAT, intent(in) :: x(:, :)
+    character(len=1), intent(in) :: arraychar
+    integer              :: i,m,n_atom,coord,string_length
+    character (LEN=100)  :: v_string
+
+    string_length = len(inp_string)
+    do i=1, string_length - 1
+       if(inp_string(i:i+1) == arraychar//"[") then
+          m = 0
+          if(inp_string(i+3:i+3) == ",") m = 1
+          if(inp_string(i+4:i+4) == ",") m = 2
+          if(m == 0) then
+             write(0, '(a)') "*** Fatal Error (description follows)"
+             write(0, '(a)') "Attempting to parse a string with array elements larger than 99"
+#ifdef HAVE_MPI
+             call MPI_Finalize(mpi_err)
+#endif
+             stop
+          end if
+          read(inp_string(i+2:i+1+m),*) n_atom
+          read(inp_string(i+3+m:i+3+m),*) coord
+          write(v_string,*) x(n_atom, coord)
+          inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
+       end if
+    end do
+
+  end subroutine parse_array
+  ! ----------------------------------------------------------------------
 
 end module parser_m
 
