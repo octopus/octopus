@@ -493,7 +493,7 @@ contains
 
   ! ----------------------------------------------------------------------
   !> A very primitive way to "preprocess" a string that contains reference
-  !  to the elements of a two-dimensional array, substitutiting them with
+  !  to the elements of a two-dimensional array, substituting them with
   !  the values of the array x. This way the string can be processed by
   !  the parser later.
   subroutine parse_array(inp_string, x, arraychar)
