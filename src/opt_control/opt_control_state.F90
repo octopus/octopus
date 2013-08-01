@@ -41,7 +41,10 @@ module opt_control_state_m
             opt_control_state_init,    &
             opt_control_get_qs,        &
             opt_control_get_classical, &
+            opt_control_set_classical, &
             opt_control_point_qs,      &
+            opt_control_point_q,       &
+            opt_control_point_p,       &
             opt_control_state_copy,    &
             opt_control_state_end
 
@@ -63,6 +66,18 @@ contains
     type(opt_control_state_t), target :: ocs
     opt_control_point_qs => ocs%psi
   end function opt_control_point_qs
+
+  function opt_control_point_q(ocs)
+    FLOAT, pointer :: opt_control_point_q(:, :)
+    type(opt_control_state_t), target :: ocs
+    opt_control_point_q => ocs%q
+  end function opt_control_point_q
+
+  function opt_control_point_p(ocs)
+    FLOAT, pointer :: opt_control_point_p(:, :)
+    type(opt_control_state_t), target :: ocs
+    opt_control_point_p => ocs%p
+  end function opt_control_point_p
 
   subroutine opt_control_get_qs(qstate, ocs)
     type(states_t), intent(inout)         :: qstate
@@ -90,6 +105,23 @@ contains
 
     POP_SUB(opt_control_get_classical)
   end subroutine opt_control_get_classical
+
+  subroutine opt_control_set_classical(geo, ocs)
+    type(geometry_t),          intent(inout) :: geo
+    type(opt_control_state_t), intent(inout) :: ocs
+
+    integer :: idim, iatom
+    PUSH_SUB(opt_control_set_classical)
+
+    do idim = 1, geo%space%dim
+      do iatom = 1, geo%natoms
+        ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
+        ocs%p(iatom, idim) = geo%atom(iatom)%v(idim) * species_weight(geo%atom(iatom)%spec)
+      end do
+    end do
+
+    POP_SUB(opt_control_set_classical)
+  end subroutine opt_control_set_classical
 
   subroutine opt_control_state_init(ocs, qstate, geo)
     type(opt_control_state_t), intent(inout) :: ocs

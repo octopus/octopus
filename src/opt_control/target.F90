@@ -90,8 +90,8 @@ module target_m
     oct_tg_exclude_state    = 8,      &
     oct_tg_hhg              = 9,      &
     oct_tg_velocity         = 10,     &
-    oct_tg_hhgnew           = 12
-
+    oct_tg_hhgnew           = 12,     &
+    oct_tg_classical        = 13
 
   integer, public, parameter ::       &
     oct_targetmode_static = 0,        &
@@ -235,6 +235,8 @@ contains
     !% EXPERIMENTAL: The  target is the optimization of the HHG yield. You must supply the
     !% OCTHarmonicWeigth string. It attempts to optimized the integral of the harmonic spectrum multiplied
     !% by some user defined weight function.
+    !%Option oct_tg_classical 13
+    !% EXPERIMENTAL
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
@@ -248,9 +250,9 @@ contains
     select case(tg%type)
     case(oct_tg_groundstate)
       call target_init_groundstate(gr, tg)
-    case(oct_tg_excited) 
+    case(oct_tg_excited)
+      call messages_experimental('OCTTargetOperator = oct_tg_excited')
       call target_init_excited(gr, tg)
-
     case(oct_tg_exclude_state)
       call target_init_exclude(gr, tg)
     case(oct_tg_gstransformation)
@@ -266,9 +268,13 @@ contains
     case(oct_tg_hhg)
       call target_init_hhg(tg, td, w0)
     case(oct_tg_hhgnew)
+      call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
       call target_init_hhgnew(gr, tg, td, geo, ep)
     case(oct_tg_velocity)
       call target_init_velocity(gr, geo, tg, oct, td, ep)
+    case(oct_tg_classical)
+      call messages_experimental('OCTTargetOperator = oct_tg_classical')
+      call target_init_classical(tg, td)
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
@@ -312,6 +318,8 @@ contains
       call target_end_hhgnew(tg, oct)
     case(oct_tg_velocity)
       call target_end_velocity(tg, oct)
+    case(oct_tg_classical)
+      call target_end_classical
     end select
 
     POP_SUB(target_end)
@@ -352,6 +360,8 @@ contains
       call target_output_hhg(tg, gr, dir, geo, outp)
     case(oct_tg_velocity)
       call target_output_velocity(tg, gr, dir, geo, outp)
+    case(oct_tg_classical)
+      call target_output_classical
     end select
     
     POP_SUB(target_output)
@@ -494,6 +504,8 @@ contains
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)
       j1 = target_j1_velocity(tg, geo)
+    case(oct_tg_classical)
+      j1 = target_j1_classical(tg, qcpsi)
     end select
 
     nullify(psi)
@@ -540,6 +552,8 @@ contains
       call target_chi_hhg(gr, chi_out)
     case(oct_tg_velocity)
       call target_chi_velocity(gr, tg, chi_out, geo)
+    case(oct_tg_classical)
+      call target_chi_classical(tg, qcchi_out)
     end select
 
     nullify(psi_in)
@@ -610,6 +624,7 @@ contains
 #include "target_userdefined_inc.F90"
 #include "target_local_inc.F90"
 #include "target_tdlocal_inc.F90"
+#include "target_classical_inc.F90"
 
 end module target_m
 

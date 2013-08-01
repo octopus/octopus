@@ -237,6 +237,8 @@ contains
        SAFE_DEALLOCATE_A(x_initial)
     end if
 
+    call opt_control_set_classical(sys%geo, qcpsi)
+
     if(write_iter_) call td_write_end(write_handler)
     nullify(psi)
     POP_SUB(propagate_forward)
@@ -318,12 +320,12 @@ contains
     integer :: i
     logical :: aux_fwd_propagation
     type(states_t) :: psi2
-    type(states_t) :: chi
+    type(opt_control_state_t) :: qcchi
     type(controlfunction_t) :: par_prev
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(propagator_t) :: tr_psi2
-    type(states_t), pointer :: psi
+    type(states_t), pointer :: psi, chi
 
     PUSH_SUB(fwd_step)
 
@@ -333,6 +335,7 @@ contains
     call controlfunction_to_realtime(par)
 
     psi => opt_control_point_qs(qcpsi)
+    chi => opt_control_point_qs(qcchi)
     gr => sys%gr
     call propagator_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
@@ -364,7 +367,7 @@ contains
     call oct_prop_read_state(prop_chi, chi, gr, 0)
 
     do i = 1, td%max_iter
-      call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
+      call update_field(i, par, gr, hm, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
@@ -379,7 +382,7 @@ contains
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
-    call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
+    call update_field(td%max_iter+1, par, gr, hm, qcpsi, qcchi, par_chi, dir = 'f')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -395,6 +398,7 @@ contains
     call states_end(chi)
     call propagator_end(tr_chi)
     nullify(psi)
+    nullify(chi)
     POP_SUB(fwd_step)
   end subroutine fwd_step
   ! ---------------------------------------------------------
@@ -423,8 +427,8 @@ contains
     integer :: i
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
-    type(states_t) :: psi
-    type(states_t), pointer :: chi
+    type(opt_control_state_t) :: qcpsi
+    type(states_t), pointer :: chi, psi
 
     PUSH_SUB(bwd_step)
 
@@ -434,6 +438,7 @@ contains
     call controlfunction_to_realtime(par_chi)
 
     chi => opt_control_point_qs(qcchi)
+    psi => opt_control_point_qs(qcpsi)
     gr => sys%gr
 
     call propagator_copy(tr_chi, td%tr)
@@ -455,7 +460,7 @@ contains
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
-      call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
+      call update_field(i, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
@@ -465,7 +470,7 @@ contains
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
     end do
     td%dt = -td%dt
-    call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
+    call update_field(0, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -475,6 +480,7 @@ contains
     call states_end(psi)
     call propagator_end(tr_chi)
     nullify(chi)
+    nullify(psi)
     POP_SUB(bwd_step)
   end subroutine bwd_step
   ! ---------------------------------------------------------
@@ -507,9 +513,10 @@ contains
     integer :: i
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
-    type(states_t) :: psi
+    type(opt_control_state_t) :: qcpsi
     type(states_t) :: st_ref
-    type(states_t), pointer :: chi
+    type(states_t), pointer :: chi, psi
+    FLOAT, pointer :: q(:, :), p(:, :)
     FLOAT, allocatable :: vhxc(:, :)
 
     PUSH_SUB(bwd_step_2)
@@ -518,6 +525,8 @@ contains
     call messages_info(1)
 
     chi => opt_control_point_qs(qcchi)
+    q => opt_control_point_q(qcchi)
+    p => opt_control_point_p(qcchi)
     gr => sys%gr
 
     call propagator_copy(tr_chi, td%tr)
@@ -526,7 +535,8 @@ contains
     ! the first two iterations are done self-consistently nonetheless.
     call propagator_remove_scf_prop(tr_chi)
 
-    call states_copy(psi, chi)
+    call opt_control_state_copy(qcpsi, qcchi)
+    psi => opt_control_point_qs(qcpsi)
     call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
 
     SAFE_ALLOCATE(vhxc(gr%mesh%np, hm%d%nspin))
@@ -546,7 +556,7 @@ contains
     do i = td%max_iter, 1, -1
 
       call oct_prop_check(prop_psi, psi, gr, i)
-      call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
+      call update_field(i, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
 
       ! Here propagate psi one full step, and then simply interpolate to get the state
       ! at half the time interval. Perhaps one could gain some accuracy by performing two
@@ -561,6 +571,11 @@ contains
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
       freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+      ! This is the propagation of the conjugated classical variables *for a very particular case*. It should
+      ! be moved inside propagator_dt
+      if(ion_dynamics_ions_move(td%ions)) then
+        q(1, 1) = p(1, 1) * ((i - 1)* td%dt - td%max_iter * td%dt)
+      end if
       if(freeze) call ion_dynamics_unfreeze(td%ions)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -569,7 +584,7 @@ contains
 
     td%dt = -td%dt
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
-    call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
+    call update_field(0, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -581,6 +596,9 @@ contains
     call states_end(psi)
 
     nullify(chi)
+    nullify(psi)
+    nullify(q)
+    nullify(p)
     POP_SUB(bwd_step_2)
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
@@ -745,13 +763,13 @@ contains
   !! going to be done moves from iter*|dt| to (iter-1)*|dt|.
   !!
   !! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
-  subroutine update_field(iter, cp, gr, hm, psi, chi, cpp, dir)
+  subroutine update_field(iter, cp, gr, hm, qcpsi, qcchi, cpp, dir)
     integer, intent(in)        :: iter
     type(controlfunction_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
     type(hamiltonian_t), intent(in) :: hm
-    type(states_t), intent(inout) :: psi
-    type(states_t), intent(inout) :: chi
+    type(opt_control_state_t), intent(inout) :: qcpsi
+    type(opt_control_state_t), intent(inout) :: qcchi
     type(controlfunction_t), intent(in) :: cpp
     character(len=1),intent(in) :: dir
 
@@ -759,8 +777,14 @@ contains
     CMPLX, allocatable  :: dl(:), dq(:)
     FLOAT, allocatable :: d(:)
     integer :: j, no_parameters
+    type(states_t), pointer :: psi, chi
+    FLOAT, pointer :: q(:, :)
 
     PUSH_SUB(update_field)
+
+    psi => opt_control_point_qs(qcpsi)
+    chi => opt_control_point_qs(qcchi)
+    q => opt_control_point_q(qcchi)
 
     no_parameters = controlfunction_number(cp)
     
@@ -779,12 +803,18 @@ contains
       forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
     end if
 
+    ! This is temporarily commented out: for the classical target.
+    !d(1) = M_HALF * q(1, 1) 
+
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)
     else
       call controlfunction_update(cp, cpp, dir, iter, eta_, d, dq)
     end if
 
+    nullify(q)
+    nullify(psi)
+    nullify(chi)
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(dl)
     SAFE_DEALLOCATE_A(dq)

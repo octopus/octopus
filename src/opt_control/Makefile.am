@@ -29,7 +29,7 @@ noinst_HEADERS = \
 	controlfunction_trans_inc.F90 check_input_inc.F90 finalcheck_inc.F90 opt_control_c_inc.F90 \
 	target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 target_groundstate_inc.F90 \
 	target_excited_inc.F90 target_gstransformation_inc.F90 target_exclude_inc.F90 \
-	target_userdefined_inc.F90 target_local_inc.F90 target_tdlocal_inc.F90
+	target_userdefined_inc.F90 target_local_inc.F90 target_tdlocal_inc.F90 target_classical_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -44,7 +44,7 @@ opt_control_iter.o : opt_control_iter.F90 controlfunction.o opt_control_global.o
 target.o : target.F90 target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 \
   target_groundstate_inc.F90 target_excited_inc.F90 target_gstransformation_inc.F90 \
   target_exclude_inc.F90 target_userdefined_inc.F90 target_local_inc.F90 \
-  target_tdlocal_inc.F90 opt_control_global.o opt_control_state.o
+  target_tdlocal_inc.F90 target_classical_inc.F90 opt_control_global.o opt_control_state.o 
 initst.o : initst.F90 opt_control_state.o
 opt_control_state.o : opt_control_state.F90
 propagation.o : propagation.F90 controlfunction.o target.o opt_control_global.o 
