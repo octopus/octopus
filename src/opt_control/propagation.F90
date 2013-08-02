@@ -573,10 +573,10 @@ contains
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       ! This is the propagation of the conjugated classical variables *for a very particular case*. It should
       ! be moved inside propagator_dt
+      if(freeze) call ion_dynamics_unfreeze(td%ions)
       if(ion_dynamics_ions_move(td%ions)) then
         q(1, 1) = p(1, 1) * ((i - 1)* td%dt - td%max_iter * td%dt)
       end if
-      if(freeze) call ion_dynamics_unfreeze(td%ions)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do

@@ -114,6 +114,7 @@ module target_m
     character(len=80) :: excluded_states_list
     character(len=4096) :: vel_input_string
     character(len=1024), pointer :: vel_der_array(:,:) => null()
+    character(len=1024), pointer :: pos_der_array(:,:) => null()
     FLOAT, pointer :: grad_local_pot(:,:,:) => null()
     logical :: move_ions
     integer :: hhg_nks
@@ -274,7 +275,7 @@ contains
       call target_init_velocity(gr, geo, tg, oct, td, ep)
     case(oct_tg_classical)
       call messages_experimental('OCTTargetOperator = oct_tg_classical')
-      call target_init_classical(tg, td)
+      call target_init_classical(geo, tg, td)
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
@@ -319,7 +320,7 @@ contains
     case(oct_tg_velocity)
       call target_end_velocity(tg, oct)
     case(oct_tg_classical)
-      call target_end_classical
+      call target_end_classical(tg)
     end select
 
     POP_SUB(target_end)
@@ -553,7 +554,7 @@ contains
     case(oct_tg_velocity)
       call target_chi_velocity(gr, tg, chi_out, geo)
     case(oct_tg_classical)
-      call target_chi_classical(tg, qcchi_out)
+      call target_chi_classical(tg, qcpsi_in, qcchi_out, geo)
     end select
 
     nullify(psi_in)
