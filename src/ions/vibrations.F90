@@ -205,8 +205,8 @@ contains
     jatom = vibrations_get_atom(this, jmat)
     jdir  = vibrations_get_dir (this, jmat)
     
-    write(this%dyn_mat_unit, '(i6, i3, i6, i3, f16.4)') iatom, idir, jatom, jdir, &
-      units_from_atomic(unit_invcm, this%dyn_matrix(imat, jmat))
+    write(this%dyn_mat_unit, '(i6, i3, i6, i3, e20.12)') iatom, idir, jatom, jdir, &
+      units_from_atomic(unit_invcm**2, this%dyn_matrix(imat, jmat))
 
     POP_SUB(vibrations_out_dyn_matrix)
   end subroutine vibrations_out_dyn_matrix
