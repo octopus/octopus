@@ -152,13 +152,32 @@ contains
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------
+  subroutine poisson_fft_gg_transform(gg_in, sb, gg, modg2)
+    FLOAT,             intent(in)    :: gg_in(:)
+    type(simul_box_t), intent(in)    :: sb
+    FLOAT,             intent(inout) :: gg(:)
+    FLOAT,             intent(out)   :: modg2
 
+    integer :: idir
+
+    ! no PUSH_SUB, called too frequently
+
+    gg(1:3) = matmul(gg_in(1:3), sb%klattice_primitive(1:3,1:3))
+    do idir = 1, 3
+      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
+    end do
+
+    modg2 = sum(gg(1:3)**2)
+
+  end subroutine poisson_fft_gg_transform
+
+  !-----------------------------------------------------------------
   subroutine poisson_fft_build_3d_3d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
-    integer :: ix, iy, iz, ixx(3), db(3), idim
+    integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), modg2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
@@ -179,13 +198,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(1:3) = temp(1:3)*ixx(1:3)
-          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-          do idim = 1, 3
-            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-          end do
-
-          modg2 = sum(gg(1:3)**2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -216,7 +229,7 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
-    integer :: ix, iy, iz, ixx(3), db(3), idim
+    integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), modg2
     FLOAT :: gpar, gz, r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
@@ -252,14 +265,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(1:3) = temp(1:3)*ixx(1:3)
-
-          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-          do idim = 1, 3
-            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-          end do
-
-          modg2 = sum(gg(1:3)**2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -295,7 +301,7 @@ contains
 
     type(spline_t)     :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
-    integer :: ix, iy, iz, ixx(3), db(3), k, ngp, idim
+    integer :: ix, iy, iz, ixx(3), db(3), k, ngp
     FLOAT :: temp(3), modg2, xmax
     FLOAT :: gperp, gx, gy, gz, r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
@@ -339,14 +345,7 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(1:3) = temp(1:3)*ixx(1:3)
-
-          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-          do idim = 1, 3
-            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-          end do
-
-          modg2 = sum(gg(1:3)**2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
@@ -406,7 +405,7 @@ contains
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
 
-    integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
+    integer :: ix, iy, iz, ixx(3), db(3), lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
     FLOAT :: r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
@@ -440,13 +439,8 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
             
-          gg(1:3) = temp(1:3)*ixx(1:3)
-          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-          do idim = 1, 3
-            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-          end do
-          modg2 = sum(gg(1:3)**2)
-            
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
+
           if(abs(modg2) > M_EPSILON) then
             select case(kernel)
             case(POISSON_FFT_KERNEL_SPH)
