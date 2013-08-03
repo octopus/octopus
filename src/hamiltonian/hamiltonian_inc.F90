@@ -382,7 +382,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   FLOAT,               intent(in)    :: exx_coef
 
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :)
-  integer :: jst, ip, idim
+  integer :: jst, ip, idim, ik2
 
   FLOAT :: ff
 
@@ -394,46 +394,50 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
 
-  do jst = 1, hm%hf_st%nst
-    if(hm%hf_st%occ(jst, ik) < M_EPSILON) cycle
+  do ik2 = 1, hm%d%nik
+    if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
 
-    ! in Hartree we just remove the self-interaction
-    if(hm%theory_level == HARTREE .and. jst /= ist) cycle
+    do jst = 1, hm%hf_st%nst
+      if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
 
-    pot = R_TOTYPE(M_ZERO)
-    rho = R_TOTYPE(M_ZERO)
+      ! in Hartree we just remove the self-interaction
+      if(hm%theory_level == HARTREE .and. jst /= ist) cycle
 
-    call states_get_state(hm%hf_st, der%mesh, jst, ik, psi2)
+      pot = R_TOTYPE(M_ZERO)
+      rho = R_TOTYPE(M_ZERO)
+
+      call states_get_state(hm%hf_st, der%mesh, jst, ik2, psi2)
     
-    if(.not. hm%cmplxscl%space) then
-      do idim = 1, hm%hf_st%d%dim
-        forall(ip = 1:der%mesh%np)
-          rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-        end forall
-      end do
+      if(.not. hm%cmplxscl%space) then
+        do idim = 1, hm%hf_st%d%dim
+          forall(ip = 1:der%mesh%np)
+            rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
+          end forall
+        end do
     
-      call X(poisson_solve)(psolver, pot, rho)
-    else
+        call X(poisson_solve)(psolver, pot, rho)
+      else
 #ifdef R_TCOMPLEX
-! Complex scaling works only with complex quantities       
+        ! Complex scaling works only with complex quantities       
+        do idim = 1, hm%hf_st%d%dim
+          forall(ip = 1:der%mesh%np)
+            rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
+          end forall
+        end do
+        call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl%theta)
+#endif
+      end if
+
+      ff = hm%hf_st%occ(jst, ik2)
+      if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
+
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)
-          rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
+          hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
         end forall
       end do
-      call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl%theta)
-#endif      
-    end if
 
-    ff = hm%hf_st%occ(jst, ik)
-    if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
-
-    do idim = 1, hm%hf_st%d%dim
-      forall(ip = 1:der%mesh%np)
-        hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
-      end forall
     end do
-
   end do
 
   SAFE_DEALLOCATE_A(rho)
