@@ -25,6 +25,6 @@ match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 20)  ; 
 Input: 04-vib_modes.03-vib_modes_fd.inp
 Precision : 0.005
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 1421.6355
-Precision : 11000
-match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 20)  ; -0.877048343866E+09
-
+Precision : 13000
+match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 20)  ; -877099414.8375
+# min -0.877159458025E+09, max +0.877039371650E+09
