@@ -124,7 +124,7 @@ module hamiltonian_m
     FLOAT, pointer :: Imvhxc(:,:)   !< XC potential + Hartree potential + Berry potential
     FLOAT, pointer :: Imvtau(:,:)   !< Derivative of e_XC w.r.t. tau
 
-
+    type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
     !> The self-induced vector potential and magnetic field
@@ -206,12 +206,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family)
-    type(hamiltonian_t),    intent(out)   :: hm
-    type(grid_t),   target, intent(inout) :: gr
-    type(geometry_t),       intent(inout) :: geo
-    type(states_t), target, intent(inout) :: st
-    integer,                intent(in)    :: theory_level
-    integer,                intent(in)    :: xc_family
+    type(hamiltonian_t),      intent(out)   :: hm
+    type(grid_t),     target, intent(inout) :: gr
+    type(geometry_t), target, intent(inout) :: geo
+    type(states_t),   target, intent(inout) :: st
+    integer,                  intent(in)    :: theory_level
+    integer,                  intent(in)    :: xc_family
 
     integer :: iline, icol, ispin
     type(states_dim_t), pointer :: states_dim
@@ -304,8 +304,9 @@ contains
       
     end if
 
+    hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
@@ -519,7 +520,7 @@ contains
       SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
       hm%ab_pot = M_ZERO
       do ip = 1, gr%mesh%np
-        if(mesh_inborder(gr%mesh, geo, ip, dd, hm%ab_width)) then
+        if(mesh_inborder(gr%mesh, hm%geo, ip, dd, hm%ab_width)) then
           hm%ab_pot(ip) = hm%ab_height * sin(dd * M_PI / (M_TWO * hm%ab_width))**2
         end if
       end do
@@ -707,10 +708,9 @@ contains
   end subroutine hamiltonian_init
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_end(hm, gr, geo)
+  subroutine hamiltonian_end(hm, gr)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(inout) :: geo
 
     integer :: il
 
@@ -742,7 +742,8 @@ contains
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
-    call epot_end(hm%ep, geo)
+    call epot_end(hm%ep, hm%geo)
+    nullify(hm%geo)
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
@@ -1101,11 +1102,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
-    type(hamiltonian_t),   intent(inout) :: this
-    type(grid_t),          intent(inout) :: gr
-    type(geometry_t),      intent(inout) :: geo
-    type(states_t),        intent(inout) :: st
-    FLOAT,       optional, intent(in)    :: time
+    type(hamiltonian_t),      intent(inout) :: this
+    type(grid_t),             intent(inout) :: gr
+    type(geometry_t), target, intent(inout) :: geo
+    type(states_t),           intent(inout) :: st
+    FLOAT,          optional, intent(in)    :: time
 
     integer :: np
 
@@ -1118,8 +1119,9 @@ contains
       this%ep%vpsl_lead(1:np, RIGHT) = this%lead(RIGHT)%v0(1:np)
     end if
 
-    call epot_generate(this%ep, gr, geo, st, this%cmplxscl%space)
-    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
+    this%geo => geo
+    call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
+    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, this%geo)
     call hamiltonian_update(this, gr%mesh, time)
 
     POP_SUB(hamiltonian_epot_generate)

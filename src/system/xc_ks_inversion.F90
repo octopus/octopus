@@ -162,17 +162,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_end(ks_inv, gr, geo)
+  subroutine xc_ks_inversion_end(ks_inv, gr)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
     type(grid_t),            intent(inout) :: gr
-    type(geometry_t),        intent(inout) :: geo
 
     PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
       call eigensolver_end(ks_inv%eigensolver)
-      call hamiltonian_end(ks_inv%aux_hm, gr, geo)
+      call hamiltonian_end(ks_inv%aux_hm, gr)
       call states_end(ks_inv%aux_st)
     end if
 

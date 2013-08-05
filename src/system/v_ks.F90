@@ -325,17 +325,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks, gr, geo)
+  subroutine v_ks_end(ks, gr)
     type(v_ks_t),     intent(inout) :: ks
     type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(inout) :: geo
 
     PUSH_SUB(v_ks_end)
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
+        call xc_ks_inversion_end(ks%ks_inversion, gr)
       endif
       if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)

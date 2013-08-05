@@ -287,7 +287,7 @@ contains
     PUSH_SUB(run_end)
 
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      call hamiltonian_end(hm, sys%gr, sys%geo)
+      call hamiltonian_end(hm, sys%gr)
       call system_end(sys)
       call fft_all_end()
     end if

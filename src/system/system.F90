@@ -175,7 +175,7 @@ contains
     call multicomm_end(sys%mc)
 
     call poisson_end(psolver)
-    call v_ks_end(sys%ks, sys%gr, sys%geo)
+    call v_ks_end(sys%ks, sys%gr)
 
     if(associated(sys%st)) then
       call states_lead_densities_end(sys%st, sys%gr)
