@@ -57,7 +57,8 @@ module ion_dynamics_m
     ion_dynamics_temperature,              &
     ion_dynamics_kinetic_energy,           &
     ion_dynamics_freeze,                   &
-    ion_dynamics_unfreeze
+    ion_dynamics_unfreeze,                 &
+    ion_dynamics_verlet
 
   integer, parameter ::   &
     THERMO_NONE     = 0,  &
@@ -494,6 +495,42 @@ contains
 
     POP_SUB(ion_dynamics_propagate_vel)
   end subroutine ion_dynamics_propagate_vel
+
+
+  ! ---------------------------------------------------------
+  !> A bare verlet integrator.
+  subroutine ion_dynamics_verlet(sb, geo, q, v, fold, fnew, dt)
+    type(simul_box_t),    intent(in)    :: sb
+    type(geometry_t),     intent(inout) :: geo
+    FLOAT,                intent(inout) :: q(:, :)
+    FLOAT,                intent(inout) :: v(:, :)
+    FLOAT,                intent(inout) :: fold(:, :)
+    FLOAT,                intent(inout) :: fnew(:, :)
+    FLOAT,                intent(in)    :: dt
+
+    integer :: iatom
+
+    PUSH_SUB(ion_dynamics_verlet)
+
+    ! integrate using verlet
+    do iatom = 1, geo%natoms
+      if(.not. geo%atom(iatom)%move) cycle
+      q(iatom, 1:geo%space%dim) = q(iatom, 1:geo%space%dim) &
+        + dt * v(iatom, 1:geo%space%dim) + &
+        M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * fold(iatom, 1:geo%space%dim)
+    end do
+
+    ! velocity verlet
+    do iatom = 1, geo%natoms
+      if(.not. geo%atom(iatom)%move) cycle
+      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) &
+        + dt / species_weight(geo%atom(iatom)%spec) * M_HALF * (fold(iatom, 1:geo%space%dim) + &
+        fnew(iatom, 1:geo%space%dim))
+      
+    end do
+
+    POP_SUB(ion_dynamics_verlet)
+  end subroutine ion_dynamics_verlet
 
 
   ! ---------------------------------------------------------

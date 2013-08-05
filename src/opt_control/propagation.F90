@@ -518,6 +518,7 @@ contains
     type(states_t), pointer :: chi, psi
     FLOAT, pointer :: q(:, :), p(:, :)
     FLOAT, allocatable :: vhxc(:, :)
+    FLOAT, allocatable :: fold(:, :), fnew(:, :)
 
     PUSH_SUB(bwd_step_2)
 
@@ -575,7 +576,13 @@ contains
       ! be moved inside propagator_dt
       if(freeze) call ion_dynamics_unfreeze(td%ions)
       if(ion_dynamics_ions_move(td%ions)) then
-        q(1, 1) = p(1, 1) * ((i - 1)* td%dt - td%max_iter * td%dt)
+        SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
+        SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
+        fold = M_ZERO
+        fnew = M_ZERO
+        call ion_dynamics_verlet(gr%sb, sys%geo, q, p, fold, fnew, td%dt)
+        SAFE_DEALLOCATE_A(fold)
+        SAFE_DEALLOCATE_A(fnew)
       end if
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -804,7 +811,7 @@ contains
     end if
 
     ! This is temporarily commented out: for the classical target.
-    !d(1) = M_HALF * q(1, 1) 
+    !d(1) = -M_HALF * q(1, 1) 
 
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)

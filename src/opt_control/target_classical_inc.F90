@@ -125,7 +125,7 @@
     PUSH_SUB(target_j1_classical)
 
     q => opt_control_point_q(qcpsi)
-    p => opt_control_point_q(qcpsi)
+    p => opt_control_point_p(qcpsi)
 
     inp_string = tg%vel_input_string
     call parse_array(inp_string, q, 'r')
