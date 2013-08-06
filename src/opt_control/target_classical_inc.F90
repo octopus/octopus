@@ -49,10 +49,10 @@
     !%End
 
     if(parse_block(datasets_check('OCTClassicalTarget'),blk)==0) then
-      tg%vel_input_string = " "
+      tg%classical_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
-        tg%vel_input_string = trim(tg%vel_input_string) // trim(expression)
+        tg%classical_input_string = trim(tg%classical_input_string) // trim(expression)
       end do
       call parse_block_end(blk)
     else
@@ -61,11 +61,11 @@
       call messages_fatal(2)
     end if
 
-    if( parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0   ) then
-      SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:geo%space%dim))
+    if( parse_block(datasets_check('OCTMomentumDerivatives'),blk)==0   ) then
+      SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
         do jst=0, geo%space%dim-1
-          call parse_block_string(blk, ist, jst, tg%vel_der_array(ist+1, jst+1))
+          call parse_block_string(blk, ist, jst, tg%mom_der_array(ist+1, jst+1))
         end do
       end do
       call parse_block_end(blk)
@@ -99,7 +99,7 @@
     type(target_t),   intent(inout) :: tg
     PUSH_SUB(target_end_classical)
     SAFE_DEALLOCATE_P(tg%pos_der_array)
-    SAFE_DEALLOCATE_P(tg%vel_der_array)
+    SAFE_DEALLOCATE_P(tg%mom_der_array)
     POP_SUB(target_end_classical)
   end subroutine target_end_classical
   ! ----------------------------------------------------------------------
@@ -127,9 +127,9 @@
     q => opt_control_point_q(qcpsi)
     p => opt_control_point_p(qcpsi)
 
-    inp_string = tg%vel_input_string
-    call parse_array(inp_string, q, 'r')
-    call parse_array(inp_string, p, 'v')
+    inp_string = tg%classical_input_string
+    call parse_array(inp_string, q, 'q')
+    call parse_array(inp_string, p, 'p')
     call conv_to_C_string(inp_string)
     call parse_expression(j1, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
     !j1 = q(1, 1)
@@ -163,9 +163,9 @@
 
     do ist=1, geo%natoms
       do jst=1, geo%space%dim
-        temp_string = tg%vel_der_array(ist, jst)
-        call parse_array(temp_string, p, 'v')
-        call parse_array(temp_string, q, 'r')
+        temp_string = tg%mom_der_array(ist, jst)
+        call parse_array(temp_string, p, 'p')
+        call parse_array(temp_string, q, 'q')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
         tq(ist, jst) = -df_dv
@@ -175,8 +175,8 @@
     do ist=1, geo%natoms
       do jst=1, geo%space%dim
         temp_string = tg%pos_der_array(ist, jst)
-        call parse_array(temp_string, p, 'v')
-        call parse_array(temp_string, q, 'r')
+        call parse_array(temp_string, p, 'p')
+        call parse_array(temp_string, q, 'q')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
         tp(ist, jst) = df_dv

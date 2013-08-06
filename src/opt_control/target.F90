@@ -113,7 +113,9 @@ module target_m
     character(len=200) :: td_local_target
     character(len=80) :: excluded_states_list
     character(len=4096) :: vel_input_string
+    character(len=4096) :: classical_input_string
     character(len=1024), pointer :: vel_der_array(:,:) => null()
+    character(len=1024), pointer :: mom_der_array(:,:) => null()
     character(len=1024), pointer :: pos_der_array(:,:) => null()
     FLOAT, pointer :: grad_local_pot(:,:,:) => null()
     logical :: move_ions

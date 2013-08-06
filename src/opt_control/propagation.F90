@@ -810,8 +810,8 @@ contains
       forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
     end if
 
-    ! This is temporarily commented out: for the classical target.
-    !d(1) = -M_HALF * q(1, 1) 
+    ! This is for the classical target.
+    if(dir == 'b') d(1) = d(1) -M_HALF * q(1, 1) 
 
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)

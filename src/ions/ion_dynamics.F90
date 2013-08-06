@@ -512,6 +512,11 @@ contains
 
     PUSH_SUB(ion_dynamics_verlet)
 
+    ! First transform momenta to velocities
+    do iatom = 1, geo%natoms
+      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+    end do
+
     ! integrate using verlet
     do iatom = 1, geo%natoms
       if(.not. geo%atom(iatom)%move) cycle
@@ -526,7 +531,11 @@ contains
       v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) &
         + dt / species_weight(geo%atom(iatom)%spec) * M_HALF * (fold(iatom, 1:geo%space%dim) + &
         fnew(iatom, 1:geo%space%dim))
-      
+    end do
+
+    ! And back to momenta.
+    do iatom = 1, geo%natoms
+      v(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
     end do
 
     POP_SUB(ion_dynamics_verlet)
