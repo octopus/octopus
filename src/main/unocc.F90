@@ -76,15 +76,17 @@ contains
 
     PUSH_SUB(unocc_run)
 
-    !%Variable UnoccMaximumIter
+    !%Variable MaximumIter
     !%Type integer
     !%Default 50
     !%Section Calculation Modes::Unoccupied States
     !%Description
     !% Maximum number of eigensolver iterations. The code will stop even if convergence
-    !% has not been achieved. -1 means unlimited.
+    !% has not been achieved. -1 means unlimited. 0 means just do LCAO or read from
+    !% restart, and stop.
     !%End
-    call parse_integer(datasets_check('UnoccMaximumIter'), 50, max_iter)
+    call parse_integer(datasets_check('MaximumIter'), 50, max_iter)
+    call messages_obsolete_variable('UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
     !%Variable UnoccShowOccStates

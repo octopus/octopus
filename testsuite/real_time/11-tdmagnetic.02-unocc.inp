@@ -23,7 +23,7 @@ DerivativesOrder = 4
 
 TheoryLevel = independent_particles
 
-UnoccMaximumIter = 2
+MaximumIter = 2
 ConvAbsDens = 1e-10
 LCAOStart = lcao_none
 

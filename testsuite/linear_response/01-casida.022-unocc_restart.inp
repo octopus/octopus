@@ -31,7 +31,7 @@ EigenSolverTolerance = 1e-6
 
 EigenSolverMaxIter = 20
 
-UnoccMaximumIter = 1
+MaximumIter = 1
 NumberUnoccStates = 9
 
 PoissonSolver = fft
