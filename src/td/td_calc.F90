@@ -195,17 +195,16 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
 
   integer :: ik, ist, ii, jj, ispin, idim, Nid
   FLOAT   :: prod, prod0
-  FLOAT, ALLOCATABLE :: N(:), Nnot(:)
+  FLOAT, allocatable :: N(:), Nnot(:)
   CMPLX,  allocatable :: zpsi(:)
   character :: buf(256)
-  
-  
+  !combinations   
   integer :: next
   type(c_ptr) :: c
-  integer, ALLOCATABLE :: idx0(:), idx(:), idxref(:)
+  integer, allocatable :: idx0(:), idx(:), idxref(:)
   
 #if defined(HAVE_MPI) 
-  integer :: Nbuf(:)
+  FLOAT, allocatable :: Nbuf(:)
 #endif
   
   
@@ -245,7 +244,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
     call MPI_Allreduce(Nnot(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     Nnot(:) = Nbuf(:)
 
-    SAFE_DALLOCATE_A(Nbuf) 
+    SAFE_DEALLOCATE_A(Nbuf) 
   end if
 #endif
 
