@@ -22,35 +22,24 @@
 module unocc_m
   use datasets_m
   use density_m
-  use derivatives_m
   use eigensolver_m
-  use energy_calc_m
-  use epot_m
   use global_m
-  use grid_m
-  use geometry_m
   use output_m
   use hamiltonian_m
   use io_m
   use lcao_m
-  use loct_m
   use mesh_m
-  use mesh_function_m
   use messages_m
   use mpi_m
   use parser_m
-  use poisson_m
   use profiling_m
-  use projector_m
   use restart_m
   use simul_box_m
   use states_m
   use states_io_m
-  use states_calc_m
   use states_dim_m
   use system_m
   use v_ks_m
-  use varinfo_m
 
   implicit none
 
@@ -259,8 +248,6 @@ contains
 
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)
-
-      eigens%converged(1:st%d%nik) = st%nst - nus
 
       POP_SUB(unocc_run.init_)
     end subroutine init_
