@@ -58,7 +58,7 @@ contains
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, orig_states, total_states, iter, ierr_rho, ik
+    integer :: iunit, ierr, total_states, iter, ierr_rho, ik
     logical :: converged, forced_finish, showoccstates
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
@@ -90,7 +90,6 @@ contains
     !%End
     call parse_logical(datasets_check('UnoccShowOccStates'), .false., showoccstates)
 
-    orig_states = sys%st%nst
     SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
     do ik = 1, sys%st%d%nik
       call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
@@ -104,21 +103,23 @@ contains
     if(showoccstates) then
       showstart = 1
     else
-      showstart = orig_states + 1
+      showstart = minval(occ_states(:)) + 1
     endif
 
-    ASSERT(total_states >= orig_states)
+    ASSERT(all(total_states >= occ_states(:)))
 
     SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, number_read = states_read)
 
     ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
-    if(any(states_read(1:sys%st%d%dim, sys%st%d%kpt%start:sys%st%d%kpt%end) < orig_states)) then
-      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
-      message(2) = "Please run a ground-state calculation first!"
-      call messages_fatal(2)
-    end if
+    do ik = 1, sys%st%d%nik
+      if(any(states_read(1:sys%st%d%dim, ik) < occ_states(ik))) then
+        message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
+        message(2) = "Please run a ground-state calculation first!"
+        call messages_fatal(2)
+      end if
+    enddo
 
     if(ierr /= 0) then
       message(1) = "Info: Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
@@ -154,7 +155,7 @@ contains
       if(ierr > 0 .and. .not. fromScratch) then
         nst_calculated = minval(states_read)
       else
-        nst_calculated = orig_states
+        nst_calculated = maxval(occ_states(:))
       end if
       call lcao_run(sys, hm, st_start = nst_calculated + 1)
     else
