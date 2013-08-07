@@ -216,24 +216,29 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   
   N(:)   = M_ZERO
   Nnot(:)= M_ZERO
+
   
   ii = 1
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      do idim = 1, st%d%dim
-        
-!         if (st%occ(ist, ik) > 0) then
+  do ik = 1, st%d%nik
+    do ist = 1, st%nst
+      do idim = 1, st%d%dim        
+
+        if (st%st_start <= ist .and. ist <= st%st_end .and. &
+              st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
           call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
           N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
           Nnot(ii) = M_ONE - N(ii)
-          ii = ii + 1
-!         end if
+        end if
+
+        ii = ii + 1
         
       end do
     end do
   end do
   
 #if defined(HAVE_MPI) 
+
+
   if(st%parallel_in_states) then
     SAFE_ALLOCATE(Nbuf(1: Nch)) 
     Nbuf(:) = M_ZERO
@@ -248,8 +253,8 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   end if
 #endif
 
-! print * , "N    =", N(:)
-! print * , "Nnot =", Nnot(:)
+! print * ,mpi_world%rank, "N    =", N(:)
+! print * ,mpi_world%rank, "Nnot =", Nnot(:)
 
   ch(:) = M_ZERO
 

@@ -1651,6 +1651,7 @@ contains
 
 #if defined(HAVE_MPI) 
     integer :: outcount
+    FLOAT, allocatable :: occbuf(:)
 #endif
 
     PUSH_SUB(td_write_ionch)
@@ -1660,18 +1661,34 @@ contains
     SAFE_ALLOCATE(ch(0: Nch)) 
     SAFE_ALLOCATE(occ(0: Nch))
 
-    occ = M_ZERO
+    occ(:) = M_ZERO
     ii = 1
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        do idim = 1, st%d%dim
-          occ(ii) = st%occ(ist, ik)
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim        
+          if (st%st_start <= ist .and. ist <= st%st_end .and. &
+              st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+            occ(ii) = st%occ(ist, ik)
+          end if
           ii = ii+1
         end do
       end do
-    end do  
+    end do
+      
+      
+#if defined(HAVE_MPI) 
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(occbuf(0: Nch)) 
+      occbuf(:) = M_ZERO
+      call MPI_Allreduce(occ(0), occbuf(0), Nch+1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      occ(:) = occbuf(:)
+      SAFE_DEALLOCATE_A(occbuf) 
+    end if
+#endif      
     
+    !Calculate the channels
     call td_calc_ionch(gr, st, ch, Nch)
+  
   
     if(.not.mpi_grp_is_root(mpi_world)) then 
       SAFE_DEALLOCATE_A(ch)
@@ -1683,7 +1700,6 @@ contains
     if(iter == 0) then
       call td_write_print_header_init(out_ionch)
       
-
       ! first line -> column names
       call write_iter_header_start(out_ionch)
       
