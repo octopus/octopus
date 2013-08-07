@@ -1655,7 +1655,7 @@ contains
     !% A positive number smaller than 1 indicates a fraction of the total
     !% device memory. A number larger than one indicates an absolute
     !% amount of memory in megabytes. A negative number indicates an
-    !% amount of memory in megabytes that would be substracted from
+    !% amount of memory in megabytes that would be subtracted from
     !% the total device memory.
     !%End
     call parse_float(datasets_check('StatesCLDeviceMemory'), CNST(-512.0), st%d%cl_states_mem)

@@ -348,7 +348,7 @@ contains
 
       if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
-      ! substract the projections
+      ! subtract the projections
       do jst = 1, ist - 1
         do idim = 1, st%d%dim
           call lalg_axpy(mesh%np, -aa(jst), st%X(psi)(:, idim, jst, ik), st%X(psi)(:, idim, ist, ik))
