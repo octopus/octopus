@@ -595,6 +595,9 @@ contains
     endif
 
     ierr = 0
+    ! make sure these intent(out)`s are initialized no matter what
+    if(present(number_read)) number_read = 0
+    if(present(iter)) iter = 0
 
     ! open files to read
     wfns_file  = io_open(trim(dir)//'/wfns', action='read', &
@@ -749,7 +752,6 @@ contains
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
-    if(present(number_read)) number_read = 0
 
     if(mpi_grp_is_root(mpi_world)) then
       iread = 1
