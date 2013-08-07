@@ -183,6 +183,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   FLOAT :: prefactor
   integer  :: ip, jp, dim
+  integer :: ip_v(1), part_v(1)
   FLOAT    :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim)
 #ifdef HAVE_MPI
   FLOAT    :: tmp, xg(MAX_DIM)
@@ -237,7 +238,10 @@ subroutine poisson_solve_direct(this, pot, rho)
         enddo
       endif
       tmp = dmf_integrate(this%der%mesh, pvec)
-      if (this%der%mesh%vp%part_vec(ip) == this%der%mesh%vp%partno) then
+      ip_v(1) = ip
+      call partition_get_partition_number(this%der%mesh%inner_partition, 1, ip_v, part_v)
+
+      if (part_v(1) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do

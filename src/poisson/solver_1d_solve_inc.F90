@@ -28,6 +28,7 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
   !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
+  integer :: ip_v(1), part_v(1)
   FLOAT               :: xx, yy
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
@@ -59,8 +60,11 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
         yy = this%der%mesh%x(jp, 1)
         pvec(jp) = rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
       end do
-      tmp = X(mf_integrate)(this%der%mesh, pvec)
-      if (this%der%mesh%vp%part_vec(ip) == this%der%mesh%vp%partno) then
+      tmp = X(mf_integrate)(this%der%mesh, pvec) 
+      ip_v(1) = ip
+      call partition_get_partition_number(this%der%mesh%inner_partition, 1, ip_v, part_v)
+
+      if (part_v(1) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do

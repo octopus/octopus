@@ -43,6 +43,7 @@ module poisson_m
   use opencl_m
   use par_vec_m
   use parser_m
+  use partition_m
   use poisson_cg_m
   use poisson_corrections_m
   use poisson_isf_m
