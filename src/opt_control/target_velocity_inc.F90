@@ -196,7 +196,7 @@
     character(len=4096) :: inp_string
     PUSH_SUB(target_j1_velocity)
 
-    SAFE_ALLOCATE(x(geo%space%dim, MAX_DIM))
+    SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
     forall(i=1: geo%natoms) x(i, 1:geo%space%dim) = geo%atom(i)%v(1:geo%space%dim)
 
     f_re = M_ZERO
@@ -231,7 +231,7 @@
        chi_out%zpsi(ip, idim, ist, ik) = M_z0
     end forall
 
-    SAFE_ALLOCATE(x(geo%space%dim, MAX_DIM))
+    SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
     forall(ip=1: geo%natoms) x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
       
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
