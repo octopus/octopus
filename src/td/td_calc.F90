@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_calc_m
+  use c_pointer_m 
   use forces_m
   use geometry_m
   use global_m
@@ -33,13 +34,15 @@ module td_calc_m
   use profiling_m
   use states_calc_m
   use states_m
+  use states_dim_m
 
   implicit none
 
   private
   public ::       &
     td_calc_tacc, &
-    td_calc_tvel
+    td_calc_tvel, &
+    td_calc_ionch
 
 contains
 
@@ -179,6 +182,149 @@ subroutine td_calc_tvel(gr, st, vel)
   SAFE_DEALLOCATE_A(momentum)
   POP_SUB(td_calc_tvel)
 end subroutine td_calc_tvel
+
+! ---------------------------------------------------------
+!> Multiple ionization probabilities calculated form the KS orbital densities 
+!! C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
+! ---------------------------------------------------------
+subroutine td_calc_ionch(gr, st, ch, Nch)
+  type(grid_t),        intent(in)    :: gr
+  type(states_t),      intent(in)    :: st
+  FLOAT,               intent(out)   :: ch(0:Nch)
+  integer,             intent(in)    :: Nch
+
+  integer :: ik, ist, ii, jj, ispin, idim, Nid
+  FLOAT   :: prod, prod0
+  FLOAT, ALLOCATABLE :: N(:), Nnot(:)
+  CMPLX,  allocatable :: zpsi(:)
+  character :: buf(256)
+  
+  
+  integer :: next
+  type(c_ptr) :: c
+  integer, ALLOCATABLE :: idx0(:), idx(:), idxref(:)
+  
+#if defined(HAVE_MPI) 
+  integer :: Nbuf(:)
+#endif
+  
+  
+  PUSH_SUB(td_calc_ionch)
+  
+  SAFE_ALLOCATE(   N(1: Nch)) 
+  SAFE_ALLOCATE(Nnot(1: Nch)) 
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+  
+  N(:)   = M_ZERO
+  Nnot(:)= M_ZERO
+  
+  ii = 1
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+        
+!         if (st%occ(ist, ik) > 0) then
+          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+          N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
+          Nnot(ii) = M_ONE - N(ii)
+          ii = ii + 1
+!         end if
+        
+      end do
+    end do
+  end do
+  
+#if defined(HAVE_MPI) 
+  if(st%parallel_in_states) then
+    SAFE_ALLOCATE(Nbuf(1: Nch)) 
+    Nbuf(:) = M_ZERO
+    call MPI_Allreduce(N(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    N(:) = Nbuf(:)
+
+    Nbuf(:) = M_ZERO
+    call MPI_Allreduce(Nnot(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    Nnot(:) = Nbuf(:)
+
+    SAFE_DALLOCATE_A(Nbuf) 
+  end if
+#endif
+
+! print * , "N    =", N(:)
+! print * , "Nnot =", Nnot(:)
+
+  ch(:) = M_ZERO
+
+  Nid = Nch - 1 
+  SAFE_ALLOCATE(idx(0:Nid))
+  SAFE_ALLOCATE(idxref(0:Nid))
+  idxref = (/ (ii, ii = 0, Nid) /)
+  do ii = 0, Nch  
+!     print *, "Nch= ", Nch, "ii", ii
+    call oct_combination_init(c, Nch, ii)
+    SAFE_ALLOCATE(idx0(0:ii-1))
+!     print *,"size(idx0,1)=",size(idx0,1)
+    if(in_debug_mode) then
+      call messages_write("P(")
+      call messages_write(ii)
+      call messages_write(") = 0")
+      call messages_new_line()
+    end if
+    ! Loop over combinations   
+    do
+      prod  = M_ONE
+      prod0 = M_ONE
+      if(in_debug_mode) then
+        call messages_write("P(")
+        call messages_write(ii)
+        call messages_write(") += ")
+      end if               
+      call oct_get_combination(c, idx0)
+      idx(:) = idxref(:)
+      do jj = 0, ii-1
+        idx(idx0(jj))= -1
+        if(in_debug_mode) then
+          call messages_write(" No(")
+          call messages_write(idx0(jj)+1)
+          call messages_write(") ")
+        end if
+        prod0 = prod0 * Nnot(idx0(jj)+1)
+      end do
+
+      do jj = 0, Nid
+        if(idx(jj)>=0) then
+          if(in_debug_mode) then
+            call messages_write(" N(")
+            call messages_write(idx(jj)+1)
+            call messages_write(") ")
+          end if
+          prod = prod * N(idx(jj)+1)
+        end if
+      end do
+      
+      if(in_debug_mode) call messages_new_line()
+
+      ch(ii) = ch(ii) + prod*prod0
+
+      call oct_combination_next(c, next)
+      if( next /=  0) exit
+    end do
+    SAFE_DEALLOCATE_A(idx0)
+    call oct_combination_end(c)
+
+    if(in_debug_mode) call messages_info()
+  end do 
+
+  SAFE_DEALLOCATE_A(idx)
+  SAFE_DEALLOCATE_A(idxref)
+
+  
+  SAFE_DEALLOCATE_A(N)
+  SAFE_DEALLOCATE_A(Nnot)
+  SAFE_DEALLOCATE_A(zpsi)
+
+  POP_SUB(td_calc_ionch)
+end subroutine td_calc_ionch
+
 
 end module td_calc_m
 

@@ -95,7 +95,8 @@ module td_write_m
     OUT_FTCHD       = 13, &
     OUT_VEL         = 14, &
     OUT_EIGS        = 15, &
-    OUT_MAX         = 15
+    OUT_ION_CH      = 16, &
+    OUT_MAX         = 16
   
   type td_write_t
     private
@@ -222,6 +223,9 @@ contains
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%Option eigenvalues    16384
     !% Write the KS eigenvalues. 
+    !%Option ionization_channels    32768
+    !% Write the multiple-ionization channels using the KS orbital densities as proposed in  
+    !% C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -242,6 +246,7 @@ contains
     if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
     if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
+    if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -461,6 +466,10 @@ contains
       if(writ%out(OUT_EIGS)%write) &
         call write_iter_init(writ%out(OUT_EIGS)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/eigenvalues")))
+
+      if(writ%out(OUT_ION_CH)%write) &
+        call write_iter_init(writ%out(OUT_ION_CH)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/ion_ch")))
         
     end if
 
@@ -559,6 +568,9 @@ contains
 
     if(writ%out(OUT_EIGS)%write) &
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
+
+    if(writ%out(OUT_ION_CH)%write) &
+      call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter)
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -1625,6 +1637,90 @@ contains
 
     POP_SUB(td_write_eigs)
   end subroutine td_write_eigs
+
+  ! ---------------------------------------------------------
+  subroutine td_write_ionch(out_ionch, gr, st, iter)
+    type(c_ptr),         intent(in) :: out_ionch
+    type(grid_t),        intent(in) :: gr
+    type(states_t),      intent(in) :: st
+    integer,             intent(in) :: iter
+
+    integer             :: ii, is, ist, Nch, ik, idim
+    character(len=68)   :: buf
+    FLOAT, allocatable  :: ch(:), occ(:)
+
+#if defined(HAVE_MPI) 
+    integer :: outcount
+#endif
+
+    PUSH_SUB(td_write_ionch)
+    
+
+    Nch =  st%nst * st%d%kpt%nglobal * st%d%dim 
+    SAFE_ALLOCATE(ch(0: Nch)) 
+    SAFE_ALLOCATE(occ(0: Nch))
+
+    occ = M_ZERO
+    ii = 1
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          occ(ii) = st%occ(ist, ik)
+          ii = ii+1
+        end do
+      end do
+    end do  
+    
+    call td_calc_ionch(gr, st, ch, Nch)
+  
+    if(.not.mpi_grp_is_root(mpi_world)) then 
+      SAFE_DEALLOCATE_A(ch)
+      POP_SUB(td_write_ionch)
+      return ! only first node outputs        
+    end if
+
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_ionch)
+      
+
+      ! first line -> column names
+      call write_iter_header_start(out_ionch)
+      
+      do ii = 0, Nch
+        if(occ(ii)>M_ZERO .or. ii == 0) then
+          write(buf, '(a,f4.1,a)') 'Pion(',occ(ii)*ii,'+, t)'
+          call write_iter_header(out_ionch, buf)
+        end if
+      end do
+      call write_iter_nl(out_ionch)
+
+      ! second line: units
+      call write_iter_string(out_ionch, '#[Iter n.]')
+      call write_iter_header(out_ionch, '[' // trim(units_abbrev(units_out%time)) // ']')
+      do ii = 0, Nch
+        if(occ(ii)>M_ZERO .or. ii == 0) then
+          call write_iter_header(out_ionch, '[' // trim(units_abbrev(unit_one)) // ']')
+        end if
+      end do
+      call write_iter_nl(out_ionch)
+      call td_write_print_header_end(out_ionch)
+    end if
+
+    call write_iter_start(out_ionch)
+    do ii =0 , Nch
+      if(occ(ii)>M_ZERO .or. ii == 0) then
+        call write_iter_double(out_ionch, units_from_atomic(unit_one, ch(ii)), 1)
+      end if
+    end do
+    call write_iter_nl(out_ionch)
+
+    SAFE_DEALLOCATE_A(ch)
+    SAFE_DEALLOCATE_A(occ)
+
+    POP_SUB(td_write_ionch)
+  end subroutine td_write_ionch
+
 
   ! ---------------------------------------------------------
   subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
