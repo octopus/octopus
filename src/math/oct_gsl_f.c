@@ -32,6 +32,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_permutation.h>
+#include <gsl/gsl_combination.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -167,6 +168,35 @@ double FC_FUNC_(oct_sine_integral, OCT_SINE_INTEGRAL)
 
 /* Permutations */
 
+
+/* Combinations */
+
+void FC_FUNC_(oct_combination_init, OCT_COMBINATION_INIT)
+     (gsl_combination **c, const fint *n, const fint *k)
+{
+  *c = gsl_combination_calloc (*n, *k);
+}
+
+void FC_FUNC_(oct_combination_next, OCT_COMBINATION_NEXT)
+     (gsl_combination **c, fint *next)
+{
+  *next = gsl_combination_next (((gsl_combination *)(*c)));
+}
+
+void FC_FUNC_(oct_get_combination, OCT_GET_COMBINATION)
+     (gsl_combination **c, fint *comb)
+{
+  int i;
+  for (i=0;i< ((gsl_combination *)(*c))->k; i++) {
+    comb[i]=(fint)((gsl_combination *)(*c))->data[i];  
+  }
+}
+
+void FC_FUNC_(oct_combination_end, OCT_COMBINATION_END)
+     (gsl_combination **c)
+{
+  gsl_combination_free (((gsl_combination *)(*c)));
+}
 
 /* Linear Algebra */
 
