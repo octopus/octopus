@@ -23,6 +23,7 @@ module unocc_m
   use datasets_m
   use density_m
   use eigensolver_m
+  use excited_states_m
   use global_m
   use output_m
   use hamiltonian_m
@@ -57,10 +58,11 @@ contains
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, occupied_states, total_states, iter, ierr_rho
+    integer :: iunit, ierr, orig_states, total_states, iter, ierr_rho, ik
     logical :: converged, forced_finish, showoccstates
     integer :: max_iter, nst_calculated, showstart
-    integer, allocatable :: states_read(:, :)
+    integer :: n_filled, n_partially_filled, n_half_filled
+    integer, allocatable :: states_read(:, :), occ_states(:)
     character(len=50) :: str
 
     PUSH_SUB(unocc_run)
@@ -88,7 +90,13 @@ contains
     !%End
     call parse_logical(datasets_check('UnoccShowOccStates'), .false., showoccstates)
 
-    occupied_states = sys%st%nst
+    orig_states = sys%st%nst
+    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
+    do ik = 1, sys%st%d%nik
+      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
+    enddo
+
     call init_(sys%gr%mesh, sys%st)
     total_states = sys%st%nst
     converged = .false.
@@ -96,17 +104,17 @@ contains
     if(showoccstates) then
       showstart = 1
     else
-      showstart = occupied_states + 1
+      showstart = orig_states + 1
     endif
 
-    ASSERT(total_states >= occupied_states)
+    ASSERT(total_states >= orig_states)
 
     SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, number_read = states_read)
 
     ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
-    if(any(states_read(1:sys%st%d%dim, sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then
+    if(any(states_read(1:sys%st%d%dim, sys%st%d%kpt%start:sys%st%d%kpt%end) < orig_states)) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)
@@ -146,7 +154,7 @@ contains
       if(ierr > 0 .and. .not. fromScratch) then
         nst_calculated = minval(states_read)
       else
-        nst_calculated = occupied_states
+        nst_calculated = orig_states
       end if
       call lcao_run(sys, hm, st_start = nst_calculated + 1)
     else
@@ -183,10 +191,12 @@ contains
       if(converged .or. forced_finish) exit
     end do
 
-    if(any(eigens%converged < occupied_states)) then
+    if(any(eigens%converged(:) < occ_states(:))) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
       call messages_warning(1)
     endif
+
+    SAFE_DEALLOCATE_A(occ_states)
 
     if(.not. converged) then
       write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
