@@ -24,29 +24,33 @@ module loct_math_m
 
   !> Define which routines can be seen from the outside.
   private
-  public ::                  &
-    loct_gamma,              &
-    loct_incomplete_gamma,   &
-    loct_hypergeometric,     &
-    loct_asinh,              &
-    loct_erf,                &
-    loct_erfc,               &
-    loct_ylm,                &
-    loct_bessel,             &
-    loct_bessel_In,          &
-    loct_bessel_j0,          &
-    loct_bessel_j1,          &
-    loct_bessel_k0,          &
-    loct_bessel_k1,          &
-    loct_sph_bessel,         &
-    loct_legendre_sphplm,    &
-    loct_sine_integral,      &
-    loct_ran_init,           &
-    loct_ran_end,            &
-    loct_ran_gaussian,       &
-    loct_ran_flat,           &
-    loct_fft_optimize,       &
-    loct_numerical_derivative
+  public ::                    &
+    loct_gamma,                &
+    loct_incomplete_gamma,     &
+    loct_hypergeometric,       &
+    loct_asinh,                &
+    loct_erf,                  &
+    loct_erfc,                 &
+    loct_ylm,                  &
+    loct_bessel,               &
+    loct_bessel_In,            &
+    loct_bessel_j0,            &
+    loct_bessel_j1,            &
+    loct_bessel_k0,            &
+    loct_bessel_k1,            &
+    loct_sph_bessel,           &
+    loct_legendre_sphplm,      &
+    loct_sine_integral,        &
+    loct_ran_init,             &
+    loct_ran_end,              &
+    loct_ran_gaussian,         &
+    loct_ran_flat,             &
+    loct_fft_optimize,         &
+    loct_numerical_derivative, &
+    loct_combination_init,     &
+    loct_combination_end,      &
+    loct_combination_next,     &
+    loct_get_combination
 
   ! ---------------------------------------------------------
   !> Numerical derivative.
@@ -199,6 +203,39 @@ module loct_math_m
     end subroutine oct_ylm
     module procedure oct_ylm4
   end interface loct_ylm
+  
+  ! ---------------------------------------------------------
+  !> Functions to generate combinations
+  interface loct_combination_init
+    subroutine oct_combination_init(c, n, k)
+      use c_pointer_m
+      type(c_ptr), intent(out) :: c
+      integer,     intent(in)  :: n, k
+    end subroutine oct_combination_init
+  end interface loct_combination_init
+
+  interface loct_combination_end
+    subroutine oct_combination_end(c)
+      use c_pointer_m
+      type(c_ptr), intent(in) :: c
+    end subroutine oct_combination_end
+  end interface loct_combination_end
+
+  interface loct_combination_next
+    subroutine oct_combination_next(c, next)
+      use c_pointer_m
+      type(c_ptr), intent(inout) :: c
+      integer,     intent(out)  :: next
+    end subroutine oct_combination_next
+  end interface loct_combination_next
+
+!   interface loct_get_combination
+!     subroutine oct_get_combination(c, comb)
+!       use c_pointer_m
+!       type(c_ptr),      intent(in)  :: c
+!       integer, pointer, intent(out) :: comb(:)
+!     end subroutine oct_get_combination
+!   end interface loct_get_combination
 
   ! ---------------------------------------------------------
   !> Functions to generate random numbers
@@ -245,6 +282,20 @@ module loct_math_m
   end interface loct_fft_optimize
 
 contains
+
+  
+  subroutine loct_get_combination(c, comb)
+    use c_pointer_m
+    type(c_ptr),      intent(in)  :: c
+    integer,          intent(out) :: comb(0:) ! Assume C-style array indices (i.e. start from 0) 
+
+    PUSH_SUB(loct_get_combination)
+
+    call oct_get_combination(c, comb(0))
+
+    POP_SUB(loct_get_combination)
+  end subroutine loct_get_combination
+
 
   ! single-precision version of the functions
   real(4) function oct_gamma4(x)
