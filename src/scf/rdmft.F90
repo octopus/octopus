@@ -213,6 +213,7 @@ contains
       rho = M_ZERO
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       rho(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
+      ! FIXME: poisson solves here should probably be all_nodes = .false.
       call dpoisson_solve(psolver, pot , rho)
       
       do jst = ist, st%nst

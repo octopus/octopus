@@ -155,6 +155,7 @@ contains
             do n = 1, gr%mesh%np
               rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
             end do
+            ! FIXME: most poisson solves here should probably be all_nodes = .false.
             call dpoisson_solve(psolver, vh, rho)
             ex = ex - dmf_integrate(gr%mesh, vh*rho)
           end do
