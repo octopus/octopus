@@ -293,7 +293,7 @@ end subroutine X(modelmb_sym_state_1diag)
 ! ---------------------------------------------------------
 
 
-! input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagrams
+!> input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagrams
 subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
            ofst, ndown, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
   integer, intent(in) :: ndimmb
@@ -320,7 +320,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
 
   PUSH_SUB(X(modelmb_sym_updown))
 
-  SAFE_ALLOCATE(forward_map_exchange(gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
   SAFE_ALLOCATE(ix(1:MAX_DIM))
   SAFE_ALLOCATE(ixp(1:MAX_DIM))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
@@ -413,7 +413,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
 
   PUSH_SUB(X(modelmb_antisym_1spin))
 
-  SAFE_ALLOCATE(forward_map_exchange(gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
   SAFE_ALLOCATE(ix(1:MAX_DIM))
   SAFE_ALLOCATE(ixp(1:MAX_DIM))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
