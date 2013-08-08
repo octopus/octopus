@@ -287,17 +287,13 @@ contains
   subroutine loct_get_combination(c, comb)
     use c_pointer_m
     type(c_ptr),      intent(in)  :: c
-    integer,          intent(out) :: comb(0:) ! Assume C-style array indices (i.e. start from 0) 
-
-    PUSH_SUB(loct_get_combination)
+    integer,          intent(out) :: comb(0:) !< Assume C-style array indices (i.e. start from 0) 
 
     call oct_get_combination(c, comb(0))
-
-    POP_SUB(loct_get_combination)
   end subroutine loct_get_combination
 
 
-  ! single-precision version of the functions
+  !> single-precision version of the functions
   real(4) function oct_gamma4(x)
     real(4), intent(in) :: x
 
