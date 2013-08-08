@@ -977,11 +977,15 @@ contains
     character(len=12)    :: filename
     FLOAT, allocatable   :: rho_coarse(:)
     CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
+    logical              :: grid_changed, grid_reordered
+    integer, pointer     :: map(:)
 
     PUSH_SUB(restart_read_rho)
 
     write(message(1), '(a,i5)') 'Info: Loading restart density.'
     call messages_info(1)
+
+    call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
 
     ierr = 0
 
@@ -1011,21 +1015,37 @@ contains
 !      end if
       if(gr%have_fine_mesh)then
         if(st%cmplxscl%space) then
-          call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err)
+          if(.not. grid_changed) then
+            call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err)
+          else
+            call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err, map)
+          endif
           call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err)
+          if(.not. grid_changed) then
+            call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err)
+          else
+            call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err, map)
+          endif
           call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_read_function(dir, filename, gr%mesh, zrho, err)
+          if(.not. grid_changed) then
+            call zrestart_read_function(dir, filename, gr%mesh, zrho, err)
+          else
+            call zrestart_read_function(dir, filename, gr%mesh, zrho, err, map)
+          endif
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+          if(.not. grid_changed) then
+            call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+          else
+            call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err, map)
+          endif
         end if  
       end if
       if(err == 0) then
