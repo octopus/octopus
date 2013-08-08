@@ -61,7 +61,7 @@ contains
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
-                         no_states, istype, freeze_orbitals
+                         no_states, istype, freeze_orbitals, ncols
     type(block_t)     :: blk
     type(states_t)    :: tmp_st 
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
@@ -132,7 +132,12 @@ contains
           SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, psi%nst
-            do jst = 1, parse_block_cols(blk, ist - 1)
+            ncols = parse_block_cols(blk, ist - 1)
+            if(ncols /= tmp_st%nst) then
+              write(message(1),'(a,i6)') "Wrong number of columns in OCTInitialTransformStates block, row ", ist
+              call messages_fatal(1)
+            endif
+            do jst = 1, ncols
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
