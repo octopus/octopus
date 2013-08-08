@@ -527,7 +527,7 @@ contains
     !% default is blocks.
     !%Option blocks 1
     !% The grid is mapped using small parallelepipedic grids. The size
-    !% of the blocks is controlled by MeshBlockSize.
+    !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
     !%Option hilbert 2
     !% (experimental) A Hilbert space filling curve is used to map the
     !% grid.
@@ -552,7 +552,7 @@ contains
       !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
       !% controls the size of this blocks in the different
       !% directions. The default is selected according to the value of
-      !% the StatesBlockSize variable. (This variable only affects the
+      !% the <tt>StatesBlockSize</tt> variable. (This variable only affects the
       !% performance of <tt>Octopus</tt> and not the results.)
       !%End
 
