@@ -166,8 +166,8 @@ contains
       call messages_fatal(2)
     end if
 
-    if(eigens%es_type == RS_LOBPCG .and. st%d%block_size > st%nst) &
-      call messages_experimental("lobpcg eigensolver with more than one block")
+    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
+      call messages_experimental("lobpcg eigensolver with more than one block per node")
 
     call messages_obsolete_variable('EigensolverVerbose')
     call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
