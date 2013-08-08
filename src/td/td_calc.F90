@@ -28,6 +28,7 @@ module td_calc_m
   use hamiltonian_base_m
   use hamiltonian_m
   use lasers_m
+  use loct_math_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -264,8 +265,12 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   idxref = (/ (ii, ii = 0, Nid) /)
   do ii = 0, Nch  
 !     print *, "Nch= ", Nch, "ii", ii
-    call oct_combination_init(c, Nch, ii)
-    SAFE_ALLOCATE(idx0(0:ii-1))
+    call loct_combination_init(c, Nch, ii)
+    if (ii == 0 ) then
+      SAFE_ALLOCATE(idx0(0:0))
+    else 
+      SAFE_ALLOCATE(idx0(0:ii-1))
+    end if 
 !     print *,"size(idx0,1)=",size(idx0,1)
     if(in_debug_mode) then
       call messages_write("P(")
@@ -282,7 +287,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
         call messages_write(ii)
         call messages_write(") += ")
       end if               
-      call oct_get_combination(c, idx0)
+      call loct_get_combination(c, idx0)
       idx(:) = idxref(:)
       do jj = 0, ii-1
         idx(idx0(jj))= -1
@@ -309,11 +314,11 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
 
       ch(ii) = ch(ii) + prod*prod0
 
-      call oct_combination_next(c, next)
+      call loct_combination_next(c, next)
       if( next /=  0) exit
     end do
     SAFE_DEALLOCATE_A(idx0)
-    call oct_combination_end(c)
+    call loct_combination_end(c)
 
     if(in_debug_mode) call messages_info()
   end do 
