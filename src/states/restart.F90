@@ -538,13 +538,13 @@ contains
     logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
 
     integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
-    integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
+    integer              :: iread, nread
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
     character(len=256)   :: line
     character(len=50)    :: str
-    integer, allocatable :: read_lxyz(:, :), map(:)
+    integer, pointer     :: map(:)
 
     FLOAT                :: my_occ, flt, imev
     logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
@@ -608,58 +608,8 @@ contains
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
     if(occ_file < 0) ierr = -1
 
-    ! now read the mesh information
-    call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
-
-    ! For the moment we continue reading if we receive -1 so we can
-    ! read old restart files that do not have a fingerprint file.
-    ! if (read_np < 0) ierr = -1
-
-    if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
-
-      grid_changed = .true.
-
-      ! perhaps only the order of the points changed, this can only
-      ! happen if the number of points is the same and no points maps
-      ! to zero (this is checked below)
-      grid_reordered = (read_np == gr%mesh%np_global)
-
-      ! the grid is different, so we read the coordinates.
-      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
-      ASSERT(associated(gr%mesh%idx%lxyz))
-      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
-
-      ! and generate the map
-      SAFE_ALLOCATE(map(1:read_np))
-
-      do ip = 1, read_np
-        xx = 0
-        xx(1:gr%mesh%sb%dim) = read_lxyz(ip, 1:gr%mesh%sb%dim)
-        if(any(xx(1:gr%mesh%sb%dim) < gr%mesh%idx%nr(1, 1:gr%mesh%sb%dim)) .or. &
-          any(xx(1:gr%mesh%sb%dim) > gr%mesh%idx%nr(2, 1:gr%mesh%sb%dim))) then
-          map(ip) = 0
-          grid_reordered = .false.
-        else
-          map(ip) = gr%mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
-          if(map(ip) > gr%mesh%np_global) map(ip) = 0
-        end if
-      end do
-
-      SAFE_DEALLOCATE_A(read_lxyz)
-
-      if(grid_reordered) then
-        message(1) = 'Octopus is attempting to restart from mesh with a different order of points.'
-        call messages_warning(1)
-      else
-        message(1) = 'Octopus is attempting to restart from a different mesh.'
-        call messages_warning(1)
-        if(exact_ .or. rdmft_) ierr = -1
-      end if
-
-    else
-      grid_changed = .false.
-      grid_reordered = .false.
-    end if
+    call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
+    if(grid_changed .and. (exact_ .or. rdmft_)) ierr = -1
 
     if(ierr /= 0) then
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
@@ -873,7 +823,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(filled)
-    SAFE_DEALLOCATE_A(map)
+    SAFE_DEALLOCATE_P(map)
     call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
     call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
 
@@ -942,6 +892,75 @@ contains
     end subroutine restart_fail_rdmft
 
   end subroutine restart_read
+
+  ! ---------------------------------------------------------
+  subroutine restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
+    character(len=*),     intent(in)  :: dir    
+    type(grid_t),         intent(in)  :: gr
+    logical,              intent(out) :: grid_changed
+    logical,              intent(out) :: grid_reordered
+    integer, pointer,     intent(out) :: map(:)
+
+    integer :: ip, read_np_part, read_np, read_ierr, xx(MAX_DIM)
+    integer, allocatable :: read_lxyz(:,:)
+    
+    PUSH_SUB(restart_read_lxyz)
+
+    ! now read the mesh information
+    call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
+
+    ! For the moment we continue reading if we receive -1 so we can
+    ! read old restart files that do not have a fingerprint file.
+    ! if (read_np < 0) ierr = -1
+
+    if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
+
+      grid_changed = .true.
+
+      ! perhaps only the order of the points changed, this can only
+      ! happen if the number of points is the same and no points maps
+      ! to zero (this is checked below)
+      grid_reordered = (read_np == gr%mesh%np_global)
+
+      ! the grid is different, so we read the coordinates.
+      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
+      ASSERT(associated(gr%mesh%idx%lxyz))
+      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
+
+      ! and generate the map
+      SAFE_ALLOCATE(map(1:read_np))
+
+      do ip = 1, read_np
+        xx = 0
+        xx(1:gr%mesh%sb%dim) = read_lxyz(ip, 1:gr%mesh%sb%dim)
+        if(any(xx(1:gr%mesh%sb%dim) < gr%mesh%idx%nr(1, 1:gr%mesh%sb%dim)) .or. &
+          any(xx(1:gr%mesh%sb%dim) > gr%mesh%idx%nr(2, 1:gr%mesh%sb%dim))) then
+          map(ip) = 0
+          grid_reordered = .false.
+        else
+          map(ip) = gr%mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+          if(map(ip) > gr%mesh%np_global) map(ip) = 0
+        end if
+      end do
+
+      SAFE_DEALLOCATE_A(read_lxyz)
+
+      if(grid_reordered) then
+        message(1) = 'Octopus is attempting to restart from mesh with a different order of points.'
+      else
+        message(1) = 'Octopus is attempting to restart from a different mesh.'
+      end if
+
+      call messages_warning(1)
+
+    else
+      grid_changed = .false.
+      grid_reordered = .false.
+    end if
+
+    POP_SUB(restart_read_lxyz)
+
+  end subroutine restart_read_lxyz
 
   ! ---------------------------------------------------------
   !> returns in ierr:
