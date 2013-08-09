@@ -100,6 +100,7 @@ contains
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
     total_states = sys%st%nst
+    converged = .false.
 
     if(showoccstates) then
       showstart = 1
