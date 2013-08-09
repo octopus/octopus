@@ -100,8 +100,8 @@ contains
 
     if(.not. fromScratch) then
       ! load wavefunctions
-      ! in RDMFT we need the exact number of states from either HF or DFT
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, rdmft = (sys%ks%theory_level == RDMFT))
+      ! in RDMFT we need the full ground state
+      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = (sys%ks%theory_level == RDMFT))
 
       if(ierr /= 0) then
         call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")

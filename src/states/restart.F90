@@ -525,7 +525,7 @@ contains
   !! <0 => Fatal error
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, rdmft, number_read, read_left)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, number_read, read_left)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -533,7 +533,6 @@ contains
     integer,    optional, intent(out)   :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
-    logical,    optional, intent(in)    :: rdmft
     integer,    optional, intent(out)   :: number_read(:, :)
     logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
 
@@ -548,7 +547,7 @@ contains
 
     FLOAT                :: my_occ, flt, imev
     logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
-    logical              :: exact_, integral_occs, rdmft_, cmplxscl, read_left_
+    logical              :: exact_, integral_occs, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
     character(len=256), allocatable :: restart_file(:, :, :)
@@ -566,7 +565,6 @@ contains
        ASSERT(st%have_left_states)
     end if
     exact_ = optional_default(exact, .false.)
-    rdmft_ = optional_default(rdmft, .false.)
 
     if(.not. present(lr)) then
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
@@ -609,13 +607,12 @@ contains
     if(occ_file < 0) ierr = -1
 
     call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
-    if(grid_changed .and. .not. grid_reordered .and. (exact_ .or. rdmft_)) ierr = -1
+    if(grid_changed .and. .not. grid_reordered .and. exact_) ierr = -1
 
     if(ierr /= 0) then
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
       if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
       if(exact_) call restart_fail()
-      if(rdmft_) call restart_fail_rdmft()
       write(message(1),'(a)') 'Could not load restart information.'
       call messages_info(1)
       call messages_print_stress(stdout)
@@ -819,7 +816,6 @@ contains
       call messages_print_stress(stdout)
 
       if(ierr /= 0 .and. exact_) call restart_fail()
-      if(ierr /= 0 .and. rdmft_) call restart_fail_rdmft()
     end if
 
     SAFE_DEALLOCATE_A(filled)
@@ -872,24 +868,12 @@ contains
     subroutine restart_fail()
       PUSH_SUB(restart_read.restart_fail)
 
-      message(1) = "Could not read KS orbitals from '"//trim(dir)
+      message(1) = "Could not read orbitals from '"//trim(dir)
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)
 
       POP_SUB(restart_read.restart_fail)
     end subroutine restart_fail
-
-    ! ---------------------------------------------------------
-
-    subroutine restart_fail_rdmft() 
-      PUSH_SUB(restart_read.restart_fail_rdmft)
-
-      message(1) = "Could not read KS or HF orbitals from '"//trim(dir)
-      message(2) = "Please run a DFT or HF calculation first!"
-      call messages_fatal(2)
-
-      POP_SUB(restart_read.restart_fail_rdmft)
-    end subroutine restart_fail_rdmft
 
   end subroutine restart_read
 
