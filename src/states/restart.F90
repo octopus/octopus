@@ -956,6 +956,7 @@ contains
     else
       grid_changed = .false.
       grid_reordered = .false.
+      nullify(map)
     end if
 
     POP_SUB(restart_read_lxyz)
