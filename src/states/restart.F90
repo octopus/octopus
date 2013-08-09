@@ -176,7 +176,7 @@ contains
     type(grid_t),               intent(in)    :: gr
     logical,          optional, intent(in)    :: is_complex
     character(len=*), optional, intent(in)    :: specify_dir
-    logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions and on the exact grid
+    logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions
 
     integer :: kpoints, dim, nst, ierr
     character(len=80) :: dir
@@ -532,7 +532,7 @@ contains
     integer,              intent(out)   :: ierr
     integer,    optional, intent(out)   :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
-    logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
+    logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
     logical,    optional, intent(in)    :: rdmft
     integer,    optional, intent(out)   :: number_read(:, :)
     logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
@@ -609,7 +609,6 @@ contains
     if(occ_file < 0) ierr = -1
 
     call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
-    if(grid_changed .and. (exact_ .or. rdmft_)) ierr = -1
 
     if(ierr /= 0) then
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
