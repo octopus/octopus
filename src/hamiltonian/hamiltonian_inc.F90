@@ -423,16 +423,15 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
         end forall
       end do
     
-      call X(poisson_solve)(psolver, pot, rho)
+      call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
     else
 #ifdef R_TCOMPLEX
-! Complex scaling works only with complex quantities       
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)
           rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
         end forall
       end do
-      call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl_th)
+      call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl_th, all_nodes = .false.)
 #endif      
     end if
 
@@ -490,7 +489,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
         rho(ip, 1) = rho(ip, 1) + hm%oct_st%occ(jst, 1)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
       end forall
     end do
-    call dpoisson_solve(psolver, pot(:, 1), rho(:, 1))
+    call dpoisson_solve(psolver, pot(:, 1), rho(:, 1), all_nodes = .false.)
     do ist = st%st_start, st%st_end
       call states_get_state(hst, der%mesh, ist, 1, hpsi)
       call states_get_state(hm%oct_st, der%mesh, ist, 1, psi2)
@@ -516,7 +515,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
     end do
 
     do ik = 1, 2
-      call dpoisson_solve(psolver, pot(:, ik), rho(:, ik))
+      call dpoisson_solve(psolver, pot(:, ik), rho(:, ik), all_nodes = .false.)
     end do
 
     do ik = 1, 2
