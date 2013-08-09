@@ -83,12 +83,8 @@ module cube_m
   !! mapping between x,y,z index and process is saved, in a compact
   !! way.
   type dimensions_t
-    integer :: start_x !< First index X, which this process has 
-    integer :: start_y !< First index Y, which this process has 
-    integer :: start_z !< First index Z, which this process has 
-    integer :: end_x   !< Last  index X, which this process has 
-    integer :: end_y   !< Last  index Y, which this process has 
-    integer :: end_z   !< Last  index Z, which this process has 
+    integer :: start_xyz(1:3) !< First index X, Y, Z, which this process has 
+    integer :: end_xyz(1:3)   !< Last  index X, Y, Z, which this process has 
   end type dimensions_t
 
 contains
@@ -524,12 +520,9 @@ contains
   !!> Given a x, y, z point of the cube, it returns the corresponding process
   !!
   !! last_found is used to speed-up the search
-  integer pure function cube_point_to_process(xx, yy, zz, part, last_found) result(process)
-    integer, intent(in)   :: xx
-    integer, intent(in)   :: yy
-    integer, intent(in)   :: zz
+  integer pure function cube_point_to_process(xyz, part) result(process)
+    integer, intent(in)   :: xyz(1:3)
     type(dimensions_t), intent(in) :: part(:)
-    integer, intent(in) :: last_found
     
     integer :: proc
     logical :: found
@@ -537,17 +530,11 @@ contains
     ! No PUSH/POP because it is a PURE function
     
     do proc = 1, mpi_world%size
-      !Compare Z index
-      if ( zz >= part(proc)%start_z .and. zz < part(proc)%end_z ) then
-        !Compare Y index
-        if ( yy >= part(proc)%start_y .and. yy < part(proc)%end_y ) then
-          !Compare X index
-          if ( xx >= part(proc)%start_x .and. xx < part(proc)%end_x ) then
-            process = proc
-            found = .true.
-            exit
-          end if
-        end if
+      !Compare XYZ index
+      if ( all(xyz >= part(proc)%start_xyz) .and. all(xyz < part(proc)%end_xyz) ) then
+        process = proc
+        found = .true.
+        exit
       end if
     end do
       
@@ -560,10 +547,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine cube_partition(cube, part)
-    type(cube_t), intent(in)  :: cube
-    integer,      intent(out) :: part(:,:,:)
+    type(cube_t),       intent(in)  :: cube
+    type(dimensions_t), intent(out) :: part(:)
 
-    integer :: tmp_local(6), position, process, ix, iy, iz
+    integer :: tmp_local(6), position, process
     integer, allocatable :: local_sizes(:)
 
     PUSH_SUB(cube_partition)
@@ -589,14 +576,14 @@ contains
 
     do process = 1, cube%mpi_grp%size
       position = ((process-1)*6)+1
-
-      do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
-        do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
-          do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
-            part(ix, iy, iz) = process
-          end do
-        end do
-      end do
+      
+      part(process)%start_xyz(1) = local_sizes(position)
+      part(process)%start_xyz(2) = local_sizes(position+1) 
+      part(process)%start_xyz(3) = local_sizes(position+2) 
+      part(process)%end_xyz(1)   = local_sizes(position)+local_sizes(position+3)
+      part(process)%end_xyz(2)   = local_sizes(position+1)+local_sizes(position+4)
+      part(process)%end_xyz(3)   = local_sizes(position+2)+local_sizes(position+5)
+      
     end do
 
     POP_SUB(cube_partition)
@@ -607,15 +594,18 @@ contains
     type(cube_t), intent(in) :: cube
 
     integer          :: nn, ii, jj, kk ! Counters.
+    integer          :: ixyz(3)        ! Current value of xyz 
     integer          :: npart
     integer          :: iunit          ! For debug output to files.
     character(len=3) :: filenum
-    integer, allocatable :: part(:,:,:)
-
+    type(dimensions_t), allocatable :: part(:)
+    integer :: last_found_proc
+    
     PUSH_SUB(cube_partition_messages_debug)
 
+    last_found_proc = 1
     if(in_debug_mode) then
-      SAFE_ALLOCATE(part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
+      SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
       call cube_partition(cube, part)
   
       if(mpi_grp_is_root(mpi_world)) then
@@ -632,7 +622,11 @@ contains
           do kk = 1, cube%rs_n_global(3)
             do jj = 1, cube%rs_n_global(2)
               do ii = 1, cube%rs_n_global(1)
-                if(part(ii, jj, kk) == nn) write(iunit, '(3i8)') ii, jj, kk
+                ixyz(1) = ii; ixyz(2) = jj; ixyz(3) = kk
+                if(cube_point_to_process(ixyz, part) == nn) then
+                  write(iunit, '(3i8)') ii, jj, kk
+                  last_found_proc = nn
+                end if
               end do
             end do
           end do

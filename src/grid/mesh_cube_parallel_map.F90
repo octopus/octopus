@@ -73,25 +73,21 @@ contains
     type(mesh_t),                   intent(in)  :: mesh
     type(cube_t),                   intent(in)  :: cube
 
-    integer :: im, ip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
-    integer, allocatable :: cube_part(:), part_local(:), global_index(:)
+    integer :: im, ip, gip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
+    integer, allocatable :: part_local(:), global_index(:)
     integer, pointer :: mf_order(:), cf_order(:)
-    integer, allocatable :: part(:,:,:)
+    type(dimensions_t), allocatable :: part(:)
 
     type(profile_t), save :: prof
 
-    integer :: last_found_proc
     PUSH_SUB(mesh_cube_parallel_map_init)
     call profiling_in(prof,"MC_PAR_INIT")
 
     !Get the cube partition on the mesh and the number of local cube points that are also on the mesh
-    SAFE_ALLOCATE(part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
+    SAFE_ALLOCATE(part(1:mesh%vp%npart))
     call cube_partition(cube, part)
 
-    SAFE_ALLOCATE(cube_part(1:mesh%np_global))
-    
     ixyz = 0
-    last_found_proc = 1
     cube_np = 0
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
@@ -101,23 +97,23 @@ contains
       ixyz = ixyz + cube%center
 
       do ii = 0, nn - 1
-        !! another option using less memory, but slower
-        !! cube_part(ip + ii) = cube_point_to_process(ixyz(1), ixyz(2), ixyz(3) + ii, part, last_found_proc)
-        cube_part(ip + ii) = part(ixyz(1), ixyz(2), ixyz(3) + ii)
-        if (cube_part(ip + ii) == cube%mpi_grp%rank + 1) cube_np = cube_np + 1
+        !! an option using less memory, but slower
+        if (cube_point_to_process(ixyz, part) == cube%mpi_grp%rank + 1) cube_np = cube_np + 1
+        ixyz(3) = ixyz(3) + 1
       end do
     end do
-    SAFE_DEALLOCATE_A(part)
-
+    
     ! Mesh to cube
     ! We will work only with the local mesh points and we need to know the global index of those points.
     SAFE_ALLOCATE(part_local(1:mesh%np))
     SAFE_ALLOCATE(global_index(1:mesh%np))
     do ip = 1, mesh%np
       global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-      part_local(ip) = cube_part(global_index(ip))
+      call index_to_coords(mesh%idx, mesh%sb%dim, global_index(ip), ixyz)
+      ixyz = ixyz + cube%center
+      part_local(ip) = cube_point_to_process(ixyz, part)
     end do
-
+    
     ! Init partition transfer
     call partition_transfer_init(this%m2c, mesh%np, global_index, mesh%mpi_grp, &
                                  cube%mpi_grp, part_local, &
@@ -160,12 +156,16 @@ contains
     SAFE_ALLOCATE(global_index(1:cube_np))
     ipos = 0
     do ip = 1, mesh%np_global
-      if (cube_part(ip) == cube%mpi_grp%rank + 1) then
+
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
+      ixyz = ixyz + cube%center
+      if (cube_point_to_process(ixyz, part) == cube%mpi_grp%rank + 1) then
         ipos = ipos + 1
         global_index(ipos) = ip
         part_local(ipos) = mesh%vp%part_vec(ip)
       end if
     end do
+    SAFE_DEALLOCATE_A(part)
 
     ! Init partition transfer
     call partition_transfer_init(this%c2m, cube_np, global_index, cube%mpi_grp, &
@@ -200,8 +200,6 @@ contains
     SAFE_DEALLOCATE_P(cf_order)
     SAFE_DEALLOCATE_A(part_local)
     SAFE_DEALLOCATE_A(global_index)
-
-    SAFE_DEALLOCATE_A(cube_part)
 
     call profiling_out(prof)
     POP_SUB(mesh_cube_parallel_map_init)
