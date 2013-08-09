@@ -609,6 +609,7 @@ contains
     if(occ_file < 0) ierr = -1
 
     call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
+    if(grid_changed .and. .not. grid_reordered .and. (exact_ .or. rdmft_)) ierr = -1
 
     if(ierr /= 0) then
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
