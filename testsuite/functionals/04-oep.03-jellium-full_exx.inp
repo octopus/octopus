@@ -51,5 +51,6 @@ EigenSolverTolerance = 1e-5
 Preconditioner = no
 
 LinearSolver = cg
-
+MaximumIter = 4
 ParallelizationStrategy=par_domains
+ExperimentalFeatures = yes
