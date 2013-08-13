@@ -254,7 +254,7 @@ contains
     ierr = parse_init('exec/parser.log', mpi_world%rank)
     if(ierr /= 0) then
       write(0,'(a)') '*** Fatal Error (description follows)'
-      write(0,'(a)') 'Error initializing liboct'
+      write(0,'(a)') 'Error initializing parser: cannot write to exec/parser.log.'
       write(0,'(a)') 'Do you have write permissions in this directory?'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
@@ -262,10 +262,11 @@ contains
       stop
     end if
 
-    ! read in default variables
+    ! read in option definitions
     ierr = parse_input_file(trim(conf%share)//'/variables')
     if(ierr /= 0) then
       write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
@@ -277,8 +278,8 @@ contains
     ierr = parse_input_file('inp')
     if(ierr /= 0) then 
       write(0,'(a)') '*** Fatal Error (description follows)' 
-      write(0,'(a)') 'Error initializing liboct' 
-      write(0,'(a)') 'Cannot open input file!' 
+      write(0,'(a)') 'Error initializing parser'
+      write(0,'(a)') 'Cannot open input file!'
       write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
