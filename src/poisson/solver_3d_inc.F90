@@ -181,13 +181,13 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
 
-  FLOAT :: prefactor
-  integer  :: ip, jp, dim
-  integer :: ip_v(1), part_v(1)
-  FLOAT    :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim)
+  FLOAT                :: prefactor
+  integer              :: ip, jp, dim
+  integer, allocatable :: ip_v(:), part_v(:)
+  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim)
 #ifdef HAVE_MPI
-  FLOAT    :: tmp, xg(MAX_DIM)
-  FLOAT, allocatable :: pvec(:) 
+  FLOAT                :: tmp, xg(MAX_DIM)
+  FLOAT, allocatable   :: pvec(:) 
 #endif
 
   PUSH_SUB(poisson_solve_direct)
@@ -213,7 +213,13 @@ subroutine poisson_solve_direct(this, pot, rho)
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
-
+    SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
+    SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
+    do ip = 1, this%der%mesh%np_global
+      ip_v(ip) = ip
+    end do
+    call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
+    
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
       xg = mesh_x_global(this%der%mesh, ip)
@@ -238,10 +244,8 @@ subroutine poisson_solve_direct(this, pot, rho)
         enddo
       endif
       tmp = dmf_integrate(this%der%mesh, pvec)
-      ip_v(1) = ip
-      call partition_get_partition_number(this%der%mesh%inner_partition, 1, ip_v, part_v)
 
-      if (part_v(1) == this%der%mesh%vp%partno) then
+      if (part_v(ip) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do

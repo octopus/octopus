@@ -28,7 +28,7 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
   !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
-  integer :: ip_v(1), part_v(1)
+  integer, allocatable :: ip_v(:), part_v(:)
   FLOAT               :: xx, yy
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
@@ -51,6 +51,12 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
+    SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
+    SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
+    do ip = 1, this%der%mesh%np_global
+      ip_v(ip) = ip
+    end do
+    call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
