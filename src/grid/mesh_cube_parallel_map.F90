@@ -28,6 +28,7 @@ module mesh_cube_parallel_map_m
   use mesh_cube_map_m
   use messages_m
   use mpi_m
+  use partition_m
   use partition_transfer_m
   use par_vec_m
   use profiling_m
@@ -74,7 +75,7 @@ contains
     type(cube_t),                   intent(in)  :: cube
 
     integer :: im, ip, gip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
-    integer, allocatable :: part_local(:), global_index(:)
+    integer, allocatable :: cube_part_local(:), global_index(:)
     integer, pointer :: mf_order(:), cf_order(:)
     type(dimensions_t), allocatable :: part(:)
 
@@ -105,18 +106,18 @@ contains
     
     ! Mesh to cube
     ! We will work only with the local mesh points and we need to know the global index of those points.
-    SAFE_ALLOCATE(part_local(1:mesh%np))
+    SAFE_ALLOCATE(cube_part_local(1:mesh%np))
     SAFE_ALLOCATE(global_index(1:mesh%np))
     do ip = 1, mesh%np
       global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
       call index_to_coords(mesh%idx, mesh%sb%dim, global_index(ip), ixyz)
       ixyz = ixyz + cube%center
-      part_local(ip) = cube_point_to_process(ixyz, part)
+      cube_part_local(ip) = cube_point_to_process(ixyz, part)
     end do
     
     ! Init partition transfer
     call partition_transfer_init(this%m2c, mesh%np, global_index, mesh%mpi_grp, &
-                                 cube%mpi_grp, part_local, &
+                                 cube%mpi_grp, cube_part_local, &
                                  this%m2c_nsend, this%m2c_nrec, mf_order, cf_order)
    ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
     SAFE_ALLOCATE(this%m2c_mf_order(1:this%m2c_nsend))
@@ -145,14 +146,14 @@ contains
     end do
     SAFE_DEALLOCATE_P(mf_order)
     SAFE_DEALLOCATE_P(cf_order)
-    SAFE_DEALLOCATE_A(part_local)
+    SAFE_DEALLOCATE_A(cube_part_local)
     SAFE_DEALLOCATE_A(global_index)
 
 
     ! Cube to mesh
     
     ! We will work only with the local cube points and we need to know the global index of those points.
-    SAFE_ALLOCATE(part_local(1:cube_np))
+    SAFE_ALLOCATE(cube_part_local(1:cube_np))
     SAFE_ALLOCATE(global_index(1:cube_np))
     ipos = 0
     do ip = 1, mesh%np_global
@@ -162,14 +163,15 @@ contains
       if (cube_point_to_process(ixyz, part) == cube%mpi_grp%rank + 1) then
         ipos = ipos + 1
         global_index(ipos) = ip
-        part_local(ipos) = mesh%vp%part_vec(ip)
       end if
     end do
+    call partition_get_partition_number(mesh%inner_partition, ipos, global_index, cube_part_local)      
+    
     SAFE_DEALLOCATE_A(part)
 
     ! Init partition transfer
     call partition_transfer_init(this%c2m, cube_np, global_index, cube%mpi_grp, &
-                                 mesh%mpi_grp, part_local, &
+                                 mesh%mpi_grp, cube_part_local, &
                                  this%c2m_nsend, this%c2m_nrec, cf_order, mf_order)
 
    ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
@@ -198,7 +200,7 @@ contains
     end do
     SAFE_DEALLOCATE_P(mf_order)
     SAFE_DEALLOCATE_P(cf_order)
-    SAFE_DEALLOCATE_A(part_local)
+    SAFE_DEALLOCATE_A(cube_part_local)
     SAFE_DEALLOCATE_A(global_index)
 
     call profiling_out(prof)
