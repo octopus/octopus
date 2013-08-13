@@ -106,7 +106,7 @@ void get_text(FILE *in, char **dest)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_init, VARINFO_INIT)
-  (STR_F_TYPE fname STR_ARG1)
+  (STR_F_TYPE const fname STR_ARG1)
 {
   char line[256], *fname_c;
   FILE *in;
@@ -116,7 +116,10 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
   TO_C_STR1(fname, fname_c);
 
   in = fopen(fname_c, "r");
-  if(!in) goto out;
+  if(!in) {
+    free(fname_c);
+    return;
+  }
 
   while(fgets(line, 256, in)){
 
@@ -186,9 +189,6 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
     }
   }
   fclose(in);
-  
- out:
-  free(fname_c);
 }
 
 
@@ -223,7 +223,7 @@ void FC_FUNC_(varinfo_end, VARINFO_END)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
-  (STR_F_TYPE name, var_type **var STR_ARG1)
+  (STR_F_TYPE const name, var_type **var STR_ARG1)
 {
   char *name_c;
   var_type *lvar;
@@ -238,7 +238,7 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_getinfo, VARINFO_GETINFO)
-  (var_type **var, char **name, char **type, char **section, char **desc)
+  (const var_type **var, char **name, char **type, char **section, char **desc)
 {
   if(var == NULL){
     *name = NULL; *type = NULL; *desc = NULL;
@@ -253,7 +253,7 @@ void FC_FUNC_(varinfo_getinfo, VARINFO_GETINFO)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_getopt, VARINFO_GETOPT)
-  (var_type **var, opt_type **opt)
+  (const var_type **var, opt_type **opt)
 {
   if(*var == NULL)
     *opt = NULL;
@@ -266,7 +266,7 @@ void FC_FUNC_(varinfo_getopt, VARINFO_GETOPT)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
-  (opt_type **opt, char **name, int *value, char **desc)
+  (const opt_type **opt, char **name, int *value, char **desc)
 {
   if(opt == NULL){
     *name = NULL; *desc = NULL;
@@ -292,7 +292,7 @@ found.
  --------------------------------------------------------- */
 
 #ifndef HAVE_STRCASESTR
-char *strcasestr (char *haystack, char *needle)
+char *strcasestr (const char *haystack, const char *needle)
 {
   char *p, *startn = 0, *np = 0;
   
@@ -314,7 +314,7 @@ char *strcasestr (char *haystack, char *needle)
 #endif
 
 void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
-  (STR_F_TYPE name, var_type **var STR_ARG1)
+  (const STR_F_TYPE name, var_type **var STR_ARG1)
 {
   char *name_c;
   var_type *lvar;
@@ -330,7 +330,7 @@ void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
 }
 
 void FC_FUNC_(varinfo_search_option, VARINFO_SEARCH_OPTION)
-     (var_type **var, STR_F_TYPE name, int * value, int * ierr STR_ARG1)
+     (const var_type **var, const STR_F_TYPE name, int * value, int * ierr STR_ARG1)
 {
   char *name_c;
   opt_type *opt;
