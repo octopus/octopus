@@ -375,8 +375,6 @@ contains
     !%
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
-    !%
-    !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
     !%End
     call parse_integer(datasets_check('TotalStates'), 0, ntot)
     if (ntot < 0) then
@@ -397,14 +395,8 @@ contains
     !% However, one may command <tt>Octopus</tt> to use more states, which is necessary if one wants to
     !% use fractional occupational numbers, either fixed from the beginning through
     !% the <tt>Occupations</tt> block or by prescribing
-    !% an electronic temperature with <tt>Smearing</tt>.
-    !%
-    !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
-    !% <tt>ExtraStates</tt> is used for a self-consistent calculation and
-    !% the usual convergence criteria on the density do not take into account the
-    !% eigenvalues, whereas <tt>unocc</tt> is a non-self-consistent calculation,
-    !% and explicitly considers the eigenvalues of the unoccupied states as the
-    !% convergence criteria.
+    !% an electronic temperature with <tt>Smearing</tt>, or in order to calculate
+    !% excited states (including with <tt>CalculationMode = unocc</tt>).
     !%End
     call parse_integer(datasets_check('ExtraStates'), 0, nempty)
     if (nempty < 0) then

@@ -8,8 +8,6 @@ dist = 3.0
 "qd" | 1.0 | spec_user_defined | 1 | "0.5*omega0*min((x-dist/2)^2+y^2,(x+dist/2)^2+y^2-0.02)"
 %
 
-NumberUnoccStates = 1
-
 %Coordinates
 "qd" | 0 | 0 | 0 
 %

@@ -30,7 +30,5 @@ TheoryLevel = independent_particles
 "doublewell" | 0
 %
 
-NumberUnoccStates = 1
-
 Output = potential + wfs
 OutputHow = axis_x

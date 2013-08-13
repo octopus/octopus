@@ -37,4 +37,4 @@ TheoryLevel = independent_particles
 %
 
 EigenSolver = cg_new
-NumberUnoccStates = 5
+excited_states_ExtraStates = 5

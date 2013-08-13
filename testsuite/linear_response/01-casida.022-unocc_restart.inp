@@ -32,7 +32,7 @@ EigenSolverTolerance = 1e-6
 EigenSolverMaxIter = 20
 
 MaximumIter = 1
-NumberUnoccStates = 9
+ExtraStates = 9
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction

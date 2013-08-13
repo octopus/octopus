@@ -11,7 +11,7 @@ CalculationMode = unocc
 
 ExperimentalFeatures = yes
 
-NumberUnoccStates = 1
+ExtraStates = 1
 
 Dimensions = 1
 fromScratch = yes
@@ -31,8 +31,6 @@ TheoryLevel = independent_particles
 %Coordinates
 "doublewell" | 0
 %
-
-NumberUnoccStates = 1
 
 Output = potential + wfs
 OutputHow = axis_x

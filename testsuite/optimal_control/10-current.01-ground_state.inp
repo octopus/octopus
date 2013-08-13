@@ -28,7 +28,6 @@ ConvRelDens = 1.0e-8
 Mixing = 1.0
 TypeOfMixing = linear
 
-NumberUnoccStates = 1
 ExtraStates= 1
 
 

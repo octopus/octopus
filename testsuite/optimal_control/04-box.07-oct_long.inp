@@ -78,5 +78,3 @@ TheoryLevel = independent_particles
 "Box1D" | 0
 %
 
-NumberUnoccStates = 4
-

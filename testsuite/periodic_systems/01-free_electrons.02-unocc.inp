@@ -8,7 +8,7 @@ FromScratch = yes
 Dimensions = 1
 PeriodicDimensions = 1
 
-NumberUnoccStates = 4
+ExtraStates = 4
 
 TheoryLevel = independent_particles
 

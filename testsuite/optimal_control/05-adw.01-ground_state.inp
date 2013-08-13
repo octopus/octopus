@@ -39,4 +39,4 @@ TheoryLevel = independent_particles
 
 ConvRelDens = 1.0e-7
 
-NumberUnoccStates = 1
+excited_states_ExtraStates = 1

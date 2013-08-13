@@ -1,7 +1,7 @@
 CalculationMode = unocc
 FromScratch = yes
 
-NumberUnoccStates = 6
+ExtraStates = 6
 
 Dimensions = 1
 
@@ -63,5 +63,3 @@ TheoryLevel = independent_particles
 ConvAbsDens = 1e-12
 
 LCAOStart = no
-
-

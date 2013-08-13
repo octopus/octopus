@@ -36,5 +36,5 @@ TheoryLevel = independent_particles
 "Hydrogen1D" | 0
 %
 
-NumberUnoccStates = 9
+excited_states_ExtraStates = 9
 EigenSolverTolerance = 1e-5

@@ -58,7 +58,7 @@ contains
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, total_states, iter, ierr_rho, ik
+    integer :: iunit, ierr, iter, ierr_rho, ik
     logical :: converged, forced_finish, showoccstates
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
@@ -97,7 +97,6 @@ contains
     enddo
 
     call init_(sys%gr%mesh, sys%st)
-    total_states = sys%st%nst
     converged = .false.
 
     if(showoccstates) then
@@ -105,8 +104,6 @@ contains
     else
       showstart = minval(occ_states(:)) + 1
     endif
-
-    ASSERT(all(total_states >= occ_states(:)))
 
     SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
@@ -237,24 +234,14 @@ contains
       type(mesh_t),   intent(in)    :: mesh
       type(states_t), intent(inout) :: st
 
-      integer :: nus
-
       PUSH_SUB(unocc_run.init_)
 
-      !%Variable NumberUnoccStates
-      !%Type integer
-      !%Default 5
-      !%Section Calculation Modes::Unoccupied States
-      !%Description
-      !% How many unoccupied states to compute.
-      !%End
-      call parse_integer(datasets_check('NumberUnoccStates'), 5, nus)
-      if(nus <= 0) then
-        message(1) = "Input: NumberUnoccStates must be > 0"
-        call messages_fatal(1)
-      end if
+      call messages_obsolete_variable("NumberUnoccStates", "ExtraStates")
 
-      call states_resize_unocc(st, nus)
+      if(st%d%ispin == SPINORS) then
+        SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
+        st%spin = M_ZERO
+      end if
       call states_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff

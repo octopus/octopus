@@ -31,5 +31,3 @@ TheoryLevel = independent_particles
 %
 
 #EigenSolverMaxIter = 1000
-
-NumberUnoccStates = 1

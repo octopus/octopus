@@ -1,8 +1,6 @@
 CalculationMode = td
 FromScratch = yes
 
-NumberUnoccStates = 6
-
 Dimensions = 1
 
 
