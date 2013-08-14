@@ -796,15 +796,21 @@ contains
 
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
       action='write')
-    do jj = 1, mesh%np_global
-      if(mesh%vp%part_vec(jj)  ==  mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+    do ii = 1, mesh%np
+      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
+      write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
       action='write')
-    do jj = 1, mesh%np_part_global
-      if(mesh%vp%part_vec(jj)  ==  mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+    do ii = 1, mesh%np
+      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
+      write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+    end do
+    do ii = 1, mesh%vp%np_bndry
+      jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
+      write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 

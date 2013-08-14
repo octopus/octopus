@@ -855,22 +855,6 @@ contains
     call partition_get_global(mesh%inner_partition, mesh%vp%part_vec(1:mesh%np_global))
     call partition_get_global(mesh%bndry_partition, mesh%vp%part_vec(mesh%np_global+1:mesh%np_part_global))      
 
-
-    !%Variable PartitionPrint
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% (experimental) If disabled, <tt>Octopus</tt> will not compute
-    !% nor print the partition information, such as local points,
-    !% no. of neighbours, ghost points and boundary points.
-    !%End
-    call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
-    
-    if (partition_print) then
-      call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
-      call mesh_partition_messages_debug(mesh)
-    end if   
     if (has_virtual_partition) then  
       write(message(1),'(a)') "Execution has ended"
       write(message(2),'(a)') "If you want to run your system, you don`t have to use MeshPartitionVirtualSize"
@@ -982,6 +966,22 @@ contains
       mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
 #endif
+
+    !%Variable PartitionPrint
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% (experimental) If disabled, <tt>Octopus</tt> will not compute
+    !% nor print the partition information, such as local points,
+    !% no. of neighbours, ghost points and boundary points.
+    !%End
+    call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
+    
+    if (partition_print) then
+      call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
+      call mesh_partition_messages_debug(mesh)
+    end if   
 
     POP_SUB(mesh_init_stage_3.do_partition)
   end subroutine do_partition
