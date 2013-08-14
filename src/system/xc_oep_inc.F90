@@ -73,7 +73,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
       select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (gr, st, is, jdm, oep, eig, xcs%exx_coef)
+          call X(oep_x) (gr, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)
         end do sum_comp
         ex = ex + eig
       end select

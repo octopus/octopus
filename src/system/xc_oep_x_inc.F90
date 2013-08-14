@@ -35,12 +35,12 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
+subroutine X(oep_x) (gr, st, is, jdm, lxc, ex, exx_coef)
   type(grid_t),   intent(inout) :: gr
   type(states_t), target, intent(in)    :: st
   integer,        intent(in)    :: is
   integer,        intent(in)    :: jdm
-  type(xc_oep_t), intent(inout) :: oep
+  R_TYPE,         intent(inout) :: lxc(:,:,:) !< (1:gr%mesh%np, 1:st%nst, nspin)
   FLOAT,          intent(inout) :: ex
   FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
 
@@ -176,14 +176,14 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
           F_ij(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
 
-          ! this quantity has to be added to oep%X(lxc)(1:gr%mesh%np, ist)
+          ! this quantity has to be added to lxc(1:gr%mesh%np, ist)
           send_buffer(1:gr%mesh%np) = send_buffer(1:gr%mesh%np) + &
             socc*st%occ(jst, isp)*F_ij(1:gr%mesh%np)*R_CONJ(st%X(psi)(1:gr%mesh%np, idm, jst, isp))
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
           if((ist /= jst).and..not.(st%d%ispin==SPINORS)) then
-            oep%X(lxc)(1:gr%mesh%np, jst, is) = oep%X(lxc)(1:gr%mesh%np, jst, is) - &
+            lxc(1:gr%mesh%np, jst, is) = lxc(1:gr%mesh%np, jst, is) - &
               exx_coef * socc * st%occ(ist, isp) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
           end if
           ! get the contribution (ist, jst) to the exchange energy
@@ -197,7 +197,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
 
         if(st%node(ist) == st%mpi_grp%rank) then
           ! either add the contribution ist
-          oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - exx_coef * send_buffer(1:gr%mesh%np)
+          lxc(1:gr%mesh%np, ist, is) = lxc(1:gr%mesh%np, ist, is) - exx_coef * send_buffer(1:gr%mesh%np)
 
 #if defined(HAVE_MPI)
         else
@@ -219,7 +219,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
           call MPI_Recv(recv_buffer(:), gr%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
-          oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s), is) = oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s), is) - &
+          lxc(1:gr%mesh%np, send_stack(ist_s), is) = lxc(1:gr%mesh%np, send_stack(ist_s), is) - &
             exx_coef * recv_buffer(1:gr%mesh%np)
         end if
 
