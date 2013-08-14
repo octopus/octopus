@@ -32,16 +32,18 @@ module partition_m
 
   private
 
-  public ::                        &
-    partition_t,                   &
-    partition_init,                &
-    partition_end,                 &
-    partition_set,                 &
-    partition_write,               &
-    partition_read,                &
-    partition_get_local_size,      &
-    partition_get_global,          &
-    partition_get_partition_number
+  public ::                         &
+    partition_t,                    &
+    partition_init,                 &
+    partition_end,                  &
+    partition_set,                  & 
+    partition_write,                &
+    partition_read,                 &
+    partition_get_local_size,       &
+    partition_get_global,           &
+    partition_get_partition_number, &
+    partition_get_np_local,         &
+    partition_get_npart
 
 
   !> The partition is an array that contains the mapping between some global index 
@@ -408,6 +410,41 @@ contains
     POP_SUB(partition_get_partition_number)
   end subroutine partition_get_partition_number
 
+  !> Giving the partition, returns the corresponding number of local
+  !! points that each partition has.
+  subroutine partition_get_np_local(partition, np_local_vec)
+    type(partition_t),    intent(in)  :: partition       !< Current partition
+    integer, pointer,     intent(out) :: np_local_vec(:) !< Vector of local points (np_local)
+    
+    integer, pointer :: np_local_vec_tmp(:)
+    integer :: ip
+
+    PUSH_SUB(partition_get_np_local)
+
+    SAFE_ALLOCATE(np_local_vec_tmp(1:partition%npart))
+    np_local_vec_tmp = 0
+
+    ! Calculate locally the local points of each partition
+    do ip = 1, partition%np_local
+      np_local_vec_tmp(partition%part(ip)) = np_local_vec_tmp(partition%part(ip)) + 1
+    end do
+
+    ! Collect all the local points
+    call MPI_Allreduce(np_local_vec_tmp(1), np_local_vec(1), partition%npart, &
+         MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
+    
+    SAFE_DEALLOCATE_P(np_local_vec_tmp)
+
+    POP_SUB(partition_get_np_local)
+
+  end subroutine partition_get_np_local
+
+  !> Returns the total number of partitions
+  pure integer function partition_get_npart(partition) result(npart)
+    type(partition_t), intent(in) :: partition
+    npart = partition%npart
+  end function partition_get_npart
+  
 end module partition_m
 
 !! Local Variables:

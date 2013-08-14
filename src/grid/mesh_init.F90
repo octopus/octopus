@@ -789,7 +789,7 @@ contains
     integer, allocatable :: gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
-    integer              :: graph_comm, iedge, nnb
+    integer              :: graph_comm, iedge, nnb, npart
     logical              :: use_topo, reorder, partition_print
     integer              :: ierr
 
@@ -928,8 +928,9 @@ contains
     ! we have a new communicator
     call mpi_grp_init(mesh%mpi_grp, graph_comm)
 
+    npart = partition_get_npart(mesh%inner_partition)
     call vec_init(graph_comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-         mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
+         mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp)
 
     ! check the number of ghost neighbours in parallel
     nnb = 0

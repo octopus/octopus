@@ -85,6 +85,7 @@ module par_vec_m
   use messages_m
   use mpi_m
   use mpi_debug_m
+  use partition_m
   use profiling_m
   use stencil_m
   use subarray_m
@@ -196,18 +197,21 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, vp)
+  subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
+       inner_partition, bndry_partition, vp)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master process.
 
     !> The next seven entries come from the mesh.
-    integer,         intent(in)  :: np_global           !< mesh%np_global
-    integer,         intent(in)  :: np_part_global      !< mesh%np_part_global
-    type(index_t),   intent(in)  :: idx
-    type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
-    integer,         intent(in)  :: dim          !< Number of dimensions.
-    integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
-    type(pv_t),      intent(inout) :: vp         !< Description of partition.
+    integer,          intent(in)    :: np_global      !< mesh%np_global
+    integer,          intent(in)    :: np_part_global !< mesh%np_part_global
+    type(index_t),    intent(in)    :: idx
+    type(stencil_t),  intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
+    integer,          intent(in)    :: dim            !< Number of dimensions.
+    integer,          intent(in)    :: periodic_dim   !< Number of periodic dimensions
+    type(partition_t),intent(in)    :: inner_partition
+    type(partition_t),intent(in)    :: bndry_partition
+    type(pv_t),       intent(inout) :: vp             !< Description of partition.
 
     ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -257,17 +261,11 @@ contains
 
     ! Count number of points for each process.
     ! Local points.
-    vp%np_local_vec = 0
-    do ip = 1, np_global
-      vp%np_local_vec(vp%part_vec(ip)) = vp%np_local_vec(vp%part_vec(ip)) + 1
-    end do
+    call partition_get_np_local(inner_partition, vp%np_local_vec)
     vp%np_local = vp%np_local_vec(vp%partno)
-    
+
     ! Boundary points.
-    np_bndry_tmp = 0
-    do ip = 1, np_enl
-      np_bndry_tmp(vp%part_vec(ip + np_global)) = np_bndry_tmp(vp%part_vec(ip + np_global)) + 1
-    end do
+    call partition_get_np_local(bndry_partition, np_bndry_tmp)
     vp%np_bndry = np_bndry_tmp(vp%partno)
 
     ! Set up local-to-global index table for local points
