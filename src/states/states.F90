@@ -985,9 +985,9 @@ contains
 
         ! Now we fill all the "missing" states with the maximum occupation.
         if(st%d%ispin == UNPOLARIZED) then
-          el_per_state = M_TWO
+          el_per_state = 2
         else
-          el_per_state = M_ONE
+          el_per_state = 1
         endif
      
         SAFE_ALLOCATE(read_occs(1:ncols, 1:st%d%nik))
@@ -2477,7 +2477,7 @@ contains
   function state_spin(mesh, f1) result(spin)
     type(mesh_t), intent(in) :: mesh
     CMPLX,        intent(in) :: f1(:, :)
-    CMPLX                    :: spin(1:3)
+    FLOAT                    :: spin(1:3)
 
     CMPLX :: z
 
@@ -2485,7 +2485,7 @@ contains
 
     z = zmf_dotp(mesh, f1(:, 1) , f1(:, 2))
 
-    spin(1) = M_TWO*z
+    spin(1) = M_TWO*dble(z)
     spin(2) = M_TWO*aimag(z)
     spin(3) = zmf_nrm2(mesh, f1(:, 1))**2 - zmf_nrm2(mesh, f1(:, 2))**2
     spin = M_HALF*spin ! spin is half the sigma matrix.
