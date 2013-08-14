@@ -40,7 +40,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   type(states_t), target, intent(in) :: st
   integer,        intent(in)    :: is
   integer,        intent(in)    :: jdm
-  R_TYPE,         intent(inout) :: lxc(:,:,:) !< (1:der%mesh%np, 1:st%nst, nspin)
+  R_TYPE,         intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
   FLOAT,          intent(inout) :: ex
   FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
 
