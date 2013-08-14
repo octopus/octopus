@@ -164,7 +164,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_look_and_read(st, gr)
+    call restart_look_and_read(st, gr, exact = .true.)
 
     if(states_are_complex(sys%st)) then
       call messages_not_implemented('linear-response vib_modes with complex wavefunctions')
