@@ -966,7 +966,6 @@ contains
       jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
       mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
-#endif
 
     !%Variable PartitionPrint
     !%Type logical
@@ -983,6 +982,7 @@ contains
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
       call mesh_partition_messages_debug(mesh)
     end if   
+#endif
 
     POP_SUB(mesh_init_stage_3.do_partition)
   end subroutine do_partition

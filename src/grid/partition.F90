@@ -66,14 +66,14 @@ module partition_m
   type partition_t
     private
 
-    ! The following components are the same for all processes:
+    !> The following components are the same for all processes:
     type(mpi_grp_t) :: mpi_grp   !< The mpi group use for distributing the partition data.
     integer ::         np_global !< The total number of points in the partition.
     integer ::         nppp      !< Number of points per process. It is different from
                                  !! np_local only for the process with the highest rank.
     integer ::         npart     !< The number of partitions.
 
-    ! The following components are process dependent:
+    !> The following components are process dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
     integer :: istart            !< The position of the first point stored in this process.
     integer, pointer :: part(:)  !< The local portion of the partition.
@@ -238,7 +238,7 @@ contains
   end subroutine partition_get_local_size
 
   ! ---------------------------------------------------------
-  !> Returns que global partition. If root is present, the partition is
+  !> Returns the global partition. If root is present, the partition is
   !! gathered only in that node. Otherwise it is gathered in all nodes.
   subroutine partition_get_global(partition, part_global, root)
     type(partition_t), intent(in)  :: partition
@@ -430,9 +430,10 @@ contains
     end do
 
     ! Collect all the local points
+#ifdef HAVE_MPI
     call MPI_Allreduce(np_local_vec_tmp(1), np_local_vec(1), partition%npart, &
          MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
-    
+#endif
     SAFE_DEALLOCATE_P(np_local_vec_tmp)
 
     POP_SUB(partition_get_np_local)
