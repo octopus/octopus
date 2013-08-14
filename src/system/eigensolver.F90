@@ -165,7 +165,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
+    if(eigens%es_type == RS_LOBPCG .and. st%block_start /= st%block_end) &
       call messages_experimental("lobpcg eigensolver with more than one block per node")
 
     call messages_obsolete_variable('EigensolverVerbose')
