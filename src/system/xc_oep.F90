@@ -76,9 +76,6 @@ module xc_oep_m
     CMPLX,   pointer      :: zlxc(:, :, :)
   end type xc_oep_t
 
-  FLOAT, parameter :: small     = CNST(1.0e-5)
-
-
 contains
 
   ! ---------------------------------------------------------
@@ -262,14 +259,14 @@ contains
     ! of the potential
     max_eigen = CNST(-1e30)
     do ist = 1, st%nst
-      if((occ(ist) > small).and.(eigenval(ist) > max_eigen)) then
+      if((occ(ist) > M_EPSILON).and.(eigenval(ist) > max_eigen)) then
         max_eigen = eigenval(ist)
       end if
     end do
 
     oep%eigen_n = 1
     do ist = 1, st%nst
-      if(occ(ist) > small) then
+      if(occ(ist) > M_EPSILON) then
         ! criterion for degeneracy
         if(abs(eigenval(ist)-max_eigen) <= CNST(1e-3)) then
           oep%eigen_type(ist) = 2

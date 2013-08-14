@@ -46,7 +46,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   ex_ = M_ZERO
   ec_ = M_ZERO
   do ist = st%st_start, st%st_end
-    if(st%occ(ist, is) > small) then ! we only need the occupied states
+    if(st%occ(ist, is) > M_EPSILON) then ! we only need the occupied states
 
       call states_get_state(st, gr%mesh, ist, is, psi)
 

@@ -80,7 +80,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
   do ist = st%st_start, st%st_end
-    if(st%occ(ist, is) > small) then
+    if(st%occ(ist, is) > M_EPSILON) then
       v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1))
     end if
   end do

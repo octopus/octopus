@@ -55,8 +55,12 @@ subroutine X(oep_x) (gr, st, is, jdm, lxc, ex, exx_coef)
   integer :: send_req, status(MPI_STATUS_SIZE)
 #endif
 
-  socc = M_ONE / st%smear%el_per_state
+  call profiling_in(C_PROFILING_XC_EXX)
+  PUSH_SUB(X(oep_x))
 
+  if(gr%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+
+  socc = M_ONE / st%smear%el_per_state
   !
   ! distinguish between 'is' being the spin_channel index (collinear)
   ! and being the spinor (noncollinear)
@@ -68,8 +72,6 @@ subroutine X(oep_x) (gr, st, is, jdm, lxc, ex, exx_coef)
     idm = 1
   end if 
   ! Note: we assume that st%occ is known in all nodes
-  call profiling_in(C_PROFILING_XC_EXX)
-  PUSH_SUB(X(oep_x))
 
   ASSERT(associated(st%X(psi)))
 
@@ -170,7 +172,7 @@ subroutine X(oep_x) (gr, st, is, jdm, lxc, ex, exx_coef)
         do jst = st%st_start, st%st_end
 
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
-          if((st%occ(ist, isp) <= small).or.(st%occ(jst, isp) <= small)) cycle
+          if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
           rho_ij(1:gr%mesh%np) = R_CONJ(wf_ist(1:gr%mesh%np))*st%X(psi)(1:gr%mesh%np, jdm, jst, isp)
           F_ij(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
