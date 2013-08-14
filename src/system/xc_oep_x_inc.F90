@@ -46,7 +46,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
-  FLOAT :: rr
+  FLOAT :: rr, socc
   R_TYPE, pointer     :: wf_ist(:), send_buffer(:)
   R_TYPE, allocatable :: rho_ij(:), F_ij(:)
 
@@ -54,6 +54,9 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
   R_TYPE,  pointer :: recv_buffer(:)
   integer :: send_req, status(MPI_STATUS_SIZE)
 #endif
+
+  socc = M_ONE / st%smear%el_per_state
+
   !
   ! distinguish between 'is' being the spin_channel index (collinear)
   ! and being the spinor (noncollinear)
@@ -175,20 +178,20 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
 
           ! this quantity has to be added to oep%X(lxc)(1:gr%mesh%np, ist)
           send_buffer(1:gr%mesh%np) = send_buffer(1:gr%mesh%np) + &
-            oep%socc*st%occ(jst, isp)*F_ij(1:gr%mesh%np)*R_CONJ(st%X(psi)(1:gr%mesh%np, idm, jst, isp))
+            socc*st%occ(jst, isp)*F_ij(1:gr%mesh%np)*R_CONJ(st%X(psi)(1:gr%mesh%np, idm, jst, isp))
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
           if((ist /= jst).and..not.(st%d%ispin==SPINORS)) then
             oep%X(lxc)(1:gr%mesh%np, jst, is) = oep%X(lxc)(1:gr%mesh%np, jst, is) - &
-              exx_coef * oep%socc * st%occ(ist, isp) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
+              exx_coef * socc * st%occ(ist, isp) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
           end if
           ! get the contribution (ist, jst) to the exchange energy
           rr = M_ONE
           if(ist /= jst .and. .not.(st%d%ispin==SPINORS)) rr = M_TWO
 
           ex = ex - exx_coef* M_HALF * rr * &
-              oep%sfact * oep%socc*st%occ(ist, isp) * oep%socc*st%occ(jst, isp) * &
+              st%occ(ist, isp) * socc*st%occ(jst, isp) * &
               R_REAL(X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, idm, jst, isp), wf_ist(:)*F_ij(:)))
         end do
 
