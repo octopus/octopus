@@ -128,7 +128,7 @@ ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 operate.o : operate.c operate_inc.c
 partition.o : partition.F90
 partition_transfer.o : partition_transfer.F90 partition_transfer_inc.F90 par_vec.o
-par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o subarray.o
+par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o subarray.o partition.o
 stencil_cube.o : stencil_cube.F90 stencil.o
 stencil.o : stencil.F90
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
