@@ -99,24 +99,31 @@ contains
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
-    if(showoccstates) then
-      showstart = 1
-    else
-      showstart = minval(occ_states(:)) + 1
-    endif
+    call restart_read_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
 
     SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, number_read = states_read)
+      
+    if(ierr_rho /= 0) then
+      message(1) = "Building density from wavefunctions."
+      call messages_info(1)
 
-    ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
-    do ik = 1, sys%st%d%nik
-      if(any(states_read(1:sys%st%d%dim, ik) < occ_states(ik))) then
-        message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
-        message(2) = "Please run a ground-state calculation first!"
-        call messages_fatal(2)
-      end if
-    enddo
+      ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
+      do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+        if(any(states_read(1:sys%st%d%dim, ik) < occ_states(ik))) then
+          message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
+          message(2) = "Please run a ground-state calculation first!"
+          call messages_fatal(2)
+        end if
+      enddo
+
+      if(.not. hm%cmplxscl%space) then
+        call density_calc(sys%st, sys%gr, sys%st%rho)
+      else
+        call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
+      endif
+    end if
 
     if(ierr /= 0) then
       message(1) = "Info: Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
@@ -136,30 +143,23 @@ contains
     end if
     call messages_info(1)
 
-    call restart_read_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
-    if(ierr_rho /= 0) then
-      message(1) = "Building density from wavefunctions."
-      call messages_info(1)
-
-      if(.not. hm%cmplxscl%space) then
-        call density_calc(sys%st, sys%gr, sys%st%rho)
-      else
-        call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-      endif
-    end if
-
     if(fromScratch .or. ierr /= 0) then
       if(ierr > 0 .and. .not. fromScratch) then
         nst_calculated = minval(states_read)
       else
-        nst_calculated = maxval(occ_states(:))
+        ! if not all occupied states read, must recalculate
+        nst_calculated = min(maxval(occ_states), minval(states_read))
       end if
       call lcao_run(sys, hm, st_start = nst_calculated + 1)
+      showstart = nst_calculated + 1
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
+      showstart = minval(occ_states(:)) + 1
     end if
     
     SAFE_DEALLOCATE_A(states_read)
+
+    if(showoccstates) showstart = 1
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
