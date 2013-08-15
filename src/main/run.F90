@@ -267,7 +267,7 @@ contains
       PUSH_SUB(calc_mode_init)
 
       select case(calc_mode_id)
-      case(CM_GS, CM_GEOM_OPT)
+      case(CM_GS, CM_GEOM_OPT, CM_UNOCC)
         call ground_state_run_init()
       case(CM_TD)
         call td_run_init()
