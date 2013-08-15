@@ -93,6 +93,7 @@ module states_m
     states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
+    state_kpt_is_local,               &
     states_distribute_nodes,          &
     states_wfns_memory,               &
     states_are_complex,               &
@@ -1915,16 +1916,19 @@ contains
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = ist_start, ist_end
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), seed)
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, dpsi)
           else
             call zmf_random(mesh, zpsi(:, 1), seed)
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               call zmf_random(mesh, zpsi(:, 1), seed)
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
           end if
@@ -1942,6 +1946,7 @@ contains
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             call zmf_random(mesh, zpsi(:, 1))
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -1978,6 +1983,7 @@ contains
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id))
             end do
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
             st%eigenval(ist, ik) = M_HUGE
           end do
@@ -2504,6 +2510,20 @@ contains
 
     POP_SUB(state_is_local)
   end function state_is_local
+
+  ! ---------------------------------------------------------
+  logical function state_kpt_is_local(st, ist, ik)
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: ist
+    integer,        intent(in) :: ik
+
+    PUSH_SUB(state_kpt_is_local)
+
+    state_kpt_is_local = ist >= st%st_start .and. ist <= st%st_end .and. &
+      ik >= st%d%kpt%start .and. ik <= st%d%kpt%end
+
+    POP_SUB(state_kpt_is_local)
+  end function state_kpt_is_local
 
 
   ! ---------------------------------------------------------
