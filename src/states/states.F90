@@ -1891,21 +1891,10 @@ contains
 
     cmplxscl = st%cmplxscl%space
 
-    ist_start = st%st_start
-    if(present(ist_start_)) ist_start = max(ist_start, ist_start_)
-    ist_end = st%st_end
-    if(present(ist_end_)) ist_end = min(ist_end, ist_end_)
+    ist_start = optional_default(ist_start_, st%st_start)
+    ist_end   = optional_default(ist_end_,   st%st_end)
 
-    if(st%parallel_in_states) then
-      seed = st%mpi_grp%rank
-    else
-      seed = 0
-    end if
-    if(st%d%kpt%parallel) then
-      seed = st%d%kpt%mpi_grp%rank
-    else
-      seed = 0
-    end if
+    seed = 0
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1917,7 +1906,9 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
+        do ist = ist_start, ist_end
+          st%eigenval(ist, ik) = M_ZERO
+          if(cmplxscl) st%zeigenval%Im(ist, ik) = M_ZERO
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), seed)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1925,15 +1916,13 @@ contains
           else
             call zmf_random(mesh, zpsi(:, 1), seed)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
-              call states_set_state(st, mesh, ist,  ik, zpsi)
+            call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               call zmf_random(mesh, zpsi(:, 1), seed)
               if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
           end if
-          st%eigenval(ist, ik) = M_ZERO
-          if(cmplxscl) st%zeigenval%Im(ist, ik) = M_ZERO
         end do
       end do
 
@@ -1943,7 +1932,7 @@ contains
 
       if(st%fixed_spins) then
 
-        do ik = st%d%kpt%start, st%d%kpt%end
+        do ik = 1, st%d%nik
           do ist = ist_start, ist_end
             call zmf_random(mesh, zpsi(:, 1))
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1978,7 +1967,7 @@ contains
           end do
         end do
       else
-        do ik = st%d%kpt%start, st%d%kpt%end
+        do ik = 1, st%d%nik
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id))
