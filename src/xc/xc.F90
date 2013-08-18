@@ -68,6 +68,7 @@ module xc_m
                                         !< (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
+    FLOAT   :: kernel_lrc_alpha         !< long-range correction alpha parameter for kernel in solids
 
     FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
     integer :: mGGA_implementation      !< how to implement the MGGAs
@@ -273,6 +274,21 @@ contains
         ck_id = val / 1000
         xk_id = val - ck_id*1000  
       end if
+
+      !%Variable XCKernelLRCAlpha
+      !%Type float
+      !%Default 0.0
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Set to a non-zero value to add a long-range correction for solids to the kernel.
+      !% This is the alpha parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
+      !% 69, 155112 (2004), which results in multiplying the Hartree term by
+      !% <math>1 - \alpha / 4 \pi</math>. 
+      !%End
+
+      call parse_float(datasets_check('XCKernelLRCAlpha'), M_ZERO, xcs%kernel_lrc_alpha)
+      if(abs(xcs%kernel_lrc_alpha) > M_EPSILON) &
+        call messages_experimental("Long-range correction to kernel")
 
       !%Variable XCDensityCorrection
       !%Type integer

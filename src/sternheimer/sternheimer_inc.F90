@@ -375,13 +375,17 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ispin, ispin2
+  FLOAT :: coeff_hartree
 
   PUSH_SUB(X(calc_hvar))
   call profiling_in(prof_hvar, "CALC_HVAR")
 
   np = sys%gr%mesh%np
 
-  if (add_hartree) then 
+  coeff_hartree = -sys%ks%xc%kernel_lrc_alpha / (M_FOUR * M_PI)
+  if(add_hartree) coeff_hartree = coeff_hartree + 1
+
+  if (abs(coeff_hartree) > M_EPSILON) then
     SAFE_ALLOCATE(    tmp(1:np))
     SAFE_ALLOCATE(hartree(1:np))
     do ip = 1, np
@@ -398,7 +402,8 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
     hvar(1:np, ispin, 1) = M_ZERO
 
     !* hartree
-    if (add_hartree) hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + hartree(1:np)
+    if (abs(coeff_hartree) > M_EPSILON) &
+      hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + coeff_hartree * hartree(1:np)
     
     !* fxc
     if(present(fxc)) then

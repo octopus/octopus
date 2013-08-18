@@ -558,6 +558,7 @@ contains
 
     integer :: pi, qi, sigma, pa, qa, mu
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
+    FLOAT :: coeff_vh
 
     PUSH_SUB(X(casida_get_matrix).X(K_term))
 
@@ -588,13 +589,15 @@ contains
 
     !  first the Hartree part
     if(present(mtxel_vh)) then
-      if(.not. cas%triplet) then
+      coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
+      if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
+      if(abs(coeff_vh) > M_EPSILON) then
         if(qi /= cas%qi_old  .or.   qa /= cas%qa_old   .or.  mu /= cas%mu_old) then
           cas%X(pot)(1:mesh%np) = M_ZERO
           if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, cas%X(pot), rho_j, all_nodes=.false.)
         endif
         ! value of pot is retained between calls
-        mtxel_vh = X(mf_dotp)(mesh, rho_i(:), cas%X(pot)(:))
+        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), cas%X(pot)(:))
 
         cas%qi_old = qi
         cas%qa_old = qa
