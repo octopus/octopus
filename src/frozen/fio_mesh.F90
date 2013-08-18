@@ -14,7 +14,7 @@ module fio_mesh_m
   use json_m,          only: JSON_OK, json_object_t, json_get
   use kinds_m,         only: wp
   use mesh_cube_map_m, only: mesh_cube_map_init
-  use mesh_init_m,     only: mesh_get_vol_pp
+  !use mesh_init_m,     only: mesh_get_vol_pp
 
   use mesh_m, only:           &
     mesh_init_from_file,      &
@@ -92,7 +92,7 @@ contains
         this%x(i,:) = mesh_x_global(this, i, .true.)
       end do
       call mesh_cube_map_init(this%cube_map, this%idx, this%np_global)
-      call mesh_get_vol_pp(this, sb)
+      !call mesh_get_vol_pp(this, sb)
     else
       message(1)="Could not open the mesh info file: '"//trim(dir)//"mesh'"
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", iunit
