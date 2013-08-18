@@ -45,6 +45,7 @@ module species_m
   public ::                        &
     species_t,                     &
     species_set_label,             &
+    species_set_type,              &
     species_set_index,             & 
     species_read,                  &
     species_init,                  &
@@ -86,6 +87,7 @@ module species_m
     SPEC_POINT          = 2,     & !< point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI          = 3,     & !< jellium sphere.
     SPEC_JELLI_SLAB     = 4,     & !< jellium slab.
+    SPEC_FROZEN         = 5,     & !< frozen species.
     SPEC_PS_PSF = PS_TYPE_PSF,   & !< SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,   & !< HGH pseudopotential
     SPEC_PS_CPI = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
@@ -145,10 +147,47 @@ module species_m
     integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
   end type species_t
 
-
+  interface species_end
+    module procedure species_end_species
+    module procedure species_end_array
+  end interface species_end
+ 
 contains
 
-
+  
+  ! ---------------------------------------------------------
+  subroutine species_nullify(this)
+    type(species_t), intent(out) :: this
+    !
+    PUSH_SUB(species_nullify)
+    this%index=0
+    this%label=""
+    this%type=0
+    this%z=M_ZERO
+    this%z_val=M_ZERO
+    this%weight=M_ZERO
+    this%has_density=.false.
+    this%user_def=""
+    this%omega=M_ZERO
+    this%filename=""
+    this%jradius=M_ZERO
+    this%jthick=M_ZERO
+    nullify(this%ps)
+    this%nlcc=.false.
+    this%sigma=M_ZERO
+    this%rho=""
+    this%def_rsize=M_ZERO
+    this%def_h=-M_ONE
+    this%niwfs=-1
+    nullify(this%iwf_l)
+    nullify(this%iwf_m)
+    nullify(this%iwf_i)
+    this%lmax=0
+    this%lloc=0
+    POP_SUB(species_nullify)
+    return
+  end subroutine species_nullify
+ 
   ! ---------------------------------------------------------
   !> Assigns a label to a species_t variable. This should be the
   !! first routine to be called (before species_index, species_read and species_init).
@@ -162,6 +201,17 @@ contains
   end subroutine species_set_label
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  !> Assigns a type to a species_t variable.
+  ! ---------------------------------------------------------
+  elemental subroutine species_set_type(this, that)
+    type(species_t), intent(inout) :: this
+    integer,         intent(in)    :: that
+    !
+    this%type=that
+    return
+  end subroutine species_set_type
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   !> Assigns an index to a species_t variable. This should be the
@@ -602,6 +652,7 @@ contains
     integer :: ierr
     !
     PUSH_SUB(species_init_from_data_object)
+    call species_nullify(this)
     this%index=index
     call json_get(json, "label", this%label, ierr)
     if(ierr/=JSON_OK)then
@@ -965,28 +1016,39 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_end(ns, spec)
+  subroutine species_end_species(spec)
+    type(species_t), intent(inout) :: spec
+    !
+    PUSH_SUB(species_end_species)
+    if (species_is_ps(spec)) then 
+      if(associated(spec%ps)) then 
+        call ps_end(spec%ps)
+        SAFE_DEALLOCATE_P(spec%ps)
+      end if
+    end if
+    SAFE_DEALLOCATE_P(spec%iwf_l)
+    SAFE_DEALLOCATE_P(spec%iwf_m)
+    SAFE_DEALLOCATE_P(spec%iwf_i)
+    POP_SUB(species_end_species)
+    return
+  end subroutine species_end_species
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  subroutine species_end_array(ns, spec)
     integer,         intent(in) :: ns
     type(species_t), pointer    :: spec(:)
 
     integer :: i
 
-    PUSH_SUB(species_end)
+    PUSH_SUB(species_end_array)
 
     do i = 1, ns
-      if (species_is_ps(spec(i))) then 
-        if(associated(spec(i)%ps)) then 
-          call ps_end(spec(i)%ps)
-          SAFE_DEALLOCATE_P(spec(i)%ps)
-        end if
-      end if
-      SAFE_DEALLOCATE_P(spec(i)%iwf_l)
-      SAFE_DEALLOCATE_P(spec(i)%iwf_m)
-      SAFE_DEALLOCATE_P(spec(i)%iwf_i)
+      call species_end_species(spec(i))
     end do
 
-    POP_SUB(species_end)
-  end subroutine species_end
+    POP_SUB(species_end_array)
+  end subroutine species_end_array
   ! ---------------------------------------------------------
 
 
