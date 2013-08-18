@@ -112,6 +112,7 @@ module casida_m
 
     FLOAT,   pointer  :: rho(:,:)       !< density
     FLOAT,   pointer  :: fxc(:,:,:)     !< derivative of xc potential
+    FLOAT             :: kernel_lrc_alpha
 
     FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
     CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
@@ -504,6 +505,7 @@ contains
 
     PUSH_SUB(casida_type_init)
 
+    cas%kernel_lrc_alpha = sys%ks%xc%kernel_lrc_alpha
     cas%states_are_real = states_are_real(sys%st)
 
     ! count pairs
