@@ -43,10 +43,10 @@ module TEMPLATE(potential_m)
     density_t => TEMPLATE(density_t)
 
   use TEMPLATE(geometry_m), only:       &
-    geometry_t => TEMPLATE(geometry_t)
+    geometry_t !=> TEMPLATE(geometry_t)
 
   use TEMPLATE(simulation_m), only:         &
-    simulation_t => TEMPLATE(simulation_t)
+    simulation_t !=> TEMPLATE(simulation_t)
 
   use TEMPLATE(system_m), only:         &
     system_t   => TEMPLATE(system_t),   &

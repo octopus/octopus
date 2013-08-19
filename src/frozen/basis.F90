@@ -3,11 +3,12 @@
 module basis_m
 
   use global_m
+  use messages_m
+  use profiling_m
+
   use json_m,  only: JSON_OK, json_object_t, json_len, json_get
   use kinds_m, only: wp, operator(.equal.)
   use mesh_m,  only: mesh_t
-  use messages_m
-  use profiling_m
 
   implicit none
 

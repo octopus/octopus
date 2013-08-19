@@ -11,7 +11,7 @@ module TEMPLATE(states_m)
   use kinds_m, only: wp
 
   use TEMPLATE(simulation_m), only:         &
-    simulation_t => TEMPLATE(simulation_t)
+    simulation_t !=> TEMPLATE(simulation_t)
 
   use TEMPLATE(density_m), only:                              &
     density_t         => TEMPLATE(density_t),                 &

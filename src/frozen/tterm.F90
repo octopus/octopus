@@ -14,7 +14,7 @@ module TEMPLATE(term_m)
     density_t => TEMPLATE(density_t)
 
   use TEMPLATE(geometry_m), only:       &
-    geometry_t => TEMPLATE(geometry_t)
+    geometry_t !=> TEMPLATE(geometry_t)
 
   use TEMPLATE(states_m), only:     &
     states_t => TEMPLATE(states_t)

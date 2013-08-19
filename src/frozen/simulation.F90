@@ -42,7 +42,7 @@ module simulation_m
   integer, parameter :: TABLE_INIT_LEN = 7
 
   type, public :: simulation_t
-    !private
+    private
     type(json_object_t), pointer :: config =>null()
     type(geometry_t),    pointer :: geo    =>null()
     type(space_t),       pointer :: space  =>null()

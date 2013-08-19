@@ -11,32 +11,32 @@ module fio_grid_m
   use kinds_m,       only: wp
 
   use fio_geometry_m, only: &
-    fio_geometry_t
+    geometry_t
 
   use fio_mesh_m, only: &
-    fio_mesh_t,         &
     fio_mesh_init,      &
     fio_mesh_end
 
   use fio_simul_box_m, only: &
-    fio_simul_box_t,         &
     fio_simul_box_init,      &
     fio_simul_box_end
 
   use igrid_m, only: &
+    grid_t,          &
     grid_init,       &
     grid_end
 
   use igrid_m, only:            &
-    fio_grid_t    => grid_t,    &
     fio_grid_get  => grid_get,  &
     fio_grid_copy => grid_copy
 
   implicit none
 
   private
+  public :: &
+    grid_t
+
   public ::        &
-    fio_grid_t,    &
     fio_grid_init, &
     fio_grid_get,  &
     fio_grid_copy, &
@@ -46,9 +46,9 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_grid_init(this, geo, config)
-    type(fio_grid_t), target, intent(out) :: this
-    type(fio_geometry_t),     intent(in)  :: geo
-    type(json_object_t),      intent(in)  :: config
+    type(grid_t), target, intent(out) :: this
+    type(geometry_t),     intent(in)  :: geo
+    type(json_object_t),  intent(in)  :: config
     !
     real(kind=wp), dimension(MAX_DIM) :: spacing
     type(json_object_t),      pointer :: cnfg
@@ -76,7 +76,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_grid_end(this)
-    type(fio_grid_t), intent(inout) :: this
+    type(grid_t), intent(inout) :: this
     !
     call fio_mesh_end(this%mesh)
     call curvilinear_end(this%cv)

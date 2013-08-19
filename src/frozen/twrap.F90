@@ -27,7 +27,7 @@ module TEMPLATE(m)
     density_t => TEMPLATE(density_t)
 
   use TEMPLATE(geometry_m), only:       &
-    geometry_t => TEMPLATE(geometry_t)
+    geometry_t !=> TEMPLATE(geometry_t)
 
   use TEMPLATE(hamiltonian_m), only:          &
     hamiltonian_t => TEMPLATE(hamiltonian_t)
@@ -53,7 +53,7 @@ module TEMPLATE(m)
 #endif
 
   use TEMPLATE(simulation_m), only:         &
-    simulation_t => TEMPLATE(simulation_t)
+    simulation_t !=> TEMPLATE(simulation_t)
 
   use TEMPLATE(states_m), only:     &
     states_t => TEMPLATE(states_t)

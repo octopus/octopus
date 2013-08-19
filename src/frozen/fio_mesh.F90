@@ -17,6 +17,7 @@ module fio_mesh_m
   !use mesh_init_m,     only: mesh_get_vol_pp
 
   use mesh_m, only:           &
+    mesh_t,                   &
     mesh_init_from_file,      &
     mesh_lxyz_init_from_file, &
     mesh_read_fingerprint,    &
@@ -26,11 +27,15 @@ module fio_mesh_m
     fio_mesh_t   =>mesh_t,    &
     fio_mesh_end =>mesh_end
 
-  use fio_simul_box_m, only: fio_simul_box_t
+  use fio_simul_box_m, only: &
+    simul_box_t
 
   implicit none
 
   private
+  public :: &
+    mesh_t
+
   public ::        &
     fio_mesh_t,    &
     fio_mesh_init, &
@@ -41,10 +46,10 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_mesh_init(this, sb, cv, config)
-    type(fio_mesh_t),              intent(out) :: this
-    type(fio_simul_box_t), target, intent(in)  :: sb
-    type(curvilinear_t),   target, intent(in)  :: cv
-    type(json_object_t),           intent(in)  :: config
+    type(mesh_t),                intent(out) :: this
+    type(simul_box_t),   target, intent(in)  :: sb
+    type(curvilinear_t), target, intent(in)  :: cv
+    type(json_object_t),         intent(in)  :: config
     !
     character(len=MAX_PATH_LEN) :: dir
     integer                     :: i, ia, ib, iunit, ierr
@@ -103,8 +108,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_mesh_copy(this, that)
-    type(fio_mesh_t), intent(out) :: this
-    type(fio_mesh_t), intent(in)  :: that
+    type(mesh_t), intent(out) :: this
+    type(mesh_t), intent(in)  :: that
     !
     ASSERT(.false.)
     return

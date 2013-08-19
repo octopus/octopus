@@ -9,22 +9,27 @@ module fio_simulation_m
   use basis_m, only: basis_t
   use json_m,  only: JSON_OK, json_object_t, json_get
 
-  use fio_geometry_m, only: fio_geometry_t
+  use fio_geometry_m, only: geometry_t
 
-  use fio_grid_m, only: fio_grid_t, fio_grid_init
+  use fio_grid_m, only: grid_t, fio_grid_init
 
-  use simulation_m, only:  simulation_start, &
-    fio_simulation_t    => simulation_t,     &
-    fio_simulation_init => simulation_init,  &
-    fio_simulation_get  => simulation_get,   &
-    fio_simulation_copy => simulation_copy,  &
+  use simulation_m, only: &
+    simulation_t,         &
+    simulation_start
+
+  use simulation_m, only:                   &
+    fio_simulation_init => simulation_init, &
+    fio_simulation_get  => simulation_get,  &
+    fio_simulation_copy => simulation_copy, &
     fio_simulation_end  => simulation_end
 
   implicit none
 
   private
+  public ::       &
+    simulation_t
+
   public ::               &
-    fio_simulation_t,     &
     fio_simulation_init,  &
     fio_simulation_start, &
     fio_simulation_get,   &
@@ -35,12 +40,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_simulation_start(this)
-    type(fio_simulation_t), intent(inout) :: this
+    type(simulation_t), intent(inout) :: this
     !
-    type(json_object_t),  pointer :: config, cnfg
-    type(fio_grid_t),     pointer :: gr
-    type(fio_geometry_t), pointer :: geo
-    integer                       :: ierr
+    type(json_object_t), pointer :: config, cnfg
+    type(grid_t),        pointer :: gr
+    type(geometry_t),    pointer :: geo
+    integer                      :: ierr
     !
     nullify(cnfg, gr, geo)
     call simulation_start(this)

@@ -11,7 +11,7 @@ module TEMPLATE(base_density_m)
   use kinds_m, only: wp
 
   use TEMPLATE(simulation_m), only:         &
-    simulation_t => TEMPLATE(simulation_t)
+    simulation_t !=> TEMPLATE(simulation_t)
 
   use storage_m, only: &
     operator(+),       &

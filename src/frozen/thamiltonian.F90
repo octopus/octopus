@@ -54,7 +54,7 @@ module TEMPLATE(hamiltonian_m)
 #endif
 
   use TEMPLATE(simulation_m), only:         &
-    simulation_t => TEMPLATE(simulation_t)
+    simulation_t !=> TEMPLATE(simulation_t)
 
   use TEMPLATE(system_m), only:     &
     system_t => TEMPLATE(system_t)
@@ -92,7 +92,7 @@ module TEMPLATE(hamiltonian_m)
     TEMPLATE(hamiltonian_interpolation_end)
 
   type, public :: TEMPLATE(hamiltonian_t)
-    !private
+    private
     type(json_object_t), pointer :: config => null()
     type(system_t),      pointer :: sys    => null()
     type(simulation_t),  pointer :: sim    => null()

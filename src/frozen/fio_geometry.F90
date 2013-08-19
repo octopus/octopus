@@ -11,18 +11,20 @@ module fio_geometry_m
   use species_m, only: SPEC_FROZEN, species_set_type
 
   use igeometry_m, only: &
+    geometry_t,          &
     geometry_init
 
   use igeometry_m, only:                &
-    fio_geometry_t    => geometry_t,    &
     fio_geometry_copy => geometry_copy, &
     fio_geometry_end  => geometry_end
 
   implicit none
 
   private
+  public ::     &
+    geometry_t
+
   public ::            &
-    fio_geometry_t,    &
     fio_geometry_init, &
     fio_geometry_copy, &
     fio_geometry_end
@@ -31,7 +33,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_geometry_init(this, space, json)
-    type(fio_geometry_t),  intent(out) :: this
+    type(geometry_t),      intent(out) :: this
     type(space_t), target, intent(in)  :: space
     type(json_object_t),   intent(in)  :: json
     !

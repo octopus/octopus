@@ -43,13 +43,12 @@ libfrozen_a_SOURCES =            \
 	fio_simulation.F90       \
 	fio_density.F90          \
 	fio_external.F90         \
-	fio_config.F90           #\
+	fio_config.F90           \
 	frozen_geometry.F90      \
 	frozen_grid.F90          \
 	frozen_simulation.F90    \
-	frozen_density.F90       \
+	frozen_density.F90       #\
 	frozen_external.F90      \
-	frozen_hartree.F90       \
 	frozen_ionic.F90         \
 	frozen_tnadd.F90         \
 	frozen_config.F90        #\
@@ -119,7 +118,6 @@ interface_xc.o : interface_xc.F90 simulation.o kinds.o
 lda.o : lda.F90 interface_xc.o kinds.o
 gga.o : gga.F90 interface_xc.o kinds.o
 functional.o : functional.F90 gga.o lda.o kinds.o
-#tnadd.o : tnadd.F90 functional.o
 
 fio_geometry.o : fio_geometry.F90 igeometry.o
 fio_simul_box.o : fio_simul_box.F90 fio_geometry.o kinds.o
@@ -130,11 +128,11 @@ fio_density.o : fio_density.F90 fio_simulation.o fio_geometry.o iatom.o kinds.o
 fio_external.o : fio_external.F90 fio_density.o fio_simulation.o storage.o kinds.o
 fio_config.o : fio_config.F90 fio_external.o fio_density.o igeometry.o basis.o kinds.o
 
-#frozen_geometry.o : frozen_geometry.F90 igeometry.o
+frozen_geometry.o : frozen_geometry.F90 igeometry.o
 #frozen_simul_box.o : frozen_simul_box.F90
-#frozen_grid.o : frozen_grid.F90
-#frozen_simulation.o : frozen_simulation.F90 fio_config.o fio_simulation.o simulation.o #domain.o basis.o
-#frozen_density.o : frozen_density.F90 frozen_geometry.o frozen_simulation.o fio_config.o iatom.o interpolation.o basis.o
+frozen_grid.o : frozen_grid.F90
+frozen_simulation.o : frozen_simulation.F90 fio_config.o fio_simulation.o simulation.o #domain.o basis.o
+frozen_density.o : frozen_density.F90 frozen_base_density.o frozen_geometry.o frozen_simulation.o fio_config.o iatom.o interpolation.o basis.o
 #frozen_external.o : frozen_external.F90 frozen_density.o frozen_simulation.o fio_config.o fio_external.o storage.o
 #frozen_hartree.o : frozen_hartree.F90 frozen_simulation.o fio_config.o storage.o 
 #frozen_ionic.o : frozen_ionic.F90 frozen_density.o frozen_simulation.o fio_config.o storage.o

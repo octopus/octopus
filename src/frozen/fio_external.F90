@@ -11,11 +11,11 @@ module fio_external_m
   use profiling_m
 
   use io_binary_m, only: io_binary_read
-  use json_m,      only: JSON_OK, json_object_t, json_get, json_write
+  use json_m,      only: JSON_OK, json_object_t, json_get
   use kinds_m,     only: wp
 
   use fio_simulation_m, only:         &
-    simulation_t => fio_simulation_t
+    simulation_t !=> fio_simulation_t
 
   use fio_external_potential_m, only:                         &
     external_potential_start => fio_external_potential_start
@@ -105,11 +105,6 @@ contains
     ASSERT(associated(cnfg))
     call json_get(cnfg, "allocate", read, ierr)
     if(ierr/=JSON_OK)read=.false.
-    print *, "***: fio_external_start: ", read, ierr
-    print *, "*********************************"
-    call json_write(cnfg)
-    print *,
-    print *, "*********************************"
     call external_potential_start(this, sim)
     if(read)&
       call fio_external_read(this)

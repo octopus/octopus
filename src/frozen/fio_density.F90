@@ -23,7 +23,7 @@ module fio_density_m
   use kinds_m,     only: wp
 
   use fio_simulation_m, only:         &
-    simulation_t => fio_simulation_t
+    simulation_t !=> fio_simulation_t
 
   use fio_base_density_m, only:                   &
     base_density_start => fio_base_density_start 
@@ -75,7 +75,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fio_density_start(this, sim)
     type(fio_density_t), intent(inout) :: this
-    type(simulation_t), intent(in)    :: sim
+    type(simulation_t),  intent(in)    :: sim
     !
     real(kind=wp), dimension(:,:), pointer :: density
     type(json_object_t),           pointer :: cnfg

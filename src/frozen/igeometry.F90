@@ -6,22 +6,16 @@ module igeometry_m
   use messages_m
   use profiling_m
 
-  use iatom_m, only: atom_init, atom_create_data_object, &
-    atom_classical_create_data_object
-  use basis_m, only: basis_t
+  use iatom_m,       only: atom_init, atom_create_data_object, atom_classical_create_data_object
   use distributed_m, only: distributed_nullify
-  use geometry_m, only: geometry_t, geometry_copy, geometry_end
-!!$  use io_m
-  use json_m, only: JSON_OK, json_object_t, json_array_t, json_init, json_get, json_set, json_append
-!!$  use loct_pointer_m
-!!$  use loct_math_m
-  use space_m, only: space_t
-  use species_m, only: LABEL_LEN, species_label, species_init_from_data_object, species_create_data_object
-!!$  use string_m
-!!$  use unit_m
-!!$  use unit_system_m
-!!$  use varinfo_m
-!!$  use xyz_file_m
+  use json_m,        only: JSON_OK, json_object_t, json_array_t, json_init, json_get, json_set, json_append
+  use space_m,       only: space_t
+  use species_m,     only: LABEL_LEN, species_label, species_init_from_data_object, species_create_data_object
+
+  use geometry_m, only: &
+    geometry_t,         &
+    geometry_copy,      &
+    geometry_end
 
   implicit none
 
@@ -29,29 +23,14 @@ module igeometry_m
   public ::                      &
     geometry_t,                  &
     geometry_init,               &
-    geometry_extend,             &
-    geometry_start,              &
     geometry_create_data_object, &
     geometry_copy,               &
     geometry_end
 
-  interface geometry_init
-    module procedure geometry_init_simple
-    module procedure geometry_init_json
-  end interface geometry_init
-
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init_simple(this, space)
-    type(geometry_t),      intent(out) :: this
-    type(space_t), target, intent(in)  :: space
-    !
-    return
-  end subroutine geometry_init_simple
-
-  ! ---------------------------------------------------------
-  subroutine geometry_init_json(this, space, json)
+  subroutine geometry_init(this, space, json)
     type(geometry_t),      intent(out) :: this
     type(space_t), target, intent(in)  :: space
     type(json_object_t),   intent(in)  :: json
@@ -155,50 +134,7 @@ contains
     this%reduced_coordinates=.false.
     POP_SUB(geometry_init_from_data_object)
     return
-  end subroutine geometry_init_json
-
-  ! ---------------------------------------------------------
-  subroutine geometry_extend(this, that, basis)
-    type(geometry_t), intent(inout) :: this
-    type(geometry_t), intent(in)    :: that
-    type(basis_t),    intent(in)    :: basis
-    !
-    return
-  end subroutine geometry_extend
-
-  ! ---------------------------------------------------------
-  subroutine geometry_start(this)
-    type(geometry_t), intent(inout) :: this
-    !
-    return
-  end subroutine geometry_start
-
-  ! ---------------------------------------------------------
-  subroutine geometry_create_empty_data_object(json)
-    type(json_object_t), intent(out) :: json
-    !
-    type(json_array_t), pointer :: list
-    !
-    PUSH_SUB(geometry_create_empty_data_object)
-    call json_init(json)
-    call json_set(json, "nspecies", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(json, "species", list)
-    nullify(list)
-    call json_set(json, "natoms", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(json, "atom", list)
-    nullify(list)
-    call json_set(json, "ncatoms", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(json, "catom", list)
-    nullify(list)
-    POP_SUB(geometry_create_empty_data_object)
-    return
-  end subroutine geometry_create_empty_data_object
+  end subroutine geometry_init
 
   ! ---------------------------------------------------------
   subroutine geometry_create_data_object(this, json)

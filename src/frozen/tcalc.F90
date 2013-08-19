@@ -53,7 +53,7 @@ module TEMPLATE(calc_m)
 #endif
 
   use TEMPLATE(simulation_m), only:                 &
-    simulation_t     => TEMPLATE(simulation_t),     &
+    simulation_t, &     !=> TEMPLATE(simulation_t),     &
     simulation_init  => TEMPLATE(simulation_init),  &
     simulation_start => TEMPLATE(simulation_start), &
     simulation_copy  => TEMPLATE(simulation_copy),  &

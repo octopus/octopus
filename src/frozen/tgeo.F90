@@ -14,7 +14,9 @@ module TEMPLATE(geo_m)
   use species_m,     only: species_t, species_end, species_set_index, species_index
 
   use TEMPLATE(geometry_m), only:             &
-    geometry_t    => TEMPLATE(geometry_t),    &
+    geometry_t    !=> TEMPLATE(geometry_t),    &
+
+  use TEMPLATE(geometry_m), only:             &
     geometry_init => TEMPLATE(geometry_init), &
     geometry_copy => TEMPLATE(geometry_copy), &
     geometry_end  => TEMPLATE(geometry_end)
