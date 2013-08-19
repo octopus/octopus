@@ -217,7 +217,7 @@ contains
     ASSERT(space==spc)
     call space_end(spc)
     call json_get(config, "geometry", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)then
+    ASSERT(ierr==JSON_OK)
     call geo_init(this%gmt, this%space, cnfg)
     nullify(cnfg)
     call TEMPLATE(system_init_common)(this, space, config)

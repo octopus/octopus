@@ -7,7 +7,6 @@ module TEMPLATE(external_potential_m)
   use messages_m
   use profiling_m
 
-  use interpolation_m, only: NONE, NEAREST
   use json_m,          only: json_object_t
   use kinds_m,         only: wp
   use species_m,       only: species_zval
@@ -23,12 +22,11 @@ module TEMPLATE(external_potential_m)
     system_get => TEMPLATE(system_get)
 
   use TEMPLATE(potential_m), only:                                &
-    potential_init          => TEMPLATE(potential_init),          &
-    potential_get_nspin     => TEMPLATE(potential_get_nspin),     &
     potential_get_potential => TEMPLATE(potential_get_potential)
 
   use TEMPLATE(potential_m), only:                                             &
     TEMPLATE(external_potential_t)          => TEMPLATE(potential_t),          &
+    TEMPLATE(external_potential_init)       => TEMPLATE(potential_init),       &
     TEMPLATE(external_potential_start)      => TEMPLATE(potential_start),      &
 #ifdef SUBTEMPLATE_NAME
     TEMPLATE(external_potential_extend)     => TEMPLATE(potential_extend),     &
@@ -88,17 +86,6 @@ module TEMPLATE(external_potential_m)
   end type TEMPLATE(external_potential_interpolation_t)
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(external_potential_init)(this, sys, config)
-    type(TEMPLATE(external_potential_t)), intent(out) :: this
-    type(system_t),                       intent(in)  :: sys
-    type(json_object_t),                  intent(in)  :: config
-    !
-    call potential_init(this, sys, config)
-    ASSERT(potential_get_nspin(this)==1)
-    return
-  end subroutine TEMPLATE(external_potential_init)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(external_potential_get_potential)(this, that)

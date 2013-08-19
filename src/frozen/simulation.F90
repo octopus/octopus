@@ -30,18 +30,19 @@ module simulation_m
   implicit none
 
   private
-  public ::            &
-    simulation_init,   &
-    simulation_start,  &
-    simulation_extend, &
-    simulation_get,    &
-    simulation_copy,   &
+  public ::              &
+    simulation_init,     &
+    simulation_start,    &
+    simulation_extend,   &
+    simulation_get,      &
+    simulation_get_ndim, &
+    simulation_copy,     &
     simulation_end
   
   integer, parameter :: TABLE_INIT_LEN = 7
 
   type, public :: simulation_t
-    private
+    !private
     type(json_object_t), pointer :: config =>null()
     type(geometry_t),    pointer :: geo    =>null()
     type(space_t),       pointer :: space  =>null()
@@ -149,6 +150,16 @@ contains
     !call simul_box_extend(this%gr%sb, that, basis)
     return
   end subroutine simulation_extend
+
+  ! ---------------------------------------------------------
+  elemental function simulation_get_ndim(this) result(that)
+    type(simulation_t),   target, intent(in) :: this
+    !
+    integer :: that
+    !
+    that=this%space%dim
+    return
+  end function simulation_get_ndim
 
   ! ---------------------------------------------------------
   subroutine simulation_get_config(this, that)

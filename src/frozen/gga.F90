@@ -2,60 +2,93 @@
 
 module gga_m
 
+  use global_m
+  use messages_m
+  use profiling_m
+
   use derivatives_m, only: derivatives_t, dderivatives_grad, dderivatives_div
-  use interface_xc_m
-  use json_m, only: json_object_t
-  use kinds_m, only: wp
-  use XC_F90(lib_m), only: XC_POLARIZED, XC_UNPOLARIZED
+  use grid_m,        only: grid_t
+  use json_m,        only: json_object_t
+  use kinds_m,       only: wp
+  use simulation_m,  only: simulation_t, simulation_get
+
+  use interface_xc_m, only: &
+    XC_NONE,                &
+    XC_POLARIZED,           &
+    XC_UNPOLARIZED
+
+  use interface_xc_m, only:    &
+    interface_xc_t,            &
+    interface_xc_init,         &
+    interface_xc_start,        &
+    interface_xc_is_polarized, &
+    interface_xc_get_nspin,    &
+    interface_xc_get_kind,     &
+    interface_xc_density,      &
+    interface_xc_gga_exc,      &
+    interface_xc_gga_vxc,      &
+    interface_xc_gga_exc_vxc,  &
+    interface_xc_copy,         &
+    interface_xc_end
 
   implicit none
 
   private
   public ::              &
     gga_init,            &
-    gga_set_parameter,   &
+    gga_start,           &
     gga_get_kind,        &
     gga_get_exc,         &
     gga_get_exc_and_vxc, &
     gga_get_vxc,         &
+    gga_copy,            &
     gga_end
 
   type, public :: gga_t
     private
-    integer                      :: spin  = XC_NONE ! XC_UNPOLARIZED | XC_POLARIZED
-    integer                      :: nspin = 0
-    integer                      :: ndim  = 0
-    type(derivatives_t), pointer :: der   =>null()
+    type(json_object_t), pointer :: config =>null()
+    type(simulation_t),  pointer :: sim    =>null()
+    type(derivatives_t), pointer :: der    =>null()
+    integer                      :: spin   = XC_NONE ! XC_UNPOLARIZED | XC_POLARIZED
+    integer                      :: nspin  = 0
+    integer                      :: ndim   = 0
     type(interface_xc_t)         :: funct
   end type gga_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine gga_init(this, der, id, nspin)
+  subroutine gga_init(this, config)
     type(gga_t),                 intent(out) :: this
-    type(derivatives_t), target, intent(in)  :: der
-    integer,                     intent(in)  :: id
-    integer,                     intent(in)  :: nspin
+    type(json_object_t), target, intent(in)  :: config
     !
-    this%der=>der
-    ASSERT(nspin>0)
-    this%nspin=nspin
+    this%config=>config
+    nullify(this%sim, this%der)
+    call interface_xc_init(this%funct, config)
+    this%nspin=interface_xc_get_nspin(this%funct)
     this%spin=XC_UNPOLARIZED
-    if(nspin>1)this%spin=XC_POLARIZED
-    this%ndim=this%der%mesh%sb%dim
-    call interface_xc_init(this%funct, id, this%ndim, nspin)
+    if(interface_xc_is_polarized(this%funct))&
+      this%spin=XC_POLARIZED
     return
   end subroutine gga_init
 
   ! ---------------------------------------------------------
-  subroutine gga_set_parameter(this, config)
-    type(gga_t),         intent(inout) :: this
-    type(json_object_t), intent(in)    :: config
+  subroutine gga_start(this, sim)
+    type(gga_t),                intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
     !
-    call interface_xc_set_parameter(this%funct, config)
+    type(grid_t), pointer :: grid
+    !
+    ASSERT(.not.associated(this%sim))
+    this%sim=>sim
+    nullify(grid)
+    call simulation_get(this%sim, grid)
+    ASSERT(associated(grid))
+    this%der=>grid%fine%der
+    this%ndim=this%der%mesh%sb%dim
+    call interface_xc_start(this%funct, sim)
     return
-  end subroutine gga_set_parameter
+  end subroutine gga_start
 
   ! ---------------------------------------------------------
   elemental function gga_get_kind(this) result(kind)
@@ -148,11 +181,29 @@ contains
   end subroutine gga_get_vxc
 
   ! ---------------------------------------------------------
+  subroutine gga_copy(this, that)
+    type(gga_t), intent(out) :: this
+    type(gga_t), intent(in)  :: that
+    !
+    this%config=>that%config
+    this%sim=>that%sim
+    this%der=>that%der
+    this%spin=that%spin
+    this%nspin=that%nspin
+    this%ndim=that%ndim
+    call interface_xc_copy(this%funct, that%funct)
+    return
+  end subroutine gga_copy
+
+  ! ---------------------------------------------------------
   subroutine gga_end(this)
     type(gga_t), intent(inout) :: this
     !
     call interface_xc_end(this%funct)
-    this%der=>null()
+    this%ndim=0
+    this%nspin=0
+    this%spin=XC_NONE
+    nullify(this%der, this%sim, this%config)
     return
   end subroutine gga_end
 

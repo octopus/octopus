@@ -10,12 +10,19 @@ module TEMPLATE(potential_m)
   use json_m,          only: JSON_OK, json_object_t, json_get
   use kinds_m,         only: wp
 
+  use storage_m, only: &
+    operator(+),       &
+    operator(-)
+
   use storage_m, only:     &
     storage_t,             &
     storage_init,          &
+    storage_start,         &
     storage_update,        &
+    storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
+    storage_get_default,   &
     storage_get_storage,   &
     storage_copy,          &
     storage_end
@@ -65,6 +72,10 @@ module TEMPLATE(potential_m)
   implicit none
 
   private
+  public ::      &
+    operator(+), &
+    operator(-)
+
   public ::                            &
     TEMPLATE(potential_init),          &
     TEMPLATE(potential_start),         &
@@ -92,12 +103,8 @@ module TEMPLATE(potential_m)
 
   type, public :: TEMPLATE(potential_t)
     private
-    type(simulation_t),  pointer :: sim     =>null()
-    integer                      :: nspin   = 0
-    logical                      :: alloc   = .false.
-    real(kind=wp)                :: default = 0.0_wp
-    type(term_t)                 :: term
-    type(storage_t)              :: potential
+    type(term_t)    :: term
+    type(storage_t) :: potential
   end type TEMPLATE(potential_t)
 
   type, public :: TEMPLATE(potential_interpolation_t)
@@ -105,6 +112,14 @@ module TEMPLATE(potential_m)
     type(TEMPLATE(potential_t)), pointer :: self =>null()
     type(storage_interpolation_t)        :: intrp
   end type TEMPLATE(potential_interpolation_t)
+
+  interface operator(+)
+    module procedure TEMPLATE(potential_add)
+  end interface operator(+)
+
+  interface operator(-)
+    module procedure TEMPLATE(potential_sub)
+  end interface operator(-)
 
   interface TEMPLATE(potential_get)
     module procedure TEMPLATE(potential_get_config)
@@ -132,34 +147,24 @@ contains
     type(system_t),      target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
     !
-    integer :: ierr
+    real(kind=wp) :: default
+    integer       :: nspin, ierr
     !
-    this%sim=>null()
     call term_init(this%term, sys, config)
-    call json_get(config, "SpinComponents", this%nspin, ierr)
-    if(ierr/=JSON_OK)this%nspin=1
-    call json_get(config, "allocate", this%alloc, ierr)
-    if(ierr/=JSON_OK)this%alloc=.true.
-    this%default=0.0_wp
+    call json_get(config, "SpinComponents", nspin, ierr)
+    if(ierr/=JSON_OK)nspin=1
+    call json_get(config, "default", default, ierr)
+    if(ierr/=JSON_OK)default=0.0_wp
+    call storage_init(this%potential, nspin, default)
     return
   end subroutine TEMPLATE(potential_init)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_start)(this, sim)
     type(TEMPLATE(potential_t)), intent(inout) :: this
-    type(simulation_t),  target, intent(in)    :: sim
+    type(simulation_t),          intent(in)    :: sim
     !
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-    !
-    ASSERT(.not.associated(this%sim))
-    this%sim=>sim
-    call term_get(this%term, cnfg)
-    ASSERT(associated(cnfg))
-    call json_get(cnfg, "default", this%default, ierr)
-    if(ierr/=JSON_OK)this%default=0.0_wp
-    if(this%alloc)&
-      call storage_init(this%potential, this%sim, this%nspin, this%default)
+    call storage_start(this%potential, sim)
     return
   end subroutine TEMPLATE(potential_start)
 
@@ -178,11 +183,31 @@ contains
   subroutine TEMPLATE(potential_update)(this)
     type(TEMPLATE(potential_t)), intent(inout) :: this
     !
-    ASSERT(associated(this%sim))
-    if(this%alloc)&
-      call storage_update(this%potential)
+    call storage_update(this%potential)
     return
   end subroutine TEMPLATE(potential_update)
+
+  ! ---------------------------------------------------------
+  function TEMPLATE(potential_add)(this, that) result(resl)
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(TEMPLATE(potential_t)), intent(in) :: that
+    !
+    type(TEMPLATE(potential_t)) :: resl
+    !
+    resl%potential=this%potential+that%potential
+    return
+  end function TEMPLATE(potential_add)
+
+  ! ---------------------------------------------------------
+  function TEMPLATE(potential_sub)(this, that) result(resl)
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(TEMPLATE(potential_t)), intent(in) :: that
+    !
+    type(TEMPLATE(potential_t)) :: resl
+    !
+    resl%potential=this%potential-that%potential
+    return
+  end function TEMPLATE(potential_sub)
 
   ! ---------------------------------------------------------
   elemental subroutine TEMPLATE(potential_set_energy)(this, that)
@@ -225,8 +250,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_get_config)(this, that)
-    type(TEMPLATE(potential_t)), target, intent(in) :: this
-    type(json_object_t),        pointer             :: that
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(json_object_t),        pointer     :: that
     !
     call term_get(this%term, that)
     return
@@ -234,19 +259,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_get_simulation)(this, that)
-    type(TEMPLATE(potential_t)), target, intent(in) :: this
-    type(simulation_t),         pointer             :: that
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(simulation_t),         pointer     :: that
     !
-    that=>null()
-    if(associated(this%sim))&
-      that=>this%sim
+    call storage_get(this%potential, that)
     return
   end subroutine TEMPLATE(potential_get_simulation)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_get_system)(this, that)
-    type(TEMPLATE(potential_t)), target, intent(in) :: this
-    type(system_t),             pointer             :: that
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(system_t),             pointer     :: that
     !
     call term_get(this%term, that)
     return
@@ -254,8 +277,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_get_geometry)(this, that)
-    type(TEMPLATE(potential_t)), target, intent(in) :: this
-    type(geometry_t),           pointer             :: that
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(geometry_t),           pointer     :: that
     !
     call term_get(this%term, that)
     return
@@ -263,8 +286,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(potential_get_density)(this, that)
-    type(TEMPLATE(potential_t)), target, intent(in) :: this
-    type(density_t),            pointer             :: that
+    type(TEMPLATE(potential_t)), intent(in) :: this
+    type(density_t),            pointer     :: that
     !
     call term_get(this%term, that)
     return
@@ -275,9 +298,7 @@ contains
     type(TEMPLATE(potential_t)),  intent(in) :: this
     real(kind=wp), dimension(:), pointer     :: that
     !
-    that=>null()
-    if(this%alloc)&
-      call storage_get_storage(this%potential, that)
+    call storage_get_storage(this%potential, that)
     return
   end subroutine TEMPLATE(potential_get_potential_1d)
 
@@ -286,9 +307,7 @@ contains
     type(TEMPLATE(potential_t)),    intent(in) :: this
     real(kind=wp), dimension(:,:), pointer     :: that
     !
-    that=>null()
-    if(this%alloc)&
-      call storage_get_storage(this%potential, that)
+    call storage_get_storage(this%potential, that)
     return
   end subroutine TEMPLATE(potential_get_potential_2d)
 
@@ -297,13 +316,8 @@ contains
     type(TEMPLATE(potential_t)), intent(out) :: this
     type(TEMPLATE(potential_t)), intent(in)  :: that
     !
-    this%sim=>that%sim
-    this%nspin=that%nspin
-    this%alloc=that%alloc
-    this%default=that%default
     call term_copy(this%term, that%term)
-    if(this%alloc)&
-      call storage_copy(this%potential, that%potential)
+    call storage_copy(this%potential, that%potential)
     return
   end subroutine TEMPLATE(potential_copy)
 
@@ -311,13 +325,8 @@ contains
   subroutine TEMPLATE(potential_end)(this)
     type(TEMPLATE(potential_t)), intent(inout) :: this
     !
-    if(this%alloc)&
-      call storage_end(this%potential)
+    call storage_end(this%potential)
     call term_end(this%term)
-    this%default=0.0_wp
-    this%alloc=.false.
-    this%nspin=0
-    this%sim=>null()
     return
   end subroutine TEMPLATE(potential_end)
 
@@ -329,19 +338,17 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: type, ierr
     !
-    cnfg=>null()
+    nullify(cnfg)
     this%self=>that
-    if(that%alloc)then
-      call term_get(that%term, cnfg)
-      ASSERT(associated(cnfg))
-      call json_get(cnfg, "interpolation", type, ierr)
-      if(ierr==JSON_OK)then
-        call storage_interpolation_init(this%intrp, that%potential, type)
-      else
-        call storage_interpolation_init(this%intrp, that%potential)
-      end if
-      cnfg=>null()
+    call term_get(that%term, cnfg)
+    ASSERT(associated(cnfg))
+    call json_get(cnfg, "interpolation", type, ierr)
+    if(ierr==JSON_OK)then
+      call storage_interpolation_init(this%intrp, that%potential, type)
+    else
+      call storage_interpolation_init(this%intrp, that%potential)
     end if
+    nullify(cnfg)
     return
   end subroutine TEMPLATE(potential_interpolation_init)
 
@@ -352,11 +359,7 @@ contains
     real(kind=wp),               intent(out) :: val
     integer,                     intent(out) :: ierr
     !
-    if(this%self%alloc)then
-      call storage_interpolation_eval(this%intrp, x, val, ierr)
-    else
-      val=this%self%default
-    end if
+    call storage_interpolation_eval(this%intrp, x, val, ierr)
     return
   end subroutine TEMPLATE(potential_interpolation_eval_1d)
 
@@ -367,11 +370,7 @@ contains
     real(kind=wp),               dimension(:), intent(out) :: val
     integer,                                   intent(out) :: ierr
     !
-    if(this%self%alloc)then
-      call storage_interpolation_eval(this%intrp, x, val, ierr)
-    else
-      val=this%self%default
-    end if
+    call storage_interpolation_eval(this%intrp, x, val, ierr)
     return
   end subroutine TEMPLATE(potential_interpolation_eval_2d)
 

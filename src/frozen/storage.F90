@@ -11,6 +11,9 @@ module storage_m
 #endif
   use kinds_m,      only: wp
 
+  use grid_m, only: &
+    grid_t
+
   use mesh_m, only: &
     mesh_t
 
@@ -33,19 +36,28 @@ module storage_m
   implicit none
 
   private
+  public ::      &
+    operator(+), &
+    operator(-)
+
   public ::                &
     storage_init,          &
+    storage_start,         &
     storage_update,        &
+    storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
+    storage_get_default,   &
     storage_get_storage,   &
     storage_copy,          &
     storage_end
 
+  public ::           &
+    STORAGE_INTRP_OK, &
+    STORAGE_INTRP_OD, &
+    STORAGE_INTRP_NI
+
   public ::                     &
-    STORAGE_INTRP_OK,           &
-    STORAGE_INTRP_OD,           &
-    STORAGE_INTRP_NI,           &
     storage_interpolation_init, &
     storage_interpolation_eval, &
     storage_interpolation_copy, &
@@ -66,6 +78,19 @@ module storage_m
     type(interpolation_t)    :: intrp
   end type storage_interpolation_t
 
+  interface operator(+)
+    module procedure storage_add
+  end interface operator(+)
+
+  interface operator(-)
+    module procedure storage_sub
+  end interface operator(-)
+
+  interface storage_get
+    module procedure storage_get_simulation
+    module procedure storage_get_mesh
+  end interface storage_get
+
   interface storage_get_storage
     module procedure storage_get_storage_1d
     module procedure storage_get_storage_2d
@@ -79,27 +104,49 @@ module storage_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine storage_init(this, sim, ndim, default)
-    type(storage_t),            intent(out) :: this
-    type(simulation_t), target, intent(in)  :: sim
-    integer,          optional, intent(in)  :: ndim
-    real(kind=wp),    optional, intent(in)  :: default
+  subroutine storage_init(this, ndim, default)
+    type(storage_t),         intent(out) :: this
+    integer,       optional, intent(in)  :: ndim
+    real(kind=wp), optional, intent(in)  :: default
     !
     this%ndim=1
     if(present(ndim))then
       ASSERT(ndim>0)
       this%ndim=ndim
     end if
-    this%sim=>sim
-    call simulation_get(this%sim, this%mesh)
-    ASSERT(associated(this%mesh))
+    this%sim=>null()
     this%default=0.0_wp
     if(present(default))this%default=default
+    return
+  end subroutine storage_init
+
+  ! ---------------------------------------------------------
+  subroutine storage_start(this, sim, fine)
+    type(storage_t),            intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
+    logical,          optional, intent(in)    :: fine
+    !
+    type(grid_t), pointer :: grid
+    logical               :: fn
+    !
+    fn=.false.
+    if(present(fine))fn=fine
+    ASSERT(this%ndim>0)
+    ASSERT(.not.associated(this%sim))
+    this%sim=>sim
+    nullify(grid)
+    call simulation_get(this%sim, grid)
+    ASSERT(associated(grid))
+    if(fn.and.grid%have_fine_mesh)then
+      this%mesh=>grid%fine%mesh
+    else
+      this%mesh=>grid%mesh
+    end if
     ASSERT(this%mesh%np_part>0)
     SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
     this%storage=this%default
     return
-  end subroutine storage_init
+  end subroutine storage_start
 
   ! ---------------------------------------------------------
   subroutine storage_update(this)
@@ -107,7 +154,7 @@ contains
     !
     integer :: i
     !
-    ASSERT(this%ndim>0)
+    ASSERT(associated(this%sim))
     this%storage(this%mesh%np+1:,:)=0.0_wp
 #if defined(HAVE_MPI)
     do i = 1, this%ndim
@@ -118,28 +165,114 @@ contains
   end subroutine storage_update
 
   ! ---------------------------------------------------------
-  elemental function storage_get_size(this) result(np)
+  subroutine storage_form(this, that)
+    type(storage_t),         intent(out) :: this
+    type(storage_t), target, intent(in)  :: that
+    !
+    call storage_end(this)
+    if(that%ndim>0)then
+      this%ndim=that%ndim
+      ASSERT(associated(this%sim))
+      this%sim=>that%sim
+      this%mesh=>that%mesh
+      SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
+    end if
+    return
+  end subroutine storage_form
+
+  ! ---------------------------------------------------------
+  function storage_add(this, that) result(resl)
+    type(storage_t), intent(in) :: this
+    type(storage_t), intent(in) :: that
+    !
+    type(storage_t) :: resl
+    !
+    ASSERT(this%ndim>0)
+    ASSERT(associated(this%mesh))
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(associated(this%mesh, that%mesh))
+    call storage_form(resl, this)
+    resl%storage(1:this%mesh%np,:)=this%storage(1:this%mesh%np,:)+that%storage(1:that%mesh%np,:)
+    resl%default=this%default+that%default
+    call storage_update(resl)
+    return
+  end function storage_add
+
+  ! ---------------------------------------------------------
+  function storage_sub(this, that) result(resl)
+    type(storage_t), intent(in) :: this
+    type(storage_t), intent(in) :: that
+    !
+    type(storage_t) :: resl
+    !
+    ASSERT(this%ndim>0)
+    ASSERT(associated(this%mesh))
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(associated(this%mesh, that%mesh))
+    call storage_form(resl, this)
+    resl%storage(1:this%mesh%np,:)=this%storage(1:this%mesh%np,:)-that%storage(1:that%mesh%np,:)
+    resl%default=this%default-that%default
+    call storage_update(resl)
+    return
+  end function storage_sub
+
+  ! ---------------------------------------------------------
+  elemental function storage_get_size(this) result(that)
     type(storage_t), intent(in) :: this
     !
-    integer :: np
+    integer :: that
     !
-    np=0
-    if(this%ndim>0)&
-      np=this%mesh%np
+    that=0
+    if(associated(this%sim))&
+      that=this%mesh%np
     return
   end function storage_get_size
 
   ! ---------------------------------------------------------
-  elemental function storage_get_dimension(this) result(ndim)
+  elemental function storage_get_dimension(this) result(that)
     type(storage_t), intent(in) :: this
     !
-    integer :: ndim
+    integer :: that
     !
-    ndim=0
+    that=0
     if(this%ndim>0)&
-      ndim=this%ndim
+      that=this%ndim
     return
   end function storage_get_dimension
+
+  ! ---------------------------------------------------------
+  elemental function storage_get_default(this) result(that)
+    type(storage_t), intent(in) :: this
+    !
+    real(kind=wp) :: that
+    !
+    that=0.0_wp
+    if(this%ndim>0)&
+      that=this%default
+    return
+  end function storage_get_default
+
+  ! ---------------------------------------------------------
+  subroutine storage_get_simulation(this, that)
+    type(storage_t),     target, intent(in) :: this
+    type(simulation_t), pointer             :: that
+    !
+    that=>null()
+    if(associated(this%sim))&
+      that=>this%sim
+    return
+  end subroutine storage_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine storage_get_mesh(this, that)
+    type(storage_t), target, intent(in) :: this
+    type(mesh_t),   pointer             :: that
+    !
+    that=>null()
+    if(associated(this%mesh))&
+      that=>this%mesh
+    return
+  end subroutine storage_get_mesh
 
   ! ---------------------------------------------------------
   subroutine storage_get_storage_1d(this, that)
@@ -147,10 +280,9 @@ contains
     real(kind=wp), dimension(:), pointer             :: that
     !
     that=>null()
-    if(this%ndim>0)then
+    if(associated(this%sim))then
       ASSERT(this%ndim==1)
-      if(allocated(this%storage))&
-        that=>this%storage(:,1)
+      that=>this%storage(:,1)
     end if
     return
   end subroutine storage_get_storage_1d
@@ -161,9 +293,8 @@ contains
     real(kind=wp), dimension(:,:), pointer             :: that
     !
     that=>null()
-    if(this%ndim>0)then
-      if(allocated(this%storage))&
-        that=>this%storage
+    if(associated(this%sim))then
+      that=>this%storage
     end if
     return
   end subroutine storage_get_storage_2d
@@ -214,12 +345,14 @@ contains
     call storage_end(this)
     if(that%ndim>0)then
       this%ndim   = that%ndim
-      this%sim    =>that%sim
-      this%mesh   =>that%mesh
       this%default= that%default
-      SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
-      this%storage(1:this%mesh%np,:)=that%storage(1:that%mesh%np,:)
-      call storage_update(this)
+      if(associated(this%sim))then
+        this%sim    =>that%sim
+        this%mesh   =>that%mesh
+        SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
+        this%storage(1:this%mesh%np,:)=that%storage(1:that%mesh%np,:)
+        call storage_update(this)
+      end if
     end if
     return
   end subroutine storage_copy
@@ -228,7 +361,7 @@ contains
   subroutine storage_end(this)
     type(storage_t), intent(inout) :: this
     !
-    if(this%ndim>0)then
+    if(associated(this%sim))then
       SAFE_DEALLOCATE_A(this%storage)
     end if
     this%default=0.0_wp
@@ -256,7 +389,7 @@ contains
     real(kind=wp),                 intent(out) :: val
     integer,                       intent(out) :: ierr
     !
-    if(this%self%ndim>0)then
+    if(associated(this%self%sim))then
       call interpolation_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default
@@ -271,7 +404,7 @@ contains
     real(kind=wp),   dimension(:), intent(out) :: val
     integer,                       intent(out) :: ierr
     !
-    if(this%self%ndim>0)then
+    if(associated(this%self%sim))then
       call interpolation_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default

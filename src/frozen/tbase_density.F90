@@ -13,9 +13,14 @@ module TEMPLATE(base_density_m)
   use TEMPLATE(simulation_m), only:         &
     simulation_t => TEMPLATE(simulation_t)
 
+  use storage_m, only: &
+    operator(+),       &
+    operator(-)
+
   use storage_m, only:     &
     storage_t,             &
     storage_init,          &
+    storage_start,         &
     storage_update,        &
     storage_get_size,      &
     storage_get_dimension, &
@@ -47,6 +52,10 @@ module TEMPLATE(base_density_m)
   implicit none
 
   private
+  public ::      &
+    operator(+), &
+    operator(-)
+
   public ::                                   &
     TEMPLATE(base_density_init),              &
     TEMPLATE(base_density_start),             &
@@ -86,6 +95,14 @@ module TEMPLATE(base_density_m)
     type(TEMPLATE(base_density_t)), pointer :: self =>null()
     type(storage_interpolation_t)           :: intrp
   end type TEMPLATE(base_density_interpolation_t)
+ 
+  interface operator(+)
+    module procedure TEMPLATE(base_density_add)
+  end interface operator(+)
+
+  interface operator(-)
+    module procedure TEMPLATE(base_density_sub)
+  end interface operator(-)
 
   interface TEMPLATE(base_density_get)
     module procedure TEMPLATE(base_density_get_config)
@@ -106,8 +123,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(base_density_init)(this, config)
-    type(TEMPLATE(base_density_t)), intent(out) :: this
-    type(json_object_t),    target, intent(in)  :: config
+    type(TEMPLATE(base_density_t)), target, intent(out) :: this
+    type(json_object_t),            target, intent(in)  :: config
     !
     integer :: ierr
     !
@@ -115,6 +132,13 @@ contains
     nullify(this%sim, this%total)
     call json_get(this%config, "SpinComponents", this%nspin, ierr)
     if(ierr/=JSON_OK)this%nspin=1
+    if(this%nspin>1)then
+      SAFE_ALLOCATE(this%total)
+      call storage_init(this%total, 1, 0.0_wp)
+    else
+      this%total=>this%density
+    end if
+    call storage_init(this%density, this%nspin, 0.0_wp)
 #ifdef SUBTEMPLATE_NAME
     this%block=.false.
     call list_init(this%list)
@@ -130,13 +154,9 @@ contains
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
-    if(this%nspin>1)then
-      SAFE_ALLOCATE(this%total)
-      call storage_init(this%total, this%sim, 1, 0.0_wp)
-    else
-      this%total=>this%density
-    end if
-    call storage_init(this%density, this%sim, this%nspin, 0.0_wp)
+    if(this%nspin>1)&
+      call storage_start(this%total, this%sim, .true.)
+    call storage_start(this%density, this%sim, .true.)
     return
   end subroutine TEMPLATE(base_density_start)
 
@@ -188,6 +208,30 @@ contains
     end if
     return
   end subroutine TEMPLATE(base_density_update)
+
+  ! ---------------------------------------------------------
+  function TEMPLATE(base_density_add)(this, that) result(resl)
+    type(TEMPLATE(base_density_t)), intent(in) :: this
+    type(TEMPLATE(base_density_t)), intent(in) :: that
+    !
+    type(TEMPLATE(base_density_t)) :: resl
+    !
+    resl%density=this%density+that%density
+    call TEMPLATE(base_density_update)(resl)
+    return
+  end function TEMPLATE(base_density_add)
+
+  ! ---------------------------------------------------------
+  function TEMPLATE(base_density_sub)(this, that) result(resl)
+    type(TEMPLATE(base_density_t)), intent(in) :: this
+    type(TEMPLATE(base_density_t)), intent(in) :: that
+    !
+    type(TEMPLATE(base_density_t)) :: resl
+    !
+    resl%density=this%density-that%density
+    call TEMPLATE(base_density_update)(resl)
+    return
+  end function TEMPLATE(base_density_sub)
 
   ! ---------------------------------------------------------
   elemental function TEMPLATE(base_density_get_size)(this) result(that)

@@ -16,13 +16,14 @@ module TEMPLATE(calc_m)
   use TEMPLATE(density_m), only:      &
     density_t => TEMPLATE(density_t)
 
-  use TEMPLATE(hamiltonian_m), only:                  &
-    hamiltonian_t     => TEMPLATE(hamiltonian_t),     &
-    hamiltonian_init  => TEMPLATE(hamiltonian_init),  &
-    hamiltonian_start => TEMPLATE(hamiltonian_start), &
-    hamiltonian_get   => TEMPLATE(hamiltonian_get),   &
-    hamiltonian_copy  => TEMPLATE(hamiltonian_copy),  &
-    hamiltonian_end   => TEMPLATE(hamiltonian_end)
+  use TEMPLATE(hamiltonian_m), only:                    &
+    hamiltonian_t      => TEMPLATE(hamiltonian_t),      &
+    hamiltonian_init   => TEMPLATE(hamiltonian_init),   &
+    hamiltonian_start  => TEMPLATE(hamiltonian_start),  &
+    hamiltonian_update => TEMPLATE(hamiltonian_update), &
+    hamiltonian_get    => TEMPLATE(hamiltonian_get),    &
+    hamiltonian_copy   => TEMPLATE(hamiltonian_copy),   &
+    hamiltonian_end    => TEMPLATE(hamiltonian_end)
 
   use TEMPLATE(hamiltonian_m), only:                                            &
     hamiltonian_interpolation_t    => TEMPLATE(hamiltonian_interpolation_t),    &
@@ -61,13 +62,14 @@ module TEMPLATE(calc_m)
   use TEMPLATE(states_m), only:     &
     states_t => TEMPLATE(states_t)
 
-  use TEMPLATE(system_m), only:             &
-    system_t     => TEMPLATE(system_t),     &
-    system_init  => TEMPLATE(system_init),  &
-    system_start => TEMPLATE(system_start), &
-    system_get   => TEMPLATE(system_get),   &
-    system_copy  => TEMPLATE(system_copy),  &
-    system_end   => TEMPLATE(system_end)
+  use TEMPLATE(system_m), only:               &
+    system_t      => TEMPLATE(system_t),      &
+    system_init   => TEMPLATE(system_init),   &
+    system_start  => TEMPLATE(system_start),  &
+    system_update => TEMPLATE(system_update), &
+    system_get    => TEMPLATE(system_get),    &
+    system_copy   => TEMPLATE(system_copy),   &
+    system_end    => TEMPLATE(system_end)
 
   use TEMPLATE(system_m), only:                             &
     system_iterator_init => TEMPLATE(system_iterator_init)
@@ -89,15 +91,13 @@ module TEMPLATE(calc_m)
 
 #ifdef SUBTEMPLATE_NAME
   use TEMPLATE(hamiltonian_m), only:                    &
-    hamiltonian_extend => TEMPLATE(hamiltonian_extend), &
-    hamiltonian_update => TEMPLATE(hamiltonian_update)
+    hamiltonian_extend => TEMPLATE(hamiltonian_extend)
 
   use TEMPLATE(simulation_m), only:                   &
     simulation_extend => TEMPLATE(simulation_extend)
 
   use TEMPLATE(system_m), only:               &
-    system_extend => TEMPLATE(system_extend), &
-    system_update => TEMPLATE(system_update)
+    system_extend => TEMPLATE(system_extend)
 
   use SUBTEMPLATE(m), only:  &
     sub_t => SUBTEMPLATE(t)
@@ -110,8 +110,8 @@ module TEMPLATE(calc_m)
     TEMPLATE(calc_init),   &
 #ifdef SUBTEMPLATE_NAME
     TEMPLATE(calc_extend), &
-    TEMPLATE(calc_update), &
 #endif
+    TEMPLATE(calc_update), &
     TEMPLATE(calc_start),  &
     TEMPLATE(calc_get),    &
     TEMPLATE(calc_copy),   &
@@ -177,6 +177,13 @@ module TEMPLATE(calc_m)
 #endif
   end interface TEMPLATE(calc_get)
 
+  interface TEMPLATE(calc_update)
+#ifdef SUBTEMPLATE_NAME
+    module procedure TEMPLATE(calc_update_build)
+#endif
+    module procedure TEMPLATE(calc_update_finalize)
+  end interface TEMPLATE(calc_update)
+
   ! ---------------------------------------------------------
   interface TEMPLATE(calc_interpolation_init)
     module procedure TEMPLATE(calc_interpolation_init_density)
@@ -241,17 +248,28 @@ contains
   end subroutine TEMPLATE(calc_extend)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(calc_update)(this, that)
+  subroutine TEMPLATE(calc_update_build)(this, that)
     type(TEMPLATE(calc_t)), intent(inout) :: this
-    type(sub_t),  optional, intent(in)    :: that
+    type(sub_t),            intent(in)    :: that
     !
     print *, "***: system_update"
     call system_update(this%sys, that)
     print *, "***: hamiltonian_update"
     call hamiltonian_update(this%hm, that)
     return
-  end subroutine TEMPLATE(calc_update)
+  end subroutine TEMPLATE(calc_update_build)
 #endif
+
+  ! ---------------------------------------------------------
+  subroutine TEMPLATE(calc_update_finalize)(this)
+    type(TEMPLATE(calc_t)), intent(inout) :: this
+    !
+    print *, "***: system_update_finalize"
+    call system_update(this%sys)
+    print *, "***: hamiltonian_update_finalize"
+    call hamiltonian_update(this%hm)
+    return
+  end subroutine TEMPLATE(calc_update_finalize)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(calc_start)(this, sim)

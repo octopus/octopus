@@ -1,4 +1,5 @@
 #include "global.h"
+#include "template.h"
 
 module TEMPLATE(m)
 
@@ -13,13 +14,14 @@ module TEMPLATE(m)
   use space_m,   only: space_t
   use species_m, only: species_t
 
-  use TEMPLATE(calc_m), only:           &
-    calc_t     => TEMPLATE(calc_t),     &
-    calc_init  => TEMPLATE(calc_init),  &
-    calc_start => TEMPLATE(calc_start), &
-    calc_get   => TEMPLATE(calc_get),   &
-    calc_copy  => TEMPLATE(calc_copy),  &
-    calc_end   => TEMPLATE(calc_end)
+  use TEMPLATE(calc_m), only:             &
+    calc_t      => TEMPLATE(calc_t),      &
+    calc_init   => TEMPLATE(calc_init),   &
+    calc_start  => TEMPLATE(calc_start),  &
+    calc_update => TEMPLATE(calc_update), &
+    calc_get    => TEMPLATE(calc_get),    &
+    calc_copy   => TEMPLATE(calc_copy),   &
+    calc_end    => TEMPLATE(calc_end)
 
   use TEMPLATE(density_m), only:      &
     density_t => TEMPLATE(density_t)
@@ -82,11 +84,10 @@ module TEMPLATE(m)
     calc_interpolation_end  => TEMPLATE(calc_interpolation_end)
 
 #ifdef SUBTEMPLATE_NAME
-  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_end
+  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_len, json_end
 
   use TEMPLATE(calc_m), only:             &
-    calc_extend => TEMPLATE(calc_extend), &
-    calc_update => TEMPLATE(calc_update)
+    calc_extend => TEMPLATE(calc_extend)
 
   use SUBTEMPLATE(m), only:          &
     sub_t     => SUBTEMPLATE(t),     &
@@ -235,7 +236,9 @@ contains
     nullify(list)
     call json_get(this%config, "list", list, ierr)
     ASSERT(ierr==JSON_OK)
-    call TEMPLATE(list_init)(this, list)
+    call list_init(this%list)
+    if(json_len(list)>0)&
+      call TEMPLATE(list_init)(this, list)
     nullify(list)
     return
   end subroutine TEMPLATE(init)
@@ -251,7 +254,6 @@ contains
     integer                      :: ierr
     !
     nullify(cnfg, that)
-    call list_init(this%list)
     call json_init(iter, list)
     do
       call json_next(iter, cnfg, ierr)
@@ -284,10 +286,9 @@ contains
     type(sub_t),         pointer :: sub
     type(json_object_t), pointer :: cnfg
     type(list_iterator_t)        :: iter
-    logical                      :: atmp, temp, pass
+    logical                      :: temp, pass
     integer                      :: ierr
     !
-    atmp=.true.
     nullify(sub)
     call list_iterator_init(iter, this%list)
     do
@@ -297,7 +298,6 @@ contains
       call sub_get(sub, cnfg)
       call json_get(cnfg, "temporary", temp, ierr)
       if(ierr/=JSON_OK)temp=.false.
-      atmp=atmp.and.temp
       call json_get(cnfg, "pass_simulation", pass, ierr)
       if(ierr/=JSON_OK)pass=.false.
       if(pass)then
@@ -307,19 +307,15 @@ contains
         print *, "***: sub_start(sub)"
         call sub_start(sub)
       end if
+      print *, "***: calc_update(this%calc, sub)"
+      call calc_update(this%calc, sub)
       if(temp)then
-        print *, "***: calc_update(this%calc, sub)"
-        call calc_update(this%calc, sub)
         print *, "***: sub_end(sub)"
         call sub_end(sub)
       end if
       nullify(sub)
     end do
     call list_iterator_end(iter)
-    if(.not.atmp)then
-      print *, "***: calc_update(this%calc)"
-      call calc_update(this%calc)
-    end if
     return
   end subroutine TEMPLATE(update)
 
@@ -373,6 +369,8 @@ contains
     call TEMPLATE(update)(this, sim)
     nullify(sim)
 #endif
+    print *, "***: calc_update(this%calc)"
+    call calc_update(this%calc)
     return
   end subroutine TEMPLATE(start)
 

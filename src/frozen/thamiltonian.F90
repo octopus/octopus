@@ -29,16 +29,6 @@ module TEMPLATE(hamiltonian_m)
     external_interpolation_end  => TEMPLATE(external_interpolation_end)
 #endif
 
-#ifdef HARTREE
-  use TEMPLATE(hartree_m), only:                              &
-    hartree_t             => TEMPLATE(hartree_t),             &
-    hartree_init          => TEMPLATE(hartree_init),          &
-    hartree_get_energy    => TEMPLATE(hartree_get_energy),    &
-    hartree_get_potential => TEMPLATE(hartree_get_potential), &
-    hartree_copy          => TEMPLATE(hartree_copy),          &
-    hartree_end           => TEMPLATE(hartree_end)
-#endif
-
 #ifdef IONIC
   use TEMPLATE(ionic_m), only:                                &
     ionic_t               => TEMPLATE(ionic_t),               &
@@ -54,6 +44,9 @@ module TEMPLATE(hamiltonian_m)
   use TEMPLATE(tnadd_m), only:                            &
     tnadd_t             => TEMPLATE(tnadd_t),             &
     tnadd_init          => TEMPLATE(tnadd_init),          &
+    tnadd_start         => TEMPLATE(tnadd_start),         &
+    tnadd_update        => TEMPLATE(tnadd_update),        &
+    tnadd_calc          => TEMPLATE(tnadd_calc),          &
     tnadd_get_energy    => TEMPLATE(tnadd_get_energy),    &
     tnadd_get_potential => TEMPLATE(tnadd_get_potential), &
     tnadd_copy          => TEMPLATE(tnadd_copy),          &
@@ -72,10 +65,6 @@ module TEMPLATE(hamiltonian_m)
 #ifdef EXTERNAL
   use TEMPLATE(external_m), only:                 &
     external_extend => TEMPLATE(external_extend)
-#endif
-#ifdef IONIC
-  use TEMPLATE(ionic_m), only:              &
-    ionic_extend => TEMPLATE(ionic_extend)
 #endif
 #endif
 
@@ -103,15 +92,12 @@ module TEMPLATE(hamiltonian_m)
     TEMPLATE(hamiltonian_interpolation_end)
 
   type, public :: TEMPLATE(hamiltonian_t)
-    private
+    !private
     type(json_object_t), pointer :: config => null()
     type(system_t),      pointer :: sys    => null()
     type(simulation_t),  pointer :: sim    => null()
 #ifdef EXTERNAL
     type(external_t)             :: ep
-#endif
-#ifdef HARTREE
-    type(hartree_t)              :: hartree
 #endif
 #ifdef IONIC
     type(ionic_t)                :: ionic
@@ -137,9 +123,6 @@ module TEMPLATE(hamiltonian_m)
 #ifdef EXTERNAL
     module procedure TEMPLATE(hamiltonian_get_external)
 #endif
-#ifdef HARTREE
-    module procedure TEMPLATE(hamiltonian_get_hartree)
-#endif
 #ifdef IONIC
     module procedure TEMPLATE(hamiltonian_get_ionic)
 #endif
@@ -153,9 +136,6 @@ module TEMPLATE(hamiltonian_m)
 #ifdef EXTERNAL
     module procedure external_get_energy
 #endif
-#ifdef HARTREE
-    module procedure hartree_get_energy
-#endif
 #ifdef IONIC
     module procedure ionic_get_energy
 #endif
@@ -168,9 +148,6 @@ module TEMPLATE(hamiltonian_m)
     !module procedure TEMPLATE(hamiltonian_get_potential_total)
 #ifdef EXTERNAL
     module procedure external_get_potential
-#endif
-#ifdef HARTREE
-    module procedure hartree_get_potential
 #endif
 #ifdef TNADD
     module procedure tnadd_get_potential
@@ -215,25 +192,21 @@ contains
 #ifdef EXTERNAL
     call json_get(this%config, "external", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
+    print *, "***: external_init"
     call external_init(this%ep, sys, cnfg)
-    nullify(cnfg)
-#endif
-#ifdef HARTREE
-    call json_get(this%config, "hartree", cnfg, ierr)
-    if(ierr==JSON_OK)then
-      !call hartree_init(this%hartree, sim, cnfg)
-    end if
     nullify(cnfg)
 #endif
 #ifdef IONIC
     call json_get(this%config, "ionic", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
+    print *, "***: ionic_init"
     call ionic_init(this%ionic, sys, cnfg)
     nullify(cnfg)
 #endif
 #ifdef TNADD
     call json_get(this%config, "tnadd", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
+    print *, "***: tnadd_init"
     call tnadd_init(this%tnadd, sys, cnfg)
     nullify(cnfg)
 #endif
@@ -251,9 +224,6 @@ contains
 #ifdef EXTERNAL
     call external_start(this%ep, sim)
 #endif
-#ifdef HARTREE
-    !call hartree_init(this%hartree, sim, config)
-#endif
 #ifdef TNADD
     call tnadd_start(this%tnadd, sim)
 #endif
@@ -270,9 +240,6 @@ contains
     print *, "***: external_extend"
     call external_extend(this%ep, that)
 #endif
-#ifdef HARTREE
-    !call hartree_init(this%hartree, sim, config)
-#endif
     return
   end subroutine TEMPLATE(hamiltonian_extend)
 
@@ -284,9 +251,6 @@ contains
 #ifdef EXTERNAL
     call external_update(this%ep, that)
 #endif
-#ifdef HARTREE
-    !call hartree_init(this%hartree, sim, config)
-#endif
     return
   end subroutine TEMPLATE(hamiltonian_update_build)
 #endif
@@ -296,16 +260,16 @@ contains
     type(TEMPLATE(hamiltonian_t)), intent(inout) :: this
     !
 #ifdef EXTERNAL
+    print *, "***: hamiltonian_update_finish: external_update"
     call external_update(this%ep)
 #endif
-#ifdef HARTREE
-    !call hartree_init(this%hartree, sim, config)
-#endif
 #ifdef IONIC
+    print *, "***: hamiltonian_update_finish: ionic_update"
     call ionic_update(this%ionic)
 #endif
 #ifdef TNADD
-    !call tnadd_init(this%tnadd, sim, config)
+    print *, "***: hamiltonian_update_finish: tnadd_update"
+    call tnadd_update(this%tnadd)
 #endif
     return
   end subroutine TEMPLATE(hamiltonian_update_finish)
@@ -329,17 +293,6 @@ contains
     that=>this%ep
     return
   end subroutine TEMPLATE(hamiltonian_get_external)
-#endif
-
-#ifdef HARTREE
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(hamiltonian_get_hartree)(this, that)
-    type(TEMPLATE(hamiltonian_t)), target, intent(in) :: this
-    type(hartree_t),              pointer             :: that
-    !
-    that=>this%hartree
-    return
-  end subroutine TEMPLATE(hamiltonian_get_hartree)
 #endif
 
 #ifdef IONIC
@@ -375,9 +328,6 @@ contains
 #ifdef EXTERNAL
     call external_copy(this_out%ep, this_in%ep)
 #endif
-#ifdef HARTREE
-    call hartree_copy(this_out%hartree, this_in%hartree)
-#endif
 #ifdef IONIC
     call ionic_copy(this_out%ionic, this_in%ionic)
 #endif
@@ -396,9 +346,6 @@ contains
 #endif
 #ifdef IONIC
     call ionic_end(this%ionic)
-#endif
-#ifdef HARTREE
-    call hartree_end(this%hartree)
 #endif
 #ifdef EXTERNAL
     call external_end(this%ep)
