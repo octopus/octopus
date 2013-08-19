@@ -22,7 +22,6 @@ noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =            \
 	kinds.F90                \
-	ispace.F90               \
 	iatom.F90                \
 	igeometry.F90            \
 	igrid.F90                \
@@ -97,7 +96,6 @@ depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
 kinds.o : kinds.F90
-ispace.o : ispace.F90
 iatom.o : iatom.F90
 igeometry.o : igeometry.F90 iatom.o
 igrid.o : igrid.F90
