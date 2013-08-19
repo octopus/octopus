@@ -8,16 +8,16 @@ module output_fio_m
 
   use datasets_m,    only: tmpdir
   use epot_m,        only: epot_t
+  use geometry_m,    only: geometry_t, geometry_create_data_object
   use grid_m,        only: grid_t
   use hamiltonian_m, only: hamiltonian_t
-  use igeometry_m,   only: geometry_t, geometry_create_data_object
   use io_m,          only: io_open, io_close
-  use ispace_m,      only: space_create_data_object
   use json_m,        only: json_init, json_object_t, json_array_t, json_set, json_append, json_write, json_end
   use kinds_m,       only: wp
   use mesh_m,        only: mesh_t
   use simul_box_m,   only: simul_box_t
   use simulation_m,  only: simulation_t
+  use space_m,       only: space_create_data_object
   use states_m,      only: states_t
 
   implicit none

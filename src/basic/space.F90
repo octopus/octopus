@@ -20,21 +20,33 @@
 #include "global.h"
 
 module space_m
+
   use datasets_m
   use global_m
   use messages_m
   use parser_m
 
+  use json_m, only: JSON_OK, json_object_t, json_init, json_set, json_get
+
   implicit none
 
   private
-  public ::                &
-    space_t,               &
-    space_init,            &
-    space_copy,            &
-    space_end,             &
-    operator(==),          &
+  public ::       &
+    operator(==), &
     operator(/=)
+
+  public ::                   &
+    space_t,                  &
+    space_init,               &
+    space_create_data_object, &
+    space_copy,               &
+    space_end
+
+  integer, parameter :: default_ndim = 3
+
+  type space_t
+    integer :: dim = 0
+  end type space_t
 
   interface operator(==)
     module procedure space_equal
@@ -44,14 +56,15 @@ module space_m
     module procedure space_not_equal
   end interface operator(/=)
 
-  type space_t
-    integer :: dim
-  end type space_t
+  interface space_init
+    module procedure space_init_simple
+    module procedure space_init_data_object
+  end interface space_init
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this, dim)
+  subroutine space_init_simple(this, dim)
     type(space_t),     intent(inout) :: this
     integer, optional, intent(in)    :: dim
     !
@@ -70,7 +83,30 @@ contains
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call input_error('Dimensions')
     return
-  end subroutine space_init
+  end subroutine space_init_simple
+
+  ! ---------------------------------------------------------
+  subroutine space_init_data_object(this, config)
+    type(space_t),       intent(out) :: this
+    type(json_object_t), intent(in)  :: config
+    !
+    integer :: ndim, ierr
+    !
+    call json_get(config, "dimensions", ndim, ierr=ierr)
+    if(ierr/=JSON_OK)ndim=default_ndim
+    call space_init_octopus(this, ndim)
+    return
+  end subroutine space_init_data_object
+
+  ! ---------------------------------------------------------
+  subroutine space_create_data_object(this, config)
+    type(space_t),       intent(in)  :: this
+    type(json_object_t), intent(out) :: config
+    !
+    call json_init(config)
+    call json_set(config, "dimensions", this%dim)
+    return
+  end subroutine space_create_data_object
 
   ! ---------------------------------------------------------
   elemental subroutine space_copy(this_out, this_in)
@@ -117,3 +153,4 @@ end module space_m
 !! mode: f90
 !! coding: utf-8
 !! End:
+

@@ -7,9 +7,9 @@ module TEMPLATE(system_m)
   use messages_m
   use profiling_m
 
-  use ispace_m, only: space_t, operator(==), space_init, space_copy, space_end
-  use json_m,   only: JSON_OK, json_object_t, json_get
-  use kinds_m,  only: wp
+  use space_m, only: space_t, operator(==), space_init, space_copy, space_end
+  use json_m,  only: JSON_OK, json_object_t, json_get
+  use kinds_m, only: wp
 
   use TEMPLATE(density_m), only:      &
     density_t => TEMPLATE(density_t)
