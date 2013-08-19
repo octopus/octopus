@@ -53,6 +53,7 @@ module output_m
   use modelmb_density_matrix_m
   use modelmb_exchange_syms_m
   use mpi_m
+  use output_fio_m
   use output_me_m
   use parser_m
   use par_vec_m
@@ -126,37 +127,38 @@ module output_m
 
   end type output_t
 
-  integer, parameter, public ::             &
-    C_OUTPUT_POTENTIAL       =        1,    &
-    C_OUTPUT_DENSITY         =        2,    &
-    C_OUTPUT_WFS             =        4,    &
-    C_OUTPUT_WFS_SQMOD       =        8,    &
-    C_OUTPUT_GEOMETRY        =       16,    &
-    C_OUTPUT_CURRENT         =       32,    &
-    C_OUTPUT_ELF             =       64,    &
-    C_OUTPUT_ELF_BASINS      =      128,    &
-    C_OUTPUT_ELF_FS          =      256,    &
-    C_OUTPUT_BADER           =      512,    &
-    C_OUTPUT_EL_PRESSURE     =     1024,    &
-    C_OUTPUT_MATRIX_ELEMENTS =     2048,    &
-    C_OUTPUT_POL_DENSITY     =     4096,    &
-    C_OUTPUT_R               =     8192,    &
-    C_OUTPUT_KED             =    16384,    &
-    C_OUTPUT_J_FLOW          =    32768,    &
-    C_OUTPUT_DOS             =    65536,    &
-    C_OUTPUT_TPA             =   131072,    &
-    C_OUTPUT_FORCES          =   262144,    &
-    C_OUTPUT_WFS_FOURIER     =   524288,    &
-    C_OUTPUT_XC_DENSITY      =  1048576,    &
-    C_OUTPUT_PES_WFS         =  2097152,    &
-    C_OUTPUT_PES_DENSITY     =  4194304,    &
-    C_OUTPUT_PES             =  8388608,    &
-    C_OUTPUT_BERKELEYGW      = 16777216,    &
-    C_OUTPUT_KICK_FUNCTION   = 33554432,    &
-    C_OUTPUT_TD_POTENTIAL    = 67108864,    &
-    C_OUTPUT_MMB             =134217728,    &
-    C_OUTPUT_MMB_WFS         =268435456,    &
-    C_OUTPUT_MMB_DEN         =536870912
+  integer, parameter, public ::              &
+    C_OUTPUT_POTENTIAL       =         1,    &
+    C_OUTPUT_DENSITY         =         2,    &
+    C_OUTPUT_WFS             =         4,    &
+    C_OUTPUT_WFS_SQMOD       =         8,    &
+    C_OUTPUT_GEOMETRY        =        16,    &
+    C_OUTPUT_CURRENT         =        32,    &
+    C_OUTPUT_ELF             =        64,    &
+    C_OUTPUT_ELF_BASINS      =       128,    &
+    C_OUTPUT_ELF_FS          =       256,    &
+    C_OUTPUT_BADER           =       512,    &
+    C_OUTPUT_EL_PRESSURE     =      1024,    &
+    C_OUTPUT_MATRIX_ELEMENTS =      2048,    &
+    C_OUTPUT_POL_DENSITY     =      4096,    &
+    C_OUTPUT_R               =      8192,    &
+    C_OUTPUT_KED             =     16384,    &
+    C_OUTPUT_J_FLOW          =     32768,    &
+    C_OUTPUT_DOS             =     65536,    &
+    C_OUTPUT_TPA             =    131072,    &
+    C_OUTPUT_FORCES          =    262144,    &
+    C_OUTPUT_WFS_FOURIER     =    524288,    &
+    C_OUTPUT_XC_DENSITY      =   1048576,    &
+    C_OUTPUT_PES_WFS         =   2097152,    &
+    C_OUTPUT_PES_DENSITY     =   4194304,    &
+    C_OUTPUT_PES             =   8388608,    &
+    C_OUTPUT_BERKELEYGW      =  16777216,    &
+    C_OUTPUT_KICK_FUNCTION   =  33554432,    &
+    C_OUTPUT_TD_POTENTIAL    =  67108864,    &
+    C_OUTPUT_MMB             = 134217728,    &
+    C_OUTPUT_MMB_WFS         = 268435456,    &
+    C_OUTPUT_MMB_DEN         = 536870912,    &
+    C_OUTPUT_FROZEN          =1073741824
 
 contains
 
@@ -293,6 +295,8 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
+    !%Option frozen 1073741824
+    !% Generates input for a frozen calculation.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
@@ -522,6 +526,13 @@ contains
       outp%how = 0
     endif
 
+    if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
+      call messages_experimental("Frozen output")
+      if(iand(outp%what, C_OUTPUT_POTENTIAL)  == 0) outp%what = outp%what + C_OUTPUT_POTENTIAL 
+      if(iand(outp%what, C_OUTPUT_DENSITY)    == 0) outp%what = outp%what + C_OUTPUT_DENSITY 
+      if(iand(outp%how,  C_OUTPUT_HOW_BINARY) == 0) outp%how  = outp%how  + C_OUTPUT_HOW_BINARY 
+    endif
+
     POP_SUB(output_init)
   end subroutine output_init
 
@@ -579,6 +590,10 @@ contains
       call output_berkeleygw(outp%bgw, dir, st, gr, xc, hm, geo)
     end if
     
+    if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
+      call output_fio(gr, geo, st, hm, trim(adjustl(dir))//"config.json")
+    end if
+
     POP_SUB(output_all)
   end subroutine output_all
 
