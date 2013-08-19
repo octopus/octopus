@@ -146,9 +146,7 @@ contains
     !
     real(kind=wp) :: o
     !
-    this%do=.false.
-    this%c=1.0_wp
-    this%s=0.0_wp
+    call rotation_end(this)
     if(present(theta))then
       o=modulo(theta,2.0_wp*M_PI)
       if(o<0.0_wp)o=o+2.0_wp*M_PI
@@ -176,15 +174,15 @@ contains
   end function rotation_equal
 
   ! ---------------------------------------------------------
-  elemental subroutine rotation_copy(this_out, this_in)
-    type(rotation_t), intent(out) :: this_out
-    type(rotation_t), intent(in)  :: this_in
+  elemental subroutine rotation_copy(this, that)
+    type(rotation_t), intent(out) :: this
+    type(rotation_t), intent(in)  :: that
     !
-    call rotation_init(this_out)
-    if(this_in%do)then
-      this_out%c=this_in%c
-      this_out%s=this_in%s
-      this_out%do=this_in%do
+    call rotation_end(this)
+    if(that%do)then
+      this%c=that%c
+      this%s=that%s
+      this%do=that%do
     end if
     return
   end subroutine rotation_copy
@@ -193,7 +191,9 @@ contains
   elemental subroutine rotation_end(this)
     type(rotation_t), intent(inout) :: this
     !
-    call rotation_init(this)
+    this%do=.false.
+    this%c=1.0_wp
+    this%s=0.0_wp
     return
   end subroutine rotation_end
 
