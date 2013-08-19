@@ -87,7 +87,8 @@ module io_function_m
     C_OUTPUT_HOW_ETSF            =  32768,    &
     C_OUTPUT_HOW_XYZ             =  65536,    &
     C_OUTPUT_HOW_CUBE            = 131072,    &
-    C_OUTPUT_HOW_OPENSCAD        = 262144
+    C_OUTPUT_HOW_OPENSCAD        = 262144,    &
+    C_OUTPUT_HOW_JSON            = 524288
     
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
@@ -188,6 +189,8 @@ contains
     !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
     !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
+    !%Option json 524288
+    !% Generates output in JSON format.
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
