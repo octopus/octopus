@@ -1,19 +1,32 @@
 module ispace_m
 
   use json_m, only: JSON_OK, json_object_t, json_init, json_set, json_get
-  use space_m, space_init_octopus => space_init
+
+  use space_m, only: &
+    operator(==),    &
+    operator(/=)
+
+  use space_m, only: &
+    space_t,         &
+    space_copy,      &
+    space_end
+
+  use space_m, only:                  &
+    space_init_octopus => space_init
 
   implicit none
 
   private
+  public ::       &
+    operator(==), &
+    operator(/=)
+
   public ::                   &
     space_t,                  &
     space_init,               &
     space_create_data_object, &
     space_copy,               &
-    space_end,                &
-    operator(==),             &
-    operator(/=)
+    space_end
 
   integer, parameter :: default_ndim = 3
 
