@@ -98,7 +98,7 @@ depend:
 kinds.o : kinds.F90
 iatom.o : iatom.F90
 igeometry.o : igeometry.F90 iatom.o
-igrid.o : igrid.F90
+igrid.o : igrid.F90 kinds.o
 basis.o : basis.F90 kinds.o
 map.o : map.F90 kinds.o
 domain.o : domain.F90 kinds.o 
