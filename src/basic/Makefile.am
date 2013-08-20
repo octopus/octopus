@@ -142,7 +142,7 @@ iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o loct_pointer.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
 
-space.o : space.F90 datasets.o parser.o messages.o
+space.o : space.F90 json.o datasets.o parser.o messages.o
 
 openscad.o : openscad.F90 io.o messages.o profiling.o global.o polyhedron.o
 polyhedron.o : messages.o profiling.o global.o

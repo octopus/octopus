@@ -79,7 +79,7 @@ contains
       !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
       !% variable. Note that not all input variables may be available in all cases.
       !%End
-      call parse_integer(datasets_check('Dimensions'), 3, this%dim)
+      call parse_integer(datasets_check('Dimensions'), default_ndim, this%dim)
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call input_error('Dimensions')
     return
@@ -94,7 +94,7 @@ contains
     !
     call json_get(config, "dimensions", ndim, ierr=ierr)
     if(ierr/=JSON_OK)ndim=default_ndim
-    call space_init_octopus(this, ndim)
+    call space_init_simple(this, ndim)
     return
   end subroutine space_init_data_object
 
