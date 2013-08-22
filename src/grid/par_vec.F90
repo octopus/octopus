@@ -218,7 +218,7 @@ contains
     ! For this reason, all ranks are incremented by one.
     integer                     :: npart            !< Number of partitions.
     integer                     :: np_enl           !< Number of points in enlargement.
-    integer                     :: ip, jp, kp, jj, index, inode, jnode !< Counters.
+    integer                     :: gip, ip, jp, kp, jj, index, inode, jnode !< Counters.
     integer, allocatable        :: irr(:)           !< Counter.
     integer                     :: p1(MAX_DIM)      !< Points.
     type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
@@ -238,6 +238,7 @@ contains
     integer, pointer            :: xghost_tmp(:)  
     integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
     integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
+    integer, pointer            :: partno(:), points(:)
 
     PUSH_SUB(vec_init)
 
@@ -314,20 +315,34 @@ contains
     SAFE_ALLOCATE(vp%send_count(1:npart))
     vp%send_count = 0
 
-    vp%total              = 0
+    vp%total                 = 0
     vp%np_ghost_neigh_partno = 0
-    vp%np_ghost           = 0
-    np_ghost_partno       = 0
-    irr = 0
+    vp%np_ghost              = 0
+    np_ghost_partno          = 0
+    ip                       = 0
     ! Check process node and communicate
     inode = vp%partno
+
+    SAFE_ALLOCATE(points(1:vp%np_local))
+    SAFE_ALLOCATE(partno(1:vp%np_local))
     ! Check all points of this node.
-    do ip = vp%xlocal, vp%xlocal + vp%np_local - 1
+    do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
+      ip = ip + 1
+      points(ip) = gip
+    end do
+    call partition_get_partition_number(inner_partition,vp%np_local, &
+         points, partno)
+    
+    ip = 0
+    vp%total = 0
+    do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
+      ip = ip + 1
       ! Update the receiving point
-      ipart = vp%part_vec(ip)
+      ipart = partno(ip)
+   
       vp%send_count(ipart) = vp%send_count(ipart) + 1
       ! Get coordinates of current point.
-      call index_to_coords(idx, dim, vp%local(ip), p1)
+      call index_to_coords(idx, dim, vp%local(gip), p1)
       
       ! For all points in stencil.
       do jj = 1, stencil%size
@@ -529,7 +544,8 @@ contains
 
   contains
     subroutine init_local
-      integer :: sp, ep, ipg
+      integer :: sp, ep, np_tmp
+      integer, allocatable :: local_tmp(:), xlocal_tmp(:)
       PUSH_SUB(vec_init.init_local)
       
       sp = vp%xlocal
@@ -540,14 +556,23 @@ contains
       ep = np_global
       SAFE_ALLOCATE(vp%local_vec(sp:ep))
 
-      irr = 0      
-      do ip = 1, np_global
-        if (vp%part_vec(ip) == vp%partno) then
-          vp%local(vp%xlocal + irr(vp%part_vec(ip))) = ip
-        end if
-        vp%local_vec(vp%xlocal_vec(vp%part_vec(ip)) + irr(vp%part_vec(ip))) = ip
-        irr(vp%part_vec(ip)) = irr(vp%part_vec(ip)) + 1 ! increment the counter
+      ! Calculate the local vector in parallel
+      call partition_get_local(inner_partition, local_tmp, np_tmp)
+
+      ! Add padding to the calculated local vector
+      do ip = 1, np_tmp
+        vp%local(vp%xlocal + ip - 1) = local_tmp(ip)
       end do
+      
+      SAFE_ALLOCATE(xlocal_tmp(1:npart))
+      xlocal_tmp = vp%xlocal_vec - 1
+      ! Gather all the local vectors in a unique big one
+      call mpi_debug_in(comm, C_MPI_ALLGATHERV)
+      call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
+                          vp%local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
+                          comm, mpi_err)
+      call mpi_debug_out(comm, C_MPI_GATHERV)
+      SAFE_DEALLOCATE_A(xlocal_tmp)
 
       POP_SUB(vec_init.init_local)
     end subroutine init_local
@@ -586,14 +611,8 @@ contains
       end do
 
       SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
-      do ip = 1, vp%np_local
-        !get the global point
-        ipg = vp%xlocal + ip - 1
-        !the destination
-        ipart = vp%part_vec(ipg)
-        vp%part_local(ip) = ipart
-      end do
-
+      vp%part_local = partno
+      
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
     

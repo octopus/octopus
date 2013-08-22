@@ -43,7 +43,9 @@ module partition_m
     partition_get_global,           &
     partition_get_partition_number, &
     partition_get_np_local,         &
-    partition_get_npart
+    partition_get_npart,            &
+    partition_get_part,             &
+    partition_get_local
 
 
   !> The partition is an array that contains the mapping between some global index 
@@ -388,7 +390,7 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
-                       sbuffer, scounts(1), sdispls(1), MPI_INTEGER,    &
+                       sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
                        partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
@@ -446,6 +448,97 @@ contains
     npart = partition%npart
   end function partition_get_npart
   
+  !> Returns the partition of the local point
+  pure integer function partition_get_part(partition, local_point) result(part)
+    type(partition_t), intent(in) :: partition
+    integer,           intent(in) :: local_point
+    part = partition%part(local_point)
+  end function partition_get_part
+  
+  !> Calculates the local vector of all partitions in parallel.
+  !! Local vector stores the global point indexes, that each partition
+  !! has.
+  subroutine partition_get_local(partition, rbuffer, np_local)
+    type(partition_t),    intent(in)  :: partition
+    integer, allocatable, intent(out) :: rbuffer(:) !< The actual result, the local vector from 1 to np_local
+    integer,              intent(out) :: np_local   !< Number of elements, might be less than partition%np_local
+
+    integer :: ip, ipart, istart
+    integer, allocatable :: sdispls(:), scounts(:), rcounts(:), rdispls(:), sbuffer(:)
+    
+    PUSH_SUB(partition_get_local)
+    
+    SAFE_ALLOCATE(sdispls(1:partition%npart))
+    SAFE_ALLOCATE(scounts(1:partition%npart))
+    SAFE_ALLOCATE(sbuffer(1:partition%npart*partition%np_local))
+    SAFE_ALLOCATE(rcounts(1:partition%npart))
+    
+    scounts(1:partition%npart-1) = partition%nppp
+    scounts(partition%npart) = partition%np_global - partition%nppp*(partition%npart - 1)
+    sdispls(1) = 0
+    do ipart = 2, partition%npart
+      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
+    end do
+    
+    scounts = 0
+    rcounts = -1
+    sbuffer = huge(1) !! Agian kentzeko
+    ! Count and store the local points for each partition
+    do ip = 1, partition%np_local
+      ipart = partition%part(ip)
+      scounts(ipart) = scounts(ipart) + 1
+      sbuffer(sdispls(ipart)+scounts(ipart)) = ip
+    end do
+    
+    ! From relative local points to the global points
+    istart = sdispls(partition%mpi_grp%rank + 1)
+    do ipart = 1, partition%npart
+      do ip = 1, scounts(ipart)
+        sbuffer(sdispls(ipart)+ip) = sbuffer(sdispls(ipart)+ip) + istart
+      end do
+    end do
+    
+    ! Tell each process how many points we will need from it
+#ifdef HAVE_MPI
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALL)
+    call MPI_Alltoall(scounts(1), 1, MPI_INTEGER, &
+                      rcounts(1), 1, MPI_INTEGER, &
+                      partition%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALL)
+#endif
+
+    ! Create the displacement vector from the counts vector
+    np_local = sum(rcounts)
+    SAFE_ALLOCATE(rdispls(1:partition%npart))
+    !! Error migh appear while allocating
+!!$    if (.not. allocated(rbuffer)) then
+!!$      write(*,*)  partition%mpi_grp%rank,"rbuffer is NOT allocated", np_local
+      SAFE_ALLOCATE(rbuffer(1:np_local))
+!!$      write(*,*)  partition%mpi_grp%rank,"rbuffer is now allocated"
+!!$    end if
+
+    rdispls(1) = 0
+    do ipart = 2, partition%npart
+      rdispls(ipart) = rcounts(ipart-1) + rdispls(ipart-1)
+    end do
+
+    ! Collect the corresponding points to each process
+#ifdef HAVE_MPI
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+    call MPI_Alltoallv(sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
+                       rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
+                       partition%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+#endif
+  
+    SAFE_DEALLOCATE_A(sdispls)
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sbuffer)
+    SAFE_DEALLOCATE_A(rcounts)
+    SAFE_DEALLOCATE_A(rdispls)
+
+    POP_SUB(partition_get_local)
+  end subroutine partition_get_local
 end module partition_m
 
 !! Local Variables:
