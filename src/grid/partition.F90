@@ -470,32 +470,40 @@ contains
     
     SAFE_ALLOCATE(sdispls(1:partition%npart))
     SAFE_ALLOCATE(scounts(1:partition%npart))
-    SAFE_ALLOCATE(sbuffer(1:partition%npart*partition%nppp))
     SAFE_ALLOCATE(rcounts(1:partition%npart))
     
+    ! Calculate the starting point of the running process
     scounts(1:partition%npart-1) = partition%nppp
     scounts(partition%npart) = partition%np_global - partition%nppp*(partition%npart - 1)
     sdispls(1) = 0
     do ipart = 2, partition%npart
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
+    istart = sdispls(partition%mpi_grp%rank + 1)
     
     scounts = 0
     ! Count and store the local points for each partition
     do ip = 1, partition%np_local
       ipart = partition%part(ip)
       scounts(ipart) = scounts(ipart) + 1
-      sbuffer(sdispls(ipart)+scounts(ipart)) = ip
     end do
-    
-    ! From relative local points to the global points
-    istart = sdispls(partition%mpi_grp%rank + 1)
-    do ipart = 1, partition%npart
-      do ip = 1, scounts(ipart)
-        sbuffer(sdispls(ipart)+ip) = sbuffer(sdispls(ipart)+ip) + istart
-      end do
+
+    ! Create displacements
+    sdispls(1) = 0
+    do ipart = 2, partition%npart
+      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
-    
+
+    ! Allocate and fill the send buffer
+    np_local = sum(scounts)
+    scounts = 0
+    SAFE_ALLOCATE(sbuffer(1:np_local))
+    do ip = 1, np_local
+      ipart = partition%part(ip)
+      scounts(ipart) = scounts(ipart) + 1
+      sbuffer(sdispls(ipart) + scounts(ipart)) = ip + istart
+    end do
+        
     ! Tell each process how many points we will need from it
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALL)
