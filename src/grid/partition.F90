@@ -459,9 +459,9 @@ contains
   !! Local vector stores the global point indexes, that each partition
   !! has.
   subroutine partition_get_local(partition, rbuffer, np_local)
-    type(partition_t),    intent(in)  :: partition
-    integer, allocatable, intent(out) :: rbuffer(:) !< The actual result, the local vector from 1 to np_local
-    integer,              intent(out) :: np_local   !< Number of elements, might be less than partition%np_local
+    type(partition_t),    intent(in)    :: partition
+    integer, allocatable, intent(inout) :: rbuffer(:) !< The actual result, the local vector from 1 to np_local
+    integer,              intent(out)   :: np_local   !< Number of elements, might be less than partition%np_local
 
     integer :: ip, ipart, istart
     integer, allocatable :: sdispls(:), scounts(:), rcounts(:), rdispls(:), sbuffer(:)
@@ -470,7 +470,7 @@ contains
     
     SAFE_ALLOCATE(sdispls(1:partition%npart))
     SAFE_ALLOCATE(scounts(1:partition%npart))
-    SAFE_ALLOCATE(sbuffer(1:partition%npart*partition%np_local))
+    SAFE_ALLOCATE(sbuffer(1:partition%npart*partition%nppp))
     SAFE_ALLOCATE(rcounts(1:partition%npart))
     
     scounts(1:partition%npart-1) = partition%nppp
@@ -481,8 +481,6 @@ contains
     end do
     
     scounts = 0
-    rcounts = -1
-    sbuffer = huge(1) !! Agian kentzeko
     ! Count and store the local points for each partition
     do ip = 1, partition%np_local
       ipart = partition%part(ip)
@@ -510,12 +508,7 @@ contains
     ! Create the displacement vector from the counts vector
     np_local = sum(rcounts)
     SAFE_ALLOCATE(rdispls(1:partition%npart))
-    !! Error migh appear while allocating
-!!$    if (.not. allocated(rbuffer)) then
-!!$      write(*,*)  partition%mpi_grp%rank,"rbuffer is NOT allocated", np_local
-      SAFE_ALLOCATE(rbuffer(1:np_local))
-!!$      write(*,*)  partition%mpi_grp%rank,"rbuffer is now allocated"
-!!$    end if
+    SAFE_ALLOCATE(rbuffer(1:np_local))
 
     rdispls(1) = 0
     do ipart = 2, partition%npart
