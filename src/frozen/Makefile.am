@@ -21,7 +21,6 @@
 noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =            \
-	kinds.F90                \
 	iatom.F90                \
 	igeometry.F90            \
 	igrid.F90                \
@@ -95,21 +94,20 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
-kinds.o : kinds.F90
 iatom.o : iatom.F90
 igeometry.o : igeometry.F90 iatom.o
-igrid.o : igrid.F90 kinds.o
-basis.o : basis.F90 kinds.o
-map.o : map.F90 kinds.o
-domain.o : domain.F90 kinds.o 
+igrid.o : igrid.F90
+basis.o : basis.F90
+map.o : map.F90
+domain.o : domain.F90
 simulation.o : simulation.F90 domain.o map.o igrid.o
-interpolation.o : interpolation.F90 simulation.o domain.o basis.o kinds.o
-storage.o : storage.F90 interpolation.o simulation.o kinds.o
+interpolation.o : interpolation.F90 simulation.o domain.o basis.o
+storage.o : storage.F90 interpolation.o simulation.o
 
-interface_xc.o : interface_xc.F90 simulation.o kinds.o
-lda.o : lda.F90 interface_xc.o kinds.o
-gga.o : gga.F90 interface_xc.o kinds.o
-functional.o : functional.F90 gga.o lda.o kinds.o
+interface_xc.o : interface_xc.F90 simulation.o
+lda.o : lda.F90 interface_xc.o
+gga.o : gga.F90 interface_xc.o
+functional.o : functional.F90 gga.o lda.o
 
 #fio_geometry.o : fio_geometry.F90 igeometry.o
 #fio_simul_box.o : fio_simul_box.F90 fio_geometry.o

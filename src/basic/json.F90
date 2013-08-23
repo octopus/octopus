@@ -6,6 +6,8 @@ module json_m
   use messages_m
   use profiling_m
 
+  use kinds_m, only: wp
+
   implicit none
 
   private
@@ -23,9 +25,6 @@ module json_m
   public :: json_append
   public :: json_next
   public :: operator(==)
-
-  FLOAT, parameter :: kind_parm=CNST(1.0)
-  integer, public, parameter :: wp=kind(kind_parm)
 
   real(kind=wp), parameter :: JSON_STRING_GROWTH_FACTOR = 1.1_wp
   integer,       parameter :: JSON_STRING_INIT_LEN      = 63
@@ -1371,7 +1370,7 @@ contains
     POP_SUB(json_array_iterator_next_real)
     return
   end subroutine json_array_iterator_next_real
-
+    !
   subroutine json_array_iterator_next_string(this, value, ierr)
     type(json_array_iterator_t), intent(inout) :: this
     character(len=*),            intent(out)   :: value
@@ -2722,7 +2721,7 @@ contains
     POP_SUB(json_member_get_ident)
     return
   end subroutine json_member_get_ident
-
+    !
   subroutine json_member_get_value(this, value, ierr)
     type(json_member_t), target, intent(in)  :: this
     type(json_value_t), pointer              :: value
@@ -2858,7 +2857,7 @@ contains
     POP_SUB(json_object_iterator_next_null)
     return
   end subroutine json_object_iterator_next_null
-
+    !
   subroutine json_object_iterator_next_logical(this, name, that, ierr)
     type(json_object_iterator_t), intent(inout) :: this
     character(len=*),             intent(out)   :: name
@@ -4267,7 +4266,7 @@ contains
 !!$    subroutine json_iterator_next_array_string(this, that, ierr)
 !!$    subroutine json_iterator_next_object(this, that, ierr)
 !!$    subroutine json_iterator_next_member(this, that, ierr)
-
+    !
   elemental function json_json_isdef(this) result(is)
     type(json_t), intent(in) :: this
     !

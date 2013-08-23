@@ -6,9 +6,10 @@ module json_parser_m
   use messages_m
   use profiling_m
 
-  use io_m,  only: iopar_read
+  use io_m,    only: iopar_read
   use json_m
-  use mpi_m, only: mpi_world
+  use kinds_m, only: wp
+  use mpi_m,   only: mpi_world
 
   implicit none
 
