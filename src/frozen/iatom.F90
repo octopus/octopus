@@ -8,17 +8,19 @@ module iatom_m
 
   use species_m, only: LABEL_LEN, species_type
 
-  use atom_m, only: &
-    operator(==),   &
-    operator(/=)
+  use atom_m, only:             &
+    atom_t,                     &
+    atom_get_label,             &
+    atom_init_from_data_object
 
-  use atom_m, only: &
-    atom_t,         &
-    atom_get_label, &
-    atom_end
+  use atom_m, only:  &
+    end => atom_end
 
   use atom_m, only:                       &
-    atom_init => atom_create_data_object
+    atom_classical_t,                     &
+    atom_classical_get_label,             &
+    atom_classical_init_from_data_object, &
+    atom_classical_end
 
   implicit none
 
@@ -33,7 +35,50 @@ module iatom_m
     atom_hash, &
     atom_end
 
+  interface operator(==)
+    module procedure atom_equal
+    module procedure atom_classical_equal
+  end interface operator(==)
+
+  interface operator(/=)
+    module procedure atom_not_equal
+    module procedure atom_classical_not_equal
+  end interface operator(/=)
+
+  interface atom_init
+     module procedure atom_init_from_data_object
+     module procedure atom_classical_init_from_data_object
+  end interface atom_init
+
+  interface atom_end
+     module procedure end
+     module procedure atom_classical_end
+  end interface atom_end
+
 contains
+
+  ! ---------------------------------------------------------
+  elemental function atom_equal(this, that) result(is)
+    type(atom_t), intent(in) :: this
+    type(atom_t), intent(in) :: that
+    !
+    logical :: is
+    !
+    is=(atom_get_label(this)==atom_get_label(that))
+    is=is.and.(species_type(this%spec)==species_type(that%spec))
+    return
+  end function atom_equal
+
+  ! ---------------------------------------------------------
+  elemental function atom_not_equal(this, that) result(is)
+    type(atom_t), intent(in) :: this
+    type(atom_t), intent(in) :: that
+    !
+    logical :: is
+    !
+    is=(.not.atom_equal(this, that))
+    return
+  end function atom_not_equal
 
   ! ---------------------------------------------------------
   ! Daniel J. Bernstein Hash Function
@@ -55,6 +100,28 @@ contains
     hash=modulo(hash, size)+1
     return
   end function atom_hash
+
+  ! ---------------------------------------------------------
+  elemental function atom_classical_equal(this, that) result(is)
+    type(atom_classical_t), intent(in) :: this
+    type(atom_classical_t), intent(in) :: that
+    !
+    logical :: is
+    !
+    is=(atom_classical_get_label(this)==atom_classical_get_label(that))
+    return
+  end function atom_classical_equal
+
+  ! ---------------------------------------------------------
+  elemental function atom_classical_not_equal(this, that) result(is)
+    type(atom_classical_t), intent(in) :: this
+    type(atom_classical_t), intent(in) :: that
+    !
+    logical :: is
+    !
+    is=(.not.atom_classical_equal(this, that))
+    return
+  end function atom_classical_not_equal
 
 end module iatom_m
 

@@ -13,8 +13,6 @@ module atom_m
 
   private
   public ::                               &
-    operator(==),                         &
-    operator(/=),                         &
     atom_init,                            &
     atom_init_from_data_object,           &
     atom_end,                             &
@@ -50,16 +48,6 @@ module atom_m
     FLOAT, dimension(MAX_DIM) :: f      = M_ZERO
     FLOAT                     :: charge = M_ZERO
   end type atom_classical_t
-
-  interface operator(==)
-    module procedure atom_equal
-    module procedure atom_classical_equal
-  end interface operator(==)
-
-  interface operator(/=)
-    module procedure atom_not_equal
-    module procedure atom_classical_not_equal
-  end interface operator(/=)
 
   interface atom_same_species
     module procedure atom_same_species_aa
@@ -192,7 +180,6 @@ contains
     logical :: is
 
     is=(atom_get_label(this)==atom_get_label(that))
-    is=is.and.(species_type(this%spec)==species_type(that%spec))
 
   end function atom_same_species_aa
 
@@ -204,7 +191,6 @@ contains
     logical :: is
 
     is=(atom_get_label(this)==species_label(spec))
-    is=is.and.(species_type(this%spec)==species_type(spec))
 
   end function atom_same_species_as
 
@@ -216,31 +202,8 @@ contains
     logical :: is
 
     is=(atom_get_label(this)==species_label(spec))
-    is=is.and.(species_type(spec)==species_type(this%spec))
 
   end function atom_same_species_sa
-
-  ! ---------------------------------------------------------
-  elemental function atom_equal(this, that) result(is)
-    type(atom_t), intent(in) :: this
-    type(atom_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=atom_same_species_aa(this, that)
-    return
-  end function atom_equal
-
-  ! ---------------------------------------------------------
-  elemental function atom_not_equal(this, that) result(is)
-    type(atom_t), intent(in) :: this
-    type(atom_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=(.not.atom_equal(this, that))
-    return
-  end function atom_not_equal
 
   ! ---------------------------------------------------------
   elemental function atom_distance(this_1, this_2) result(dst)
@@ -355,28 +318,6 @@ contains
     return
   end function atom_classical_get_label
   
-  ! ---------------------------------------------------------
-  elemental function atom_classical_equal(this, that) result(is)
-    type(atom_classical_t), intent(in) :: this
-    type(atom_classical_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=(atom_classical_get_label(this)==atom_classical_get_label(that))
-    return
-  end function atom_classical_equal
-
-  ! ---------------------------------------------------------
-  elemental function atom_classical_not_equal(this, that) result(is)
-    type(atom_classical_t), intent(in) :: this
-    type(atom_classical_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=(.not.atom_classical_equal(this, that))
-    return
-  end function atom_classical_not_equal
-
   ! ---------------------------------------------------------
   subroutine atom_classical_write_xyz(this, dim, unit)
     type(atom_classical_t), intent(in) :: this
