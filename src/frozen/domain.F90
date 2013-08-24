@@ -1,4 +1,10 @@
+#include "global.h"
+
 module domain_m
+
+  use global_m
+  use messages_m
+  use profiling_m
 
   use kinds_m,     only: wp
   use geometry_m,  only: geometry_t
@@ -27,8 +33,10 @@ contains
     type(simul_box_t), target, intent(in)  :: sb
     type(geometry_t),  target, intent(in)  :: geo
     !
+    PUSH_SUB(domain_init)
     this%sb=>sb
     this%geo=>geo
+    POP_SUB(domain_init)
     return
   end subroutine domain_init
 
@@ -39,7 +47,9 @@ contains
     !
     logical :: in
     !
+    PUSH_SUB(domain_in_domain)
     in=simul_box_in_box(this%sb, this%geo, x)
+    POP_SUB(domain_in_domain)
     return
   end function domain_in_domain
 
@@ -48,8 +58,10 @@ contains
     type(domain_t), intent(out) :: this_out
     type(domain_t), intent(in)  :: this_in
     !
+    PUSH_SUB(domain_copy)
     this_out%sb=>this_in%sb
     this_out%geo=>this_in%geo
+    POP_SUB(domain_copy)
     return
   end subroutine domain_copy
 

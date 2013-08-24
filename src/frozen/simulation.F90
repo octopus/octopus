@@ -11,21 +11,9 @@ module simulation_m
   use geometry_m,  only: geometry_t
   use igrid_m,     only: grid_t, grid_init, grid_copy, grid_end
   use json_m,      only: JSON_OK, json_object_t, json_get
-  use map_m,       onlY: map_t, map_init, map_end
   use mesh_m,      only: mesh_t 
   use simul_box_m, only: simul_box_t
   use space_m,     only: space_t
-
-  use wrap_mesh_m, only: wrap_mesh_t, wrap_mesh_init, wrap_mesh_end
-
-  use meshmap_table_m, only:          &
-    table_t    => meshmap_table_t,    &
-    table_init => meshmap_table_init, &
-    table_pop  => meshmap_table_pop,  &
-    table_get  => meshmap_table_get,  &
-    table_set  => meshmap_table_set,  &
-    table_copy => meshmap_table_copy, &
-    table_end  => meshmap_table_end
 
   implicit none
 
@@ -39,8 +27,6 @@ module simulation_m
     simulation_copy,     &
     simulation_end
   
-  integer, parameter :: TABLE_INIT_LEN = 7
-
   type, public :: simulation_t
     private
     type(json_object_t), pointer :: config =>null()
@@ -51,7 +37,6 @@ module simulation_m
     logical                      :: start  = .false.
     logical                      :: alloc  = .false.
     type(domain_t)               :: domain
-    type(table_t)                :: table
   end type simulation_t
 
   interface simulation_init
@@ -66,7 +51,6 @@ module simulation_m
     module procedure simulation_get_mesh
     module procedure simulation_get_geometry
     module procedure simulation_get_domain
-    module procedure simulation_get_map
   end interface simulation_get
 
 contains
@@ -77,6 +61,7 @@ contains
     type(geometry_t), target, intent(in)  :: geo
     type(space_t),    target, intent(in)  :: space
     !
+    PUSH_SUB(simulation_init_common)
     this%config=>null()
     this%geo=>geo
     this%space=>space
@@ -84,6 +69,7 @@ contains
     this%init=.true.
     this%start=.false.
     this%alloc=.false.
+    POP_SUB(simulation_init_common)
     return
   end subroutine simulation_init_common
 
@@ -94,9 +80,11 @@ contains
     type(space_t),        intent(in)  :: space
     type(grid_t), target, intent(in)  :: grid
     !
+    PUSH_SUB(simulation_init_grid)
     call simulation_init_common(this, geo, space)
     this%gr=>grid
     this%alloc=.false.
+    POP_SUB(simulation_init_grid)
     return
   end subroutine simulation_init_grid
 
@@ -107,10 +95,11 @@ contains
     type(space_t),               intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
     !
-    print *, "***: simulation_init_config"
+    PUSH_SUB(simulation_init_config)
     call simulation_init_common(this, geo, space)
     this%config=>config
     this%alloc=.true.
+    POP_SUB(simulation_init_config)
     return
   end subroutine simulation_init_config
 
@@ -121,6 +110,7 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
     !
+    PUSH_SUB(simulation_start)
     ASSERT(this%init)
     ASSERT(.not.this%start)
     this%start=.true.
@@ -133,7 +123,7 @@ contains
       nullify(cnfg)
     end if
     call domain_init(this%domain, this%gr%sb, this%geo)
-    call table_init(this%table, TABLE_INIT_LEN)
+    POP_SUB(simulation_start)
     return
   end subroutine simulation_start
 
@@ -143,11 +133,12 @@ contains
     type(simulation_t), optional, intent(in)    :: that
     type(basis_t),      optional, intent(in)    :: basis
     !
-    print *, "***: simulation_extend"
+    PUSH_SUB(simulation_extend)
     ASSERT(this%init)
     ASSERT(.not.this%start)
     ASSERT(this%alloc)
     !call simul_box_extend(this%gr%sb, that, basis)
+    POP_SUB(simulation_extend)
     return
   end subroutine simulation_extend
 
@@ -166,9 +157,11 @@ contains
     type(simulation_t),   target, intent(in) :: this
     type(json_object_t), pointer             :: that
     !
+    PUSH_SUB(simulation_get_config)
     that=>null()
     if(associated(this%config))&
       that=>this%config
+    POP_SUB(simulation_get_config)
     return
   end subroutine simulation_get_config
 
@@ -177,9 +170,11 @@ contains
     type(simulation_t), target, intent(in) :: this
     type(simul_box_t), pointer             :: that
     !
+    PUSH_SUB(simulation_get_simul_box)
     that=>null()
     if(associated(this%gr))&
       that=>this%gr%sb
+    POP_SUB(simulation_get_simul_box)
     return
   end subroutine simulation_get_simul_box
 
@@ -188,9 +183,11 @@ contains
     type(simulation_t), target, intent(in) :: this
     type(grid_t),      pointer             :: that
     !
+    PUSH_SUB(simulation_get_grid)
     that=>null()
     if(associated(this%gr))&
       that=>this%gr
+    POP_SUB(simulation_get_grid)
     return
   end subroutine simulation_get_grid
 
@@ -199,9 +196,11 @@ contains
     type(simulation_t), target, intent(in) :: this
     type(mesh_t),      pointer             :: that
     !
+    PUSH_SUB(simulation_get_mesh)
     that=>null()
     if(associated(this%gr))&
       that=>this%gr%mesh
+    POP_SUB(simulation_get_mesh)
     return
   end subroutine simulation_get_mesh
 
@@ -210,9 +209,11 @@ contains
     type(simulation_t), target, intent(in) :: this
     type(geometry_t),  pointer             :: that
     !
+    PUSH_SUB(simulation_get_geometry)
     that=>null()
     if(associated(this%geo))&
       that=>this%geo
+    POP_SUB(simulation_get_geometry)
     return
   end subroutine simulation_get_geometry
 
@@ -221,41 +222,18 @@ contains
     type(simulation_t), target, intent(in) :: this
     type(domain_t),    pointer             :: that
     !
+    PUSH_SUB(simulation_get_domain)
     that=>this%domain
+    POP_SUB(simulation_get_domain)
     return
   end subroutine simulation_get_domain
-
-  ! ---------------------------------------------------------
-  subroutine simulation_get_map(this, mesh, that)
-    type(simulation_t), target, intent(inout) :: this
-    type(mesh_t),               intent(in)    :: mesh
-    type(map_t),       pointer                :: that
-    !
-    type(wrap_mesh_t), pointer :: wmsh
-    type(map_t),       pointer :: map
-    !
-    nullify(that, wmsh, map)
-    SAFE_ALLOCATE(wmsh)
-    call wrap_mesh_init(wmsh, mesh)
-    call table_get(this%table, wmsh, that)
-    if(associated(that))then
-      call wrap_mesh_end(wmsh)
-      SAFE_DEALLOCATE_P(wmsh)
-    else
-      SAFE_ALLOCATE(map)
-      call map_init(map, this%gr%mesh, mesh)
-      call table_set(this%table, wmsh, map)
-      that=>map
-    end if
-    nullify(wmsh, map)
-    return
-  end subroutine simulation_get_map
 
   ! ---------------------------------------------------------
   subroutine simulation_copy(this, that)
     type(simulation_t), intent(out) :: this
     type(simulation_t), intent(in)  :: that
     !
+    PUSH_SUB(simulation_copy)
     this%config=>that%config
     this%geo=>that%geo
     this%init=that%init
@@ -270,7 +248,7 @@ contains
       this%gr=>that%gr
     end if
     call domain_copy(this%domain, that%domain)
-    call table_copy(this%table, that%table)
+    POP_SUB(simulation_copy)
     return
   end subroutine simulation_copy
 
@@ -278,20 +256,7 @@ contains
   subroutine simulation_end(this)
     type(simulation_t), intent(inout) :: this
     !
-    type(wrap_mesh_t), pointer :: wmsh
-    type(map_t),       pointer :: map
-    !
-    nullify(wmsh, map)
-    do
-      call table_pop(this%table, wmsh, map)
-      if((.not.associated(wmsh)).or.(.not.associated(map)))exit
-      call wrap_mesh_end(wmsh)
-      SAFE_DEALLOCATE_P(wmsh)
-      call map_end(map)
-      SAFE_DEALLOCATE_P(map)
-      nullify(wmsh, map)
-    end do
-    call table_end(this%table)
+    PUSH_SUB(simulation_end)
     call domain_end(this%domain)
     if(this%init)then
       if(this%alloc)then
@@ -305,6 +270,7 @@ contains
       this%init=.false.
     end if
     nullify(this%config, this%geo)
+    POP_SUB(simulation_end)
     return
   end subroutine simulation_end
 

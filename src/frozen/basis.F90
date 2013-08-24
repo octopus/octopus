@@ -8,15 +8,16 @@ module basis_m
 
   use json_m,  only: JSON_OK, json_object_t, json_len, json_get
   use kinds_m, only: wp, operator(.equal.)
-  use mesh_m,  only: mesh_t
 
   implicit none
 
   private
+  public ::       &
+    operator(==), &
+    operator(/=)
+
   public ::            &
     basis_init,        &
-    operator(==),      &
-    operator(/=),      &
     basis_use,         &
     basis_to_internal, &
     basis_to_external, &
@@ -68,16 +69,6 @@ module basis_m
     module procedure basis_init_json
   end interface basis_init
 
-  interface basis_to_internal
-    module procedure basis_to_internal_vector
-    module procedure basis_to_internal_mesh
-  end interface basis_to_internal
-
-  interface basis_to_external
-    module procedure basis_to_external_vector
-    module procedure basis_to_external_mesh
-  end interface basis_to_external
-
 contains
   
   ! ---------------------------------------------------------
@@ -85,6 +76,7 @@ contains
     type(translation_t),                   intent(out) :: this
     real(kind=wp), dimension(:), optional, intent(in)  :: r
     !
+    PUSH_SUB(translation_init)
     this%do=.false.
     this%n=0
     if(present(r))then
@@ -95,6 +87,7 @@ contains
         this%r=r
       end if
     end if
+    POP_SUB(translation_init)
     return
   end subroutine translation_init
 
@@ -118,6 +111,7 @@ contains
     type(translation_t), intent(out) :: this_out
     type(translation_t), intent(in)  :: this_in
     !
+    PUSH_SUB(translation_copy)
     call translation_init(this_out)
     if(this_in%do)then
       this_out%n=this_in%n
@@ -125,6 +119,7 @@ contains
       this_out%r=this_in%r
       this_out%do=.true.
     end if
+    POP_SUB(translation_copy)
     return
   end subroutine translation_copy
 
@@ -132,10 +127,12 @@ contains
   subroutine translation_end(this)
     type(translation_t), intent(inout) :: this
     !
+    PUSH_SUB(translation_end)
     call translation_init(this)
     if(allocated(this%r))then
       SAFE_DEALLOCATE_A(this%r)
     end if
+    POP_SUB(translation_end)
     return
   end subroutine translation_end
 
@@ -204,6 +201,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(rotations_init)
     this%do=.false.
     this%n=0
     if(present(theta))then
@@ -214,6 +212,7 @@ contains
       end do
       this%do=any(this%r%do)
     end if
+    POP_SUB(rotations_init)
     return
   end subroutine rotations_init
 
@@ -245,6 +244,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(rotations_copy)
     call rotations_init(this_out)
     if(this_in%do)then
       this_out%n=this_in%n
@@ -254,6 +254,7 @@ contains
       end do
       this_out%do=.true.
     end if
+    POP_SUB(rotations_copy)
     return
   end subroutine rotations_copy
 
@@ -263,6 +264,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(rotations_end)
     this%do=.false.
     if(allocated(this%r))then
       do i = 1, this%n
@@ -271,6 +273,7 @@ contains
       SAFE_DEALLOCATE_A(this%r)
     end if
     this%n=0
+    POP_SUB(rotations_end)
     return
   end subroutine rotations_end
 
@@ -280,10 +283,12 @@ contains
     real(kind=wp), dimension(:), optional, intent(in)  :: r
     real(kind=wp), dimension(:), optional, intent(in)  :: theta
     !
+    PUSH_SUB(basis_init_array)
     ASSERT(size(r)==size(theta))
     call translation_init(this%trn, r)
     call rotations_init(this%rot, theta)
     this%do=(this%trn%do.or.this%rot%do)
+    POP_SUB(basis_init_array)
     return
   end subroutine basis_init_array
 
@@ -296,6 +301,7 @@ contains
     !
     integer :: n, ierr
     !
+    PUSH_SUB(basis_init_json)
     call json_get(config, "dim", this%dim, ierr)
     if(ierr/=JSON_OK)this%dim=ndim
     n=json_len(config, "r")
@@ -325,6 +331,7 @@ contains
         call basis_init_array(this)
       end if
     end if
+    POP_SUB(basis_init_json)
     return
   end subroutine basis_init_json
 
@@ -395,7 +402,7 @@ contains
   end subroutine basis_neg_rot
 
   ! ---------------------------------------------------------
-  pure subroutine basis_to_internal_vector(this, x, y)
+  pure subroutine basis_to_internal(this, x, y)
     type(basis_t),               intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp), dimension(:), intent(out) :: y
@@ -415,10 +422,10 @@ contains
       end do
     end do
     return
-  end subroutine basis_to_internal_vector
+  end subroutine basis_to_internal
 
   ! ---------------------------------------------------------
-  pure subroutine basis_to_external_vector(this, y, x)
+  pure subroutine basis_to_external(this, y, x)
     type(basis_t),               intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: y
     real(kind=wp), dimension(:), intent(out) :: x
@@ -435,49 +442,21 @@ contains
     end do
     if(this%trn%do)x=x+this%trn%r
     return
-  end subroutine basis_to_external_vector
-
-  ! ---------------------------------------------------------
-  elemental subroutine basis_to_internal_mesh(this, mesh)
-    type(basis_t), intent(in)    :: this
-    type(mesh_t),  intent(inout) :: mesh
-    !
-    real(kind=wp), dimension(MAX_DIM) :: y
-    integer                           :: i
-    !
-    do i = 1, mesh%np_part_global
-      call basis_to_internal_vector(this, mesh%x(i,:), y)
-      mesh%x(i,:)=y
-    end do
-    return
-  end subroutine basis_to_internal_mesh
-
-  ! ---------------------------------------------------------
-  pure subroutine basis_to_external_mesh(this, mesh)
-    type(basis_t), intent(in)    :: this
-    type(mesh_t),  intent(inout) :: mesh
-    !
-    real(kind=wp), dimension(MAX_DIM) :: y
-    integer                           :: i
-    !
-    do i = 1, mesh%np_part_global
-      call basis_to_external_vector(this, mesh%x(i,:), y)
-      mesh%x(i,:)=y
-    end do
-    return
-  end subroutine basis_to_external_mesh
+  end subroutine basis_to_external
 
   ! ---------------------------------------------------------
   subroutine basis_copy(this_out, this_in)
     type(basis_t), intent(out) :: this_out
     type(basis_t), intent(in)  :: this_in
     !
+    PUSH_SUB(basis_copy)
     call basis_init_array(this_out)
     if(this_in%do)then
       call translation_copy(this_out%trn, this_in%trn)
       call rotations_copy(this_out%rot, this_in%rot)
       this_out%do=.true.
     end if
+    POP_SUB(basis_copy)
     return
   end subroutine basis_copy
 
@@ -485,11 +464,13 @@ contains
   subroutine basis_end(this)
     type(basis_t), intent(inout) :: this
     !
+    PUSH_SUB(basis_end)
     if(this%do)then
       this%do=.false.
       call translation_end(this%trn)
       call rotations_end(this%rot)
     end if
+    POP_SUB(basis_end)
     return
   end subroutine basis_end
 

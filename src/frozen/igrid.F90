@@ -8,7 +8,6 @@ module igrid_m
 
   use geometry_m,  only: geometry_t
   use json_m,      only: JSON_OK, json_object_t, json_get
-  use kinds_m,     only: wp
   use mesh_m,      only: mesh_t
   use ob_grid_m,   only: ob_grid_init, ob_grid_end
   use simul_box_m, only: simul_box_t
@@ -38,12 +37,14 @@ contains
     type(geometry_t),     intent(in)  :: geo
     type(json_object_t),  intent(in)  :: config
     !
+    PUSH_SUB(grid_init)
     call ob_grid_init(this%ob_grid)
     ASSERT(.not.this%ob_grid%open_boundaries)
     this%have_fine_mesh=.false.
     this%fine%mesh=>this%mesh
     this%fine%der=>this%der
     nullify(this%mgrid)
+    POP_SUB(grid_init)
     return
   end subroutine grid_init
 
@@ -52,7 +53,9 @@ contains
     type(grid_t),       target, intent(in) :: this
     type(simul_box_t), pointer             :: that
     !
+    PUSH_SUB(grid_get_simul_box)
     that=>this%sb
+    POP_SUB(grid_get_simul_box)
     return
   end subroutine grid_get_simul_box
 
@@ -61,7 +64,9 @@ contains
     type(grid_t),  target, intent(in) :: this
     type(mesh_t), pointer             :: mesh
     !
+    PUSH_SUB(grid_get_mesh)
     mesh=>this%mesh
+    POP_SUB(grid_get_mesh)
     return
   end subroutine grid_get_mesh
 
@@ -70,7 +75,9 @@ contains
     type(grid_t), intent(out) :: this
     type(grid_t), intent(in)  :: that
     !
+    PUSH_SUB(grid_copy)
     ASSERT(.false.)
+    POP_SUB(grid_copy)
     return
   end subroutine grid_copy
 
@@ -78,9 +85,11 @@ contains
   subroutine grid_end(this)
     type(grid_t), intent(inout) :: this
     !
+    PUSH_SUB(grid_end)
     nullify(this%mgrid, this%fine%der, this%fine%mesh)
     this%have_fine_mesh=.false.
     call ob_grid_end(this%ob_grid)
+    POP_SUB(grid_end)
     return
   end subroutine grid_end
 

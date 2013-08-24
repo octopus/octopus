@@ -101,6 +101,7 @@ contains
     !
     integer :: ierr
     !
+    PUSH_SUB(interface_xc_init)
     this%config=>config
     this%sim=>null()
     call json_get(this%config, "functional", this%id, ierr)
@@ -113,6 +114,7 @@ contains
       this%spin=XC_UNPOLARIZED
       if(this%nspin>1)this%spin=XC_POLARIZED
     end if
+    POP_SUB(interface_xc_init)
     return
   end subroutine interface_xc_init
 
@@ -124,6 +126,7 @@ contains
     real(kind=wp) :: rtmp
     integer       :: ndim, itmp, ierr
     !
+    PUSH_SUB(interface_xc_start)
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
     call XC_F90(func_init)(this%conf, this%info, this%id, this%spin)
@@ -156,6 +159,7 @@ contains
       ASSERT(ierr==JSON_OK)
       call XC_F90(lda_c_2d_prm_set_par)(this%conf, rtmp)
     end select
+    POP_SUB(interface_xc_start)
     return
   end subroutine interface_xc_start
 
@@ -386,6 +390,7 @@ contains
     real(kind=wp), dimension(n_block)           :: l_zk
     integer                                     :: i, n, np
     !
+    PUSH_SUB(interface_xc_lda_exc)
     exc=0.0_wp
     np=size(exc)
     if(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0)then
@@ -396,6 +401,7 @@ contains
         exc(i:i+n-1)=l_zk(1:n)
       end do
     end if
+    POP_SUB(interface_xc_lda_exc)
     return
   end subroutine interface_xc_lda_exc
 
@@ -410,6 +416,7 @@ contains
     real(kind=wp), dimension(n_block)           :: l_zk
     integer                                     :: i, n, np
     !
+    PUSH_SUB(interface_xc_lda_exc_vxc)
     exc=0.0_wp
     vxc=0.0_wp
     np=size(exc)
@@ -423,6 +430,7 @@ contains
         exc(i:i+n-1)=l_zk(1:n)
       end do
     end if
+    POP_SUB(interface_xc_lda_exc_vxc)
     return
   end subroutine interface_xc_lda_exc_vxc
 
@@ -435,6 +443,7 @@ contains
     real(kind=wp), dimension(this%spin,n_block) :: l_dens, l_dedd
     integer                                     :: i, n, np
     !
+    PUSH_SUB(interface_xc_lda_vxc)
     vxc=0.0_wp
     np=size(vxc, dim=1)
     if(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0)then
@@ -445,6 +454,7 @@ contains
         call interface_xc_out_vxc(vxc(i:,:), density(i:,:), l_dedd)
       end do
     end if
+    POP_SUB(interface_xc_lda_vxc)
     return
   end subroutine interface_xc_lda_vxc
 
@@ -460,6 +470,7 @@ contains
     real(kind=wp), dimension(n_block)               :: l_zk
     integer                                         :: i, n, np
     !
+    PUSH_SUB(interface_xc_gga_exc)
     exc=0.0_wp
     np=size(exc)
     if(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0)then
@@ -471,6 +482,7 @@ contains
         exc(i:i+n-1)=l_zk(1:n)
       end do
     end if
+    POP_SUB(interface_xc_gga_exc)
     return
   end subroutine interface_xc_gga_exc
 
@@ -489,6 +501,7 @@ contains
     real(kind=wp), dimension(n_block)               :: l_zk
     integer                                         :: i, n, np
     !
+    PUSH_SUB(interface_xc_gga_exc_vxc)
     exc=0.0_wp
     np=size(exc)
     if((iand(this%flags,XC_FLAGS_HAVE_EXC)/=0).and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
@@ -502,6 +515,7 @@ contains
         exc(i:i+n-1)=l_zk(1:n)
       end do
     end if
+    POP_SUB(interface_xc_gga_exc_vxc)
     return
   end subroutine interface_xc_gga_exc_vxc
 
@@ -518,6 +532,7 @@ contains
     real(kind=wp), dimension(2*this%spin-1,n_block) :: l_vsigma
     integer                                         :: i, n, np
     !
+    PUSH_SUB(interface_xc_gga_vxc)
     vxc=0.0_wp
     np=size(vxc, dim=1)
     if(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0)then
@@ -530,6 +545,7 @@ contains
         call interface_xc_out_vxc(vxc(i:,:), density(i:,:), l_dedd)
       end do
     end if
+    POP_SUB(interface_xc_gga_vxc)
     return
   end subroutine interface_xc_gga_vxc
 
@@ -538,7 +554,9 @@ contains
     type(interface_xc_t), intent(out) :: this
     type(interface_xc_t), intent(in)  :: that
     !
+    PUSH_SUB(interface_xc_copy)
     ASSERT(.false.)
+    POP_SUB(interface_xc_copy)
     return
   end subroutine interface_xc_copy
 
@@ -546,6 +564,7 @@ contains
   subroutine interface_xc_end(this)
     type(interface_xc_t), intent(inout) :: this
     !
+    PUSH_SUB(interface_xc_end)
     if(this%id>XC_NONE)&
       call XC_F90(func_end)(this%conf)
     this%flags=XC_NONE
@@ -554,6 +573,7 @@ contains
     this%nspin=0
     this%id=XC_NONE
     nullify(this%sim, this%config)
+    POP_SUB(interface_xc_end)
     return
   end subroutine interface_xc_end
 

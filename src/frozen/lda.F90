@@ -48,9 +48,11 @@ contains
     type(lda_t),                 intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
+    PUSH_SUB(lda_init)
     this%config=>config
     this%sim=>null()
     call interface_xc_init(this%funct, config)
+    POP_SUB(lda_init)
     return
   end subroutine lda_init
 
@@ -59,9 +61,11 @@ contains
     type(lda_t),                intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
+    PUSH_SUB(lda_start)
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
     call interface_xc_start(this%funct, sim)
+    POP_SUB(lda_start)
     return
   end subroutine lda_start
 
@@ -81,7 +85,9 @@ contains
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:),   intent(out) :: exc
     !
+    PUSH_SUB(lda_get_exc)
     call interface_xc_lda_exc(this%funct, density, exc)
+    POP_SUB(lda_get_exc)
     return
   end subroutine lda_get_exc
 
@@ -92,7 +98,9 @@ contains
     real(kind=wp), dimension(:),   intent(out) :: exc
     real(kind=wp), dimension(:,:), intent(out) :: vxc
     !
+    PUSH_SUB(lda_get_exc_and_vxc)
     call interface_xc_lda_exc_vxc(this%funct, density, exc, vxc)
+    POP_SUB(lda_get_exc_and_vxc)
     return
   end subroutine lda_get_exc_and_vxc
 
@@ -102,7 +110,9 @@ contains
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:,:), intent(out) :: vxc
     !
+    PUSH_SUB(lda_get_vxc)
     call interface_xc_lda_vxc(this%funct, density, vxc)
+    POP_SUB(lda_get_vxc)
     return
   end subroutine lda_get_vxc
 
@@ -111,9 +121,11 @@ contains
     type(lda_t), intent(out) :: this
     type(lda_t), intent(in)  :: that
     !
+    PUSH_SUB(lda_copy)
     this%config=>that%config
     this%sim=>that%sim
     call interface_xc_copy(this%funct, that%funct)
+    POP_SUB(lda_copy)
     return
   end subroutine lda_copy
 
@@ -121,8 +133,10 @@ contains
   subroutine lda_end(this)
     type(lda_t), intent(inout) :: this
     !
+    PUSH_SUB(lda_end)
     call interface_xc_end(this%funct)
     nullify(this%sim, this%config)
+    POP_SUB(lda_end)
     return
   end subroutine lda_end
 

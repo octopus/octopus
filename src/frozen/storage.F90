@@ -86,6 +86,11 @@ module storage_m
     module procedure storage_sub
   end interface operator(-)
 
+  interface storage_init
+    module procedure storage_init_simple
+    module procedure storage_init_copy
+  end interface storage_init
+
   interface storage_get
     module procedure storage_get_simulation
     module procedure storage_get_mesh
@@ -104,11 +109,12 @@ module storage_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine storage_init(this, ndim, default)
+  subroutine storage_init_simple(this, ndim, default)
     type(storage_t),         intent(out) :: this
     integer,       optional, intent(in)  :: ndim
     real(kind=wp), optional, intent(in)  :: default
     !
+    PUSH_SUB(storage_init_simple)
     this%ndim=1
     if(present(ndim))then
       ASSERT(ndim>0)
@@ -117,8 +123,30 @@ contains
     this%sim=>null()
     this%default=0.0_wp
     if(present(default))this%default=default
+    POP_SUB(storage_init_simple)
     return
-  end subroutine storage_init
+  end subroutine storage_init_simple
+
+  ! ---------------------------------------------------------
+  subroutine storage_init_copy(this, that)
+    type(storage_t),         intent(out) :: this
+    type(storage_t), target, intent(in)  :: that
+    !
+    PUSH_SUB(storage_init_copy)
+    call storage_end(this)
+    ASSERT(that%ndim>0)
+    ASSERT(associated(that%sim))
+    ASSERT(associated(that%mesh))
+    this%ndim=that%ndim
+    this%sim=>that%sim
+    this%mesh=>that%mesh
+    this%default=that%default
+    SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
+    this%storage=this%default
+    call storage_update(this)
+    POP_SUB(storage_init_copy)
+    return
+  end subroutine storage_init_copy
 
   ! ---------------------------------------------------------
   subroutine storage_start(this, sim, fine)
@@ -129,6 +157,7 @@ contains
     type(grid_t), pointer :: grid
     logical               :: fn
     !
+    PUSH_SUB(storage_start)
     fn=.false.
     if(present(fine))fn=fine
     ASSERT(this%ndim>0)
@@ -145,6 +174,7 @@ contains
     ASSERT(this%mesh%np_part>0)
     SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
     this%storage=this%default
+    POP_SUB(storage_start)
     return
   end subroutine storage_start
 
@@ -154,6 +184,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(storage_update)
     ASSERT(associated(this%sim))
     this%storage(this%mesh%np+1:,:)=0.0_wp
 #if defined(HAVE_MPI)
@@ -161,24 +192,9 @@ contains
       call dvec_ghost_update(this%mesh%vp, this%storage(:,i))
     end do
 #endif
+    POP_SUB(storage_update)
     return
   end subroutine storage_update
-
-  ! ---------------------------------------------------------
-  subroutine storage_form(this, that)
-    type(storage_t),         intent(out) :: this
-    type(storage_t), target, intent(in)  :: that
-    !
-    call storage_end(this)
-    if(that%ndim>0)then
-      this%ndim=that%ndim
-      ASSERT(associated(this%sim))
-      this%sim=>that%sim
-      this%mesh=>that%mesh
-      SAFE_ALLOCATE(this%storage(this%mesh%np_part,this%ndim))
-    end if
-    return
-  end subroutine storage_form
 
   ! ---------------------------------------------------------
   function storage_add(this, that) result(resl)
@@ -187,14 +203,14 @@ contains
     !
     type(storage_t) :: resl
     !
-    ASSERT(this%ndim>0)
-    ASSERT(associated(this%mesh))
+    PUSH_SUB(storage_add)
     ASSERT(this%ndim==that%ndim)
     ASSERT(associated(this%mesh, that%mesh))
-    call storage_form(resl, this)
+    call storage_init_copy(resl, this)
     resl%storage(1:this%mesh%np,:)=this%storage(1:this%mesh%np,:)+that%storage(1:that%mesh%np,:)
     resl%default=this%default+that%default
     call storage_update(resl)
+    POP_SUB(storage_add)
     return
   end function storage_add
 
@@ -205,14 +221,14 @@ contains
     !
     type(storage_t) :: resl
     !
-    ASSERT(this%ndim>0)
-    ASSERT(associated(this%mesh))
+    PUSH_SUB(storage_sub)
     ASSERT(this%ndim==that%ndim)
     ASSERT(associated(this%mesh, that%mesh))
-    call storage_form(resl, this)
+    call storage_init_copy(resl, this)
     resl%storage(1:this%mesh%np,:)=this%storage(1:this%mesh%np,:)-that%storage(1:that%mesh%np,:)
     resl%default=this%default-that%default
     call storage_update(resl)
+    POP_SUB(storage_sub)
     return
   end function storage_sub
 
@@ -257,9 +273,11 @@ contains
     type(storage_t),     target, intent(in) :: this
     type(simulation_t), pointer             :: that
     !
+    PUSH_SUB(storage_get_simulation)
     that=>null()
     if(associated(this%sim))&
       that=>this%sim
+    POP_SUB(storage_get_simulation)
     return
   end subroutine storage_get_simulation
 
@@ -268,9 +286,11 @@ contains
     type(storage_t), target, intent(in) :: this
     type(mesh_t),   pointer             :: that
     !
+    PUSH_SUB(storage_get_mesh)
     that=>null()
     if(associated(this%mesh))&
       that=>this%mesh
+    POP_SUB(storage_get_mesh)
     return
   end subroutine storage_get_mesh
 
@@ -279,11 +299,13 @@ contains
     type(storage_t),              target, intent(in) :: this
     real(kind=wp), dimension(:), pointer             :: that
     !
+    PUSH_SUB(storage_get_storage_1d)
     that=>null()
     if(associated(this%sim))then
       ASSERT(this%ndim==1)
       that=>this%storage(:,1)
     end if
+    POP_SUB(storage_get_storage_1d)
     return
   end subroutine storage_get_storage_1d
 
@@ -292,56 +314,21 @@ contains
     type(storage_t),                target, intent(in) :: this
     real(kind=wp), dimension(:,:), pointer             :: that
     !
+    PUSH_SUB(storage_get_storage_2d)
     that=>null()
     if(associated(this%sim))then
       that=>this%storage
     end if
+    POP_SUB(storage_get_storage_2d)
     return
   end subroutine storage_get_storage_2d
 
-!!$  ! ---------------------------------------------------------
-!!$  subroutine storage_assign(this, that)
-!!$    type(storage_t), intent(inout) :: this
-!!$    type(storage_t), intent(in)    :: that
-!!$    !
-!!$    type(interpolation_t) :: intrp
-!!$    type(map_t), pointer  :: map
-!!$    integer               :: i
-!!$    !
-!!$    if(that%ndim>0)then
-!!$      if(this%ndim>0)then
-!!$        A!SSERT(this%ndim==that%ndim)
-!!$        if(associated(this%mesh, that%mesh))then
-!!$          this%storage(1:this%mesh%np,:)=that%storage(1:that%mesh%np,:)
-!!$        else
-!!$          call simulation_get(this%sim, that%mesh, map)
-!!$          if(associated(map))then
-!!$            do i = 1, this%ndim
-!!$              call map_map(map, this%storage(:,i), that%storage(:,i))
-!!$            end do
-!!$          else
-!!$            call interpolation_init(intrp, that%mesh, that%storage)
-!!$            do i = 1, this%mesh%np
-!!$              call interpolation_eval(intrp, this%mesh%x(i,:), this%storage(i,:))
-!!$            end do
-!!$            call interpolation_end(intrp)
-!!$          end if
-!!$        end if
-!!$        call storage_update(this)
-!!$      else
-!!$        call storage_copy(this, that)
-!!$      endif
-!!$    else
-!!$      call storage_end(this)
-!!$    end if
-!!$    return
-!!$  end subroutine storage_assign
-  
   ! ---------------------------------------------------------
   subroutine storage_copy(this, that)
     type(storage_t),         intent(out) :: this
     type(storage_t), target, intent(in)  :: that
     !
+    PUSH_SUB(storage_copy)
     call storage_end(this)
     if(that%ndim>0)then
       this%ndim   = that%ndim
@@ -354,6 +341,7 @@ contains
         call storage_update(this)
       end if
     end if
+    POP_SUB(storage_copy)
     return
   end subroutine storage_copy
 
@@ -361,12 +349,14 @@ contains
   subroutine storage_end(this)
     type(storage_t), intent(inout) :: this
     !
+    PUSH_SUB(storage_end)
     if(associated(this%sim))then
       SAFE_DEALLOCATE_A(this%storage)
     end if
     this%default=0.0_wp
     nullify(this%mesh, this%sim)
     this%ndim=0
+    POP_SUB(storage_end)
     return
   end subroutine storage_end
 
@@ -376,9 +366,11 @@ contains
     type(storage_t),       target, intent(in)  :: that
     integer,             optional, intent(in)  :: type
     !
+    PUSH_SUB(storage_interpolation_init)
     this%self=>that
     if(that%ndim>0)&
       call interpolation_init(this%intrp, that%sim, that%storage, type=type, default=that%default)
+    POP_SUB(storage_interpolation_init)
     return
   end subroutine storage_interpolation_init
 
@@ -389,11 +381,13 @@ contains
     real(kind=wp),                 intent(out) :: val
     integer,                       intent(out) :: ierr
     !
+    PUSH_SUB(storage_interpolation_eval_1d)
     if(associated(this%self%sim))then
       call interpolation_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default
     end if
+    POP_SUB(storage_interpolation_eval_1d)
     return
   end subroutine storage_interpolation_eval_1d
 
@@ -404,11 +398,13 @@ contains
     real(kind=wp),   dimension(:), intent(out) :: val
     integer,                       intent(out) :: ierr
     !
+    PUSH_SUB(storage_interpolation_eval_2d)
     if(associated(this%self%sim))then
       call interpolation_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default
     end if
+    POP_SUB(storage_interpolation_eval_2d)
     return
   end subroutine storage_interpolation_eval_2d
 
@@ -417,8 +413,10 @@ contains
     type(storage_interpolation_t), intent(out) :: this
     type(storage_interpolation_t), intent(in)  :: that
     !
+    PUSH_SUB(storage_interpolation_copy)
     this%self=>that%self
     call interpolation_copy(this%intrp, that%intrp)
+    POP_SUB(storage_interpolation_copy)
     return
   end subroutine storage_interpolation_copy
 
@@ -426,8 +424,10 @@ contains
   subroutine storage_interpolation_end(this)
     type(storage_interpolation_t), intent(inout) :: this
     !
+    PUSH_SUB(storage_interpolation_end)
     call interpolation_end(this%intrp)
     this%self=>null()
+    POP_SUB(storage_interpolation_end)
     return
   end subroutine storage_interpolation_end
 

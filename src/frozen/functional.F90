@@ -108,6 +108,7 @@ contains
     !
     integer :: ierr
     !
+    PUSH_SUB(functional_init)
     this%config=>config
     nullify(this%sim, this%mesh)
     call json_get(this%config, "family", this%family, ierr)
@@ -130,6 +131,7 @@ contains
         ASSERT(.false.)
       end select
     end if
+    POP_SUB(functional_init)
     return
   end subroutine functional_init
 
@@ -140,6 +142,7 @@ contains
     !
     type(grid_t), pointer :: grid
     !
+    PUSH_SUB(functional_start)
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
     nullify(grid)
@@ -160,6 +163,7 @@ contains
         ASSERT(.false.)
       end select
     end if
+    POP_SUB(functional_start)
     return
   end subroutine functional_start
 
@@ -193,8 +197,10 @@ contains
     !
     real(kind=wp), dimension(size(exc)) :: enrg
     !
+    PUSH_SUB(functional_get_energy_from_exc)
     enrg=sum(density, dim=2)*exc
     energy=dmf_integrate(this%mesh, enrg)
+    POP_SUB(functional_get_energy_from_exc)
     return
   end function functional_get_energy_from_exc
 
@@ -207,6 +213,7 @@ contains
     !
     real(kind=wp), dimension(size(density,dim=1)) :: exc
     !
+    PUSH_SUB(functional_get_energy_from_density)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_get_exc(this%lda, density, exc)
@@ -219,6 +226,7 @@ contains
       ASSERT(.false.)
     end select
     energy=functional_get_energy_from_exc(this, density, exc)
+    POP_SUB(functional_get_energy_from_density)
     return
   end function functional_get_energy_from_density
 
@@ -228,6 +236,7 @@ contains
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:),   intent(out) :: exc
     !
+    PUSH_SUB(functional_get_exc)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_get_exc(this%lda, density, exc)
@@ -239,6 +248,7 @@ contains
     case default
       ASSERT(.false.)
     end select
+    POP_SUB(functional_get_exc)
     return
   end subroutine functional_get_exc
 
@@ -249,6 +259,7 @@ contains
     real(kind=wp), dimension(:),   intent(out) :: exc
     real(kind=wp), dimension(:,:), intent(out) :: vxc
     !
+    PUSH_SUB(functional_get_exc_and_vxc)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_get_exc_and_vxc(this%lda, density, exc, vxc)
@@ -260,6 +271,7 @@ contains
     case default
       ASSERT(.false.)
     end select
+    POP_SUB(functional_get_exc_and_vxc)
     return
   end subroutine functional_get_exc_and_vxc
 
@@ -272,6 +284,7 @@ contains
     !
     real(kind=wp), dimension(size(density,dim=1)) :: exc
     !
+    PUSH_SUB(functional_get_energy_and_potential)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_get_exc_and_vxc(this%lda, density, exc, potential)
@@ -284,6 +297,7 @@ contains
       ASSERT(.false.)
     end select
     energy=functional_get_energy_from_exc(this, density, exc)
+    POP_SUB(functional_get_energy_and_potential)
     return
   end subroutine functional_get_energy_and_potential
 
@@ -293,6 +307,7 @@ contains
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:,:), intent(out) :: potential
     !
+    PUSH_SUB(functional_get_potential)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_get_vxc(this%lda, density, potential)
@@ -304,6 +319,7 @@ contains
     case default
       ASSERT(.false.)
     end select
+    POP_SUB(functional_get_potential)
     return
   end subroutine functional_get_potential
 
@@ -312,6 +328,7 @@ contains
     type(functional_t), intent(out) :: this
     type(functional_t), intent(in)  :: that
     !
+    PUSH_SUB(functional_copy)
     this%config=>that%config
     this%sim=>that%sim
     this%mesh=>that%mesh
@@ -330,6 +347,7 @@ contains
       nullify(this%lda, this%lda)
       ASSERT(this%family==XC_NONE)
     end select
+    POP_SUB(functional_copy)
     return
   end subroutine functional_copy
 
@@ -337,6 +355,7 @@ contains
   subroutine functional_end(this)
     type(functional_t), intent(inout) :: this
     !
+    PUSH_SUB(functional_end)
     select case(this%family)
     case(XC_FAMILY_LDA)
       call lda_end(this%lda)
@@ -350,6 +369,7 @@ contains
     end select
     this%family=XC_NONE
     nullify(this%gga, this%lda, this%mesh, this%sim, this%config)
+    POP_SUB(functional_end)
     return
   end subroutine functional_end
 

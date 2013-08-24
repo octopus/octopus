@@ -73,6 +73,7 @@ contains
     !
     integer :: n
     !
+    PUSH_SUB(intrp_init)
     this%type  = type
     this%vals  =>vals
     ASSERT(associated(this%vals))
@@ -92,6 +93,7 @@ contains
         call messages_fatal(1)
       end select
     end select
+    POP_SUB(intrp_init)
     return
   end subroutine intrp_init
 
@@ -101,7 +103,9 @@ contains
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp),               intent(out) :: val
     !
+    PUSH_SUB(intrp_qshep)
     val=qshep_interpolate(this%qshep, this%vals, x)
+    POP_SUB(intrp_qshep)
     return
   end subroutine intrp_qshep
 
@@ -111,11 +115,13 @@ contains
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp),               intent(out) :: val
     !
+    PUSH_SUB(intrp_eval)
     val=0.0_wp
     select case(this%type)
     case(QSHEP)
       call intrp_qshep(this, x, val)
     end select
+    POP_SUB(intrp_eval)
     return
   end subroutine intrp_eval
 
@@ -124,9 +130,11 @@ contains
     type(intrp_t), intent(out) :: this
     type(intrp_t), intent(in)  :: that
     !
+    PUSH_SUB(intrp_copy)
     this%type  = that%type
     this%vals  =>that%vals
     this%qshep =>that%qshep
+    POP_SUB(intrp_copy)
     return
   end subroutine intrp_copy
 
@@ -134,6 +142,7 @@ contains
   subroutine intrp_end(this)
     type(intrp_t), intent(inout) :: this
     !
+    PUSH_SUB(intrp_end)
     select case(this%type)
     case(QSHEP)
       call kill_qshep(this%qshep)
@@ -142,6 +151,7 @@ contains
     this%qshep =>null()
     this%vals  =>null()
     this%type  = NONE
+    POP_SUB(intrp_end)
     return
   end subroutine intrp_end
 
@@ -154,6 +164,7 @@ contains
     integer,       optional,         intent(in)  :: type
     real(kind=wp), optional,         intent(in)  :: default
     !
+    PUSH_SUB(interpolation_init_common)
     this%type=NEAREST
     if(present(type))this%type=type
     this%sim=>sim
@@ -172,6 +183,7 @@ contains
     end if
     this%default=0.0_wp
     if(present(default))this%default=default
+    POP_SUB(interpolation_init_common)
     return
   end subroutine interpolation_init_common
 
@@ -184,9 +196,11 @@ contains
     integer,           optional,         intent(in)  :: type
     real(kind=wp),     optional,         intent(in)  :: default
     !
+    PUSH_SUB(interpolation_init_1d)
     call interpolation_init_common(this, sim, 1, basis, type, default)
     if(type>NONE)&
       call intrp_init(this%intr(1), this%mesh, vals, this%type)
+    POP_SUB(interpolation_init_1d)
     return
   end subroutine interpolation_init_1d
 
@@ -201,12 +215,14 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(interpolation_init_2d)
     call interpolation_init_common(this, sim, size(vals,dim=2), basis, type, default)
     if(type>NONE)then
       do i = 1, this%nint
         call intrp_init(this%intr(i), this%mesh, vals(:,i), this%type)
       end do
     end if
+    POP_SUB(interpolation_init_2d)
     return
   end subroutine interpolation_init_2d
 
@@ -221,12 +237,14 @@ contains
     integer,       dimension(MAX_DIM) :: ix
     integer                           :: i, dm
     !
+    PUSH_SUB(interpolation_nearest_index)
     dm=this%mesh%sb%dim
     xp=(/x(1:dm),(0.0_wp, i=dm+1,MAX_DIM)/)
     call curvilinear_x2chi(this%mesh%sb, this%mesh%cv, xp, chi)
     ix(1:dm)=nint(chi(1:dm)/this%mesh%spacing(1:dm))
     ix(dm+1:MAX_DIM)=0
     n=index_from_coords(this%mesh%idx, dm, ix)
+    POP_SUB(interpolation_nearest_index)
     return
   end function interpolation_nearest_index
 
@@ -249,11 +267,13 @@ contains
     !
     integer :: n
     !
+    PUSH_SUB(interpolation_in_domain)
     in=domain_in_domain(this%domain, x)
     if(in)then
       n=interpolation_nearest_index(this, x)
       in=((0<n).and.(n<=size(this%intr(1)%vals)))
     end if
+    POP_SUB(interpolation_in_domain)
     return
   end function interpolation_in_domain
 
@@ -266,12 +286,14 @@ contains
     real(kind=wp) :: tol, dlt
     integer       :: i, n, dm
     !
+    PUSH_SUB(interpolation_nearest)
     dm=this%mesh%sb%dim
     n=interpolation_nearest_index(this, x)
     tol=CNST(0.51)*sqrt(sum(this%mesh%spacing(1:dm)**2))
     dlt=sqrt(sum((x(1:dm)-this%mesh%x(n,1:dm))**2))
     ASSERT(dlt<tol)
     forall(i=1:this%nint)val(i)=this%intr(i)%vals(n)
+    POP_SUB(interpolation_nearest)
     return
   end subroutine interpolation_nearest
 
@@ -284,6 +306,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(interpolation_eval_internal)
     if(interpolation_in_domain(this, x))then
       ierr=INTRP_OK
       select case(this%type)
@@ -301,6 +324,7 @@ contains
       val=this%default
       ierr=INTRP_OD
     end if
+    POP_SUB(interpolation_eval_internal)
     return
   end subroutine interpolation_eval_internal
 
@@ -314,6 +338,7 @@ contains
     real(kind=wp), dimension(size(x)) :: y
     real(kind=wp), dimension(1)       :: tvl
     !
+    PUSH_SUB(interpolation_eval_1d)
     if(associated(this%basis))then
       call basis_to_internal(this%basis, x, y)
       call interpolation_eval_internal(this, y, tvl, ierr)
@@ -321,6 +346,7 @@ contains
       call interpolation_eval_internal(this, x, tvl, ierr)
     end if
     val=tvl(1)
+    POP_SUB(interpolation_eval_1d)
     return
   end subroutine interpolation_eval_1d
 
@@ -333,12 +359,14 @@ contains
     !
     real(kind=wp), dimension(size(x)) :: y
     !
+    PUSH_SUB(interpolation_eval_2d)
     if(associated(this%basis))then
       call basis_to_internal(this%basis, x, y)
       call interpolation_eval_internal(this, y, val, ierr)
     else
       call interpolation_eval_internal(this, x, val, ierr)
     end if
+    POP_SUB(interpolation_eval_2d)
     return
   end subroutine interpolation_eval_2d
 
@@ -349,6 +377,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(interpolation_copy)
     this%type  = that%type
     this%nint  = that%nint
     this%sim   =>that%sim
@@ -361,6 +390,7 @@ contains
         call intrp_copy(this%intr(i), that%intr(i))
       end do
     end if
+    POP_SUB(interpolation_copy)
     return
   end subroutine interpolation_copy
 
@@ -370,6 +400,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(interpolation_end)
     this%type=0
     do i = 1, this%nint
       call intrp_end(this%intr(i))
@@ -379,6 +410,7 @@ contains
     end if
     nullify(this%sim, this%mesh, this%domain, this%basis, this%intr)
     this%nint=0
+    POP_SUB(interpolation_end)
     return
   end subroutine interpolation_end
 
