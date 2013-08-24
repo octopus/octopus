@@ -25,7 +25,6 @@ libfrozen_a_SOURCES =            \
 	igrid.F90                \
 	basis.F90                \
 	domain.F90               \
-	map.F90                  \
 	simulation.F90           \
 	interpolation.F90        \
 	storage.F90              \
@@ -96,9 +95,8 @@ depend:
 iatom.o : iatom.F90
 igrid.o : igrid.F90
 basis.o : basis.F90
-map.o : map.F90
 domain.o : domain.F90
-simulation.o : simulation.F90 domain.o map.o igrid.o
+simulation.o : simulation.F90 domain.o igrid.o
 interpolation.o : interpolation.F90 simulation.o domain.o basis.o
 storage.o : storage.F90 interpolation.o simulation.o
 
