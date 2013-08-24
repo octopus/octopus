@@ -57,8 +57,8 @@ module atom_m
   end interface operator(==)
 
   interface operator(/=)
-    module procedure atom_equal
-    module procedure atom_classical_equal
+    module procedure atom_not_equal
+    module procedure atom_classical_not_equal
   end interface operator(/=)
 
   interface atom_same_species
