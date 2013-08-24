@@ -27,18 +27,25 @@
 
 module TEMPLATE(pair_m)
 
+  use global_m
+  use messages_m
+  use profiling_m
+
   MODULE_INVOCATION_1
   MODULE_INVOCATION_2
 
   implicit none
 
   private
+
+#ifdef MODULE_IMPLEMENT_OPS
+  public ::       &
+    operator(==), &
+    operator(/=)
+#endif
+
   public ::                    &
     TEMPLATE(pair_init),       &
-#ifdef MODULE_IMPLEMENT_OPS
-    operator(==),              &
-    operator(/=),              &
-#endif
     TEMPLATE(pair_get_first),  &
     TEMPLATE(pair_get_second), &
     TEMPLATE(pair_set_first),  &
@@ -70,8 +77,10 @@ contains
     ITYPE_1,        target, intent(in)  :: a
     ITYPE_2,        target, intent(in)  :: b
     !
+    PUSH_SUB(TEMPLATE(pair_init))
     this%a=>a
     this%b=>b
+    POP_SUB(TEMPLATE(pair_init))
     return
   end subroutine TEMPLATE(pair_init)
 
@@ -104,9 +113,11 @@ contains
     type(TEMPLATE(pair_t)), intent(in) :: this
     ITYPE_1,               pointer     :: that
     !
+    PUSH_SUB(TEMPLATE(pair_get_first))
     that=>null()
     if(associated(this%a))&
       that=>this%a
+    POP_SUB(TEMPLATE(pair_get_first))
     return
   end subroutine TEMPLATE(pair_get_first)
 
@@ -115,9 +126,11 @@ contains
     type(TEMPLATE(pair_t)), intent(in) :: this
     ITYPE_2,               pointer     :: that
     !
+    PUSH_SUB(TEMPLATE(pair_get_second))
     that=>null()
     if(associated(this%b))&
       that=>this%b
+    POP_SUB(TEMPLATE(pair_get_second))
     return
   end subroutine TEMPLATE(pair_get_second)
 
@@ -126,7 +139,9 @@ contains
     type(TEMPLATE(pair_t)), intent(inout) :: this
     ITYPE_1,        target, intent(in)    :: that
     !
+    PUSH_SUB(TEMPLATE(pair_set_first))
     this%a=>that
+    POP_SUB(TEMPLATE(pair_set_first))
     return
   end subroutine TEMPLATE(pair_set_first)
 
@@ -135,7 +150,9 @@ contains
     type(TEMPLATE(pair_t)), intent(inout) :: this
     ITYPE_2,        target, intent(in)    :: that
     !
+    PUSH_SUB(TEMPLATE(pair_set_second))
     this%b=>that
+    POP_SUB(TEMPLATE(pair_set_second))
     return
   end subroutine TEMPLATE(pair_set_second)
 
@@ -144,8 +161,10 @@ contains
     type(TEMPLATE(pair_t)), intent(out) :: this_out
     type(TEMPLATE(pair_t)), intent(in)  :: this_in
     !
+    PUSH_SUB(TEMPLATE(pair_copy))
     this_out%a=>this_in%a
     this_out%b=>this_in%b
+    POP_SUB(TEMPLATE(pair_copy))
     return
   end subroutine TEMPLATE(pair_copy)
 

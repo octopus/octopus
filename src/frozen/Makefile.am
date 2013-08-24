@@ -22,7 +22,6 @@ noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =            \
 	iatom.F90                \
-	igeometry.F90            \
 	igrid.F90                \
 	basis.F90                \
 	domain.F90               \
@@ -95,7 +94,6 @@ depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
 iatom.o : iatom.F90
-igeometry.o : igeometry.F90 iatom.o
 igrid.o : igrid.F90
 basis.o : basis.F90
 map.o : map.F90
@@ -109,7 +107,7 @@ lda.o : lda.F90 interface_xc.o
 gga.o : gga.F90 interface_xc.o
 functional.o : functional.F90 gga.o lda.o
 
-#fio_geometry.o : fio_geometry.F90 igeometry.o
+#fio_geometry.o : fio_geometry.F90
 #fio_simul_box.o : fio_simul_box.F90 fio_geometry.o
 #fio_mesh.o : fio_mesh.F90 fio_simul_box.o
 #fio_grid.o : fio_grid.F90 fio_mesh.o fio_simul_box.o fio_geometry.o

@@ -31,11 +31,13 @@ module TEMPLATE(list_m)
 
   private
 
+  public ::       &
+    operator(==), &
+    operator(/=)
+
   public ::                &
     TEMPLATE(list_init),   &
     TEMPLATE(list_len),    &
-    operator(==),          &
-    operator(/=),          &
     TEMPLATE(list_index),  &
     TEMPLATE(list_push),   &
     TEMPLATE(list_pop),    &
@@ -111,6 +113,7 @@ contains
     !
     type(node_t), pointer :: n1, n2
     !
+    PUSH_SUB(TEMPLATE(list_equal))
     eqv=.false.
     nullify(n1, n2)
     if(this%size==that%size)then
@@ -127,6 +130,7 @@ contains
         n2=>n2%next
       end do
     end if
+    POP_SUB(TEMPLATE(list_equal))
     return
   end function TEMPLATE(list_equal)
   
@@ -137,7 +141,9 @@ contains
     !
     logical :: neqv
     !
+    PUSH_SUB(TEMPLATE(list_not_equal))
     neqv=.not.TEMPLATE(list_equal)(this, that)
+    POP_SUB(TEMPLATE(list_not_equal))
     return
   end function TEMPLATE(list_not_equal)
 
@@ -151,6 +157,7 @@ contains
     type(node_t), pointer :: node
     integer               :: cnt
     !
+    PUSH_SUB(TEMPLATE(list_index))
     cnt=0
     index=0
     node=>this%head
@@ -163,6 +170,7 @@ contains
       end if
       node=>node%next
     end do
+    POP_SUB(TEMPLATE(list_index))
     return
   end function TEMPLATE(list_index)
   

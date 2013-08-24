@@ -6,91 +6,34 @@ module iatom_m
   use messages_m
   use profiling_m
 
-  use atom_m,    only: atom_t, atom_classical_t, atom_same_species, atom_get_label, atom_end
-  use json_m,    only: JSON_OK, json_object_t, json_init, json_get, json_set
-  use species_m, only: LABEL_LEN, species_t, species_label, species_type
+  use species_m, only: LABEL_LEN, species_type
+
+  use atom_m, only: &
+    operator(==),   &
+    operator(/=)
+
+  use atom_m, only: &
+    atom_t,         &
+    atom_get_label, &
+    atom_end
+
+  use atom_m, only:                       &
+    atom_init => atom_create_data_object
 
   implicit none
 
   private
-  public ::                            &
-    atom_t,                            &
-    operator(==),                      &
-    operator(/=),                      &
-    atom_classical_t,                  &
-    atom_init,                         &
-    atom_hash,                         &
-    atom_create_data_object,           &
-    atom_classical_create_data_object, &
+  public ::       &
+    operator(==), &
+    operator(/=)
+
+  public ::    &
+    atom_t,    &
+    atom_init, &
+    atom_hash, &
     atom_end
 
-  interface operator(==)
-    module procedure atom_equal
-  end interface operator(==)
-
-  interface operator(/=)
-    module procedure atom_equal
-  end interface operator(/=)
-
-  interface atom_init
-    module procedure atom_init_from_data_object
-    module procedure atom_classical_init_from_data_object
-  end interface atom_init
-
 contains
-
-  ! ---------------------------------------------------------
-  subroutine atom_init_from_data_object(this, spec, json)
-    type(atom_t),            intent(out) :: this
-    type(species_t), target, intent(in)  :: spec
-    type(json_object_t),     intent(in)  :: json
-    !
-    integer :: ierr
-    !
-    PUSH_SUB(atom_init_from_data_object)
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom data object.'
-      call messages_fatal(1)
-      return
-    end if
-    ASSERT(atom_get_label(this)==species_label(spec))
-    this%spec=>spec
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    this%move=.true.
-    POP_SUB(atom_init_from_data_object)
-    return
-  end subroutine atom_init_from_data_object
-
-  ! ---------------------------------------------------------
-  elemental function atom_equal(this, that) result(is)
-    type(atom_t), intent(in) :: this
-    type(atom_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=(atom_get_label(this)==atom_get_label(that))
-    is=is.and.(species_type(this%spec)==species_type(that%spec))
-    return
-  end function atom_equal
-
-  ! ---------------------------------------------------------
-  elemental function atom_not_equal(this, that) result(is)
-    type(atom_t), intent(in) :: this
-    type(atom_t), intent(in) :: that
-    !
-    logical :: is
-    !
-    is=(.not.atom_equal(this, that))
-    return
-  end function atom_not_equal
 
   ! ---------------------------------------------------------
   ! Daniel J. Bernstein Hash Function
@@ -112,65 +55,6 @@ contains
     hash=modulo(hash, size)+1
     return
   end function atom_hash
-
-  ! ---------------------------------------------------------
-  subroutine atom_create_data_object(this, json)
-    type(atom_t),        intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-    !
-    PUSH_SUB(atom_create_data_object)
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-    POP_SUB(atom_create_data_object)
-    return
-  end subroutine atom_create_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_init_from_data_object(this, json)
-    type(atom_classical_t), intent(out) :: this
-    type(json_object_t),    intent(in)  :: json
-    !
-    integer :: ierr
-    !
-    PUSH_SUB(atom_classical_init_from_data_object)
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    call json_get(json, "charge", this%charge, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "charge" from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    POP_SUB(atom_classical_init_from_data_object)
-    return
-  end subroutine atom_classical_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_create_data_object(this, json)
-    type(atom_classical_t), intent(in)  :: this
-    type(json_object_t),    intent(out) :: json
-    !
-    PUSH_SUB(atom_classical_create_data_object)
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-    call json_set(json, "charge", this%charge)
-    POP_SUB(atom_classical_create_data_object)
-    return
-  end subroutine atom_classical_create_data_object
 
 end module iatom_m
 

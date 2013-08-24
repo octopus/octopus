@@ -36,9 +36,10 @@
 module TEMPLATE(table_m)
 
   use global_m
-  use kinds_m, only: wp
   use messages_m
   use profiling_m
+
+  use kinds_m, only: wp
 
   MODULE_INVOCATION_KEY
   MODULE_INVOCATION_VAL
@@ -84,25 +85,6 @@ module TEMPLATE(table_m)
   integer, public, parameter :: TABLE_KEY_OK    = 0
   integer, public, parameter :: TABLE_KEY_ERROR =-1
 
-!!$  type :: json_member_node_t
-!!$    private
-!!$    type(json_member_t),      pointer :: member =>null()
-!!$    type(json_member_node_t), pointer :: next   =>null()
-!!$  end type json_member_node_t
-!!$
-!!$  type :: json_table_node_t
-!!$    private
-!!$    type(json_member_node_t), pointer :: head =>null()
-!!$  end type json_table_node_t
-!!$
-!!$  type, public :: json_object_iterator_t
-!!$    private
-!!$    integer                                        :: pos   = 0
-!!$    integer                                        :: size  = 0
-!!$    type(json_member_node_t),              pointer :: node  =>null()
-!!$    type(json_table_node_t), dimension(:), pointer :: table =>null()
-!!$  end type json_object_iterator_t
-
   type, public :: TEMPLATE(table_t)
     private
     integer                             :: size  = 0
@@ -119,6 +101,7 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(TEMPLATE(table_init))
     this%used=0
     this%size=TABLE_INIT_LEN
     if(present(size))this%size=size
@@ -126,6 +109,7 @@ contains
     do i=1, this%size
       call list_init(this%table(i))
     end do
+    POP_SUB(TEMPLATE(table_init))
     return
   end subroutine TEMPLATE(table_init)
 
@@ -149,6 +133,7 @@ contains
     real(kind=wp)           :: need
     integer                 :: i, n
     !
+    PUSH_SUB(TEMPLATE(table_reallocate))
     need=real(this%used+1, kind=wp)
     if(this%size<int(TABLE_GROWTH_FACTOR*need))then
       n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(TABLE_GROWTH_FACTOR)),1)
@@ -173,6 +158,7 @@ contains
       this%used=buff%used
       this%table=>buff%table
     end if
+    POP_SUB(TEMPLATE(table_reallocate))
     return
   end subroutine table_reallocate
 
@@ -185,6 +171,7 @@ contains
     type(pair_t), pointer :: pair
     integer               :: i
     !
+    PUSH_SUB(TEMPLATE(table_pop))
     nullify(key, val)
     if(this%used>0)then
       pair=>null()
@@ -201,6 +188,7 @@ contains
         pair=>null()
       end do
     end if
+    POP_SUB(TEMPLATE(table_pop))
     return
   end subroutine TEMPLATE(table_pop)
 
@@ -213,6 +201,7 @@ contains
     type(pair_t), pointer :: pair
     integer               :: n
     !
+    PUSH_SUB(TEMPLATE(table_set))
     call table_reallocate(this)
     n=HASH_FUNCTION(key, this%size)
     call table_list_get_pair(this%table(n), key, pair)
@@ -224,6 +213,7 @@ contains
       call list_push(this%table(n), pair)
       this%used=this%used+1
     end if
+    POP_SUB(TEMPLATE(table_set))
     return
   end subroutine TEMPLATE(table_set)
 
@@ -236,6 +226,7 @@ contains
     type(list_iterator_t) :: iter
     ITYPE_KEY,    pointer :: k
     !
+    PUSH_SUB(TEMPLATE(table_list_get_pair))
     nullify(k, pair)
     call list_iterator_init(iter, this)
     do
@@ -246,6 +237,7 @@ contains
       nullify(k, pair)
     end do
     call list_iterator_end(iter)
+    POP_SUB(TEMPLATE(table_list_get_pair))
     return
   end subroutine table_list_get_pair
 
@@ -259,6 +251,7 @@ contains
     type(pair_t), pointer :: pair
     integer               :: n
     !
+    PUSH_SUB(TEMPLATE(table_get))
     val=>null()
     if(present(ierr))ierr=TABLE_KEY_ERROR
     n=HASH_FUNCTION(key, this%size)
@@ -267,6 +260,7 @@ contains
       if(present(ierr))ierr=TABLE_KEY_OK
       call pair_get_second(pair, val)
     end if
+    POP_SUB(TEMPLATE(table_get))
     return
   end subroutine TEMPLATE(table_get)
 
@@ -277,11 +271,13 @@ contains
     !
     integer :: i
     !
+    PUSH_SUB(TEMPLATE(table_copy))
     call TEMPLATE(table_init)(this_out, this_in%size)
     do i = 1, this_out%size
       call list_copy(this_out%table(i), this_in%table(i))
     end do
     this_out%used=this_in%used
+    POP_SUB(TEMPLATE(table_copy))
     return
   end subroutine TEMPLATE(table_copy)
 
@@ -292,6 +288,7 @@ contains
     type(pair_t), pointer :: pair
     integer               :: i
     !
+    PUSH_SUB(TEMPLATE(table_end))
     pair=>null()
     do i = 1, this%size
       do
@@ -308,6 +305,7 @@ contains
     this%table=>null()
     ASSERT(this%used==0)
     this%size=0
+    POP_SUB(TEMPLATE(table_end))
     return
   end subroutine TEMPLATE(table_end)
 
