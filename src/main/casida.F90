@@ -166,8 +166,10 @@ contains
     integer :: idir, ik, n_filled, n_partially_filled, n_half_filled, theorylevel, iatom
     character(len=80) :: nst_string, default
     character(len=100) :: restart_filename
+    type(profile_t), save :: prof
 
     PUSH_SUB(casida_run)
+    call profiling_in(prof, 'CASIDA')
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
@@ -492,6 +494,7 @@ contains
 
     call casida_type_end(cas)
 
+    call profiling_out(prof)
     POP_SUB(casida_run)
   end subroutine casida_run
 

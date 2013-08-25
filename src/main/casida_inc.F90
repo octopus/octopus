@@ -164,8 +164,10 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   R_TYPE, allocatable :: ff(:)
   R_TYPE, allocatable :: psii(:, :), psia(:, :)
   integer :: ip, ia, idim
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(ks_matrix_elements))
+  call profiling_in(prof, 'CASIDA_KS')
 
   SAFE_ALLOCATE(ff(1:mesh%np))
   SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
@@ -188,6 +190,8 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   end do
 
   SAFE_DEALLOCATE_A(ff)
+
+  call profiling_out(prof)
   POP_SUB(X(ks_matrix_elements))
 end function X(ks_matrix_elements)
 
@@ -559,9 +563,11 @@ contains
     integer :: pi, qi, sigma, pa, qa, mu
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
     FLOAT :: coeff_vh
+    type(profile_t), save :: prof
 
     PUSH_SUB(X(casida_get_matrix).X(K_term))
-
+    call profiling_in(prof, 'CASIDA_K')
+    
     if(cas%herm_conj) then
       pi = qq%i
       pa = qq%a
@@ -621,6 +627,7 @@ contains
     SAFE_DEALLOCATE_A(rho_j)
     SAFE_DEALLOCATE_A(integrand)
 
+    call profiling_out(prof)
     POP_SUB(X(casida_get_matrix).X(K_term))
   end subroutine X(K_term)
 
