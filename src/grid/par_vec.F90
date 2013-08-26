@@ -226,7 +226,6 @@ contains
     character(len=3)            :: filenum
     integer                     :: tmp, init, size, ii
     logical                     :: found
-    integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
    
     integer                     :: idir, ipart
     integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
@@ -234,11 +233,10 @@ contains
     !! neighbour per partition.      
     integer, pointer            :: np_ghost_neigh(:, :) 
     integer, pointer            :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
-    integer, pointer            :: np_ghost_neigh_partno_prev(:) !< Sum of the all previous elements
     integer, pointer            :: xghost_tmp(:)  
     integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
     integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
-    integer, pointer            :: partno(:), points(:)
+    integer, pointer            :: points(:)
 
     PUSH_SUB(vec_init)
 
@@ -318,27 +316,26 @@ contains
     vp%total                 = 0
     vp%np_ghost_neigh_partno = 0
     vp%np_ghost              = 0
-    np_ghost_partno          = 0
     ip                       = 0
     ! Check process node and communicate
     inode = vp%partno
 
     SAFE_ALLOCATE(points(1:vp%np_local))
-    SAFE_ALLOCATE(partno(1:vp%np_local))
+    SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
     ! Check all points of this node.
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       points(ip) = gip
     end do
     call partition_get_partition_number(inner_partition,vp%np_local, &
-         points, partno)
+         points, vp%part_local)
     
     ip = 0
     vp%total = 0
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       ! Update the receiving point
-      ipart = partno(ip)
+      ipart = vp%part_local(ip)
    
       vp%send_count(ipart) = vp%send_count(ipart) + 1
       ! Get coordinates of current point.
@@ -363,7 +360,7 @@ contains
             ! Increase number of ghost points of inode from part(index).
             vp%np_ghost_neigh_partno(vp%part_vec(index)) = vp%np_ghost_neigh_partno(vp%part_vec(index))+1
             ! Increase total number of ghostpoints of inode.
-            np_ghost_partno = np_ghost_partno + 1
+            vp%np_ghost = vp%np_ghost + 1
             ! One more ghost point.
             vp%total = vp%total + 1
           end if
@@ -380,7 +377,6 @@ contains
     call MPI_Allgather(vp%np_ghost_neigh_partno(1),npart,MPI_INTEGER, &
          np_ghost_neigh(1,1),npart,MPI_INTEGER, &
          comm, mpi_err)
-    vp%np_ghost = np_ghost_partno
 
     ! Transpose data
     tmp = 0
@@ -610,9 +606,6 @@ contains
         vp%part_local_rev(ip) = ipart
       end do
 
-      SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
-      vp%part_local = partno
-      
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
     
