@@ -599,12 +599,16 @@ contains
 
       SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
       do ip = 1, vp%np_local
-        !get the global point
+        ! Get the temporally global point
         ipg = vp%local(vp%xlocal + ip - 1)
-        !the destination
-        ipart = vp%part_vec(vp%local_vec(ipg))
-        vp%part_local_rev(ip) = ipart
+        ! Get the destination global point
+        points(ip) = vp%local_vec(ipg)
       end do
+
+      ! Get the destination partitions
+      call partition_get_partition_number(inner_partition, vp%np_local, points, vp%part_local_rev)
+      
+      SAFE_DEALLOCATE_P(points)
 
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
