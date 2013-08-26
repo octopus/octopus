@@ -1,0 +1,32 @@
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+ExperimentalFeatures = yes
+
+meff = 1.0
+omega = 1.0
+
+%Species
+"qd" | 1.0 | spec_user_defined | 20 | "0.5*meff*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 
+%
+
+BoxShape = sphere
+Radius = 8.0
+Spacing = 0.15
+
+SpinComponents = spinors
+
+TheoryLevel = independent_particles
+
+EigenSolver = cg
+EigenSolverTolerance = 1e-6
+#EigenSolverMaxIter = 250
+
+RashbaSpinOrbitCoupling = 0.01
+
+TypeOfMixing = linear
+Mixing = 1.0

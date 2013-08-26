@@ -218,6 +218,59 @@ end subroutine X(hamiltonian_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
+subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
+  type(hamiltonian_base_t),    intent(in)    :: this
+  type(derivatives_t),         intent(in)    :: der
+  type(states_dim_t),          intent(in)    :: std
+  type(batch_t), target,       intent(in)    :: psib
+  type(batch_t), target,       intent(inout) :: vpsib
+
+  integer :: ist, idim, ip
+  R_TYPE, pointer :: psi(:, :), vpsi(:, :)
+  R_TYPE, allocatable :: grad(:, :, :)
+  PUSH_SUB(X(hamiltonian_base_rashba))
+
+  if(this%rashba_coupling**2 == M_ZERO) then
+    POP_SUB(X(hamiltonian_base_rashba))
+    return
+  end if
+  ASSERT(std%ispin == SPINORS)
+
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:std%dim))
+
+  do ist = 1, psib%nst
+    psi  => psib%states(ist)%X(psi)
+    vpsi => vpsib%states(ist)%X(psi)
+
+    grad = M_ZERO
+    do idim = 1, std%dim
+      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+    end do
+    grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
+ 
+    if(associated(this%vector_potential)) then
+      forall (idim = 1:std%dim, ip = 1:der%mesh%np)
+         vpsi(ip, idim) = vpsi(ip, idim) &
+          + (-1)**(idim+1)*M_zI*this%rashba_coupling*( this%vector_potential(1,ip)*psi(ip,2-(idim-1)) &
+          + (-1)**idim*M_zI*this%vector_potential(2,ip)*psi(ip,2-(idim-1)) )
+      end forall
+    end if
+
+    forall(ip = 1:der%mesh%np)
+      vpsi(ip, 1) = vpsi(ip, 1) - &
+        this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
+      vpsi(ip, 2) = vpsi(ip, 2) + &
+        this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
+    end forall
+
+  end do
+  
+  SAFE_DEALLOCATE_A(grad)
+  
+  POP_SUB(X(hamiltonian_base_rashba))
+end subroutine X(hamiltonian_base_rashba)
+
+
 subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der

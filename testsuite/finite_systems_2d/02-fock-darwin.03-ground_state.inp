@@ -1,0 +1,39 @@
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+UnitsOutput = ev_angstrom
+
+ExperimentalFeatures = yes
+
+omega = 0.00018374663
+meff = 0.022
+ParticleMass = meff
+
+%Species
+"qd" | 1.0 | spec_user_defined | 8 | "0.5*meff*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 
+%
+
+BoxShape = sphere
+Radius = 2500.0
+Spacing = 50
+
+DerivativesOrder = 2
+
+SpinComponents = spinors
+
+TheoryLevel = independent_particles
+
+EigenSolver = cg_new
+EigenSolverTolerance = 1e-6
+#EigenSolverMaxIter = 250
+
+Output = wfs
+OutputHow = axis_x
+
+mu=0.7896
+lambda=mu*sqrt(omega/meff)
+RashbaSpinOrbitCoupling = lambda

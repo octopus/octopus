@@ -161,6 +161,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
 
+  if (iand(TERM_OTHERS, terms_) /= 0 ) then 
+    call X(hamiltonian_base_rashba)(hm%hm_base, der, hm%d, epsib, hpsib)
+  end if
+
   if (iand(TERM_OTHERS, terms_) /= 0) then
 
     if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then

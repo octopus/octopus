@@ -179,6 +179,9 @@ module hamiltonian_m
     !> If we use a complex-scaled Hamiltonian by complexifying the spatial coordinate with 
     !> the transformation r -> r*exp(i*theta)      
     type(cmplxscl_t) :: cmplxscl  !< complex scaling parameters
+
+    !> For the Rashba spin-orbit coupling
+    FLOAT :: rashba_coupling
     
   end type hamiltonian_t
 
@@ -241,7 +244,29 @@ contains
     !%End
     call parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
 
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass)
+    !%Variable RashbaSpinOrbitCoupling
+    !%Type float
+    !%Default 0.0
+    !%Section Hamiltonian
+    !%Description
+    !% This feature is still in experimental phase, use at your own risk.
+    !%
+    !% For systems described in 2D (electrons confined to 2D in semiconductor structures), one
+    !% may add the Bychkov-Rashba spin-orbit coupling term [Bychkov and Rashba, J. Phys. C: Solid
+    !% State Phys. 17, 6031 (1984)]. The variable "RashbaSpinOrbitCoupling" determines the strength
+    !% of this perturbation, and has dimensions of energy times length.
+    !%End
+    call parse_float(datasets_check('RashbaSpinOrbitCoupling'), M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
+    if(parse_isdef(datasets_check('RashbaSpinOrbitCoupling')) /= 0 ) then
+      if(gr%sb%dim .ne. 2) then
+        write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
+        call messages_fatal(1)
+      end if
+      call messages_experimental('RashbaSpinOrbitCoupling')
+    end if
+
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, hm%rashba_coupling)
+
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
 
@@ -317,8 +342,10 @@ contains
     endif
 
     !Static magnetic field requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
-
+    !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
+    if (associated(hm%ep%B_field) .or. &
+      gauge_field_is_applied(hm%ep%gfield) .or. &
+      parse_isdef(datasets_check('RashbaSpinOrbitCoupling')) /= 0) call states_set_complex(st)
 
     call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
@@ -1144,6 +1171,7 @@ contains
     apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
+    if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA) /= 0)  apply = .false.

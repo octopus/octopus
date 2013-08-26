@@ -33,3 +33,28 @@ match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 0.970798
 match ; Eigenvalue  8 ; GREP(static/info, ' 8   --', 13) ; 0.990797
 match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; 1.010796
 match ; Eigenvalue 10 ; GREP(static/info, '10   --', 13) ; 1.030798
+
+# This is also a system of 20 non-interactin electrons in 2D, confined
+# by a harmonic potential. There is no static magnetic field, but a
+# Rashba spin-orbit coupling term. The results should reproduce the
+# perturbative formula (5) of [M. Governale, Phys. Rev. Lett. 89,
+# 206802 (2002)].
+
+Input : 02-fock-darwin.02-ground_state.inp
+
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.999900
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 2.000000
+match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; 2.999900
+match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; 3.999600
+match ; Eigenvalue 17 ; GREP(static/info, '17   --', 13) ; 4.000000
+
+# Finally, the same type of problem, but in this case the purpose is to
+# reproduce the non-perturbative results of the inset of Fig. 1 (a), in
+# the same paper.
+
+Input : 02-fock-darwin.03-ground_state.inp
+
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.002441
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 0.005945
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 0.008712
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 0.009764
