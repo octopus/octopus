@@ -693,7 +693,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(mesh%vp%send_disp(npart) + send_count(npart) == mesh%np)
       ASSERT(mesh%vp%recv_disp(npart) + recv_count(npart) == mesh%np)
 
-      !pack for sending
+      ! Pack for sending
       send_count = 0  
       do ip = 1, mesh%np
         ipart = mesh%vp%part_local(ip)
@@ -713,6 +713,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_DEALLOCATE_A(send_buffer)
 
+      ! Unpack on receiving
       recv_count = 0
       do ip = 1, mesh%np
         ! get the destination
@@ -737,7 +738,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 end subroutine X(mesh_batch_exchange_points)
 
 ! -----------------------------------------------------
-! This function should not be called directly, but through mesh_batch_nrm2.
+!> This function should not be called directly, but through mesh_batch_nrm2.
 subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
   type(mesh_t),            intent(in)    :: mesh
   type(batch_t),           intent(in)    :: aa

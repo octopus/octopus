@@ -236,7 +236,7 @@ contains
     integer, pointer            :: xghost_tmp(:)  
     integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
     integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
-    integer, pointer            :: points(:)
+    integer, pointer            :: points(:), part_bndry(:)
 
     PUSH_SUB(vec_init)
 
@@ -317,19 +317,19 @@ contains
     vp%np_ghost_neigh_partno = 0
     vp%np_ghost              = 0
     ip                       = 0
-    ! Check process node and communicate
     inode = vp%partno
 
     SAFE_ALLOCATE(points(1:vp%np_local))
     SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
-    ! Check all points of this node.
+    ! Check all points of this node and create the local partition matrix
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       points(ip) = gip
     end do
     call partition_get_partition_number(inner_partition,vp%np_local, &
          points, vp%part_local)
-    
+    SAFE_DEALLOCATE_P(points)
+
     ip = 0
     vp%total = 0
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
@@ -473,11 +473,20 @@ contains
       ip = 1
       jp = npart
       SAFE_ALLOCATE(vp%bndry(1:np_enl))
+      SAFE_ALLOCATE(points(1:np_enl))
+      SAFE_ALLOCATE(part_bndry(1:np_enl))
       irr = 0
-      do ii = np_global+1, np_global+np_enl
-        vp%bndry(xbndry_tmp(vp%part_vec(ii)) + irr(vp%part_vec(ii))) = ii
-        irr(vp%part_vec(ii)) = irr(vp%part_vec(ii)) + 1 ! increment the counter
+      do ii = 1, np_enl
+        points(ii) = ii
       end do
+      call partition_get_partition_number(bndry_partition, np_enl, &
+           points, part_bndry)
+      do ii = 1, np_enl
+        vp%bndry(xbndry_tmp(part_bndry(ii)) + irr(part_bndry(ii))) = ii + np_global
+        irr(part_bndry(ii)) = irr(part_bndry(ii)) + 1 ! increment the counter
+      end do
+      SAFE_DEALLOCATE_P(part_bndry)
+      SAFE_DEALLOCATE_P(points)
     else
       ip = vp%partno
       jp = vp%partno
@@ -487,13 +496,13 @@ contains
           call iihash_init(vp%global(inode),1)
         end if
       end do
-      ii=xbndry_tmp(vp%partno)+np_bndry_tmp(vp%partno)
+      ii = xbndry_tmp(vp%partno) + np_bndry_tmp(vp%partno)
       SAFE_ALLOCATE(vp%bndry(xbndry_tmp(vp%partno):ii))
-      irr = 0
+      tmp = 0
       do ii = np_global+1, np_global+np_enl
         if(vp%part_vec(ii) == vp%partno) then
-          vp%bndry(xbndry_tmp(vp%part_vec(ii)) + irr(vp%part_vec(ii))) = ii
-          irr(vp%part_vec(ii)) = irr(vp%part_vec(ii)) + 1 ! increment the counter
+          vp%bndry(xbndry_tmp(vp%part_vec(ii)) + tmp) = ii
+          tmp = tmp + 1 ! increment the counter
         end if
       end do
     end if
@@ -578,12 +587,22 @@ contains
       PUSH_SUB(vec_init.init_MPI_Alltoall)
       
       SAFE_ALLOCATE(vp%recv_count(1:npart))
+      SAFE_ALLOCATE(points(1:vp%np_local))
       vp%recv_count = 0
       do ip = 1, vp%np_local
-        !get the global point
+        ! Get the temporally global point
         ipg = vp%local(vp%xlocal + ip - 1)
-        !the source
-        ipart = vp%part_vec(vp%local_vec(ipg))
+        ! Get the destination global point
+        points(ip) = vp%local_vec(ipg)
+      end do
+
+      SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
+      ! Get the destination partitions
+      call partition_get_partition_number(inner_partition, vp%np_local, points, vp%part_local_rev)
+      SAFE_DEALLOCATE_P(points)
+
+      do ip = 1, vp%np_local
+        ipart = vp%part_local_rev(ip)
         vp%recv_count(ipart) = vp%recv_count(ipart) + 1
       end do
       
@@ -596,20 +615,7 @@ contains
         vp%send_disp(ipart) = vp%send_disp(ipart - 1) + vp%send_count(ipart - 1)
         vp%recv_disp(ipart) = vp%recv_disp(ipart - 1) + vp%recv_count(ipart - 1)
       end do
-
-      SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
-      do ip = 1, vp%np_local
-        ! Get the temporally global point
-        ipg = vp%local(vp%xlocal + ip - 1)
-        ! Get the destination global point
-        points(ip) = vp%local_vec(ipg)
-      end do
-
-      ! Get the destination partitions
-      call partition_get_partition_number(inner_partition, vp%np_local, points, vp%part_local_rev)
       
-      SAFE_DEALLOCATE_P(points)
-
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
     
