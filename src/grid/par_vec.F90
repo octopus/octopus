@@ -227,7 +227,7 @@ contains
     integer                     :: tmp, init, size, ii
     logical                     :: found
    
-    integer                     :: idir, ipart
+    integer                     :: idir, ipart, np_inner, np_bndry
     integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
     !> Number of ghost points per
     !! neighbour per partition.      
@@ -236,7 +236,7 @@ contains
     integer, pointer            :: xghost_tmp(:)  
     integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
     integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
-    integer, pointer            :: points(:), part_bndry(:)
+    integer, pointer            :: points(:), points_bndry(:), part_bndry(:), part_inner(:)
 
     PUSH_SUB(vec_init)
 
@@ -330,8 +330,12 @@ contains
          points, vp%part_local)
     SAFE_DEALLOCATE_P(points)
 
-    ip = 0
-    vp%total = 0
+    ip       = 0
+    np_inner = 0
+    np_bndry = 0
+    SAFE_ALLOCATE(points(1:vp%np_local*stencil%size))
+    SAFE_ALLOCATE(points_bndry(1:vp%np_bndry*stencil%size))
+    points_bndry = 0
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       ! Update the receiving point
@@ -346,27 +350,68 @@ contains
         ! Get point number of possible ghost point.
         index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
         ASSERT(index /= 0)
-        ! If this index does not belong to partition of node "inode",
-        ! then index is a ghost point for "inode" with part(index) now being
-        ! a neighbour of "inode".
-        if(vp%part_vec(index) /= inode) then
-          ! Only mark and count this ghost point, if it is not
-          ! done yet. Otherwise, points would possibly be registered
-          ! more than once.
-          tmp = iihash_lookup(ghost_flag(inode), index, found)
-          if(.not.found) then
-            ! Mark point ip as ghost point for inode from part(index).
-            call iihash_insert(ghost_flag(inode), index, vp%part_vec(index))
-            ! Increase number of ghost points of inode from part(index).
-            vp%np_ghost_neigh_partno(vp%part_vec(index)) = vp%np_ghost_neigh_partno(vp%part_vec(index))+1
-            ! Increase total number of ghostpoints of inode.
-            vp%np_ghost = vp%np_ghost + 1
-            ! One more ghost point.
-            vp%total = vp%total + 1
-          end if
+        ! Global index can be either in the mesh or in the boundary.
+        ! Different treatment is needed for each case.
+        if (index > np_global) then
+          np_bndry = np_bndry + 1
+          points_bndry(np_bndry) = index - np_global
+        else
+          np_inner = np_inner + 1
+          points(np_inner) = index
         end if
       end do
     end do
+    
+    SAFE_ALLOCATE(part_inner(1:np_inner))
+    SAFE_ALLOCATE(part_bndry(1:np_bndry))
+
+    call partition_get_partition_number(inner_partition, np_inner, &
+         points, part_inner)
+    call partition_get_partition_number(bndry_partition, np_bndry, &
+         points_bndry, part_bndry)
+
+    vp%total = 0
+    do ip = 1, np_inner
+      ! If this index does not belong to partition of working node "inode",
+      ! then index is a ghost point for "inode" with part(index) now being
+      ! a neighbour of "inode".
+      if ( part_inner(ip) /= inode ) then
+        ! Only mark and count this ghost point, if it is not
+        ! done yet. Otherwise, points would possibly be registered
+        ! more than once.
+        tmp = iihash_lookup(ghost_flag(inode), points(ip), found)
+        if(.not.found) then
+          ! Mark point ip as ghost point for inode from part(index).
+          call iihash_insert(ghost_flag(inode), points(ip), part_inner(ip))
+          ! Increase number of ghost points of inode from part(index).
+          vp%np_ghost_neigh_partno(part_inner(ip)) = vp%np_ghost_neigh_partno(part_inner(ip))+1
+          ! Increase total number of ghostpoints of inode.
+          vp%np_ghost = vp%np_ghost + 1
+          ! One more ghost point.
+          vp%total = vp%total + 1
+        end if
+      end if
+    end do
+    
+    ! The same for boundary points
+    do ip = 1, np_bndry
+      if ( part_bndry(ip) /= inode ) then
+        tmp = iihash_lookup(ghost_flag(inode), &
+             points_bndry(ip)+np_global, found)
+        if(.not.found) then
+          call iihash_insert(ghost_flag(inode), &
+               points_bndry(ip)+np_global, part_bndry(ip))
+          vp%np_ghost_neigh_partno(part_bndry(ip)) = vp%np_ghost_neigh_partno(part_bndry(ip))+1
+          vp%np_ghost = vp%np_ghost + 1
+          vp%total = vp%total + 1
+        end if
+      end if
+    end do
+
+    SAFE_DEALLOCATE_P(points)
+    SAFE_DEALLOCATE_P(points_bndry)
+    SAFE_DEALLOCATE_P(part_inner)
+    SAFE_DEALLOCATE_P(part_bndry)
 
     call init_MPI_Alltoall
     tmp=0
