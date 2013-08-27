@@ -437,6 +437,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
   R_TYPE :: mtxel_vh, mtxel_xc
   logical, allocatable :: is_saved(:, :), is_calcd(:, :)
   logical :: is_forces_
+  type(casida_save_pot_t) :: saved_pot
 
   PUSH_SUB(X(casida_get_matrix))
 
@@ -476,6 +477,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
   ! only root retains the saved values
   if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
 
+  call X(casida_save_pot_init)(saved_pot, mesh)
+
   ! calculate the matrix elements of (v + fxc)
   do jb = 1, cas%n_pairs
     actual = actual + 1
@@ -511,9 +514,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
       ! if not loaded, then calculate matrix element
       if(.not. is_saved(ia, jb)) then
         if(is_forces_) then
-          call X(K_term)(cas%pair(ia), cas%pair(jb), mtxel_xc = mtxel_xc)
+          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_xc = mtxel_xc)
         else
-          call X(K_term)(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
         endif
         matrix(ia, jb) = mtxel_vh + mtxel_xc
       end if
@@ -521,6 +524,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
     end do
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
   end do
+
+  call X(casida_save_pot_end)(saved_pot)
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -555,10 +560,12 @@ contains
 
   ! ---------------------------------------------------------
   !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  subroutine X(K_term)(pp, qq, mtxel_vh, mtxel_xc)
-    type(states_pair_t), intent(in) :: pp, qq
-    R_TYPE,   optional, intent(out) :: mtxel_vh
-    R_TYPE,   optional, intent(out) :: mtxel_xc
+  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc)
+    type(states_pair_t),               intent(in)    :: pp
+    type(states_pair_t),               intent(in)    :: qq
+    type(casida_save_pot_t),           intent(inout) :: saved
+    R_TYPE,                  optional, intent(out)   :: mtxel_vh
+    R_TYPE,                  optional, intent(out)   :: mtxel_xc
 
     integer :: pi, qi, sigma, pa, qa, mu
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
@@ -598,23 +605,25 @@ contains
       coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
       if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
       if(abs(coeff_vh) > M_EPSILON) then
-        if(qi /= cas%qi_old  .or.   qa /= cas%qa_old   .or.  mu /= cas%mu_old) then
-          cas%X(pot)(1:mesh%np) = M_ZERO
-          if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, cas%X(pot), rho_j, all_nodes=.false.)
+        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  mu /= saved%mu) then
+          saved%X(pot)(1:mesh%np) = M_ZERO
+          if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
+
+          saved%qi = qi
+          saved%qa = qa
+          saved%mu = mu
+      else
         endif
         ! value of pot is retained between calls
-        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), cas%X(pot)(:))
+        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
 
-        cas%qi_old = qi
-        cas%qa_old = qa
-        cas%mu_old = mu
       else
         mtxel_vh = M_ZERO
       endif
     end if
 
     if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
+      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, sigma, mu)
       mtxel_xc = X(mf_integrate)(mesh, integrand)
     endif
 
@@ -942,6 +951,28 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   POP_SUB(X(casida_get_lr_hmat1))
 
 end subroutine X(casida_get_lr_hmat1)
+
+! -----------------------------------------------------
+
+subroutine X(casida_save_pot_init)(this, mesh)
+  type(casida_save_pot_t), intent(out)   :: this
+  type(mesh_t),            intent(in)    :: mesh
+  
+  SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
+  this%qi = -1
+  this%qa = -1
+  this%mu = -1
+
+end subroutine X(casida_save_pot_init)
+    
+! -----------------------------------------------------
+
+subroutine X(casida_save_pot_end)(this)
+  type(casida_save_pot_t), intent(inout)   :: this
+
+  SAFE_DEALLOCATE_P(this%X(pot))
+
+end subroutine X(casida_save_pot_end)
 
 !! Local Variables:
 !! mode: f90

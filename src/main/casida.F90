@@ -96,10 +96,6 @@ module casida_m
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
     integer, pointer  :: ind(:)         !< ordering in energy of solutions
 
-    integer :: qi_old, qa_old, mu_old   !< previous mtxel calculated in K_term
-    FLOAT,   pointer  :: dpot(:)         !< previous exchange potential calculated in K_term
-    CMPLX,   pointer  :: zpot(:)         !< previous exchange potential calculated in K_term
-
     FLOAT,   pointer  :: dmat(:,:)      !< general-purpose matrix
     FLOAT,   pointer  :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
     CMPLX,   pointer  :: zmat(:,:)      !< general-purpose matrix
@@ -133,6 +129,14 @@ module casida_m
     type(mpi_grp_t)   :: mpi_grp
     logical           :: fromScratch
   end type casida_t
+
+  type casida_save_pot_t
+    integer :: qi                    !< previous mtxel calculated in K_term
+    integer :: qa                    !< previous mtxel calculated in K_term
+    integer :: mu                    !< previous mtxel calculated in K_term
+    FLOAT,   pointer  :: dpot(:)     !< previous exchange potential calculated in K_term
+    CMPLX,   pointer  :: zpot(:)     !< previous exchange potential calculated in K_term    
+  end type casida_save_pot_t
 
   type(profile_t), save :: prof
 
@@ -678,20 +682,6 @@ contains
       cas%qf_avg = M_ZERO
     end if
 
-    if (cas%type /= CASIDA_EPS_DIFF) then
-      ! This is to be allocated here, and is used inside K_term.
-      if(.not. cas%triplet) then
-        if(cas%states_are_real) then
-          SAFE_ALLOCATE(cas%dpot(1:mesh%np))
-        else
-          SAFE_ALLOCATE(cas%zpot(1:mesh%np))
-        endif
-      endif
-      cas%qi_old = -1
-      cas%qa_old = -1
-      cas%mu_old = -1
-    endif
-      
     if (cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(cas%rho(1:mesh%np, 1:st%d%nspin))
@@ -743,16 +733,6 @@ contains
     endif
 
     ! clean up
-    if (cas%type /= CASIDA_EPS_DIFF) then
-      SAFE_DEALLOCATE_P(cas%fxc)
-      if(.not. cas%triplet) then
-        if(cas%states_are_real) then
-          SAFE_DEALLOCATE_P(cas%dpot)
-        else
-          SAFE_DEALLOCATE_P(cas%zpot)
-        endif
-      endif
-    end if
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       SAFE_DEALLOCATE_P(cas%rho)
     endif
@@ -764,7 +744,7 @@ contains
     ! ---------------------------------------------------------
     subroutine solve_eps_diff
 
-      integer :: ia, actual
+      integer :: ia
       FLOAT, allocatable :: w(:)
 
       PUSH_SUB(casida_work.solve_eps_diff)
