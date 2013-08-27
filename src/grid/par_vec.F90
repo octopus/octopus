@@ -468,25 +468,25 @@ contains
       call io_close(iunit)
     end if
 
+    
+    SAFE_ALLOCATE(points(1:np_enl))
+    SAFE_ALLOCATE(part_bndry(1:np_enl))
+    do ii = 1, np_enl
+      points(ii) = ii
+    end do
+    call partition_get_partition_number(bndry_partition, np_enl, &
+         points, part_bndry)
+    
     ! Set up the global-to-local point number mapping
     if (periodic_dim /= 0) then
       ip = 1
       jp = npart
       SAFE_ALLOCATE(vp%bndry(1:np_enl))
-      SAFE_ALLOCATE(points(1:np_enl))
-      SAFE_ALLOCATE(part_bndry(1:np_enl))
       irr = 0
-      do ii = 1, np_enl
-        points(ii) = ii
-      end do
-      call partition_get_partition_number(bndry_partition, np_enl, &
-           points, part_bndry)
       do ii = 1, np_enl
         vp%bndry(xbndry_tmp(part_bndry(ii)) + irr(part_bndry(ii))) = ii + np_global
         irr(part_bndry(ii)) = irr(part_bndry(ii)) + 1 ! increment the counter
       end do
-      SAFE_DEALLOCATE_P(part_bndry)
-      SAFE_DEALLOCATE_P(points)
     else
       ip = vp%partno
       jp = vp%partno
@@ -499,13 +499,15 @@ contains
       ii = xbndry_tmp(vp%partno) + np_bndry_tmp(vp%partno)
       SAFE_ALLOCATE(vp%bndry(xbndry_tmp(vp%partno):ii))
       tmp = 0
-      do ii = np_global+1, np_global+np_enl
-        if(vp%part_vec(ii) == vp%partno) then
-          vp%bndry(xbndry_tmp(vp%part_vec(ii)) + tmp) = ii
+      do ii = 1, np_enl
+        if(part_bndry(ii) == vp%partno) then
+          vp%bndry(xbndry_tmp(part_bndry(ii)) + tmp) = ii + np_global
           tmp = tmp + 1 ! increment the counter
         end if
       end do
-    end if
+    end if  
+    SAFE_DEALLOCATE_P(part_bndry)
+    SAFE_DEALLOCATE_P(points)
     SAFE_DEALLOCATE_A(irr)
     
     do inode = ip, jp
