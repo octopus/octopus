@@ -31,9 +31,9 @@ libfrozen_a_SOURCES =            \
 	interface_xc.F90         \
 	lda.F90                  \
 	gga.F90                  \
-	functional.F90           #\
+	functional.F90           \
 	fio_geometry.F90         \
-	fio_simul_box.F90        \
+	fio_simul_box.F90        #\
 	fio_mesh.F90             \
 	fio_grid.F90             \
 	fio_simulation.F90       \
@@ -105,8 +105,8 @@ lda.o : lda.F90 interface_xc.o
 gga.o : gga.F90 interface_xc.o
 functional.o : functional.F90 gga.o lda.o
 
-#fio_geometry.o : fio_geometry.F90
-#fio_simul_box.o : fio_simul_box.F90 fio_geometry.o
+fio_geometry.o : fio_geometry.F90
+fio_simul_box.o : fio_simul_box.F90 fio_geometry.o
 #fio_mesh.o : fio_mesh.F90 fio_simul_box.o
 #fio_grid.o : fio_grid.F90 fio_mesh.o fio_simul_box.o fio_geometry.o
 #fio_simulation.o : fio_simulation.F90 fio_grid.o fio_geometry.o

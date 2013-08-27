@@ -114,7 +114,7 @@ static SYMMETRY_ELEMENT **    ImproperAxes          = NULL ;
 static int *                  NormalAxesCounts      = NULL ;
 static int *                  ImproperAxesCounts    = NULL ;
 static int                    BadOptimization       = 0 ;
-static char *                 SymmetryCode          = "" ;
+static char *                 SymmetryCode          = NULL; /*"" ;*/
 /*
  *    Statistics
  */
@@ -1228,7 +1228,7 @@ void
 find_planes(void)
 {
         int                i, j ;
-        SYMMETRY_ELEMENT * plane ;
+        SYMMETRY_ELEMENT * plane=NULL;
 
 plane = init_ultimate_plane() ;
 if( plane != NULL ){
@@ -1265,6 +1265,7 @@ destroy_planes(void)
   for(i = 0; i < PlanesCount; i++) destroy_symmetry_element(Planes[i]);
   PlanesCount = 0;
   free(Planes);
+  MolecularPlane = NULL;
   Planes = NULL;
 }
 
@@ -1399,6 +1400,10 @@ void destroy_normal_axes(){
   NormalAxesCount = 0;
   free(NormalAxes);
   NormalAxes = NULL;
+  for(i = 0; i < ImproperAxesCount; i++) destroy_symmetry_element(ImproperAxes[i]);
+  ImproperAxesCount = 0;
+  free(ImproperAxes);
+  ImproperAxes = NULL;
 }
 
 void destroy_improper_axes(){
