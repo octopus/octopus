@@ -1400,10 +1400,6 @@ void destroy_normal_axes(){
   NormalAxesCount = 0;
   free(NormalAxes);
   NormalAxes = NULL;
-  for(i = 0; i < ImproperAxesCount; i++) destroy_symmetry_element(ImproperAxes[i]);
-  ImproperAxesCount = 0;
-  free(ImproperAxes);
-  ImproperAxes = NULL;
 }
 
 void destroy_improper_axes(){
