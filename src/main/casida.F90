@@ -81,7 +81,7 @@ module casida_m
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
     integer           :: nst            !< total number of states
     integer           :: nik
-    integer           :: el_per_state
+    FLOAT             :: el_per_state
     character(len=80) :: wfn_list
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
@@ -724,6 +724,14 @@ contains
       call solve_casida()
     end select
 
+    if (mpi_grp_is_root(cas%mpi_grp)) then
+      if(cas%states_are_real) then
+        call doscillator_strengths(cas, mesh, st)
+      else
+        call zoscillator_strengths(cas, mesh, st)
+      endif
+    endif
+
     if(cas%calc_forces) then
       if(cas%states_are_real) then
         call dcasida_forces(cas, sys, mesh, st, hm)
@@ -767,12 +775,6 @@ contains
       w = cas%w
       call sort(w, cas%ind)
       SAFE_DEALLOCATE_A(w)
-
-      if(cas%states_are_real) then
-        call doscillator_strengths(cas, mesh, st)
-      else
-        call zoscillator_strengths(cas, mesh, st)
-      endif
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
@@ -849,12 +851,6 @@ contains
             cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
                                                      st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
           end do
-        endif
-
-        if(cas%states_are_real) then
-          call doscillator_strengths(cas, mesh, st)
-        else
-          call zoscillator_strengths(cas, mesh, st)
         endif
 
       end if
