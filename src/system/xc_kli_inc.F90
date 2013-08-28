@@ -55,10 +55,12 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   end if
 #endif
 
+  ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
+  ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi (included in lxc) and \psi (explicitly below)
   do ip = 1, mesh%np
     oep%vxc(ip,1) = M_ZERO
     do ist = st%st_start, st%st_end
-      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * oep%X(lxc)(ip, ist, is) * st%X(psi)(ip, 1, ist, is)
+      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * oep%X(lxc)(ip, ist, is) * R_CONJ(st%X(psi)(ip, 1, ist, is))
     end do
     oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
   end do
