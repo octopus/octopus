@@ -576,8 +576,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
 
 #ifdef HAVE_MPI
-  integer :: ip, ipg, npart, ipart, ist, pos, nstl
-  integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:)
+  integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
+  integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:), &
+       points_inner(:), points_bndry(:), partno_inner(:), partno_bndry(:)
   integer, allocatable :: send_count_nstl(:), recv_count_nstl(:), send_disp_nstl(:), recv_disp_nstl(:)
   R_TYPE, allocatable  :: send_buffer(:, :), recv_buffer(:, :)
 #endif
@@ -611,18 +612,48 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_ALLOCATE(send_disp(1:npart))
       SAFE_ALLOCATE(recv_disp(1:npart))
-      
+      SAFE_ALLOCATE(points_inner(1:mesh%np))
+      SAFE_ALLOCATE(points_bndry(1:mesh%np))
       ASSERT(ubound(forward_map, dim = 1) == mesh%np_global)
 
       send_count = 0
+      np_inner   = 0
+      np_bndry   = 0
+      np_points  = 0
       do ip = 1, mesh%np
-        !get the global point
+        ! Get the temporally global point
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        !the destination
-        ipart = mesh%vp%part_vec(forward_map(ipg))
-        INCR(send_count(ipart), 1)
+        ! Store the global point
+        ! Global index can be either in the mesh or in the boundary.
+        ! Different treatment is needed for each case.
+        if (ipg > mesh%np_global) then
+          np_bndry = np_bndry + 1
+          points_bndry(np_bndry) = forward_map(ipg) - mesh%np_global
+        else
+          np_inner = np_inner + 1
+          points_inner(np_inner) = forward_map(ipg)
+        end if
+        np_points = np_points + 1
       end do
 
+      SAFE_ALLOCATE(partno_inner(1:np_points))
+      SAFE_ALLOCATE(partno_bndry(1:np_points))
+      call partition_get_partition_number(mesh%inner_partition, np_inner, &
+           points_inner, partno_inner)
+      call partition_get_partition_number(mesh%bndry_partition, np_bndry, &
+           points_bndry, partno_bndry)
+      SAFE_DEALLOCATE_A(points_inner)
+      SAFE_DEALLOCATE_A(points_bndry)
+      do ip = 1, np_inner
+        ! the destination
+        ipart = partno_inner(ip)
+        INCR(send_count(ipart), 1)
+      end do
+      do ip = 1, np_bndry
+        ! the destination
+        ipart = partno_bndry(ip)
+        INCR(send_count(ipart), 1)
+      end do
       ASSERT(sum(send_count) == mesh%np)
 
       recv_count = 0
@@ -644,18 +675,27 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(send_disp(npart) + send_count(npart) == mesh%np)
       ASSERT(recv_disp(npart) + recv_count(npart) == mesh%np)
 
-      !pack for sending
+      ! Pack for sending
       send_count = 0
-      do ip = 1, mesh%np
-        !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
+      ! First inner points
+      do ip = 1, np_inner
         !the destination
-        ipart = mesh%vp%part_vec(forward_map(ipg))
+        ipart = partno_inner(ip)
+        INCR(send_count(ipart), 1)
+        pos = send_disp(ipart) + send_count(ipart)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+      end do
+      ! Then boundary points
+      do ip = 1, np_bndry
+        !the destination
+        ipart = partno_bndry(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
         forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
       end do
 
+      SAFE_DEALLOCATE_A(partno_bndry)
+      SAFE_DEALLOCATE_A(partno_inner)
       SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
       send_count_nstl = send_count * nstl

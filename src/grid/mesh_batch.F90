@@ -43,6 +43,7 @@ module mesh_batch_m
   use mpi_m
   use opencl_m
   use par_vec_m
+  use partition_m
   use profiling_m
   use types_m
 
