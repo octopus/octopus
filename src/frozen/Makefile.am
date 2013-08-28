@@ -33,11 +33,11 @@ libfrozen_a_SOURCES =            \
 	gga.F90                  \
 	functional.F90           \
 	fio_geometry.F90         \
-	fio_simul_box.F90        #\
+	fio_simul_box.F90        \
 	fio_mesh.F90             \
 	fio_grid.F90             \
-	fio_simulation.F90       \
-	fio_density.F90          \
+	fio_simulation.F90       #\
+	fio_density.F90          #\
 	fio_external.F90         \
 	fio_config.F90           \
 	frozen_geometry.F90      \
@@ -107,9 +107,9 @@ functional.o : functional.F90 gga.o lda.o
 
 fio_geometry.o : fio_geometry.F90
 fio_simul_box.o : fio_simul_box.F90 fio_geometry.o
-#fio_mesh.o : fio_mesh.F90 fio_simul_box.o
-#fio_grid.o : fio_grid.F90 fio_mesh.o fio_simul_box.o fio_geometry.o
-#fio_simulation.o : fio_simulation.F90 fio_grid.o fio_geometry.o
+fio_mesh.o : fio_mesh.F90 fio_simul_box.o
+fio_grid.o : fio_grid.F90 fio_mesh.o fio_simul_box.o fio_geometry.o
+fio_simulation.o : fio_simulation.F90 fio_grid.o fio_geometry.o
 #fio_density.o : fio_density.F90 fio_simulation.o fio_geometry.o iatom.o
 #fio_external.o : fio_external.F90 fio_density.o fio_simulation.o storage.o
 #fio_config.o : fio_config.F90 fio_external.o fio_density.o igeometry.o basis.o

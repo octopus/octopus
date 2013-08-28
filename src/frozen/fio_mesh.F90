@@ -14,10 +14,9 @@ module fio_mesh_m
   use json_m,          only: JSON_OK, json_object_t, json_get
   use kinds_m,         only: wp
   use mesh_cube_map_m, only: mesh_cube_map_init
-  !use mesh_init_m,     only: mesh_get_vol_pp
+  use mesh_init_m,     only: mesh_get_vol_pp
 
   use mesh_m, only:           &
-    mesh_t,                   &
     mesh_init_from_file,      &
     mesh_lxyz_init_from_file, &
     mesh_read_fingerprint,    &
@@ -28,14 +27,11 @@ module fio_mesh_m
     fio_mesh_end =>mesh_end
 
   use fio_simul_box_m, only: &
-    simul_box_t
+    fio_simul_box_t
 
   implicit none
 
   private
-  public :: &
-    mesh_t
-
   public ::        &
     fio_mesh_t,    &
     fio_mesh_init, &
@@ -46,19 +42,20 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_mesh_init(this, sb, cv, config)
-    type(mesh_t),                intent(out) :: this
-    type(simul_box_t),   target, intent(in)  :: sb
-    type(curvilinear_t), target, intent(in)  :: cv
-    type(json_object_t),         intent(in)  :: config
+    type(fio_mesh_t),              intent(out) :: this
+    type(fio_simul_box_t), target, intent(in)  :: sb
+    type(curvilinear_t),   target, intent(in)  :: cv
+    type(json_object_t),           intent(in)  :: config
     !
     character(len=MAX_PATH_LEN) :: dir
     integer                     :: i, ia, ib, iunit, ierr
     integer                     :: i11, i21, i12, i22, i13, i23
     !
+    PUSH_SUB(fio_mesh_init)
     ASSERT(.not.sb%mr_flag)
     call json_get(config, "dir", dir, ierr)
     if(ierr/=JSON_OK)dir="./"//trim(tmpdir)//GS_DIR
-    iunit=io_open(trim(dir)//"mesh", action="read", status="old", is_tmp=.true.)
+    iunit=io_open(trim(dir)//"mesh", action="read", status="old")
     if(iunit>0)then
       this%sb=>sb
       this%cv=>cv
@@ -97,21 +94,24 @@ contains
         this%x(i,:) = mesh_x_global(this, i, .true.)
       end do
       call mesh_cube_map_init(this%cube_map, this%idx, this%np_global)
-      !call mesh_get_vol_pp(this, sb)
+      call mesh_get_vol_pp(this, sb)
     else
       message(1)="Could not open the mesh info file: '"//trim(dir)//"mesh'"
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", iunit
       call messages_fatal(2)
     end if
+    POP_SUB(fio_mesh_init)
     return
   end subroutine fio_mesh_init
 
   ! ---------------------------------------------------------
   subroutine fio_mesh_copy(this, that)
-    type(mesh_t), intent(out) :: this
-    type(mesh_t), intent(in)  :: that
+    type(fio_mesh_t), intent(out) :: this
+    type(fio_mesh_t), intent(in)  :: that
     !
+    PUSH_SUB(fio_mesh_copy)
     ASSERT(.false.)
+    POP_SUB(fio_mesh_copy)
     return
   end subroutine fio_mesh_copy
 
