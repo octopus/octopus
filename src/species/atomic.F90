@@ -54,9 +54,9 @@ module atomic_m
     character(len=3)  :: symbol
     integer           :: type     !< 0 for the most normal valence configuration, 1 for semicore.
     integer           :: p        !< number of orbitals.
-    integer           :: n(6)     !< n quantum number
-    integer           :: l(6)     !< l quantum number
-    FLOAT             :: occ(6,2) !< occupations of each level
+    integer           :: n(12)     !< n quantum number
+    integer           :: l(12)     !< l quantum number
+    FLOAT             :: occ(12,2) !< occupations of each level
   end type valconf_t
 
 
