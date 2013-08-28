@@ -617,6 +617,7 @@ contains
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start <= sys%st%nst)
+      ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
