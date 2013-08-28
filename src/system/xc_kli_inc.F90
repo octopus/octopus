@@ -28,7 +28,6 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-  R_TYPE :: occ
 
   call profiling_in(C_PROFILING_XC_KLI)
   PUSH_SUB(X(xc_KLI_solve))
@@ -60,7 +59,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   do ip = 1, mesh%np
     oep%vxc(ip,1) = M_ZERO
     do ist = st%st_start, st%st_end
-      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * oep%X(lxc)(ip, ist, is) * R_CONJ(st%X(psi)(ip, 1, ist, is))
+      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * &
+        R_REAL(oep%X(lxc)(ip, ist, is) * R_CONJ(st%X(psi)(ip, 1, ist, is)))
     end do
     oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
   end do
@@ -146,9 +146,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
     do ist = 1, eigen_n
       kssi = oep%eigen_index(ist)
-      occ = st%occ(kssi, is)
       oep%vxc(1:mesh%np,1) = oep%vxc(1:mesh%np,1) + &
-        oep%socc * occ * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
+        oep%socc * st%occ(kssi, is) * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
     end do
 
     SAFE_DEALLOCATE_A(dd)

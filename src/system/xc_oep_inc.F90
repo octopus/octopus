@@ -85,7 +85,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     end if
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist,is) = X(mf_dotp)(gr%mesh, R_CONJ(st%X(psi)(1:gr%mesh%np, idm, ist, isp)), oep%X(lxc)(1:gr%mesh%np, ist, is))
+      oep%uxc_bar(ist,is) = &
+        R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(st%X(psi)(1:gr%mesh%np, idm, ist, isp)), oep%X(lxc)(1:gr%mesh%np, ist, is)))
     end do
   end do spin
 #if defined(HAVE_MPI) 
