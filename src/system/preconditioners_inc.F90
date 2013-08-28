@@ -28,7 +28,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   R_TYPE,       optional, intent(in)    :: omega
   
   integer :: idim
-  FLOAT   :: omega_
+  R_TYPE  :: omega_
   type(profile_t), save :: preconditioner_prof
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
