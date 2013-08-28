@@ -116,8 +116,8 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
   TO_C_STR1(fname, fname_c);
 
   in = fopen(fname_c, "r");
+  free(fname_c);
   if(!in) {
-    free(fname_c);
     return;
   }
 
