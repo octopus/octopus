@@ -54,7 +54,7 @@ match ; Eigenvalue 17 ; GREP(static/info, '17   --', 13) ; 4.000000
 
 Input : 02-fock-darwin.03-ground_state.inp
 
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.002441
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 0.005945
-match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 0.008712
-match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 0.009764
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.869168
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 2.116862
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 3.101960
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 3.476506

@@ -1,16 +1,92 @@
+###############################################################################
+# This file assumes "effective atomic units". Let us recall what this means.
+# We start with the usual atomic units:
+#
+# hbar = e^2 = m_e = 1
+#
+# The unit of length, Bohr, is given by 
+#
+# a_0 = (hbar^2 / (e^2 * m_e)) * 4*pi*epsilon_0, 
+#
+# where epsilon_0 = 1 / (4*pi), so that in fact 4*pi*epsilon_0 = 1.
+# The unit of energy is 
+#
+# Ha = e^2 / a_0 = (e^4 * m_e) / (hbar^2 * 4*pi*epsilon_0)
+#
+# In effective atomic units:
+#
+#  hbar = e^2/epsilon = m = 1
+#
+# In this relations, epsilon is
+# adimensional and is not equal to one, and m = m_e * m^*, being m^* 
+# the "effective mass" in atomic units, also an adimensional factor.
+# The unit of length is given by
+#
+#    a_0^* = (hbar^2 / (e^2 * m)) * 4*pi*epsilon*epsilon_0 
+#          = a_0 * (epsilon/m^*)
+# 
+# And the unit of energy is given by:
+#
+#    Ha^* = e^2 / (a_0^* * epsilon) = Ha * (m^* / epsilon^2)
+#
+# For the material in [M. Governale, Phys. Rev. Lett. 89, 206802 (2002)].
+#
+# m^* = 0.022
+# epsilon = 14.6
+#
+# The confining potential is 5 meV, corresponding to 0.00018374663 Ha, and
+# therefore, 0.00018374663 * (e^2/m^*) Ha^* = 1.78033780231 Ha^*
+#
+#
+#
+# Even though we do not use magnetic fields, here, it is worth recalling
+# the conversions here.
+#
+# 1 Tesla corresponds to 10^4 Gauss, i.e.:
+#
+#   1 Tesla =>  10^4 g^(1/2) cm^(-1/2) s^(-1)
+#
+# I do not write the sign "equal", because both sides of the equation do
+# not have the same dimensions. Since we have fractional exponents, it is
+# more convenient to work with squared relations:
+#
+#   1 Tesla^2 => 10^8 g / (cm * s^2)
+#
+# In atomic units:
+#
+#   1 Tesla^2 => 3.3989315000000 * 10^(-7) Ha / a0^3
+#
+# This can also be written as:
+#
+#   1 Tesla => 5.8300355916580818 * 10(-4) sqrt(Ha / a0^3) =
+#              5.8300355916580818 * 10(-4) a.u.(B)
+#
+# The sqrt(Ha/a0^3) is the atomic unit of magnetic induction. This can 
+# be rewritten as:
+#
+#   1 a.u.(B) => T / 1715.25539471980586102447
+#
+# Now we can get the effective unit of magnetic induction, as:
+#
+#   1 eff.a.u.(B) = sqrt(Ha^*/(a0^*)^3) = 
+#                   sqrt(Ha * (m^* / epsilon^2) / (a_0 * (epsilon/m^*))^3) =
+#                   sqrt(Ha/a_0^3) * sqrt( (m^*/epsilon^2) / (epsilon/m^*)^3 ) =
+#                   a.u.(B) * ((m^*)^2 / epsilon^(5/2))
+#
+###############################################################################
+
+
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
-UnitsOutput = ev_angstrom
 
 ExperimentalFeatures = yes
 
-omega = 0.00018374663
-meff = 0.022
-ParticleMass = meff
+# omega should be 5 meV. In effective atomic units:
+omega = 1.78033780231
 
 %Species
-"qd" | 1.0 | spec_user_defined | 8 | "0.5*meff*omega^2*r^2"
+"qd" | 1.0 | spec_user_defined | 8 | "0.5*omega^2*r^2"
 %
 
 %Coordinates
@@ -18,22 +94,22 @@ ParticleMass = meff
 %
 
 BoxShape = sphere
-Radius = 2500.0
-Spacing = 50
-
-DerivativesOrder = 2
+Radius = 6
+Spacing = 0.15
 
 SpinComponents = spinors
 
 TheoryLevel = independent_particles
 
-EigenSolver = cg_new
+EigenSolver = cg
 EigenSolverTolerance = 1e-6
-#EigenSolverMaxIter = 250
+EigenSolverMaxIter = 25
 
 Output = wfs
 OutputHow = axis_x
 
 mu=0.7896
+meff = 1.0
 lambda=mu*sqrt(omega/meff)
 RashbaSpinOrbitCoupling = lambda
+
