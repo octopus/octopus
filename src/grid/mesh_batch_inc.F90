@@ -656,13 +656,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       end do
       ASSERT(sum(send_count) == mesh%np)
 
-      recv_count = 0
-      do ipg = 1, mesh%np_global
-        if(mesh%vp%part_vec(forward_map(ipg)) == mesh%vp%partno) then
-          INCR(recv_count(mesh%vp%part_vec(ipg)), 1)
-        end if
-      end do
-
+      ! Receiving number of points is the inverse matrix of the sending points
+      call MPI_Alltoall(send_count(1), 1, MPI_INTEGER, &
+                        recv_count(1), 1, MPI_INTEGER, &
+                        mesh%mpi_grp%comm, mpi_err)
       ASSERT(sum(recv_count) == mesh%np)
 
       send_disp(1) = 0
