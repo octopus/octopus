@@ -47,8 +47,8 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: rr, socc
-  R_TYPE, pointer     :: wf_ist(:), send_buffer(:)
-  R_TYPE, allocatable :: rho_ij(:), F_ij(:)
+  R_TYPE, pointer     :: send_buffer(:)
+  R_TYPE, allocatable :: rho_ij(:), F_ij(:), psi(:), wf_ist(:)
 
 #if defined(HAVE_MPI)
   R_TYPE,  pointer :: recv_buffer(:)
@@ -73,13 +73,13 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   end if 
   ! Note: we assume that st%occ is known in all nodes
 
-  ASSERT(associated(st%X(psi)))
-
   SAFE_ALLOCATE(F_ij(1:der%mesh%np))
   SAFE_ALLOCATE(rho_ij(1:der%mesh%np))
   SAFE_ALLOCATE(send_buffer(1:der%mesh%np))
   SAFE_ALLOCATE(recv_stack(1:st%nst+1))
   SAFE_ALLOCATE(send_stack(1:st%nst+1))
+  SAFE_ALLOCATE(psi(der%mesh%np))
+  SAFE_ALLOCATE(wf_ist(der%mesh%np))
 
 #if defined(HAVE_MPI)
   SAFE_ALLOCATE(recv_buffer(1:der%mesh%np))
@@ -134,7 +134,8 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
         ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to /= st%mpi_grp%rank)) then
-          call MPI_Isend(st%X(psi)(1, jdm, send_stack(ist_s), isp), der%mesh%np, R_MPITYPE, &
+          call states_get_state(st, der%mesh, jdm, send_stack(ist_s), isp, psi)
+          call MPI_Isend(psi, der%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
       end if
@@ -146,13 +147,12 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
       ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
-          wf_ist => st%X(psi)(1:der%mesh%np, jdm, recv_stack(ist_r), isp)
+          call states_get_state(st, der%mesh, jdm, send_stack(ist_r), isp, wf_ist)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
-            call MPI_Recv(recv_buffer, der%mesh%np, R_MPITYPE, &
+            call MPI_Recv(wf_ist, der%mesh%np, R_MPITYPE, &
               node_fr, recv_stack(ist_r), st%mpi_grp%comm, status, mpi_err)
-            wf_ist => recv_buffer(1:der%mesh%np)
           end if
 #endif
         end if
@@ -174,13 +174,15 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
-          rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np))*st%X(psi)(1:der%mesh%np, jdm, jst, isp)
+          call states_get_state(st, der%mesh, jdm, jst, isp, psi)
+          rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np))*psi(1:der%mesh%np)
           F_ij(1:der%mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
 
           ! this quantity has to be added to lxc(1:der%mesh%np, ist)
+          call states_get_state(st, der%mesh, idm, jst, isp, psi)
           send_buffer(1:der%mesh%np) = send_buffer(1:der%mesh%np) + &
-            socc*st%occ(jst, isp)*F_ij(1:der%mesh%np)*R_CONJ(st%X(psi)(1:der%mesh%np, idm, jst, isp))
+            socc*st%occ(jst, isp)*F_ij(1:der%mesh%np)*R_CONJ(psi(1:der%mesh%np))
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
@@ -194,7 +196,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
 
           ex = ex - exx_coef* M_HALF * rr * &
               st%occ(ist, isp) * socc*st%occ(jst, isp) * &
-              R_REAL(X(mf_dotp)(der%mesh, st%X(psi)(1:der%mesh%np, idm, jst, isp), wf_ist(:)*F_ij(:)))
+              R_REAL(X(mf_dotp)(der%mesh, psi(1:der%mesh%np), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
@@ -249,6 +251,8 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   SAFE_DEALLOCATE_A(F_ij)
   SAFE_DEALLOCATE_A(rho_ij)
   SAFE_DEALLOCATE_P(send_buffer)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(wf_ist)
 
   call profiling_out(C_PROFILING_XC_EXX)
   POP_SUB(X(oep_x))
