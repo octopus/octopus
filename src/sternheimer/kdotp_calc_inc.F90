@@ -97,7 +97,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
           ! contribution from Sternheimer equation
           term = X(mf_dotp)(mesh, sys%st%d%dim, proj_dl_psi, pertpsi(:, :, idir1))
-          eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * term
+          eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * R_REAL(term)
 
           if (occ_solution_method == 1) then
           ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
@@ -107,7 +107,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
                 term = X(mf_dotp)(mesh, sys%st%d%dim, pertpsi(:, :, idir1), sys%st%X(psi)(:, :, ist2, ik)) * &
                      X(mf_dotp)(mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :, idir2)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-                eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * term
+                eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * R_REAL(term)
              enddo
           endif
 
@@ -156,7 +156,7 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
 
   integer :: ik, ist, idir
   R_TYPE, allocatable :: ppsi(:,:)
-  FLOAT :: expectation
+  R_TYPE :: expectation
 
   PUSH_SUB(X(kdotp_add_diagonal))
 

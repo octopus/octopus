@@ -124,7 +124,7 @@ end subroutine zcalc_band_velocity
 subroutine zcalc_dipole_periodic(sys, lr, dipole)
   type(system_t), target, intent(inout) :: sys
   type(lr_t),             intent(in)    :: lr(:,:)
-  FLOAT,                  intent(out)   :: dipole(:)
+  CMPLX,                  intent(out)   :: dipole(:)
 
   integer idir, ist, ik, idim
   type(mesh_t), pointer :: mesh

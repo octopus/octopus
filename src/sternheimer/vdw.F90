@@ -287,13 +287,13 @@ contains
 
       get_pol = M_ZERO
       do dir = 1, ndir
-        get_pol = get_pol + alpha(dir, dir)
+        get_pol = get_pol + real(alpha(dir, dir), REAL_PRECISION)
       end do
       do dir = ndir+1, sys%gr%mesh%sb%dim
-        get_pol = get_pol + alpha(ndir, ndir)
+        get_pol = get_pol + real(alpha(ndir, ndir), REAL_PRECISION)
       end do
 
-      get_pol = get_pol / real(sys%gr%mesh%sb%dim)
+      get_pol = get_pol / real(sys%gr%mesh%sb%dim, REAL_PRECISION)
 
       call pert_end(perturbation)
       POP_SUB(vdw_run.get_pol)
