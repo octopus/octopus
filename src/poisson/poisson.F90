@@ -574,27 +574,24 @@ contains
       all_nodes_value = this%all_nodes_default
     end if
 
+    SAFE_ALLOCATE(aux1(1:der%mesh%np))
+    SAFE_ALLOCATE(aux2(1:der%mesh%np))
+    ! first the real part
+    aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
+    aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
+    
+    ! now the imaginary part
+    aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
+    aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
+    
+    SAFE_DEALLOCATE_A(aux1)
+    SAFE_DEALLOCATE_A(aux2)
 
-  !if((this%method == POISSON_DIRECT_SUM).and.(this%der%mesh%sb%dim == 1).and.present(theta)) then
-  !  call poisson1d_solve(this, pot, rho, theta)
-  !else
-  SAFE_ALLOCATE(aux1(1:der%mesh%np))
-  SAFE_ALLOCATE(aux2(1:der%mesh%np))
-  ! first the real part
-  aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
-  aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-  call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
-  pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
-  
-  ! now the imaginary part
-  aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
-  aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-  call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
-  pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
-
-  SAFE_DEALLOCATE_A(aux1)
-  SAFE_DEALLOCATE_A(aux2)
-  POP_SUB(zpoisson_solve_real_and_imag_separately)
+    POP_SUB(zpoisson_solve_real_and_imag_separately)
   end subroutine zpoisson_solve_real_and_imag_separately
 
   !-----------------------------------------------------------------
