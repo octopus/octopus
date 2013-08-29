@@ -413,25 +413,15 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
       call states_get_state(hm%hf_st, der%mesh, jst, ik2, psi2)
     
-      if(.not. hm%cmplxscl%space) then
-        do idim = 1, hm%hf_st%d%dim
-          forall(ip = 1:der%mesh%np)
-            rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-          end forall
-        end do
-    
-        call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
-      else
-#ifdef R_TCOMPLEX
-        ! Complex scaling works only with complex quantities       
-        do idim = 1, hm%hf_st%d%dim
-          forall(ip = 1:der%mesh%np)
-            rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
-          end forall
-        end do
-        call zpoisson_solve(psolver, pot, rho, all_nodes = .false.)
-#endif
-      end if
+      if(hm%cmplxscl%space) psi2 = R_CONJ(psi2)
+
+      do idim = 1, hm%hf_st%d%dim
+        forall(ip = 1:der%mesh%np)
+          rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
+        end forall
+      end do
+      
+      call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
 
       ff = hm%hf_st%occ(jst, ik2)
       if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff

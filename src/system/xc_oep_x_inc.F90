@@ -143,6 +143,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
           call states_get_state(st, der%mesh, jdm, send_stack(ist_r), isp, wf_ist)
+          if(st%cmplxscl%space) wf_ist = R_CONJ(wf_ist)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
