@@ -108,10 +108,10 @@ contains
     call states_lead_densities_init(sys%st, sys%gr)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm)
+    call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm, theta = sys%st%cmplxscl%theta)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
-    call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%mc, sys%st%qtot)
+    call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%mc, sys%st%qtot, theta = sys%st%cmplxscl%theta)
 
     !print the mesh information if it is required
     call print_r()

@@ -126,13 +126,14 @@ module v_ks_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, dd, geo, mc, nel)
+  subroutine v_ks_init(ks, gr, dd, geo, mc, nel, theta)
     type(v_ks_t),         intent(out)   :: ks
     type(grid_t), target, intent(inout) :: gr
     type(states_dim_t),   intent(in)    :: dd
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
     FLOAT,                intent(in)    :: nel !< the total number of electrons
+    FLOAT,      optional, intent(in)    :: theta !< cmplxscl
 
     PUSH_SUB(v_ks_init)
 
@@ -310,7 +311,7 @@ contains
       if(gr%have_fine_mesh) then
         ks%new_hartree = .true.
         SAFE_ALLOCATE(ks%hartree_solver)
-        call poisson_init(ks%hartree_solver, gr%fine%der, geo, mc%master_comm, label = " (fine mesh)")
+        call poisson_init(ks%hartree_solver, gr%fine%der, geo, mc%master_comm, label = " (fine mesh)", theta = theta)
       else
         ks%hartree_solver => psolver
       end if
@@ -1010,7 +1011,7 @@ contains
       else
         ! Solve the Poisson equation for the scaled density and coulomb potential
         call zpoisson_solve(ks%hartree_solver, zpot,&
-          ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl%theta)
+          ks%calc%total_density + M_zI * ks%calc%Imtotal_density)
         pot   =   real(zpot)
         Impot =  aimag(zpot)
       end if

@@ -17,12 +17,11 @@
 !!
 !! $Id: solver_1d_inc.F90 9854 2013-01-19 23:28:12Z dstrubbe $
 
-subroutine X(poisson1D_solve)(this, pot, rho, theta)
+subroutine X(poisson1D_solve)(this, pot, rho)
   type(poisson_t), intent(in)  :: this
   R_TYPE,          intent(out) :: pot(:)
   R_TYPE,          intent(in)  :: rho(:)
-  FLOAT, optional, intent(in)  :: theta !< Complex scaling angle
-  !! Passing theta is not needed for a normal Poisson solver due to linearity,
+  !! Using theta is not needed for a normal Poisson solver due to linearity,
   !! which makes it possible to solve separately for real/imaginary parts.
   !! But the soft-Coulomb kernel makes it necessary.
   !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
@@ -41,12 +40,9 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
 
   PUSH_SUB(X(poisson1D_solve))
 
-  soft_coulomb_param_squared = this%poisson_soft_coulomb_param**2
-  if(present(theta)) then
-    ! This will discard imaginary part for R_TYPE real.
-    ! But theta won`t be there unless we already use complex scaling, so only cmplx is relevant.
-    soft_coulomb_param_squared = soft_coulomb_param_squared * exp(-M_TWO * M_zI * theta)
-  end if
+  soft_coulomb_param_squared = this%poisson_soft_coulomb_param**2 * exp(-M_TWO * M_zI * this%theta)
+  ! This will discard imaginary part for R_TYPE real.
+  ! But theta won`t be there unless we already use complex scaling, so only cmplx is relevant.
 
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then

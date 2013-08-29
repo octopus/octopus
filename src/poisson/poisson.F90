@@ -113,6 +113,7 @@ module poisson_m
     type(poisson_libisf_t) :: libisf_solver
     type(poisson_fmm_t)  :: params_fmm
     integer :: nslaves
+    FLOAT :: theta !< cmplxscl
 #ifdef HAVE_MPI2
     integer         :: intercomm
     type(mpi_grp_t) :: local_grp
@@ -130,12 +131,13 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, all_nodes_comm, label)
+  subroutine poisson_init(this, der, geo, all_nodes_comm, label, theta)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(geometry_t),            intent(in)  :: geo
     integer,                     intent(in)  :: all_nodes_comm
     character(len=*),  optional, intent(in)  :: label
+    FLOAT,             optional, intent(in)  :: theta !< cmplxscl
 
     logical :: need_cube
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
@@ -145,6 +147,8 @@ contains
     if(this%method /= -99) return ! already initialized
 
     PUSH_SUB(poisson_init)
+
+    this%theta = optional_default(M_ZERO, theta)
 
     str = "Hartree"
     if(present(label)) str = trim(str) // trim(label)
@@ -327,6 +331,10 @@ contains
           call messages_fatal(1)
         endif
       end select
+
+      if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
+        call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
+      end if
 
       if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
@@ -596,15 +604,13 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve(this, pot, rho, all_nodes, theta)
+  subroutine zpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
-    FLOAT, optional,      intent(in)    :: theta   !< complex scaling angle
 
     logical :: all_nodes_value, cmplxscl
-    FLOAT :: theta_
 
     PUSH_SUB(zpoisson_solve)
 
@@ -614,26 +620,14 @@ contains
       all_nodes_value = this%all_nodes_default
     end if
 
-    cmplxscl = .false.
-    theta_ = M_ZERO
-    if(present(theta))  then
-      cmplxscl = .true.
-      theta_ = theta
-    end if
-
     ASSERT(this%method /= -99)
 
-
-    if(this%der%mesh%sb%dim == 1 .and. cmplxscl) then
-      if(this%method == POISSON_DIRECT_SUM) then
-        call zpoisson1d_solve(this, pot, rho, theta = theta)
-      else
-        call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
-      end if
+    if(this%der%mesh%sb%dim == 1) then
+      call zpoisson1d_solve(this, pot, rho)
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
     end if
-    if(cmplxscl) pot = pot * exp(-M_zI * theta_)
+    if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve

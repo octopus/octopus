@@ -1268,7 +1268,7 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
       zrho_tot(:) = zrho_tot(:)+ rho(:,isp) +M_zI * Imrho(:,isp)
     end do
 
-    call zpoisson_solve(psolver, zpot, zrho_tot, theta = theta)
+    call zpoisson_solve(psolver, zpot, zrho_tot)
 
     zpot = - zpot /CNST(2.0)
     vxc(:,1) = real(zpot(:)) 

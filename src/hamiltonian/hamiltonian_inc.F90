@@ -429,7 +429,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
             rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
           end forall
         end do
-        call zpoisson_solve(psolver, pot, rho, all_nodes = .false., theta = hm%cmplxscl%theta)
+        call zpoisson_solve(psolver, pot, rho, all_nodes = .false.)
 #endif
       end if
 
