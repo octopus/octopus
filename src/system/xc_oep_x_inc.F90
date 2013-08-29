@@ -51,7 +51,6 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   R_TYPE, allocatable :: rho_ij(:), F_ij(:), psi(:), wf_ist(:)
 
 #if defined(HAVE_MPI)
-  R_TYPE,  pointer :: recv_buffer(:)
   integer :: send_req, status(MPI_STATUS_SIZE)
 #endif
 
@@ -80,10 +79,6 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   SAFE_ALLOCATE(send_stack(1:st%nst+1))
   SAFE_ALLOCATE(psi(der%mesh%np))
   SAFE_ALLOCATE(wf_ist(der%mesh%np))
-
-#if defined(HAVE_MPI)
-  SAFE_ALLOCATE(recv_buffer(1:der%mesh%np))
-#endif
 
   ! This is the maximum number of blocks for each processor
   i_max = int((st%mpi_grp%size + 2)/2) - 1
@@ -220,11 +215,11 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
       ! which we sent the wavefunction ist
       if(st%parallel_in_states) then
         if((node_to >= 0) .and. (send_stack(ist_s) > 0) .and. (node_to /= st%mpi_grp%rank)) then
-          call MPI_Recv(recv_buffer(:), der%mesh%np, R_MPITYPE, &
+          call MPI_Recv(psi(:), der%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
           lxc(1:der%mesh%np, send_stack(ist_s), is) = lxc(1:der%mesh%np, send_stack(ist_s), is) - &
-            exx_coef * recv_buffer(1:der%mesh%np)
+            exx_coef * psi(1:der%mesh%np)
         end if
 
         if(send_req /= 0) call MPI_Wait(send_req, status, mpi_err)
@@ -242,8 +237,6 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
     call MPI_Allreduce(ex, rr, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     ex = rr
   end if
-
-  SAFE_DEALLOCATE_P(recv_buffer)
 #endif
 
   SAFE_DEALLOCATE_A(recv_stack)
