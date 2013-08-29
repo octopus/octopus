@@ -624,7 +624,7 @@ contains
     ASSERT(this%method /= POISSON_NULL)
 
     if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
-      call zpoisson1d_solve(this, pot, rho)
+      call zpoisson1d_solve_direct(this, pot, rho)
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
     end if
@@ -714,7 +714,7 @@ contains
     case(POISSON_DIRECT_SUM)
       select case(this%der%mesh%sb%dim)
       case(1)
-        call dpoisson1d_solve(this, pot, rho)
+        call dpoisson1d_solve_direct(this, pot, rho)
       case(2)
         call poisson_solve_direct(this, pot, rho)
       case(3)

@@ -17,7 +17,7 @@
 !!
 !! $Id: solver_1d_inc.F90 9854 2013-01-19 23:28:12Z dstrubbe $
 
-subroutine X(poisson1D_solve)(this, pot, rho)
+subroutine X(poisson1D_solve_direct)(this, pot, rho)
   type(poisson_t), intent(in)  :: this
   R_TYPE,          intent(out) :: pot(:)
   R_TYPE,          intent(in)  :: rho(:)
@@ -36,7 +36,7 @@ subroutine X(poisson1D_solve)(this, pot, rho)
   R_TYPE, allocatable :: pvec(:)
 #endif
 
-  PUSH_SUB(X(poisson1D_solve))
+  PUSH_SUB(X(poisson1D_solve_direct))
 
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
@@ -92,8 +92,8 @@ subroutine X(poisson1D_solve)(this, pot, rho)
   end if
 #endif
 
-  POP_SUB(X(poisson1D_solve))
-end subroutine X(poisson1D_solve)
+  POP_SUB(X(poisson1D_solve_direct))
+end subroutine X(poisson1D_solve_direct)
 
 !! Local Variables:
 !! mode: f90
