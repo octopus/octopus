@@ -36,9 +36,9 @@ subroutine X(poisson1D_solve)(this, pot, rho)
   R_TYPE, allocatable :: pvec(:)
 #endif
 
-  ASSERT(this%method == -1)
-
   PUSH_SUB(X(poisson1D_solve))
+
+  ASSERT(this%method == POISSON_DIRECT_SUM)
 
   soft_coulomb_param_squared = this%poisson_soft_coulomb_param**2 * exp(-M_TWO * M_zI * this%theta)
   ! This will discard imaginary part for R_TYPE real.

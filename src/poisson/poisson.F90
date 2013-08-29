@@ -95,11 +95,12 @@ module poisson_m
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
     POISSON_SETE          =  9,         &
-    POISSON_LIBISF        = 10
+    POISSON_LIBISF        = 10,         &
+    POISSON_NULL          = -99
   
   type poisson_t
     type(derivatives_t), pointer :: der
-    integer           :: method = -99
+    integer           :: method = POISSON_NULL
     integer           :: kernel
     type(cube_t)      :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
@@ -144,7 +145,7 @@ contains
     FLOAT :: fft_alpha
     character*60 :: str
 
-    if(this%method /= -99) return ! already initialized
+    if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init)
 
@@ -548,7 +549,7 @@ contains
       call poisson_fmm_end(this%params_fmm)
 
     end select
-    this%method = -99
+    this%method = POISSON_NULL
 
     if (has_cube) then
       if (this%der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
@@ -610,7 +611,7 @@ contains
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
 
-    logical :: all_nodes_value, cmplxscl
+    logical :: all_nodes_value
 
     PUSH_SUB(zpoisson_solve)
 
@@ -620,9 +621,9 @@ contains
       all_nodes_value = this%all_nodes_default
     end if
 
-    ASSERT(this%method /= -99)
+    ASSERT(this%method /= POISSON_NULL)
 
-    if(this%der%mesh%sb%dim == 1) then
+    if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
       call zpoisson1d_solve(this, pot, rho)
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
@@ -707,7 +708,7 @@ contains
       all_nodes_value = this%all_nodes_default
     end if
 
-    ASSERT(this%method /= -99)
+    ASSERT(this%method /= POISSON_NULL)
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
