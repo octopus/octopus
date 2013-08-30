@@ -21,6 +21,8 @@
 #include "global.h"
 
 module casida_m
+  use batch_m
+  use batch_ops_m
   use calc_mode_m
   use comm_m
   use datasets_m

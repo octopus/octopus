@@ -312,25 +312,32 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   integer,        intent(in)  :: sigma
   R_TYPE,         intent(out) :: rho(:)
 
-  R_TYPE, allocatable :: psi_i(:), psi_a(:)
-  integer :: ip
+  R_TYPE, pointer :: psi_i(:), psi_a(:)
+  integer :: ip, idim, iblock, ablock, ilin, alin
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(casida_get_rho))
+  call profiling_in(prof, 'CASIDA_GET_RHO')
 
-  SAFE_ALLOCATE(psi_i(1:mesh%np))
-  SAFE_ALLOCATE(psi_a(1:mesh%np))
+  ! For performance reasons we don't use states_get_states, but we access the states directly
+
+  iblock = st%group%iblock(ii, sigma)
+  ablock = st%group%iblock(ia, sigma)
 
   ! FIXME: need to take into account spinor dimension here, not just 1
-  call states_get_state(st, mesh, 1, ii, sigma, psi_i)
-  call states_get_state(st, mesh, 1, ia, sigma, psi_a)
+  idim = 1
+  ilin = batch_inv_index(st%group%psib(iblock, sigma), (/ii, idim/))
+  alin = batch_inv_index(st%group%psib(ablock, sigma), (/ia, idim/))
 
-  do ip = 1, mesh%np
-    rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
-  end do
+  ASSERT(.not. batch_is_packed(st%group%psib(iblock, sigma)))
+  ASSERT(.not. batch_is_packed(st%group%psib(ablock, sigma)))
 
-  SAFE_DEALLOCATE_A(psi_i)
-  SAFE_DEALLOCATE_A(psi_a)
+  psi_i => st%group%psib(iblock, sigma)%states_linear(ilin)%X(psi)
+  psi_a => st%group%psib(ablock, sigma)%states_linear(alin)%X(psi)
 
+  forall(ip = 1:mesh%np) rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
+
+  call profiling_out(prof)
   POP_SUB(X(casida_get_rho))
 end subroutine X(casida_get_rho)
 
