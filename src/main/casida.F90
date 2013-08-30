@@ -169,10 +169,10 @@ contains
 
     type(casida_t) :: cas
     type(block_t) :: blk
-    integer :: idir, ik, n_filled, n_partially_filled, n_half_filled, theorylevel, iatom
-    character(len=80) :: nst_string, default
+    integer :: idir, theorylevel, iatom
     character(len=100) :: restart_filename
     type(profile_t), save :: prof
+    logical :: is_frac_occ
 
     PUSH_SUB(casida_run)
     call profiling_in(prof, 'CASIDA')
@@ -195,21 +195,14 @@ contains
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
     cas%nik = sys%st%d%nik
+    SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
+    SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
-    SAFE_ALLOCATE(  cas%n_occ(1:cas%nik))
-    SAFE_ALLOCATE(cas%n_unocc(1:cas%nik))
-
-    cas%n_occ(:) = 0
-    do ik = 1, cas%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
-      if(n_partially_filled > 0 .or. n_half_filled > 0) then
-        call messages_not_implemented("Casida with partial occupations")
-        ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
-      endif
-      cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
-      cas%n_unocc(ik) = cas%nst - n_filled
-      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
-    end do
+    call casida_count_pairs(sys%st, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%wfn_list, is_frac_occ)
+    if(is_frac_occ) then
+      call messages_not_implemented("Casida with partial occupations")
+      ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
+    endif
 
     select case(sys%st%d%ispin)
     case(UNPOLARIZED, SPINORS)
@@ -279,29 +272,6 @@ contains
       endif
     end if
 
-    !%Variable CasidaKohnShamStates
-    !%Type string
-    !%Section Linear Response::Casida
-    !%Default all states
-    !%Description
-    !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
-    !% formulation of linear-response time-dependent density functional theory (TDDFT)
-    !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
-    !% basis set should, in principle, include all pairs formed by all occupied states,
-    !% and an infinite number of unoccupied states. In practice, one has to truncate this
-    !% basis set, selecting a number of occupied and unoccupied states that will form the
-    !% pairs. These states are specified with this variable. If there are, say, 15 occupied
-    !% states, and one sets this variable to the value "10-18", this means that occupied
-    !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
-    !%
-    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
-    !% valid. You should include a non-zero number of unoccupied states and a non-zero number
-    !% of occupied states.
-    !%End
-
-    write(nst_string,'(i6)') cas%nst
-    write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-    call parse_string(datasets_check('CasidaKohnShamStates'), default, cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ", trim(cas%wfn_list)
     Call messages_info(1)
 
@@ -505,6 +475,70 @@ contains
   end subroutine casida_run
 
   ! ---------------------------------------------------------
+  subroutine casida_count_pairs(st, n_pairs, n_occ, n_unocc, wfn_list, is_frac_occ)
+    type(states_t),    intent(in)  :: st
+    integer,           intent(out) :: n_pairs
+    integer,           intent(out) :: n_occ(:)   !< nik
+    integer,           intent(out) :: n_unocc(:) !< nik
+    character(len=80), intent(out) :: wfn_list
+    logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
+
+    integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
+    character(len=80) :: nst_string, default
+
+    PUSH_SUB(casida_count_pairs)
+
+    !%Variable CasidaKohnShamStates
+    !%Type string
+    !%Section Linear Response::Casida
+    !%Default all states
+    !%Description
+    !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
+    !% formulation of linear-response time-dependent density functional theory (TDDFT)
+    !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
+    !% basis set should, in principle, include all pairs formed by all occupied states,
+    !% and an infinite number of unoccupied states. In practice, one has to truncate this
+    !% basis set, selecting a number of occupied and unoccupied states that will form the
+    !% pairs. These states are specified with this variable. If there are, say, 15 occupied
+    !% states, and one sets this variable to the value "10-18", this means that occupied
+    !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
+    !%
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
+    !% valid. You should include a non-zero number of unoccupied states and a non-zero number
+    !% of occupied states.
+    !%End
+
+    write(nst_string,'(i6)') st%nst
+    write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+    call parse_string(datasets_check('CasidaKohnShamStates'), default, wfn_list)
+
+    is_frac_occ = .false.
+    do ik = 1, st%d%nik
+      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
+      if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
+      n_occ(ik) = n_filled + n_partially_filled + n_half_filled
+      n_unocc(ik) = st%nst - n_filled
+      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
+    end do
+
+    ! count pairs
+    n_pairs = 0
+    do ik = 1, st%d%nik
+      do ast = n_occ(ik) + 1, st%nst
+        if(loct_isinstringlist(ast, wfn_list)) then
+          do ist = 1, n_occ(ik)
+            if(loct_isinstringlist(ist, wfn_list)) then
+              n_pairs = n_pairs + 1
+            end if
+          end do
+        end if
+      end do
+    end do
+
+    POP_SUB(casida_count_pairs)
+  end subroutine casida_count_pairs
+
+  ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, sys)
     type(casida_t),    intent(inout) :: cas
@@ -516,20 +550,6 @@ contains
 
     cas%kernel_lrc_alpha = sys%ks%xc%kernel_lrc_alpha
     cas%states_are_real = states_are_real(sys%st)
-
-    ! count pairs
-    cas%n_pairs = 0
-    do ik = 1, cas%nik
-      do ast = cas%n_occ(ik) + 1, cas%nst
-        if(loct_isinstringlist(ast, cas%wfn_list)) then
-          do ist = 1, cas%n_occ(ik)
-            if(loct_isinstringlist(ist, cas%wfn_list)) then
-              cas%n_pairs = cas%n_pairs + 1
-            end if
-          end do
-        end if
-      end do
-    end do
 
     write(message(1), '(a,i9)') "Number of occupied-unoccupied pairs: ", cas%n_pairs
     call messages_info(1)
