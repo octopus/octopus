@@ -9,10 +9,18 @@ Enabled    : Yes
 # direct_sum doesn't complex-scale correctly these days so this test temporarily uses 2D for the non-independent particle test
 
 Processors: 1
+
+# if this is complex scaling why does it all end up real?
 Input: 01-harmonic-oscillator.01-independent.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; 2.00000000      7.438546E-13
-match ; 3rd state   ; GREP(static/info, '   3   --     ', 12) ; 5.000000
+match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ; 2.00000000
+match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ; 0.0
+match ; 3rd state Re    ; GREPFIELD(static/info, '  3   -- ',     3) ; 5.000000
+match ; 3rd state Im    ; GREPFIELD(static/info, '  3   -- ',     4) ; 0.0
 
 Input: 01-harmonic-oscillator.02-complex_lda.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 2.0811
-match ; 3rd state    ; GREP(static/info, '   3   --     ', 12) ; 5.7692
+match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  2.0811
+match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  0.0
+match ; 3rd state Re    ; GREPFIELD(static/info, '  3   -- ',    3) ;  5.7692
+match ; 3rd state Im    ; GREPFIELD(static/info, '  3   -- ',    4) ;  0.0
+match ; 9th state Re    ; GREPFIELD(static/info, '  9   -- ',    3) ; 17.725802
+match ; 9th state Im    ; GREPFIELD(static/info, '  9   -- ',    4) ; -0.014293
