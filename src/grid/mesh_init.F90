@@ -830,24 +830,23 @@ contains
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
         write(message(2),'(a)') "The execution will crash"
         call messages_warning(2)
-        mesh%mpi_grp%size = vsize
         has_virtual_partition = .true.
       else 
         has_virtual_partition = .false.
       end if
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil)
+        call mesh_partition(mesh, stencil, vsize)
       else
         ! if there is a parent grid, use its partition
         call mesh_partition_from_parent(mesh, parent)
       end if
       
       !Do the partioning of the boundary points
-      call mesh_partition_boundaries(mesh, stencil)
+      call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
-      call mesh_partition_write(mesh)
+      call mesh_partition_write(mesh, vsize)
     end if
 
     !At the moment we still need the global partition. This will be removed in near future.

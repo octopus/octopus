@@ -73,9 +73,12 @@ contains
   !! which has to be allocated beforehand.
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
-  subroutine mesh_partition(mesh, lapl_stencil)
+  subroutine mesh_partition(mesh, lapl_stencil, vsize)
     type(mesh_t),      intent(inout)  :: mesh
-    type(stencil_t),   intent(in)  :: lapl_stencil
+    type(stencil_t),   intent(in)     :: lapl_stencil
+    integer,           intent(in)     :: vsize        !< number of partition to be created. Might
+                                                      !! be different from the actual number of
+                                                      !! domains
 
     integer              :: iv, jp, inb, jpart
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -306,8 +309,8 @@ contains
 
     ! The sum of all tpwgts elements has to be 1 and 
     ! we don`t care about the weights. So; 1/npart
-    SAFE_ALLOCATE(tpwgts(1:npart))
-    tpwgts(1:npart) = real(1.0, 4)/real(npart, 4)
+    SAFE_ALLOCATE(tpwgts(1:vsize))
+    tpwgts(1:vsize) = real(1.0, 4)/real(vsize, 4)
     
     ! Allocate local output matrix
     SAFE_ALLOCATE(part(1:nv))
@@ -321,7 +324,7 @@ contains
 #endif
       options(METIS_OPTION_NUMBERING) = 1 ! Fortran style: start counting from 1
 
-      if(npart  <  8) then
+      if(vsize  <  8) then
         default_method = RCB
       else
         default_method = GRAPH
@@ -349,12 +352,12 @@ contains
       case(RCB)
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), npart, &
+        call oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                           tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), npart, &
+        call oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                      tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
@@ -389,7 +392,7 @@ contains
     end select
     
     ASSERT(all(part(1:nv) > 0))
-    ASSERT(all(part(1:nv) <= npart))
+    ASSERT(all(part(1:nv) <= vsize))
     call partition_set(mesh%inner_partition, part)
 
 
@@ -411,9 +414,10 @@ contains
   end subroutine mesh_partition
 
   ! --------------------------------------------------------
-  subroutine mesh_partition_boundaries(mesh, stencil)
+  subroutine mesh_partition_boundaries(mesh, stencil, vsize)
     type(mesh_t),      intent(inout) :: mesh
     type(stencil_t),   intent(in)    :: stencil
+    integer,           intent(in)    :: vsize
 
     integer              :: np_global, istart, np, ipart, npart, ip
     integer              :: is, ii, jj         ! Counter.
@@ -460,9 +464,9 @@ contains
 
     !First round of voting
     SAFE_ALLOCATE(part(np))
-    SAFE_ALLOCATE(bps(1:npart))
-    SAFE_ALLOCATE(votes(1:npart))
-    SAFE_ALLOCATE(winner(1:npart))
+    SAFE_ALLOCATE(bps(1:vsize))
+    SAFE_ALLOCATE(votes(1:vsize))
+    SAFE_ALLOCATE(winner(1:vsize))
     part = 0
     bps = 0
     do is = 1, np
@@ -484,7 +488,7 @@ contains
     end do
 
     !Count how many points have already been assigned to each partition in all processes
-    SAFE_ALLOCATE(bps_total(1:npart))
+    SAFE_ALLOCATE(bps_total(1:vsize))
 #ifdef HAVE_MPI 
     call MPI_Reduce(bps(1), bps_total(1), npart, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
 #endif
@@ -516,7 +520,7 @@ contains
     SAFE_DEALLOCATE_A(winner)
 
     ASSERT(all(part > 0))
-    ASSERT(all(part <= npart))
+    ASSERT(all(part <= vsize))
     call partition_set(mesh%bndry_partition, part)
 
     SAFE_DEALLOCATE_A(part)
@@ -562,15 +566,16 @@ contains
   end subroutine mesh_partition_from_parent
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_write(mesh)
+  subroutine mesh_partition_write(mesh, vsize)
     type(mesh_t),    intent(in)    :: mesh
+    integer,         intent(in)    :: vsize
     
     character(len=6) :: numstring
 
     PUSH_SUB(mesh_partition_write)
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(numstring, '(i6.6)') mesh%mpi_grp%size
+      write(numstring, '(i6.6)') vsize
 
       call io_mkdir('restart', is_tmp = .true.)
       call io_mkdir('restart/partition', is_tmp = .true.)
