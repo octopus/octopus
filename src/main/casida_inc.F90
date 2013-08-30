@@ -319,7 +319,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   PUSH_SUB(X(casida_get_rho))
   call profiling_in(prof, 'CASIDA_GET_RHO')
 
-  ! For performance reasons we don't use states_get_states, but we access the states directly
+  ! For performance reasons we don`t use states_get_states, but we access the states directly
 
   iblock = st%group%iblock(ii, sigma)
   ablock = st%group%iblock(ia, sigma)
