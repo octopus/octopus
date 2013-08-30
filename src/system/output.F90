@@ -787,48 +787,87 @@ contains
     !%Default all states
     !%Section Output::BerkeleyGW
     !%Description
-    !% Wavefunctions for bands up to this number will be output.
+    !% Wavefunctions for bands up to this number will be output. Must be between <= number of states.
+    !% If < 1, no wavefunction file will be output.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_NumberBands'), nst, bgw%nbands)
-  
+
+    ! these cannot be checked earlier, since output is initialized before unocc determines nst
+    if(bgw%nbands > nst) then
+      message(1) = "BerkeleyGW_NumberBands must be <= number of states."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
+
     !%Variable BerkeleyGW_Vxc_diag_nmin
     !%Type integer
     !%Default 1
     !%Section Output::BerkeleyGW
     !%Description
-    !% Lowest band for which to write diagonal exchange-correlation matrix elements.
+    !% Lowest band for which to write diagonal exchange-correlation matrix elements. Must be <= number of states.
+    !% If < 1, diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_diag_nmin'), 1, bgw%vxc_diag_nmin)
+
+    if(bgw%vxc_diag_nmin > nst) then
+      message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
     
     !%Variable BerkeleyGW_Vxc_diag_nmax
     !%Type integer
     !%Default nst
     !%Section Output::BerkeleyGW
     !%Description
-    !% Highest band for which to write diagonal exchange-correlation matrix elements.
+    !% Highest band for which to write diagonal exchange-correlation matrix elements. Must be between <= number of states.
+    !% If < 1, diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_diag_nmax'), nst, bgw%vxc_diag_nmax)
-    
+
+    if(bgw%vxc_diag_nmax > nst) then
+      message(1) = "BerkeleyGW_Vxc_diag_nmax must be <= number of states."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
+
+    if(bgw%vxc_diag_nmin <= 0 .or. bgw%vxc_diag_nmax <= 0) then
+      bgw%vxc_diag_nmin = 0
+      bgw%vxc_diag_nmax = 0
+    endif
+
     !%Variable BerkeleyGW_Vxc_offdiag_nmin
     !%Type integer
     !%Default 1
     !%Section Output::BerkeleyGW
     !%Description
-    !% Lowest band for which to write off-diagonal exchange-correlation matrix elements.
+    !% Lowest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmin'), 1, bgw%vxc_offdiag_nmin)
     
+    if(bgw%vxc_offdiag_nmin > nst) then
+      message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
+
     !%Variable BerkeleyGW_Vxc_offdiag_nmax
     !%Type integer
     !%Default nst
     !%Section Output::BerkeleyGW
     !%Description
-    !% Highest band for which to write off-diagonal exchange-correlation matrix elements.
+    !% Highest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmax'), nst, bgw%vxc_offdiag_nmax)
-    
+
+    if(bgw%vxc_offdiag_nmax > nst) then
+      message(1) = "BerkeleyGW_Vxc_offdiag_nmax must be <= number of states."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
+
+    if(bgw%vxc_offdiag_nmin <= 0 .or. bgw%vxc_offdiag_nmax <= 0) then
+      bgw%vxc_offdiag_nmin = 0
+      bgw%vxc_offdiag_nmax = 0
+    endif
+
     !%Variable BerkeleyGW_Complex
     !%Type logical
     !%Default false
