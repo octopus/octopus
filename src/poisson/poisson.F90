@@ -149,7 +149,7 @@ contains
 
     PUSH_SUB(poisson_init)
 
-    this%theta = optional_default(M_ZERO, theta)
+    this%theta = optional_default(theta, M_ZERO)
 
     str = "Hartree"
     if(present(label)) str = trim(str) // trim(label)
