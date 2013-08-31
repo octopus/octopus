@@ -1,0 +1,47 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : 1D-Neon
+Programs   : octopus_mpi; octopus
+TestGroups : short-run, finite_systems_1d
+Enabled    : Yes
+
+# This test calculates a one-dimensional model of the Neon atom (soft Coulomb 
+# interaction) with LDA
+
+Input      : 03-neon.01-gs.inp
+match ; Total energy  ; GREP(static/info, 'Total       =', 20) ; -61.16048724
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   -- ',  3) ; -0.528192
+match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.039716
+
+Input      : 03-neon.02-unocc.inp
+match ; Eigenvalue  5 ; GREPFIELD(static/eigenvalues, ' 5   -- ',  3) ; -0.039716
+match ; Eigenvalue  6 ; GREPFIELD(static/eigenvalues, ' 6   -- ',  3) ; -0.013156
+match ; Eigenvalue 10 ; GREPFIELD(static/eigenvalues, '10   -- ',  3) ;  0.018497
+
+Input      : 03-neon.03-casida.inp
+match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 2.65601433E-02
+match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  5   8', 3) ; 4.64372008E-02
+match ; 12th eps-diff E ; GREPFIELD(casida/eps_diff, '  3   7', 3) ; 1.96408670E+00
+
+match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 5) ; 3.54713669E+00
+match ;  3rd eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 5) ; 5.26979347E-03
+match ; 12th eps-diff f ; GREPFIELD(casida/eps_diff, '  3   7', 5) ; 2.36289561E-13
+
+match ; 1st Petersilka E ; LINEFIELD(casida/petersilka,  2,  2); 4.71307122E-02
+match ; 2nd Petersilka E ; LINEFIELD(casida/petersilka,  3,  2); 5.67578273E-02
+match ; 5th Petersilka E ; LINEFIELD(casida/petersilka,  6,  2); 1.36970018E-01
+
+match ; 1st Petersilka f ; LINEFIELD(casida/petersilka,  2,  4); 5.34849464E-03
+match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka,  3,  4); 2.52026179E-11
+match ; 5th Petersilka f ; LINEFIELD(casida/petersilka,  6,  4); 1.82924983E+01
+
+match ;  1st Casida E ; LINEFIELD(casida/casida,  2, 2) ; 4.59649860E-02
+match ;  2nd Casida E ; LINEFIELD(casida/casida,  3, 2) ; 4.63626344E-02
+match ; 10th Casida E ; LINEFIELD(casida/casida, 11, 2) ; 5.71988204E-01
+match ; 20th Casida E ; LINEFIELD(casida/casida, 21, 2) ; 4.89579179E+00
+
+match ;  1st Casida f ; LINEFIELD(casida/casida,  2, 4) ; 7.17566806E-02
+match ;  2nd Casida f ; LINEFIELD(casida/casida,  3, 4) ; 3.31964594E-09
+match ; 10th Casida f ; LINEFIELD(casida/casida, 11, 4) ; 1.08003278E+00
+match ; 20th Casida f ; LINEFIELD(casida/casida, 21, 4) ; 1.49702259E-11

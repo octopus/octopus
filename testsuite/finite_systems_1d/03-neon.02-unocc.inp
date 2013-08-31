@@ -1,0 +1,22 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+
+CalculationMode = unocc
+
+Dimensions = 1
+Spacing = 0.2
+Radius = 50.0
+ExtraStates = 6
+
+%Species
+  "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+%
+
+%Coordinates
+  "Neon1D" | 0 
+%
+
+EigensolverMaxIter = 100
+Preconditioner = no
+#EigensolverTolerance = 1e-8

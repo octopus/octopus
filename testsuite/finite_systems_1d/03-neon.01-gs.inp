@@ -2,15 +2,12 @@
 # $Id$
 #
 
-CalculationMode = unocc
+FromScratch = yes
+CalculationMode = gs
 
 Dimensions = 1
 Spacing = 0.2
 Radius = 50.0
-ExtraStates = 8
-
-XCFunctional = oep_x
-OEPLevel = oep_kli
 
 %Species
   "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
@@ -20,6 +17,8 @@ OEPLevel = oep_kli
   "Neon1D" | 0 
 %
 
-EigensolverMaxIter = 100
+#Mixing = 0.1
+#EigensolverMaxIter = 100
+#ConvEigenError = true
 Preconditioner = no
-EigensolverTolerance = 1e-7
+ConvRelDens = 1e-7
