@@ -41,6 +41,7 @@ module states_m
   use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
+  use loct_m
   use loct_pointer_m
   use math_m
   use mesh_m
@@ -115,7 +116,9 @@ module states_m
     states_resize_unocc,              &
     zstates_eigenvalues_sum,          &
     cmplx_array2_t,                   &
-    states_wfs_t
+    states_wfs_t,                     &
+    states_count_pairs,               &
+    occupied_states
 
   !> cmplxscl: Left and Right eigenstates
   type states_wfs_t    
@@ -2755,6 +2758,139 @@ contains
     
     size = st%group%block_size(ib)
   end function states_block_size
+
+  ! ---------------------------------------------------------
+  !> number of occupied-unoccipied pairs for Casida
+  subroutine states_count_pairs(st, n_pairs, n_occ, n_unocc, wfn_list, is_frac_occ)
+    type(states_t),    intent(in)  :: st
+    integer,           intent(out) :: n_pairs
+    integer,           intent(out) :: n_occ(:)   !< nik
+    integer,           intent(out) :: n_unocc(:) !< nik
+    character(len=80), intent(out) :: wfn_list
+    logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
+
+    integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
+    character(len=80) :: nst_string, default
+
+    PUSH_SUB(states_count_pairs)
+
+    !%Variable CasidaKohnShamStates
+    !%Type string
+    !%Section Linear Response::Casida
+    !%Default all states
+    !%Description
+    !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
+    !% formulation of linear-response time-dependent density functional theory (TDDFT)
+    !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
+    !% basis set should, in principle, include all pairs formed by all occupied states,
+    !% and an infinite number of unoccupied states. In practice, one has to truncate this
+    !% basis set, selecting a number of occupied and unoccupied states that will form the
+    !% pairs. These states are specified with this variable. If there are, say, 15 occupied
+    !% states, and one sets this variable to the value "10-18", this means that occupied
+    !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
+    !%
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
+    !% valid. You should include a non-zero number of unoccupied states and a non-zero number
+    !% of occupied states.
+    !%End
+
+    write(nst_string,'(i6)') st%nst
+    write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+    call parse_string(datasets_check('CasidaKohnShamStates'), default, wfn_list)
+
+    is_frac_occ = .false.
+    do ik = 1, st%d%nik
+      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
+      if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
+      n_occ(ik) = n_filled + n_partially_filled + n_half_filled
+      n_unocc(ik) = st%nst - n_filled
+      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
+    end do
+
+    ! count pairs
+    n_pairs = 0
+    do ik = 1, st%d%nik
+      do ast = n_occ(ik) + 1, st%nst
+        if(loct_isinstringlist(ast, wfn_list)) then
+          do ist = 1, n_occ(ik)
+            if(loct_isinstringlist(ist, wfn_list)) then
+              n_pairs = n_pairs + 1
+            end if
+          end do
+        end if
+      end do
+    end do
+
+    POP_SUB(states_count_pairs)
+  end subroutine states_count_pairs
+
+  ! ---------------------------------------------------------
+  !> Returns information about which single-particle orbitals are
+  !! occupied or not in a _many-particle_ state st:
+  !!   n_filled are the number of orbitals that are totally filled
+  !!            (the occupation number is two, if ispin = UNPOLARIZED,
+  !!            or it is one in the other cases).
+  !!   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
+  !!            is the number of orbitals where there is only one 
+  !!            electron in the orbital.
+  !!   n_partially_filled is the number of orbitals that are neither filled,
+  !!            half-filled, nor empty.
+  !! The integer arrays filled, partially_filled and half_filled point
+  !!   to the indices where the filled, partially filled and half_filled
+  !!   orbitals are, respectively.
+  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
+                             filled, partially_filled, half_filled)
+    type(states_t),    intent(in)  :: st
+    integer,           intent(in)  :: ik
+    integer,           intent(out) :: n_filled, n_partially_filled, n_half_filled
+    integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
+
+    integer :: ist
+    FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
+
+    PUSH_SUB(occupied_states)
+
+    if(present(filled))           filled(:) = 0
+    if(present(partially_filled)) partially_filled(:) = 0
+    if(present(half_filled))      half_filled(:) = 0
+    n_filled = 0
+    n_partially_filled = 0
+    n_half_filled = 0
+
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      do ist = 1, st%nst
+        if(abs(st%occ(ist, ik) - M_TWO) < M_THRESHOLD) then
+          n_filled = n_filled + 1
+          if(present(filled)) filled(n_filled) = ist
+        elseif(abs(st%occ(ist, ik) - M_ONE) < M_THRESHOLD) then
+          n_half_filled = n_half_filled + 1
+          if(present(half_filled)) half_filled(n_half_filled) = ist
+        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
+          n_partially_filled = n_partially_filled + 1
+          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
+        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
+          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
+          call messages_fatal(1)
+         end if
+      end do
+    case(SPIN_POLARIZED, SPINORS)
+      do ist = 1, st%nst
+        if(abs(st%occ(ist, ik)-M_ONE) < M_THRESHOLD) then
+          n_filled = n_filled + 1
+          if(present(filled)) filled(n_filled) = ist
+        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
+          n_partially_filled = n_partially_filled + 1
+          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
+        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
+          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
+          call messages_fatal(1)
+         end if
+      end do
+    end select
+
+    POP_SUB(occupied_states)
+  end subroutine occupied_states
 
 #include "undef.F90"
 #include "real.F90"

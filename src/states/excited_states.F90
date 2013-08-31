@@ -42,7 +42,6 @@ module excited_states_m
     excited_states_init,            &
     excited_states_kill,            &
     excited_states_output,          &
-    occupied_states,                &
     dstates_mpdotp,                 &
     zstates_mpdotp,                 &
     zstates_mpmatrixelement,        &
@@ -82,75 +81,6 @@ module excited_states_m
   end type excited_states_t
 
 contains
-
-  ! ---------------------------------------------------------
-  !> Returns information about which single-particle orbitals are
-  !! occupied or not in a _many-particle_ state st:
-  !!   n_filled are the number of orbitals that are totally filled
-  !!            (the occupation number is two, if ispin = UNPOLARIZED,
-  !!            or it is one in the other cases).
-  !!   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
-  !!            is the number of orbitals where there is only one 
-  !!            electron in the orbital.
-  !!   n_partially_filled is the number of orbitals that are neither filled,
-  !!            half-filled, nor empty.
-  !! The integer arrays filled, partially_filled and half_filled point
-  !!   to the indices where the filled, partially filled and half_filled
-  !!   orbitals are, respectively.
-  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
-                             filled, partially_filled, half_filled)
-    type(states_t),    intent(in)  :: st
-    integer,           intent(in)  :: ik
-    integer,           intent(out) :: n_filled, n_partially_filled, n_half_filled
-    integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
-
-    integer :: ist
-    FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
-
-    PUSH_SUB(occupied_states)
-
-    if(present(filled))           filled(:) = 0
-    if(present(partially_filled)) partially_filled(:) = 0
-    if(present(half_filled))      half_filled(:) = 0
-    n_filled = 0
-    n_partially_filled = 0
-    n_half_filled = 0
-
-    select case(st%d%ispin)
-    case(UNPOLARIZED)
-      do ist = 1, st%nst
-        if(abs(st%occ(ist, ik) - M_TWO) < M_THRESHOLD) then
-          n_filled = n_filled + 1
-          if(present(filled)) filled(n_filled) = ist
-        elseif(abs(st%occ(ist, ik) - M_ONE) < M_THRESHOLD) then
-          n_half_filled = n_half_filled + 1
-          if(present(half_filled)) half_filled(n_half_filled) = ist
-        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
-          n_partially_filled = n_partially_filled + 1
-          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
-        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
-         end if
-      end do
-    case(SPIN_POLARIZED, SPINORS)
-      do ist = 1, st%nst
-        if(abs(st%occ(ist, ik)-M_ONE) < M_THRESHOLD) then
-          n_filled = n_filled + 1
-          if(present(filled)) filled(n_filled) = ist
-        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
-          n_partially_filled = n_partially_filled + 1
-          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
-        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
-         end if
-      end do
-    end select
-
-    POP_SUB(occupied_states)
-  end subroutine occupied_states
-
 
   ! ---------------------------------------------------------
   !> Fills in an excited_state structure, by reading a file called

@@ -23,7 +23,6 @@ module unocc_m
   use datasets_m
   use density_m
   use eigensolver_m
-  use excited_states_m
   use global_m
   use output_m
   use hamiltonian_m

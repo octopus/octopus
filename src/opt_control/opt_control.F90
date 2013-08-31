@@ -24,7 +24,6 @@
 module opt_control_m
   use messages_m
   use controlfunction_m
-  use excited_states_m
   use exponential_m
   use filter_m
   use geometry_m
