@@ -4,13 +4,10 @@
 
 CalculationMode = unocc
 
-ParallelizationStrategy = par_states
-
 Dimensions = 1
 Spacing = 0.2
 Radius = 50.0
 ExtraStates = 8
-ConvEigenError = true
 
 XCFunctional = oep_x
 OEPLevel = oep_kli
@@ -22,3 +19,7 @@ OEPLevel = oep_kli
 %Coordinates
   "Neon1D" | 0 
 %
+
+EigensolverMaxIter = 100
+Preconditioner = no
+EigensolverTolerance = 1e-7

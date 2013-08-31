@@ -43,20 +43,20 @@ match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 1.23133006E
 match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  5   8', 3) ; 2.06591632E-02
 match ; 12th eps-diff E ; GREPFIELD(casida/eps_diff, '  3   7', 3) ; 1.91785322E+00
 
-match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 5) ; 1.06982086E+00
-match ;  3rd eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 5) ; 3.91038233E-01
+match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 5) ; 1.06605995E+00
+match ;  3rd eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 5) ; 3.90348800E-01
 match ; 12th eps-diff f ; GREPFIELD(casida/eps_diff, '  3   7', 5) ; 5.36198821E-10
 
 match ; 1st Petersilka E ; LINEFIELD(casida/petersilka,  2,  2); 1.41067642E-02
 match ; 2nd Petersilka E ; LINEFIELD(casida/petersilka,  3,  2); 2.77179422E-02
 
-match ; 1st Petersilka f ; LINEFIELD(casida/petersilka,  2,  4); 1.22564299E+00
-match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka,  3,  4); 5.24647347E-01
+match ; 1st Petersilka f ; LINEFIELD(casida/petersilka,  2,  4); 1.22153419E+00
+match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka,  3,  4); 5.23976967E-01
 
 match ;  1st Casida E ; LINEFIELD(casida/casida,  2, 2) ; 7.12075901E-03
 match ;  2nd Casida E ; LINEFIELD(casida/casida,  3, 2) ; 2.19076578E-02
 match ; 20th Casida E ; LINEFIELD(casida/casida, 21, 2) ; 4.85034679E+00
 
-match ;  1st Casida f ; LINEFIELD(casida/casida,  2, 4) ; 5.91627965E-01
+match ;  1st Casida f ; LINEFIELD(casida/casida,  2, 4) ; 5.89491989E-01
 match ;  3rd Casida f ; LINEFIELD(casida/casida,  3, 4) ; 1.00065410E-01
 match ; 20th Casida f ; LINEFIELD(casida/casida, 21, 4) ; 5.54911379E-10

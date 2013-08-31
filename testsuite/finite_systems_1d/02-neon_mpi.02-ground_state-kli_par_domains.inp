@@ -21,3 +21,9 @@ OEPLevel = oep_kli
 %Coordinates
   "Neon1D" | 0 
 %
+
+Mixing = 0.1
+EigensolverMaxIter = 100
+ConvEigenError = true
+Preconditioner = no
+ConvRelDens = 1e-7
