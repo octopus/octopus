@@ -1,0 +1,24 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+
+CalculationMode = unocc
+
+ParallelizationStrategy = par_states
+
+Dimensions = 1
+Spacing = 0.2
+Radius = 50.0
+ExtraStates = 8
+ConvEigenError = true
+
+XCFunctional = oep_x
+OEPLevel = oep_kli
+
+%Species
+  "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+%
+
+%Coordinates
+  "Neon1D" | 0 
+%

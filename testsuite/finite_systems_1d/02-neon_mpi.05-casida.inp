@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+
+FromScratch = yes
+CalculationMode = casida
+
+Dimensions = 1
+Spacing = 0.2
+Radius = 50.0
+
+%Species
+  "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+%
+
+%Coordinates
+  "Neon1D" | 0 
+%
+
+CasidaKohnShamStates = "2-10"

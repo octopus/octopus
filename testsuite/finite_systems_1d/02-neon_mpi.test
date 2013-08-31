@@ -14,19 +14,49 @@ Enabled    : Yes
 Processors : 3
 Input      : 02-neon_mpi.01-ground_state-IP_par_domains.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -87.55795211
-match ; Eigenvalue 5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -3.987813
-match ; Eigenvalue 6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -3.088058
+match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -3.987813
+match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -3.088058
 
 Input      : 02-neon_mpi.02-ground_state-kli_par_domains.inp
 Precision  : 0.0004
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.03815
 # there can be disturbingly large run-to-run variation of this number
-match ; Eigenvalue 5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
-match ; Eigenvalue 6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719
+match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
+match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719
 
 # now we start a td calculation parallel in states on 5 processors
 Processors : 5
 Input      : 02-neon_mpi.03-td_calc-kli_par_states.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.03815
-match ; Eigenvalue 5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
-match ; Eigenvalue 6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719
+match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
+match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719
+
+Processors : 2
+Input      : 02-neon_mpi.04-unocc.inp
+match ; Eigenvalue  5 ; GREPFIELD(static/eigenvalues, ' 5   -- ',  3) ; -0.051170
+match ; Eigenvalue  6 ; GREPFIELD(static/eigenvalues, ' 6   -- ',  3) ; -0.035719
+match ; Eigenvalue 10 ; GREPFIELD(static/eigenvalues, '10   -- ',  3) ; -0.012336
+match ; Eigenvalue 13 ; GREPFIELD(static/eigenvalues, '13   -- ',  3) ;  0.007773
+
+Input      : 02-neon_mpi.05-casida.inp
+match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 1.23133006E-02
+match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  5   8', 3) ; 2.06591632E-02
+match ; 12th eps-diff E ; GREPFIELD(casida/eps_diff, '  3   7', 3) ; 1.91785322E+00
+
+match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 5) ; 1.06982086E+00
+match ;  3rd eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 5) ; 3.91038233E-01
+match ; 12th eps-diff f ; GREPFIELD(casida/eps_diff, '  3   7', 5) ; 5.36198821E-10
+
+match ; 1st Petersilka E ; LINEFIELD(casida/petersilka,  2,  2); 1.41067642E-02
+match ; 2nd Petersilka E ; LINEFIELD(casida/petersilka,  3,  2); 2.77179422E-02
+
+match ; 1st Petersilka f ; LINEFIELD(casida/petersilka,  2,  4); 1.22564299E+00
+match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka,  3,  4); 5.24647347E-01
+
+match ;  1st Casida E ; LINEFIELD(casida/casida,  2, 2) ; 7.12075901E-03
+match ;  2nd Casida E ; LINEFIELD(casida/casida,  3, 2) ; 2.19076578E-02
+match ; 20th Casida E ; LINEFIELD(casida/casida, 21, 2) ; 4.85034679E+00
+
+match ;  1st Casida f ; LINEFIELD(casida/casida,  2, 4) ; 5.91627965E-01
+match ;  3rd Casida f ; LINEFIELD(casida/casida,  3, 4) ; 1.00065410E-01
+match ; 20th Casida f ; LINEFIELD(casida/casida, 21, 4) ; 5.54911379E-10
