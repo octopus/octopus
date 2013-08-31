@@ -108,8 +108,10 @@ contains
     call states_lead_densities_init(sys%st, sys%gr)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm, theta = sys%st%cmplxscl%theta)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
+    if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm, theta = sys%st%cmplxscl%theta)
+      if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
+    endif
 
     call v_ks_init(sys%ks, sys%gr, sys%st%d, sys%geo, sys%mc, sys%st%qtot, theta = sys%st%cmplxscl%theta)
 
