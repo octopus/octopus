@@ -92,17 +92,20 @@ contains
     this%space = iand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
     this%time  = iand(cmplxscl_flags, CMPLXSCL_TIME)  /= 0
 
-    
-    !%Variable ComplexScalingTheta
-    !%Type float 
-    !%Default 0.3
-    !%Section Hamiltonian
-    !%Description
-    !% The spatial coordinate complex scaling angle \theta.
-    !% Allowed values must be in the range 0 <= \theta < \pi/4. 
-    !%End
-    call parse_float(datasets_check('ComplexScalingTheta'), CNST(0.3), this%theta)
-    if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call input_error('ComplexScalingTheta')
+    if(this%space) then
+      !%Variable ComplexScalingTheta
+      !%Type float 
+      !%Default 0.3
+      !%Section Hamiltonian
+      !%Description
+      !% The spatial coordinate complex scaling angle \theta.
+      !% Allowed values must be in the range 0 <= \theta < \pi/4. 
+      !%End
+      call parse_float(datasets_check('ComplexScalingTheta'), CNST(0.3), this%theta)
+      if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call input_error('ComplexScalingTheta')
+    else
+      this%theta = M_ZERO
+    endif
 
     !%Variable ComplexScalingRotateSpectrum
     !%Type float
