@@ -4,7 +4,7 @@
 Test       : 1D-Neon
 Programs   : octopus_mpi; octopus
 TestGroups : short-run, finite_systems_1d
-Enabled    : Yes
+Enabled    : No
 
 # This test calculates a one-dimensional model of the Neon atom (soft Coulomb 
 # interaction) with LDA
