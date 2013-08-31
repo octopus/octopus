@@ -235,6 +235,8 @@ contains
       end select
     end if
 
+    if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
+
     call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call input_error('PoissonSolver')
 
