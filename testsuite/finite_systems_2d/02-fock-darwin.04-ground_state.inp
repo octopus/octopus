@@ -1,0 +1,173 @@
+###############################################################################
+# This file assumes "effective atomic units". Let us recall what this means.
+# We start with the usual atomic units:
+#
+# hbar = e^2 = m_e = 1
+#
+# The unit of length, Bohr, is given by 
+#
+# a_0 = (hbar^2 / (e^2 * m_e)) * 4*pi*epsilon_0, 
+#
+# where epsilon_0 = 1 / (4*pi), so that in fact 4*pi*epsilon_0 = 1.
+# The unit of energy is 
+#
+# Ha = e^2 / a_0 = (e^4 * m_e) / (hbar^2 * 4*pi*epsilon_0)
+#
+# In effective atomic units:
+#
+#  hbar = e^2/epsilon = m = 1
+#
+# In this relations, epsilon is
+# adimensional and is not equal to one, and m = m_e * m^*, being m^* 
+# the "effective mass" in atomic units, also an adimensional factor.
+# The unit of length is given by
+#
+#    a_0^* = (hbar^2 / (e^2 * m)) * 4*pi*epsilon*epsilon_0 
+#          = a_0 * (epsilon/m^*)
+# 
+# And the unit of energy is given by:
+#
+#    Ha^* = e^2 / (a_0^* * epsilon) = Ha * (m^* / epsilon^2)
+#
+# For the material in [M. Governale, Phys. Rev. Lett. 89, 206802 (2002)].
+#
+# m^* = 0.022
+# epsilon = 14.6
+#
+# The confining potential is 5 meV, corresponding to 0.00018374663 Ha, and
+# therefore, 0.00018374663 * (e^2/m^*) Ha^* = 1.78033780231 Ha^*
+#
+#
+#
+# Regarding the magnetic field:
+#
+# 1 Tesla corresponds to 10^4 Gauss, i.e.:
+#
+#   1 Tesla =>  10^4 g^(1/2) cm^(-1/2) s^(-1)
+#
+# I do not write the sign "equal", because both sides of the equation do
+# not have the same dimensions. Since we have fractional exponents, it is
+# more convenient to work with squared relations:
+#
+#   1 Tesla^2 => 10^8 g / (cm * s^2)
+#
+# In atomic units:
+#
+#   1 Tesla^2 => 3.3989315000000 * 10^(-7) Ha / a0^3
+#
+# This can also be written as:
+#
+#   1 Tesla => 5.8300355916580818 * 10(-4) sqrt(Ha / a0^3) =
+#              5.8300355916580818 * 10(-4) a.u.(B)
+#
+# The sqrt(Ha/a0^3) is the atomic unit of magnetic induction. This can 
+# be rewritten as:
+#
+#   1 a.u.(B) => T / 1715.25539471980586102447
+#
+# Now we can get the effective unit of magnetic induction, as:
+#
+#   1 eff.a.u.(B) = sqrt(Ha^*/(a0^*)^3) = 
+#                   sqrt(Ha * (m^* / epsilon^2) / (a_0 * (epsilon/m^*))^3) =
+#                   sqrt(Ha/a_0^3) * sqrt( (m^*/epsilon^2) / (epsilon/m^*)^3 ) =
+#                   a.u.(B) * ((m^*)^2 / epsilon^(5/2))
+#
+# So, in principle, if we need to input {x} T, where {x} is the numerical
+# value that we need in teslas, the number that we need in effective atomic
+# units, is:
+#
+# {x} => ( {x} / 1715.25539471980586102447 ) * sqrt(epsilon^5) / (m^*)^2
+#
+# However, there is one problem: internally, the code is assuming that the
+# speed of light c is 137.036 and the electronic charge is equal to one. 
+# In effective atomic units, this is no longer true, as the speed of light
+# is epsilon * 137.036, and the electronic charge is sqrt(epsilon). The
+# magnetic field appears in two places: 
+# 
+# (i) Transformed into a vector potential, in the kinetic operator:
+#
+#     p + e/c A
+#
+#     Therefore we need a numerical value in the prefactor (e/c) of 
+#     sqrt(epsilon) / (epsilon * 137.036), while the will only use
+#     1 / sqrt(epsilon). We may solve this problem by using B/sqrt(epsilon)
+#     instead of simply B.
+#
+# (ii) In the Zeeman operator:
+#
+#     (1/2) * g * mub * B
+#
+#     where mub = (e * hbar) / (2 * me * c)
+#
+#     In atomic units, the numerical value of mub is 1/(2*137.036). In
+#     effective atomic units, we need sqrt(epsilon)*meff/(137.036*epsilon). Therefore,
+#     one solution would be to multiply g by meff/sqrt(epsilon). However, we
+#     are using a B that is already multiplied by (1/sqrt(epsilon)), and therefore,
+#     we just need a multiplication by meff.
+#
+###############################################################################
+
+
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+ExperimentalFeatures = yes
+
+meff=0.014
+epsilon=17.88
+gfactor=-40
+
+# omega should be 7.5 meV. In effective atomic units:
+omega = (7.5 / 27211.384) * (epsilon^2/meff)
+
+%Species
+"qd" | 1.0 | spec_user_defined | 4 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 
+%
+
+BoxShape = sphere
+Radius = 6
+Spacing = 0.15
+
+SpinComponents = spinors
+
+TheoryLevel = independent_particles
+
+EigenSolver = cg_new
+EigenSolverTolerance = 1e-6
+EigenSolverMaxIter = 25
+
+ConvRelDens  = 1.0e-7
+
+Output = wfs
+OutputHow = axis_x
+
+# First, we express lambda in meV*nm
+lambda=0.0
+# Then, we transform it into Ha * a0
+lambda=lambda*0.00069446161
+# And then, to (Ha*) * (a0*)
+lambda=lambda* (epsilon^2/meff) * (meff/epsilon)
+RashbaSpinOrbitCoupling = lambda
+
+# We need to multiply the true gyromagnetic factor by meff, for reasons
+# explained above:
+GyroMagneticRatio=gfactor * meff 
+
+#B=77.623978916051/sqrt(epsilon)
+# This i the magnetic field, in teslas:
+B = 1
+# Now we convert to atomic units:
+B = B * (1.0/1715.25539471980586102447) 
+# Now we convert to effective atomic units:
+B = B * sqrt(epsilon^5) / (meff^2) 
+# And now we divide by sqrt(epsilon), as described above:
+B = B/ sqrt(epsilon)
+
+%StaticMagneticField
+0 | 0 | B
+%

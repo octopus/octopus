@@ -30,6 +30,7 @@ dist_share_DATA = \
 	02-fock-darwin.01-ground_state.inp \
 	02-fock-darwin.02-ground_state.inp \
 	02-fock-darwin.03-ground_state.inp \
+	02-fock-darwin.04-ground_state.inp \
 	02-fock-darwin.test \
 	03-helium_atom.01-ground_state.inp \
 	03-helium_atom.02-ground_state.inp \

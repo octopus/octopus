@@ -249,10 +249,11 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
     grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
  
     if(associated(this%vector_potential)) then
-      forall (idim = 1:std%dim, ip = 1:der%mesh%np)
-         vpsi(ip, idim) = vpsi(ip, idim) &
-          + (-1)**(idim+1)*M_zI*this%rashba_coupling*( this%vector_potential(1,ip)*psi(ip,2-(idim-1)) &
-          + (-1)**idim*M_zI*this%vector_potential(2,ip)*psi(ip,2-(idim-1)) )
+      forall(ip = 1:der%mesh%np)
+        vpsi(ip, 1) = vpsi(ip, 1) + &
+          (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
+        vpsi(ip, 2) = vpsi(ip, 2) + &
+          (this%rashba_coupling) * (this%vector_potential(2, ip) - M_zI * this%vector_potential(1, ip)) * psi(ip, 1)
       end forall
     end if
 

@@ -23,6 +23,7 @@ Enabled    : Yes
 
 Input : 02-fock-darwin.01-ground_state.inp
 
+Precision : 1e-5
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.250200
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ; 0.490400
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 0.510400
@@ -42,19 +43,34 @@ match ; Eigenvalue 10 ; GREP(static/info, '10   --', 13) ; 1.030798
 
 Input : 02-fock-darwin.02-ground_state.inp
 
+Precision : 1e-5
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.999900
 match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 2.000000
 match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; 2.999900
 match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; 3.999600
 match ; Eigenvalue 17 ; GREP(static/info, '17   --', 13) ; 4.000000
 
-# Finally, the same type of problem, but in this case the purpose is to
+# The same type of problem, but in this case the purpose is to
 # reproduce the non-perturbative results of the inset of Fig. 1 (a), in
 # the same paper.
 
 Input : 02-fock-darwin.03-ground_state.inp
 
+Precision : 1e-5
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.869168
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 2.116862
 match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 3.101960
 match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 3.476506
+
+# Finally, this test demonstrates the use of effective atomic
+# units, including a magnetic field (and using Zeeman coupling,
+# unlike in the first Fock-Darwin spectrum calculation). It does not
+# include the Rashba spin-orbit term. It is based
+# on the calculation of Pietilainen et al. Phys. Rev. B 73,
+# 155315 (2006) (top left panel of Fig. 2).
+
+Input : 02-fock-darwin.04-ground_state.inp
+
+Precision : 1e-5
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 6.215340
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ; 11.875568
