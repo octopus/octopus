@@ -332,6 +332,7 @@ contains
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
+    !% Note that version 2.0 or any later version of the UPF file format are not supported.
     !%Option spec_pspio  110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
