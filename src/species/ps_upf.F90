@@ -380,8 +380,11 @@ contains
         message(1) = "Error in subroutine init_tag"
         call messages_fatal(1)
       elseif (iostat == -1) then
-        write(message(1),*) "No ", trim(string), " tag found."
-        call messages_fatal(1)
+        write(message(1),'(A,A,A)') "No ", trim(string), " tag found."
+        message(2) = "Please check that this is a valid UPF file."
+        message(3) = "(Note that version 2.0 or any later version of the UPF file format" 
+        message(4) = " are not yet supported)." 
+        call messages_fatal(4)
       end if
       if (string_matches("<"//string//">", string2) ) exit
     end do
