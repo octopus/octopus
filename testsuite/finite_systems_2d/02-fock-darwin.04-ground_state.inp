@@ -137,7 +137,7 @@ SpinComponents = spinors
 
 TheoryLevel = independent_particles
 
-EigenSolver = cg_new
+EigenSolver = plan
 EigenSolverTolerance = 1e-6
 EigenSolverMaxIter = 25
 
