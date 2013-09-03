@@ -2202,3 +2202,861 @@
 	  
 	  ------------------------------------------------------------------------
 
+2013-05-23 08:22  micael
+
+	* [r10694] ChangeLog: Updating ChangeLog in 4.1.x.
+
+2013-05-23 09:44  micael
+
+	* [r10696] testsuite/linear_response/Makefile.am: Backport of 10695
+	  to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10695 | micael | 2013-05-23 10:41:30 +0100 (Thu, 23 May 2013) |
+	  2 lines
+	  
+	  A file was missing from the tarball.
+	  
+	  ------------------------------------------------------------------------
+
+2013-05-24 17:04  micael
+
+	* [r10718] testsuite/finite_systems_2d/04-biot_savart.01-gs.inp:
+	  Backport of 10707 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10707 | micael | 2013-05-24 09:04:17 +0100 (Fri, 24 May 2013) |
+	  2 lines
+	  
+	  Changed the eigensolver of the Biot-Savart test to to make its
+	  SCF convergence more stable.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-07 21:45  dstrubbe
+
+	* [r10789] src/system/eigensolver.F90,
+	  testsuite/finite_systems_3d/21-lobpcg.02-spinors.inp: Backport of
+	  10774 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10774 | dstrubbe | 2013-06-06 13:14:06 -0400 (Thu, 06 Jun 2013)
+	  | 2 lines
+	  
+	  Marking lobpcg with more than one block as experimental. This is
+	  quite unfortunate, given the name "locally optimal *block*
+	  preconditioned conjugate gradients", but in all cases with more
+	  than one block which I tried, except for
+	  finite_systems_3d/21-lobpcg.02-spinors.inp, the results were
+	  totally wrong. For example, a large fraction of eigenvalues were
+	  0.00000 after a few iterations.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-08 04:02  dstrubbe
+
+	* [r10795]
+	  testsuite/finite_systems_3d/20-eigensolver.01-lobpcg.inp,
+	  testsuite/finite_systems_3d/21-lobpcg.01-spin_polarized.inp:
+	  Backport of 10794 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10794 | dstrubbe | 2013-06-07 22:37:52 -0400 (Fri, 07 Jun 2013)
+	  | 2 lines
+	  
+	  Apparently the block size is different on the CL intel slave, so
+	  we need to set ExperimentalFeatures for two more tests.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-11 14:38  dstrubbe
+
+	* [r10828] src/system/output_states_inc.F90: Backport of 10818 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10818 | dstrubbe | 2013-06-10 16:48:51 -0400 (Mon, 10 Jun 2013)
+	  | 2 lines
+	  
+	  Bugfix: the CurrentThroughPlane output in 2D accidentally used
+	  uninitalized outp%plane%origin instead of the appropriate
+	  outp%line%origin. Thanks to Vittorio Zecca for reporting the
+	  issue.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-11 14:46  dstrubbe
+
+	* [r10829] src/states/states.F90: Backport of 10823 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10823 | dstrubbe | 2013-06-10 19:03:38 -0400 (Mon, 10 Jun 2013)
+	  | 2 lines
+	  
+	  Bugfix: when running parallel in states with spinors, the
+	  reported spin directions <Sx>, <Sy>, <Sz> were scrambled among
+	  states and directions, due to incorrect usage of the allgatherv
+	  routine. Passing arrays with specified indices BEFORE colons will
+	  usually not give what you want. The test
+	  finite_systems_3d/21-lobpcg.02-spinors.inp had this problem, but
+	  unfortunately the spin directions were not being checked.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-15 01:52  dstrubbe
+
+	* [r10852] src/system/eigensolver.F90: Backport of 10835 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10835 | dstrubbe | 2013-06-11 18:54:13 -0400 (Tue, 11 Jun 2013)
+	  | 2 lines
+	  
+	  Bugfix: when parallel in k-points, the number of matrix-vector
+	  operations, and the number of converged vectors, were not
+	  reduced/gathered among processors in the k-points group. As a
+	  result, the calculation would almost certainly warn that some
+	  states were unconverged, even if they all were.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-15 02:04  dstrubbe
+
+	* [r10853] src/ions/simul_box.F90: Backport of 10791 (partly) to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10791 | dstrubbe | 2013-06-07 20:16:47 -0400 (Fri, 07 Jun 2013)
+	  | 3 lines
+	  
+	  Bugfix: The coordinate conversion for the image was flipped
+	  vertically, due to confusion about the origin convention.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-20 15:22  dstrubbe
+
+	* [r10881] m4/check_cl.m4: Backport of 10858 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10858 | dstrubbe | 2013-06-17 00:55:35 -0400 (Mon, 17 Jun 2013)
+	  | 2 lines
+	  
+	  The OpenCL m4 macro is unnecessarily complicating matters by
+	  putting X11 libraries on the link lines in the tests, even though
+	  they are not necessary for octopus to link with OpenCL, as far as
+	  I can tell.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-20 15:25  dstrubbe
+
+	* [r10882] src/math/splines.F90: Backport of 10851 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10851 | dstrubbe | 2013-06-14 20:16:04 -0400 (Fri, 14 Jun 2013)
+	  | 4 lines
+	  
+	  Bugfix: FilterPotentials = filter_TS caused an uninitialized
+	  value to be returned for spline_cutoff_radius and used in the
+	  initialization of the pseudopotential. This is because
+	  'oct_spline_fit' was used within splines.F90 to initialize spline
+	  objects, rather than the wrapper 'spline_fit', which also
+	  includes initialization of x_limit.
+	  * Now, the wrapper is used everywhere, which simplifies the call
+	  anyway.
+	  * x_limit is initialized to illegal values, and then we assert
+	  they are ok in the routines that use x_limit. ('ASSERT' makes
+	  spline_cutoff_radius no longer pure. I don't see any particular
+	  reason it was pure though.)
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-20 15:32  dstrubbe
+
+	* [r10883] src/system/eigen_mg_inc.F90: Backport of 10870 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10870 | dstrubbe | 2013-06-18 16:36:36 -0400 (Tue, 18 Jun 2013)
+	  | 2 lines
+	  
+	  Bugfix: The multigrid eigensolver did not deallocate anything.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-20 15:39  dstrubbe
+
+	* [r10884] src/system/eigen_mg_inc.F90, src/system/eigensolver.F90:
+	  Backport of 10871 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10871 | dstrubbe | 2013-06-18 16:59:32 -0400 (Tue, 18 Jun 2013)
+	  | 4 lines
+	  
+	  * Declaring Eigensolver = multigrid experimental, in accordance
+	  with the variable reference, and the fact that it doesn't seem to
+	  work (and is not in the testsuite at all).
+	  * Providing proper debug output from multigrid eigensolver.
+	  * Fixing incorrect reference to vol_pp which would cause a seg
+	  fault except for curvilinear coordinates.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-20 15:47  dstrubbe
+
+	* [r10885] testsuite/components/01-derivatives_1d.test: Backport of
+	  10876 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10876 | dstrubbe | 2013-06-19 13:26:08 -0400 (Wed, 19 Jun 2013)
+	  | 2 lines
+	  
+	  ifort 11.1 needs a slightly looser tolerance on
+	  testsuite/components/01-derivatives_1d.01-inp.
+	  
+	  ------------------------------------------------------------------------
+
+2013-06-28 18:18  dstrubbe
+
+	* [r10922] src/states/excited_states.F90, src/td/td_write.F90:
+	  Backport of 10918 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10918 | dstrubbe | 2013-06-27 15:04:55 -0400 (Thu, 27 Jun 2013)
+	  | 3 lines
+	  
+	  * Bugfix: condition for when to read TDProjStateStart was
+	  accidentally reversed in r3597 (6 yrs ago!).
+	  * Improvement of documentation regarding TDOutput = td_occup,
+	  populations.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-10 21:35  dstrubbe
+
+	* [r10963] src/scf/scf.F90: Backport of 10953 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10953 | dstrubbe | 2013-07-09 13:40:18 -0400 (Tue, 09 Jul 2013)
+	  | 2 lines
+	  
+	  Clarification about MaximumIter = 0.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-10 21:39  dstrubbe
+
+	* [r10964] src/grid/curv_modine.F90: Backport of 10959 and 10962 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10959 | dstrubbe | 2013-07-10 14:54:12 -0400 (Wed, 10 Jul 2013)
+	  | 2 lines
+	  
+	  Documenting secret variables.
+	  
+	  ------------------------------------------------------------------------
+	  
+	  ------------------------------------------------------------------------
+	  r10962 | dstrubbe | 2013-07-10 17:33:36 -0400 (Wed, 10 Jul 2013)
+	  | 2 lines
+	  
+	  Better documentation for curv_modine.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-11 15:28  micael
+
+	* [r10978] COPYING, Makefile.am, build/Makefile.am,
+	  build/mk_functionals_list.pl, build/mk_varinfo.pl,
+	  build/var2html.pl, configure.ac, doc/Makefile.am,
+	  doc/doxygen/create_documentation.sh, doc/doxygen/index.html,
+	  doc/doxygen/menu.html, doc/html/Makefile.am,
+	  doc/html/icons/Makefile.am, doc/html/js/Makefile.am,
+	  doc/html/vars/Makefile.am, doc/pdf/Makefile.am,
+	  external_libs/Makefile.am, external_libs/bpdn/Makefile.am,
+	  external_libs/fortrancl/Makefile.am,
+	  external_libs/fortrancl/string_f.h,
+	  external_libs/metis-4.0/Makefile.am,
+	  external_libs/newuoa/Makefile.am,
+	  external_libs/qshep/Makefile.am,
+	  external_libs/slatec/Makefile.am,
+	  external_libs/zoltan/GNU_Lesser_GPL.txt,
+	  external_libs/zoltan/ZoltanComponent/config/config.guess,
+	  external_libs/zoltan/ZoltanComponent/config/config.sub,
+	  liboct_parser/Makefile.am, liboct_parser/grammar.y,
+	  liboct_parser/gsl_userdef.c, liboct_parser/gsl_userdef.h,
+	  liboct_parser/liboct_parser.h, liboct_parser/parse.c,
+	  liboct_parser/parse_exp.c, liboct_parser/parser_f.c,
+	  liboct_parser/string_f.h, liboct_parser/symbols.c,
+	  liboct_parser/symbols.h, libxc/Makefile.am,
+	  libxc/build/Makefile.am, libxc/configure.ac, libxc/m4/acx.m4,
+	  libxc/m4/fc_integer.m4, libxc/m4/fcflags.m4,
+	  libxc/src/Makefile.am, libxc/src/libxc_master.F90,
+	  libxc/src/string_f.h, libxc/testsuite/Makefile.am, m4/arch.m4,
+	  m4/fc_command_line.m4, m4/fc_f2003_c_ptr.m4, m4/fc_integer.m4,
+	  m4/fc_sizeof.m4, m4/fcflags.m4, m4/fft.m4, m4/fortran.m4,
+	  m4/libfm.m4, m4/nfft.m4, m4/octopus_compilation_info.m4,
+	  m4/openmp.m4, m4/papi.m4, m4/pfft.m4, m4/pspio.m4,
+	  perl/Makefile.am, share/Makefile.am, share/PP/HGH/Makefile.am,
+	  share/PP/Makefile.am, share/PP/PSF/Makefile.am,
+	  share/PP/UPF/Makefile.am, share/logo, share/opencl/Makefile.am,
+	  share/opencl/axpy.cl, share/opencl/cl_complex.h,
+	  share/opencl/cl_global.h, share/opencl/cl_rtype.h,
+	  share/opencl/convert.cl, share/opencl/copy.cl,
+	  share/opencl/density.cl, share/opencl/mesh_batch.cl,
+	  share/opencl/mesh_to_cube.cl, share/opencl/mul.cl,
+	  share/opencl/operate.cl, share/opencl/pack.cl,
+	  share/opencl/phase.cl, share/opencl/points.cl,
+	  share/opencl/projector.cl, share/opencl/rotate.cl,
+	  share/opencl/set_zero.cl, share/opencl/subarray.cl,
+	  share/opencl/trsm.cl, share/opencl/vpsi.cl,
+	  share/recipes/Makefile.am, share/recipes/en/Makefile.am,
+	  share/recipes/es/Makefile.am, share/recipes/it/Makefile.am,
+	  share/util/Makefile.am, src/Makefile.am, src/basic/Makefile.am,
+	  src/basic/blacs.F90, src/basic/blacs_proc_grid.F90,
+	  src/basic/c_pointer.F90, src/basic/calc_mode.F90,
+	  src/basic/comm.F90, src/basic/comm_inc.F90,
+	  src/basic/command_line.F90, src/basic/datasets.F90,
+	  src/basic/distributed.F90, src/basic/getopt_f.c,
+	  src/basic/global.F90, src/basic/hardware.F90,
+	  src/basic/ialist.F90, src/basic/iihash.F90, src/basic/io.F90,
+	  src/basic/io_binary.c, src/basic/io_binary.h,
+	  src/basic/io_binary_f.F90, src/basic/io_csv.c,
+	  src/basic/io_csv.h, src/basic/io_csv_f.F90, src/basic/json.F90,
+	  src/basic/json_parser.F90, src/basic/loct.F90,
+	  src/basic/loct_pointer.F90, src/basic/loct_pointer_inc.F90,
+	  src/basic/lookup.F90, src/basic/messages.F90, src/basic/mpi.F90,
+	  src/basic/mpi_debug.F90, src/basic/mpi_debug_inc.F90,
+	  src/basic/mpi_lib.F90, src/basic/mpi_lib_inc.F90,
+	  src/basic/multicomm.F90, src/basic/oct_f.c,
+	  src/basic/oct_gdlib_f.c, src/basic/octcl_kernel.F90,
+	  src/basic/opencl.F90, src/basic/opencl_inc.F90, src/basic/papi.c,
+	  src/basic/papi_f.F90, src/basic/parser.F90,
+	  src/basic/profiling.F90, src/basic/recipes.c,
+	  src/basic/signals.c, src/basic/space.F90, src/basic/string.F90,
+	  src/basic/topology.F90, src/basic/types.F90, src/basic/unit.F90,
+	  src/basic/unit_system.F90, src/basic/utils.F90,
+	  src/basic/varia.c, src/basic/varia.h, src/basic/varinfo.F90,
+	  src/basic/varinfo_low.c, src/basic/write_iter.F90,
+	  src/basic/write_iter_low.c, src/common-rules.make,
+	  src/frozen/Makefile.am, src/grid/Makefile.am,
+	  src/grid/basins.F90, src/grid/batch.F90, src/grid/batch_inc.F90,
+	  src/grid/batch_ops.F90, src/grid/batch_ops_inc.F90,
+	  src/grid/boundaries.F90, src/grid/boundaries_inc.F90,
+	  src/grid/cube.F90, src/grid/cube_function.F90,
+	  src/grid/cube_function_inc.F90, src/grid/curv_briggs.F90,
+	  src/grid/curv_gygi.F90, src/grid/curv_modine.F90,
+	  src/grid/curvilinear.F90, src/grid/derivatives.F90,
+	  src/grid/derivatives_inc.F90, src/grid/double_grid.F90,
+	  src/grid/double_grid_apply_inc.F90, src/grid/fourier_shell.F90,
+	  src/grid/fourier_space.F90, src/grid/fourier_space_inc.F90,
+	  src/grid/grid.F90, src/grid/hypercube.F90, src/grid/index.F90,
+	  src/grid/io_function.F90, src/grid/io_function_inc.F90,
+	  src/grid/mesh.F90, src/grid/mesh_batch.F90,
+	  src/grid/mesh_batch_inc.F90, src/grid/mesh_cube_map.F90,
+	  src/grid/mesh_cube_parallel_map.F90, src/grid/mesh_function.F90,
+	  src/grid/mesh_function_inc.F90, src/grid/mesh_init.F90,
+	  src/grid/mesh_partition.F90, src/grid/metis.c,
+	  src/grid/modelmb_1part.F90, src/grid/multigrid.F90,
+	  src/grid/multigrid_inc.F90, src/grid/nl_operator.F90,
+	  src/grid/nl_operator_inc.F90, src/grid/ob_grid.F90,
+	  src/grid/ob_interface.F90, src/grid/operate.c,
+	  src/grid/operate_f.F90, src/grid/operate_inc.c,
+	  src/grid/par_vec.F90, src/grid/par_vec_inc.F90,
+	  src/grid/partition.F90, src/grid/partition_transfer.F90,
+	  src/grid/partition_transfer_inc.F90, src/grid/partitioner.F90,
+	  src/grid/stencil.F90, src/grid/stencil_cube.F90,
+	  src/grid/stencil_star.F90, src/grid/stencil_starplus.F90,
+	  src/grid/stencil_variational.F90, src/grid/subarray.F90,
+	  src/grid/subarray_inc.F90, src/grid/submesh.F90,
+	  src/grid/submesh_inc.F90, src/grid/symmetrizer.F90,
+	  src/grid/symmetrizer_inc.F90, src/grid/transfer_table.F90,
+	  src/grid/zoltan.F90, src/grid/zoltan_low.c,
+	  src/hamiltonian/Makefile.am, src/hamiltonian/berry.F90,
+	  src/hamiltonian/born_charges.F90, src/hamiltonian/energy.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/gauge_field.F90,
+	  src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_base.F90,
+	  src/hamiltonian/hamiltonian_base_inc.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/hgh_projector.F90,
+	  src/hamiltonian/hgh_projector_inc.F90,
+	  src/hamiltonian/kb_projector.F90,
+	  src/hamiltonian/kb_projector_inc.F90, src/hamiltonian/kick.F90,
+	  src/hamiltonian/lasers.F90, src/hamiltonian/lasers_inc.F90,
+	  src/hamiltonian/ob_lead.F90, src/hamiltonian/projector.F90,
+	  src/hamiltonian/projector_inc.F90,
+	  src/hamiltonian/projector_matrix.F90,
+	  src/hamiltonian/rkb_projector.F90, src/hamiltonian/scf_tol.F90,
+	  src/hamiltonian/species_pot.F90, src/include/Makefile.am,
+	  src/include/complex.F90, src/include/global.h,
+	  src/include/integer.F90, src/include/real.F90,
+	  src/include/undef.F90, src/include/vectors.h,
+	  src/ions/Makefile.am, src/ions/geometry.F90,
+	  src/ions/ion_dynamics.F90, src/ions/kpoints.F90,
+	  src/ions/simul_box.F90, src/ions/solids.F90, src/ions/spglib_f.c,
+	  src/ions/symmetries.F90, src/ions/vibrations.F90,
+	  src/ions/xyz_adjust.F90, src/ions/xyz_file.F90,
+	  src/main/Makefile.am, src/main/casida.F90,
+	  src/main/casida_inc.F90, src/main/gcm.F90, src/main/geom_opt.F90,
+	  src/main/invert_ks.F90, src/main/main.F90, src/main/memory.F90,
+	  src/main/one_shot.F90, src/main/phonons_fd.F90,
+	  src/main/pulpo.F90, src/main/run.F90, src/main/static_pol.F90,
+	  src/main/test.F90, src/main/unocc.F90, src/math/Makefile.am,
+	  src/math/blas.F90, src/math/checksum.c,
+	  src/math/checksum_interface.F90, src/math/dablas.c,
+	  src/math/fft.F90, src/math/fft_inc.F90, src/math/fftw.F90,
+	  src/math/fftw_low.c, src/math/gauss_legendre.F90,
+	  src/math/lalg_adv.F90, src/math/lalg_adv_lapack_inc.F90,
+	  src/math/lalg_adv_scalapack_inc.F90, src/math/lalg_basic.F90,
+	  src/math/lalg_basic_blas_inc.F90, src/math/lapack.F90,
+	  src/math/loct_math.F90, src/math/math.F90, src/math/math_inc.F90,
+	  src/math/matrix.F90, src/math/matrix_inc.F90, src/math/mix.F90,
+	  src/math/mix_inc.F90, src/math/nfft.F90, src/math/nfft_f.c,
+	  src/math/nfft_inc.F90, src/math/oct_gsl_f.c,
+	  src/math/oct_gsl_min_f.c, src/math/ode_solver.F90,
+	  src/math/ode_solver_inc.F90, src/math/pblas.F90,
+	  src/math/permutations.F90, src/math/pfft.F90,
+	  src/math/root_solver.F90, src/math/root_solver_inc.F90,
+	  src/math/scalapack.F90, src/math/solvers.F90,
+	  src/math/solvers_inc.F90, src/math/sparskit.F90,
+	  src/math/sparskit_inc.F90, src/math/spline_filter.F90,
+	  src/math/splines.F90, src/math/symm_op.F90,
+	  src/math/symm_op_inc.F90, src/math/tdfunction.F90,
+	  src/math/ylm.c, src/math/young.F90, src/opt_control/Makefile.am,
+	  src/opt_control/check_input_inc.F90,
+	  src/opt_control/controlfunction.F90,
+	  src/opt_control/controlfunction_trans_inc.F90,
+	  src/opt_control/filters.F90, src/opt_control/finalcheck_inc.F90,
+	  src/opt_control/initst.F90, src/opt_control/opt_control.F90,
+	  src/opt_control/opt_control_c_inc.F90,
+	  src/opt_control/opt_control_global.F90,
+	  src/opt_control/opt_control_iter.F90,
+	  src/opt_control/opt_control_state.F90,
+	  src/opt_control/propagation.F90, src/opt_control/target.F90,
+	  src/poisson/Makefile.am, src/poisson/poisson.F90,
+	  src/poisson/poisson_cg.F90, src/poisson/poisson_corrections.F90,
+	  src/poisson/poisson_cutoff.F90, src/poisson/poisson_fft.F90,
+	  src/poisson/poisson_fmm.F90, src/poisson/poisson_isf.F90,
+	  src/poisson/poisson_multigrid.F90, src/poisson/poisson_sete.F90,
+	  src/poisson/scaling_function.F90, src/poisson/solver_1d_inc.F90,
+	  src/poisson/solver_2d_inc.F90, src/poisson/solver_3d_inc.F90,
+	  src/scf/Makefile.am, src/scf/ground_state.F90, src/scf/lcao.F90,
+	  src/scf/lcao_inc.F90, src/scf/ob_lippmann_schwinger.F90,
+	  src/scf/rdmft.F90, src/scf/scf.F90, src/species/Makefile.am,
+	  src/species/atomic.F90, src/species/logrid.F90,
+	  src/species/periodic_table.F90, src/species/ps.F90,
+	  src/species/ps_cpi.F90, src/species/ps_cpi_file.F90,
+	  src/species/ps_fhi.F90, src/species/ps_fhi_file.F90,
+	  src/species/ps_hgh.F90, src/species/ps_in_grid.F90,
+	  src/species/ps_psf.F90, src/species/ps_psf_file.F90,
+	  src/species/ps_pspio_inc.F90, src/species/ps_upf.F90,
+	  src/species/species.F90, src/states/Makefile.am,
+	  src/states/density.F90, src/states/excited_states.F90,
+	  src/states/excited_states_inc.F90,
+	  src/states/linear_response.F90,
+	  src/states/linear_response_inc.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_density_matrix_inc.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_exchange_syms_inc.F90,
+	  src/states/modelmb_particles.F90, src/states/ob_green.F90,
+	  src/states/physics_op.F90, src/states/physics_op_inc.F90,
+	  src/states/restart.F90, src/states/restart_inc.F90,
+	  src/states/smear.F90, src/states/states.F90,
+	  src/states/states_block.F90, src/states/states_block_inc.F90,
+	  src/states/states_calc.F90, src/states/states_calc_inc.F90,
+	  src/states/states_dim.F90, src/states/states_inc.F90,
+	  src/states/states_io.F90, src/sternheimer/Makefile.am,
+	  src/sternheimer/em_resp.F90, src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90, src/sternheimer/kdotp.F90,
+	  src/sternheimer/kdotp_calc.F90,
+	  src/sternheimer/kdotp_calc_inc.F90,
+	  src/sternheimer/phonons_lr.F90, src/sternheimer/sternheimer.F90,
+	  src/sternheimer/sternheimer_inc.F90, src/sternheimer/vdw.F90,
+	  src/system/Makefile.am, src/system/eigen_arpack_inc.F90,
+	  src/system/eigen_cg.F90, src/system/eigen_cg_inc.F90,
+	  src/system/eigen_evolution_inc.F90, src/system/eigen_lobpcg.F90,
+	  src/system/eigen_lobpcg_inc.F90, src/system/eigen_mg_inc.F90,
+	  src/system/eigen_plan_inc.F90, src/system/eigen_rmmdiis.F90,
+	  src/system/eigen_rmmdiis_inc.F90, src/system/eigensolver.F90,
+	  src/system/elf.F90, src/system/energy_calc.F90,
+	  src/system/energy_calc_inc.F90, src/system/exponential.F90,
+	  src/system/forces.F90, src/system/forces_inc.F90,
+	  src/system/linear_solver.F90, src/system/linear_solver_inc.F90,
+	  src/system/magnetic.F90, src/system/output.F90,
+	  src/system/output_berkeleygw_inc.F90,
+	  src/system/output_etsf_inc.F90, src/system/output_h_inc.F90,
+	  src/system/output_linear_response_inc.F90,
+	  src/system/output_me.F90, src/system/output_me_inc.F90,
+	  src/system/output_modelmb_inc.F90,
+	  src/system/output_states_inc.F90, src/system/pert.F90,
+	  src/system/pert_inc.F90, src/system/preconditioners.F90,
+	  src/system/preconditioners_inc.F90, src/system/subspace.F90,
+	  src/system/subspace_inc.F90, src/system/system.F90,
+	  src/system/v_ks.F90, src/system/xc_kli_inc.F90,
+	  src/system/xc_ks_inversion.F90, src/system/xc_oep.F90,
+	  src/system/xc_oep_inc.F90, src/system/xc_oep_sic_inc.F90,
+	  src/system/xc_oep_x_inc.F90, src/td/Makefile.am, src/td/cpmd.F90,
+	  src/td/cpmd_inc.F90, src/td/ob_mem.F90, src/td/ob_propagator.F90,
+	  src/td/ob_src.F90, src/td/ob_terms.F90, src/td/pes.F90,
+	  src/td/pes_mask.F90, src/td/pes_mask_out_inc.F90,
+	  src/td/pes_rc.F90, src/td/propagator.F90,
+	  src/td/propagator_qoct_inc.F90, src/td/spectrum.F90,
+	  src/td/td.F90, src/td/td_calc.F90, src/td/td_init_inc.F90,
+	  src/td/td_write.F90, src/td/tdpsf.F90, src/utils/Makefile.am,
+	  src/utils/casida_spectrum.F90, src/utils/centergeom.F90,
+	  src/utils/dielectric_function.F90,
+	  src/utils/harmonic_spectrum.F90, src/utils/help.F90,
+	  src/utils/infrared.F90, src/utils/liquid.F90,
+	  src/utils/oscillator_strength.F90,
+	  src/utils/photoelectron_spectrum.F90,
+	  src/utils/propagation_spectrum.F90,
+	  src/utils/rotatory_strength.F90, src/utils/vibrational.F90,
+	  src/utils/xyzanim.F90, src/xc/Makefile.am,
+	  src/xc/functionals.F90, src/xc/fxc_inc.F90, src/xc/kxc_inc.F90,
+	  src/xc/vxc_inc.F90, src/xc/xc.F90, testsuite/Makefile.am,
+	  testsuite/components/Makefile.am,
+	  testsuite/finite_systems_1d/Makefile.am,
+	  testsuite/finite_systems_2d/Makefile.am,
+	  testsuite/finite_systems_3d/Makefile.am,
+	  testsuite/functionals/Makefile.am,
+	  testsuite/linear_response/Makefile.am,
+	  testsuite/oct-run_regression_test.pl,
+	  testsuite/oct-run_testsuite.in,
+	  testsuite/open_systems/Makefile.am,
+	  testsuite/optimal_control/Makefile.am,
+	  testsuite/periodic_systems/Makefile.am,
+	  testsuite/photo_electron/Makefile.am,
+	  testsuite/real_time/Makefile.am: Corrected the FSF address in the
+	  copyright.
+
+2013-07-11 18:52  dstrubbe
+
+	* [r10984] src/basic/io.F90: Backport of 10961 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10961 | dstrubbe | 2013-07-10 17:28:39 -0400 (Wed, 10 Jul 2013)
+	  | 2 lines
+	  
+	  Bugfix: an error was not sent to standard error.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-12 10:11  acastro
+
+	* [r10989] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_base.F90,
+	  src/hamiltonian/hamiltonian_base_inc.F90: Backport of 10988 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10988 | acastro | 2013-07-12 12:08:07 +0200 (Fri, 12 Jul 2013) |
+	  5 lines
+	  
+	  The code allows the possibility of changing the mass of the
+	  particles, but
+	  then forgets to consider this change of mass when applying the
+	  magnetic terms
+	  of the Hamiltonian.
+	  
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-12 17:30  dstrubbe
+
+	* [r10995] src/main/geom_opt.F90: Backport of 10981 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10981 | dstrubbe | 2013-07-11 13:05:22 -0400 (Thu, 11 Jul 2013)
+	  | 2 lines
+	  
+	  It seems GOMinimumMove and GOTolerance have to be negative to be
+	  definitely not used as convergence criteria, since tolgrad or
+	  toldr exactly zero is possible. Setting them negative makes the
+	  condition impossible.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-12 17:32  dstrubbe
+
+	* [r10996] src/grid/io_function.F90, src/grid/io_function_inc.F90:
+	  Backport of 10983 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10983 | dstrubbe | 2013-07-11 14:45:35 -0400 (Thu, 11 Jul 2013)
+	  | 3 lines
+	  
+	  * Fixing possible loss of precision in netcdf and cube output
+	  where 'real' is used.
+	  * Noting which options in OutputHow give only the real part.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-17 11:55  acastro
+
+	* [r11014] src/td/td_write.F90: Backport of 11013 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11013 | acastro | 2013-07-17 13:54:31 +0200 (Wed, 17 Jul 2013) |
+	  4 lines
+	  
+	  Bug fix for the problem reported by several users: the laser
+	  printed in file
+	  td.general/laser changes after performing a restart.
+	  
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-17 20:51  dstrubbe
+
+	* [r11015] src/basic/getopt_f.c, src/basic/utils.F90: Backport of
+	  11003 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11003 | dstrubbe | 2013-07-13 20:47:17 -0400 (Sat, 13 Jul 2013)
+	  | 2 lines
+	  
+	  newuoa should be in the list of configuration options.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-22 02:15  dstrubbe
+
+	* [r11028] m4/zoltan.m4: Specifying --without-external_zoltan in
+	  configure would trigger an attempt to compile zoltan, even if MPI
+	  is not being used, which would inevitably result in failure to
+	  find 'mpif.h'. COMPILE_ZOLTAN should be false unless MPI is
+	  enabled.
+	  
+	  (This problem does not exist anymore in trunk since zoltan
+	  support was decommissioned.)
+
+2013-07-22 15:01  dstrubbe
+
+	* [r11030] share/util/README: Backport of 10779 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10779 | dstrubbe | 2013-06-07 14:12:21 -0400 (Fri, 07 Jun 2013)
+	  | 2 lines
+	  
+	  Typos, updated link.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-22 15:06  dstrubbe
+
+	* [r11031] share/util/README, src/grid/io_function_inc.F90:
+	  Backport of 11019 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11019 | dstrubbe | 2013-07-19 11:48:10 -0400 (Fri, 19 Jul 2013)
+	  | 3 lines
+	  
+	  * Expanding format for mesh_index since there can easily be more
+	  than a million points. More than a trillion is probably unlikely
+	  ;-)
+	  * Documentation about display_mesh_index.gp.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-22 16:02  dstrubbe
+
+	* [r11032] build/svn_release_number.sh, build/true_compiler.sh,
+	  m4/octopus_compilation_info.m4: Backport of 11025 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11025 | dstrubbe | 2013-07-21 17:31:46 -0400 (Sun, 21 Jul 2013)
+	  | 6 lines
+	  
+	  Fixing two small issues with the extraction of the "true
+	  compiler":
+	  * echo from sh, at least on MacOS, does not support the -n
+	  option, so this was ending up in the output from
+	  true_compiler.sh. However, if we use bash everywhere, this seems
+	  portable.
+	  * MPI compilers/wrappers usually, but not always, called mpicc
+	  and mpif90. For example, MacPorts openmpi calls them openmpicc
+	  and openmpif90; Intel MPI calls the mpiicc and mpiifort. I made
+	  true_compiler.sh be a bit more general, and try -show as long as
+	  the name contains 'mpi', which includes all these cases.
+	  
+	  Also, for consistency and general good practice, I used
+	  /usr/bin/env bash rather than just bash, and did the same for
+	  svn_release_number.sh.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-22 16:37  dstrubbe
+
+	* [r11033] testsuite/real_time/06-caetrs.test: Backport of 11027 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11027 | dstrubbe | 2013-07-21 20:22:42 -0400 (Sun, 21 Jul 2013)
+	  | 2 lines
+	  
+	  This test, with task parallelization, requires MPI2.
+	  
+	  ------------------------------------------------------------------------
+
+2013-07-23 16:13  dstrubbe
+
+	* [r11036] build/true_compiler.sh: Backport of 11035 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11035 | dstrubbe | 2013-07-22 14:47:16 -0400 (Mon, 22 Jul 2013)
+	  | 2 lines
+	  
+	  "true compiler" support for Cray compiler wrappers cc and ftn
+	  (which may or may not be in parallel).
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-09 18:48  dstrubbe
+
+	* [r11097] src/poisson/poisson_fft.F90: Backport of 11056 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11056 | dstrubbe | 2013-08-01 14:37:17 -0700 (Thu, 01 Aug 2013)
+	  | 2 lines
+	  
+	  Bugfix: loop went only to 2 instead of 3 in a poisson_fft
+	  routine. Fortunately, I don't think this mattered in most casees.
+	  (I caused this in r8523.)
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-09 18:52  dstrubbe
+
+	* [r11098] src/main/unocc.F90: Backport of 11068 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11068 | dstrubbe | 2013-08-05 16:31:06 -0700 (Mon, 05 Aug 2013)
+	  | 2 lines
+	  
+	  Initialization, for the case UnoccMaximumIter = 0.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-09 18:53  dstrubbe
+
+	* [r11099] src/states/restart.F90: Backport of 11079 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11079 | dstrubbe | 2013-08-07 11:45:53 -0700 (Wed, 07 Aug 2013)
+	  | 2 lines
+	  
+	  Ensuring initializations in restart.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-09 20:54  dstrubbe
+
+	* [r11100] src/hamiltonian/hamiltonian_inc.F90, src/main/gcm.F90:
+	  Backport of 11091 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11091 | dstrubbe | 2013-08-08 11:39:55 -0700 (Thu, 08 Aug 2013)
+	  | 2 lines
+	  
+	  Hartree-Fock was broken for parallelization in k-points (and
+	  probably states too) due to incorrect communication in the
+	  Poisson solve. I think I fixed the same problem in the OCT
+	  exchange, and I suspect it is present in GCM and RDMFT too (which
+	  I commented on but did not change).
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-14 00:16  dstrubbe
+
+	* [r11114] src/system/eigensolver.F90: Backport of 11092 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11092 | dstrubbe | 2013-08-08 12:11:42 -0700 (Thu, 08 Aug 2013)
+	  | 2 lines
+	  
+	  Bugfix: the check for more than one block in lobpcg was not very
+	  accurate. (r10774)
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-14 00:20  dstrubbe
+
+	* [r11115] src/system/eigensolver.F90: Fix to allow previous
+	  backport to compile: the structure was altered a bit since the
+	  4.1.x branch split off.
+
+2013-08-14 00:21  dstrubbe
+
+	* [r11116] src/hamiltonian/hamiltonian_inc.F90: Backport of 11101
+	  to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11101 | dstrubbe | 2013-08-09 15:27:26 -0700 (Fri, 09 Aug 2013)
+	  | 2 lines
+	  
+	  Blocking Hartree-Fock calculations parallel in states, which will
+	  crash or be wrong.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-14 00:23  dstrubbe
+
+	* [r11117] src/sternheimer/em_resp.F90, src/sternheimer/kdotp.F90,
+	  src/sternheimer/phonons_lr.F90, src/sternheimer/vdw.F90: Backport
+	  of 11104 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11104 | dstrubbe | 2013-08-09 16:51:29 -0700 (Fri, 09 Aug 2013)
+	  | 2 lines
+	  
+	  Sternheimer calculations should read with 'exact' since a
+	  different grid is not acceptable.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-28 13:53  micael
+
+	* [r11183] src/species/atomic.F90: Backport of 11182 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11182 | micael | 2013-08-28 14:49:31 +0100 (Wed, 28 Aug 2013) |
+	  2 lines
+	  
+	  Bug fix: in some specific situations, the total number of atomic
+	  wavefunctions for a given species could exceed the hard-wired
+	  value of 6.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-30 22:39  xavier
+
+	* [r11211] external_libs/fortrancl/cl_kernel_low.c: Backport of
+	  11210 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11210 | xavier | 2013-08-30 18:36:57 -0400 (Fri, 30 Aug 2013) |
+	  2 lines
+	  
+	  Bugfix: A function had the wrong uppercase name.
+	  
+	  ------------------------------------------------------------------------
+
+2013-08-30 23:46  xavier
+
+	* [r11213] external_libs/fortrancl/cl_platform.f90: Backport of
+	  11212 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11212 | xavier | 2013-08-30 19:45:56 -0400 (Fri, 30 Aug 2013) |
+	  4 lines
+	  
+	  Bugfix: fixed out of bounds access when the number of platforms
+	  in the
+	  system is larger than the requested number of platforms.
+	  
+	  
+	  ------------------------------------------------------------------------
+
+2013-09-02 17:29  micael
+
+	* [r11226] src/species/ps_upf.F90: Backport of 11224 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11224 | micael | 2013-09-02 18:26:34 +0100 (Mon, 02 Sep 2013) |
+	  2 lines
+	  
+	  * More informative error message when not finding a tag in the
+	  UPF file format.
+	  
+	  ------------------------------------------------------------------------
+
+2013-09-02 17:31  micael
+
+	* [r11227] src/species/species.F90: Backport of 11225 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11225 | micael | 2013-09-02 18:29:04 +0100 (Mon, 02 Sep 2013) |
+	  2 lines
+	  
+	  * Clarified supported UPF versions in the Species block
+	  documentation.
+	  
+	  ------------------------------------------------------------------------
+
