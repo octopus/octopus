@@ -58,7 +58,8 @@ module xc_m
     xc_get_vxc,         &
     xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
-    xc_get_kxc
+    xc_get_kxc,         &
+    xc_is_orbital_dependent
 
 
   type xc_t
@@ -382,6 +383,19 @@ contains
 
     POP_SUB(xc_end)
   end subroutine xc_end
+
+  ! ---------------------------------------------------------
+  logical function xc_is_orbital_dependent(xcs)
+    type(xc_t), intent(in) :: xcs
+
+    PUSH_SUB(xc_is_orbital_dependent)
+
+    xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
+      iand(xcs%functl(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
+      iand(xcs%family, XC_FAMILY_MGGA) /= 0
+
+    POP_SUB(xc_is_orbital_dependent)
+  end function xc_is_orbital_dependent
 
 
 #include "vxc_inc.F90"

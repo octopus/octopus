@@ -40,6 +40,7 @@ module unocc_m
   use states_dim_m
   use system_m
   use v_ks_m
+  use xc_m
 
   implicit none
 
@@ -58,7 +59,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
-    logical :: converged, forced_finish, showoccstates
+    logical :: converged, forced_finish, showoccstates, is_orbital_dependent
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: states_read(:, :), occ_states(:)
@@ -107,7 +108,19 @@ contains
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
       call messages_info(1)
+    endif
 
+    is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
+      xc_is_orbital_dependent(sys%ks%xc))
+
+    if(is_orbital_dependent) then
+      message(1) = "CalculationMode = unocc is not well-defined for orbital-dependent functionals,"
+      message(2) = "since merely freezing the density does not guarantee consistency with the gs run."
+      message(3) = "Density and occupied orbitals from the same k-points are required to restart."
+      call messages_warning(3)
+    endif
+
+    if(ierr_rho /= 0 .or. is_orbital_dependent) then
       ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
       do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
         if(any(states_read(1:sys%st%d%dim, ik) < occ_states(ik))) then
