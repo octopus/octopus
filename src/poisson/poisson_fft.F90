@@ -65,19 +65,27 @@ module poisson_fft_m
   type poisson_fft_t
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
+    FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param)
+  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq)
     type(poisson_fft_t), intent(out)   :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
+    FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
 
     PUSH_SUB(poisson_fft_init)
 
     this%kernel = kernel
+    this%qq = M_ZERO
+
+    if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
+      ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
+      this%qq(1:mesh%sb%periodic_dim) = qq(1:mesh%sb%periodic_dim)
+    endif
     
     select case(mesh%sb%dim)
     case(1)
@@ -152,9 +160,10 @@ contains
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_gg_transform(gg_in, sb, gg, modg2)
+  subroutine poisson_fft_gg_transform(gg_in, sb, qq, gg, modg2)
     FLOAT,             intent(in)    :: gg_in(:)
     type(simul_box_t), intent(in)    :: sb
+    FLOAT,             intent(in)    :: qq(:)
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
@@ -166,6 +175,7 @@ contains
     do idir = 1, 3
       gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
     end do
+    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
 
     modg2 = sum(gg(1:3)**2)
 
@@ -198,7 +208,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, this%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -265,7 +275,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, this%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -345,7 +355,7 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, this%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
@@ -439,7 +449,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
             
-          call poisson_fft_gg_transform(temp * ixx, mesh%sb, gg, modg2)
+          call poisson_fft_gg_transform(temp * ixx, mesh%sb, this%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             select case(kernel)

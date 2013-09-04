@@ -115,12 +115,12 @@ module poisson_m
     type(poisson_fmm_t)  :: params_fmm
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
+    FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
 #ifdef HAVE_MPI2
     integer         :: intercomm
     type(mpi_grp_t) :: local_grp
     logical         :: root
 #endif
-
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
@@ -132,13 +132,14 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, all_nodes_comm, label, theta)
+  subroutine poisson_init(this, der, geo, all_nodes_comm, label, theta, qq)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(geometry_t),            intent(in)  :: geo
     integer,                     intent(in)  :: all_nodes_comm
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
+    FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
 
     logical :: need_cube
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
@@ -157,6 +158,13 @@ contains
 
     this%nslaves = 0
     this%der => der
+
+    this%qq = M_ZERO
+    if(present(qq)  .and. simul_box_is_periodic(der%mesh%sb)) then
+      ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
+      ASSERT(this%method == POISSON_FFT)
+      this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
+    endif
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationPoissonAllNodes
