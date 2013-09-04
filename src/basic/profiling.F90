@@ -94,6 +94,7 @@ module profiling_m
     character(LABEL_LENGTH)  :: label
     real(8)                  :: entry_time
     real(8)                  :: total_time
+    real(8)                  :: min_time
     real(8)                  :: self_time
     real(8)                  :: op_count_current
     real(8)                  :: op_count
@@ -406,6 +407,7 @@ contains
 
     this%label = label
     this%total_time = M_ZERO
+    this%min_time   = M_HUGE
     this%self_time  = M_ZERO
     this%entry_time = huge(this%entry_time)
     this%count  = 0
@@ -530,6 +532,9 @@ contains
     this%total_time = this%total_time + time_spent
     this%self_time  = this%self_time + time_spent
     this%count = this%count + 1
+    if (time_spent < this%min_time) then
+      this%min_time = time_spent
+    end if
 
 #ifdef HAVE_PAPI
     call papi_get_count_and_reset(ops)
@@ -705,6 +710,17 @@ contains
 
 
   ! ---------------------------------------------------------
+  real(8) function profile_min_time(this)
+    type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_self_time)
+    profile_min_time = this%min_time
+
+    POP_SUB(profile_self_time)
+  end function profile_min_time
+
+
+  ! ---------------------------------------------------------
   real(8) function profile_self_time_per_call(this)
     type(profile_t), intent(in) :: this
 
@@ -793,17 +809,17 @@ contains
     end if
 
     write(iunit, '(2a)')                                                                                    &
-      '                                                                       CUMULATIVE TIME                      |', &
-      '                  SELF TIME'
+      '                                                                       CUMULATIVE TIME                      ', &
+      '                 |                  SELF TIME'
     write(iunit, '(2a)')                                                                                    &
-      '                                                    --------------------------------------------------------|', &
-      '-------------------------------------------'
+      '                                                    --------------------------------------------------------', &
+      '-----------------|-------------------------------------------'
     write(iunit, '(2a)')                                                                                    &
-      'TAG                           NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    MFLOPS  MBYTES/S   %TIME |', &
-      '        TOTAL_TIME    TIME_PER_CALL  %TIME'
+      'TAG                           NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL         MIN_TIME   ', &
+      ' MFLOPS  MBYTES/S   %TIME |        TOTAL_TIME    TIME_PER_CALL   %TIME'
     write(iunit, '(2a)')                                                                    &
-      '============================================================================================================|', &
-      '==========================================='
+      '============================================================================================================', &
+      '=================|==========================================='
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
 
@@ -812,11 +828,12 @@ contains
 
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,2f17.7,f10.1,f10.1,f8.1,a,2f17.7,f8.1)')     &
+      write(iunit, '(a,i20,3f17.7,f10.1,f10.1,f8.1,a,2f17.7,f8.1)')     &
            profile_label(prof),                             & 
            profile_num_calls(prof),                         &
            profile_total_time(prof),                        &
            profile_total_time_per_call(prof),               &
+           profile_min_time(prof),                          &
            profile_throughput(prof),                        &
            profile_bandwidth(prof),                         &
            profile_total_time(prof)/total_time*CNST(100.0), &
