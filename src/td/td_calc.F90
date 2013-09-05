@@ -194,11 +194,10 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   FLOAT,               intent(out)   :: ch(0:Nch)
   integer,             intent(in)    :: Nch
 
-  integer :: ik, ist, ii, jj, ispin, idim, Nid
+  integer :: ik, ist, ii, jj, idim, Nid
   FLOAT   :: prod, prod0
   FLOAT, allocatable :: N(:), Nnot(:)
   CMPLX,  allocatable :: zpsi(:)
-  character :: buf(256)
   !combinations   
   integer :: next
   type(c_ptr) :: c

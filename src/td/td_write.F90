@@ -1645,12 +1645,11 @@ contains
     type(states_t),      intent(in) :: st
     integer,             intent(in) :: iter
 
-    integer             :: ii, is, ist, Nch, ik, idim
+    integer             :: ii, ist, Nch, ik, idim
     character(len=68)   :: buf
     FLOAT, allocatable  :: ch(:), occ(:)
 
 #if defined(HAVE_MPI) 
-    integer :: outcount
     FLOAT, allocatable :: occbuf(:)
 #endif
 

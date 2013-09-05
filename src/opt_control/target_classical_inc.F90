@@ -120,8 +120,9 @@
     type(opt_control_state_t), intent(in)    :: qcpsi
 
     FLOAT, pointer :: q(:, :), p(:, :)
-    FLOAT :: f_re, dummy(3)
+    FLOAT :: dummy(3)
     character(len=4096) :: inp_string
+
     PUSH_SUB(target_j1_classical)
 
     q => opt_control_point_q(qcpsi)

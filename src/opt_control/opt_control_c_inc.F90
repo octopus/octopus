@@ -60,7 +60,7 @@
 
     integer :: j
     type(controlfunction_t) :: par_new
-    FLOAT :: j1, dx, fmdf
+    FLOAT :: j1, dx
     FLOAT, allocatable :: theta(:), abserr(:), dfn(:), dff(:)
     type(opt_control_state_t) :: qcpsi
 
