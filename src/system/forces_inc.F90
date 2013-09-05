@@ -132,10 +132,10 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, ep, st, force)
+subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
+  type(hamiltonian_t),            intent(inout) :: hm
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(out)   :: force(:, :)
 
@@ -227,7 +227,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
             iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
 
             do iatom = 1, geo%natoms
-              if(projector_is_null(ep%proj(iatom))) cycle
+              if(projector_is_null(hm%ep%proj(iatom))) cycle
 
               ratom = M_ZERO
               ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
@@ -243,7 +243,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
 
               do idir = 1, gr%mesh%sb%dim
                 force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                  R_REAL(X(projector_matrix_element)(ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                  R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
 
@@ -260,11 +260,11 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
 
           ! iterate over the projectors
           do iatom = 1, geo%natoms
-            if(projector_is_null(ep%proj(iatom))) cycle
+            if(projector_is_null(hm%ep%proj(iatom))) cycle
 
             do idir = 1, gr%mesh%sb%dim
               force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
             end do
 
             force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
@@ -303,7 +303,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
     call symmetrizer_end(symmetrizer)
   end if
 
-  call dforces_from_local_potential(gr, geo, ep, grad_rho, force_loc)
+  call dforces_from_local_potential(gr, geo, hm%ep, grad_rho, force_loc)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim

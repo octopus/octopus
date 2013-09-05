@@ -709,7 +709,7 @@ contains
 
     ! Recalculate forces, update velocities...
     if(ion_dynamics_ions_move(ions)) then
-      call forces_calculate(gr, geo, hm%ep, st, abs(nt*dt), dt)
+      call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
@@ -1542,7 +1542,7 @@ contains
     end if
 
     ! Recalculate forces, update velocities...
-    call forces_calculate(gr, geo, hm%ep, st, iter*dt, dt)
+    call forces_calculate(gr, geo, hm, st, iter*dt, dt)
     call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)

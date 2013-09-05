@@ -29,6 +29,7 @@ module forces_m
   use geometry_m
   use global_m
   use grid_m
+  use hamiltonian_m
   use index_m
   use io_m
   use kpoints_m
@@ -94,13 +95,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, ep, st, t, dt)
-    type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(inout) :: geo
-    type(epot_t),     intent(inout) :: ep
-    type(states_t),   intent(inout) :: st
-    FLOAT,     optional, intent(in) :: t
-    FLOAT,     optional, intent(in) :: dt
+  subroutine forces_calculate(gr, geo, hm, st, t, dt)
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(hamiltonian_t), intent(inout) :: hm
+    type(states_t),      intent(inout) :: st
+    FLOAT,     optional, intent(in)    :: t
+    FLOAT,     optional, intent(in)    :: dt
 
     integer :: i, j, iatom, idir
     FLOAT :: x(MAX_DIM), time
@@ -116,15 +117,15 @@ contains
 
     ! the ion-ion term is already calculated
     do i = 1, geo%natoms
-      geo%atom(i)%f(1:gr%sb%dim) = ep%fii(1:gr%sb%dim, i)
+      geo%atom(i)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, i)
     end do
 
     SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
     
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, ep, st, force)
+      call dforces_from_potential(gr, geo, hm, st, force)
     else
-      call zforces_from_potential(gr, geo, ep, st, force)
+      call zforces_from_potential(gr, geo, hm, st, force)
     end if
 
     do iatom = 1, geo%natoms
@@ -137,11 +138,11 @@ contains
     
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
-      do j = 1, ep%no_lasers
-        select case(laser_kind(ep%lasers(j)))
+      do j = 1, hm%ep%no_lasers
+        select case(laser_kind(hm%ep%lasers(j)))
         case(E_FIELD_ELECTRIC)
           x(1:gr%sb%dim) = M_ZERO
-          call laser_field(ep%lasers(j), x(1:gr%sb%dim), t)
+          call laser_field(hm%ep%lasers(j), x(1:gr%sb%dim), t)
           do i = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
@@ -155,7 +156,7 @@ contains
           ! F = q [- dA/dt + v x \nabla x A]
 
           x(1:gr%sb%dim) = M_ZERO
-          call laser_electric_field(ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
+          call laser_electric_field(hm%ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do i = 1, geo%natoms
             ! Also here the proton charge is +1
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
@@ -170,11 +171,11 @@ contains
       end do
     end if
 
-    if(associated(ep%E_field)) then
+    if(associated(hm%ep%E_field)) then
       do i = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
         geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-          + species_zval(geo%atom(i)%spec)*ep%E_field(1:gr%mesh%sb%dim)
+          + species_zval(geo%atom(i)%spec)*hm%ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

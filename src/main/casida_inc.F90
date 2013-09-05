@@ -831,7 +831,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_P(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%geo, hm%ep, st)
+    call forces_calculate(sys%gr, sys%geo, hm, st)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim

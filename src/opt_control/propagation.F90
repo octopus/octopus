@@ -168,7 +168,7 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
-    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm%ep, psi, M_ZERO, td%dt)
+    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
 
     if(target_type(tg)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
@@ -552,7 +552,7 @@ contains
 
     call states_copy(st_ref, psi)
 
-    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm%ep, psi, td%max_iter*abs(td%dt), td%dt)
+    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, td%max_iter*abs(td%dt), td%dt)
 
     do i = td%max_iter, 1, -1
 
