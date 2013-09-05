@@ -148,7 +148,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
   CMPLX :: phase
   FLOAT, allocatable :: symmtmp(:, :)
-  type(batch_t) :: psib
+  type(batch_t) :: psib, grad_psib(1:MAX_DIM)
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -181,24 +181,31 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       call batch_copy(st%group%psib(ib, iq), psib, reference = .false.)
       call batch_copy_data(gr%mesh%np, st%group%psib(ib, iq), psib)
 
+      ! set the boundary conditions
       call X(derivatives_batch_set_bc)(gr%der, psib)
 
+      ! set the phase for periodic systems
+      if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+        call X(hamiltonian_phase)(hm, gr%der, gr%mesh%np_part, iq, .false., psib)
+      end if
+
+      ! calculate the gradient
+      do idir = 1, gr%mesh%sb%dim
+        call batch_copy(st%group%psib(ib, iq), grad_psib(idir), reference = .false.)
+        call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
+      end do
+      
       do ist = minst, maxst
 
+        ! get the state and its gradient out of the batches (for the moment)
         do idim = 1, st%d%dim
           call batch_get_state(psib, (/ist, idim/), gr%mesh%np_part, psi(:, idim))
+          do idir = 1, gr%mesh%sb%dim
+            call batch_get_state(grad_psib(idir), (/ist, idim/), gr%mesh%np, grad_psi(:, idir, idim))
+          end do
         end do
 
         do idim = 1, st%d%dim
-          if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
-
-            do ip = 1, np_part
-              phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
-              psi(ip, idim) = phase*psi(ip, idim)
-            end do
-          end if
-
-          call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
 
           ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
           do idir = 1, gr%mesh%sb%dim
@@ -275,6 +282,10 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       end do
       
       call batch_end(psib)
+      do idir = 1, gr%mesh%sb%dim
+        call batch_end(grad_psib(idir))
+      end do
+
     end do
   end do
 
