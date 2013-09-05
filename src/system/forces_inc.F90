@@ -141,12 +141,14 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
 
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii, iatom_symm
+  integer :: ib, maxst, minst
   FLOAT :: ff, kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
   CMPLX :: phase
   FLOAT, allocatable :: symmtmp(:, :)
+  type(batch_t) :: psib
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -171,96 +173,108 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, force)
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
     kpoint = M_ZERO
     kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
-    
-    do ist = st%st_start, st%st_end
 
-      call states_get_state(st, gr%mesh, ist, iq, psi)
+    do ib = st%group%block_start, st%group%block_end
+      minst = states_block_min(st, ib)
+      maxst = states_block_max(st, ib)
 
-      do idim = 1, st%d%dim
-        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+      call batch_copy(st%group%psib(ib, iq), psib, reference = .false.)
+      call batch_copy_data(gr%mesh%np, st%group%psib(ib, iq), psib)
 
-        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+      call X(derivatives_batch_set_bc)(gr%der, psib)
 
-          do ip = 1, np_part
-            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
-            psi(ip, idim) = phase*psi(ip, idim)
-          end do
-        endif
+      do ist = minst, maxst
 
-        call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
-
-        ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
-        do idir = 1, gr%mesh%sb%dim
-          do ip = 1, np
-            grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
-          end do
+        do idim = 1, st%d%dim
+          call batch_get_state(psib, (/ist, idim/), gr%mesh%np_part, psi(:, idim))
         end do
 
-      end do
+        do idim = 1, st%d%dim
+          if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
-      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+            do ip = 1, np_part
+              phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
+              psi(ip, idim) = phase*psi(ip, idim)
+            end do
+          end if
 
-      if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+          call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
 
-        ! We use that
-        !
-        ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
-        !
-        ! and that the operator R should map the position of atom
-        ! iatom to the position of some other atom iatom_symm, so that
-        !
-        ! V_iatom(R*r) = V_iatom_symm(r)
-        !
-        do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
-          
-          iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+          ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+          do idir = 1, gr%mesh%sb%dim
+            do ip = 1, np
+              grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
+            end do
+          end do
 
+        end do
+
+        call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+
+        if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+
+          ! We use that
+          !
+          ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+          !
+          ! and that the operator R should map the position of atom
+          ! iatom to the position of some other atom iatom_symm, so that
+          !
+          ! V_iatom(R*r) = V_iatom_symm(r)
+          !
+          do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
+            iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+
+            do iatom = 1, geo%natoms
+              if(projector_is_null(ep%proj(iatom))) cycle
+
+              ratom = M_ZERO
+              ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+
+              call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
+
+              ! find iatom_symm
+              do iatom_symm = 1, geo%natoms
+                if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
+              end do
+
+              ASSERT(iatom_symm <= geo%natoms)
+
+              do idir = 1, gr%mesh%sb%dim
+                force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+                  R_REAL(X(projector_matrix_element)(ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+              end do
+
+
+              force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
+
+              force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+                force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
+            end do
+
+          end do
+
+        else
+
+          ! iterate over the projectors
           do iatom = 1, geo%natoms
             if(projector_is_null(ep%proj(iatom))) cycle
 
-            ratom = M_ZERO
-            ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
-
-            call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
-
-            ! find iatom_symm
-            do iatom_symm = 1, geo%natoms
-              if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
-            end do
-            
-            ASSERT(iatom_symm <= geo%natoms)
-
             do idir = 1, gr%mesh%sb%dim
               force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                R_REAL(X(projector_matrix_element)(ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
             end do
-            
-            
-            force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
-            
-            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-            force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
-          
+
+            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
           end do
 
-        end do
-        
-      else
+        end if
 
-        ! iterate over the projectors
-        do iatom = 1, geo%natoms
-          if(projector_is_null(ep%proj(iatom))) cycle
-          
-          do idir = 1, gr%mesh%sb%dim
-            force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-              R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
-          end do
-          
-          force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
-        end do
-
-      end if
-
+      end do
+      
+      call batch_end(psib)
     end do
   end do
 

@@ -20,6 +20,8 @@
 #include "global.h"
 
 module forces_m
+  use batch_m
+  use batch_ops_m
   use born_charges_m
   use comm_m
   use derivatives_m
