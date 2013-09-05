@@ -123,6 +123,8 @@ contains
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
+    if(sys%st%d%pack_states) call states_pack(sys%st)
+
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
@@ -145,6 +147,8 @@ contains
       call messages_fatal(2)
     end if
 
+    if(sys%st%d%pack_states) call states_unpack(sys%st)
+  
     ! print out geometry
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
