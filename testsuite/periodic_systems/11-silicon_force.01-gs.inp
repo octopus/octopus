@@ -1,0 +1,33 @@
+FromScratch = yes
+
+CalculationMode = gs
+
+PeriodicDimensions = 3
+
+Spacing = 0.7
+
+a = 10.2
+
+BoxShape = parallelepiped
+Lsize = a/2
+
+%ReducedCoordinates
+  "Si" |   0.1       | -0.02     | 0.03
+  "Si" |   1/2       | 1/2       | 0.0
+  "Si" |   1/2       | 0.0       | 1/2
+  "Si" |   0.0       | 1/2       | 1/2 
+  "Si" |   1/4       | 1/4       | 1/4 
+  "Si" |   1/4 + 1/2 | 1/4 + 1/2 | 1/4
+  "Si" |   1/4 + 1/2 | 1/4       | 1/4 + 1/2
+  "Si" |   1/4       | 1/4 + 1/2 | 1/4 + 1/2 
+%
+
+%KPointsGrid
+ 2 | 2 | 2
+ 1/2 | 1/2 | 1/2
+%
+
+KPointsUseSymmetries = yes
+
+ExtraStates = 1
+ConvRelDens = 1e-7
