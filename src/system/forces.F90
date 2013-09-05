@@ -100,9 +100,9 @@ contains
     FLOAT,     optional, intent(in) :: t
     FLOAT,     optional, intent(in) :: dt
 
-    integer :: i, j
+    integer :: i, j, iatom, idir
     FLOAT :: x(MAX_DIM), time
-    
+    FLOAT, allocatable :: force(:, :)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -116,12 +116,22 @@ contains
     do i = 1, geo%natoms
       geo%atom(i)%f(1:gr%sb%dim) = ep%fii(1:gr%sb%dim, i)
     end do
+
+    SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
     
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, ep, st)
+      call dforces_from_potential(gr, geo, ep, st, force)
     else
-      call zforces_from_potential(gr, geo, ep, st)
+      call zforces_from_potential(gr, geo, ep, st, force)
     end if
+
+    do iatom = 1, geo%natoms
+      do idir = 1, gr%mesh%sb%dim
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(force)
     
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then

@@ -132,18 +132,19 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, ep, st)
+subroutine X(forces_from_potential)(gr, geo, ep, st, force)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(out)   :: force(:, :)
 
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii, iatom_symm
   FLOAT :: ff, kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: grad_rho(:, :), force(:, :), force_psi(:), force_tmp(:)
+  FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
   CMPLX :: phase
   FLOAT, allocatable :: symmtmp(:, :)
 
@@ -156,7 +157,6 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
   SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho = M_ZERO
 
-  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
   SAFE_ALLOCATE(force_psi(1:gr%mesh%sb%dim))
   SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim))
 
@@ -276,9 +276,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
   end if
 #endif
 
-  do iatom = 1, geo%natoms
-    geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + force(1:gr%mesh%sb%dim, iatom)
-  end do
+  SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
@@ -291,17 +289,18 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
     call symmetrizer_end(symmetrizer)
   end if
 
-  call dforces_from_local_potential(gr, geo, ep, grad_rho, force)
+  call dforces_from_local_potential(gr, geo, ep, grad_rho, force_loc)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
+      force(idir, iatom) = force(idir, iatom) + force_loc(idir, iatom)
     end do
   end do
 
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
-  SAFE_DEALLOCATE_A(force)
+  SAFE_DEALLOCATE_A(force_loc)
+
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
 
