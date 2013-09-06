@@ -42,7 +42,8 @@ dist_opencl_DATA =              \
 	mul.cl                  \
 	mesh_to_cube.cl         \
 	convert.cl              \
-	boundaries.cl
+	boundaries.cl           \
+	forces.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

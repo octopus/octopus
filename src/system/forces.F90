@@ -23,6 +23,9 @@ module forces_m
   use batch_m
   use batch_ops_m
   use born_charges_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use comm_m
   use derivatives_m
   use epot_m
@@ -36,12 +39,15 @@ module forces_m
   use lalg_basic_m
   use lasers_m
   use linear_response_m
+  use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use profiling_m
   use projector_m
+  use octcl_kernel_m
+  use opencl_m
   use simul_box_m
   use species_m
   use species_pot_m
@@ -49,6 +55,7 @@ module forces_m
   use states_dim_m
   use symm_op_m
   use symmetrizer_m
+  use types_m
 
   implicit none
 

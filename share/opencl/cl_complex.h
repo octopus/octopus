@@ -37,6 +37,15 @@ inline double2 complex_div(const double2 a, const double2 b){
   return complex_mul(a, complex_conj(b))/(c.x + c.y);
 }
 
+inline double complex_real(const double2 a){
+  return a.x;
+}
+
+inline double complex_imag(const double2 a){
+  return a.y;
+}
+
+
 #endif
 
 /*

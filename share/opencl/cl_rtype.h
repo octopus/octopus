@@ -30,6 +30,8 @@ typedef double rtype;
 #define X(x)        d ## x
 #define MUL(x, y)   ((x)*(y))
 #define CONJ(x)     (x)
+#define REAL(x)     (x)
+#define IMAG(x)     (0.0)
 
 #elif defined(RTYPE_COMPLEX)
 
@@ -37,6 +39,8 @@ typedef double2 rtype;
 #define X(x)        z ## x
 #define MUL(x, y)   complex_mul(x, y)
 #define CONJ(x)     complex_conj(x)
+#define REAL(x)     complex_real(x)
+#define IMAG(x)     complex_imag(x)
 
 #else
 #error Type not defined

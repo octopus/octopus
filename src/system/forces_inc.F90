@@ -140,13 +140,12 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   FLOAT,                          intent(out)   :: force(:, :)
 
   type(symmetrizer_t) :: symmetrizer
-  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii, iatom_symm
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ikpoint, iop, ii, iatom_symm
   integer :: ib, maxst, minst
-  FLOAT :: ff, kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
+  FLOAT :: kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
-  CMPLX :: phase
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
 
@@ -194,6 +193,9 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
         call batch_copy(st%group%psib(ib, iq), grad_psib(idir), reference = .false.)
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
+
+      ! calculate the contribution to the density gradient
+      call X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
       
       do ist = minst, maxst
 
@@ -203,17 +205,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
           do idir = 1, gr%mesh%sb%dim
             call batch_get_state(grad_psib(idir), (/ist, idim/), gr%mesh%np, grad_psi(:, idir, idim))
           end do
-        end do
-
-        do idim = 1, st%d%dim
-
-          ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
-          do idir = 1, gr%mesh%sb%dim
-            do ip = 1, np
-              grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
-            end do
-          end do
-
         end do
 
         call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
@@ -329,6 +320,119 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
 
+!---------------------------------------------------------------------------
+subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
+  type(grid_t),   intent(inout) :: gr
+  type(states_t), intent(inout) :: st
+  integer,        intent(in)    :: iq
+  type(batch_t),  intent(in)    :: psib
+  type(batch_t),  intent(in)    :: grad_psib(:)
+  FLOAT,          intent(inout) :: grad_rho(:, :)
+
+  integer :: ii, ist, idim, idir, ip
+  FLOAT :: ff
+  R_TYPE :: psi, gpsi
+#ifdef HAVE_OPENCL
+  integer :: wgsize
+  FLOAT, allocatable :: grad_rho_tmp(:, :), weights(:)
+  type(opencl_mem_t) :: grad_rho_buff, weights_buff
+  type(octcl_kernel_t), save :: ker_calc_grad_dens
+  type(cl_kernel) :: kernel
+#endif  
+
+  ASSERT(batch_status(psib) == batch_status(grad_psib(1)))
+
+  select case(batch_status(psib))
+  case(BATCH_NOT_PACKED)
+    do ii = 1, psib%nst_linear
+      ist = batch_linear_to_ist(psib, ii)
+      idim = batch_linear_to_idim(psib, ii)
+      
+      ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+      do idir = 1, gr%mesh%sb%dim
+        do ip = 1, gr%mesh%np
+          
+          psi = psib%states_linear(ii)%X(psi)(ip)
+          gpsi = grad_psib(idir)%states_linear(ii)%X(psi)(ip)
+          grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi)*gpsi)
+          
+        end do
+      end do
+      
+    end do
+
+  case(BATCH_PACKED)
+    do ii = 1, psib%nst_linear
+      ist = batch_linear_to_ist(psib, ii)
+      idim = batch_linear_to_idim(psib, ii)
+      
+      ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+      do idir = 1, gr%mesh%sb%dim
+        do ip = 1, gr%mesh%np
+          
+          psi = psib%pack%X(psi)(ii, ip)
+          gpsi = grad_psib(idir)%pack%X(psi)(ii, ip)
+          grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi)*gpsi)
+          
+        end do
+      end do
+      
+    end do
+      
+  case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(grad_rho_buff, CL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
+
+    SAFE_ALLOCATE(weights(1:psib%pack%size(1)))
+
+    weights = CNST(0.0)
+    do ii = 1, psib%nst_linear
+      ist = batch_linear_to_ist(psib, ii)
+      weights(ii) = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+    end do
+
+    call opencl_create_buffer(weights_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, psib%pack%size(1))
+    call opencl_write_buffer(weights_buff, psib%pack%size(1), weights)
+   
+    SAFE_DEALLOCATE_A(weights)
+    
+    call octcl_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), flags = '-D'//R_TYPE_CL)
+    kernel = octcl_kernel_get_ref(ker_calc_grad_dens)
+
+    do idir = 1, gr%mesh%sb%dim
+      call opencl_set_kernel_arg(kernel, 0, idir - 1)
+      call opencl_set_kernel_arg(kernel, 1, psib%pack%size(1))
+      call opencl_set_kernel_arg(kernel, 2, gr%mesh%np)
+      call opencl_set_kernel_arg(kernel, 3, weights_buff)
+      call opencl_set_kernel_arg(kernel, 4, grad_psib(idir)%pack%buffer)
+      call opencl_set_kernel_arg(kernel, 5, psib%pack%buffer)
+      call opencl_set_kernel_arg(kernel, 6, log2(psib%pack%size(1)))
+      call opencl_set_kernel_arg(kernel, 7, grad_rho_buff)
+
+      wgsize = opencl_kernel_workgroup_size(kernel)
+      call opencl_kernel_run(kernel, (/pad(gr%mesh%np, wgsize)/), (/wgsize/))
+
+    end do
+
+    call opencl_release_buffer(weights_buff)
+
+    SAFE_ALLOCATE(grad_rho_tmp(1:gr%mesh%np, 1:gr%sb%dim))
+
+    call opencl_read_buffer(grad_rho_buff, gr%mesh%np*gr%sb%dim, grad_rho_tmp)
+
+    call opencl_release_buffer(grad_rho_buff)
+
+    do idir = 1, gr%mesh%sb%dim
+      do ip = 1, gr%mesh%np
+        grad_rho(ip, idir) = grad_rho(ip, idir) + grad_rho_tmp(ip, idir)
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(grad_rho_tmp)
+#endif
+  end select
+
+end subroutine X(accumulate_grad_rho)
 
 !---------------------------------------------------------------------------
 subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
