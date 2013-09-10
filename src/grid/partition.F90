@@ -49,14 +49,17 @@ module partition_m
 
 
   !> The partition is an array that contains the mapping between some global index 
-  !! and a process, such that point ip will be stored in process partition(ip).
+  !! and a process, such that point ip will be stored in process partition%part(ip).
   !!
   !! In this module this array is distributed among the processes, such that each process 
   !! only stores a portion of the full array. Because each process needs to know in a 
   !! straighforward way (i.e. without having to perform any kind of communication or 
   !! lengthy operations) which process stores the partition corresponding to any giving
-  !! point, all the processes except one (the one with the highest rank) store exactly the 
-  !! same number of points.
+  !! point, the distribution of the points is done in the following way:
+  !! 
+  !!  i) the first mod(partition%np_global, partition%npart) processes store partition%nppp+1 
+  !!     points, with partition%nppp = partition%np_global/partition%npart
+  !!  ii) the remaining processes store partition%nppp points
   !!
   !! Note 1: this module can be a bit confusing as they are in fact two partitions. One is the
   !! partition of some array (in the case of Octopus, this is typically the mesh functions),
@@ -71,9 +74,10 @@ module partition_m
     !> The following components are the same for all processes:
     type(mpi_grp_t) :: mpi_grp   !< The mpi group use for distributing the partition data.
     integer ::         np_global !< The total number of points in the partition.
-    integer ::         nppp      !< Number of points per process. It is different from
-                                 !! np_local only for the process with the highest rank.
     integer ::         npart     !< The number of partitions.
+    integer ::         remainder !< The remainder of the division of np_global by npart
+    integer ::         nppp      !< Number of points per process. The first partition%remainder processes
+                                 !! have nppp+1 points, while the other ones have nppp points
 
     !> The following components are process dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
@@ -97,17 +101,18 @@ contains
     !Global variables
     partition%mpi_grp = mpi_grp
     partition%np_global = np_global
-    partition%nppp = ceiling(real(np_global)/real(mpi_grp%size))
     partition%npart = mpi_grp%size
+    partition%remainder = mod(partition%np_global, partition%npart)
+    partition%nppp = partition%np_global/partition%npart   
 
     !Processor dependent
-    if (mpi_grp%rank + 1 == partition%npart) then
-      partition%np_local = mod(np_global, partition%nppp)
-      if (partition%np_local == 0) partition%np_local = partition%nppp
+    if (mpi_grp%rank + 1 <= partition%remainder) then
+      partition%np_local = partition%nppp + 1
+      partition%istart = (partition%nppp + 1)*mpi_grp%rank + 1
     else
       partition%np_local = partition%nppp
+      partition%istart = partition%nppp*mpi_grp%rank + partition%remainder + 1
     end if
-    partition%istart = partition%nppp*mpi_grp%rank + 1
 
     !Allocate memory for the partition
     nullify(partition%part)
@@ -197,8 +202,8 @@ contains
         SAFE_ALLOCATE(scounts(partition%npart))
         SAFE_ALLOCATE(sdispls(partition%npart))
 
-        scounts(1:partition%npart-1) = partition%nppp
-        scounts(partition%npart) = partition%np_global - partition%nppp*(partition%npart - 1)
+        scounts(1:partition%remainder) = partition%nppp + 1
+        scounts(partition%remainder + 1:partition%npart) = partition%nppp
         sdispls(1) = 0
         do ipart = 2, partition%npart
           sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
@@ -255,8 +260,8 @@ contains
     SAFE_ALLOCATE(rdispls(partition%npart))
     SAFE_ALLOCATE(rcounts(partition%npart))
 
-    rcounts(1:partition%npart-1) = partition%nppp
-    rcounts(partition%npart) = partition%np_global - partition%nppp*(partition%npart - 1)
+    rcounts(1:partition%remainder) = partition%nppp + 1
+    rcounts(partition%remainder + 1:partition%npart) = partition%nppp
     rdispls(1) = 0
     do ipart = 2, partition%npart
       rdispls(ipart) = rdispls(ipart-1) + rcounts(ipart-1)
@@ -314,11 +319,13 @@ contains
     zero_part = 1
     do ip = 1, np
       !Who knows where points(ip) is stored?
-      if (points(ip) /= 0) then
-        nproc = ceiling(real(points(ip))/real(partition%nppp))
-      else
+      if (points(ip) == 0) then
         nproc = zero_part
         zero_part = mod(zero_part, partition%npart) + 1
+      else if (points(ip) <= partition%remainder) then
+        nproc = ceiling(real(points(ip))/real(partition%nppp + 1))
+      else
+        nproc = ceiling(real(points(ip) - partition%remainder)/real(partition%nppp))
       end if
 
       !We increase the respective counter
@@ -355,11 +362,13 @@ contains
     zero_part = 1
     do ip = 1, np
       !Who knows where points(ip) is stored?
-      if (points(ip) /= 0) then
-        nproc = ceiling(real(points(ip))/real(partition%nppp))
-      else
+      if (points(ip) == 0) then
         nproc = zero_part
         zero_part = mod(zero_part, partition%npart) + 1
+      else if (points(ip) <= partition%remainder) then
+        nproc = ceiling(real(points(ip))/real(partition%nppp + 1))
+      else
+        nproc = ceiling(real(points(ip) - partition%remainder)/real(partition%nppp))
       end if
 
       !We increase the respective counter
@@ -473,8 +482,8 @@ contains
     SAFE_ALLOCATE(rcounts(1:partition%npart))
     
     ! Calculate the starting point of the running process
-    scounts(1:partition%npart-1) = partition%nppp
-    scounts(partition%npart) = partition%np_global - partition%nppp*(partition%npart - 1)
+    scounts(1:partition%remainder) = partition%nppp + 1
+    scounts(partition%remainder + 1:partition%npart) = partition%nppp
     sdispls(1) = 0
     do ipart = 2, partition%npart
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
