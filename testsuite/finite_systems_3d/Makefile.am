@@ -79,12 +79,6 @@ dist_share_DATA = \
 	21-lobpcg.01-spin_polarized.inp \
 	21-lobpcg.02-spinors.inp \
 	21-lobpcg.test \
-	22-time_propagation.01-gs.inp \
-	22-time_propagation.02-td_domains.inp \
-	22-time_propagation.03-td_domains_states.inp \
-	22-time_propagation.04-td_md.inp \
-	22-time_propagation.05-td_fast_md.inp        \
-	22-time_propagation.test                     \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
 	23-go-na2.02-simplex.inp                     \

@@ -36,6 +36,12 @@ dist_share_DATA =                      \
 	03-exp_mid.02-td.inp           \
 	03-exp_mid.test                \
 	04-etrs_single.test            \
+        05-time_propagation.01-gs.inp                                 \
+	05-time_propagation.02-td_domains.inp                         \
+	05-time_propagation.03-td_domains_states.inp                  \
+	05-time_propagation.04-td_md.inp                              \
+	05-time_propagation.05-td_fast_md.inp                         \
+	05-time_propagation.test                                      \
 	06-caetrs.01-gs.inp            \
 	06-caetrs.02-kick.inp          \
 	06-caetrs.03-kick-tp1.inp      \
