@@ -230,7 +230,7 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   R_TYPE, allocatable :: grad(:, :, :)
   PUSH_SUB(X(hamiltonian_base_rashba))
 
-  if(this%rashba_coupling**2 == M_ZERO) then
+  if(abs(this%rashba_coupling) > M_EPSILON) then
     POP_SUB(X(hamiltonian_base_rashba))
     return
   end if
