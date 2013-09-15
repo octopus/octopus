@@ -16,7 +16,7 @@ Spacing = 0.6
 
 Radius = 6
 
-MoveIons = vel_verlet
+MoveIons = yes
 
 TDDynamics = bo
 

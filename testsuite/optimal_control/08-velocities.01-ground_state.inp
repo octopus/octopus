@@ -69,12 +69,6 @@ TDPropagator = crank_nicolson
 
 # For the TD runs:
 totaltime = 500.0
-#TDPropagator = exp_mid
-#TDMaximumIter = totaltime/dt
-#TDExponentialMethod = taylor
-#TDExpOrder = 4
-#MoveIons = vel_verlet
-MoveIons = no
 
 TDOutput = multipoles + laser + geometry
 

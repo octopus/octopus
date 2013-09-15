@@ -36,10 +36,6 @@ dist_share_DATA =                      \
 	03-exp_mid.02-td.inp           \
 	03-exp_mid.test                \
 	04-etrs_single.test            \
-	05-cpmd.test                   \
-	05-cpmd.01-gs.inp              \
-	05-cpmd.02-verlet.inp          \
-	05-cpmd.03-vel_verlet.inp      \
 	06-caetrs.01-gs.inp            \
 	06-caetrs.02-kick.inp          \
 	06-caetrs.03-kick-tp1.inp      \

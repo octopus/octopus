@@ -38,7 +38,7 @@ Radius=8
 
 ParallelizationStrategy = par_domains + par_states
 
-MoveIons=vel_verlet
+MoveIons = yes
 
 TDIonicTimeScale = 10
 

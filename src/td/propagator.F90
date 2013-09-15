@@ -27,7 +27,6 @@ module propagator_m
   use cl
 #endif
   use cmplxscl_m
-  use cpmd_m
   use cube_function_m
   use datasets_m
   use density_m
@@ -78,7 +77,6 @@ module propagator_m
     propagator_ions_are_propagated, &
     propagator_dens_is_propagated,  &
     propagator_requires_vks,        &
-    propagator_dt_cpmd,             &
     propagator_dt_bo
 
 
@@ -1487,74 +1485,6 @@ contains
   end function propagator_requires_vks
 
   ! ---------------------------------------------------------
-
-
-  subroutine propagator_dt_cpmd(cp_propagator, gr, ks, st, hm, gauge_force, geo, iter, dt, ions, scsteps, update_energy)
-    type(cpmd_t), intent(inout)        :: cp_propagator
-    type(grid_t), intent(inout)        :: gr
-    type(v_ks_t), intent(inout)        :: ks
-    type(states_t), intent(inout)      :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    type(gauge_force_t), intent(inout) :: gauge_force
-    type(geometry_t), intent(inout)    :: geo
-    integer, intent(in)                :: iter
-    FLOAT, intent(in)                  :: dt
-    type(ion_dynamics_t), intent(inout) :: ions
-    integer, intent(inout)             :: scsteps
-    logical, intent(in)                :: update_energy
-
-    logical :: cmplxscl, generate
-    PUSH_SUB(propagator_dt_cpmd)
-
-    cmplxscl = hm%cmplxscl%space
-
-    if(states_are_real(st)) then
-      call dcpmd_propagate(cp_propagator, gr, hm, st, iter, dt)
-    else
-      call zcpmd_propagate(cp_propagator, gr, hm, st, iter, dt)
-    end if
-    scsteps = 1
-
-    if(.not. cmplxscl) then
-        call density_calc(st, gr, st%rho)
-    else
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if  
-
-    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
-    generate = .true.
-
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-       call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
-    end if
-
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
-
-    ! update Hamiltonian and eigenvalues (fermi is *not* called)
-    call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy, time = iter*dt, calc_energy = update_energy)
-    ! Get the energies.
-    if(update_energy) call energy_calc_total(hm, gr, st, iunit = -1)
-
-    if(states_are_real(st)) then
-      call dcpmd_propagate_vel(cp_propagator, gr, hm, st, dt)
-    else
-      call zcpmd_propagate_vel(cp_propagator, gr, hm, st, dt)
-    end if
-
-    ! Recalculate forces, update velocities...
-    call forces_calculate(gr, geo, hm, st, iter*dt, dt)
-    call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
-    geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
-    end if
-
-    POP_SUB(propagator_dt_cpmd)
-  end subroutine propagator_dt_cpmd
-
 
   subroutine propagator_dt_bo(scf, gr, ks, st, hm, gauge_force, geo, mc, outp, iter, dt, ions, scsteps)
     type(scf_t), intent(inout)         :: scf

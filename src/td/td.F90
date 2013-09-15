@@ -23,7 +23,6 @@ module td_m
   use batch_m
   use calc_mode_m
   use cmplxscl_m
-  use cpmd_m
   use datasets_m
   use density_m
   use energy_calc_m
@@ -82,14 +81,12 @@ module td_m
   !> Parameters.
   integer, parameter :: &
        EHRENFEST = 1,   &
-       BO        = 2,   &
-       CP        = 3
+       BO        = 2
 
   type td_t
     type(propagator_t)   :: tr             !< contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
-    type(cpmd_t)         :: cp_propagator
     FLOAT                :: dt             !< time step
     integer              :: max_iter       !< maximum number of iterations to perform
     integer              :: iter           !< the actual iteration
@@ -155,9 +152,6 @@ contains
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
     end if
-
-    ! CP has to be initialized after wavefunction type is set
-    if(td%dynamics == CP) call cpmd_init(td%cp_propagator, sys%gr, sys%st)
 
     call init_wfs()
 
@@ -241,9 +235,6 @@ contains
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
         call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
-      case(CP)
-        call propagator_dt_cpmd(td%cp_propagator, gr, sys%ks, st, hm, gauge_force, geo, iter, td%dt, td%ions, scsteps, &
-          update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       end select
 
       !Photoelectron stuff 
@@ -279,49 +270,37 @@ contains
 
   contains
 
-    subroutine print_header
+    subroutine print_header()
 
-      if(td%dynamics /= CP) then
-        if(.not.cmplxscl) then
-          write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
-        else
-          write(message(1), '(a7,1x,a14,a14,a14,a10,a17)') &
-                                      'Iter ', 'Time ', 'Re(Energy) ','Im(Energy) ', 'SC Steps', 'Elapsed Time '
-        end if
+      if(.not.cmplxscl) then
+        write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
       else
-        write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
+        write(message(1), '(a7,1x,a14,a14,a14,a10,a17)') &
+          'Iter ', 'Time ', 'Re(Energy) ','Im(Energy) ', 'SC Steps', 'Elapsed Time '
       end if
+
       call messages_info(1)
       call messages_print_stress(stdout)
 
     end subroutine print_header
 
     ! ---------------------------------------------------------
-    subroutine check_point
+    subroutine check_point()
       PUSH_SUB(td_run.check_point)
 
-      ! write info
-      if(td%dynamics /= CP) then
-        if(.not. cmplxscl) then
-          write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
-               units_from_atomic(units_out%time, iter*td%dt), &
-               units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-               scsteps, loct_clock() - etime
-        else
-          write(message(1), '(i7,1x,3f14.6,i10,f14.3)') iter, &
-               units_from_atomic(units_out%time, iter*td%dt), &
-               units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-               units_from_atomic(units_out%energy, hm%energy%Imtotal), &
-               scsteps, loct_clock() - etime
-        end if     
+      if(.not. cmplxscl) then
+        write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
+          units_from_atomic(units_out%time, iter*td%dt), &
+          units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
+          scsteps, loct_clock() - etime
       else
-        write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
-             units_from_atomic(units_out%time, iter*td%dt), &
-             units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-             units_from_atomic(units_out%energy, &
-                hm%energy%total + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)), &
-             loct_clock() - etime
+        write(message(1), '(i7,1x,3f14.6,i10,f14.3)') iter, &
+          units_from_atomic(units_out%time, iter*td%dt), &
+          units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
+          units_from_atomic(units_out%energy, hm%energy%Imtotal), &
+          scsteps, loct_clock() - etime
       end if
+
       call messages_info(1)
       etime = loct_clock()
 
@@ -352,7 +331,6 @@ contains
       PUSH_SUB(td_run.end_)
 
       ! free memory
-      if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
       call states_deallocate_wfns(st)
       call ion_dynamics_end(td%ions)
       call td_end(td)
@@ -390,18 +368,6 @@ contains
         message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
         call messages_info(1)
       endif
-
-      if(.not. fromscratch .and. td%dynamics == CP) then
-        call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
-
-        if(ierr /= 0) then
-          message(1) = "Could not load "//trim(restart_dir)//"td/cpmd: Starting from scratch"
-          call messages_warning(1)
-
-          fromScratch = .true.
-          td%iter = 0
-        end if
-      end if
 
       if(.not. fromscratch) then
         ! read potential from previous interactions
@@ -737,8 +703,6 @@ contains
           end if
         end do
       end do
-
-      if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
 
       if(cmplxscl) then
         SAFE_DEALLOCATE_A(zv_old)
