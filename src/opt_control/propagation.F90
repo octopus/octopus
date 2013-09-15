@@ -811,7 +811,7 @@ contains
     end if
 
     ! This is for the classical target.
-    if(dir == 'b') d(1) = d(1) -M_HALF * q(1, 1) 
+    if(dir == 'b') d(1) = d(1) -M_HALF * sum(q(:, 1))
 
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)
