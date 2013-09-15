@@ -559,6 +559,12 @@ contains
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
 
+      if(ion_dynamics_ions_move(td%ions)) then
+        SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
+        SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
+        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q, td%dt)
+      end if
+
       ! Here propagate psi one full step, and then simply interpolate to get the state
       ! at half the time interval. Perhaps one could gain some accuracy by performing two
       ! successive propagations of half time step.
@@ -576,10 +582,7 @@ contains
       ! be moved inside propagator_dt
       if(freeze) call ion_dynamics_unfreeze(td%ions)
       if(ion_dynamics_ions_move(td%ions)) then
-        SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
-        SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
-        fold = M_ZERO
-        fnew = M_ZERO
+        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fnew, q)
         call ion_dynamics_verlet(gr%sb, sys%geo, q, p, fold, fnew, td%dt)
         SAFE_DEALLOCATE_A(fold)
         SAFE_DEALLOCATE_A(fnew)

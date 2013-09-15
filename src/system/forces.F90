@@ -68,7 +68,8 @@ module forces_m
     zforces_derivative,        &
     dforces_born_charges,      &
     zforces_born_charges,      &
-    total_force_calculate
+    total_force_calculate,     &
+    forces_costate_calculate
 
   type(profile_t), save :: prof_comm
 
@@ -99,6 +100,35 @@ contains
     POP_SUB(total_force_calculate)
     call profiling_out(forces_prof)
   end subroutine total_force_calculate
+
+
+  subroutine forces_costate_calculate(gr, geo, ep, psi, chi, f, q, t, dt)
+    type(grid_t),     intent(inout) :: gr
+    type(geometry_t), intent(inout) :: geo
+    type(epot_t),     intent(inout) :: ep
+    type(states_t),   intent(inout) :: psi
+    type(states_t),   intent(inout) :: chi
+    FLOAT,            intent(inout) :: f(:, :)
+    FLOAT,            intent(in)    :: q(:, :)
+    FLOAT,     optional, intent(in) :: t
+    FLOAT,     optional, intent(in) :: dt
+
+    integer :: ia, idim
+    type(profile_t), save :: forces_prof
+
+    call profiling_in(forces_prof, "FORCES")
+    PUSH_SUB(forces_costate_calculate)
+
+    ! Temporarily, this merely gives back zeros...
+    do ia = 1, geo%natoms
+      do idim = 1, gr%sb%dim
+        f(ia, idim) = M_ZERO
+      end do
+    end do
+
+    POP_SUB(forces_costate_calculate)
+    call profiling_out(forces_prof)
+  end subroutine forces_costate_calculate
 
 
   ! ---------------------------------------------------------

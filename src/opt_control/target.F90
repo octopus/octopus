@@ -526,6 +526,7 @@ contains
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
     type(geometry_t),  intent(in)    :: geo
 
+    FLOAT, pointer :: q(:, :), p(:, :)
     type(states_t), pointer :: psi_in, chi_out
     PUSH_SUB(target_chi)
 
@@ -539,6 +540,10 @@ contains
       call target_chi_excited(tg, gr, psi_in, chi_out)
     case(oct_tg_gstransformation)
       call target_chi_gstransformation(tg, gr, psi_in, chi_out)
+      q => opt_control_point_q(qcchi_out)
+      p => opt_control_point_p(qcchi_out)
+      q = M_ZERO
+      p = M_ZERO
     case(oct_tg_userdefined)
       call target_chi_userdefined(tg, gr, psi_in, chi_out)
     case(oct_tg_jdensity)
