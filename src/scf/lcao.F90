@@ -49,7 +49,6 @@ module lcao_m
   use species_m
   use species_pot_m
   use states_m
-  use states_block_m
   use states_calc_m
   use states_dim_m
   use states_io_m

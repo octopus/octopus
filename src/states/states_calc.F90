@@ -64,7 +64,6 @@ module states_calc_m
   use simul_box_m
   use smear_m
   use states_m
-  use states_block_m
   use states_dim_m
   use unit_m
   use unit_system_m

@@ -49,7 +49,6 @@ module subspace_m
   use profiling_m
   use scalapack_m
   use states_m
-  use states_block_m
   use states_calc_m
   use types_m
   use opencl_m
