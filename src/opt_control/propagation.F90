@@ -367,7 +367,7 @@ contains
     call oct_prop_read_state(prop_chi, chi, gr, 0)
 
     do i = 1, td%max_iter
-      call update_field(i, par, gr, hm, qcpsi, qcchi, par_chi, dir = 'f')
+      call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
@@ -382,7 +382,7 @@ contains
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
-    call update_field(td%max_iter+1, par, gr, hm, qcpsi, qcchi, par_chi, dir = 'f')
+    call update_field(td%max_iter+1, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -460,7 +460,7 @@ contains
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
-      call update_field(i, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
+      call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
@@ -470,7 +470,7 @@ contains
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
     end do
     td%dt = -td%dt
-    call update_field(0, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
+    call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -557,7 +557,7 @@ contains
     do i = td%max_iter, 1, -1
 
       call oct_prop_check(prop_psi, psi, gr, i)
-      call update_field(i, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
+      call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
       if(ion_dynamics_ions_move(td%ions)) then
         SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
@@ -594,7 +594,7 @@ contains
 
     td%dt = -td%dt
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
-    call update_field(0, par_chi, gr, hm, qcpsi, qcchi, par, dir = 'b')
+    call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -773,11 +773,12 @@ contains
   !! going to be done moves from iter*|dt| to (iter-1)*|dt|.
   !!
   !! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
-  subroutine update_field(iter, cp, gr, hm, qcpsi, qcchi, cpp, dir)
+  subroutine update_field(iter, cp, gr, hm, geo, qcpsi, qcchi, cpp, dir)
     integer, intent(in)        :: iter
     type(controlfunction_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
     type(hamiltonian_t), intent(in) :: hm
+    type(geometry_t),        intent(in)    :: geo
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(opt_control_state_t), intent(inout) :: qcchi
     type(controlfunction_t), intent(in) :: cpp
@@ -786,7 +787,7 @@ contains
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
     FLOAT, allocatable :: d(:)
-    integer :: j, no_parameters
+    integer :: j, no_parameters, iatom
     type(states_t), pointer :: psi, chi
     FLOAT, pointer :: q(:, :)
 
@@ -814,7 +815,11 @@ contains
     end if
 
     ! This is for the classical target.
-    if(dir == 'b') d(1) = d(1) -M_HALF * sum(q(:, 1))
+    if(dir == 'b') then
+      do iatom = 1, geo%natoms
+        d(1) = d(1) - M_HALF * species_zval(geo%atom(iatom)%spec) * q(iatom, 1)
+      end do
+    end if
 
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)
