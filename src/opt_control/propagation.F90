@@ -168,7 +168,10 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
-    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
+    if(ion_dynamics_ions_move(td%ions)) then
+      call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = M_ZERO)
+      call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
+    end if
 
     if(target_type(tg)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
