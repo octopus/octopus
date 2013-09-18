@@ -102,7 +102,7 @@ contains
   end subroutine total_force_calculate
 
 
-  subroutine forces_costate_calculate(gr, geo, ep, psi, chi, f, q, t, dt)
+  subroutine forces_costate_calculate(gr, geo, ep, psi, chi, f, q)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout) :: geo
     type(epot_t),     intent(inout) :: ep
@@ -110,19 +110,21 @@ contains
     type(states_t),   intent(inout) :: chi
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
-    FLOAT,     optional, intent(in) :: t
-    FLOAT,     optional, intent(in) :: dt
 
-    integer :: ia, idim
+    integer :: iatom, jatom, idim
+    FLOAT :: r, w2r
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
 
-    ! Temporarily, this merely gives back zeros...
-    do ia = 1, geo%natoms
-      do idim = 1, gr%sb%dim
-        f(ia, idim) = M_ZERO
+    f = M_ZERO
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        if(jatom == iatom) cycle
+        r = abs(geo%atom(iatom)%x(1) - geo%atom(jatom)%x(1))
+        w2r = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) * M_TWO / r**3
+        f(iatom, 1) = f(iatom, 1) + w2r * (q(jatom, 1) - q(iatom, 1))
       end do
     end do
 

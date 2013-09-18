@@ -58,7 +58,8 @@ module ion_dynamics_m
     ion_dynamics_kinetic_energy,           &
     ion_dynamics_freeze,                   &
     ion_dynamics_unfreeze,                 &
-    ion_dynamics_verlet
+    ion_dynamics_verlet_step1,             &
+    ion_dynamics_verlet_step2
 
   integer, parameter ::   &
     THERMO_NONE     = 0,  &
@@ -499,18 +500,16 @@ contains
 
   ! ---------------------------------------------------------
   !> A bare verlet integrator.
-  subroutine ion_dynamics_verlet(sb, geo, q, v, fold, fnew, dt)
-    type(simul_box_t),    intent(in)    :: sb
-    type(geometry_t),     intent(inout) :: geo
+  subroutine ion_dynamics_verlet_step1(geo, q, v, fold, dt)
+    type(geometry_t),     intent(in)    :: geo
     FLOAT,                intent(inout) :: q(:, :)
     FLOAT,                intent(inout) :: v(:, :)
-    FLOAT,                intent(inout) :: fold(:, :)
-    FLOAT,                intent(inout) :: fnew(:, :)
+    FLOAT,                intent(in)    :: fold(:, :)
     FLOAT,                intent(in)    :: dt
 
     integer :: iatom
 
-    PUSH_SUB(ion_dynamics_verlet)
+    PUSH_SUB(ion_dynamics_verlet_step1)
 
     ! First transform momenta to velocities
     do iatom = 1, geo%natoms
@@ -523,6 +522,34 @@ contains
       q(iatom, 1:geo%space%dim) = q(iatom, 1:geo%space%dim) &
         + dt * v(iatom, 1:geo%space%dim) + &
         M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * fold(iatom, 1:geo%space%dim)
+    end do
+
+    ! And back to momenta.
+    do iatom = 1, geo%natoms
+      v(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
+    end do
+
+    POP_SUB(ion_dynamics_verlet_step1)
+  end subroutine ion_dynamics_verlet_step1
+
+
+
+  ! ---------------------------------------------------------
+  !> A bare verlet integrator.
+  subroutine ion_dynamics_verlet_step2(geo, v, fold, fnew, dt)
+    type(geometry_t),     intent(in)    :: geo
+    FLOAT,                intent(inout) :: v(:, :)
+    FLOAT,                intent(in)    :: fold(:, :)
+    FLOAT,                intent(in)    :: fnew(:, :)
+    FLOAT,                intent(in)    :: dt
+
+    integer :: iatom
+
+    PUSH_SUB(ion_dynamics_verlet_step2)
+
+    ! First transform momenta to velocities
+    do iatom = 1, geo%natoms
+      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
     end do
 
     ! velocity verlet
@@ -538,8 +565,8 @@ contains
       v(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
     end do
 
-    POP_SUB(ion_dynamics_verlet)
-  end subroutine ion_dynamics_verlet
+    POP_SUB(ion_dynamics_verlet_step2)
+  end subroutine ion_dynamics_verlet_step2
 
 
   ! ---------------------------------------------------------

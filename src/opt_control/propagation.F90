@@ -565,7 +565,8 @@ contains
       if(ion_dynamics_ions_move(td%ions)) then
         SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
         SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
-        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q, td%dt)
+        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q)
+        call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
       end if
 
       ! Here propagate psi one full step, and then simply interpolate to get the state
@@ -586,7 +587,7 @@ contains
       if(freeze) call ion_dynamics_unfreeze(td%ions)
       if(ion_dynamics_ions_move(td%ions)) then
         call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fnew, q)
-        call ion_dynamics_verlet(gr%sb, sys%geo, q, p, fold, fnew, td%dt)
+        call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
         SAFE_DEALLOCATE_A(fold)
         SAFE_DEALLOCATE_A(fnew)
       end if
