@@ -36,6 +36,7 @@ module propagation_m
   use ion_dynamics_m 
   use lasers_m
   use loct_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -371,7 +372,7 @@ contains
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, psi2)
+      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       if(aux_fwd_propagation) then
@@ -464,7 +465,7 @@ contains
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -577,9 +578,9 @@ contains
       vhxc(:, :) = hm%vhxc(:, :)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
-
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
+
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, qcchi, st_ref)
       freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       ! This is the propagation of the conjugated classical variables *for a very particular case*. It should
@@ -621,7 +622,7 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -629,18 +630,37 @@ contains
     type(td_t), intent(inout)                  :: td
     type(target_t), intent(inout)              :: tg
     type(controlfunction_t), intent(in)        :: par_chi
+    type(geometry_t), intent(in)               :: geo
+    type(opt_control_state_t) :: qcchi
     type(states_t), intent(inout)              :: st
+    FLOAT, pointer :: q(:, :)
 
     type(states_t)                             :: inh
-    integer :: j
+    integer :: j, idim, ip
+    FLOAT :: rr, xx(MAX_DIM)
 
     PUSH_SUB(update_hamiltonian_chi)
+
 
     if(target_mode(tg) == oct_targetmode_td) then
       call states_copy(inh, st)
       call target_inh(st, gr, tg, abs(td%dt)*iter, inh, iter)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
+    end if
+
+    if(ion_dynamics_ions_move(td%ions)) then
+      q => opt_control_point_q(qcchi)
+      call states_copy(inh, st)
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          call mesh_r(gr%mesh, ip, rr, coords = xx)
+          inh%zpsi(ip, idim, 1, 1) =  CNST(0.05) * q(1, 1) * (xx(1) - geo%atom(1)%x(1)) * st%zpsi(ip, idim, 1, 1)
+        end do
+      end do
+      call hamiltonian_set_inh(hm, inh)
+      call states_end(inh)
+      nullify(q)
     end if
 
     if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
@@ -680,6 +700,10 @@ contains
     PUSH_SUB(update_hamiltonian_psi)
 
     if(target_mode(tg) == oct_targetmode_td) then
+      call hamiltonian_remove_inh(hm)
+    end if
+
+    if(ion_dynamics_ions_move(td%ions)) then
       call hamiltonian_remove_inh(hm)
     end if
 

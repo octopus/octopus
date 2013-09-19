@@ -112,9 +112,11 @@ contains
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
 
-    integer :: iatom, jatom, idim
-    FLOAT :: r, w2r
+    integer :: iatom, jatom, idim, ip
+    FLOAT :: r, w2r, rr, xx(MAX_DIM)
     type(profile_t), save :: forces_prof
+    CMPLX :: chipsi, chixpsi
+    CMPLX, allocatable :: xpsi(:, :)
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
@@ -128,6 +130,20 @@ contains
         f(iatom, 1) = f(iatom, 1) + w2r * (q(jatom, 1) - q(iatom, 1))
       end do
     end do
+
+    ! Warning: very preliminary inclusion of the electron-nucleus coupling term.
+    chipsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), psi%zpsi(:, :, 1, 1))
+    SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:psi%d%dim))
+    do idim = 1, psi%d%dim
+      do ip = 1, gr%mesh%np
+        call mesh_r(gr%mesh, ip, rr, coords = xx)
+        xpsi(ip, idim) = xx(1) * psi%zpsi(ip, idim, 1, 1)
+      end do
+    end do
+    chixpsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), xpsi)
+    SAFE_DEALLOCATE_A(xpsi)
+    f(1, 1) = f(1, 1) - CNST(0.05) * q(1, 1)
+    f(1, 1) = f(1, 1) - M_TWO * CNST(0.05) * real( M_zI * ( chixpsi - geo%atom(1)%x(1)*chipsi ) )
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
