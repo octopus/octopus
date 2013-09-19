@@ -201,9 +201,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       if(hm%hm_base%apply_projector_matrices .and. .not. opencl_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
-        do idir = 1, gr%mesh%sb%dim
-          call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, psib, grad_psib(idir), force(idir, :))
-        end do
+        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force)
 
       else 
 

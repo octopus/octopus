@@ -700,20 +700,20 @@ end subroutine X(hamiltonian_base_nlocal_finish)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, psi1b, psi2b, force)
+subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1b, psi2b, force)
   type(hamiltonian_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
   type(states_t),                   intent(in)    :: st
   type(geometry_t),                 intent(in)    :: geo
   integer,                          intent(in)    :: iqn
+  integer,                          intent(in)    :: ndim
   type(batch_t),                    intent(in)    :: psi1b
-  type(batch_t),                    intent(in)    :: psi2b
-  FLOAT,                            intent(inout) :: force(:)
+  type(batch_t),                    intent(in)    :: psi2b(:)
+  FLOAT,                            intent(inout) :: force(:, :)
 
-  integer :: ii, ist, ip, iproj, imat, nreal, iprojection, iatom
+  integer :: ii, ist, ip, iproj, imat, nreal, iprojection, iatom, idir
   integer :: npoints, nprojs, nst
-  R_TYPE :: ff
-  R_TYPE, allocatable :: psi(:, :, :), projs(:, :, :)
+  R_TYPE, allocatable :: psi(:, :, :), projs(:, :, :), ff(:)
   type(projector_matrix_t), pointer :: pmat
 
   if(.not. this%apply_projector_matrices) return
@@ -721,8 +721,8 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, psi1b, psi
   call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_ELEMENT")
   PUSH_SUB(X(hamiltonian_base_nlocal_force))
 
-  ASSERT(psi1b%nst_linear == psi2b%nst_linear)
-  ASSERT(batch_status(psi1b) == batch_status(psi2b))
+  ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
+  ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))
 
   nst = psi1b%nst_linear
 #ifdef R_TCOMPLEX
@@ -740,8 +740,8 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, psi1b, psi
 
     if(npoints /= 0) then
 
-      SAFE_ALLOCATE(psi(1:2, 1:nst, 1:npoints))
-      SAFE_ALLOCATE(projs(1:2, 1:nst, 1:nprojs))
+      SAFE_ALLOCATE(psi(0:ndim, 1:nst, 1:npoints))
+      SAFE_ALLOCATE(projs(0:ndim, 1:nst, 1:nprojs))
       
       call profiling_in(prof_gather, "PROJ_MAT_ELEM_GATHER")
 
@@ -749,22 +749,23 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, psi1b, psi
       if(batch_is_packed(psi1b)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
-            psi(1, ist, ip) = psi1b%pack%X(psi)(ist, pmat%map(ip))
-            psi(2, ist, ip) = psi2b%pack%X(psi)(ist, pmat%map(ip))
+            psi(0, ist, ip) = psi1b%pack%X(psi)(ist, pmat%map(ip))
+            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%pack%X(psi)(ist, pmat%map(ip))
           end forall
         end forall
       else
         forall(ist = 1:nst, ip = 1:npoints)
-          psi(1, ist, ip) = psi1b%states_linear(ist)%X(psi)(pmat%map(ip))
-          psi(2, ist, ip) = psi2b%states_linear(ist)%X(psi)(pmat%map(ip))
+          psi(0, ist, ip) = psi1b%states_linear(ist)%X(psi)(pmat%map(ip))
+          forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%states_linear(ist)%X(psi)(pmat%map(ip))
         end forall
       end if
 
       if(associated(this%projector_phases)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
-            psi(1, ist, ip) = this%projector_phases(ip, imat, iqn)*psi(1, ist, ip)
-            psi(2, ist, ip) = this%projector_phases(ip, imat, iqn)*psi(2, ist, ip)
+            forall(idir = 0:ndim)
+              psi(idir, ist, ip) = this%projector_phases(ip, imat, iqn)*psi(idir, ist, ip)
+            end forall
           end forall
         end forall
       end if
@@ -772,27 +773,35 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, psi1b, psi
       call profiling_out(prof_gather)
       
       ! Now matrix-multiply to calculate the projections. We can do all the matrix multiplications at once
-      call blas_gemm('N', 'N', 2*nreal, nprojs, npoints, M_ONE, psi(1, 1, 1), 2*nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, projs(1, 1, 1), 2*nreal)
+      call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
+        psi(0, 1, 1), (ndim + 1)*nreal, pmat%projectors(1, 1), npoints, &
+        M_ZERO, projs(0, 1, 1), (ndim + 1)*nreal)
 
-      ff = CNST(0.0)
+      iatom = this%projector_to_atom(imat)
+      
+      SAFE_ALLOCATE(ff(1:ndim))
+      
+      ff(1:ndim) = CNST(0.0)
+
       do ii = 1, psi1b%nst_linear
         ist = batch_linear_to_ist(psi1b, ii)
         do iproj = 1, nprojs
-          ff = ff - M_TWO*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
-            R_CONJ(projs(1, ii, iproj))*projs(2, ii, iproj)
+          do idir = 1, ndim
+            ff(idir) = ff(idir) - CNST(2.0)*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
+              R_CONJ(projs(0, ii, iproj))*projs(idir, ii, iproj)
+          end do
         end do
       end do
 
-      iatom = this%projector_to_atom(imat)
-      force(iatom) = force(iatom) + ff
+      force(1:ndim, iatom) = force(1:ndim, iatom) + ff(1:ndim)
 
-      call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
+      call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints + (R_ADD + 2*R_MUL)*nst*ndim*nprojs)
 
     end if
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(projs)
+    SAFE_DEALLOCATE_A(ff)
 
     INCR(iprojection, nprojs)
   end do
