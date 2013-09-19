@@ -25,6 +25,7 @@ module hamiltonian_base_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
+  use comm_m
   use datasets_m
   use derivatives_m
   use epot_m

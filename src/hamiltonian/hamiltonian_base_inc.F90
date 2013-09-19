@@ -738,10 +738,11 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
+    SAFE_ALLOCATE(projs(0:ndim, 1:nst, 1:nprojs))
+
     if(npoints /= 0) then
 
       SAFE_ALLOCATE(psi(0:ndim, 1:nst, 1:npoints))
-      SAFE_ALLOCATE(projs(0:ndim, 1:nst, 1:nprojs))
       
       call profiling_in(prof_gather, "PROJ_MAT_ELEM_GATHER")
 
@@ -776,28 +777,36 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
       call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
         psi(0, 1, 1), (ndim + 1)*nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO, projs(0, 1, 1), (ndim + 1)*nreal)
-
-      iatom = this%projector_to_atom(imat)
       
-      SAFE_ALLOCATE(ff(1:ndim))
+      call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints)
+
+    else
       
-      ff(1:ndim) = CNST(0.0)
-
-      do ii = 1, psi1b%nst_linear
-        ist = batch_linear_to_ist(psi1b, ii)
-        do iproj = 1, nprojs
-          do idir = 1, ndim
-            ff(idir) = ff(idir) - CNST(2.0)*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
-              R_CONJ(projs(0, ii, iproj))*projs(idir, ii, iproj)
-          end do
-        end do
-      end do
-
-      force(1:ndim, iatom) = force(1:ndim, iatom) + ff(1:ndim)
-
-      call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints + (R_ADD + 2*R_MUL)*nst*ndim*nprojs)
+      projs = CNST(0.0)
 
     end if
+
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, projs)
+    
+    iatom = this%projector_to_atom(imat)
+    
+    SAFE_ALLOCATE(ff(1:ndim))
+    
+    ff(1:ndim) = CNST(0.0)
+    
+    do ii = 1, psi1b%nst_linear
+      ist = batch_linear_to_ist(psi1b, ii)
+      do iproj = 1, nprojs
+        do idir = 1, ndim
+          ff(idir) = ff(idir) - CNST(2.0)*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
+            R_CONJ(projs(0, ii, iproj))*projs(idir, ii, iproj)
+        end do
+      end do
+    end do
+    
+    force(1:ndim, iatom) = force(1:ndim, iatom) + ff(1:ndim)
+    
+    call profiling_count_operations((R_ADD + 2*R_MUL)*nst*ndim*nprojs)
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(projs)
