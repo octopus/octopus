@@ -81,6 +81,8 @@ module hamiltonian_base_m
     hamiltonian_base_clear,                    &
     hamiltonian_base_build_proj,               &
     hamiltonian_base_update,                   &
+    dhamiltonian_base_nlocal_force,            &
+    zhamiltonian_base_nlocal_force,            &
     projection_t
 
   !> This object stores and applies an electromagnetic potential that

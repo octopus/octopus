@@ -33,6 +33,7 @@ module forces_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use index_m
   use io_m
   use kpoints_m

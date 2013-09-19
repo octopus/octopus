@@ -196,82 +196,95 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
       ! calculate the contribution to the density gradient
       call X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
-      
-      do ist = minst, maxst
 
-        ! get the state and its gradient out of the batches (for the moment)
-        do idim = 1, st%d%dim
-          call batch_get_state(psib, (/ist, idim/), gr%mesh%np_part, psi(:, idim))
-          do idir = 1, gr%mesh%sb%dim
-            call batch_get_state(grad_psib(idir), (/ist, idim/), gr%mesh%np, grad_psi(:, idir, idim))
-          end do
+      ! the non-local potential contribution
+      if(hm%hm_base%apply_projector_matrices .and. .not. opencl_is_enabled() .and. &
+        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+
+        do idir = 1, gr%mesh%sb%dim
+          call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, psib, grad_psib(idir), force(idir, :))
         end do
 
-        call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+      else 
 
-        if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+        do ist = minst, maxst
 
-          ! We use that
-          !
-          ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
-          !
-          ! and that the operator R should map the position of atom
-          ! iatom to the position of some other atom iatom_symm, so that
-          !
-          ! V_iatom(R*r) = V_iatom_symm(r)
-          !
-          do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+          ! get the state and its gradient out of the batches (for the moment)
+          do idim = 1, st%d%dim
+            call batch_get_state(psib, (/ist, idim/), gr%mesh%np_part, psi(:, idim))
+            do idir = 1, gr%mesh%sb%dim
+              call batch_get_state(grad_psib(idir), (/ist, idim/), gr%mesh%np, grad_psi(:, idir, idim))
+            end do
+          end do
 
-            iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+          call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
 
+          if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+
+            ! We use that
+            !
+            ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+            !
+            ! and that the operator R should map the position of atom
+            ! iatom to the position of some other atom iatom_symm, so that
+            !
+            ! V_iatom(R*r) = V_iatom_symm(r)
+            !
+            do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
+              iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+
+              do iatom = 1, geo%natoms
+                if(projector_is_null(hm%ep%proj(iatom))) cycle
+
+                ratom = M_ZERO
+                ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+
+                call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
+
+                ! find iatom_symm
+                do iatom_symm = 1, geo%natoms
+                  if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
+                end do
+
+                ASSERT(iatom_symm <= geo%natoms)
+
+                do idir = 1, gr%mesh%sb%dim
+                  force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+                    R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                end do
+
+
+                force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
+
+                force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+                  force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
+              end do
+
+            end do
+
+          else
+
+            ! iterate over the projectors
             do iatom = 1, geo%natoms
               if(projector_is_null(hm%ep%proj(iatom))) cycle
 
-              ratom = M_ZERO
-              ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
-
-              call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
-
-              ! find iatom_symm
-              do iatom_symm = 1, geo%natoms
-                if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
-              end do
-
-              ASSERT(iatom_symm <= geo%natoms)
-
               do idir = 1, gr%mesh%sb%dim
                 force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                  R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                  R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
-
-              force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
-
-              force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-                force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
-
+              force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
             end do
 
-          end do
+          end if
 
-        else
+        end do
 
-          ! iterate over the projectors
-          do iatom = 1, geo%natoms
-            if(projector_is_null(hm%ep%proj(iatom))) cycle
+      end if
 
-            do idir = 1, gr%mesh%sb%dim
-              force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
-            end do
 
-            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
-          end do
-
-        end if
-
-      end do
-      
       call batch_end(psib)
       do idir = 1, gr%mesh%sb%dim
         call batch_end(grad_psib(idir))
