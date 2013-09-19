@@ -633,10 +633,11 @@ contains
     type(geometry_t), intent(in)               :: geo
     type(opt_control_state_t) :: qcchi
     type(states_t), intent(inout)              :: st
-    FLOAT, pointer :: q(:, :)
 
-    type(states_t)                             :: inh
-    integer :: j, idim, ip
+    FLOAT, pointer :: q(:, :)
+    FLOAT, parameter :: w2 = CNST(0.05)
+    type(states_t) :: inh
+    integer :: j, idim, ip, iatom
     FLOAT :: rr, xx(MAX_DIM)
 
     PUSH_SUB(update_hamiltonian_chi)
@@ -655,7 +656,11 @@ contains
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, rr, coords = xx)
-          inh%zpsi(ip, idim, 1, 1) =  CNST(0.05) * q(1, 1) * (xx(1) - geo%atom(1)%x(1)) * st%zpsi(ip, idim, 1, 1)
+          inh%zpsi(ip, idim, 1, 1) =  M_z0
+          do iatom = 1, geo%natoms
+            inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
+              w2 * q(iatom, 1) * (xx(1) - geo%atom(iatom)%x(1)) * st%zpsi(ip, idim, 1, 1)
+          end do
         end do
       end do
       call hamiltonian_set_inh(hm, inh)

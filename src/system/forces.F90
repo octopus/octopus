@@ -114,6 +114,7 @@ contains
 
     integer :: iatom, jatom, idim, ip
     FLOAT :: r, w2r, rr, xx(MAX_DIM)
+    FLOAT, parameter :: w2 = CNST(0.05)
     type(profile_t), save :: forces_prof
     CMPLX :: chipsi, chixpsi
     CMPLX, allocatable :: xpsi(:, :)
@@ -142,8 +143,10 @@ contains
     end do
     chixpsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), xpsi)
     SAFE_DEALLOCATE_A(xpsi)
-    f(1, 1) = f(1, 1) - CNST(0.05) * q(1, 1)
-    f(1, 1) = f(1, 1) - M_TWO * CNST(0.05) * real( M_zI * ( chixpsi - geo%atom(1)%x(1)*chipsi ) )
+    do iatom = 1, geo%natoms
+      f(iatom, 1) = f(iatom, 1) - w2 * q(iatom, 1) &
+        - M_TWO * w2 * real( M_zI * ( chixpsi - geo%atom(iatom)%x(1)*chipsi ) )
+    end do
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
