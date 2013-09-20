@@ -10,31 +10,31 @@ Enabled    : Yes
 
 # ground state
 Processors : 4
-Input      : 22-time_propagation.01-gs.inp
+Input      : 05-time_propagation.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -37.92527580
 
 # time-propagation, parallel in domains
 Processors : 4
-Input      : 22-time_propagation.02-td_domains.inp
+Input      : 05-time_propagation.02-td_domains.inp
 match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 # combined parallelization
 Processors : 4
-Input      : 22-time_propagation.03-td_domains_states.inp
+Input      : 05-time_propagation.03-td_domains_states.inp
 match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 # moving the ions
 Processors : 4
-Input      : 22-time_propagation.04-td_md.inp
+Input      : 05-time_propagation.04-td_md.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -11, 30) ; -3.791137115072e+01
 match ; Energy [step  5] ; LINE(td.general/energy,  -6, 30) ; -3.791133478924e+01
 match ; Energy [step 10] ; LINE(td.general/energy,  -1, 30) ; -3.791129939150e+01
 
 # fast Ehrenfest molecular dynamics
 Processors : 4
-Input      : 22-time_propagation.05-td_fast_md.inp
+Input      : 05-time_propagation.05-td_fast_md.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -3.791137115072e+01
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -3.791104428135e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -3.791081551608e+01
@@ -46,4 +46,3 @@ match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 1610) ; -7.99991716
 match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 1610) ; -9.747595883062e-03
 match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 1610) ; -1.080888096097e-02
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 1610) ; -9.800629054763e-03
-
