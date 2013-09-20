@@ -817,7 +817,7 @@ contains
     type(controlfunction_t), intent(in) :: cpp
     character(len=1),intent(in) :: dir
 
-    CMPLX :: d1
+    CMPLX :: d1, pol(MAX_DIM)
     CMPLX, allocatable  :: dl(:), dq(:)
     FLOAT, allocatable :: d(:)
     integer :: j, no_parameters, iatom
@@ -849,8 +849,10 @@ contains
 
     ! This is for the classical target.
     if(dir == 'b') then
+      pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
-        d(1) = d(1) - M_HALF * species_zval(geo%atom(iatom)%spec) * q(iatom, 1)
+        d(1) = d(1) - M_HALF * species_zval(geo%atom(iatom)%spec) * &
+          real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
       end do
     end if
 
