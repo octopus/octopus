@@ -36,3 +36,9 @@ match ; Forces [step 2] ; LINE(td.general/coordinates, -3, 270) ; -2.37265047867
 match ; Forces [step 3] ; LINE(td.general/coordinates, -2, 270) ; -2.485570059367e-01
 match ; Forces [step 4] ; LINE(td.general/coordinates, -1, 270) ; -2.570433048265e-01
 
+Util       : oct-xyz-anim
+Input      : 10-bomd.04-xyz-anim.inp
+match ; Coordinates  2 2 1 ; LINE(td.general/movie.xyz,  8, 20);  1.181302
+match ; Coordinates  2 2 2 ; LINE(td.general/movie.xyz,  8, 36);  0.0
+match ; Coordinates  8 1 1 ; LINE(td.general/movie.xyz, 23, 20); -1.146508
+match ; Coordinates  8 1 3 ; LINE(td.general/movie.xyz, 23, 48);  0.0

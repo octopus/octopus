@@ -1,0 +1,8 @@
+AnimationSampling = 2
+
+# it does not make sense that the following is required
+bond_length = 2.4
+%Coordinates
+ "C" |  -bond_length/2 |  0.0 |  0.0
+ "C" |   bond_length/2 |  0.0 |  0.0
+%

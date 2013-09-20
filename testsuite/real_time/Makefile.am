@@ -60,6 +60,7 @@ dist_share_DATA =                      \
 	10-bomd.01-gs.inp                      \
 	10-bomd.02-td.inp                      \
 	10-bomd.03-td_restart.inp              \
+        10-bomd.04-xyz-anim.inp                \
 	11-tdmagnetic.test                     \
 	11-tdmagnetic.01-gs.inp                \
 	11-tdmagnetic.02-unocc.inp             \
