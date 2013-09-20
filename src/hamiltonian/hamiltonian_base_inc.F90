@@ -755,9 +755,11 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
           end forall
         end forall
       else
-        forall(ist = 1:nst, ip = 1:npoints)
-          psi(0, ist, ip) = psi1b%states_linear(ist)%X(psi)(pmat%map(ip))
-          forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%states_linear(ist)%X(psi)(pmat%map(ip))
+        forall(ip = 1:npoints)
+          forall(ist = 1:nst) 
+            psi(0, ist, ip) = psi1b%states_linear(ist)%X(psi)(pmat%map(ip))
+            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%states_linear(ist)%X(psi)(pmat%map(ip))
+          end forall
         end forall
       end if
 
