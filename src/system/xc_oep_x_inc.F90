@@ -19,7 +19,9 @@
 
 
 !------------------------------------------------------------
-!> The parallelization of this routine is done in the following way:
+!> This routine computes <psi|X, i.e. the exchange operator applied to a bra.
+!!
+!! The parallelization of this routine is done in the following way:
 !!
 !! We have to calculate the sum
 !! \f$ lxc = \sum_{j>i} l_{ij} \f$
