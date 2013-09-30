@@ -574,8 +574,8 @@ contains
 
     PUSH_SUB(mesh_partition_write)
 
+    write(numstring, '(i6.6)') vsize
     if(mpi_grp_is_root(mpi_world)) then
-      write(numstring, '(i6.6)') vsize
 
       call io_mkdir('restart', is_tmp = .true.)
       call io_mkdir('restart/partition', is_tmp = .true.)
@@ -602,8 +602,8 @@ contains
     call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
 
     ! Read mesh fingerprint
+    write(numstring, '(i6.6)') mesh%mpi_grp%size
     if(mpi_grp_is_root(mesh%mpi_grp)) then
-      write(numstring, '(i6.6)') mesh%mpi_grp%size
       call mesh_read_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring), read_np_part, ierr)
     end if
 #ifdef HAVE_MPI

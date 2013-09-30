@@ -145,18 +145,52 @@ contains
   end subroutine partition_set
 
   ! ---------------------------------------------------------
+  !> Partition is written in parallel if MPI2 is available.
+  !! Otherwise, is gathered in root and then written.
   subroutine partition_write(partition, filename)
     type(partition_t), intent(in) :: partition
     character(len=*),  intent(in) :: filename
 
-    integer :: ierr
+    integer :: ipart, ierr, amode, info, fh, status
     integer, allocatable :: part_global(:)
+    integer, allocatable :: scounts(:), sdispls(:)
 
     PUSH_SUB(partition_write)
 
+#ifdef HAVE_MPI2    
+    ! Calculate displacements for writing
+    SAFE_ALLOCATE(scounts(1:partition%npart))
+    SAFE_ALLOCATE(sdispls(1:partition%npart))
+    
+    scounts(1:partition%remainder) = partition%nppp + 1
+    scounts(partition%remainder + 1:partition%npart) = partition%nppp
+    sdispls(1) = 0
+    do ipart = 2, partition%npart
+      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
+    end do
+    
+    ! Write the header (root only)
+    ierr = 0
+    if (partition%mpi_grp%rank == 0) then
+      call write_header(partition%np_global, FC_INTEGER_SIZE, ierr, trim(filename))
+    end if
+    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
+    
+    ! Each process writes a portion of the partition
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    info = MPI_INFO_NULL 
+    call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+    call MPI_File_set_atomicity(fh, .true., mpi_err)
+    call MPI_File_seek(fh, sdispls(partition%mpi_grp%rank+1), MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(fh, partition%part, partition%np_local, &
+         MPI_INTEGER, STATUS, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+    call MPI_File_close(fh, mpi_err)
+#else
     !Get the global partition in the root node
     if (partition%mpi_grp%rank == 0) then
-      SAFE_ALLOCATE(part_global(partition%np_global))
+      SAFE_ALLOCATE(part_global(1:partition%np_global))
     else
       SAFE_ALLOCATE(part_global(1))
     end if
@@ -166,27 +200,70 @@ contains
     if (partition%mpi_grp%rank == 0) then
       call io_binary_write(filename, partition%np_global, part_global, ierr)
     end if
-
+    
     SAFE_DEALLOCATE_A(part_global)
+#endif
 
     POP_SUB(partition_write)
   end subroutine partition_write
 
   ! ---------------------------------------------------------
+  !> Partition is read in parallel if MPI2 is available.
+  !! Otherwise, is read by the root and then scattered
   subroutine partition_read(partition, filename, ierr)
     type(partition_t), intent(inout) :: partition
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart
+    integer :: ipart, amode, info, fh, status, count
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset
+#endif
 
     PUSH_SUB(partition_read)
 
-    ! The global partition is only read by the root node
+    ! Calculate displacements for reading
+    SAFE_ALLOCATE(scounts(1:partition%npart))
+    SAFE_ALLOCATE(sdispls(1:partition%npart))
+
+    scounts(1:partition%remainder) = partition%nppp + 1
+    scounts(partition%remainder + 1:partition%npart) = partition%nppp
+    sdispls(1) = 0
+    do ipart = 2, partition%npart
+      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
+    end do
+
+#ifdef HAVE_MPI2
+    amode = MPI_MODE_RDONLY
+    info = MPI_INFO_NULL 
+    call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
+
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
+    !! +64 to skip the header, FC_INTEGER_SIZE is the integer size in the running machine
+    offset = sdispls(partition%mpi_grp%rank+1)*FC_INTEGER_SIZE+64
+    call MPI_File_set_atomicity(fh, .true., mpi_err)
+    call MPI_File_seek(fh, 0, MPI_SEEK_SET, mpi_err)
+    call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(fh, partition%part, partition%np_local, &
+         MPI_INTEGER, status, mpi_err)
+    call MPI_Get_count(status, MPI_INTEGER, count, mpi_err)
+    if (count /= partition%np_local) then 
+      write(message(1),'(i8,a,i8,a,i8)') partition%mpi_grp%rank, " rank, read elements=", count, &
+           " instead of",partition%np_local
+      call messages_fatal(2)
+    end if
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
+    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
+    call MPI_File_close(fh, mpi_err)
+
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sdispls)
+#else
+     ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
-      SAFE_ALLOCATE(part_global(partition%np_global))
+      SAFE_ALLOCATE(part_global(1:partition%np_global))
       call io_binary_read(filename, partition%np_global, part_global, ierr)
     else
       SAFE_ALLOCATE(part_global(1))
@@ -195,24 +272,8 @@ contains
     ! All nodes need to know the result
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
 #endif
-
     ! If reading was successfull, then scatter the result
     if (ierr == 0) then
-      if (partition%mpi_grp%rank == 0) then
-        SAFE_ALLOCATE(scounts(partition%npart))
-        SAFE_ALLOCATE(sdispls(partition%npart))
-
-        scounts(1:partition%remainder) = partition%nppp + 1
-        scounts(partition%remainder + 1:partition%npart) = partition%nppp
-        sdispls(1) = 0
-        do ipart = 2, partition%npart
-          sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
-        end do
-      else
-        SAFE_ALLOCATE(scounts(1))
-        SAFE_ALLOCATE(sdispls(1))
-      end if
-
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_SCATTERV)
       call MPI_Scatterv(part_global(1), scounts(1), sdispls(1), MPI_INTEGER, &
@@ -220,13 +281,13 @@ contains
                         0, partition%mpi_grp%comm, mpi_err)
       call mpi_debug_out(partition%mpi_grp%comm, C_MPI_SCATTERV)
 #endif
-
-      SAFE_DEALLOCATE_A(scounts)
-      SAFE_DEALLOCATE_A(sdispls)
     end if
 
     SAFE_DEALLOCATE_A(part_global)
-
+#endif
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sdispls)
+    
     POP_SUB(partition_read)
   end subroutine partition_read
 

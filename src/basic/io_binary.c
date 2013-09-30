@@ -184,12 +184,10 @@ static inline int check_header(header_t * h, int * correct_endianness){
   return 0;
 }
 
-
-void FC_FUNC_(write_binary,WRITE_BINARY)
-     (const fint * np, void * f, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
-{
-  header_t * h;
+void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{ 
   char * filename;
+  header_t * h;
   int fd;
   ssize_t moved;
 
@@ -197,13 +195,11 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   assert(h != NULL);
 
   *ierr = 0;
-
   TO_C_STR1(fname, filename);
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
-  free(filename);
   if( fd < 0 ) {
-    inf_error("octopus.write_binary");
+    inf_error("octopus.write_header in creating the header");
     *ierr = 2;
     free(h);
     return;
@@ -219,25 +215,56 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 
   if(moved < sizeof(header_t)){
     /* we couldn't write the complete header */
-    inf_error("octopus.write_binary");
+    inf_error("octopus.write_header in writing the header");
     *ierr = 3;
     close(fd);
     free(h);
     return;
   }
 
+  free(h);
+  free(filename);
+  close(fd);
+}
+
+void FC_FUNC_(write_binary,WRITE_BINARY)
+     (const fint * np, void * f, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{
+  char * filename;
+  int fd;
+  ssize_t moved;
+  unsigned long fname_len;
+  *ierr = 0;
+  fd = -132;
+  
+  fname_len = strlen(fname);
+  fname_len = l1;
+  TO_C_STR1(fname, filename);
+  write_header_(np, type, ierr, fname, fname_len);
+
+  fd = open (filename, O_WRONLY, 
+	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+  if( fd < 0 ) {
+    inf_error("octopus.write_binary in opening the file");
+    *ierr = 2;
+    return;
+  }
+
+  /* skip the header and go untill the end */
+  lseek(fd, 0, SEEK_END);
+  
   /* now write the values */
   moved = write(fd, f, (*np)*size_of[(*type)]);
 
   if(moved < (*np)*size_of[(*type)]){
     /* we couldn't write the whole dataset */
-    inf_error("octopus.write_binary");
+    inf_error("octopus.write_binary in actual writing");
     *ierr = 3;
   }
 
+  free(filename);
   /* close the file */
   close(fd);
-  free(h);
   return;
 }
  

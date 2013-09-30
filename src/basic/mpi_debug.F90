@@ -68,7 +68,7 @@ module mpi_debug_m
     TSZ_MPI_Allgather,           &
     TSI_MPI_Allgather
 
-  integer, parameter :: C_NUM_MPI_ROUTINES = 9
+  integer, parameter :: C_NUM_MPI_ROUTINES = 11
 
   integer, public, parameter ::  &
     C_MPI_BARRIER    = 1,        &
@@ -79,7 +79,9 @@ module mpi_debug_m
     C_MPI_BCAST      = 6,        &
     C_MPI_ALLREDUCE  = 7,        &
     C_MPI_ALLTOALL   = 8,        &
-    C_MPI_ALLGATHER  = 9
+    C_MPI_ALLGATHER  = 9,        &
+    C_MPI_FILE_READ  = 10,       &
+    C_MPI_FILE_WRITE = 11 
 
   character(len=14), dimension(C_NUM_MPI_ROUTINES), public :: mpi_rlabel = &
     (/                           &
@@ -91,7 +93,9 @@ module mpi_debug_m
     'MPI_BCAST     ',            &
     'MPI_ALLREDUCE ',            &
     'MPI_ALLTOALL  ',            &
-    'MPI_ALLGATHER '             &
+    'MPI_ALLGATHER ',            &
+    'MPI_FILE_READ ',            &
+    'MPI_FILE_wRITE'             &
     /)
 
   integer, public :: call_counter(C_NUM_MPI_ROUTINES) = 0
