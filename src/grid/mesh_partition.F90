@@ -581,6 +581,7 @@ contains
       call io_mkdir('restart/partition', is_tmp = .true.)
       call mesh_write_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring))
     end if
+    call MPI_Barrier(mpi_world%comm, mpi_err)
 
     call partition_write(mesh%inner_partition, 'restart/partition/inner_partition_'//trim(numstring)//'.obf')
     call partition_write(mesh%bndry_partition, 'restart/partition/bndry_partition_'//trim(numstring)//'.obf')

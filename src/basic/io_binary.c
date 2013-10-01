@@ -199,6 +199,7 @@ void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ie
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
   if( fd < 0 ) {
+    printf("Filename is %s\n",filename);
     inf_error("octopus.write_header in creating the header");
     *ierr = 2;
     free(h);
