@@ -172,7 +172,7 @@ contains
     ! Write the header (root only)
     ierr = 0
     if (partition%mpi_grp%rank == 0) then
-      call write_header(partition%np_global, FC_INTEGER_SIZE, ierr, trim(filename))
+      call io_binary_write_header(filename, partition%np_global, FC_INTEGER_SIZE, ierr)
     end if
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     

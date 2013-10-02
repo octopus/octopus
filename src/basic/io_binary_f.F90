@@ -28,9 +28,10 @@ module io_binary_m
 
   private
 
-  public ::             &
-    io_binary_write,    &
-    io_binary_read,     &
+  public ::                 &
+    io_binary_write_header, &
+    io_binary_write,        &
+    io_binary_read,         &
     io_binary_get_info
 
   interface io_binary_write
@@ -43,7 +44,27 @@ module io_binary_m
     module procedure iread_binary2, lread_binary2, zread_binary3, cread_binary3, dread_binary3
   end interface io_binary_read
 
+  interface io_binary_write_header
+    module procedure iwrite_header
+  end interface io_binary_write_header
+
 contains
+
+  !> Interface to C to write the header of Integer type
+  subroutine iwrite_header(fname, np_global, int_size, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    integer,             intent(in)  :: int_size
+    integer,             intent(out) :: ierr
+    
+    PUSH_SUB(iwrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, int_size, ierr, trim(fname))
+
+    POP_SUB(iwrite_header)
+  end subroutine iwrite_header
+
 
   ! ------------------------------------------------------
 
