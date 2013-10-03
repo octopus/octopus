@@ -207,6 +207,8 @@ contains
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
 
+      !write(81, *) sys%geo%atom(1)%x(1)
+
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
       if(present(prop)) call oct_prop_output(prop, istep, psi, gr)
@@ -513,7 +515,6 @@ contains
     type(oct_prop_t), intent(in)                  :: prop_chi
     type(oct_prop_t), intent(in)                  :: prop_psi
 
-    logical :: freeze
     integer :: i
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
@@ -521,8 +522,10 @@ contains
     type(states_t) :: st_ref
     type(states_t), pointer :: chi, psi
     FLOAT, pointer :: q(:, :), p(:, :)
+    FLOAT, allocatable :: qtildehalf(:, :), qinitial(:, :)
     FLOAT, allocatable :: vhxc(:, :)
     FLOAT, allocatable :: fold(:, :), fnew(:, :)
+    type(ion_state_t) :: ions_state_initial, ions_state_final
 
     PUSH_SUB(bwd_step_2)
 
@@ -533,6 +536,8 @@ contains
     q => opt_control_point_q(qcchi)
     p => opt_control_point_p(qcchi)
     gr => sys%gr
+    SAFE_ALLOCATE(qtildehalf(1:sys%geo%natoms, 1:sys%geo%space%dim))
+    SAFE_ALLOCATE(qinitial(1:sys%geo%natoms, 1:sys%geo%space%dim))
 
     call propagator_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
@@ -563,10 +568,15 @@ contains
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
+
       if(ion_dynamics_ions_move(td%ions)) then
+        qtildehalf = q
+        call geometry_get_positions(sys%geo, qinitial)
         SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
         SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
         call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q)
+        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
+        call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
         call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
       end if
 
@@ -577,29 +587,40 @@ contains
       st_ref%zpsi = psi%zpsi
       vhxc(:, :) = hm%vhxc(:, :)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+
+      if(ion_dynamics_ions_move(td%ions)) then
+        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
+        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
+      end if
+
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
 
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, qcchi, st_ref)
-      freeze = ion_dynamics_freeze(td%ions)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, qcchi, st_ref, qinitial, qtildehalf)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
-      ! This is the propagation of the conjugated classical variables *for a very particular case*. It should
-      ! be moved inside propagator_dt
-      if(freeze) call ion_dynamics_unfreeze(td%ions)
+
       if(ion_dynamics_ions_move(td%ions)) then
+        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
+        call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
+        call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
         call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fnew, q)
         call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
         SAFE_DEALLOCATE_A(fold)
         SAFE_DEALLOCATE_A(fnew)
       end if
+
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
+
     call states_end(st_ref)
 
     td%dt = -td%dt
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
     call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
+
+    call controlfunction_write('par_chi', par_chi)
+
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -614,6 +635,8 @@ contains
     nullify(psi)
     nullify(q)
     nullify(p)
+    SAFE_DEALLOCATE_A(qtildehalf)
+    SAFE_DEALLOCATE_A(qinitial)
     POP_SUB(bwd_step_2)
   end subroutine bwd_step_2
   ! ----------------------------------------------------------
@@ -622,7 +645,8 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st)
+!  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st, qinitial, qtildehalf)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -633,6 +657,8 @@ contains
     type(geometry_t), intent(in)               :: geo
     type(opt_control_state_t) :: qcchi
     type(states_t), intent(inout)              :: st
+    FLOAT, intent(in), optional                :: qinitial(:, :)
+    FLOAT, intent(in), optional                :: qtildehalf(:, :)
 
     FLOAT, pointer :: q(:, :)
     FLOAT, parameter :: w2 = CNST(0.05)
@@ -641,7 +667,6 @@ contains
     FLOAT :: rr, xx(MAX_DIM)
 
     PUSH_SUB(update_hamiltonian_chi)
-
 
     if(target_mode(tg) == oct_targetmode_td) then
       call states_copy(inh, st)
@@ -659,7 +684,8 @@ contains
           inh%zpsi(ip, idim, 1, 1) =  M_z0
           do iatom = 1, geo%natoms
             inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
-              w2 * q(iatom, 1) * (xx(1) - geo%atom(iatom)%x(1)) * st%zpsi(ip, idim, 1, 1)
+              w2 * qtildehalf(iatom, 1) * &
+              (xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1)) ) * st%zpsi(ip, idim, 1, 1)
           end do
         end do
       end do
@@ -855,6 +881,7 @@ contains
           real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
       end do
     end if
+
 
     if(dir == 'f') then
       call controlfunction_update(cp, cpp, dir, iter, delta_, d, dq)

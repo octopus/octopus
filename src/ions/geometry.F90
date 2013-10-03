@@ -66,7 +66,8 @@ module geometry_m
     loadPDB,                         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
-    geometry_species_time_dependent
+    geometry_species_time_dependent, &
+    geometry_get_positions
 
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
@@ -104,6 +105,7 @@ module geometry_m
   end type geometry_t
 
 contains
+
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)
@@ -1037,6 +1039,22 @@ contains
 
     POP_SUB(geometry_copy)
   end subroutine geometry_copy
+
+  ! ---------------------------------------------------------
+  subroutine geometry_get_positions(geo, q)
+    type(geometry_t), intent(in)    :: geo
+    FLOAT,            intent(inout) :: q(:, :)
+
+    integer :: iatom
+    PUSH_SUB(geometry_get_positions)
+
+    do iatom = 1, geo%natoms
+      q(iatom, 1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim)
+    end do
+
+    POP_SUB(geometry_get_positions)
+  end subroutine geometry_get_positions
+
 
 end module geometry_m
 
