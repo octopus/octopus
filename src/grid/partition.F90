@@ -223,7 +223,11 @@ contains
 #endif
 
     PUSH_SUB(partition_read)
-
+    
+    ! This is a writing to avoid an optimization of gfortran with -O3
+    write(message(1),'(a,i8)') "Info: partition of size =", size(partition%part)
+    call messages_info(1)
+    
     ! Calculate displacements for reading
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(sdispls(1:partition%npart))
@@ -244,7 +248,6 @@ contains
     !! +64 to skip the header, FC_INTEGER_SIZE is the integer size in the running machine
     offset = sdispls(partition%mpi_grp%rank+1)*FC_INTEGER_SIZE+64
     call MPI_File_set_atomicity(fh, .true., mpi_err)
-    call MPI_File_seek(fh, 0, MPI_SEEK_SET, mpi_err)
     call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(fh, partition%part, partition%np_local, &
          MPI_INTEGER, status, mpi_err)
@@ -257,9 +260,7 @@ contains
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     call MPI_File_close(fh, mpi_err)
-
-    SAFE_DEALLOCATE_A(scounts)
-    SAFE_DEALLOCATE_A(sdispls)
+    ierr = 0
 #else
      ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
