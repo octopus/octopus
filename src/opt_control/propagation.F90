@@ -340,6 +340,8 @@ contains
 
     call controlfunction_to_realtime(par)
 
+    call opt_control_state_copy(qcchi, qcpsi)
+
     psi => opt_control_point_qs(qcpsi)
     chi => opt_control_point_qs(qcchi)
     gr => sys%gr
@@ -357,7 +359,6 @@ contains
       call controlfunction_copy(par_prev, par)
     end if
 
-    
     ! setup forward propagation
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -369,7 +370,6 @@ contains
     end if
 
     call oct_prop_output(prop_psi, 0, psi, gr)
-    call states_copy(chi, psi)
     call oct_prop_read_state(prop_chi, chi, gr, 0)
 
     do i = 1, td%max_iter
@@ -683,9 +683,18 @@ contains
           call mesh_r(gr%mesh, ip, rr, coords = xx)
           inh%zpsi(ip, idim, 1, 1) =  M_z0
           do iatom = 1, geo%natoms
-            inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
-              w2 * qtildehalf(iatom, 1) * &
-              (xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1)) ) * st%zpsi(ip, idim, 1, 1)
+            select case(species_type(geo%atom(1)%spec))
+            case(SPEC_USDEF)
+              inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
+                w2 * qtildehalf(iatom, 1) * &
+                (xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1)) ) * st%zpsi(ip, idim, 1, 1)
+            case(SPEC_SOFT_COULOMB)
+              rr = xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1))
+              inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
+                qtildehalf(iatom, 1) * (rr / sqrt( (rr**2+M_ONE)**3 ) ) * st%zpsi(ip, idim, 1, 1)
+            case default
+              stop 'Internal error.'
+            end select
           end do
         end do
       end do

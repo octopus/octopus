@@ -132,21 +132,52 @@ contains
       end do
     end do
 
-    ! Warning: very preliminary inclusion of the electron-nucleus coupling term.
-    chipsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), psi%zpsi(:, :, 1, 1))
-    SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:psi%d%dim))
-    do idim = 1, psi%d%dim
-      do ip = 1, gr%mesh%np
-        call mesh_r(gr%mesh, ip, rr, coords = xx)
-        xpsi(ip, idim) = xx(1) * psi%zpsi(ip, idim, 1, 1)
+    select case(species_type(geo%atom(1)%spec))
+    case(SPEC_USDEF)
+      ! Warning: very preliminary inclusion of the electron-nucleus coupling term.
+      chipsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), psi%zpsi(:, :, 1, 1))
+      SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:psi%d%dim))
+      do idim = 1, psi%d%dim
+        do ip = 1, gr%mesh%np
+          call mesh_r(gr%mesh, ip, rr, coords = xx)
+          xpsi(ip, idim) = xx(1) * psi%zpsi(ip, idim, 1, 1)
+        end do
       end do
-    end do
-    chixpsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), xpsi)
-    SAFE_DEALLOCATE_A(xpsi)
-    do iatom = 1, geo%natoms
-      f(iatom, 1) = f(iatom, 1) - w2 * q(iatom, 1) &
-        - M_TWO * w2 * real( M_zI * ( chixpsi - geo%atom(iatom)%x(1)*chipsi ) )
-    end do
+      chixpsi = zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), xpsi)
+      SAFE_DEALLOCATE_A(xpsi)
+      do iatom = 1, geo%natoms
+        f(iatom, 1) = f(iatom, 1) - w2 * q(iatom, 1) &
+          - M_TWO * w2 * real( M_zI * ( chixpsi - geo%atom(iatom)%x(1)*chipsi ) )
+      end do
+
+    case(SPEC_SOFT_COULOMB)
+
+      SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:psi%d%dim))
+      do iatom = 1, geo%natoms
+        do idim = 1, psi%d%dim
+          do ip = 1, gr%mesh%np
+            call mesh_r(gr%mesh, ip, rr, coords = xx)
+            rr = xx(1) - geo%atom(iatom)%x(1)
+            xpsi(ip, idim) = (M_ONE - M_TWO * rr**2) * ( rr**2 + M_ONE )**(-M_FIVE/M_TWO) * psi%zpsi(ip, idim, 1, 1)
+          end do
+        end do
+        f(iatom, 1) = f(iatom, 1) &
+          - q(iatom, 1) * real(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, 1, 1), xpsi(:, :)), REAL_PRECISION)
+        do idim = 1, psi%d%dim
+          do ip = 1, gr%mesh%np
+            call mesh_r(gr%mesh, ip, rr, coords = xx)
+            rr = xx(1) - geo%atom(iatom)%x(1)
+            xpsi(ip, idim) = rr * (rr**2 + M_ONE)**(-M_THREE/M_TWO) * psi%zpsi(ip, idim, 1, 1)
+          end do
+        end do
+        f(iatom, 1) = f(iatom, 1) - M_TWO * &
+           real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), xpsi(:, :)), REAL_PRECISION)
+      end do
+      SAFE_DEALLOCATE_A(xpsi)
+
+    case default
+      stop 'Internal error.'
+    end select
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
