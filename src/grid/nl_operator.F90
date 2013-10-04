@@ -661,7 +661,7 @@ contains
       call messages_info(2)
       
       do istencil = 1, this%stencil%size
-        write(message(1), '(a,i3,3i4,f16.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w_re(istencil, 1)
+        write(message(1), '(a,i3,3i4,f25.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w_re(istencil, 1)
         call messages_info(1)
       end do
       
