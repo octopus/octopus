@@ -112,8 +112,8 @@ contains
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
 
-    integer :: iatom, jatom, idim, ip
-    FLOAT :: r, w2r, rr, xx(MAX_DIM)
+    integer :: iatom, jatom, idim, jdim, ip
+    FLOAT :: r, w2r_, w1r_, rr, xx(MAX_DIM)
     type(profile_t), save :: forces_prof
     CMPLX, allocatable :: dvpsi(:, :), dpsi(:, :, :)
 
@@ -124,9 +124,21 @@ contains
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         if(jatom == iatom) cycle
-        r = abs(geo%atom(iatom)%x(1) - geo%atom(jatom)%x(1))
-        w2r = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) * M_TWO / r**3
-        f(iatom, 1) = f(iatom, 1) + w2r * (q(jatom, 1) - q(iatom, 1))
+        xx(1:gr%sb%dim) = geo%atom(jatom)%x(1:gr%sb%dim) - geo%atom(iatom)%x(1:gr%sb%dim)
+        r = sqrt( sum( xx(1:gr%sb%dim)**2 ) )
+        !w2r_ = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) * M_TWO / r**3
+        w2r_ = w2r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
+        w1r_ = w1r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
+        do idim = 1, gr%sb%dim
+          !f(iatom, idim) = f(iatom, idim) + (q(jatom, idim) - q(iatom, idim)) * w2r_
+          do jdim = 1, gr%sb%dim
+            f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w2r_ * (M_ONE/r**2) * xx(idim) * xx(jdim)
+            f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r**3) * xx(idim) * xx(jdim)
+            if(jdim == idim) then
+              f(iatom, idim) = f(iatom, idim) - (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r)
+            end if
+          end do
+        end do
       end do
     end do
 
@@ -149,6 +161,25 @@ contains
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
+    contains
+
+    FLOAT function wr(speca, specb, r)
+      type(species_t), intent(in) :: speca, specb
+      FLOAT, intent(in) :: r
+      wr = species_zval(speca) * species_zval(specb) / r
+    end function wr
+
+    FLOAT function w1r(speca, specb, r)
+      type(species_t), intent(in) :: speca, specb
+      FLOAT, intent(in) :: r
+      w1r = - species_zval(speca) * species_zval(specb) / r**2
+    end function w1r
+
+    FLOAT function w2r(speca, specb, r)
+      type(species_t), intent(in) :: speca, specb
+      FLOAT, intent(in) :: r
+      w2r = M_TWO * species_zval(speca) * species_zval(specb) / r**3
+    end function w2r
   end subroutine forces_costate_calculate
   ! ---------------------------------------------------------
 
