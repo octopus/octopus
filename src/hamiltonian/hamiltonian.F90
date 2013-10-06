@@ -59,6 +59,7 @@ module hamiltonian_m
   use projector_m
   use simul_box_m
   use smear_m
+  use species_m
   use states_m
   use states_dim_m
   use types_m
@@ -104,7 +105,8 @@ module hamiltonian_m
     dexchange_operator,              &
     zexchange_operator,              &
     dhamiltonian_phase,              &
-    zhamiltonian_phase
+    zhamiltonian_phase,              &
+    zhamiltonian_dervexternal
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -1178,6 +1180,85 @@ contains
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_packed
+
+
+  ! This routine computes the action of the derivative of the external potential
+  ! with respect to the nuclear positions. It is preliminary, and should be
+  ! recoded in a more efficient way.
+  subroutine zhamiltonian_dervexternal(ep, geo, gr, ia, qa, dim, psi, dvpsi)
+    type(epot_t), intent(inout)  :: ep
+    type(geometry_t),    intent(in)  :: geo
+    type(grid_t),        intent(in)  :: gr
+    integer,             intent(in)  :: ia
+    FLOAT,               intent(in)  :: qa(:)
+    integer,             intent(in)  :: dim
+    CMPLX,               intent(inout)  :: psi(:, :)
+    CMPLX,               intent(out) :: dvpsi(:, :)
+
+    FLOAT :: rr, xx(MAX_DIM)
+    FLOAT, allocatable :: vlocal(:)
+    ! FLOAT, allocatable :: dvlocal(:, :)
+    CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
+    integer :: idim, ip
+    PUSH_SUB(dvexternal)
+
+    SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(vlocalpsi(1:gr%mesh%np_part, 1:dim))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:dim))
+    SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:dim))
+
+    vlocal = M_ZERO
+    vlocalpsi = M_ZERO
+    dpsi = M_z0
+    dvlocalpsi = M_z0
+
+    call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vlocal)
+    do idim = 1, dim
+      call zderivatives_grad(gr%der, psi(:, idim), dpsi(:, :, idim))
+    end do
+
+    do idim = 1, dim
+      vlocalpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)
+    end do
+
+    do idim = 1, dim
+      call zderivatives_grad(gr%der, vlocalpsi(:, idim), dvlocalpsi(:, :, idim))
+    end do
+    
+
+    ! Various ways to do the same thing:
+    ! (1)
+    !    _SAFE_ALLOCATE(dvlocal(1:gr%mesh%np, 1:gr%sb%dim))
+    !    call dderivatives_grad(gr%der, vlocal, dvlocal)
+    !    do idim = 1, dim
+    !      do ip = 1, gr%mesh%np
+    !        call mesh_r(gr%mesh, ip, rr, coords = xx, origin = qa)
+    !        dvpsi(ip, idim) = (xx(1) / sqrt( (xx(1)**2+M_ONE)**3 ) ) * psi(ip, idim)
+    !      end do
+    !    end do
+    !    _SAFE_DEALLOCATE_A(dvlocal)
+    !
+    ! (2)
+    !    do idim = 1, dim
+    !      do ip = 1, gr%mesh%np
+    !        dvpsi(ip, idim) = dvlocal(ip, 1) * psi(ip, idim)
+    !      end do
+    !    end do
+    !
+    ! (3)
+    do idim = 1, dim
+      do ip = 1, gr%mesh%np
+        dvpsi(ip, dim) = - vlocal(ip) * dpsi(ip, 1, idim) + dvlocalpsi(ip, 1, idim)
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(vlocal)
+    SAFE_DEALLOCATE_A(vlocalpsi)
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(dvlocalpsi)
+    POP_SUB(dvexternal)
+  end subroutine zhamiltonian_dervexternal
+
 
 #include "undef.F90"
 #include "real.F90"

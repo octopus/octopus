@@ -666,6 +666,8 @@ contains
     integer :: j, idim, ip, iatom
     FLOAT :: rr, xx(MAX_DIM)
 
+    CMPLX, allocatable :: dvpsi(:, :)
+
     PUSH_SUB(update_hamiltonian_chi)
 
     if(target_mode(tg) == oct_targetmode_td) then
@@ -678,26 +680,13 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       q => opt_control_point_q(qcchi)
       call states_copy(inh, st)
-      do idim = 1, st%d%dim
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, rr, coords = xx)
-          inh%zpsi(ip, idim, 1, 1) =  M_z0
-          do iatom = 1, geo%natoms
-            select case(species_type(geo%atom(1)%spec))
-            case(SPEC_USDEF)
-              inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
-                w2 * qtildehalf(iatom, 1) * &
-                (xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1)) ) * st%zpsi(ip, idim, 1, 1)
-            case(SPEC_SOFT_COULOMB)
-              rr = xx(1) - M_HALF * (qinitial(iatom, 1) + geo%atom(iatom)%x(1))
-              inh%zpsi(ip, idim, 1, 1) =  inh%zpsi(ip, idim, 1, 1) + &
-                qtildehalf(iatom, 1) * (rr / sqrt( (rr**2+M_ONE)**3 ) ) * st%zpsi(ip, idim, 1, 1)
-            case default
-              stop 'Internal error.'
-            end select
-          end do
-        end do
+      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      do iatom = 1, geo%natoms
+        call zhamiltonian_dervexternal(hm%ep, geo, gr, iatom, &
+          M_HALF * (qinitial(iatom, :) + geo%atom(iatom)%x(:)), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
+        inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, 1) * dvpsi(:, :)
       end do
+      SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
       nullify(q)
