@@ -189,6 +189,7 @@ contains
 
     nullify(mc%group_sizes)
     mc%have_slaves = .false.
+
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
       SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
       mc%group_sizes(:) = 1
@@ -394,6 +395,15 @@ contains
       do kk = 1, mc%n_index
         if(.not. multicomm_strategy_is_parallel(mc, kk)) n_group_max(kk) = 1
       end do
+
+      if(in_debug_mode) then
+        call messages_write('Debug info: Allowable group ranks:', new_line = .true.)
+        do kk = 1, mc%n_index
+          call messages_write(par_types(kk), fmt = '2x,a12,":",1x')
+          call messages_write(n_group_max(kk), new_line = .true.)
+        enddo
+        call messages_info()
+      endif
 
       ! for each index
       do kk = 1, mc%n_index

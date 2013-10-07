@@ -1178,11 +1178,15 @@ contains
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_str(val, new_line)
+  subroutine messages_write_str(val, fmt, new_line)
     character(len=*),           intent(in) :: val
+    character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
 
-    write(message(current_line), '(2a)') trim(message(current_line)), trim(val)
+    character*100 :: fmt_
+
+    fmt_ = optional_default(fmt, '(a)')
+    write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), trim(val)
 
     if(present(new_line)) then
       if(new_line) call messages_new_line()
