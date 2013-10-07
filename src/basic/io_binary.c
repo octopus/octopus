@@ -184,8 +184,8 @@ static inline int check_header(header_t * h, int * correct_endianness){
   return 0;
 }
 
-void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
-{ 
+void write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{
   char * filename;
   header_t * h;
   int fd;
@@ -228,6 +228,15 @@ void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ie
   close(fd);
 }
 
+void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{ 
+  unsigned long fname_len;
+  char * filename;
+  fname_len = l1;
+  TO_C_STR1(fname, filename);
+  write_header(np, type, ierr, fname, fname_len);
+}
+
 void FC_FUNC_(write_binary,WRITE_BINARY)
      (const fint * np, void * f, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
@@ -241,7 +250,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   fname_len = strlen(fname);
   fname_len = l1;
   TO_C_STR1(fname, filename);
-  write_header_(np, type, ierr, fname, fname_len);
+  write_header(np, type, ierr, fname, fname_len);
 
   fd = open (filename, O_WRONLY, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
