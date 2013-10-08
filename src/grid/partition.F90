@@ -215,7 +215,7 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, amode, info, fh, status, count
+    integer :: ipart, amode, info, fh, status, read_count
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 #ifdef HAVE_MPI2
@@ -251,9 +251,9 @@ contains
     call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(fh, partition%part, partition%np_local, &
          MPI_INTEGER, status, mpi_err)
-    call MPI_Get_count(status, MPI_INTEGER, count, mpi_err)
-    if (count /= partition%np_local) then 
-      write(message(1),'(i8,a,i8,a,i8)') partition%mpi_grp%rank, " rank, read elements=", count, &
+    call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
+    if (read_count /= partition%np_local) then 
+      write(message(1),'(i8,a,i8,a,i8)') partition%mpi_grp%rank, " rank, read elements=", read_count, &
            " instead of",partition%np_local
       call messages_fatal(2)
     end if
