@@ -412,7 +412,7 @@ contains
           cycle
         end if
 
-        ! distibute the nodes so that domains is the last
+        ! distribute the nodes so that domains is the last
         ff = real(nn, REAL_PRECISION)
         do ii = kk + 1, mc%n_index
           ff = ff / real(n_group_max(ii), REAL_PRECISION)
@@ -478,7 +478,7 @@ contains
       if(product(mc%group_sizes(1:mc%n_index)) /= base_grp%size) then
         write(message(1),'(a)') 'Inconsistent number of processors:'
         write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
-        write(message(3),'(a,i6)') '  Required processes = ', product(real_group_sizes(1:mc%n_index))
+        write(message(3),'(a,i6)') '  Required processes = ', product(mc%group_sizes(1:mc%n_index))
         message(4) = ''
         message(5) = 'You probably have a problem in the ParallelizationGroupRanks block or ParallelizationStrategy.'
         call messages_fatal(5, only_root_writes = .true.)
