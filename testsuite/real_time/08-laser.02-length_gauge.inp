@@ -41,4 +41,3 @@ AbsorbingBoundaries = no
 MoveIons = no
 
 TDOutput = laser + energy + multipoles
-OutputInterval = 10
