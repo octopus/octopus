@@ -218,6 +218,7 @@ contains
     integer :: ipart, amode, info, fh, status, read_count
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
+    logical :: finalized
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset
 #endif
@@ -259,7 +260,11 @@ contains
     end if
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    call MPI_File_close(fh, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(fh, mpi_err)
+    end if
+    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     ierr = 0
 #else
      ! The global partition is only read by the root node
