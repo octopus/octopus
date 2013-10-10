@@ -645,7 +645,6 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-!  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st)
   subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st, qinitial, qtildehalf)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
@@ -681,6 +680,7 @@ contains
       q => opt_control_point_q(qcchi)
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      inh%zpsi = M_z0
       do iatom = 1, geo%natoms
         call zhamiltonian_dervexternal(hm%ep, geo, gr, iatom, &
           M_HALF * (qinitial(iatom, :) + geo%atom(iatom)%x(:)), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
