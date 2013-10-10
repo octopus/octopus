@@ -1200,11 +1200,20 @@ contains
     logical,           intent(in) :: val
     logical, optional, intent(in) :: new_line
 
+    character*3 :: text
+
     if(val) then
-      write(message(current_line), '(2a)') trim(message(current_line)), ' yes'
+      text = 'yes'
     else
-      write(message(current_line), '(2a)') trim(message(current_line)), ' no'
+      text = 'no'
     end if
+
+    if(len(trim(message(current_line))) + len(trim(text)) > len(message(current_line))) then
+      write(message(current_line + 1), '(3a)') "Exceeded message line length limit, to write logical value '", trim(text), "'"
+      call messages_fatal(current_line + 1)
+    endif
+
+    write(message(current_line), '(a,1x,a)') trim(message(current_line)), trim(text)
 
     if(present(new_line)) then
       if(new_line) call messages_new_line()
