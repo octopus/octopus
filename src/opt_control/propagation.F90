@@ -516,6 +516,7 @@ contains
     type(oct_prop_t), intent(in)                  :: prop_psi
 
     integer :: i
+    logical :: freeze
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
@@ -568,14 +569,18 @@ contains
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
-
       if(ion_dynamics_ions_move(td%ions)) then
         qtildehalf = q
+
+        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
+        call ion_dynamics_propagate(td%ions, gr%sb, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt)
         call geometry_get_positions(sys%geo, qinitial)
+        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
+
         SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
         SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
         call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q)
-        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
+
         call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
         call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
       end if
@@ -590,14 +595,16 @@ contains
 
       if(ion_dynamics_ions_move(td%ions)) then
         call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
-        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
+        call geometry_set_positions(sys%geo, qinitial)
+        call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
       end if
 
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, qcchi, st_ref, qinitial, qtildehalf)
+      freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+      if(freeze) call ion_dynamics_unfreeze(td%ions)
 
       if(ion_dynamics_ions_move(td%ions)) then
         call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
@@ -611,6 +618,7 @@ contains
 
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
+
     end do
 
     call states_end(st_ref)
@@ -659,12 +667,8 @@ contains
     FLOAT, intent(in), optional                :: qinitial(:, :)
     FLOAT, intent(in), optional                :: qtildehalf(:, :)
 
-    FLOAT, pointer :: q(:, :)
-    FLOAT, parameter :: w2 = CNST(0.05)
     type(states_t) :: inh
-    integer :: j, idim, ip, iatom
-    FLOAT :: rr, xx(MAX_DIM)
-
+    integer :: j, iatom
     CMPLX, allocatable :: dvpsi(:, :)
 
     PUSH_SUB(update_hamiltonian_chi)
@@ -677,19 +681,17 @@ contains
     end if
 
     if(ion_dynamics_ions_move(td%ions)) then
-      q => opt_control_point_q(qcchi)
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim))
       inh%zpsi = M_z0
       do iatom = 1, geo%natoms
         call zhamiltonian_dervexternal(hm%ep, geo, gr, iatom, &
-          M_HALF * (qinitial(iatom, :) + geo%atom(iatom)%x(:)), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
+          qinitial(iatom, :), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
         inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, 1) * dvpsi(:, :)
       end do
       SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
-      nullify(q)
     end if
 
     if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then

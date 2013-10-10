@@ -67,7 +67,9 @@ module geometry_m
     geometry_val_charge,             &
     geometry_grid_defaults,          &
     geometry_species_time_dependent, &
-    geometry_get_positions
+    geometry_get_positions,          &
+    geometry_set_positions
+
 
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
@@ -1054,6 +1056,21 @@ contains
 
     POP_SUB(geometry_get_positions)
   end subroutine geometry_get_positions
+
+  ! ---------------------------------------------------------
+  subroutine geometry_set_positions(geo, q)
+    type(geometry_t), intent(inout) :: geo
+    FLOAT,            intent(in)    :: q(:, :)
+
+    integer :: iatom
+    PUSH_SUB(geometry_get_positions)
+
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%x(1:geo%space%dim) = q(iatom, 1:geo%space%dim)
+    end do
+
+    POP_SUB(geometry_get_positions)
+  end subroutine geometry_set_positions
 
 
 end module geometry_m
