@@ -154,6 +154,10 @@ contains
     integer :: ipart, ierr, amode, info, fh, status
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
+    logical :: finalized
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset
+#endif
 
     PUSH_SUB(partition_write)
 
@@ -182,11 +186,17 @@ contains
     call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
     call MPI_File_set_atomicity(fh, .true., mpi_err)
-    call MPI_File_seek(fh, sdispls(partition%mpi_grp%rank+1), MPI_SEEK_SET, mpi_err)
+    !! +64 to skip the header, FC_INTEGER_SIZE is the integer size in the running machine
+    offset = sdispls(partition%mpi_grp%rank+1)*FC_INTEGER_SIZE+64
+    call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(fh, partition%part, partition%np_local, &
          MPI_INTEGER, STATUS, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-    call MPI_File_close(fh, mpi_err)
+    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(fh, mpi_err)
+    end if
 #else
     !Get the global partition in the root node
     if (partition%mpi_grp%rank == 0) then
@@ -256,7 +266,7 @@ contains
     if (read_count /= partition%np_local) then 
       write(message(1),'(i8,a,i8,a,i8)') partition%mpi_grp%rank, " rank, read elements=", read_count, &
            " instead of",partition%np_local
-      call messages_fatal(2)
+      call messages_fatal(1)
     end if
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
