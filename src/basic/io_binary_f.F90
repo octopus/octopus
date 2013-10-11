@@ -320,8 +320,8 @@ contains
     integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(swrite_parallel)
 
@@ -352,8 +352,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(dwrite_parallel)
 
@@ -391,8 +391,8 @@ contains
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(cwrite_parallel)
 
@@ -423,8 +423,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(zwrite_parallel)
 
@@ -455,8 +455,8 @@ contains
     integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
+    integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: status
 
     PUSH_SUB(iwrite_parallel)
 
@@ -487,8 +487,8 @@ contains
     integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(lwrite_parallel)
 
@@ -756,8 +756,8 @@ contains
     integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(sread_parallel)
 
@@ -793,8 +793,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset 
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(dread_parallel)
 
@@ -837,8 +837,8 @@ contains
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(cread_parallel)
 
@@ -874,8 +874,8 @@ contains
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(zread_parallel)
 
@@ -911,8 +911,8 @@ contains
     integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(iread_parallel)
 
@@ -948,8 +948,8 @@ contains
     integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-#endif
     integer :: status(MPI_STATUS_SIZE), read_count
+#endif
 
     PUSH_SUB(lread_parallel)
 
