@@ -321,7 +321,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status
+    integer :: status(MPI_STATUS_SIZE)
 
     PUSH_SUB(swrite_parallel)
 
@@ -353,7 +353,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status
+    integer :: status(MPI_STATUS_SIZE)
 
     PUSH_SUB(dwrite_parallel)
 
@@ -392,7 +392,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status
+    integer :: status(MPI_STATUS_SIZE)
 
     PUSH_SUB(cwrite_parallel)
 
@@ -424,7 +424,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status
+    integer :: status(MPI_STATUS_SIZE)
 
     PUSH_SUB(zwrite_parallel)
 
@@ -488,7 +488,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status
+    integer :: status(MPI_STATUS_SIZE)
 
     PUSH_SUB(lwrite_parallel)
 
@@ -757,7 +757,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(sread_parallel)
 
@@ -794,7 +794,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset 
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(dread_parallel)
 
@@ -838,7 +838,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(cread_parallel)
 
@@ -875,7 +875,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(zread_parallel)
 
@@ -912,7 +912,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(iread_parallel)
 
@@ -949,7 +949,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
 #endif
-    integer :: status, read_count
+    integer :: status(MPI_STATUS_SIZE), read_count
 
     PUSH_SUB(lread_parallel)
 
