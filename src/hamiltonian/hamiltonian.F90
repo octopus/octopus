@@ -782,8 +782,8 @@ contains
       end do
     end if
 
-    call states_dim_end(hm%d)
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+    call states_dim_end(hm%d) 
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
       call states_end(hm%hf_st)
       SAFE_DEALLOCATE_P(hm%hf_st)
     endif
@@ -1175,7 +1175,7 @@ contains
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
-    if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
+    if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK .or. this%theory_level == RDMFT) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA) /= 0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 

@@ -237,7 +237,7 @@ contains
 
       call unit_system_init()
       call system_init(sys)
-      if(sys%ks%theory_level == RDMFT .and. sys%st%nst < sys%st%qtot+5) then
+      if(sys%ks%theory_level == RDMFT .and. sys%st%nst < sys%st%qtot+5) then   
         message(1) = "Too few states to run RDMFT calculation"
         message(2) = "Number of states should be at least the number of electrons plus five"
         call messages_fatal(2)

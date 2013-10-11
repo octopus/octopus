@@ -404,7 +404,7 @@ contains
     FLOAT,            optional, intent(in)    :: time
     logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
-    
+
     call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy)
     call v_ks_calc_finish(ks, hm)
 
@@ -418,7 +418,6 @@ contains
       end if
       
     end if
-
   end subroutine v_ks_calc
 
   ! --------------------------------------------------------- 
@@ -443,7 +442,6 @@ contains
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
-
     cmplxscl = hm%cmplxscl%space
    
     ASSERT(.not. ks%calc%calculating)
@@ -512,8 +510,8 @@ contains
       if(ks%theory_level /= HARTREE) call v_a_xc(geo, hm)
     end if
 
-    nullify(ks%calc%hf_st)
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
+    nullify(ks%calc%hf_st) 
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_null(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
@@ -870,7 +868,7 @@ contains
       end if
     else
 
-      if(ks%theory_level /= HARTREE) then
+      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT ) then 
         if(ks%gr%have_fine_mesh) then
           do ispin = 1, hm%d%nspin
             call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
@@ -915,7 +913,10 @@ contains
       hm%energy%Imhartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
+      if (ks%theory_level == RDMFT) hm%vxc=M_ZERO 
+
       ! Build Hartree + XC potential
+     
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
       if (hm%cmplxscl%space) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 1) = hm%Imvxc(ip, 1) + hm%Imvhartree(ip)
       if(associated(hm%vberry)) then
@@ -935,7 +936,7 @@ contains
         if (hm%cmplxscl%space) forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, ispin) = hm%Imvxc(ip, ispin)
       end if
 
-      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
         call states_end(hm%hf_st)
@@ -946,6 +947,8 @@ contains
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
         case(HARTREE)
+          hm%exx_coef = M_ONE
+        case(RDMFT) 
           hm%exx_coef = M_ONE
         end select
       end if

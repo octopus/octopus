@@ -122,6 +122,9 @@ dist_share_DATA =                                  \
 	04-oep.test                                \
 	05-ks_inversion.test                       \
 	05-ks_inversion.01-target_density.inp      \
-	05-ks_inversion.02-inversion.inp
+	05-ks_inversion.02-inversion.inp           \
+        06-rdmft.01-hf_smear.inp                   \
+        06-rdmft.02-gs.inp                         \
+        06-rdmft.test
 
 CLEANFILES = *~ *.bak
