@@ -308,8 +308,6 @@ contains
     POP_SUB(lwrite_binary2)
   end subroutine lwrite_binary2
 
-  ! HASIERA **********************************************
-
   ! ------------------------------------------------------
 
   subroutine swrite_parallel(file_handle, xlocal, np, ff, ierr)
@@ -512,8 +510,6 @@ contains
 
     POP_SUB(lwrite_parallel)
   end subroutine lwrite_parallel
-
-  !--- BUKAERA **************************************
 
   !------------------------------------------------------
 
@@ -754,9 +750,6 @@ contains
 
   !------------------------------------------------------
 
-  !--- HASIERA **************************************
-  ! ------------------------------------------------------
-
   subroutine sread_parallel(file_handle, xlocal, np, ff, ierr)
     integer,             intent(in)  :: file_handle
     integer,             intent(in)  :: xlocal
@@ -988,7 +981,7 @@ contains
     POP_SUB(lread_parallel)
   end subroutine lread_parallel
 
-  !--- BUKAERA **************************************
+  !------------------------------------------------------
 
   subroutine io_binary_get_info(fname, np, ierr)
     character(len=*),    intent(in)    :: fname
