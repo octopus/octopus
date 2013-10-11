@@ -78,7 +78,8 @@ module states_calc_m
   public ::                         &
     states_orthogonalize,           &
     states_degeneracy_matrix,       &
-    states_rotate,                  &
+    dstates_rotate,                 &
+    zstates_rotate,                 &
     dstates_rotate_in_place,        &
     zstates_rotate_in_place,        &
     dstates_calc_orth_test,         &

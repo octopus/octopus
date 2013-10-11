@@ -83,7 +83,11 @@
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
-          call states_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
+          if(states_are_real(tg%st)) then
+            call dstates_rotate(gr%mesh, tg%st, tmp_st, real(rotation_matrix, REAL_PRECISION))
+          else
+            call zstates_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
+          endif
           SAFE_DEALLOCATE_A(rotation_matrix)
           call density_calc(tg%st, gr, tg%st%rho)
           do ip = 1, gr%mesh%np

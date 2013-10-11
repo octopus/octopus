@@ -485,7 +485,7 @@ contains
     
     PUSH_SUB(scf_orb)
 
-    SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) !matrix of Lagranage Multiplyers from Piris paper Equation (8) 
+    SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) !matrix of Lagrange Multipliers from Piris paper Equation (8) 
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
 
     lambda = M_ZERO
@@ -644,25 +644,22 @@ contains
     FLOAT,                intent(in)    :: lambda(:, :)
     
     type(states_t)   :: psi2
-    CMPLX, allocatable :: zlambda(:,:)
     FLOAT, allocatable :: occ(:,:)
     integer :: ist, jst
 
     PUSH_SUB(assign_eigenfunctions)
     
-    SAFE_ALLOCATE(zlambda(1:st%nst,1:st%nst))
     SAFE_ALLOCATE(occ(1:st%nst,1:st%d%nik))
 
-   
-    zlambda = M_ZERO
     occ = M_ZERO
 
-    zlambda = transpose(lambda) 
-
     call states_copy(psi2, st)
-    call states_rotate(gr%mesh, st, psi2, zlambda)
+    if(states_are_real(st)) then
+      call dstates_rotate(gr%mesh, st, psi2, transpose(lambda))
+    else
+      call zstates_rotate(gr%mesh, st, psi2, M_z0 * transpose(lambda))
+    endif
  
-
    ! reordering occupation numbers if needed
     occ = st%occ
 
@@ -679,7 +676,6 @@ contains
   
     call states_end(psi2) 
 
-    SAFE_DEALLOCATE_A(zlambda)
     SAFE_DEALLOCATE_A(occ)
     
     POP_SUB(assign_eigenfunctions)

@@ -141,7 +141,12 @@ contains
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
-          call states_rotate(sys%gr%mesh, psi, tmp_st, rotation_matrix)
+          ! FIXME: rotation matrix should be R_TYPE
+          if(states_are_real(psi)) then
+            call dstates_rotate(sys%gr%mesh, psi, tmp_st, real(rotation_matrix, REAL_PRECISION))
+          else
+            call zstates_rotate(sys%gr%mesh, psi, tmp_st, rotation_matrix)
+          endif
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
         else

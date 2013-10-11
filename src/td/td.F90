@@ -440,13 +440,15 @@ contains
         !% Note that the code will not check the orthonormality of the new states!
         !%
         !% Each line provides the coefficients of the new states, in terms of
-        !% the old ones.
+        !% the old ones. The coefficients are complex, but the imaginary part will be
+        !% ignored for real wavefunctions.
         !%End
         if(parse_isdef(datasets_check('TransformStates')) /= 0) then
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
             call restart_look_and_read(stin, gr)
+            ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst
@@ -454,7 +456,11 @@ contains
                 call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call states_rotate(gr%mesh, st, stin, rotation_matrix)
+            if(states_are_real(st)) then
+              call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
+            else
+              call zstates_rotate(gr%mesh, st, stin, rotation_matrix)
+            endif
             SAFE_DEALLOCATE_A(rotation_matrix)
             call states_end(stin)
           else

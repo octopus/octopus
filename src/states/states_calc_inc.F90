@@ -17,6 +17,33 @@
 !!
 !! $Id$
 
+!> ---------------------------------------------------------
+!! This routine transforms the orbitals of state "st", according
+!! to the transformation matrix "uu".
+!!
+!! Each row of u contains the coefficients of the new orbitals
+!! in terms of the old ones.
+!! ---------------------------------------------------------
+subroutine X(states_rotate)(mesh, st, stin, uu)
+  type(mesh_t),      intent(in)    :: mesh
+  type(states_t),    intent(inout) :: st
+  type(states_t),    intent(in)    :: stin
+  R_TYPE,            intent(in)    :: uu(:, :) !< (nst, nst)
+  
+  integer :: ik
+  
+  PUSH_SUB(X(states_rotate))
+
+  ASSERT(associated(st%X(psi)))
+  ASSERT(associated(stin%X(psi)))
+  
+  do ik = st%d%kpt%start, st%d%kpt%end
+    call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, R_TOTYPE(M_ONE), stin%X(psi)(:, :, 1:stin%nst, ik), &
+      transpose(uu(:, :)), R_TOTYPE(M_ZERO), st%X(psi)(:, :, :, ik))
+  end do
+  
+  POP_SUB(X(states_rotate))
+end subroutine X(states_rotate)
 
 ! ---------------------------------------------------------
 !> Orthonormalizes nst orbitals in mesh (honours state parallelization).
