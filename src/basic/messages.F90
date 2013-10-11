@@ -1185,6 +1185,11 @@ contains
 
     character*100 :: fmt_
 
+    if(len(trim(message(current_line))) + len(trim(val)) > len(message(current_line))) then
+      write(message(current_line + 1), '(3a)') "Exceeded message line length limit, to write string '", trim(val), "'"
+      call messages_fatal(current_line + 1)
+    endif
+
     fmt_ = optional_default(fmt, '(a)')
     write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), trim(val)
 
