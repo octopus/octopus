@@ -173,7 +173,7 @@ contains
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
     
-    ! Write the header (root only)
+    ! Write the header (root only) and wait
     ierr = 0
     if (partition%mpi_grp%rank == 0) then
       call io_binary_write_header(filename, partition%np_global, FC_INTEGER_SIZE, ierr)
@@ -185,12 +185,8 @@ contains
     info = MPI_INFO_NULL 
     call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-    call MPI_File_set_atomicity(fh, .true., mpi_err)
-    !! +64 to skip the header, FC_INTEGER_SIZE is the integer size in the running machine
-    offset = sdispls(partition%mpi_grp%rank+1)*FC_INTEGER_SIZE+64
-    call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(fh, partition%part, partition%np_local, &
-         MPI_INTEGER, STATUS, mpi_err)
+    call io_binary_write_parallel(fh, sdispls(partition%mpi_grp%rank+1)+1, partition%np_local, &
+         partition%part, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     call MPI_Finalized(finalized, mpi_err)
@@ -225,13 +221,10 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, amode, info, fh, status, read_count
+    integer :: ipart, amode, info, fh, status
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
     logical :: finalized
-#ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset
-#endif
 
     PUSH_SUB(partition_read)
     
@@ -256,18 +249,8 @@ contains
     call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
 
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
-    !! +64 to skip the header, FC_INTEGER_SIZE is the integer size in the running machine
-    offset = sdispls(partition%mpi_grp%rank+1)*FC_INTEGER_SIZE+64
-    call MPI_File_set_atomicity(fh, .true., mpi_err)
-    call MPI_File_seek(fh, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(fh, partition%part, partition%np_local, &
-         MPI_INTEGER, status, mpi_err)
-    call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
-    if (read_count /= partition%np_local) then 
-      write(message(1),'(i8,a,i8,a,i8)') partition%mpi_grp%rank, " rank, read elements=", read_count, &
-           " instead of",partition%np_local
-      call messages_fatal(1)
-    end if
+    call io_binary_read_parallel(fh, sdispls(partition%mpi_grp%rank+1)+1, &
+         partition%np_local, partition%part, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     call MPI_Finalized(finalized, mpi_err)

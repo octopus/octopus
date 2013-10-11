@@ -23,26 +23,37 @@
 module io_binary_m
   use global_m
   use messages_m
+  use mpi_m
 
   implicit none 
 
   private
 
-  public ::                 &
-    io_binary_write_header, &
-    io_binary_write,        &
-    io_binary_read,         &
+  public ::                   &
+    io_binary_write_header,   &
+    io_binary_write,          &
+    io_binary_write_parallel, &
+    io_binary_read,           &
+    io_binary_read_parallel,  &
     io_binary_get_info
 
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
     module procedure iwrite_binary2, lwrite_binary2, zwrite_binary3, cwrite_binary3, dwrite_binary3
   end interface io_binary_write
+  
+  interface io_binary_write_parallel
+    module procedure swrite_parallel, dwrite_parallel, cwrite_parallel,  zwrite_parallel, iwrite_parallel, lwrite_parallel
+  end interface io_binary_write_parallel
 
   interface io_binary_read
     module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
     module procedure iread_binary2, lread_binary2, zread_binary3, cread_binary3, dread_binary3
   end interface io_binary_read
+
+  interface io_binary_read_parallel
+    module procedure sread_parallel, dread_parallel, cread_parallel,  zread_parallel, iread_parallel, lread_parallel
+  end interface io_binary_read_parallel
 
   interface io_binary_write_header
     module procedure iwrite_header
@@ -297,6 +308,213 @@ contains
     POP_SUB(lwrite_binary2)
   end subroutine lwrite_binary2
 
+  ! HASIERA **********************************************
+
+  ! ------------------------------------------------------
+
+  subroutine swrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    real(4),             intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_FLOAT
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(swrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 4 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) =>
+    offset = (xlocal-1)*16+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(swrite_parallel)
+  end subroutine swrite_parallel
+
+  !------------------------------------------------------
+
+  subroutine dwrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    real(8),             intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(dwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+
+    PUSH_SUB(cwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 8 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) => 
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(dwrite_parallel)
+  end subroutine dwrite_parallel
+
+  !------------------------------------------------------
+
+  subroutine cwrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    complex(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_FLOAT_COMPLEX
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(cwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 8 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(cwrite_parallel)
+  end subroutine cwrite_parallel
+
+  !------------------------------------------------------
+
+  subroutine zwrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    complex(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(zwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 16 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
+    offset = (xlocal-1)*16+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(zwrite_parallel)
+  end subroutine zwrite_parallel
+
+  !------------------------------------------------------
+  
+  subroutine iwrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(iwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    offset = (xlocal-1)*FC_INTEGER_SIZE+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(iwrite_parallel)
+  end subroutine iwrite_parallel
+
+  !------------------------------------------------------
+
+  subroutine lwrite_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status
+
+    PUSH_SUB(lwrite_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
+    ierr = mpi_err
+#endif
+
+    POP_SUB(lwrite_parallel)
+  end subroutine lwrite_parallel
+
+  !--- BUKAERA **************************************
+
   !------------------------------------------------------
 
   subroutine sread_binary(fname, np, ff, ierr, offset)
@@ -535,6 +753,242 @@ contains
   end subroutine lread_binary2
 
   !------------------------------------------------------
+
+  !--- HASIERA **************************************
+  ! ------------------------------------------------------
+
+  subroutine sread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    real(4),             intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_FLOAT
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(sread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 4 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) =>
+    offset = (xlocal-1)*16+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
+    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(sread_parallel)
+  end subroutine sread_parallel
+
+  !------------------------------------------------------
+
+  subroutine dread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    real(8),             intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset 
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(dread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+
+    PUSH_SUB(cread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 8 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) => 
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
+    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(dread_parallel)
+  end subroutine dread_parallel
+
+  !------------------------------------------------------
+
+  subroutine cread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    complex(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_FLOAT_COMPLEX
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(cread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 8 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
+    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(cread_parallel)
+  end subroutine cread_parallel
+
+  !------------------------------------------------------
+
+  subroutine zread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    complex(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(zread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    !! I assume 16 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
+    offset = (xlocal-1)*16+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
+    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(zread_parallel)
+  end subroutine zread_parallel
+
+  !------------------------------------------------------
+  
+  subroutine iread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(iread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    offset = (xlocal-1)*FC_INTEGER_SIZE+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
+    call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(iread_parallel)
+  end subroutine iread_parallel
+
+  !------------------------------------------------------
+
+  subroutine lread_parallel(file_handle, xlocal, np, ff, ierr)
+    integer,             intent(in)  :: file_handle
+    integer,             intent(in)  :: xlocal
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset    
+#endif
+    integer :: status, read_count
+
+    PUSH_SUB(lread_parallel)
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    offset = (xlocal-1)*8+64
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
+    call MPI_Get_count(status, MPI_INTEGER4, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
+    ierr = mpi_err
+#endif
+
+    POP_SUB(lread_parallel)
+  end subroutine lread_parallel
+
+  !--- BUKAERA **************************************
 
   subroutine io_binary_get_info(fname, np, ierr)
     character(len=*),    intent(in)    :: fname
