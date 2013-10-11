@@ -307,6 +307,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   npoints = product(nr(2, 1:3) - nr(1, 1:3) + 1)
   call MPI_Allreduce(MPI_IN_PLACE, mesh%idx%lxyz_inv(nr(1, 1), nr(1, 2), nr(1, 3)), npoints, &
     MPI_INTEGER, MPI_BOR, mpi_world%comm, mpi_err)
+  ! MPI2 not working could also provoke a segmentation fault in the line above, which we cannot catch.
+  if(all(mesh%idx%lxyz_inv(:,:,:) == 0)) then
+    message(1) = "Failure of MPI_Allreduce in place for lxyz_inv. MPI2 is not working correctly."
+    call messages_fatal(1)
+  endif
 
   call profiling_out(prof_reduce)
 #endif
@@ -390,6 +395,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%np_part_global = il
   mesh%np_global      = ik
 
+  ASSERT(mesh%np_global > 0)
+  ASSERT(mesh%np_part_global > 0)
+
   ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
   ! following routine checks that everything will be ok.
   if(sb%mr_flag) then
@@ -436,7 +444,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)
 end subroutine mesh_init_stage_2
-
 
 ! ---------------------------------------------------------
 !> When running parallel in domains, stencil and np_stencil
@@ -776,7 +783,12 @@ contains
       call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
 
       ASSERT(iin == mesh%np_global)
-      ASSERT(ien == mesh%np_part_global)
+
+      if(ien /= mesh%np_part_global) then
+        write(message(1), '(a,i9,a,i9)') 'Assertion failure from create_x_lxyz: ien = ', ien, ' /= ', mesh%np_part_global
+        write(message(2), '(a)') 'Probably MPI2 is not working correctly.'
+        call messages_fatal(2)
+      endif
 
       POP_SUB(mesh_init_stage_3.create_x_lxyz)
     end subroutine create_x_lxyz
