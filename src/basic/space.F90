@@ -45,7 +45,7 @@ module space_m
   integer, parameter :: default_ndim = 3
 
   type space_t
-    integer :: dim = 0
+    integer :: dim
   end type space_t
 
   interface operator(==)
