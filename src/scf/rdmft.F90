@@ -88,7 +88,7 @@ contains
     rdm%qtot = st%qtot
     rdm%occsum = M_ZERO
     rdm%scale_f = CNST(1e-3)
-    rdm%iter = M_ONE
+    rdm%iter = 1
     
    
 
@@ -177,7 +177,7 @@ contains
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
-    counter = M_ZERO
+    counter = 0
     fr = M_ZERO
     energy = M_ZERO 
 
@@ -206,7 +206,7 @@ contains
         else
           rdm%scale_f = CNST(0.95)* rdm%scale_f 
         endif
-        counter = M_ZERO
+        counter = 0
         xneg = M_ZERO
         xpos = M_ZERO
       end do
@@ -422,7 +422,7 @@ contains
       FLOAT, intent(out)                  :: df(1:nst)
       FLOAT, intent(out)                  :: objective_new
 
-      integer :: ist, jst
+      integer :: ist
       FLOAT ::  energy
       FLOAT, allocatable :: V_h(:), V_x(:), dE_dn(:),occ(:) 
  
