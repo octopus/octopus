@@ -330,8 +330,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 4 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) =>
-    offset = (xlocal-1)*16+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
@@ -370,8 +369,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 8 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) => 
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
@@ -403,8 +401,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 8 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
@@ -436,8 +433,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 16 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
-    offset = (xlocal-1)*16+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
@@ -469,7 +465,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*FC_INTEGER_SIZE+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
@@ -770,16 +766,15 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 4 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) =>
-    offset = (xlocal-1)*16+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
-    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
-    end if
+!!$    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
+!!$    if (read_count /= np) then 
+!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+!!$      call messages_fatal(1)
+!!$    end if
     ierr = mpi_err
 #endif
 
@@ -815,16 +810,15 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 8 byte real (ubuntu x86_64, gcc-4.4/4.6, openmpi) => 
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
-    end if
+!!$    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
+!!$    if (read_count /= np) then 
+!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+!!$      call messages_fatal(1)
+!!$    end if
     ierr = mpi_err
 #endif
 
@@ -853,16 +847,15 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 8 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
-    end if
+!!$    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
+!!$    if (read_count /= np) then 
+!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+!!$      call messages_fatal(1)
+!!$    end if
     ierr = mpi_err
 #endif
 
@@ -891,16 +884,15 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    !! I assume 16 byte complex (ubuntu x86_64, gcc-4.4/4.6, openmpi) => MPI_DOUBLE_COMPLEX
-    offset = (xlocal-1)*16+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
-    end if
+!!$    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
+!!$    if (read_count /= np) then 
+!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+!!$      call messages_fatal(1)
+!!$    end if
     ierr = mpi_err
 #endif
 
@@ -929,7 +921,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*FC_INTEGER_SIZE+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
@@ -966,7 +958,7 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
