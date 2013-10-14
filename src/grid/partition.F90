@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: par_vec.F90 10505 2013-05-03 18:56:16Z dstrubbe $
+!! $Id$
 
 #include "global.h"
  
