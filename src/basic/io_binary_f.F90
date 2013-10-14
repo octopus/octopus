@@ -361,13 +361,6 @@ contains
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-
-    PUSH_SUB(cwrite_parallel)
-
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
-
-    ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
@@ -770,11 +763,11 @@ contains
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
-!!$    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
-!!$    if (read_count /= np) then 
-!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-!!$      call messages_fatal(1)
-!!$    end if
+    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
     ierr = mpi_err
 #endif
 
@@ -802,23 +795,16 @@ contains
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-
-    PUSH_SUB(cread_parallel)
-
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
-
-    ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-!!$    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
-!!$    if (read_count /= np) then 
-!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-!!$      call messages_fatal(1)
-!!$    end if
+    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
     ierr = mpi_err
 #endif
 
@@ -851,11 +837,11 @@ contains
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-!!$    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
-!!$    if (read_count /= np) then 
-!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-!!$      call messages_fatal(1)
-!!$    end if
+    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
     ierr = mpi_err
 #endif
 
@@ -888,11 +874,11 @@ contains
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-!!$    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
-!!$    if (read_count /= np) then 
-!!$      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-!!$      call messages_fatal(1)
-!!$    end if
+    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
+    if (read_count /= np) then 
+      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
+      call messages_fatal(1)
+    end if
     ierr = mpi_err
 #endif
 
