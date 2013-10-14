@@ -103,19 +103,19 @@ contains
   end subroutine total_force_calculate
 
 
-  subroutine forces_costate_calculate(gr, geo, ep, psi, chi, f, q)
+  subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout) :: geo
-    type(epot_t),     intent(inout) :: ep
+    type(hamiltonian_t),     intent(inout) :: hm
     type(states_t),   intent(inout) :: psi
     type(states_t),   intent(inout) :: chi
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
 
-    integer :: iatom, jatom, idim, jdim, ip
+    integer :: iatom, jatom, idim, jdim, ip, i, j
     FLOAT :: r, w2r_, w1r_, rr, xx(MAX_DIM)
     type(profile_t), save :: forces_prof
-    CMPLX, allocatable :: dvpsi(:, :), dpsi(:, :, :)
+    CMPLX, allocatable :: dvpsi(:, :, :), dpsi(:, :, :)
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
@@ -126,11 +126,9 @@ contains
         if(jatom == iatom) cycle
         xx(1:gr%sb%dim) = geo%atom(jatom)%x(1:gr%sb%dim) - geo%atom(iatom)%x(1:gr%sb%dim)
         r = sqrt( sum( xx(1:gr%sb%dim)**2 ) )
-        !w2r_ = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) * M_TWO / r**3
         w2r_ = w2r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
         w1r_ = w1r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
         do idim = 1, gr%sb%dim
-          !f(iatom, idim) = f(iatom, idim) + (q(jatom, idim) - q(iatom, idim)) * w2r_
           do jdim = 1, gr%sb%dim
             f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w2r_ * (M_ONE/r**2) * xx(idim) * xx(jdim)
             f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r**3) * xx(idim) * xx(jdim)
@@ -145,15 +143,20 @@ contains
     do iatom = 1, geo%natoms
 
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:psi%d%dim))
-      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:psi%d%dim))
+      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:psi%d%dim, 1:gr%sb%dim))
       do idim = 1, psi%d%dim
         call zderivatives_grad(gr%der, psi%zpsi(:, idim, 1, 1), dpsi(:, :, idim))
       end do
-      call zhamiltonian_dervexternal(ep, geo, gr, iatom, xx-geo%atom(iatom)%x, psi%d%dim, psi%zpsi(:, :, 1, 1), dvpsi)
+      call zhamiltonian_dervexternal(hm, geo, gr, iatom, xx-geo%atom(iatom)%x, psi%d%dim, psi%zpsi(:, :, 1, 1), dvpsi)
 
-      f(iatom, 1) = f(iatom, 1) + q(iatom, 1) * &
-        M_TWO * real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, 1, 1:psi%d%dim), dvpsi), REAL_PRECISION)
-      f(iatom, 1) = f(iatom, 1) - M_TWO * real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), dvpsi), REAL_PRECISION)
+      do i = 1, gr%sb%dim
+        do j = 1, gr%sb%dim
+          f(iatom, i) = f(iatom, i) + q(iatom, j) * &
+            M_TWO * real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, j, 1:psi%d%dim), dvpsi(:, :, i)), REAL_PRECISION)
+        end do
+        f(iatom, i) = f(iatom, i) &
+          - M_TWO * real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), dvpsi(:, :, i)), REAL_PRECISION)
+      end do
 
       SAFE_DEALLOCATE_A(dpsi)
       SAFE_DEALLOCATE_A(dvpsi)

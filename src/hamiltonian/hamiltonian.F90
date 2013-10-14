@@ -1185,34 +1185,32 @@ contains
   ! This routine computes the action of the derivative of the external potential
   ! with respect to the nuclear positions. It is preliminary, and should be
   ! recoded in a more efficient way.
-  subroutine zhamiltonian_dervexternal(ep, geo, gr, ia, qa, dim, psi, dvpsi)
-    type(epot_t), intent(inout)  :: ep
+  subroutine zhamiltonian_dervexternal(hm, geo, gr, ia, qa, dim, psi, dvpsi)
+    type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)  :: geo
     type(grid_t),        intent(in)  :: gr
     integer,             intent(in)  :: ia
     FLOAT,               intent(in)  :: qa(:)
     integer,             intent(in)  :: dim
     CMPLX,               intent(inout)  :: psi(:, :)
-    CMPLX,               intent(out) :: dvpsi(:, :)
+    CMPLX,               intent(out) :: dvpsi(:, :, :)
 
-    FLOAT :: rr, xx(MAX_DIM)
     FLOAT, allocatable :: vlocal(:)
-    ! FLOAT, allocatable :: dvlocal(:, :)
     CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
     integer :: idim, ip
     PUSH_SUB(dvexternal)
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     SAFE_ALLOCATE(vlocalpsi(1:gr%mesh%np_part, 1:dim))
-    SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:dim))
-    SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:dim))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
+    SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
 
     vlocal = M_ZERO
     vlocalpsi = M_ZERO
     dpsi = M_z0
     dvlocalpsi = M_z0
 
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
     do idim = 1, dim
       call zderivatives_grad(gr%der, psi(:, idim), dpsi(:, :, idim))
     end do
@@ -1225,7 +1223,6 @@ contains
       call zderivatives_grad(gr%der, vlocalpsi(:, idim), dvlocalpsi(:, :, idim))
     end do
     
-
     ! Various ways to do the same thing:
     ! (1)
     !    _SAFE_ALLOCATE(dvlocal(1:gr%mesh%np, 1:gr%sb%dim))
@@ -1248,7 +1245,7 @@ contains
     ! (3)
     do idim = 1, dim
       do ip = 1, gr%mesh%np
-        dvpsi(ip, dim) = - vlocal(ip) * dpsi(ip, 1, idim) + dvlocalpsi(ip, 1, idim)
+        dvpsi(ip, idim, 1:gr%sb%dim) = - vlocal(ip) * dpsi(ip, 1:gr%sb%dim, idim) + dvlocalpsi(ip, 1:gr%sb%dim, idim)
       end do
     end do
 

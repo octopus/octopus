@@ -579,7 +579,7 @@ contains
 
         SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
         SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
-        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fold, q)
+        call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fold, q)
 
         call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
         call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
@@ -610,7 +610,7 @@ contains
         call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
         call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-        call forces_costate_calculate(gr, sys%geo, hm%ep, psi, chi, fnew, q)
+        call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
         call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
         SAFE_DEALLOCATE_A(fold)
         SAFE_DEALLOCATE_A(fnew)
@@ -668,8 +668,8 @@ contains
     FLOAT, intent(in), optional                :: qtildehalf(:, :)
 
     type(states_t) :: inh
-    integer :: j, iatom
-    CMPLX, allocatable :: dvpsi(:, :)
+    integer :: j, iatom, idim
+    CMPLX, allocatable :: dvpsi(:, :, :)
 
     PUSH_SUB(update_hamiltonian_chi)
 
@@ -682,12 +682,14 @@ contains
 
     if(ion_dynamics_ions_move(td%ions)) then
       call states_copy(inh, st)
-      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
       inh%zpsi = M_z0
       do iatom = 1, geo%natoms
-        call zhamiltonian_dervexternal(hm%ep, geo, gr, iatom, &
+        call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
           qinitial(iatom, :), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
-        inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, 1) * dvpsi(:, :)
+        do idim = 1, gr%sb%dim
+          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+        end do
       end do
       SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
