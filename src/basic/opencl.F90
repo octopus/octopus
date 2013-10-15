@@ -923,7 +923,7 @@ contains
     character(len=*), optional, intent(in)    :: flags
 
     character(len = OPENCL_MAX_FILE_LENGTH) :: string
-    integer :: ierr, ierrlog, iunit, irec
+    integer :: ierr, ierrlog, iunit, irec, newlen
     type(profile_t), save :: prof
 
     PUSH_SUB(opencl_build_program)
@@ -995,6 +995,10 @@ contains
     call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
     if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
 
+    ! CL_PROGRAM_BUILD_LOG seems to have a useless '\n' in it
+    newlen = scan(string, achar(010)) - 1
+    if(newlen >= 0) string = string(1:newlen)
+    
     if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
 
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
