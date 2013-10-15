@@ -1,4 +1,4 @@
-!! Copyright (C) 2012 I. Theophilou, N. Helbig
+! Copyright (C) 2012 I. Theophilou, N. Helbig
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ contains
     !% Even if the convergence criterion is not satisfied, the minimization will stop
     !% after this number of iterations. The default is 100.
     !%End 
-    call parse_integer(datasets_check('RDMMaxIter'), 1000, rdm%max_iter)
+    call parse_integer(datasets_check('RDMMaxIter'), 100, rdm%max_iter)
     
     !%Variable RDMStep
     !%Type float
@@ -280,11 +280,11 @@ contains
     mu2 = -CNST(1.0e-6)
     dinterv = M_HALF
     theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+    call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+    call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi2 = rdm%occsum - st%qtot
 
     do while (sumgi1*sumgi2 > M_ZERO)
@@ -294,7 +294,7 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+        call  multid_minimize(st%nst, 1000, theta, energy) 
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -302,16 +302,16 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+        call  multid_minimize(st%nst, 1000, theta, energy) 
         sumgi2 = rdm%occsum - st%qtot 
       end if
     end do
 
-    do icycle = 1, rdm%max_iter
+    do icycle = 1, 1000
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
-      call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+      call  multid_minimize(st%nst, 1000, theta, energy) 
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -322,7 +322,7 @@ contains
       if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
       cycle
     end do
-    if (icycle >= rdm%max_iter) then
+    if (icycle >= 1000) then
       write(message(1),'(a,1x,f11.6)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
     endif
