@@ -37,6 +37,7 @@ match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -3.682145
 match ; mz             ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  2.00000
 
 Input: 21-lobpcg.02-spinors.inp
+Precision : 0.00011
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -141.78882842
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;     0.00000000
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -43.94163200
