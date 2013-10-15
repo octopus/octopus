@@ -208,7 +208,7 @@ contains
 
     FLOAT :: h
 
-    PUSH_SUB(hermite)
+    ! no push_sub, called too frequently
 
     if(n<=0) then
       h = M_ONE
@@ -218,7 +218,6 @@ contains
       h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
     end if
 
-    POP_SUB(hermite)
   end function hermite
 
 
