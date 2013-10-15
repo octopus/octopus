@@ -701,7 +701,7 @@ contains
 
       integer :: ierr
 
-      PUSH_SUB(hamiltonian.hamiltonian_init.read_potential)
+      PUSH_SUB(hamiltonian_init.read_potential)
 
       ! first try obf format
       call dio_function_input(trim(fname)//'.obf', mesh, pot, ierr)
@@ -731,7 +731,7 @@ contains
         call messages_warning(9)
         pot(:) = M_ZERO
       end if
-      POP_SUB(hamiltonian.hamiltonian_init.read_potential)
+      POP_SUB(hamiltonian_init.read_potential)
     end subroutine read_potential
 
   end subroutine hamiltonian_init
@@ -1181,10 +1181,10 @@ contains
 
   end function hamiltonian_apply_packed
 
-
-  ! This routine computes the action of the derivative of the external potential
-  ! with respect to the nuclear positions. It is preliminary, and should be
-  ! recoded in a more efficient way.
+  ! -----------------------------------------------------------------
+  !> This routine computes the action of the derivative of the external potential
+  !! with respect to the nuclear positions. It is preliminary, and should be
+  !! recoded in a more efficient way.
   subroutine zhamiltonian_dervexternal(hm, geo, gr, ia, qa, dim, psi, dvpsi)
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)  :: geo
@@ -1198,7 +1198,8 @@ contains
     FLOAT, allocatable :: vlocal(:)
     CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
     integer :: idim, ip
-    PUSH_SUB(dvexternal)
+
+    PUSH_SUB(zhamiltonian_dervexternal)
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     SAFE_ALLOCATE(vlocalpsi(1:gr%mesh%np_part, 1:dim))
@@ -1253,7 +1254,8 @@ contains
     SAFE_DEALLOCATE_A(vlocalpsi)
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dvlocalpsi)
-    POP_SUB(dvexternal)
+
+    POP_SUB(zhamiltonian_dervexternal)
   end subroutine zhamiltonian_dervexternal
 
 

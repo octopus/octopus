@@ -164,20 +164,21 @@ contains
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
-    contains
 
+  contains
+    
     FLOAT function wr(speca, specb, r)
       type(species_t), intent(in) :: speca, specb
       FLOAT, intent(in) :: r
       wr = species_zval(speca) * species_zval(specb) / r
     end function wr
-
+    
     FLOAT function w1r(speca, specb, r)
       type(species_t), intent(in) :: speca, specb
       FLOAT, intent(in) :: r
       w1r = - species_zval(speca) * species_zval(specb) / r**2
     end function w1r
-
+    
     FLOAT function w2r(speca, specb, r)
       type(species_t), intent(in) :: speca, specb
       FLOAT, intent(in) :: r
@@ -286,8 +287,6 @@ contains
 #include "forces_inc.F90"
 
 end module forces_m
-
-
 
 !! Local Variables:
 !! mode: f90

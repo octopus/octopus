@@ -43,42 +43,42 @@ module ps_upf_m
     FLOAT :: local_radius
     FLOAT, pointer :: kb_radius(:)
 
-    ! The contents of the file:
-    !Header
-    integer      :: version  ! UPF file version number
-    character(3) :: symbol   ! Element label
-    character(2) :: type     ! Pseudo type (NC or US). In octopus only NC is implemented.
-    FLOAT        :: z_val    ! z valence
-    integer      :: l_max    ! maximum angular momentum component
-    integer      :: n_proj   ! number of projectors
-    integer      :: n_wfs    ! number of wavefunctions
+    !> The contents of the file:
+    !!Header
+    integer      :: version  !< UPF file version number
+    character(3) :: symbol   !< Element label
+    character(2) :: type     !< Pseudo type (NC or US). In octopus only NC is implemented.
+    FLOAT        :: z_val    !< z valence
+    integer      :: l_max    !< maximum angular momentum component
+    integer      :: n_proj   !< number of projectors
+    integer      :: n_wfs    !< number of wavefunctions
     integer, pointer :: n(:)
     integer, pointer :: l(:)
     FLOAT, pointer :: occ(:)
 
-    !Radial mesh
+    !>Radial mesh
     integer        :: np
     FLOAT, pointer :: r(:)
     FLOAT, pointer :: drdi(:)
 
-    !nlcc
+    !>nlcc
     logical        :: nlcc
     FLOAT, pointer :: core_density(:)
 
-    !KB projectors
+    !>KB projectors
     FLOAT,   pointer :: v_local(:)
     integer, pointer :: proj_l(:)
     integer, pointer :: proj_np(:)
     FLOAT,   pointer :: proj(:,:)
     FLOAT,   pointer :: e(:)
 
-    !Wavefunctions
+    !>Wavefunctions
     FLOAT,  pointer :: wfs(:,:)
 
-    !Valence charge
+    !>Valence charge
     FLOAT,  pointer :: rho(:)
     
-    !Extra information
+    !>Extra information
     FLOAT, pointer :: proj_j(:)
 
   end type ps_upf_t
@@ -503,7 +503,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! checks normalization of the pseudo wavefunctions
+  !> checks normalization of the pseudo wavefunctions
   subroutine ps_upf_check_rphi(ps_upf)
     type(ps_upf_t), intent(in) :: ps_upf
     
