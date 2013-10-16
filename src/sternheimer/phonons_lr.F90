@@ -85,10 +85,9 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, ist, ik, jmat_start
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, jmat_start
     FLOAT, allocatable :: infrared(:,:)
     CMPLX, allocatable :: force_deriv(:,:)
-    FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
     logical :: normal_mode_wfs, use_restart, do_infrared, symmetrize
@@ -166,10 +165,6 @@ contains
 
     call restart_look_and_read(st, gr, exact = .true.)
 
-    if(states_are_complex(sys%st)) then
-      call messages_not_implemented('linear-response vib_modes with complex wavefunctions')
-    endif
-
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
@@ -196,7 +191,7 @@ contains
     call messages_info(1)
 
     call system_h_setup(sys, hm)
-    call sternheimer_init(sh, sys, hm, "VM", .false.)
+    call sternheimer_init(sh, sys, hm, "VM", wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr")
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
@@ -213,7 +208,11 @@ contains
     call build_ionic_dyn_matrix()
 
     !the  <phi0 | v2 | phi0> term
-    call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+    if(states_are_real(st)) then
+      call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+    else
+      call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%zpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+    endif
 
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
 
@@ -239,8 +238,13 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(.not. use_restart .or. ierr /= 0) then
-        call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
-          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        if(states_are_real(st)) then
+          call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
+            VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        else
+          call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
+            VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        endif
       else
         message(1) = "Restart info being used without solving Sternheimer equation."
         call messages_warning(1)
@@ -256,7 +260,11 @@ contains
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        if(states_are_real(st)) then
+          call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        else
+          call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        endif
 
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
@@ -266,28 +274,12 @@ contains
         call vibrations_out_dyn_matrix(vib, imat, jmat)
       end do
       
-      ! FIXME: generalize to complex case
       if(do_infrared) then
-        if(smear_is_semiconducting(st%smear)) then
-          do jdir = 1, gr%sb%periodic_dim
-            infrared(imat, jdir) = M_ZERO
-            do ik = 1, st%d%nik
-              term = M_ZERO
-              do ist = 1, st%nst
-                term = term + &
-                  TOFLOAT(dmf_dotp(gr%mesh, st%d%dim, lr(1)%ddl_psi(:, :, ist, ik), kdotp_lr(jdir)%ddl_psi(:, :, ist, ik)))
-              enddo
-              infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
-            enddo
-          enddo
+        if(states_are_real(st)) then
+          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, infrared, born)
+        else
+          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, infrared, born)
         endif
-
-        do jdir = gr%sb%periodic_dim + 1, ndim
-          infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), lr(1)%ddl_rho(:, 1))
-        end do
-        infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%spec)
-
-        born%charge(1:ndim, idir, iatom) = -infrared(imat, 1:ndim)
       endif
 
       message(1) = ""
@@ -317,7 +309,11 @@ contains
     if(normal_mode_wfs) then
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
-      call vib_modes_wavefunctions()
+      if(states_are_real(st)) then
+        call dphonons_lr_wavefunctions(lr(1), st, gr, vib)
+      else
+        call zphonons_lr_wavefunctions(lr(1), st, gr, vib)
+      endif
     endif
 
     !DESTRUCT
@@ -432,60 +428,6 @@ contains
       POP_SUB(phonons_lr_run.calc_infrared)
     end subroutine calc_infrared
 
-    ! ---------------------------------------------------------
-    !> now calculate the wavefunction associated with each normal mode
-    subroutine vib_modes_wavefunctions()
-
-      type(lr_t) :: lrtmp
-      integer :: ik, ist, idim, inm
-      character(len=80) :: dirname
-
-      PUSH_SUB(phonons_lr_run.vib_modes_wavefunctions)
-
-      call lr_init(lrtmp)
-      call lr_allocate(lrtmp, st, gr%mesh)
-
-      ! FIXME: generalize to complex case
-      lr(1)%ddl_psi = M_ZERO
-
-      do inm = 1, vib%num_modes
-
-        do iatom = 1, natoms
-          do idir = 1, ndim
-
-            imat = vibrations_get_index(vib, iatom, idir)
-
-            dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
-            call restart_read(trim(dirname), st, gr, ierr, lr = lrtmp)
-
-            if(ierr /= 0) then
-              message(1) = "Failed to load response wavefunctions from '"//dirname//"'"
-              call messages_fatal(1)
-            end if
-            
-            do ik = 1, st%d%nik
-              do ist = st%st_start, st%st_end
-                do idim = 1, st%d%dim
-
-                  call lalg_axpy(gr%mesh%np, vib%normal_mode(imat, inm), &
-                    lrtmp%ddl_psi(:, idim, ist, ik), lr(1)%ddl_psi(:, idim, ist, ik))
-                  
-                end do
-              end do
-            end do
-
-          end do
-        end do
-        
-        call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
-          st, gr, ierr, lr = lr(1))
-
-      end do
-
-      call lr_dealloc(lrtmp)
-      POP_SUB(phonons_lr_run.vib_modes_wavefunctions)
-    end subroutine vib_modes_wavefunctions
-
   end subroutine phonons_lr_run
 
 
@@ -562,6 +504,14 @@ contains
 
     POP_SUB(axsf_mode_output)
   end subroutine axsf_mode_output
+
+#include "complex.F90"
+#include "phonons_lr_inc.F90"
+
+#include "undef.F90"
+
+#include "real.F90"
+#include "phonons_lr_inc.F90"
 
 end module phonons_lr_m
 

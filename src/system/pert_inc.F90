@@ -615,8 +615,8 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: psi(:, :, :)
   type(vibrations_t),  intent(in)    :: vib
-  R_TYPE,              intent(in)    :: factor
-  R_TYPE,              intent(inout) :: matrix(:, :)
+  FLOAT,               intent(in)    :: factor
+  FLOAT,               intent(inout) :: matrix(:, :) !< this is an expectation value of a Hermitian operator
 
   integer :: ist, idim, ip
   integer :: imat, jmat, iatom, idir, jdir
