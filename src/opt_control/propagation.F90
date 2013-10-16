@@ -608,8 +608,8 @@ contains
 
       if(ion_dynamics_ions_move(td%ions)) then
         call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
-        call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+        call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
         call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
         call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
         SAFE_DEALLOCATE_A(fold)

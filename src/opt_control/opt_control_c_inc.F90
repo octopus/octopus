@@ -104,10 +104,12 @@
           call messages_info(1)
         end do
         write(message(1), '(70(''-''))')
-        write(message(2), '(a,es18.8,''                                        |'')') 'REL DIFF = ', &
+        write(message(2), '(a,es18.8,''                                        |'')') 'ABS DIFF = ', &
+          sqrt(dot_product(df-dfn,df-dfn))
+        write(message(3), '(a,es18.8,''                                        |'')') 'REL DIFF = ', &
           sqrt(dot_product(df-dfn,df-dfn))/sqrt(dot_product(dfn, dfn))
-        write(message(3), '(70(''#''))')
-        call messages_info(3)
+        write(message(4), '(70(''#''))')
+        call messages_info(4)
 
         SAFE_DEALLOCATE_A(dfn)
         SAFE_DEALLOCATE_A(x_)
