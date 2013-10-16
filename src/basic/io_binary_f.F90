@@ -311,11 +311,11 @@ contains
   ! ------------------------------------------------------
 
   subroutine swrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    real(4),             intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    real(4),             intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
@@ -343,11 +343,11 @@ contains
   !------------------------------------------------------
 
   subroutine dwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    real(8),             intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    real(8),             intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
@@ -375,11 +375,11 @@ contains
   !------------------------------------------------------
 
   subroutine cwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    complex(4),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    complex(4),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
@@ -407,11 +407,11 @@ contains
   !------------------------------------------------------
 
   subroutine zwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    complex(8),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    complex(8),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
@@ -439,11 +439,11 @@ contains
   !------------------------------------------------------
   
   subroutine iwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    integer(4),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    integer(4),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
@@ -471,11 +471,11 @@ contains
   !------------------------------------------------------
 
   subroutine lwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    integer(8),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
@@ -740,11 +740,11 @@ contains
   !------------------------------------------------------
 
   subroutine sread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    real(4),             intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    real(4),             intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
@@ -777,11 +777,11 @@ contains
   !------------------------------------------------------
 
   subroutine dread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    real(8),             intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    real(8),             intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
@@ -814,11 +814,11 @@ contains
   !------------------------------------------------------
 
   subroutine cread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    complex(4),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    complex(4),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
@@ -851,11 +851,11 @@ contains
   !------------------------------------------------------
 
   subroutine zread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    complex(8),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    complex(8),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
@@ -888,11 +888,11 @@ contains
   !------------------------------------------------------
   
   subroutine iread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    integer(4),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    integer(4),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
@@ -925,11 +925,11 @@ contains
   !------------------------------------------------------
 
   subroutine lread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(in)  :: file_handle
-    integer,             intent(in)  :: xlocal
-    integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
+    integer,             intent(inout) :: file_handle
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    integer(8),          intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
