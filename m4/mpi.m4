@@ -38,15 +38,20 @@ AC_MSG_CHECKING([for MPI Fortran headers])
 save_ldflags="$LDFLAGS"
 AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
 
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+acx_enable_mpi_mod=no
+AC_ARG_ENABLE(mpi_mod, AS_HELP_STRING([--enable-mpi_mod], [Use mpi.mod instead of mpif.h.]), [acx_enable_mpi_mod=${enableval}])
+
+if test x"$acx_enable_mpi_mod" = x"no"; then
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
 include 'mpif.h'
 integer :: ierr
 call MPI_Init(ierr)
 ]), [HAVE_MPIF_H=1], [HAVE_MPIF_H=0])
 
-if test "$HAVE_MPIF_H" = 1; then
-  AC_DEFINE(MPI_H, 1, [have MPI Fortran header file])
-  AC_MSG_RESULT([mpif.h])
+  if test "$HAVE_MPIF_H" = 1; then
+    AC_DEFINE(MPI_H, 1, [have MPI Fortran header file])
+    AC_MSG_RESULT([mpif.h])
+  fi
 else
   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
   use mpi
@@ -58,7 +63,7 @@ else
     AC_DEFINE(MPI_MOD, 1, [have mpi module])
     AC_MSG_RESULT([mpi module])
   else
-    AC_MSG_ERROR([Could neither find the mpi module nor mpif.h.])
+    AC_MSG_ERROR([Could not find the mpi module.])
   fi
 fi
 ])dnl ACX_MPI_FC_MODULE
