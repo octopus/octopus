@@ -296,9 +296,6 @@ contains
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
       endif
-    case(RDMFT)
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.false.)
-      ks%xc_family = ks%xc%family
     end select
 
     ks%frozen_hxc = .false.
@@ -913,7 +910,6 @@ contains
       hm%energy%Imhartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
-      if (ks%theory_level == RDMFT) hm%vxc=M_ZERO 
 
       ! Build Hartree + XC potential
      
