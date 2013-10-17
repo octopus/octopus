@@ -996,7 +996,7 @@ contains
     if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
 
     ! CL_PROGRAM_BUILD_LOG seems to have a useless '\n' in it
-    newlen = scan(string, achar(010)) - 1
+    newlen = scan(string, achar(010), back = .true.) - 1
     if(newlen >= 0) string = string(1:newlen)
     
     if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
