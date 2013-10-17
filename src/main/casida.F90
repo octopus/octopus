@@ -83,6 +83,7 @@ module casida_m
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
     integer           :: nst            !< total number of states
     integer           :: nik
+    integer           :: sb_dim         !< number of spatial dimensions
     FLOAT             :: el_per_state
     character(len=80) :: wfn_list
     character(len=80) :: trandens
@@ -195,6 +196,7 @@ contains
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
     cas%nik = sys%st%d%nik
+    cas%sb_dim = sys%gr%sb%dim
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
@@ -302,7 +304,7 @@ contains
     !%End
 
     if(parse_block(datasets_check('CasidaMomentumTransfer'), blk)==0) then
-      do idir = 1, MAX_DIM
+      do idir = 1, cas%sb_dim
         call parse_block_float(blk, 0, idir - 1, cas%qvector(idir))
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
       end do
@@ -407,7 +409,7 @@ contains
 
       if(cas%calc_forces) then
         do iatom = 1, sys%geo%natoms
-          do idir = 1, sys%gr%sb%dim
+          do idir = 1, cas%sb_dim
             write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
             call loct_rm(trim(restart_filename))
@@ -501,10 +503,10 @@ contains
     SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
     if(cas%states_are_real) then
       SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs, 1:cas%n_pairs))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs, 1:sys%gr%sb%dim))
+      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs, 1:cas%sb_dim))
     else
       SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
-      SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:sys%gr%sb%dim))
+      SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
     endif
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
@@ -518,7 +520,7 @@ contains
       else
         SAFE_ALLOCATE(cas%zmat_save(cas%n_pairs, cas%n_pairs))
       endif
-      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:sys%gr%sb%dim, 1:cas%n_pairs))
+      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%sb_dim, 1:cas%n_pairs))
     endif
 
     if(cas%qcalc) then
@@ -845,18 +847,16 @@ contains
   subroutine qcasida_write(cas)
     type(casida_t), intent(in) :: cas
 
-    integer :: iunit, ia, dim
+    integer :: iunit, ia
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(qcasida_write)
 
-    dim = size(cas%dtm, 2)
-
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
-                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:dim),')'
+                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
                                                                   trim('-'), &
                                                                   trim('-'), &
@@ -888,14 +888,12 @@ contains
 
     character(len=5) :: str
     character(len=50) :: dir_name
-    integer :: iunit, ia, jb, dim, idim
+    integer :: iunit, ia, jb, idim
     FLOAT   :: temp
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(casida_write)
-
-    dim = size(cas%dtm, 2)
 
     ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR)
@@ -911,7 +909,7 @@ contains
     endif
 
     write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
-    do idim = 1, dim
+    do idim = 1, cas%sb_dim
       write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
     enddo
     write(iunit, '(1x,a15)') '<f>'
@@ -926,7 +924,7 @@ contains
         write(iunit, '(i6)', advance='no') cas%ind(ia)
       end if
       write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
-        (units_from_atomic(units_out%length, cas%dtm(cas%ind(ia), idim)), idim=1,dim), cas%f(cas%ind(ia))
+        (units_from_atomic(units_out%length, cas%dtm(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
     end do
     call io_close(iunit)
 
@@ -947,7 +945,7 @@ contains
         ! First, a little header
         write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
           units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-        do idim = 1, dim
+        do idim = 1, cas%sb_dim
           write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
             units_from_atomic(units_out%length, cas%dtm(cas%ind(ia), idim))
         enddo
