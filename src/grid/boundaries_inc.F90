@@ -185,7 +185,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   ASSERT(handle%nnb > 0)
 
   SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
-  call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
+  call MPI_Waitall(handle%nnb, handle%requests, status, mpi_err)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 

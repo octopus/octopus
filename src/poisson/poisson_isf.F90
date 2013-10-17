@@ -158,7 +158,7 @@ contains
     !create a new communicator
     !Extract the original group handle and create new comm.
     call MPI_Comm_group(all_nodes_comm, world_grp, ierr)
-    call MPI_Group_incl(world_grp, nodes, ranks(1), poisson_grp, ierr)
+    call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
     call MPI_Comm_create(mpi_world%comm, poisson_grp, this%cnf(WORLD)%mpi_grp%comm, ierr)
 
     SAFE_DEALLOCATE_A(ranks)

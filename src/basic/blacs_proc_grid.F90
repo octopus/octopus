@@ -92,7 +92,7 @@ contains
       dims(2) = 1
       periods = .false.
       reorder = .false.
-      call MPI_Cart_create(mpi_grp%comm, 2, dims(1), periods(1), reorder, comm, mpi_err)
+      call MPI_Cart_create(mpi_grp%comm, 2, dims, periods, reorder, comm, mpi_err)
     else
       comm = mpi_grp%comm
     end if
@@ -110,7 +110,7 @@ contains
     dims = 1
     coords = 0
     
-    call MPI_Cart_get(comm, maxdims, dims(1), periods(1), coords(1), mpi_err)
+    call MPI_Cart_get(comm, maxdims, dims, periods, coords, mpi_err)
 
     SAFE_ALLOCATE(this%usermap(1:dims(1), 1:dims(2)))
     

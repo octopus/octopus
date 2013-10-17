@@ -794,7 +794,7 @@ contains
 
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
-            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc(1), node, mpi_err)
+            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
             INCR(recv_count(node + 1), 1)
           end if
 
@@ -819,7 +819,7 @@ contains
               dest(1) = ii - 1
 
               ! get the node id from coordinates
-              call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest(1), node, mpi_err)
+              call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest, node, mpi_err)
               INCR(node, 1)
               INCR(send_count(node), 1)
               send_buffer(send_count(node), node) = levec(ilbasis, jlbasis)
@@ -829,7 +829,7 @@ contains
 
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
-            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc(1), node, mpi_err)
+            call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
             INCR(node, 1)
 
             INCR(recv_count(node), 1)

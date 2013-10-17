@@ -1174,7 +1174,7 @@ contains
             call MPI_Isend(spsi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, jst, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
 
-          if(nreq > 0) call MPI_Waitall(nreq, req(1), MPI_STATUSES_IGNORE, mpi_err)
+          if(nreq > 0) call MPI_Waitall(nreq, req, MPI_STATUSES_IGNORE, mpi_err)
 
           if(st%mpi_grp%rank /= 0) cycle
 

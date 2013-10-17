@@ -924,7 +924,7 @@ contains
       ASSERT(iedge == count(nb))
 
       reorder = .true.
-      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex(1), gedges(1), reorder, graph_comm, mpi_err)
+      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
 
       SAFE_DEALLOCATE_A(nb)
       SAFE_DEALLOCATE_A(gindex)
