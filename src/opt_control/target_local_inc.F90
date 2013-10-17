@@ -20,14 +20,18 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_local(gr, tg)
+  subroutine target_init_local(gr, tg, td)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
+    type(td_t),       intent(in)    :: td
 
     integer             :: ip
     FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
     character(len=1024) :: expression
     PUSH_SUB(target_init_local)
+
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
 
     !%Variable OCTLocalTarget
     !%Type string

@@ -20,9 +20,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_userdefined(gr, tg)
+  subroutine target_init_userdefined(gr, tg, td)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
+    type(td_t),       intent(in)    :: td
 
     integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
     type(block_t)       :: blk
@@ -31,6 +32,9 @@
 
     message(1) =  'Info: Target is a user-defined state.'
     call messages_info(1)
+
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
       
     !%Variable OCTTargetUserdefined
     !%Type block

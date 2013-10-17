@@ -28,6 +28,9 @@
     type(block_t)       :: blk
     PUSH_SUB(target_init_tdlocal)
 
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
+
     if(parse_block(datasets_check('OCTTdTarget'), blk)==0) then
       call parse_block_string(blk, 0, 0, tg%td_local_target)
       call conv_to_C_string(tg%td_local_target)
@@ -37,7 +40,6 @@
       message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
       call messages_fatal(1)
     end if
-    tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
     call target_build_tdlocal(tg, gr, M_ZERO)

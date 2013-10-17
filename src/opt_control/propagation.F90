@@ -207,8 +207,6 @@ contains
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
 
-      !write(81, *) sys%geo%atom(1)%x(1)
-
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
       if(present(prop)) call oct_prop_output(prop, istep, psi, gr)

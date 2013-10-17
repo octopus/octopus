@@ -38,6 +38,9 @@
     message(1) =  'Info: Target is a combination of a density and/or a current functional.'
     call messages_info(1)
 
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
+
     tg%curr_functional = oct_no_curr
     tg%curr_weight = M_ZERO
     tg%strt_iter_curr_tg = 0

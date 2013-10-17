@@ -20,11 +20,15 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_exclude(gr, tg)
+  subroutine target_init_exclude(gr, tg, td)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
+    type(td_t),       intent(in)    :: td
 
     PUSH_SUB(target_init_exclude)
+
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
 
     message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
     message(2) =  '      "OCTExcludedStates".'

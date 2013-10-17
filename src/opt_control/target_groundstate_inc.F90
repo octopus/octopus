@@ -20,9 +20,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_groundstate(gr, tg)
+  subroutine target_init_groundstate(gr, tg, td)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
+    type(td_t),       intent(in)    :: td
 
     integer :: ierr
     PUSH_SUB(target_init_groundstate)
@@ -30,6 +31,9 @@
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
     call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
 
     POP_SUB(target_init_groundstate)
   end subroutine target_init_groundstate

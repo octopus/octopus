@@ -20,15 +20,19 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_excited(gr, tg)
+  subroutine target_init_excited(gr, tg, td)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
+    type(td_t),       intent(in)    :: td
 
     integer :: ierr, ip
     PUSH_SUB(target_init_excited)
 
     message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
     call messages_info(1)
+
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%dt = td%dt
 
     call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, tg%st%nst, ierr)
     tg%st%st_start = 1

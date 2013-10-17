@@ -29,6 +29,8 @@
     type(block_t) :: blk
     PUSH_SUB(target_init_hhg)
 
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
+
     !%Variable OCTOptimizeHarmonicSpectrum
     !%Type block
     !%Default no
