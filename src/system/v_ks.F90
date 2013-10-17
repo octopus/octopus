@@ -505,6 +505,8 @@ contains
       end if
 
       if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(geo, hm)
+    else
+       ks%calc%total_density_alloc = .false.
     end if
 
     nullify(ks%calc%hf_st) 
