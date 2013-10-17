@@ -679,7 +679,7 @@ contains
         call zcasida_get_matrix(cas, hm, st, mesh, cas%zmat, cas%fxc, restart_filename)
         cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
       endif
-      call solve_casida()
+      call casida_solve(cas, st)
     end select
 
     if (mpi_grp_is_root(cas%mpi_grp)) then
@@ -739,84 +739,86 @@ contains
       POP_SUB(casida_work.solve_eps_diff)
     end subroutine solve_eps_diff
 
-    ! ---------------------------------------------------------
-    subroutine solve_casida()
-
-      FLOAT :: temp
-      integer :: ia, jb
-      type(states_pair_t), pointer :: p, q
-
-      PUSH_SUB(casida_work.solve_casida)
-
-      ! all processors with the exception of the first are done
-      if (mpi_grp_is_root(cas%mpi_grp)) then
-
-        ! complete the matrix
-        do ia = 1, cas%n_pairs
-          p => cas%pair(ia)
-          temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
-            
-          do jb = ia, cas%n_pairs
-            q => cas%pair(jb)
-              
-            ! FIXME: need the equivalent of this stuff for forces too.
-            if(cas%type == CASIDA_CASIDA) then
-              cas%dmat(ia, jb) = M_TWO * sqrt(temp) * cas%dmat(ia, jb) * &
-                sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
-            endif
-            if(jb /= ia) cas%dmat(jb, ia) = cas%dmat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
-          end do
-          if(cas%type == CASIDA_CASIDA) then
-            cas%dmat(ia, ia) = temp**2 + cas%dmat(ia, ia)
-          else
-            cas%dmat(ia, ia) = cas%dmat(ia, ia) + temp
-          endif
-        end do
-
-        message(1) = "Info: Diagonalizing matrix for resonance energies."
-        call messages_info(1)
-        ! now we diagonalize the matrix
-        ! for huge matrices, perhaps we should consider ScaLAPACK here...
-        call profiling_in(prof, "CASIDA_DIAGONALIZATION")
-        if(cas%calc_forces) cas%dmat_save = cas%dmat ! save before gets turned into eigenvectors
-        call lalg_eigensolve(cas%n_pairs, cas%dmat, cas%w)
-        call profiling_out(prof)
-
-        do ia = 1, cas%n_pairs
-
-          if(cas%type == CASIDA_CASIDA) then
-            if(cas%w(ia) < -M_EPSILON) then       
-              write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
-              call messages_warning(1)
-              cas%w(ia) = -sqrt(-cas%w(ia))
-            else
-              cas%w(ia) = sqrt(cas%w(ia))
-            endif
-          else
-            if(cas%w(ia) < -M_EPSILON) then
-              write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
-              write(message(2),'(a)')      'This should not happen.'
-              call messages_warning(2)
-           endif
-          endif
-
-          cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
-        end do
-
-        ! And let us now get the S matrix...
-        if(cas%type == CASIDA_CASIDA) then
-          do ia = 1, cas%n_pairs
-            cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                                                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
-          end do
-        endif
-
-      end if
-
-      POP_SUB(casida_work.solve_casida)
-    end subroutine solve_casida
-
   end subroutine casida_work
+
+  ! ---------------------------------------------------------
+  subroutine casida_solve(cas, st)
+    type(casida_t), intent(inout) :: cas
+    type(states_t), intent(in)    :: st
+
+    FLOAT :: temp
+    integer :: ia, jb
+    type(states_pair_t), pointer :: p, q
+
+    PUSH_SUB(casida_solve)
+
+    ! all processors with the exception of the first are done
+    if (mpi_grp_is_root(cas%mpi_grp)) then
+
+      ! complete the matrix
+      do ia = 1, cas%n_pairs
+        p => cas%pair(ia)
+        temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
+        
+        do jb = ia, cas%n_pairs
+          q => cas%pair(jb)
+          
+          ! FIXME: need the equivalent of this stuff for forces too.
+          if(cas%type == CASIDA_CASIDA) then
+            cas%dmat(ia, jb) = M_TWO * sqrt(temp) * cas%dmat(ia, jb) * &
+              sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
+          endif
+          if(jb /= ia) cas%dmat(jb, ia) = cas%dmat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
+        end do
+        if(cas%type == CASIDA_CASIDA) then
+          cas%dmat(ia, ia) = temp**2 + cas%dmat(ia, ia)
+        else
+          cas%dmat(ia, ia) = cas%dmat(ia, ia) + temp
+        endif
+      end do
+      
+      message(1) = "Info: Diagonalizing matrix for resonance energies."
+      call messages_info(1)
+      ! now we diagonalize the matrix
+      ! for huge matrices, perhaps we should consider ScaLAPACK here...
+      call profiling_in(prof, "CASIDA_DIAGONALIZATION")
+      if(cas%calc_forces) cas%dmat_save = cas%dmat ! save before gets turned into eigenvectors
+      call lalg_eigensolve(cas%n_pairs, cas%dmat, cas%w)
+      call profiling_out(prof)
+      
+      do ia = 1, cas%n_pairs
+        
+        if(cas%type == CASIDA_CASIDA) then
+          if(cas%w(ia) < -M_EPSILON) then       
+            write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
+            call messages_warning(1)
+            cas%w(ia) = -sqrt(-cas%w(ia))
+          else
+            cas%w(ia) = sqrt(cas%w(ia))
+          endif
+        else
+          if(cas%w(ia) < -M_EPSILON) then
+            write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
+            write(message(2),'(a)')      'This should not happen.'
+            call messages_warning(2)
+          endif
+        endif
+        
+        cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
+      end do
+      
+      ! And let us now get the S matrix...
+      if(cas%type == CASIDA_CASIDA) then
+        do ia = 1, cas%n_pairs
+          cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                                                   st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
+        end do
+      endif
+      
+    end if
+    
+    POP_SUB(casida_solve)
+  end subroutine casida_solve
 
   ! ---------------------------------------------------------
   FLOAT function casida_matrix_factor(cas, sys)
