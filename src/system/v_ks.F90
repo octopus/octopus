@@ -504,7 +504,7 @@ contains
         end if
       end if
 
-      if(ks%theory_level /= HARTREE) call v_a_xc(geo, hm)
+      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(geo, hm)
     end if
 
     nullify(ks%calc%hf_st) 
