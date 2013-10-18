@@ -1186,12 +1186,13 @@ contains
     character*100 :: fmt_
 
     if(len(trim(message(current_line))) + len(trim(val)) > len(message(current_line))) then
-      write(message(current_line + 1), '(3a)') "Exceeded message line length limit, to write string '", trim(val), "'"
-      call messages_fatal(current_line + 1)
+      ! cannot use normal message approach without interfering with message we are trying to write
+      ! write directly in case trim(val) is itself too long
+      write(0, *) "Exceeded message line length limit, to write string:", trim(val)
+    else
+      fmt_ = optional_default(fmt, '(a)')
+      write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), trim(val)
     endif
-
-    fmt_ = optional_default(fmt, '(a)')
-    write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), trim(val)
 
     if(present(new_line)) then
       if(new_line) call messages_new_line()
