@@ -158,6 +158,9 @@ subroutine X(restart_read_lr_rho)(dl_rho, gr, nspin, restart_subdir, rho_tag, ie
 
   PUSH_SUB(X(restart_read_lr_rho))
 
+  ASSERT(ubound(dl_rho, 1) >= gr%mesh%np)
+  ASSERT(ubound(dl_rho, 2) >= nspin)
+
   ierr = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
