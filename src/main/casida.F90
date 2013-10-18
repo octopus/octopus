@@ -232,8 +232,8 @@ contains
     !%Description
     !% Choose which electron-hole matrix-based theory levels to use in calculating excitation energies.
     !% More than one may be used to take advantage of the significant commonality between the calculations.
-    !% Only <tt>eps_diff</tt> is implemented for complex wavefunctions. Note the restart data saved by each theory level
-    !% is compatible with all the others.
+    !% <tt>variational</tt> and <tt>lrttdft_casida</tt> are not usable with complex wavefunctions.
+    !% Note the restart data saved by each theory level is compatible with all the others.
     !%Option eps_diff 1
     !% Difference of eigenvalues, <i>i.e.</i> independent-particle approximation.
     !%Option petersilka 2

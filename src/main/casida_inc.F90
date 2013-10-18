@@ -1006,6 +1006,13 @@ subroutine X(casida_solve)(cas, st)
 
   PUSH_SUB(X(casida_solve))
 
+  ! Note: this is not just a matter of implementation. CASIDA_CASIDA assumes real wfns in the derivation.
+  if(states_are_complex(st) .and. (cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_CASIDA)) then
+    message(1) = "Variational and full Casida theory levels cannot be used with complex wavefunctions."
+    call messages_fatal(1, only_root_writes = .true.)
+    ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
+  endif
+
   ! all processors with the exception of the first are done
   if (mpi_grp_is_root(cas%mpi_grp)) then
 
@@ -1105,7 +1112,7 @@ subroutine X(casida_write)(cas, sys)
   do idim = 1, cas%sb_dim
     write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
 #ifdef R_TCOMPLEX
-    write(iunit, '(1x,a15)')
+    write(iunit, '(1x,a15)', advance='no')
 #endif
   enddo
   write(iunit, '(1x,a15)') '<f>'
