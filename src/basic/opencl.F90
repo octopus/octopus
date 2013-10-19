@@ -923,6 +923,7 @@ contains
     character(len=*), optional, intent(in)    :: flags
 
     character(len = OPENCL_MAX_FILE_LENGTH) :: string
+    character(len = 256) :: share_string
     integer :: ierr, ierrlog, iunit, irec, newlen
     type(profile_t), save :: prof
 
@@ -966,7 +967,7 @@ contains
     string=trim(string)//' -cl-finite-math-only'
     string=trim(string)//' -cl-fast-relaxed-math'
 
-    string=trim(string)//' -I'//trim(conf%share)//'/opencl/'
+    share_string='-I'//trim(conf%share)//'/opencl/'
 
     if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
       string = trim(string)//' -DEXT_AMD_FP64'
@@ -986,9 +987,12 @@ contains
     end if
 
     if(in_debug_mode) then
-      call messages_write("Debug info: compilation flags '"//trim(string)//"'. ")
+      call messages_write("Debug info: compilation flags '"//trim(string), new_line = .true.)
+      call messages_write('  '//trim(share_string)//"'.")
       call messages_info()
     end if
+
+    string = trim(string)//' '//trim(share_string)
 
     call clBuildProgram(prog, trim(string), ierr)
 
