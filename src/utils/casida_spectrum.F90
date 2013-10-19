@@ -132,7 +132,7 @@ contains
 
     FLOAT, allocatable :: spectrum(:,:)
     FLOAT :: omega, energy, tm(MAX_DIM), ff(MAX_DIM+1)
-    integer :: istep, nsteps, iunit, trash(3), ii, ncols
+    integer :: istep, nsteps, iunit, trash(3), ii, ncols, ios
 
     nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
@@ -156,7 +156,13 @@ contains
 
     read(iunit, *) ! skip header
     do
-      read(iunit, *, end=100) trash(1:ncols), energy, tm(1:cs%space%dim), ff(cs%space%dim+1)
+      read(iunit, *, iostat = ios) trash(1:ncols), energy, tm(1:cs%space%dim), ff(cs%space%dim+1)
+      if(ios < 0) then
+        exit ! end of file
+      else if(ios > 0) then
+        message(1) = "Error parsing file " // trim(fname)
+        call messages_fatal(1)
+      endif
 
       energy = units_to_atomic(units_out%energy, energy)
 
@@ -170,7 +176,6 @@ contains
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
-100 continue
     call io_close(iunit)
 
     ! print spectra
