@@ -1112,7 +1112,7 @@ subroutine X(casida_write)(cas, sys)
   do idim = 1, cas%sb_dim
     write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
 #ifdef R_TCOMPLEX
-    write(iunit, '(1x,a15)', advance='no')
+    write(iunit, '(16x)', advance='no')
 #endif
   enddo
   write(iunit, '(1x,a15)') '<f>'

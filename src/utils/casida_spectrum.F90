@@ -131,8 +131,10 @@ contains
     logical,                 intent(in) :: extracols
 
     FLOAT, allocatable :: spectrum(:,:)
-    FLOAT :: omega, energy, tm(MAX_DIM), ff(MAX_DIM+1)
-    integer :: istep, nsteps, iunit, trash(3), ii, ncols, ios
+    FLOAT :: omega, energy, re_tm(MAX_DIM), im_tm(MAX_DIM), ff(MAX_DIM+1), tm_sq(MAX_DIM)
+    integer :: istep, nsteps, iunit, trash(3), idir, ncols, ios
+    character(len=256) :: string
+    logical :: is_complex
 
     nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
@@ -155,8 +157,21 @@ contains
     endif
 
     read(iunit, *) ! skip header
+    
+    read(iunit, '(a)') string
+    ! complex has this many columns; real lacks the imaginary columns (im_tm)
+    read(string, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir), im_tm(idir), idir = 1, cs%space%dim), ff(cs%space%dim+1)
+    is_complex = (ios == 0)
+    ! put it back to read the data in the loop
+    backspace(iunit)
+
     do
-      read(iunit, *, iostat = ios) trash(1:ncols), energy, tm(1:cs%space%dim), ff(cs%space%dim+1)
+      if(is_complex) then
+        read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir), im_tm(idir), idir = 1, cs%space%dim), ff(cs%space%dim+1)
+      else
+        read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir),              idir = 1, cs%space%dim), ff(cs%space%dim+1)
+      endif
+
       if(ios < 0) then
         exit ! end of file
       else if(ios > 0) then
@@ -171,7 +186,9 @@ contains
 
         ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
         ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
-        ff(1:cs%space%dim) = (M_TWO / cs%space%dim) * energy * (tm(1:cs%space%dim))**2
+        tm_sq(1:cs%space%dim) = (re_tm(1:cs%space%dim))**2
+        if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + (im_tm(1:cs%space%dim))**2
+        ff(1:cs%space%dim) = (M_TWO / cs%space%dim) * energy * tm_sq(1:cs%space%dim)
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
@@ -182,14 +199,14 @@ contains
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
 
     write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
-    do ii = 1, cs%space%dim
-      write(iunit, '(a14)', advance = 'no') '<' // index2axis(ii) // '>^2'
+    do idir = 1, cs%space%dim
+      write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // '>^2'
     enddo
     write(iunit, '(a14)') '<f>'
 
     do istep = 1, nsteps
       write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
-        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, istep)), ii = 1, cs%space%dim+1)
+        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(idir, istep)), idir = 1, cs%space%dim+1)
     end do
 
     call io_close(iunit)
