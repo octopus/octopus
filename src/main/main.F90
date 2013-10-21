@@ -112,12 +112,20 @@ program octopus
   !% Prints out a tasty recipe.
   !%
   !% May also be used as a block for multi-dataset mode. The first line is a list of calculation modes,
-  !% the second is labels (optional), and the third is the order for the runs (optional). Example:
+  !% the second is labels (optional; default is <tt>dsXX_</tt> where XX=01, 02, ...), and the third is the
+  !% order for the runs (optional; default is the order listed). The labels will be used as prefixes for
+  !% the output directories such as <tt>restart</tt>, <tt>static</tt>, <tt>td...</tt> etc., and can also
+  !% be used as prefixes to variables to indicate that they apply only to that dataset's calculation.
+  !%
+  !% Example:
   !%
   !% <pre>%CalculationMode
-  !%   gs     | unocc  | td
-  !%   "run1" | "run2" | "run3"
-  !%   1      | 2      | 3
+  !% gs              | unocc
+  !% "ground_state_" | "excited_states_"
+  !% 1               | 2
+  !% %
+  !% excited_states_RestartDir = "ground_state_restart"
+  !% excited_states_ExtraStates = 9
   !% %</pre>
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
