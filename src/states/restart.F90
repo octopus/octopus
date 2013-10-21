@@ -1041,6 +1041,8 @@ contains
       endif
     end do
 
+    SAFE_DEALLOCATE_P(map)
+
     if(gr%have_fine_mesh)then
       if(st%cmplxscl%space) then
          SAFE_DEALLOCATE_A(zrho_coarse)
