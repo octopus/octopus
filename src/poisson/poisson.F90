@@ -67,6 +67,7 @@ module poisson_m
     poisson_t,                   &
     poisson_fmm_t,               &
     poisson_get_solver,          &
+    poisson_get_qpoint,          &
     poisson_init,                &
     dpoisson_solve,              &
     zpoisson_solve,              &
@@ -106,7 +107,7 @@ module poisson_m
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     type(mg_solver_t) :: mg
     type(poisson_fft_t) :: fft_solver
-    FLOAT   :: poisson_soft_coulomb_param = M_ONE
+    FLOAT   :: poisson_soft_coulomb_param
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_sete_t) :: sete_solver
@@ -424,6 +425,8 @@ contains
       end if
     end select
 
+    call messages_print_stress(stdout)
+
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
     fft_type = FFT_REAL
@@ -507,16 +510,7 @@ contains
       end if
     end if
 
-    select case(der%mesh%sb%dim)
-    case (1)
-      call poisson1d_init(this)
-    case (2)
-      call poisson2D_init(this)
-    case (3)
-      call poisson3D_init(this, geo, all_nodes_comm)
-    end select
-
-    call messages_print_stress(stdout)
+    call poisson_kernel_init(this, geo, all_nodes_comm)
 
     POP_SUB(poisson_init)
   end subroutine poisson_init
@@ -1041,6 +1035,15 @@ contains
   end function poisson_get_solver
 
   !-----------------------------------------------------------------
+
+  pure subroutine poisson_get_qpoint(this, qq)
+    type(poisson_t), intent(in)  :: this
+    FLOAT,           intent(out) :: qq(:)
+
+    qq = this%qq
+  end subroutine poisson_get_qpoint
+
+  !-----------------------------------------------------------------
   
   FLOAT function poisson_energy(this) result(energy)
     type(poisson_t), intent(in) :: this
@@ -1163,9 +1166,6 @@ contains
 
   end function poisson_is_async
 
-! 1d solver´s init function is datatype independent, but the solve function must be included separately as real/complex
-#include "solver_1d_init_inc.F90"
-#include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
 
 #include "undef.F90"

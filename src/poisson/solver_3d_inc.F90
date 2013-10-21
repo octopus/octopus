@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson3D_init(this, geo, all_nodes_comm)
+subroutine poisson_kernel_init(this, geo, all_nodes_comm)
   type(poisson_t),  intent(inout) :: this
   type(geometry_t), intent(in)    :: geo
   integer,          intent(in)    :: all_nodes_comm
@@ -29,7 +29,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 
   logical :: valid_solver
 
-  PUSH_SUB(poisson3D_init)
+  PUSH_SUB(poisson_kernel_init)
 
   select case(this%method)
   case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
@@ -106,6 +106,21 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   !! memory if you use curvilinear coordinates.
   !!End
 
+  if(this%der%mesh%sb%dim == 1) then
+    !%Variable Poisson1DSoftCoulomParam
+    !%Type float
+    !%Default 1.0 bohr
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
+    !% solver is not 1/r but 1/sqrt(a^2 + r^2), where this variable sets the value of "a".
+    !%End
+    call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
+      M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
+  else
+    this%poisson_soft_coulomb_param = M_ZERO
+  endif
+
   select case(this%method)
   case(POISSON_FMM)
     call poisson_fmm_init(this%params_fmm, this%der, all_nodes_comm)
@@ -151,7 +166,9 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
     
   case(POISSON_FFT)
 
-    call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel)
+    call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
+      soft_coulb_param = this%poisson_soft_coulomb_param)
+    ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
       call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
@@ -172,8 +189,8 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
      
   end select
 
-  POP_SUB(poisson3D_init)
-end subroutine poisson3D_init
+  POP_SUB(poisson_kernel_init)
+end subroutine poisson_kernel_init
 
 
 subroutine poisson_solve_direct(this, pot, rho)

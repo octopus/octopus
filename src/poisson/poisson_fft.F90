@@ -704,11 +704,11 @@ contains
   subroutine poisson_fft_end(this)
     type(poisson_fft_t), intent(inout) :: this
 
-    PUSH_SUB(poisson_fft.end)
+    PUSH_SUB(poisson_fft_end)
 
     call fourier_space_op_end(this%coulb)
 
-    POP_SUB(poisson_fft.end)
+    POP_SUB(poisson_fft_end)
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
@@ -726,7 +726,7 @@ contains
     FLOAT :: average
     type(cube_function_t) :: cf
 
-    PUSH_SUB(poisson_fft)
+    PUSH_SUB(poisson_fft_solve)
     
     average_to_zero_ = .false.
     if (present(average_to_zero)) average_to_zero_ = average_to_zero
@@ -767,7 +767,7 @@ contains
     
     call dcube_function_free_RS(cube, cf) ! memory is no longer needed
 
-    POP_SUB(poisson_fft)
+    POP_SUB(poisson_fft_solver)
   end subroutine poisson_fft_solve
   
 end module poisson_fft_m
