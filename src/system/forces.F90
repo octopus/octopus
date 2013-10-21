@@ -147,7 +147,7 @@ contains
       do idim = 1, psi%d%dim
         call zderivatives_grad(gr%der, psi%zpsi(:, idim, 1, 1), dpsi(:, :, idim))
       end do
-      call zhamiltonian_dervexternal(hm, geo, gr, iatom, xx-geo%atom(iatom)%x, psi%d%dim, psi%zpsi(:, :, 1, 1), dvpsi)
+      call zhamiltonian_dervexternal(hm, geo, gr, iatom, psi%d%dim, psi%zpsi(:, :, 1, 1), dvpsi)
 
       do i = 1, gr%sb%dim
         do j = 1, gr%sb%dim

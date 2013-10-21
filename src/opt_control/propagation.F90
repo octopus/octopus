@@ -684,7 +684,7 @@ contains
       inh%zpsi = M_z0
       do iatom = 1, geo%natoms
         call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-          qinitial(iatom, :), st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
+          st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
         do idim = 1, gr%sb%dim
           inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, idim) * dvpsi(:, :, idim)
         end do
@@ -877,6 +877,7 @@ contains
     if(dir == 'b') then
       pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
+        ! WARNING: it should be M_TWO * d(1) for spin compensated systems?
         d(1) = d(1) - M_HALF * species_zval(geo%atom(iatom)%spec) * &
           real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
       end do

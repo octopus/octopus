@@ -1185,40 +1185,32 @@ contains
   !> This routine computes the action of the derivative of the external potential
   !! with respect to the nuclear positions. It is preliminary, and should be
   !! recoded in a more efficient way.
-  subroutine zhamiltonian_dervexternal(hm, geo, gr, ia, qa, dim, psi, dvpsi)
+  subroutine zhamiltonian_dervexternal(hm, geo, gr, ia, dim, psi, dvpsi)
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)  :: geo
     type(grid_t),        intent(in)  :: gr
     integer,             intent(in)  :: ia
-    FLOAT,               intent(in)  :: qa(:)
     integer,             intent(in)  :: dim
     CMPLX,               intent(inout)  :: psi(:, :)
     CMPLX,               intent(out) :: dvpsi(:, :, :)
 
-    FLOAT, allocatable :: vlocal(:)
     CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
-    integer :: idim, ip
+    integer :: idim, ip, j
 
     PUSH_SUB(zhamiltonian_dervexternal)
 
-    SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     SAFE_ALLOCATE(vlocalpsi(1:gr%mesh%np_part, 1:dim))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
     SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
 
-    vlocal = M_ZERO
     vlocalpsi = M_ZERO
     dpsi = M_z0
     dvlocalpsi = M_z0
 
-    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
     do idim = 1, dim
       call zderivatives_grad(gr%der, psi(:, idim), dpsi(:, :, idim))
     end do
-
-    do idim = 1, dim
-      vlocalpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)
-    end do
+    call zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vlocalpsi)
 
     do idim = 1, dim
       call zderivatives_grad(gr%der, vlocalpsi(:, idim), dvlocalpsi(:, :, idim))
@@ -1244,19 +1236,43 @@ contains
     !    end do
     !
     ! (3)
-    do idim = 1, dim
-      do ip = 1, gr%mesh%np
-        dvpsi(ip, idim, 1:gr%sb%dim) = - vlocal(ip) * dpsi(ip, 1:gr%sb%dim, idim) + dvlocalpsi(ip, 1:gr%sb%dim, idim)
-      end do
+
+    do j = 1, gr%sb%dim
+      call zhamiltonian_apply_atom (hm, geo, gr, ia, dpsi(:, j, :), vlocalpsi)
+      dvpsi(:, :, j) = -vlocalpsi(:, :) + dvlocalpsi(:, j, :)
     end do
 
-    SAFE_DEALLOCATE_A(vlocal)
     SAFE_DEALLOCATE_A(vlocalpsi)
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dvlocalpsi)
-
     POP_SUB(zhamiltonian_dervexternal)
   end subroutine zhamiltonian_dervexternal
+
+
+  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)!, ist, ik, time, terms, Imtime)
+    type(hamiltonian_t), intent(inout) :: hm
+    type(geometry_t),    intent(in)    :: geo
+    type(grid_t),        intent(in)    :: gr
+    integer,             intent(in)    :: ia
+    CMPLX,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,   target,    intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+
+    integer :: idim
+    FLOAT, allocatable :: vlocal(:)
+    PUSH_SUB(zhamiltonian_apply_atom)
+
+    SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
+    vlocal = M_ZERO
+    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
+
+    do idim = 1, hm%d%dim
+      vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)
+    end do
+
+
+    SAFE_DEALLOCATE_A(vlocal)
+    POP_SUB(zhamiltonian_apply_atom)
+  end subroutine zhamiltonian_apply_atom
 
 
 #include "undef.F90"
