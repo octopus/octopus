@@ -423,7 +423,6 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-
   subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy) 
     type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
@@ -449,8 +448,11 @@ contains
       call messages_info(1)
     end if
 
-    ks%calc%time_present = present(time)
-    if(present(time)) ks%calc%time = time
+    if(present(time)) then
+      ks%calc%time = time
+    else
+      ks%calc%time = M_ZERO
+    endif
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     nullify(ks%calc%vberry)
@@ -673,13 +675,8 @@ contains
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
-        ! Also treat KS inversion separately (not part of libxc)
-        if(present(time)) then
-           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time=ks%calc%time)
-        else
-           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc)
-         end if
-
+          ! Also treat KS inversion separately (not part of libxc)
+          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
         endif
       end if
 
@@ -953,11 +950,7 @@ contains
       
     end if
 
-    if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
-    else
-      call hamiltonian_update(hm, ks%gr%mesh)
-    end if
+    call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
@@ -966,6 +959,7 @@ contains
       SAFE_DEALLOCATE_P(ks%calc%Imtotal_density)
     end if
     nullify(ks%calc%total_density)
+    nullify(ks%calc%Imtotal_density)
 
     POP_SUB(v_ks_calc_finish)
   end subroutine v_ks_calc_finish
