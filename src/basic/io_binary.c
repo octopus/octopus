@@ -247,7 +247,6 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   *ierr = 0;
   fd = -132;
   
-  fname_len = strlen(fname);
   fname_len = l1;
   TO_C_STR1(fname, filename);
   write_header(np, type, ierr, fname, fname_len);
@@ -276,15 +275,6 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   /* close the file */
   close(fd);
   return;
-}
-
-void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
-{ 
-  unsigned long fname_len;
-  char * filename;
-  fname_len = l1;
-  TO_C_STR1(fname, filename);
-  read_header(h, correct_endianness, ierr, fname, fname_len);
 }
 
 void read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
@@ -321,6 +311,15 @@ void read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE
 
   close(fd);
 
+}
+
+void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{ 
+  unsigned long fname_len;
+  char * filename;
+  fname_len = l1;
+  TO_C_STR1(fname, filename);
+  read_header(h, correct_endianness, ierr, fname, fname_len);
 }
 
 void FC_FUNC_(read_binary,READ_BINARY)
@@ -493,36 +492,15 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
      (fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
-  char * filename;
-  int fd;
-  ssize_t moved;
   int correct_endianness;
-
-  TO_C_STR1(fname, filename);
-  fd = open(filename, O_RDONLY);
-  if(fd < 0){
-    *ierr = 2;
-    return;
-  }
-
-  free(filename);
+  unsigned long fname_len;
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
 
   /* read header */
-  moved = read(fd, h, sizeof(header_t));
-
-  close(fd);
-
-  if ( moved != sizeof(header_t) ) { 
-    /* we couldn't read the complete header */
-    *ierr = 3;
-    return;
-  }
-
-  *ierr = check_header(h, &correct_endianness);
-  if( *ierr != 0 ) return;
+  fname_len = l1;
+  read_header(h, &correct_endianness, ierr, fname, fname_len);
 
   *np  = h->np;
   *type = (int) h->type;
