@@ -131,9 +131,9 @@ contains
         do idim = 1, gr%sb%dim
           do jdim = 1, gr%sb%dim
             f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w2r_ * (M_ONE/r**2) * xx(idim) * xx(jdim)
-            f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r**3) * xx(idim) * xx(jdim)
+            f(iatom, idim) = f(iatom, idim) - (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r**3) * xx(idim) * xx(jdim)
             if(jdim == idim) then
-              f(iatom, idim) = f(iatom, idim) - (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r)
+              f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w1r_ * (M_ONE/r)
             end if
           end do
         end do
@@ -144,6 +144,8 @@ contains
 
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:psi%d%dim))
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:psi%d%dim, 1:gr%sb%dim))
+      dpsi = M_z0
+      dvpsi = M_z0
       do idim = 1, psi%d%dim
         call zderivatives_grad(gr%der, psi%zpsi(:, idim, 1, 1), dpsi(:, :, idim))
       end do
