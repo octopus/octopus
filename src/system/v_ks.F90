@@ -185,7 +185,13 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
+      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+        call messages_not_implemented("Hartree with k-points")
+
     case(HARTREE_FOCK)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+        call messages_not_implemented("Hartree-Fock with k-points")
+
       ! initialize XC modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
