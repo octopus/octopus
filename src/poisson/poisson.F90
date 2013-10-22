@@ -1166,7 +1166,7 @@ contains
 
   end function poisson_is_async
 
-#include "solver_3d_inc.F90"
+#include "poisson_init_direct_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
