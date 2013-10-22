@@ -95,7 +95,7 @@ module mpi_debug_m
     'MPI_ALLTOALL  ',            &
     'MPI_ALLGATHER ',            &
     'MPI_FILE_READ ',            &
-    'MPI_FILE_wRITE'             &
+    'MPI_FILE_WRITE'             &
     /)
 
   integer, public :: call_counter(C_NUM_MPI_ROUTINES) = 0
