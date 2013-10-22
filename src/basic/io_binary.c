@@ -277,17 +277,23 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   close(fd);
   return;
 }
- 
-void FC_FUNC_(read_binary,READ_BINARY)
-     (const fint * np, const fint * offset, byte * f, fint * output_type, fint * ierr, STR_F_TYPE fname STR_ARG1)
-{
-  header_t * h;
-  char * filename;
-  int fd, i;
-  ssize_t moved;
-  int correct_endianness;
-  byte * read_f;
 
+void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{ 
+  unsigned long fname_len;
+  char * filename;
+  fname_len = l1;
+  TO_C_STR1(fname, filename);
+  read_header(h, correct_endianness, ierr, fname, fname_len);
+}
+
+void read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{
+  char * filename;
+  int fd;
+  ssize_t moved;
+
+  *ierr = 0;
   TO_C_STR1(fname, filename);
   fd = open(filename, O_RDONLY);
   free(filename);
@@ -296,7 +302,6 @@ void FC_FUNC_(read_binary,READ_BINARY)
     return;
   }
 
-  h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
 
   /* read header */
@@ -308,17 +313,47 @@ void FC_FUNC_(read_binary,READ_BINARY)
     return;
   }
 
-  *ierr = check_header(h, &correct_endianness);
+  *ierr = check_header(h, correct_endianness);
   if( *ierr != 0 ){
     free(h);
     return;
   }
+
+  close(fd);
+
+}
+
+void FC_FUNC_(read_binary,READ_BINARY)
+     (const fint * np, const fint * offset, byte * f, fint * output_type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+{
+  header_t * h;
+  char * filename;
+  unsigned long fname_len;
+  int fd, i;
+  ssize_t moved;
+  int correct_endianness;
+  byte * read_f;
+  
+  /* read the header */
+  fname_len = l1;
+  h = (header_t *) malloc(sizeof(header_t));
+  assert(h != NULL);
+  read_header(h, &correct_endianness, ierr, fname, fname_len);
 
   /* check whether the sizes match */ 
   if( h->np < *np + *offset ){ 
     *ierr = 4;
     free(h);
     return; 
+  }
+
+  TO_C_STR1(fname, filename);
+  fd = open(filename, O_RDONLY);
+  free(filename);
+  
+  if(fd < 0){
+    *ierr = 2;
+    return;
   }
 
   if( h->type == *output_type){
@@ -330,8 +365,11 @@ void FC_FUNC_(read_binary,READ_BINARY)
   }
 
   /* set the start point */
-  if(*offset != 0) lseek(fd, (*offset)*size_of[h->type], SEEK_CUR);
-
+  if(*offset != 0)
+    lseek(fd, (*offset)*size_of[h->type]+sizeof(header_t), SEEK_SET);
+  else
+    lseek(fd, sizeof(header_t), SEEK_SET);
+  
   /* now read the values and close the file */
   moved = read(fd, read_f, (*np)*size_of[h->type]);
 
