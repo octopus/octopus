@@ -56,8 +56,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     ! matrix element
     do ia = 1, cas%n_pairs
 
-      call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%sigma, zf)
-      call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%sigma, psi_a)
+      call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
+      call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
 
       do ip = 1, mesh%np
         zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
@@ -94,8 +94,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           zx(:) = M_ZERO
           zf(:) = M_ZERO
 
-          call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%sigma, zf)
-          call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%sigma, psi_a)
+          call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
+          call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
 
           do ia = 1, cas%n_pairs
             forall(ip = 1:mesh%np)
@@ -174,8 +174,8 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   SAFE_ALLOCATE(psia(1:mesh%np, 1:st%d%dim))
 
   do ia = 1, cas%n_pairs
-    call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%sigma, psii)
-    call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%sigma, psia)
+    call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
+    call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
     ! FIXME: parallelize in states
     ! use forall here
@@ -254,8 +254,8 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
     do ip = sp, ep
       do jb = 1, cas%n_pairs
         do idim = 1, st%d%dim
-          xx(jb) = R_CONJ(psi(cas%pair(jb)%i, idim, ip - sp + 1, cas%pair(jb)%sigma))* &
-            psi(cas%pair(jb)%a, idim, ip - sp + 1, cas%pair(jb)%sigma)
+          xx(jb) = R_CONJ(psi(cas%pair(jb)%i, idim, ip - sp + 1, cas%pair(jb)%kk))* &
+            psi(cas%pair(jb)%a, idim, ip - sp + 1, cas%pair(jb)%kk)
         end do
       end do
       n0I(ip) = X(transition_matrix_element)(cas, ia, xx)
@@ -304,12 +304,12 @@ end subroutine X(get_transition_densities)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho) 
+subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho) 
   type(states_t), intent(in)  :: st
   type(mesh_t),   intent(in)  :: mesh
   integer,        intent(in)  :: ii
   integer,        intent(in)  :: ia
-  integer,        intent(in)  :: sigma
+  integer,        intent(in)  :: kk
   R_TYPE,         intent(out) :: rho(:)
 
   R_TYPE, pointer :: psi_i(:), psi_a(:)
@@ -321,19 +321,19 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
 
   ! For performance reasons we don`t use states_get_states, but we access the states directly
 
-  iblock = st%group%iblock(ii, sigma)
-  ablock = st%group%iblock(ia, sigma)
+  iblock = st%group%iblock(ii, kk)
+  ablock = st%group%iblock(ia, kk)
 
   ! FIXME: need to take into account spinor dimension here, not just 1
   idim = 1
-  ilin = batch_inv_index(st%group%psib(iblock, sigma), (/ii, idim/))
-  alin = batch_inv_index(st%group%psib(ablock, sigma), (/ia, idim/))
+  ilin = batch_inv_index(st%group%psib(iblock, kk), (/ii, idim/))
+  alin = batch_inv_index(st%group%psib(ablock, kk), (/ia, idim/))
 
-  ASSERT(.not. batch_is_packed(st%group%psib(iblock, sigma)))
-  ASSERT(.not. batch_is_packed(st%group%psib(ablock, sigma)))
+  ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
+  ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
 
-  psi_i => st%group%psib(iblock, sigma)%states_linear(ilin)%X(psi)
-  psi_a => st%group%psib(ablock, sigma)%states_linear(alin)%X(psi)
+  psi_i => st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)
+  psi_a => st%group%psib(ablock, kk)%states_linear(alin)%X(psi)
 
   forall(ip = 1:mesh%np) rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
 
@@ -574,7 +574,7 @@ contains
     R_TYPE,                  optional, intent(out)   :: mtxel_vh
     R_TYPE,                  optional, intent(out)   :: mtxel_xc
 
-    integer :: pi, qi, sigma, pa, qa, mu
+    integer :: pi, qi, kk, pa, qa, mu
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
     FLOAT :: coeff_vh
     type(profile_t), save :: prof
@@ -585,27 +585,27 @@ contains
     if(cas%herm_conj) then
       pi = qq%i
       pa = qq%a
-      sigma = qq%sigma
+      kk = qq%kk
 
       qi = pp%i
       qa = pp%a
-      mu = pp%sigma
+      mu = pp%kk
     else
       pi = pp%i
       pa = pp%a
-      sigma = pp%sigma
+      kk = qq%kk
 
       qi = qq%i
       qa = qq%a
-      mu = qq%sigma
+      mu = qq%kk
     endif
 
     SAFE_ALLOCATE(rho_i(1:mesh%np))
     SAFE_ALLOCATE(rho_j(1:mesh%np))
     SAFE_ALLOCATE(integrand(1:mesh%np))
 
-    call X(casida_get_rho)(st, mesh, pa, pi, sigma, rho_i)
-    call X(casida_get_rho)(st, mesh, qi, qa, mu,    rho_j)
+    call X(casida_get_rho)(st, mesh, pa, pi, kk, rho_i)
+    call X(casida_get_rho)(st, mesh, qi, qa, mu, rho_j)
 
     !  first the Hartree part
     if(present(mtxel_vh)) then
@@ -630,7 +630,7 @@ contains
     end if
 
     if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, sigma, mu)
+      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, kk, mu)
       mtxel_xc = X(mf_integrate)(mesh, integrand)
     endif
 
@@ -722,8 +722,8 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
 
   PUSH_SUB(X(write_K_term))
   
-  write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%sigma, &
-    cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, mat_val
+  write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%kk, &
+    cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, mat_val
   
   POP_SUB(X(write_K_term))
 end subroutine X(write_K_term)
@@ -1019,7 +1019,7 @@ subroutine X(casida_solve)(cas, st)
     ! complete the matrix
     do ia = 1, cas%n_pairs
       p => cas%pair(ia)
-      temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
+      temp = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
       
       do jb = ia, cas%n_pairs
         q => cas%pair(jb)
@@ -1027,7 +1027,7 @@ subroutine X(casida_solve)(cas, st)
         ! FIXME: need the equivalent of this stuff for forces too.
         if(cas%type == CASIDA_CASIDA) then
           cas%X(mat)(ia, jb) = M_TWO * sqrt(temp) * cas%X(mat(ia, jb)) * &
-            sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
+            sqrt(st%eigenval(q%a, q%kk) - st%eigenval(q%i, q%kk))
         endif
         if(jb /= ia) cas%X(mat)(jb, ia) = R_CONJ(cas%X(mat)(ia, jb)) ! the matrix is Hermitian
       end do
@@ -1071,8 +1071,8 @@ subroutine X(casida_solve)(cas, st)
     ! And let us now get the S matrix...
     if(cas%type == CASIDA_CASIDA) then
       do ia = 1, cas%n_pairs
-        cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                                                 st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
+        cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
+                                                 st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) )
       end do
     endif
       
@@ -1121,7 +1121,7 @@ subroutine X(casida_write)(cas, sys)
     if((cas%type == CASIDA_EPS_DIFF)) then
       write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
       if(sys%st%d%ispin == SPIN_POLARIZED) then
-        write(iunit, '(i5)', advance='no') cas%pair(cas%ind(ia))%sigma
+        write(iunit, '(i5)', advance='no') cas%pair(cas%ind(ia))%kk
       endif
     else
       write(iunit, '(i6)', advance='no') cas%ind(ia)
@@ -1159,7 +1159,7 @@ subroutine X(casida_write)(cas, sys)
       temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
       
       do jb = 1, cas%n_pairs
-        write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%X(mat)(jb, cas%ind(ia))
+        write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
       end do
       
       if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then

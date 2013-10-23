@@ -77,7 +77,7 @@ subroutine X(states_matrix_swap)(mat, pair)
 
   ii = pair%i
   aa = pair%a
-  ik = pair%sigma
+  ik = pair%kk
 
   SAFE_ALLOCATE(row(1:size(mat, 2)))
 

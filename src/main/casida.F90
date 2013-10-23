@@ -96,7 +96,7 @@ module casida_m
     
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
-    integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
+    integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
     integer, pointer  :: ind(:)         !< ordering in energy of solutions
 
     FLOAT,   pointer  :: dmat(:,:)      !< general-purpose matrix
@@ -532,7 +532,7 @@ contains
               cas%index(ist, ast, ik) = jpair
               cas%pair(jpair)%i = ist
               cas%pair(jpair)%a = ast
-              cas%pair(jpair)%sigma = ik
+              cas%pair(jpair)%kk = ik
               jpair = jpair + 1
             end if
           end do
@@ -720,8 +720,8 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       do ia = 1, cas%n_pairs
-        cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
+        cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
+                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
           message(2) = "Probably this indicates an inconsistency in occupations between gs and unocc calculations."
@@ -834,8 +834,8 @@ contains
     pp => cas%pair(ia)
     qq => cas%pair(jb)
 
-    isnt_degenerate = (abs((st%eigenval(pp%a, pp%sigma) - st%eigenval(pp%i, pp%sigma)) &
-      - (st%eigenval(qq%a, qq%sigma) - st%eigenval(qq%i, qq%sigma))) > CNST(1e-8))
+    isnt_degenerate = (abs((st%eigenval(pp%a, pp%kk) - st%eigenval(pp%i, pp%kk)) &
+      - (st%eigenval(qq%a, qq%kk) - st%eigenval(qq%i, qq%kk))) > CNST(1e-8))
 
     POP_SUB(isnt_degenerate)
   end function isnt_degenerate

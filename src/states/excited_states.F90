@@ -70,7 +70,7 @@ module excited_states_m
   type states_pair_t
     integer :: i
     integer :: a
-    integer :: sigma
+    integer :: kk
   end type states_pair_t
 
   type excited_states_t
@@ -90,14 +90,14 @@ contains
   !! of electron-hole pairs. The structure of the file is thus four
   !! columns:
   !!
-  !! i  a  sigma  weight
+  !! i  a  k  weight
   !! 
-  !! where i should be an occupied state, a an unoccupied one, and sigma
-  !! the spin state of the corresponding orbital. This pair is then associated with a
-  !! creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
+  !! where i should be an occupied state, a an unoccupied one, and k
+  !! the k-point (including spin) of the corresponding orbital. This pair is then associated with a
+  !! creation-annihilation pair a^t_{a,k} a_{i,k}, so that the
   !! excited state will be a linear combination in the form:
   !! 
-  !! |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
+  !! |ExcitedState> = Sum [ weight(i,a,k) a^t_{a,k} a_{i,k} |GroundState> ]
   !!
   !! where weight is the number in the fourth column.
   !! These weights should be normalized to one; otherwise the routine
@@ -220,8 +220,8 @@ contains
     call io_skip_header(iunit)
     do ipair = 1, excited_state%n_pairs
       read(iunit, *) excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
-                     excited_state%pair(ipair)%sigma, excited_state%weight(ipair)
-      if(( (ispin  ==  UNPOLARIZED) .or. (ispin  ==  SPINORS) ) .and. (excited_state%pair(ipair)%sigma /= 1) ) then
+                     excited_state%pair(ipair)%kk, excited_state%weight(ipair)
+      if(( (ispin  ==  UNPOLARIZED) .or. (ispin  ==  SPINORS) ) .and. (excited_state%pair(ipair)%kk /= 1) ) then
         message(1) = 'Error reading excited state in file "'//trim(filename)//'":'
         message(2) = 'Cannot treat a electron-hole pair for "down" spin when not working in spin-polarized mode.'
         call messages_fatal(2)
@@ -230,35 +230,35 @@ contains
 
       ! First, whether the occupied state belongs to the list of occupied states.
       ok = .false.
-      do ist = 1, n_filled(excited_state%pair(ipair)%sigma)
-        ok = excited_state%pair(ipair)%i  ==  filled(ist, excited_state%pair(ipair)%sigma)
+      do ist = 1, n_filled(excited_state%pair(ipair)%kk)
+        ok = excited_state%pair(ipair)%i  ==  filled(ist, excited_state%pair(ipair)%kk)
         if(ok) exit
       end do
 
       ! Treat differently the one-electron case in unpolarized mode
       if( ispin  ==  UNPOLARIZED .and. (n_half_filled(1) == 1) ) then
-        ok = excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%sigma)
+        ok = excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%kk)
       end if
 
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
-          excited_state%pair(ipair)%a, '; sigma =', excited_state%pair(ipair)%sigma, ') is not valid.'
+          excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is not valid.'
         call messages_fatal(1)
       end if
 
       ! Then, whether the unoccupied state is really unoccupied.
       ok = .true.
-      do ist = 1, n_filled(excited_state%pair(ipair)%sigma)
-        ok = .not. (excited_state%pair(ipair)%a  ==  filled(ist, excited_state%pair(ipair)%sigma))
+      do ist = 1, n_filled(excited_state%pair(ipair)%kk)
+        ok = .not. (excited_state%pair(ipair)%a  ==  filled(ist, excited_state%pair(ipair)%kk))
       end do
       ! Treat differently the one-electron case in unpolarized mode
       if( ispin  ==  UNPOLARIZED .and. (n_half_filled(1) == 1) ) then
-        ok = .not. (excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%sigma))
+        ok = .not. (excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%kk))
       end if
       ok = .not. (excited_state%pair(ipair)%a > nst)
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
-          excited_state%pair(ipair)%a, '; sigma =', excited_state%pair(ipair)%sigma, ') is not valid.'
+          excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is not valid.'
           call messages_fatal(1)
       end if
 
@@ -267,7 +267,7 @@ contains
         ok = .not. pair_is_eq(excited_state%pair(ipair), excited_state%pair(jpair))
         if(.not.ok) then
           write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
-            excited_state%pair(ipair)%a, '; sigma =', excited_state%pair(ipair)%sigma, ') is repeated in the file.'
+            excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is repeated in the file.'
           call messages_fatal(1)
         end if
       end do
@@ -325,7 +325,7 @@ contains
     iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
     do ipair = 1, excited_state%n_pairs
       write(iunit, '(3i5,es20.12)') excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
-                                    excited_state%pair(ipair)%sigma, excited_state%weight(ipair)
+                                    excited_state%pair(ipair)%kk, excited_state%weight(ipair)
     end do
 
     call io_close(iunit)
@@ -337,7 +337,7 @@ contains
   logical function pair_is_eq(pair1, pair2) result(res)
     type(states_pair_t), intent(in) :: pair1, pair2
 
-    res = (pair1%i  ==  pair2%i) .and. (pair1%a  ==  pair2%a) .and. (pair1%sigma  ==  pair2%sigma)
+    res = (pair1%i  ==  pair2%i) .and. (pair1%a  ==  pair2%a) .and. (pair1%kk  ==  pair2%kk)
   end function pair_is_eq
 
 #include "undef.F90"
