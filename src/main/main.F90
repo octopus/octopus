@@ -118,14 +118,14 @@ program octopus
   !% be used as prefixes to variables to indicate that they apply only to that dataset's calculation.
   !%
   !% Example:
-  !%<pre>%CalculationMode
-  !% gs              | unocc
-  !% "ground_state_" | "excited_states_"
-  !% 1               | 2
-  !%%
-  !%excited_states_RestartDir = "ground_state_restart"
-  !%excited_states_ExtraStates = 9
-  !%</pre>
+  !% <pre>%CalculationMode
+  !%  gs              | unocc
+  !%  "ground_state_" | "excited_states_"
+  !%  1               | 2
+  !% %
+  !% excited_states_RestartDir = "ground_state_restart"
+  !% excited_states_ExtraStates = 9
+  !% </pre>
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
     call datasets_init(inp_calc_mode, blk)
