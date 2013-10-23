@@ -815,6 +815,12 @@ contains
     ! calculate forces
     if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
 
+    if(scf%max_iter == 0) then
+      call energy_calc_eigenvalues(hm, gr%der, st)
+      call states_fermi(st, gr%mesh)
+      call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+    endif
+
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
