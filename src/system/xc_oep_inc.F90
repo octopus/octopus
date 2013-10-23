@@ -100,6 +100,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   if (st%d%ispin==SPINORS) then
     call xc_KLI_Pauli_solve(gr%mesh, st, oep)
     vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+    ! full OEP not implemented!
   else
     spin2: do is = 1, nspin_
       ! get the HOMO state
@@ -148,6 +149,9 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   call profiling_in(C_PROFILING_XC_OEP_FULL)
   PUSH_SUB(X(xc_oep_solve))
+
+  if(st%parallel_in_states) &
+    call messages_not_implemented("Full OEP parallel in states")
 
   SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(     ss(1:gr%mesh%np))

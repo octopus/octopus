@@ -91,16 +91,9 @@ contains
 
     if(iand(family, XC_FAMILY_OEP) == 0) then
       oep%level = XC_OEP_NONE
-    POP_SUB(xc_oep_init)
+      POP_SUB(xc_oep_init)
       return
     end if
-
-#if defined(HAVE_MPI)
-    if(oep%level == XC_OEP_FULL) then
-      message(1) = "Full OEP is not allowed with the code parallel in states."
-      call messages_fatal(1)
-    end if
-#endif
 
     !%Variable OEPLevel
     !%Type integer
@@ -124,6 +117,10 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
+
+        if(d%nspin == SPINORS) &
+          call messages_not_implemented("Full OEP with spinors")
+
         call messages_experimental("Full OEP")    
         !%Variable OEPMixing
         !%Type float
@@ -161,6 +158,10 @@ contains
 
       ! the linear equation has to be more converged if we are to attain the required precision
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
+
+      if(d%nspin == SPINORS) &
+        call messages_experimental("OEP with spinors")
+
     end if
 
     POP_SUB(xc_oep_init)
