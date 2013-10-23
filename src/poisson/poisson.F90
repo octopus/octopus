@@ -69,6 +69,7 @@ module poisson_m
     poisson_get_solver,          &
     poisson_get_qpoint,          &
     poisson_init,                &
+    poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
     poisson_solve_batch,         &

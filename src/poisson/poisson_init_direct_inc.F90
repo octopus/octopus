@@ -167,7 +167,7 @@ subroutine poisson_kernel_init(this, geo, all_nodes_comm)
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param)
+      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
@@ -193,6 +193,30 @@ subroutine poisson_kernel_init(this, geo, all_nodes_comm)
 end subroutine poisson_kernel_init
 
 
+!-----------------------------------------------------------------
+subroutine poisson_kernel_reinit(this, qq)
+  type(poisson_t), intent(inout) :: this
+  FLOAT,           intent(in)    :: qq(:)
+
+  PUSH_SUB(poisson_kernel_reinit)
+
+  select case(this%method)
+  case(POISSON_FFT)
+    if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
+      this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
+      call poisson_fft_end(this%fft_solver)
+      call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
+        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
+    endif
+  case default
+    call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
+  end select
+
+  POP_SUB(poisson_kernel_reinit)
+end subroutine poisson_kernel_reinit
+
+
+!-----------------------------------------------------------------
 subroutine poisson_solve_direct(this, pot, rho)
   type(poisson_t), intent(in)  :: this
   FLOAT,           intent(out) :: pot(:)
