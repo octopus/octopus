@@ -767,7 +767,7 @@ contains
     
     call dcube_function_free_RS(cube, cf) ! memory is no longer needed
 
-    POP_SUB(poisson_fft_solver)
+    POP_SUB(poisson_fft_solve)
   end subroutine poisson_fft_solve
   
 end module poisson_fft_m
