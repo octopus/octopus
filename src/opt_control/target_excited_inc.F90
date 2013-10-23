@@ -158,7 +158,7 @@
         do ist = chi_out%st_start, chi_out%st_end
           chi_out%zpsi(:, :, ist, ik) = M_z0
           do ia = 1, n_pairs
-            if(ik /= tg%est%pair(ia)%sigma) cycle
+            if(ik /= tg%est%pair(ia)%kk) cycle
             if(abs(dI(ia)) < CNST(1.0e-12)) cycle
             do ib = 1, n_pairs
               if(abs(dI(ib)) < CNST(1.0e-12)) cycle
