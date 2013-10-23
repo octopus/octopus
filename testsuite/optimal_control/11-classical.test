@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : testsuite/optimal_control/11-classical.test
+Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input: 11-classical.01-ground_state.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 0.89379037
+
+
+Input: 11-classical.02-oct.inp
+match ; J1 2nd iteration  ; GREP(opt-control/convergence, '##        2   ', 40) ; -1.03679215

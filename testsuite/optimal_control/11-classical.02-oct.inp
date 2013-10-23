@@ -1,0 +1,98 @@
+#CalculationMode = gs
+#CalculationMode = td
+CalculationMode = opt_control
+
+DebugLevel = 0
+ExperimentalFeatures = yes
+
+Dimensions = 2
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.40
+Radius =  9.0
+
+TheoryLevel = independent_particles
+
+%Species
+"sc" | 10*0.0005485799110 | spec_soft_coulomb | 1.0 | 1.0
+"sc2" | 10*0.0005485799110 | spec_soft_coulomb | 2.0 | 1.0
+%
+
+%Coordinates
+"sc" |  1.0 |  0.0
+"sc" |  0.0 | -1.0
+"sc2" | -1.0 |  0.0
+%
+ExcessCharge = 3
+
+EigenSolver = plan
+ConvRelDens = 1.0e-12
+EigenSolverTolerance = 1.0e-12
+SCFCalculateForces = yes
+
+Mixing = 1.0
+TypeOfMixing = linear
+
+MoveIons = yes
+
+stime  = 1.0
+dt = stime/100
+
+AbsorbingBoundaries = sin2
+AbWidth = 2.0
+AbHeight = -3.0
+
+TDPropagator = exp_mid
+TDExponentialMethod = lanczos
+TDExponentialOrder = 30
+TDLanczosTol = 1.0e-4
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+ampl = 0.1
+freq = (2*pi/stime)
+
+%TDExternalFields
+electric_field | 1.0/sqrt(2.0) | 1.0/sqrt(2.0) | 0.0 | freq | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_cw | ampl
+%
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty = 0.0
+OCTEps   = 1.0e-4
+OCTMaxIter = 2
+
+OCTInitialState = oct_is_groundstate
+
+OCTTargetOperator = oct_tg_classical
+%OCTClassicalTarget
+"q[2,2]+q[2,1]*p[1,1]*p[3,2]"
+%
+%OCTPositionDerivatives
+"0.0" | "0.0"
+"p[1,1]*p[3,2]" | "1.0"
+"0.0" | "0.0"
+%
+%OCTMomentumDerivatives
+"q[2,1]*p[3,2]" | "0.0"
+"0.0" | "0.0"
+"0.0" | "q[2,1]*p[1,1]"
+%
+
+#OCTCheckGradient = 0.001
+OCTDirectStep = 0.1
+OCTScheme = oct_algorithm_cg
+OCTControlFunctionRepresentation = control_fourier_series_h
+OCTControlFunctionOmegaMax = 10.0
+
+OCTFixFluenceTo = -1
+
+OCTDoubleCheck = no
+

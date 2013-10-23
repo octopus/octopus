@@ -58,7 +58,16 @@ dist_share_DATA = \
 	08-velocities.test                     \
 	08-velocities.01-ground_state.inp      \
 	08-velocities.02-oct.inp               \
-	08-velocities.03-movingions.inp
-
+	08-velocities.03-movingions.inp        \
+	09-density+current.test                \
+	09-density+current.01-ground_state.inp \
+	09-density+current.02-oct.inp          \
+	09-density+current.03-tdoct.inp        \
+	10-current.test                        \
+	10-current.01-ground_state.inp         \
+	10-current.02-oct.inp                  \
+	11-classical.test                      \
+	11-classical.01-ground_state.inp       \
+	11-classical.02-oct.inp
 
 CLEANFILES = *~ *.bak
