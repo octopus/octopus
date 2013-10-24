@@ -151,6 +151,7 @@ contains
 
     nullify(this%symmetry_ops)
     nullify(this%num_symmetry_ops)
+    nullify(this%klattice)
 
     !%Variable KPointsUseSymmetries
     !%Type logical
@@ -197,11 +198,13 @@ contains
       this%method = KPOINTS_GAMMA
       call read_MP(gamma_only = .true.)
     else 
+      ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
+      call read_MP(gamma_only = .false.)
+
       if(read_user_kpoints()) then
         this%method = KPOINTS_USER
       else
         this%method = KPOINTS_MONKH_PACK
-        call read_MP(gamma_only = .false.)
 
         write(message(1),'(a)') ' '
         write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
@@ -437,6 +440,10 @@ contains
         end if
       end if
       read_user_kpoints = .true.
+
+      ! end the one initialized by KPointsGrid already
+      call kpoints_end(this)
+
       this%use_symmetries = .false.
 
       call kpoints_grid_init(dim, this%full, parse_block_n(blk))
