@@ -399,7 +399,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
   PUSH_SUB(X(exchange_operator))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
   if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
 
   SAFE_ALLOCATE(rho(1:der%mesh%np))
