@@ -90,16 +90,9 @@ contains
 
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
-    POP_SUB(xc_oep_init)
+      POP_SUB(xc_oep_init)
       return
     end if
-
-#if defined(HAVE_MPI)
-    if(oep%level == XC_OEP_FULL) then
-      message(1) = "Full OEP is not allowed with the code parallel in states."
-      call messages_fatal(1)
-    end if
-#endif
 
     !%Variable OEPLevel
     !%Type integer
