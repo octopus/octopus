@@ -1528,8 +1528,8 @@ contains
   end subroutine controlfunction_der
 
 
-  !> controlfunction_gradient computes the gradient with respect
-  !! to the theta basis
+  !> controlfunction_gradient computes the (minus the) gradient of the
+  !! J functional with respect to the parameters.
   subroutine controlfunction_gradient(par, par_output, grad)
     type(controlfunction_t), intent(in)    :: par, par_output
     FLOAT,                   intent(inout) :: grad(:)
@@ -1543,14 +1543,14 @@ contains
       do jj = 1, par%dof
         ! Probably we could do without par%u, and write explicitly the values it takes.
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * par%u(jj, 1)*par%theta(jj) &
-                 - M_TWO * par%u(jj, 1) * tdf(par_output%f(1), jj)
+                 - par%u(jj, 1) * tdf(par_output%f(1), jj)
       end do
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
         call controlfunction_der(par, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
-                 - M_TWO * tdf_dot_product(par_output%f(1), depsilon)
+                 - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do
 
@@ -1558,7 +1558,7 @@ contains
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
         call controlfunction_der(par, depsilon, jj)
-        grad(jj) = - M_TWO * tdf_dot_product(par_output%f(1), depsilon)
+        grad(jj) = - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do
 

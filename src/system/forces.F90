@@ -153,8 +153,8 @@ contains
 
       do i = 1, gr%sb%dim
         do j = 1, gr%sb%dim
-          f(iatom, i) = f(iatom, i) + q(iatom, j) * &
-            M_TWO * real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, j, 1:psi%d%dim), dvpsi(:, :, i)), REAL_PRECISION)
+          f(iatom, i) = f(iatom, i) + q(iatom, j) * psi%occ(1, 1) * M_TWO * &
+            real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, j, 1:psi%d%dim), dvpsi(:, :, i)), REAL_PRECISION)
         end do
         f(iatom, i) = f(iatom, i) &
           - M_TWO * real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), dvpsi(:, :, i)), REAL_PRECISION)

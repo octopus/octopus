@@ -3,7 +3,7 @@
 
 Test       : testsuite/optimal_control/11-classical.test
 Programs   : octopus
-TestGroups : short-run
+TestGroups : short-run, optimal_control
 Enabled    : Yes
 
 Input: 11-classical.01-ground_state.inp

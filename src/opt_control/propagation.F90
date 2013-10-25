@@ -686,7 +686,7 @@ contains
         call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
           st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
         do idim = 1, gr%sb%dim
-          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + st%occ(1, 1) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
         end do
       end do
       SAFE_DEALLOCATE_A(dvpsi)
@@ -868,7 +868,7 @@ contains
       d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
       forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j) 
     elseif(gradients_) then
-      forall(j = 1:no_parameters) d(j) = aimag(dl(j))
+      forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))
     else
       forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
     end if
@@ -877,8 +877,7 @@ contains
     if(dir == 'b') then
       pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
-        ! WARNING: it should be M_TWO * d(1) for spin compensated systems?
-        d(1) = d(1) - M_HALF * species_zval(geo%atom(iatom)%spec) * &
+        d(1) = d(1) - species_zval(geo%atom(iatom)%spec) * &
           real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
       end do
     end if
