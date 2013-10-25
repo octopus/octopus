@@ -20,13 +20,16 @@
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, gr, st, tr, t, dt)!, gauge_force, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, gr, st, tr, t, dt, ions, geo)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(propagator_t),  intent(inout) :: tr
     FLOAT,               intent(in)    :: t, dt
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
 
+    type(ion_state_t) :: ions_state
     PUSH_SUB(td_qoct_tddft_propagator)
     
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
@@ -34,8 +37,18 @@
       call interpolate( (/t, t-dt/), tr%v_old(:, :, 0:1), t-dt/M_TWO, hm%vhxc(:, :))
     end if
 
+    !move the ions to time 'time - dt/2'
+    if(ion_dynamics_ions_move(ions)) then
+      call ion_dynamics_save_state(ions, geo, ions_state)
+      call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
+      call hamiltonian_epot_generate(hm, gr, geo, st, time = t - dt/M_TWO)
+    end if
+
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
     call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
+
+    !restore to time 'time - dt'
+    if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
     POP_SUB(td_qoct_tddft_propagator)
   end subroutine td_qoct_tddft_propagator

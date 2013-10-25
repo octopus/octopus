@@ -338,7 +338,8 @@ contains
     if(have_fields) then
       if(tr%method /= PROP_ETRS .and.    &
          tr%method /= PROP_AETRS .and. &
-         tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
+         tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
+         tr%method /= PROP_QOCT_TDDFT_PROPAGATOR) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call messages_fatal(1)
       end if
@@ -557,7 +558,7 @@ contains
     case(PROP_MAGNUS);                   call td_magnus()
     case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
+      call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt, ions, geo)
     end select
 
     if(present(scsteps)) scsteps = 1
@@ -608,7 +609,7 @@ contains
           case(PROP_MAGNUS);                   call td_magnus()
           case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
           case(PROP_QOCT_TDDFT_PROPAGATOR)
-            call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
+            call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt, ions, geo)
           end select
 
           if(.not. cmplxscl) then
