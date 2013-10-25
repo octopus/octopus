@@ -48,7 +48,7 @@
 ##########################################################################
 
 # Felipe Homrich da Jornada, September 2011
-# imported from BerkeleyGW r4576
+# imported from BerkeleyGW r4576, r5630
 
 # Python script for updating a test suite given its result.
 # The script searches for all *.test files recursively, and updates those that
@@ -64,8 +64,6 @@
 #   changes! You might have meant to change only one component (A), but you
 #   might have introduced a bug in component B! So, take a look at all numbers
 #   before you "fix" the test result!
-
-##########################################################################
 
 import sys
 import os
@@ -84,23 +82,33 @@ f_out = None
 #All lines before the match are copied to the .test.new file
 def get_next_match():
 	global f_in, f_out
+
 	while 1:
 		line = f_in.readline()
+		if not line: break
 		if line.lstrip()[:5]=='match':
 			return line
 		f_out.write(line)
 	raise Exception('Read past end of file!')
 
-#Update the current .test and .test.new files
-def refresh_files(new_in,new_out):
-	global f_in, f_out
+#Update the current .test and .test.new files. Finishes copying the rest of the
+#.test file into .test.new, and closes/reopens new files.
+def refresh_files(new_in=None, new_out=None):
+	global f_in, f_out, n_cor, n_fine
+
+	#Finishes copying the .test => .test.new
+	if not f_in is None:
+		f_out.write(f_in.read())
+		print('     corrections: %d/%d'%(n_cor, n_cor+n_fine))
+
 	if not(f_in is None):
 		f_in.close()
 	if not(f_out is None):
 		f_out.close()
+	if not ((new_in is None) or (new_out is None)):
+		f_in  = open(new_in)
+		f_out = open(new_out, 'w')
 
-	f_in  = open(new_in)
-	f_out = open(new_out, 'w')
 
 #Mimics the "find" utility
 def recursive_glob(rootdir='.', pattern='*'):
@@ -123,26 +131,37 @@ def get_test_name(fname):
 #Find all tests and gets all titles
 test_files = recursive_glob('.', '*.test')
 test_names = [get_test_name(fname) for fname in test_files]
-print('Found %d test suites\n'%(len(test_files)))
+print('Found %d test suites:'%(len(test_files)))
+for test_file in test_files:
+	print('      %s'%(test_file))
+print('')
+
+ignored_tests=[]
 
 ntot_fine=0
 ntot_cor=0
 n_fine=0
 n_cor=0
+test_exists=False
 for line in f_result.readlines():
-	for tname,tfile in zip(test_names, test_files): 
-		if tname in line:
-			#Entering a new test!
-			if not f_in is None:
-				#Don't forget to copy the rest of the .test file!
-				f_out.write(f_in.read())
-				print('     corrections: %d/%d'%(n_cor,n_cor+n_fine))
-			print('>> Entering test: %s'%tname)
-			print('          output: %s'%tfile+".new")
-			refresh_files(tfile, tfile+".new")
-			n_fine=0
-			n_cor=0
-			break
+	if line[0:18] == 'Using test file  :' in line:
+		# There is a new test! Look for the file...
+		cur_file = line[19:-1].strip()
+		test_exists = False
+		if (os.path.isfile(cur_file)):
+			for tname,tfile in zip(test_names, test_files):
+				if os.path.samefile(cur_file, tfile):
+					refresh_files(tfile, tfile+".new")
+					print('>> Entering test: %s'%tname)
+					print('          output: %s'%tfile+".new")
+					n_fine=0
+					n_cor=0
+					test_exists=True
+					break
+		if not test_exists:
+			ignored_tests.append(cur_file)
+	
+	if not test_exists: continue
 
 	if line[:20] == '   Calculated value ':
 		calc_val = line[21:]
@@ -160,19 +179,21 @@ for line in f_result.readlines():
 		n_cor += 1; ntot_cor += 1
 		buf = get_next_match()
 		idx = buf.rfind(';')
-		buf = buf[:idx] + '; ' + calc_val.lstrip() #includes \n!
+		rest = buf[idx+1:].rstrip()
+		spaces = ' '*rest.count(' ')
+		buf = '%s;%s%s\n'%(buf[:idx], spaces, calc_val.strip())
 		f_out.write(buf)
 
-#Don't forget to copy the rest of the .test file!
-f_out.write(f_in.read())
-print('     corrections: %d/%d'%(n_cor,n_cor+n_fine))
+refresh_files()
 f_result.close()
-f_in.close()
-f_out.close()
 
 print('\nSummary:')
 print('  %d values were fine'%(ntot_fine))
-print('  %d values were corrected\n'%(ntot_cor))
+print('  %d values were corrected'%(ntot_cor))
+print('  %d test file(s) was/were ignored:'%(len(ignored_tests)))
+for ignored in ignored_tests:
+	print('      %s'%(ignored))
+print('')
 
 #Workaround to get raw_input and input
 try: input = raw_input
@@ -185,17 +206,19 @@ def get_answer(question, default=False):
 	except:
 		return default
 
-if not get_answer('Would you like to see the diff now? (y/N) '):
+if not get_answer('Would you like to see the diff now? (Y/n) ', True):
 	sys.exit()
 
 for tfile in test_files:
-	os.system('diff -u0 %s %s.new'%(tfile,tfile))
+	os.system('diff -U 0 %s %s.new'%(tfile,tfile))
 	print('')
 
-if not get_answer('If you are happy with the diff, would you like me to update the files now? (y/N) '):
+print('If you are happy with the diff, would you like me to update the files now?')
+if not get_answer('I\'ll not commit anything, so you can still "svn diff" to see the changes. (Y/n) ', True):
 	sys.exit()
 
 for tfile in test_files:
-	os.system('mv %s.new %s'%(tfile,tfile))
+	if (os.path.isfile(tfile+'.new')):
+		os.system('mv %s.new %s'%(tfile,tfile))
 
 print('\nAll done! Enjoy the time that I saved you!\n')
