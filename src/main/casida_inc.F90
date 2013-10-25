@@ -1101,8 +1101,8 @@ subroutine X(casida_write)(cas, sys)
 
   if(cas%type == CASIDA_EPS_DIFF) then
     write(iunit, '(2a4)', advance='no') 'From', '  To'
-    if(sys%st%d%ispin == SPIN_POLARIZED) then
-      write(iunit, '(a5)', advance='no') 'Spin'
+    if(cas%nik > 1) then
+      write(iunit, '(a7)', advance='no') 'Spin/k'
     endif
   else
     write(iunit, '(6x)', advance='no')
@@ -1120,8 +1120,8 @@ subroutine X(casida_write)(cas, sys)
   do ia = 1, cas%n_pairs
     if((cas%type == CASIDA_EPS_DIFF)) then
       write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
-      if(sys%st%d%ispin == SPIN_POLARIZED) then
-        write(iunit, '(i5)', advance='no') cas%pair(cas%ind(ia))%kk
+      if(cas%nik > 1) then
+        write(iunit, '(i7)', advance='no') cas%pair(cas%ind(ia))%kk
       endif
     else
       write(iunit, '(i6)', advance='no') cas%ind(ia)
@@ -1149,7 +1149,7 @@ subroutine X(casida_write)(cas, sys)
       write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
         units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
       do idim = 1, cas%sb_dim
-        write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+        write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
           units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
       enddo
       
