@@ -2761,18 +2761,39 @@ contains
 
   ! ---------------------------------------------------------
   !> number of occupied-unoccipied pairs for Casida
-  subroutine states_count_pairs(st, n_pairs, n_occ, n_unocc, wfn_list, is_frac_occ)
+  subroutine states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
     type(states_t),    intent(in)  :: st
     integer,           intent(out) :: n_pairs
     integer,           intent(out) :: n_occ(:)   !< nik
     integer,           intent(out) :: n_unocc(:) !< nik
-    character(len=80), intent(out) :: wfn_list
+    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
     logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
 
     integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
-    character(len=80) :: nst_string, default
+    character(len=80) :: nst_string, default, wfn_list
+    FLOAT :: energy_window
 
     PUSH_SUB(states_count_pairs)
+
+    is_frac_occ = .false.
+    do ik = 1, st%d%nik
+      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
+      if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
+      n_occ(ik) = n_filled + n_partially_filled + n_half_filled
+      n_unocc(ik) = st%nst - n_filled
+      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
+    end do
+
+    !%Variable CasidaKSEnergyWindow
+    !%Type float
+    !%Section Linear Response::Casida
+    !%Description
+    !% An alternative to <tt>CasidaKohnShamStates</tt> for specifying which occupied-unoccupied
+    !% transitions will be used: all those whose eigenvalue differences are less than this
+    !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
+    !%End
+
+    call parse_float(datasets_check('CasidaKSEnergyWindow'), -M_ONE, energy_window, units_inp%energy)
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -2794,32 +2815,53 @@ contains
     !% of occupied states.
     !%End
 
-    write(nst_string,'(i6)') st%nst
-    write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-    call parse_string(datasets_check('CasidaKohnShamStates'), default, wfn_list)
-
-    is_frac_occ = .false.
-    do ik = 1, st%d%nik
-      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
-      if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
-      n_occ(ik) = n_filled + n_partially_filled + n_half_filled
-      n_unocc(ik) = st%nst - n_filled
-      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
-    end do
-
-    ! count pairs
     n_pairs = 0
-    do ik = 1, st%d%nik
-      do ast = n_occ(ik) + 1, st%nst
-        if(loct_isinstringlist(ast, wfn_list)) then
-          do ist = 1, n_occ(ik)
-            if(loct_isinstringlist(ist, wfn_list)) then
-              n_pairs = n_pairs + 1
-            end if
-          end do
-        end if
+    SAFE_ALLOCATE(is_included(maxval(n_occ), minval(n_occ) + 1:st%nst , st%d%nik))
+    is_included(:,:,:) = .false.
+
+    if(energy_window < M_ZERO) then
+      write(nst_string,'(i6)') st%nst
+      write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+      call parse_string(datasets_check('CasidaKohnShamStates'), default, wfn_list)
+
+      write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
+      call messages_info(1)
+
+      ! count pairs
+      n_pairs = 0
+      do ik = 1, st%d%nik
+        do ast = n_occ(ik) + 1, st%nst
+          if(loct_isinstringlist(ast, wfn_list)) then
+            do ist = 1, n_occ(ik)
+              if(loct_isinstringlist(ist, wfn_list)) then
+                n_pairs = n_pairs + 1
+                is_included(ist, ast, ik) = .true.
+              end if
+            end do
+          end if
+        end do
       end do
-    end do
+
+    else ! using CasidaKSEnergyWindow
+
+      write(message(1),'(a,f12.6,a)') "Info: including transitions with energy < ", &
+        units_from_atomic(units_out%energy, energy_window), trim(units_abbrev(units_out%energy))
+      call messages_info(1)
+
+      ! count pairs
+      n_pairs = 0
+      do ik = 1, st%d%nik
+        do ast = n_occ(ik) + 1, st%nst
+          do ist = 1, n_occ(ik)
+            if(st%eigenval(ast, ik) - st%eigenval(ist, ik) < energy_window) then
+              n_pairs = n_pairs + 1
+              is_included(ist, ast, ik) = .true.
+            endif
+          end do
+        end do
+      end do
+
+    endif
 
     POP_SUB(states_count_pairs)
   end subroutine states_count_pairs

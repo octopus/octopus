@@ -85,7 +85,6 @@ module casida_m
     integer           :: nik
     integer           :: sb_dim         !< number of spatial dimensions
     FLOAT             :: el_per_state
-    character(len=80) :: wfn_list
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
@@ -94,6 +93,7 @@ module casida_m
     logical           :: herm_conj      !< use Hermitian conjugate of matrix
     character(len=80) :: restart_dir
     
+    logical, pointer  :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
@@ -200,7 +200,7 @@ contains
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
-    call states_count_pairs(sys%st, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%wfn_list, is_frac_occ)
+    call states_count_pairs(sys%st, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
     if(is_frac_occ) then
       call messages_not_implemented("Casida with partial occupations")
       ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
@@ -270,9 +270,6 @@ contains
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
       endif
     end if
-
-    write(message(1),'(a,a)') "Info: States that form the basis: ", trim(cas%wfn_list)
-    Call messages_info(1)
 
     !%Variable CasidaTransitionDensities
     !%Type string
@@ -526,19 +523,19 @@ contains
     jpair = 1
     do ik = 1, cas%nik
       do ast = cas%n_occ(ik) + 1, cas%nst
-        if(loct_isinstringlist(ast, cas%wfn_list)) then
-          do ist = 1, cas%n_occ(ik)
-            if(loct_isinstringlist(ist, cas%wfn_list)) then
-              cas%index(ist, ast, ik) = jpair
-              cas%pair(jpair)%i = ist
-              cas%pair(jpair)%a = ast
-              cas%pair(jpair)%kk = ik
-              jpair = jpair + 1
-            end if
-          end do
-        end if
+        do ist = 1, cas%n_occ(ik)
+          if(cas%is_included(ist, ast, ik)) then
+            cas%index(ist, ast, ik) = jpair
+            cas%pair(jpair)%i = ist
+            cas%pair(jpair)%a = ast
+            cas%pair(jpair)%kk = ik
+            jpair = jpair + 1
+          end if
+        end do
       end do
     end do
+
+    SAFE_DEALLOCATE_P(cas%is_included)
 
     ! now let us take care of initializing the parallel stuff
     cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
