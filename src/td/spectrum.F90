@@ -281,11 +281,10 @@ contains
     integer,      intent(in)    :: out_file
     integer,      intent(in)    :: in_file(:)
 
-    character(len=20) :: header_string
-    integer :: nspin, energy_steps, ie, is, equiv_axes, n_files, idir, jdir, ii, trash
+    integer :: nspin, energy_steps, ie, is, equiv_axes, n_files, trash
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
-      sigmav(:, :, :), sigmaw(:, :, :), pp(:, :), ip(:, :)
-    FLOAT :: dw, dump, average, anisotropy
+      sigmav(:, :, :), sigmaw(:, :, :), ip(:, :)
+    FLOAT :: dw, dump
     type(kick_t) :: kick
 
     PUSH_SUB(spectrum_cross_section_tensor)
@@ -302,7 +301,6 @@ contains
     SAFE_ALLOCATE(sigmau(1:3,      0:energy_steps, 1:nspin))
     SAFE_ALLOCATE(sigmav(1:3,      0:energy_steps, 1:nspin))
     SAFE_ALLOCATE(sigmaw(1:3,      0:energy_steps, 1:nspin))
-    SAFE_ALLOCATE(    pp(1:3, 1:3))
     SAFE_ALLOCATE(    ip(1:3, 1:3))
 
     select case(equiv_axes)
@@ -420,8 +418,44 @@ contains
     end do
 
     ! Finally, write down the result
-    write(out_file, '(a15,i2)')      '# nspin        ', nspin
-    call kick_write(kick, out_file)
+    call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
+
+    SAFE_DEALLOCATE_A(sigma)
+    SAFE_DEALLOCATE_A(sigmap)
+    SAFE_DEALLOCATE_A(sigmau)
+    SAFE_DEALLOCATE_A(sigmav)
+    SAFE_DEALLOCATE_A(sigmaw)
+    SAFE_DEALLOCATE_A(ip)
+
+    POP_SUB(spectrum_cross_section_tensor)
+  end subroutine spectrum_cross_section_tensor
+
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_cross_section_tensor_write(out_file, sigma, nspin, energy_step, energy_steps, kick)
+    integer,                intent(in) :: out_file
+    FLOAT,                  intent(in) :: sigma(:, :, 0:, :) !< (3, 3, energy_steps, nspin) already converted to units
+    integer,                intent(in) :: nspin
+    FLOAT,                  intent(in) :: energy_step
+    integer,                intent(in) :: energy_steps
+    type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
+
+    integer :: is, idir, jdir, ie, ii
+    FLOAT :: average, anisotropy
+    FLOAT, allocatable :: pp(:,:), ip(:,:)
+    logical :: spins_subtract
+    character(len=20) :: header_string
+
+    PUSH_SUB(spectrum_cross_section_tensor_write)
+
+    if(present(kick)) then
+      write(out_file, '(a15,i2)')      '# nspin        ', nspin
+      call kick_write(kick, out_file)
+      spins_subtract = (kick%delta_strength_mode == KICK_SPIN_MODE)
+    else
+      spins_subtract = .false.
+    endif
+
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
     write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
@@ -452,12 +486,16 @@ contains
     ! where {alpha_1, alpha_2, alpha_3} are the eigenvalues of alpha. An "isotropic" tensor
     ! is characterized by having three equal eigenvalues, which leads to zero anisotropy. The
     ! more different that the eigenvalues are, the larger the anisotropy is.
+
+    SAFE_ALLOCATE(pp(1:3, 1:3))
+    SAFE_ALLOCATE(ip(1:3, 1:3))
+
     do ie = 0, energy_steps
 
       pp = M_ZERO
       pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
       if (nspin >= 2) then
-        if (kick%delta_strength_mode == KICK_SPIN_MODE) then
+        if (spins_subtract) then
           pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
         else
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
@@ -465,27 +503,25 @@ contains
       end if
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
+
+      average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
+      ip = matmul(pp, pp)
       anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE * average)**2 )
 
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
-      write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * spectrum%energy_step)), &
-        average , sqrt(max(anisotropy, M_ZERO)) 
+      write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step)), &
+        average, sqrt(max(anisotropy, M_ZERO))
       do is = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, ie, is)
       end do
       write(out_file, '(1x)')
     end do
 
-    SAFE_DEALLOCATE_A(sigma)
-    SAFE_DEALLOCATE_A(sigmap)
-    SAFE_DEALLOCATE_A(sigmau)
-    SAFE_DEALLOCATE_A(sigmav)
-    SAFE_DEALLOCATE_A(sigmaw)
     SAFE_DEALLOCATE_A(pp)
     SAFE_DEALLOCATE_A(ip)
-    POP_SUB(spectrum_cross_section_tensor)
-  end subroutine spectrum_cross_section_tensor
+    POP_SUB(spectrum_cross_section_tensor_write)
+  end subroutine spectrum_cross_section_tensor_write
 
 
   ! ---------------------------------------------------------
