@@ -142,10 +142,16 @@ contains
     integer :: iatom
     type(states_t), pointer :: psi
 
+!!!!NEW
+    FLOAT :: tinitial, tfinal
+!!!!ENDOFNEW
+
     PUSH_SUB(propagate_forward)
 
     message(1) = "Info: Forward propagation."
     call messages_info(1)
+
+
 
     call controlfunction_to_h(par, hm%ep)
 
@@ -201,6 +207,8 @@ contains
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
 
+    tinitial = loct_clock()    
+
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     ii = 1
@@ -233,6 +241,10 @@ contains
 
       if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
+
+    tfinal = loct_clock()    
+
+    write(*, *) 'PROPAGATED TIME', (tfinal - tinitial)
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
@@ -668,6 +680,9 @@ contains
     type(states_t) :: inh
     integer :: j, iatom, idim
     CMPLX, allocatable :: dvpsi(:, :, :)
+!!!!NEW
+    integer :: ist, ik
+!!!!ENDOFNEW
 
     PUSH_SUB(update_hamiltonian_chi)
 
@@ -682,13 +697,26 @@ contains
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
       inh%zpsi = M_z0
-      do iatom = 1, geo%natoms
-        call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-          st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
-        do idim = 1, gr%sb%dim
-          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + st%occ(1, 1) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+!!$      do iatom = 1, geo%natoms
+!!$        call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
+!!$          st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
+!!$        do idim = 1, gr%sb%dim
+!!$          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + st%occ(1, 1) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+!!$        end do
+!!$      end do
+!!!!NEW
+      do ist = 1, st%nst
+        do ik = 1, st%d%nik
+          do iatom = 1, geo%natoms
+            call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
+              st%d%dim, st%zpsi(:, :, ist, ik), dvpsi)
+            do idim = 1, gr%sb%dim
+              inh%zpsi(:, :, ist, ik) = inh%zpsi(:, :, ist, ik) + st%occ(ist, ik) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+            end do
+          end do
         end do
       end do
+!!!!ENDOFNEW
       SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)

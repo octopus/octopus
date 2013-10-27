@@ -112,7 +112,7 @@ contains
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
 
-    integer :: iatom, jatom, idim, jdim, ip, i, j
+    integer :: iatom, jatom, idim, jdim, ip, i, j, ist, ik
     FLOAT :: r, w2r_, w1r_, rr, xx(MAX_DIM)
     type(profile_t), save :: forces_prof
     CMPLX, allocatable :: dvpsi(:, :, :), dpsi(:, :, :)
@@ -144,20 +144,26 @@ contains
 
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:gr%sb%dim, 1:psi%d%dim))
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:psi%d%dim, 1:gr%sb%dim))
-      dpsi = M_z0
-      dvpsi = M_z0
-      do idim = 1, psi%d%dim
-        call zderivatives_grad(gr%der, psi%zpsi(:, idim, 1, 1), dpsi(:, :, idim))
-      end do
-      call zhamiltonian_dervexternal(hm, geo, gr, iatom, psi%d%dim, psi%zpsi(:, :, 1, 1), dvpsi)
+      do ist = 1, psi%nst
+        do ik = 1, psi%d%nik
 
-      do i = 1, gr%sb%dim
-        do j = 1, gr%sb%dim
-          f(iatom, i) = f(iatom, i) + q(iatom, j) * psi%occ(1, 1) * M_TWO * &
-            real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, j, 1:psi%d%dim), dvpsi(:, :, i)), REAL_PRECISION)
+          dpsi = M_z0
+          dvpsi = M_z0
+          do idim = 1, psi%d%dim
+            call zderivatives_grad(gr%der, psi%zpsi(:, idim, ist, ik), dpsi(:, :, idim))
+          end do
+          call zhamiltonian_dervexternal(hm, geo, gr, iatom, psi%d%dim, psi%zpsi(:, :, ist, ik), dvpsi)
+
+          do i = 1, gr%sb%dim
+            do j = 1, gr%sb%dim
+              f(iatom, i) = f(iatom, i) + q(iatom, j) * psi%occ(ist, ik) * M_TWO * &
+                real( zmf_dotp(gr%mesh, psi%d%dim, dpsi(1:gr%mesh%np, j, 1:psi%d%dim), dvpsi(:, :, i)), REAL_PRECISION)
+            end do
+            f(iatom, i) = f(iatom, i) &
+              - M_TWO * real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, ist, ik), dvpsi(:, :, i)), REAL_PRECISION)
+          end do
+
         end do
-        f(iatom, i) = f(iatom, i) &
-          - M_TWO * real(M_zI * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, 1, 1), dvpsi(:, :, i)), REAL_PRECISION)
       end do
 
       SAFE_DEALLOCATE_A(dpsi)
