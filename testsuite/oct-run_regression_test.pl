@@ -256,6 +256,10 @@ foreach my $octopus_exe (@executables){
 	}
       }
 
+      if ( $_ =~ /^Not_Util/) {
+        $command = $octopus_exe;
+      }
+
       if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	$np = $1;
       }
