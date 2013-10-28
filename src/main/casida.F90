@@ -343,6 +343,8 @@ contains
 
     if(cas%triplet) then
       call messages_experimental("Casida triplet calculation")
+      message(1) = "Info: Using triplet kernel. Oscillator strengths will be for spin magnetic-dipole field."
+      call messages_info(1)
     endif
 
     !%Variable CasidaHermitianConjugate
