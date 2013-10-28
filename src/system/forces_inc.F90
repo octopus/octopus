@@ -357,11 +357,11 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
 
   select case(batch_status(psib))
   case(BATCH_NOT_PACKED)
-    do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
+    do idir = 1, gr%mesh%sb%dim
+      do ii = 1, psib%nst_linear
+        ist = batch_linear_to_ist(psib, ii)
       
-      ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
-      do idir = 1, gr%mesh%sb%dim
+        ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
         do ip = 1, gr%mesh%np
           
           psi = psib%states_linear(ii)%X(psi)(ip)
