@@ -339,7 +339,7 @@ contains
     !% Spin-restricted calculations.
     !%Option polarized 2
     !%Option spin_polarized 2
-    !% Spin-unrestricted, also known as spin-DFT, SDFT. This mode will double the number of
+    !% (Synonym <tt>polarized</tt>.) Spin-unrestricted, also known as spin-DFT, SDFT. This mode will double the number of
     !% wavefunctions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
@@ -916,7 +916,7 @@ contains
     !% of the uppermost states, assigning maximum occupation (i.e. 2 for spin-unpolarized
     !% calculations, 1 otherwise) to the lower states. The number of rows should be equal
     !% to the number of k-points times the number of spins. For example, for a finite system
-    !% with <tt>SpinComponents == polarized</tt>,
+    !% with <tt>SpinComponents == spin_polarized</tt>,
     !% this block should contain two lines, one for each spin channel.
     !% All rows must have the same number of columns.
     !% This variable is very useful when dealing with highly symmetric small systems
