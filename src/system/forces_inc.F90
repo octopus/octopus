@@ -351,6 +351,8 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
   type(cl_kernel) :: kernel
 #endif  
 
+  PUSH_SUB(X(accumulate_grad_rho))
+
   ASSERT(batch_status(psib) == batch_status(grad_psib(1)))
 
   select case(batch_status(psib))
@@ -442,6 +444,8 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
     SAFE_DEALLOCATE_A(grad_rho_tmp)
 #endif
   end select
+
+  POP_SUB(X(accumulate_grad_rho))
 
 end subroutine X(accumulate_grad_rho)
 
