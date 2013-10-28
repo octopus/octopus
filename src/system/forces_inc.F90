@@ -340,7 +340,7 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
   type(batch_t),  intent(in)    :: grad_psib(:)
   FLOAT,          intent(inout) :: grad_rho(:, :)
 
-  integer :: ii, ist, idim, idir, ip
+  integer :: ii, ist, idir, ip
   FLOAT :: ff
   R_TYPE :: psi, gpsi
 #ifdef HAVE_OPENCL
@@ -359,7 +359,6 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
   case(BATCH_NOT_PACKED)
     do ii = 1, psib%nst_linear
       ist = batch_linear_to_ist(psib, ii)
-      idim = batch_linear_to_idim(psib, ii)
       
       ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
       do idir = 1, gr%mesh%sb%dim
@@ -377,7 +376,6 @@ subroutine X(accumulate_grad_rho)(gr, st, iq, psib, grad_psib, grad_rho)
   case(BATCH_PACKED)
     do ii = 1, psib%nst_linear
       ist = batch_linear_to_ist(psib, ii)
-      idim = batch_linear_to_idim(psib, ii)
       
       ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
       do idir = 1, gr%mesh%sb%dim
