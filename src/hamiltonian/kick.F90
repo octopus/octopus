@@ -174,7 +174,7 @@ contains
     !% one needs to perform an initial kick on the KS system, at
     !% time zero. Depending on what kind of response property one wants to obtain,
     !% this kick may be done in several modes. For use to calculate triplet excitations,
-    !% see MJT Oliveira, A Castro, MAL Marques, and A Rubio, J. Nanoscience and Nanotechnology 8, 3392 (2008).
+    !% see MJT Oliveira, A Castro, MAL Marques, and A Rubio, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>, 3392 (2008).
     !%Option kick_density 0
     !% The total density of the system is perturbed.
     !%Option kick_spin 1
@@ -209,9 +209,9 @@ contains
       !%Section Time-Dependent::Response
       !%Description
       !% By default, the kick function will be a dipole. This will change if (1) the variable
-      !% TDDeltaUserDefined is present in the inp file, or (2) if the block TDKickFunction 
-      !% is present in the inp file. If both are present in the inp file, the TDKickFunction
-      !% block will be ignored. The value of TDDeltaUserDefined should be a string describing
+      !% <tt>TDDeltaUserDefined</tt> is present in the inp file, or (2) if the block <tt>TDKickFunction</tt>
+      !% is present in the <tt>inp</tt> file. If both are present in the <tt>inp</tt> file, the <tt>TDKickFunction</tt>
+      !% block will be ignored. The value of <tt>TDDeltaUserDefined</tt> should be a string describing
       !% the function that is going to be used as delta perturbation.
       !%End
       call parse_string(datasets_check('TDDeltaUserDefined'), "0", kick%user_defined_function)
