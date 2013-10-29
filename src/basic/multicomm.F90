@@ -324,7 +324,8 @@ contains
       !$omp end master
       !$omp end parallel
       if(mc%nthreads > MAX_OMP_THREADS) then
-        message(1) = "Number of threads requested is larger than MAX_OMP_THREADS."
+        write(message(1),'(a,i6,a,i6,a)') "Number of threads requested (", mc%nthreads, &
+          ") is larger than MAX_OMP_THREADS (", MAX_OMP_THREADS, ")."
         call messages_fatal(1)
       end if
 #endif
