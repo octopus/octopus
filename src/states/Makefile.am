@@ -69,3 +69,4 @@ restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o
 density.o : states.o
 states_io.o : states.o
 cmplxscl.o : cmplxscl.F90
+smear.o : smear.F90 cmplxscl.o

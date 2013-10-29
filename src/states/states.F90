@@ -2007,8 +2007,8 @@ contains
     PUSH_SUB(states_fermi)
 
     if(st%cmplxscl%space) then
-      call smear_occupy_states_by_ordering(st%smear, st%eigenval, st%occ, st%qtot, &
-        st%d%nik, st%nst, st%d%kweights)
+      call smear_occupy_states_by_ordering(st%smear, st%zeigenval%Re, st%zeigenval%Im, st%occ, st%qtot, &
+        st%d%nik, st%nst, st%d%kweights, st%cmplxscl%penalizationfactor)
     else
       
       call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
