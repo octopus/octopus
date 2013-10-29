@@ -112,8 +112,8 @@ contains
     FLOAT,            intent(inout) :: f(:, :)
     FLOAT,            intent(in)    :: q(:, :)
 
-    integer :: iatom, jatom, idim, jdim, ip, i, j, ist, ik
-    FLOAT :: r, w2r_, w1r_, rr, xx(MAX_DIM)
+    integer :: iatom, jatom, idim, jdim, i, j, ist, ik
+    FLOAT :: r, w2r_, w1r_, xx(MAX_DIM)
     type(profile_t), save :: forces_prof
     CMPLX, allocatable :: dvpsi(:, :, :), dpsi(:, :, :)
 
