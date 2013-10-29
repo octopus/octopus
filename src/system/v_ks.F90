@@ -559,6 +559,7 @@ contains
         ks%calc%density = ks%calc%amaldi_factor*ks%calc%density
 
       nullify(ks%calc%total_density)
+      if(cmplxscl) nullify(ks%calc%Imtotal_density)
       if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
         ks%calc%total_density_alloc = .true.
 
@@ -570,6 +571,11 @@ contains
         forall(ip = 1:ks%gr%fine%mesh%np)
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
         end forall
+        if(cmplxscl) then
+          forall(ip = 1:ks%gr%fine%mesh%np)
+            ks%calc%Imtotal_density(ip) = sum(ks%calc%Imdensity(ip, 1:hm%d%spin_channels))
+          end forall
+        end if
 
         ! remove non-local core corrections
         if(associated(st%rho_core)) then
