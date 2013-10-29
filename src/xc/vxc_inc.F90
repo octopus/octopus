@@ -1079,125 +1079,329 @@ CMPLX function get_logarithm_branch(x, branch) result(y)
 end function get_logarithm_branch
 
 
-subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Imec)
-  type(mesh_t),    intent(in)    :: mesh
-  FLOAT,           intent(in)    :: rho(:, :)
-  FLOAT,           intent(in)    :: Imrho(:, :)
-  FLOAT,           intent(in)    :: theta
-  FLOAT, optional, intent(inout) :: vxc(:, :)
-  FLOAT, optional, intent(inout) :: Imvxc(:, :)
-  FLOAT, optional, intent(inout) :: ex
-  FLOAT, optional, intent(inout) :: Imex
-  FLOAT, optional, intent(inout) :: ec
-  FLOAT, optional, intent(inout) :: Imec
-
-  ! Exchange potential prefactor
-  FLOAT, parameter :: Wx = -0.98474502184269641
-
-  ! LDA correlation parameters
-  FLOAT, parameter      :: gamma = 0.031091, alpha1 = 0.21370, beta1 = 7.5957, beta2 = 3.5876, beta3 = 1.6382, beta4 = 0.49294
-  CMPLX, allocatable    :: zvc_arr(:, :, :), Q0(:, :, :), Q1(:, :, :), dQ1drs(:, :, :), epsc(:, :, :), depsdrs(:, :, :), &
-    zrho_local(:), zvxc_local(:)
-  CMPLX                 :: dimphase, zex, zec
-  integer               :: N
-  CMPLX, allocatable    :: vxbuf(:, :, :), rootrs(:, :, :)
-  type(cube_t)          :: cube
-  type(cube_function_t) :: cf
-  logical               :: calc_energy
-
-  PUSH_SUB(zxc_complex_lda)
-
-  SAFE_ALLOCATE(zrho_local(1:mesh%np))
-  zrho_local(:) = rho(:, 1) + M_zI * Imrho(:, 1)
-
-  calc_energy = present(ex)
-
-  ! okay, now the cube probably works
-  call cube_init(cube, mesh%idx%ll, mesh%sb)
-  call cube_function_null(cf)
-  call zcube_function_alloc_rs(cube, cf)
-  call zmesh_to_cube(mesh, zrho_local, cube, cf, .true.)
-
-  N = cube%rs_n_global(1) * cube%rs_n_global(2) * cube%rs_n_global(3)
-  SAFE_ALLOCATE(zvxc_local(1:mesh%np))
+subroutine zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, gamma, alpha1, beta1, beta2, beta3, beta4)
+  type(mesh_t), intent(in)  :: mesh
+  CMPLX,        intent(in)  :: rootrs(:)
+  CMPLX,        intent(out) :: epsc(:)
+  CMPLX,        intent(out) :: depsdrs(:)
+  FLOAT,        intent(in)  :: gamma
+  FLOAT,        intent(in)  :: alpha1
+  FLOAT,        intent(in)  :: beta1
+  FLOAT,        intent(in)  :: beta2
+  FLOAT,        intent(in)  :: beta3
+  FLOAT,        intent(in)  :: beta4
   
-  SAFE_ALLOCATE(zvc_arr(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(rootrs(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(Q0(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(Q1(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(dQ1drs(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(epsc(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(depsdrs(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  SAFE_ALLOCATE(vxbuf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+  CMPLX, allocatable :: Q0(:), Q1(:), dQ1drs(:)
 
-  dimphase = exp(-mesh%sb%dim * M_zI * theta)
+  PUSH_SUB(zxc_complex_lda_gamma)
   
-  vxbuf(:, :, :) = Wx * (cf%zRS(:, :, :) * dimphase)**(M_ONE / M_THREE)
-  
-  call stitch(get_root3_branch, vxbuf, cube%center)
+  SAFE_ALLOCATE(Q0(1:mesh%np))
+  SAFE_ALLOCATE(Q1(1:mesh%np))
+  SAFE_ALLOCATE(dQ1drs(1:mesh%np))
 
-  zex = M_THREE / M_FOUR * sum(vxbuf(:, :, :) * cf%zRS(:, :, :)) * mesh%volume_element
+  Q0(:) = -M_TWO * gamma * (M_ONE + alpha1 * rootrs(:)**2)
+  Q1(:) = M_TWO * gamma * rootrs(:) * (beta1 + rootrs(:) * (beta2 + rootrs(:) * (beta3 + rootrs(:) * beta4)))
+  dQ1drs(:) = gamma * (beta1 / rootrs(:) + M_TWO * beta2 + rootrs(:) * (M_THREE * beta3 + M_FOUR * beta4 * rootrs(:)))
 
-  ! Right.  Next is correlation which is much more complicated.  We
-  ! use the PW91 parametrization.  We have to stitch the square root
-  ! of the Wigner-Seitz radius and also the logarithm.
-  
-  ! add a tiny arbitrary number so we don`t get NaN when the density is zero
-  rootrs(:, :, :) = (M_THREE / (1e-20 + M_FOUR * M_PI * (cf%zRS(:, :, :)) * dimphase))**(M_ONE / M_SIX)
+  epsc(:) = log(M_ONE + M_ONE / Q1(:))
+  call localstitch(mesh, epsc, get_logarithm_branch)
+  epsc(:) = Q0(:) * epsc(:)
 
-  call stitch(get_root6_branch, rootrs, cube%center)
+  depsdrs(:) = -M_TWO * gamma * alpha1 * epsc(:) / Q0(:) &
+    - Q0(:) * dQ1drs(:) / (Q1(:) * (Q1(:) + M_ONE))
 
-  Q0(:, :, :) = -M_TWO * gamma * (M_ONE + alpha1 * rootrs(:, :, :)**2)
-  Q1(:, :, :) = M_TWO * gamma * rootrs(:, :, :) * (beta1 + rootrs(:, :, :) * (beta2 + rootrs(:, :, :) &
-    * (beta3 + rootrs(:, :, :) * beta4)))
-  
-  dQ1drs(:, :, :) = gamma * (beta1 / rootrs(:, :, :) + M_TWO * beta2 + rootrs(:, :, :) &
-    * (M_THREE * beta3 + M_FOUR * beta4 * rootrs(:, :, :)))
-
-  epsc(:, :, :) = log(M_ONE + M_ONE / Q1(:, :, :))
-
-  call stitch(get_logarithm_branch, epsc, cube%center)
-
-  epsc(:, :, :) = Q0(:, :, :) * epsc(:, :, :)
-
-  depsdrs(:, :, :) = -M_TWO * gamma * alpha1 * epsc(:, :, :) / Q0(:, :, :) &
-    - Q0(:, :, :) * dQ1drs(:, :, :) / (Q1(:, :, :) * (Q1(:, :, :) + M_ONE))
-
-  zvc_arr(:, :, :) = epsc(:, :, :) - rootrs(:, :, :)**2 * depsdrs(:, :, :) / M_THREE
-
-  zec = sum(epsc(:, :, :) * cf%zRS(:, :, :)) * mesh%volume_element
-
-  if(calc_energy) then
-    ex = real(zex)
-    Imex = aimag(zex)
-    ec = real(zec)
-    Imec = aimag(zec)
-  end if
-  ! okay, now we write the potential back into cf and distribute that
-  cf%zRS(:, :, :) = vxbuf(:, :, :) + zvc_arr(:, :, :)
-  call zcube_to_mesh(cube, cf, mesh, zvxc_local, .true.)
-  call zcube_function_free_rs(cube, cf)
-  call cube_end(cube)
-  !if(present(vxc)) then
-  vxc(:, 1) = real(zvxc_local(:))
-  Imvxc(:, 1) = aimag(zvxc_local(:))
-  !end if
-  SAFE_DEALLOCATE_A(vxbuf)
-  SAFE_DEALLOCATE_A(rootrs)
-
-  SAFE_DEALLOCATE_A(zrho_local)
-  SAFE_DEALLOCATE_A(zvxc_local)
-  SAFE_DEALLOCATE_A(zvc_arr)
   SAFE_DEALLOCATE_A(Q0)
   SAFE_DEALLOCATE_A(Q1)
   SAFE_DEALLOCATE_A(dQ1drs)
+  
+  POP_SUB(zxc_complex_lda_gamma)
+end subroutine zxc_complex_lda_gamma
+
+subroutine localstitch(mesh, array, get_branch)
+  type(mesh_t), intent(in)    :: mesh
+  CMPLX,        intent(inout) :: array(:)
+
+  interface 
+    CMPLX function get_branch(x, branch)
+      CMPLX,   intent(in) :: x
+      integer, intent(in) :: branch
+    end function get_branch
+  end interface
+  
+  type(cube_t)          :: cube
+  type(cube_function_t) :: cf
+  CMPLX, allocatable :: stitchbuffer(:, :, :)
+
+  PUSH_SUB(localstitch)
+
+  ! XXX this will use mpi_world
+  call cube_init(cube, mesh%idx%ll, mesh%sb)
+  call cube_function_null(cf)
+  call zcube_function_alloc_rs(cube, cf)
+  call zmesh_to_cube(mesh, array, cube, cf, .true.)
+  
+  SAFE_ALLOCATE(stitchbuffer(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+  stitchbuffer(:, :, :) = cf%zRS(:, :, :)
+  call stitch(get_branch, stitchbuffer, cube%center)
+  cf%zRS(:, :, :) = stitchbuffer(:, :, :)
+  SAFE_DEALLOCATE_A(stitchbuffer)
+  
+  call zcube_to_mesh(cube, cf, mesh, array, .true.)
+  call zcube_function_free_rs(cube, cf)
+  call cube_end(cube)
+
+  POP_SUB(localstitch)
+end subroutine 
+
+
+subroutine zxc_lda_exchange(mesh, zrho, zvx, zex, theta)
+  type(mesh_t), intent(in)  :: mesh
+  CMPLX,        intent(in)  :: zrho(:)
+  CMPLX,        intent(out) :: zvx(:)
+  CMPLX,        intent(out) :: zex
+  FLOAT,        intent(in)  :: theta
+  
+  FLOAT, parameter :: exchangeprefactor = CNST(-0.98474502184269641)
+
+  PUSH_SUB(zxc_lda_exchange)
+  zvx(:) = exchangeprefactor * (zrho(:) * exp(-mesh%sb%dim * M_zI * theta))**(M_ONE / M_THREE)
+  call localstitch(mesh, zvx, get_root3_branch)
+  zex = M_THREE / M_FOUR * sum(zvx(:) * zrho(:)) * mesh%volume_element
+  POP_SUB(zxc_lda_exchange)
+end subroutine zxc_lda_exchange
+
+subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
+  type(mesh_t), intent(in)  :: mesh
+  CMPLX,        intent(in)  :: zrho(:, :)
+  CMPLX,        intent(out) :: zvc(:, :)
+  CMPLX,        intent(out) :: zec
+  FLOAT,        intent(in)  :: theta
+  logical,      intent(in)  :: polarized
+
+  CMPLX, allocatable    :: rootrs(:), epsc(:), depsdrs(:), epsc1(:), zrhototal(:), &
+    depsdrs1(:), alpha(:), dalphadrs(:), zeta(:), xplus(:), xminus(:)!, decdzeta(:)
+  
+  FLOAT, parameter :: C0I = 0.238732414637843, C1 = -0.45816529328314287, &
+    CC1 = 1.9236610509315362, CC2 = 2.5648814012420482, IF2 = 0.58482236226346462
+  integer          :: gg
+  FLOAT            :: ff, f1, xx, zeta3, zeta4, decdrs, decdzeta
+  
+  PUSH_SUB(zxc_lda_correlation)
+
+  SAFE_ALLOCATE(zeta(1:mesh%np))
+  SAFE_ALLOCATE(rootrs(1:mesh%np))
+  SAFE_ALLOCATE(zrhototal(1:mesh%np))
+  SAFE_ALLOCATE(epsc(1:mesh%np))
+  SAFE_ALLOCATE(depsdrs(1:mesh%np))
+
+  zrhototal(:) = sum(zrho, 2)
+  zeta(:) = (zrho(:, 1) - zrho(:, 2)) / (1e-30 + zrhototal(:))
+  rootrs(:) = (M_THREE / (1e-30 + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / M_SIX)
+  call localstitch(mesh, rootrs, get_root6_branch)
+  
+  call zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, &
+    CNST(0.031091), CNST(0.21370), CNST(7.5957), CNST(3.5876), CNST(1.6382), CNST(0.49294))
+
+  if(polarized) then
+    SAFE_ALLOCATE(epsc1(1:mesh%np))
+    SAFE_ALLOCATE(depsdrs1(1:mesh%np))
+    SAFE_ALLOCATE(alpha(1:mesh%np))
+    SAFE_ALLOCATE(dalphadrs(1:mesh%np))
+    SAFE_ALLOCATE(xplus(1:mesh%np))
+    SAFE_ALLOCATE(xminus(1:mesh%np))
+
+    call zxc_complex_lda_gamma(mesh, rootrs, epsc1, depsdrs1, &
+      CNST(0.015545), CNST(0.20548), CNST(14.1189), CNST(6.1977), CNST(3.3662), CNST(0.62517))
+    call zxc_complex_lda_gamma(mesh, rootrs, alpha, dalphadrs, &
+      CNST(0.016887), CNST(0.11125), CNST(10.357), CNST(3.6231), CNST(0.88026), CNST(0.49671))
+    alpha(:) = -alpha(:)
+    dalphadrs(:) = -dalphadrs(:)
+    
+    xplus(:) = (M_ONE + zeta(:))**(M_ONE / M_THREE)
+    xminus(:) = (M_ONE - zeta(:))**(M_ONE / M_THREE)
+    call localstitch(mesh, xplus, get_root3_branch)
+    call localstitch(mesh, xminus, get_root3_branch)
+    
+    do gg=1, mesh%np
+      zeta3 = zeta(gg)**3
+      zeta4 = zeta3 * zeta(gg)
+
+      ff = CC1 * ((M_ONE + zeta(gg)) * xplus(gg) + (M_ONE - zeta(gg)) * xminus(gg) - M_TWO)
+      f1 = CC2 * (xplus(gg) - xminus(gg))
+      xx = M_ONE - zeta4
+      decdrs = depsdrs(gg) * (M_ONE - ff * zeta4) + depsdrs(gg) * ff * zeta4 + dalphadrs(gg) * ff * xx * IF2
+      
+      decdzeta = M_FOUR * zeta3 * ff * (epsc1(gg) - epsc(gg) - alpha(gg) * IF2) + &
+        f1 * (zeta4 * epsc1(gg) - zeta4 * epsc(gg) + xx * alpha(gg) * IF2)
+      
+      zvc(gg, 1) = epsc(gg) - rootrs(gg)**2 * depsdrs(gg) / M_THREE - (zeta(gg) - M_ONE) * decdzeta
+      zvc(gg, 2) = epsc(gg) - rootrs(gg)**2 * depsdrs(gg) / M_THREE - (zeta(gg) + M_ONE) * decdzeta
+    end do
+    zec = sum(epsc(:) * zrhototal(:)) * mesh%volume_element
+    
+    SAFE_DEALLOCATE_A(epsc1)
+    SAFE_DEALLOCATE_A(depsdrs1)
+    SAFE_DEALLOCATE_A(alpha)
+    SAFE_DEALLOCATE_A(dalphadrs)
+    SAFE_DEALLOCATE_A(xplus)
+    SAFE_DEALLOCATE_A(xminus)
+  else
+    zvc(:, 1) = epsc(:) - rootrs(:)**2 * depsdrs(:) / M_THREE
+    zec = sum(epsc(:) * zrho(:, 1)) * mesh%volume_element
+  end if
+
   SAFE_DEALLOCATE_A(epsc)
   SAFE_DEALLOCATE_A(depsdrs)
+  SAFE_DEALLOCATE_A(rootrs)
+  SAFE_DEALLOCATE_A(zeta)
+  SAFE_DEALLOCATE_A(zrhototal)
+
+  POP_SUB(zxc_lda_correlation)
+end subroutine zxc_lda_correlation
+
+subroutine zxc_complex_lda(mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
+  type(mesh_t),    intent(in)    :: mesh
+  integer,         intent(in)    :: ispin
+  FLOAT,           intent(in)    :: theta
+  CMPLX,           intent(in)    :: zrho(:, :)
+  CMPLX, optional, intent(inout) :: zvx(:, :)
+  CMPLX, optional, intent(inout) :: zvc(:, :)
+  CMPLX, optional, intent(inout) :: zex
+  CMPLX, optional, intent(inout) :: zec
+
+  ! LDA correlation parameters
+  !CMPLX                 :: zex, zec
+  integer               :: N, nspin
+  logical               :: calc_energy
+  CMPLX                 :: zenergies1(2), zenergies2(2)
+  CMPLX                 :: zextmp
+
+  PUSH_SUB(zxc_complex_lda)
+
+  if (ispin == UNPOLARIZED) then
+    nspin = 1
+  else
+    ASSERT(ispin == SPIN_POLARIZED)
+    nspin = 2
+  end if
+
+  if(ispin == UNPOLARIZED) then
+    call zxc_lda_exchange(mesh, zrho(:, 1), zvx(:, 1), zex, theta)
+  else
+    call zxc_lda_exchange(mesh, M_TWO * zrho(:, 1), zvx(:, 1), zex, theta)
+    call zxc_lda_exchange(mesh, M_TWO * zrho(:, 2), zvx(:, 2), zextmp, theta)
+    zex = M_HALF * (zex + zextmp)
+  end if
+
+  call zxc_lda_correlation(mesh, zrho, zvc, zec, theta, ispin == SPIN_POLARIZED)
+
+#ifdef HAVE_MPI
+  zenergies1(1) = zex
+  zenergies1(2) = zec
+  call MPI_Allreduce(zenergies1, zenergies2, 2, MPI_CMPLX, MPI_SUM, mpi_world, mpi_err) ! XXX world
+  zex = zenergies2(1)
+  zec = zenergies2(2)
+#endif
 
   POP_SUB(zxc_complex_lda)
   
 end subroutine zxc_complex_lda
 
+
+subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
+  type(derivatives_t),  intent(in)    :: der
+  type(mesh_t),         intent(in)    :: mesh
+  integer,              intent(in)    :: ispin
+  FLOAT,                intent(in)    :: theta
+  CMPLX,                intent(in)    :: zrho(:, :)
+  CMPLX, optional,      intent(inout) :: zvx(:, :)
+  CMPLX, optional,      intent(inout) :: zvc(:, :)
+  CMPLX, optional,      intent(inout) :: zex
+  CMPLX, optional,      intent(inout) :: zec
+
+  integer               :: nn, nspin
+  logical               :: calc_energy
+  CMPLX                 :: zenergies1(2), zenergies2(2) ! XXX sum/broadcast
+  CMPLX                 :: zextmp
+  FLOAT, parameter      :: &
+    mu = 0.2195149727645171, kappa = 0.804, C0I = 0.238732414637843, &
+    C1 = -0.45816529328314287, C2 = 0.26053088059892404, C3 = 0.10231023756535741, &
+    gamma = 0.0310906908697, CC1 = 1.9236610509315362, CC2 = 2.5648814012420482, &
+    IF2 = 0.58482236226346462, beta = 0.06672455060314922
+
+  CMPLX, allocatable    :: rootrs(:), gradn(:, :), a2(:), epsc(:), depsdrs(:), zrhotemp(:), HH(:)
+  CMPLX                 :: rs, ex, dexdrs, s2, xx, yy, zrho2, Fx, t2, At2, nom, denom, AA, dimphase
+
+  PUSH_SUB(zxc_complex_pbe)
+
+  dimphase = exp(mesh%sb%dim * M_zI * theta)
+
+  SAFE_ALLOCATE(rootrs(1:mesh%np))
+  rootrs(:) = (M_THREE / (M_FOUR * M_PI / dimphase * zrho(:, 1)))**(M_ONE / M_SIX)
+  call localstitch(mesh, rootrs, get_root6_branch)
+
+  SAFE_ALLOCATE(gradn(1:mesh%np, mesh%sb%dim))
+  SAFE_ALLOCATE(zrhotemp(1:mesh%np_part))
+  zrhotemp(1:mesh%np) = zrho(:, 1)
+  zrhotemp(mesh%np + 1:mesh%np_part) = M_ZERO
+  call zderivatives_grad(der, zrhotemp, gradn, .false., .false.)
+  SAFE_DEALLOCATE_A(zrhotemp)
+  SAFE_ALLOCATE(a2(1:mesh%np))
+  a2(:) = sum(gradn**2, 2) / dimphase**4
+  SAFE_DEALLOCATE_A(gradn)
+  
+  SAFE_ALLOCATE(epsc(1:mesh%np))
+  SAFE_ALLOCATE(depsdrs(1:mesh%np))
+
+  call zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, gamma, &
+    CNST(0.21370), CNST(7.5957), CNST(3.5876), CNST(1.6382), CNST(0.49294))
+      
+  SAFE_ALLOCATE(HH(1:mesh%np))
+  do nn=1, mesh%np
+    rs = rootrs(nn)**2
+    ex = C1 / rs
+    dexdrs = -ex / rs
+    s2 = a2(nn) * (C2 * rs / (zrho(nn, 1) / dimphase))**2
+    xx = M_ONE + mu * s2 / kappa
+    Fx = M_ONE + kappa - kappa / xx
+    ex = ex * Fx
+    zvx(nn, 1) = ex - rs * dexdrs / M_THREE
+    zex = zex + ex * zrho(nn, 1)
+
+    t2 = C3 * a2(nn) * rs / (zrho(nn, 1) / dimphase)**2
+    yy = -epsc(nn) / gamma
+    xx = exp(yy)
+    if (yy.eq.M_ZERO) then
+      AA = M_ZERO
+    else
+      AA = beta / (gamma * (xx - M_ONE))
+    end if
+    At2 =  AA * t2
+    nom = M_ONE + At2
+    denom = nom + At2**2
+    HH(nn) = log(M_ONE + beta * t2 * nom / (denom * gamma))
+    if(yy.eq.M_ZERO) then
+      HH(nn) = M_ZERO
+    end if
+  end do
+
+  call localstitch(mesh, HH, get_logarithm_branch)
+  HH(:) = HH(:) * gamma
+  
+  epsc(:) = epsc(:) + HH(:)
+
+  zex = zex * mesh%volume_element
+  zec = sum(epsc(:) * zrho(:, 1)) * mesh%volume_element
+  zvc(:, 1) = epsc(:) - rootrs(:)**2 * depsdrs(:) / M_THREE
+
+  SAFE_DEALLOCATE_A(HH)
+  SAFE_DEALLOCATE_A(epsc)
+  SAFE_DEALLOCATE_A(depsdrs)
+  
+  SAFE_DEALLOCATE_A(a2)
+  SAFE_DEALLOCATE_A(rootrs)
+  POP_SUB(zxc_complex_pbe)  
+end subroutine zxc_complex_pbe
 
 ! ----------------------------------------------------------------------------- 
 !> This is the complex scaled interface for xc functionals.
@@ -1212,15 +1416,14 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   FLOAT,                intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT,                intent(inout) :: Imvxc(:,:)      !< cmplxscl: XC potential
   FLOAT,                intent(in)    :: theta           !< complex scaling angle
-  FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
+  FLOAT, optional,      intent(inout) :: ex              !< Exchange 1energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: Imex            !< cmplxscl: Exchange energy.
   FLOAT, optional,      intent(inout) :: Imec            !< cmplxscl: Correlation energy
 
-  
-  CMPLX, pointer             :: zpot(:), zrho_tot(:)
-  CMPLX                      :: ztmp
-  Integer                    :: isp
+
+  CMPLX, allocatable         :: zrho(:, :), zvx(:, :), zvc(:, :)
+  CMPLX                      :: zex, zec
   type(xc_functl_t), pointer :: functl(:)
   logical                    :: calc_energy
 
@@ -1231,6 +1434,16 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   ASSERT(present(ec) .eqv. present(Imec))
   calc_energy = present(ex)
   
+  SAFE_ALLOCATE(zrho(1:size(vxc, 1), 1:size(vxc, 2)))
+  SAFE_ALLOCATE(zvx(1:size(vxc, 1), 1:size(vxc, 2)))
+  SAFE_ALLOCATE(zvc(1:size(vxc, 1), 1:size(vxc, 2)))
+
+  zrho(:, :) = rho(:, :) + M_zI * Imrho(:, :)
+  zvx(:, :) = M_ZERO
+  zvc(:, :) = M_ZERO
+  zex = M_ZERO
+  zec = M_ZERO
+
   !Pointer-shortcut for xcs%functl
   !It helps to remember that for xcs%functl(:,:)
   ! (1,:) => exchange,    (2,:) => correlation
@@ -1242,63 +1455,40 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   end if
   
   if(functl(1)%id == XC_LDA_XC_CMPLX) then
-    
-    if(calc_energy) then
-      !if(present(vxc)) then
-      call zxc_complex_lda(der%mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Imec)
-      !else
-      !  call zxc_complex_lda(der%mesh, rho, Imrho, theta, ex, Imex, ec, Imec)
-      !end if
-    else
-      !if(present(vxc)) then
-      call zxc_complex_lda(der%mesh, rho, Imrho, theta, vxc, Imvxc)
-      !else
-      !  call zxc_complex_lda(der%mesh, rho, Imrho, theta)
-      !end if    
-    end if
+      ! XXX vxc optional parameter?
+    call zxc_complex_lda(der%mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
+  else if(functl(1)%id == XC_PBE_XC_CMPLX) then
+    call zxc_complex_pbe(der, der%mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   else if(functl(1)%id == XC_HALF_HARTREE) then
     ! Exact exchange for 2 particles [vxc(r) = 1/2 * vh(r)]
     ! we keep it here for debug purposes
-    !print*, 'half hartree exchange'
-    SAFE_ALLOCATE(zpot(1:size(vxc,1)))
-    SAFE_ALLOCATE(zrho_tot(1:size(vxc,1)))
-
-    zrho_tot = M_z0
-    do isp = 1, ispin
-      zrho_tot(:) = zrho_tot(:)+ rho(:,isp) +M_zI * Imrho(:,isp)
-    end do
-
-    call zpoisson_solve(psolver, zpot, zrho_tot)
-
-    zpot = - zpot /CNST(2.0)
-    vxc(:,1) = real(zpot(:)) 
-    Imvxc(:,1) = aimag(zpot(:))
-  
+    call zpoisson_solve(psolver, zvx(:, 1), zrho(:, 1))
+    zvx = -M_HALF * zvx  
     if(calc_energy) then
-      ztmp = M_HALF *zmf_dotp(der%mesh, zrho_tot, zpot, dotu = .true. )
-      ex =  real(ztmp)
-      Imex = aimag(ztmp)
-      ec   = M_ZERO
-      Imec = M_ZERO    
+      zex = M_HALF * zmf_dotp(der%mesh, zrho(:, 1), zvx(:, 1), dotu = .true. )
     end if
-    SAFE_DEALLOCATE_P(zrho_tot)
-    SAFE_DEALLOCATE_P(zpot)
-    
   else if(functl(1)%family == XC_FAMILY_NONE) then
-
-    vxc = M_ZERO
-    if(calc_energy) then
-      ex   = M_ZERO
-      Imex = M_ZERO
-      ec   = M_ZERO
-      Imec = M_ZERO
-    end if
-
+    ! Everything was initialized to zero, so do nothing.
+    ! This block is just here as a reminder.
   else  
     write(message(1), '(a)') 'The selected XCFunctional will not work with ComplexScaling = yes.'
-    write(message(2), '(a)') 'Use XCFunctional = lda_xc_cmplx.'
+    write(message(2), '(a)') 'Use XCFunctional = lda_xc_cmplx, for example.'
     call messages_fatal(2)     
   end if
+
+  vxc(:, :) = real(zvx(:, :)) + real(zvc(:, :))
+  Imvxc(:, :) = aimag(zvx(:, :)) + aimag(zvc(:, :))
+
+  if(calc_energy) then
+    ex = real(zex)
+    Imex = aimag(zex)
+    ec = real(zec)
+    Imec = aimag(zec)
+  end if
+  
+  SAFE_DEALLOCATE_A(zrho)
+  SAFE_DEALLOCATE_A(zvx)
+  SAFE_DEALLOCATE_A(zvc)
 
   POP_SUB(xc_get_vxc_cmplx)
 end subroutine xc_get_vxc_cmplx

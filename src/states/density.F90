@@ -151,9 +151,8 @@ contains
     correct_size = ubound(this%density, dim = 1) == this%gr%fine%mesh%np &
       .or. ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
     
-    cmplxscl = .false. ! calculate the imaginary part of the density
-    if(associated(this%Imdensity)) cmplxscl = .true.
-
+    cmplxscl = associated(this%Imdensity)
+    
     ispin = states_dim_get_spin_index(this%st%d, ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))

@@ -455,7 +455,9 @@
 !%Option ks_inversion             801 
 !% Inversion of KS potential
 !%Option lda_xc_cmplx             701
-!% LDA complex scaled exchange-correlation.
+!% LDA complex-scaled exchange and correlation.
+!%Option pbe_xc_cmplx             702
+!% PBE complex-scaled exchange and correlation.
 !%Option rdmft_xc_m               601
 !% RDMFT Mueller functional
 !%Option xc_half_hartree          917

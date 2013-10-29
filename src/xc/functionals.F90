@@ -41,7 +41,8 @@ module xc_functl_m
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  !< complex scaled LDA exchange-correlation 
+    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation 
+    XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
     XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
     XC_RDMFT_XC_M = 601,        &  !< RDMFT Mueller functional
     XC_FAMILY_KS_INVERSION = 64,&
@@ -115,6 +116,8 @@ contains
           functl%family = XC_FAMILY_LDA
         else if(functl%id == XC_HALF_HARTREE) then
           functl%family = XC_FAMILY_LDA
+        else if(functl%id == XC_PBE_XC_CMPLX) then
+          functl%family = XC_FAMILY_GGA
         else if (functl%id == XC_RDMFT_XC_M) then
           functl%family = XC_FAMILY_RDMFT  
         else
@@ -133,6 +136,9 @@ contains
       functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%id == XC_HALF_HARTREE) then
+      functl%type = XC_EXCHANGE_CORRELATION
+
+    else if(functl%id == XC_PBE_XC_CMPLX) then
       functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%family  ==  XC_FAMILY_NONE) then
@@ -236,7 +242,8 @@ contains
 
     if(functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
       functl%family /= XC_FAMILY_KS_INVERSION .and. &
-      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE) then
+      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE .and. &
+      functl%id /= XC_PBE_XC_CMPLX) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -285,6 +292,12 @@ contains
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
+      write(message(3), '(4x,a)') 'WARNING: under development'
+      call messages_info(3, iunit)
+
+    else if(functl%id == XC_PBE_XC_CMPLX) then
+      write(message(1), '(2x,a)') 'Exchange-Correlation:'
+      write(message(2), '(4x,a)') 'Complex-scaled PBE'
       write(message(3), '(4x,a)') 'WARNING: under development'
       call messages_info(3, iunit)
       
