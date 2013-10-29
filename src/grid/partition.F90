@@ -151,13 +151,9 @@ contains
     type(partition_t), intent(in) :: partition
     character(len=*),  intent(in) :: filename
 
-    integer :: ipart, ierr, amode, info, fh, status
+    integer :: ipart, ierr
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
-    logical :: finalized
-#ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset
-#endif
 
     PUSH_SUB(partition_write)
 
@@ -176,23 +172,15 @@ contains
     ! Write the header (root only) and wait
     ierr = 0
     if (partition%mpi_grp%rank == 0) then
-      call io_binary_write_header(filename, partition%np_global, FC_INTEGER_SIZE, ierr)
+      call io_binary_write_header(filename, partition%np_global, partition%part(1), ierr)
     end if
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     
     ! Each process writes a portion of the partition
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    info = MPI_INFO_NULL 
-    call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-    call io_binary_write_parallel(fh, sdispls(partition%mpi_grp%rank+1)+1, partition%np_local, &
-         partition%part, mpi_err)
+    call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+         partition%np_local, partition%part, ierr)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(fh, mpi_err)
-    end if
 #else
     !Get the global partition in the root node
     if (partition%mpi_grp%rank == 0) then

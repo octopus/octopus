@@ -55,13 +55,15 @@ module io_binary_m
     module procedure sread_parallel, dread_parallel, cread_parallel,  zread_parallel, iread_parallel, lread_parallel
   end interface io_binary_read_parallel
 
+  !> Interfaces to C to write the header
   interface io_binary_write_header
     module procedure swrite_header, dwrite_header, cwrite_header,  zwrite_header, iwrite_header, lwrite_header
   end interface io_binary_write_header
 
 contains
 
-  !> Interface to C to write the header of Integer type
+  ! ------------------------------------------------------
+
   subroutine swrite_header(fname, np_global, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np_global
@@ -401,8 +403,9 @@ contains
 
   ! ------------------------------------------------------
 
-  subroutine swrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine swrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     real(4),             intent(in)    :: ff(:)
@@ -413,6 +416,8 @@ contains
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(swrite_parallel)
 
@@ -422,9 +427,17 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
+    call MPI_Barrier(comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 
@@ -433,8 +446,9 @@ contains
 
   !------------------------------------------------------
 
-  subroutine dwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine dwrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     real(8),             intent(in)    :: ff(:)
@@ -445,6 +459,8 @@ contains
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(dwrite_parallel)
 
@@ -454,9 +470,17 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
+    call MPI_Barrier(comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 
@@ -465,8 +489,9 @@ contains
 
   !------------------------------------------------------
 
-  subroutine cwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine cwrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     complex(4),          intent(in)    :: ff(:)
@@ -477,6 +502,8 @@ contains
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(cwrite_parallel)
 
@@ -486,9 +513,17 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
+    call MPI_Barrier(comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 
@@ -497,8 +532,9 @@ contains
 
   !------------------------------------------------------
 
-  subroutine zwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine zwrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     complex(8),          intent(in)    :: ff(:)
@@ -509,6 +545,8 @@ contains
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(zwrite_parallel)
 
@@ -518,9 +556,17 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
+    call MPI_Barrier(comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 
@@ -529,8 +575,9 @@ contains
 
   !------------------------------------------------------
   
-  subroutine iwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine iwrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm   
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     integer(4),          intent(in)    :: ff(:)
@@ -541,6 +588,8 @@ contains
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(iwrite_parallel)
 
@@ -550,9 +599,17 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
+    call MPI_Barrier(comm, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 
@@ -561,8 +618,9 @@ contains
 
   !------------------------------------------------------
 
-  subroutine lwrite_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine lwrite_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
     integer(8),          intent(in)    :: ff(:)
@@ -572,7 +630,9 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
-#endif
+#endif   
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(lwrite_parallel)
 
@@ -581,10 +641,16 @@ contains
 
     ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*8+64
+    offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
     ierr = mpi_err
 #endif
 

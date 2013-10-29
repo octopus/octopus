@@ -485,7 +485,11 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     
     call do_partition()
   else
+#ifdef HAVE_MPI
+    call mpi_grp_init(mesh%mpi_grp, MPI_COMM_WORLD)
+#else
     call mpi_grp_init(mesh%mpi_grp, -1)
+#endif
 
     ! When running serially those two are the same.
     mesh%np      = mesh%np_global
@@ -495,6 +499,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     ! as copy operations when running without domain parallelization.
     mesh%vp%np_global = mesh%np_global
     mesh%vp%npart = 1
+    mesh%vp%xlocal = 1
   end if
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
