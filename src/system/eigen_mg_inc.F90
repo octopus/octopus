@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
+!! $Id$
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)

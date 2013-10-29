@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen_cg_inc.F90 6376 2010-03-23 14:18:30Z joseba $
+!! $Id$
 
 subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens_error, niter, converged, ik, diff)
   type(eigen_arpack_t),intent(in)    :: arpack

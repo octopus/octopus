@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: output_etsf_inc.F90 5880 2009-09-03 23:44:44Z dstrubbe $
+!! $Id$
 
 subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   type(output_bgw_t),     intent(in)    :: bgw

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen.F90 4287 2008-06-15 22:20:10Z xavier $
+!! $Id$
 
 #include "global.h"
 

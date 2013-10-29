@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: pert_inc.F90 2548 2006-11-06 21:42:27Z xavier $
+!! $Id$
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)

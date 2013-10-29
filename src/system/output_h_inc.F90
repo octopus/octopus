@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: output_linear_h.F90 5765 2009-07-24 20:47:06Z dstrubbe $
+!! $Id$
 
   ! ---------------------------------------------------------
   subroutine output_hamiltonian(hm, der, dir, outp, geo)

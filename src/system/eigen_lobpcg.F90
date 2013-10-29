@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen_lobpcg.F90 5954 2009-10-17 20:53:52Z xavier $
+!! $Id$
 
 #include "global.h"
 

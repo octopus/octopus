@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states.F90 2515 2006-10-24 17:13:30Z acastro $
+!! $Id$
 
   ! ---------------------------------------------------------
   subroutine output_states(st, gr, geo, dir, outp)

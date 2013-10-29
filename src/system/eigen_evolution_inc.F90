@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen_evolution_inc.F90 6257 2009-12-26 01:13:24Z xavier $
+!! $Id$
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)

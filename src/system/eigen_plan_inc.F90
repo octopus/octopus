@@ -15,9 +15,9 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen_plan_inc.F90 6282 2010-01-27 21:12:31Z dstrubbe $
+!! $Id$
 
-!! This subroutine implements the preconditioned Lanczos eigensolver as
+!> This subroutine implements the preconditioned Lanczos eigensolver as
 !! described in the paper:
 !!
 !! Y. Saad, A. Stathopoulos, J. Chelikowsky, K. Wu and S. Ogut,
@@ -25,8 +25,6 @@
 !! BIT 36 563-578 (1996) doi:10.1007/BF01731934 .
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
-
-
 subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(in)    :: gr
   type(states_t),              intent(inout) :: st

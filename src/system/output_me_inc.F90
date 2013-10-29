@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: unocc.F90 5320 2009-04-23 15:29:57Z marques $
+!! $Id$
 
 
 ! ---------------------------------------------------------
