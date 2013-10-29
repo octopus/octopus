@@ -645,7 +645,8 @@ contains
     amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
     mpi_info = MPI_INFO_NULL 
     call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+    call MPI_File_set_atomicity(file_handle, .true., mpi_err) 
+    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err) 
     call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
     call MPI_Finalized(finalized, mpi_err)
     if (.not. finalized) then
