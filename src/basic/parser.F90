@@ -36,7 +36,6 @@ end module block_t_m
 module parser_m
   use block_t_m
   use global_m
-  use io_m
   use loct_m
   use mpi_m
   use unit_m
