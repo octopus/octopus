@@ -56,26 +56,117 @@ module io_binary_m
   end interface io_binary_read_parallel
 
   interface io_binary_write_header
-    module procedure iwrite_header
+    module procedure swrite_header, dwrite_header, cwrite_header,  zwrite_header, iwrite_header, lwrite_header
   end interface io_binary_write_header
 
 contains
 
   !> Interface to C to write the header of Integer type
-  subroutine iwrite_header(fname, np_global, int_size, ierr)
+  subroutine swrite_header(fname, np_global, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np_global
-    integer,             intent(in)  :: int_size
+    real(4),             intent(in)  :: ff
     integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_FLOAT
+    
+    PUSH_SUB(swrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, type, ierr, trim(fname))
+    
+    POP_SUB(swrite_header)
+  end subroutine swrite_header
+
+  ! ------------------------------------------------------
+
+  subroutine dwrite_header(fname, np_global, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    real(8),             intent(in)  :: ff
+    integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_DOUBLE
+    
+    PUSH_SUB(dwrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, type, ierr, trim(fname))
+    
+    POP_SUB(dwrite_header)
+  end subroutine dwrite_header
+
+  ! ------------------------------------------------------
+
+  subroutine cwrite_header(fname, np_global, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    complex(4),          intent(in)  :: ff
+    integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_FLOAT_COMPLEX
+    
+    PUSH_SUB(cwrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, type, ierr, trim(fname))
+    
+    POP_SUB(cwrite_header)
+  end subroutine cwrite_header
+
+  ! ------------------------------------------------------
+
+  subroutine zwrite_header(fname, np_global, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    complex(8),          intent(in)  :: ff
+    integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+    
+    PUSH_SUB(zwrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, type, ierr, trim(fname))
+    
+    POP_SUB(zwrite_header)
+  end subroutine zwrite_header
+
+  ! ------------------------------------------------------
+
+  subroutine iwrite_header(fname, np_global, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    integer(4),          intent(in)  :: ff
+    integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_INT_32
     
     PUSH_SUB(iwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, int_size, ierr, trim(fname))
-
+    call write_header(np_global, type, ierr, trim(fname))
+    
     POP_SUB(iwrite_header)
   end subroutine iwrite_header
 
+  ! ------------------------------------------------------
+
+  subroutine lwrite_header(fname, np_global, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np_global
+    integer(8),          intent(in)  :: ff
+    integer,             intent(out) :: ierr
+    
+    integer, parameter :: type = TYPE_INT_64
+    
+    PUSH_SUB(lwrite_header)
+
+    ASSERT(np_global > 0)
+    call write_header(np_global, type, ierr, trim(fname))
+    
+    POP_SUB(lwrite_header)
+  end subroutine lwrite_header
 
   ! ------------------------------------------------------
 
@@ -739,18 +830,23 @@ contains
 
   !------------------------------------------------------
 
-  subroutine sread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine sread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    real(4),             intent(in)    :: ff(:)
+    real(4),             intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
+
 
     PUSH_SUB(sread_parallel)
 
@@ -760,13 +856,21 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = MPI_MODE_RDONLY
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
     call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
     if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+      write(message(1),'(a,i8,a,i8)') " real(4) read elements=", read_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_fatal(2)
+    end if
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
     end if
     ierr = mpi_err
 #endif
@@ -776,18 +880,22 @@ contains
 
   !------------------------------------------------------
 
-  subroutine dread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine dread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    real(8),             intent(in)    :: ff(:)
+    real(8),             intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset 
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(dread_parallel)
 
@@ -797,13 +905,21 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = MPI_MODE_RDONLY
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
     call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
     if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+      write(message(1),'(a,i8,a,i8)') " real(8) read elements=", read_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_fatal(2)
+    end if
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
     end if
     ierr = mpi_err
 #endif
@@ -813,18 +929,22 @@ contains
 
   !------------------------------------------------------
 
-  subroutine cread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine cread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    complex(4),          intent(in)    :: ff(:)
+    complex(4),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(cread_parallel)
 
@@ -834,13 +954,22 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = MPI_MODE_RDONLY
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
     call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
     if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+      write(message(1),'(a,i8,a,i8)') " complex(4) read elements=", read_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_fatal(2)
+    end if
+
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
     end if
     ierr = mpi_err
 #endif
@@ -850,18 +979,23 @@ contains
 
   !------------------------------------------------------
 
-  subroutine zread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine zread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    complex(8),          intent(in)    :: ff(:)
+    complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer(MPI_OFFSET_KIND) :: offset
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
+    real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(zread_parallel)
 
@@ -869,17 +1003,39 @@ contains
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
+    read_count = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-    call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+    
+    call get_info_binary(read_np, number_type, ierr, fname);
+    ! if the type of the file is real, then read real numbers and convert to complex
+    ! @TODO other castings are missing
+    if (number_type /= type) then
+      write(message(1),*) "Found type =", number_type, "instead of ",TYPE_DOUBLE_COMPLEX
+      call messages_warning(1)
+      allocate(read_ff(1:np))
+      call dread_parallel(fname, comm, xlocal, np, read_ff, ierr)
+      ff = read_ff
+    else
+      amode = MPI_MODE_RDONLY
+      mpi_info = MPI_INFO_NULL 
+      call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
+      call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+      call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+      call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
+      call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
+      if (read_count /= np) then 
+        write(message(1),'(a,i8,a,i8)') " complex(8) read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+
+      call MPI_Finalized(finalized, mpi_err)
+      if (.not. finalized) then
+        call MPI_File_close(file_handle, mpi_err)
+      end if
+      ierr = mpi_err
     end if
-    ierr = mpi_err
 #endif
 
     POP_SUB(zread_parallel)
@@ -887,18 +1043,22 @@ contains
 
   !------------------------------------------------------
   
-  subroutine iread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine iread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    integer(4),          intent(in)    :: ff(:)
+    integer(4),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(iread_parallel)
 
@@ -908,13 +1068,22 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = MPI_MODE_RDONLY
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
     call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
     if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+      write(message(1),'(a,i8,a,i8)') " integer(4) read elements=", read_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_fatal(2)
+    end if
+
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
     end if
     ierr = mpi_err
 #endif
@@ -924,18 +1093,22 @@ contains
 
   !------------------------------------------------------
 
-  subroutine lread_parallel(file_handle, xlocal, np, ff, ierr)
-    integer,             intent(inout) :: file_handle
+  subroutine lread_parallel(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    integer(8),          intent(in)    :: ff(:)
+    integer(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
     integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset    
-    integer :: status(MPI_STATUS_SIZE), read_count
+    integer :: status(MPI_STATUS_SIZE)
 #endif
+    integer :: read_np, number_type
+    integer :: read_count, amode, mpi_info, file_handle
+    logical :: finalized
 
     PUSH_SUB(lread_parallel)
 
@@ -945,13 +1118,22 @@ contains
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
+    amode = MPI_MODE_RDONLY
+    mpi_info = MPI_INFO_NULL 
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
     call MPI_File_set_atomicity(file_handle, .true., mpi_err)
     call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
     call MPI_Get_count(status, MPI_INTEGER4, read_count, mpi_err)
     if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " read elements=", read_count, " instead of", np
-      call messages_fatal(1)
+      write(message(1),'(a,i8,a,i8)') " integer(8) read elements=", read_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_fatal(2)
+    end if
+
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
     end if
     ierr = mpi_err
 #endif

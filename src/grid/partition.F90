@@ -221,10 +221,9 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, amode, info, fh, status
+    integer :: ipart
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
-    logical :: finalized
 
     PUSH_SUB(partition_read)
     
@@ -244,21 +243,10 @@ contains
     end do
 
 #ifdef HAVE_MPI2
-    amode = MPI_MODE_RDONLY
-    info = MPI_INFO_NULL 
-    call MPI_File_open(partition%mpi_grp%comm, filename, amode, info, fh, mpi_err)
-
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
-    call io_binary_read_parallel(fh, sdispls(partition%mpi_grp%rank+1)+1, &
-         partition%np_local, partition%part, mpi_err)
+    call io_binary_read_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+         partition%np_local, partition%part, ierr)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(fh, mpi_err)
-    end if
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    ierr = 0
 #else
      ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
