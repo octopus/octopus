@@ -36,6 +36,7 @@ end module block_t_m
 module parser_m
   use block_t_m
   use global_m
+  use io_m
   use loct_m
   use mpi_m
   use unit_m
@@ -248,7 +249,32 @@ contains
   ! ---------------------------------------------------------
   subroutine parser_init
     integer :: ierr
+    logical :: file_exists
     
+    ! check files are present
+    inquire(file=trim(conf%share)//'/variables', exist=file_exists)
+    if(.not. file_exists) then
+      write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Error initializing parser'
+      write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
+#ifdef HAVE_MPI
+      call MPI_Finalize(mpi_err)
+#endif
+      stop
+    endif
+
+    inquire(file='inp', exist=file_exists)
+    if(.not. file_exists) then
+      write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Error initializing parser'
+      write(0,'(a)') 'Cannot open input file!'
+      write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
+#ifdef HAVE_MPI
+      call MPI_Finalize(mpi_err)
+#endif
+      stop
+    endif
+
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
     ierr = parse_init('exec/parser.log', mpi_world%rank)
