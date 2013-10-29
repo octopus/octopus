@@ -33,7 +33,7 @@ module states_calc_m
   use clAmdBlas
 #endif
 #endif
-  use octcl_kernel_m
+  use cmplxscl_m
   use comm_m
   use datasets_m
   use derivatives_m
@@ -55,6 +55,7 @@ module states_calc_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use octcl_kernel_m
   use opencl_m
   use parser_m
   use pblas_m
@@ -251,6 +252,7 @@ contains
     POP_SUB(reorder_states_by_args)
   end subroutine reorder_states_by_args
 
+
   subroutine states_sort_complex(mesh, st, diff)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
@@ -273,13 +275,10 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
-      buf(:) = real(cbuf) + st%cmplxscl%penalizationfactor * aimag(cbuf)**2
       do ist=1, st%nst
-        if (aimag(cbuf(ist)) > 0) then
-          buf(ist) = buf(ist) + 8.0 * aimag(cbuf(ist))
-        end if
+        buf(ist) = cmplxscl_energy_ordering_score(cbuf(ist), st%cmplxscl%penalizationfactor)
       end do
-      
+
       call sort(buf, index)
       if (mpi_grp_is_root(mpi_world)) then
         write(message(1), *) 'Permutation of states'
