@@ -454,7 +454,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       call profiling_in(prof_gather, "PROJ_MAT_GATHER")
 
-      ! collect all the points we need in a continous array
+      ! collect all the points we need in a continuous array
       if(batch_is_packed(psib)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
@@ -746,7 +746,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
       
       call profiling_in(prof_gather, "PROJ_MAT_ELEM_GATHER")
 
-      ! collect all the points we need in a continous array
+      ! collect all the points we need in a continuous array
       if(batch_is_packed(psi1b)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
