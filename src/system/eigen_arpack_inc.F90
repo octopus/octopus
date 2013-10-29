@@ -29,7 +29,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
 	
-  logical, allocatable :: select_array(:)
+  logical, allocatable :: select(:)
   R_TYPE, allocatable  :: resid(:), v(:, :), &
                           workd(:), workev(:), workl(:), zd(:), &
                           psi(:,:), hpsi(:,:)
@@ -46,6 +46,8 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   PUSH_SUB(X(eigen_solver_arpack))
 
 #ifdef HAVE_ARPACK
+
+  ASSERT(st%d%dim == 1)
 
   !Enable debug info
   if(in_debug_mode) call arpack_debug(conf%debug_level)
@@ -65,15 +67,15 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   SAFE_ALLOCATE(workd(3*ldv))
   SAFE_ALLOCATE(workev(3*ncv))
   SAFE_ALLOCATE(workl(lworkl))
-  SAFE_ALLOCATE(select_array(ncv))
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(select(ncv))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
   
 #if defined(R_TCOMPLEX)
   SAFE_ALLOCATE(rwork(ncv))
-  SAFE_ALLOCATE(zd(ncv+1))
+  SAFE_ALLOCATE(zd(ncv+1)) !!!! ncv+1 or nev+1?
 #endif
   which = arpack%sort
-  select_array(:) = .true.
+  select(:) = .true.
 
   ! The idea with initial_tolerance is to optionally base the arpack tolerance on the current degree of convergence
   ! of the electronic density, which can improve performance in some (badly converged) SCF steps by at least an order
@@ -103,42 +105,10 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   info = arpack%init_resid ! 0. random resid vector
                            ! 1. calculate resid vector
                            ! 2. resid vector constant = 1
+  resid(:) = M_ONE
   
   !if(info == 1) then !Calculate the residual vector
-    
-  !  SAFE_A!LLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
-  
- !   resid(:) = R_TOTYPE(M_ZERO)
- !   do ist = 1, st%nst
- !     call states_get_state(st, gr%mesh, ist, ik, psi)      
- !     do idim = 1, st%d%dim
- !      call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, idim, ik)
-       ! XXX this will hardly work because tmp is not necessarily written to...
-       ! In fact as of lately, it is never written to as the mentioned sorting trick is not in use
-       !if (st%eigenval(ist, ik) > CNST(1e3)) tmp = st%eigenval(ist, ik) -  CNST(1e3) ! compensate the ugly sorting trick
-       !!!!!!resid(1:ldv) = arpresid(1:ldv) + hpsi(1:ldv, idim) - tmp * psi(1:ldv, idim)
-       !!!!!!if(associated(st%zeigenval%Im)) resid(1:ldv) = resid(1:ldv) - M_zI * st%zeigenval%Im(ist, ik) * psi(1:ldv, idim)
- !     end do
- !   end do
-    !resid(:) = resid(:) * sqrt(gr%mesh%volume_element)
-    !SAFE_D!EALLOCATE_A(hpsi)
-
-    !resid_sum = abs(sum(resid(:)**2))
-    !if(resid_sum < M_EPSILON .or. resid_sum > M_HUGE) then
-    !  resid(:) = R_TOTYPE(M_ONE)
-    !end if
-    
- ! else
- !   resid(:) = R_TOTYPE(M_ONE)
- ! end if
-  
-!   do i = 1, ldv
-! !      resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%mesh%vol_pp(1))
-!       resid(i) = R_TOTYPE(M_ONE)
-!   end do
-!   ishfts = 1
-!   maxitr = niter
-!   mode1 = 1
+  ! XXX let's not do this anymore.  Modifying residual seems to have little/no effect
   iparam(1) = 1
   iparam(3) = niter
   iparam(7) = 1
@@ -186,46 +156,46 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   !Error Check
   call arpack_check_error('naupd', info)
   
-  write(message(1), '(a)') 'Arpack: Relative errors in Ritz values'
-  call messages_info(1)
-  do i=1, ncv
-    tmp = abs(workl(ipntr(8) + i - 1) / workl(ipntr(6) + i - 1))
-    if(tmp <= tol) then
-      write(message(1), '(a,i6,a,es10.3,a)') 'Arpack:', i, '   ', tmp, ' OK'
-    else
-      write(message(1), '(a,i6,a,es10.3)') 'Arpack:', i, '   ', tmp
-    end if
-    call messages_info(1)
-  end do
+  !write(message(1), '(a)') 'Arpack: Relative errors in Ritz values'
+  !call messages_info(1)
+  !do i=1, ncv
+  !  tmp = abs(workl(ipntr(8) + i - 1) / workl(ipntr(6) + i - 1))
+  !  if(tmp <= tol) then
+  !    write(message(1), '(a,i6,a,es10.3,a)') 'Arpack:', i, '   ', tmp, ' OK'
+  !  else
+  !    write(message(1), '(a,i6,a,es10.3)') 'Arpack:', i, '   ', tmp
+  !  end if
+  !  call messages_info(1)
+  !end do
 
 #if defined(R_TCOMPLEX) 
   if(arpack%use_parpack) then
 #if defined(HAVE_PARPACK) 
     call pzneupd  (mpi_comm,&
-          .true., 'A', select_array, zd, v, ldv, sigma, &
+          .true., 'A', select, zd, v, ldv, sigma, &
           workev, 'I', n, which, nev, tol, resid, ncv, & 
           v, ldv, iparam, ipntr, workd, workl, lworkl, &
           rwork, info)
-          d(:,1)=real(zd(:), REAL_PRECISION)
-          d(:,2)=aimag(zd(:))
-          d(:,3)=M_ZERO
+    d(:,1)=real(zd(:), REAL_PRECISION)
+    d(:,2)=aimag(zd(:))
+    d(:,3)=M_ZERO
 #endif
   else
     call zneupd  (&
-          .true., 'A', select_array, zd, v, ldv, sigma, &
+          .true., 'A', select, zd, v, ldv, sigma, &
           workev, 'I', n,  which, nev, tol, resid, ncv, & 
           v, ldv, iparam, ipntr, workd, workl, lworkl, &
           rwork, info)
-          d(:,1)=real(zd(:), REAL_PRECISION)
-          d(:,2)=aimag(zd(:))
-          d(:,3)=M_ZERO
+    d(:,1)=real(zd(:), REAL_PRECISION)
+    d(:,2)=aimag(zd(:))
+    d(:,3)=M_ZERO
   end if    
         
 #else	
   if(arpack%use_parpack) then
 #if defined(HAVE_PARPACK)
     call pdneupd (mpi_comm,&
-         .true., 'A', select_array, d, d(1,2), v, ldv, &
+         .true., 'A', select, d, d(1,2), v, ldv, &
          sigmar, sigmai, workev, 'I', n, which, nev, tol, &
          resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
          lworkl, info )
@@ -233,7 +203,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
 #endif
   else
     call dneupd (&
-         .true., 'A', select_array, d, d(1,2), v, ldv, &
+         .true., 'A', select, d, d(1,2), v, ldv, &
          sigmar, sigmai, workev, 'I', n, which, nev, tol, &
          resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
          lworkl, info )
@@ -257,8 +227,8 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   
   ! The number of converged eigenvectors.
   converged = iparam(5)
-    
-  do j = 1, converged
+  
+  do j = 1, nev !, converged ! XXXXXXXXXXXXXXXXXXXXX
 !     do i = 1, n
 !       psi(i,1) = v(i, j)!/sqrt(gr%mesh%volume_element) 
 !     end do
@@ -273,9 +243,10 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
     eps_temp = (d(j, 1) + M_zI * d(j, 2)) / arpack%rotation
 
     st%eigenval(j, ik) = real(eps_temp, REAL_PRECISION)
-    if(associated(st%zeigenval%Im)) then
-      st%zeigenval%Im(j, ik) = aimag(eps_temp)
-    end if
+    ASSERT(associated(st%zeigenval%Im))
+    !if(associated(st%zeigenval%Im)) then
+    st%zeigenval%Im(j, ik) = aimag(eps_temp)
+    !end if
 
     if(abs(workl(ipntr(11)+j-1))< M_EPSILON) then
       diff(j) = M_ZERO
@@ -283,6 +254,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
       diff(j) = workl(ipntr(11)+j-1)
     end if
   end do
+  ! XXX What about those eigenvalues not converged ??????  Which value?
 
   write(message(1), '(a,i6)') 'Arpack: Number of major iterations         ', iparam(3)
   write(message(2), '(a,i6)') 'Arpack: Number of matrix-vector operations ', iparam(9)
@@ -316,7 +288,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   SAFE_DEALLOCATE_A(workd)
   SAFE_DEALLOCATE_A(workev)
   SAFE_DEALLOCATE_A(workl)
-  SAFE_DEALLOCATE_A(select_array)
+  SAFE_DEALLOCATE_A(select)
   
   SAFE_DEALLOCATE_A(psi)
   

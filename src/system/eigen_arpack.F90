@@ -74,6 +74,8 @@ contains
     logical :: use_parpack
 
     PUSH_SUB(arpack_init)
+    use_parpack = .false.
+    this%use_parpack = .false.
 #if defined(HAVE_ARPACK)
 
     ! XXX yuck, this parameter is also given in grid/cmplxscl.  How should it be transferred from there to here
