@@ -30,11 +30,12 @@ module cmplxscl_m
   
   private
 
-  public ::                &
-    cmplxscl_t,            &
-    cmplxscl_init,         & 
-    cmplxscl_copy,         & 
-    cmplxscl_end 
+  public ::                        &
+    cmplxscl_t,                    &
+    cmplxscl_init,                 & 
+    cmplxscl_copy,                 & 
+    cmplxscl_end ,                 &
+    cmplxscl_energy_ordering_score
        
   !> Complex scaling module    
   type cmplxscl_t
@@ -212,6 +213,23 @@ contains
     POP_SUB(cmplxscl_copy)
   end subroutine cmplxscl_copy
 
+  !-----------------------------------------------------------------
+  function cmplxscl_energy_ordering_score(energy, penalizationfactor) result(score)
+    CMPLX, intent(in) :: energy
+    FLOAT, intent(in) :: penalizationfactor
+    CMPLX             :: score
+    
+    PUSH_SUB(complex_energy_ordering_score)
+
+    score = real(energy) + penalizationfactor * aimag(energy)**2
+    if (aimag(energy).gt.M_ZERO) then
+      ! Pretty arbitrary.  Must work on something more systematic
+      score = score + M_EIGHT * aimag(energy)
+    end if
+    
+    POP_SUB(complex_energy_ordering_score)
+    
+  end function cmplxscl_energy_ordering_score
 
 end module cmplxscl_m
 
