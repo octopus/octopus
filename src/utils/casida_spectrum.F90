@@ -130,7 +130,7 @@ program casida_spectrum
     rotation(:,:) = M_ZERO
     do idir = 1, cs%space%dim
       do jdir = 1, cs%space%dim
-        call parse_block_float(blk, idir - 1,  jdir - 1, rotation(jdir, idir))
+        call parse_block_float(blk, idir - 1,  jdir - 1, rotation(idir, jdir))
       end do
     end do
     call parse_block_end(blk)
@@ -140,10 +140,11 @@ program casida_spectrum
     call output_tensor(stdout, rotation, cs%space%dim, unit_one, write_average = .false.)
 
     ! allowing inversions is fine
-    rot2(:,:) = abs(matmul(rotation, rotation))
-    if(any(abs(rot2(:,:) - identity(:,:)) > M_EPSILON)) then
-      message(1) = "Rotation matrix is not orthogonal."
-      call messages_fatal(1)
+    rot2(:,:) = abs(matmul(transpose(rotation), rotation))
+    if(any(abs(rot2(:,:) - identity(:,:)) > CNST(1e-6))) then
+      write(message(1),'(a,es12.6)') "Rotation matrix is not orthogonal. max discrepancy in product = ", &
+        maxval(abs(rot2(:,:) - identity(:,:)))
+      call messages_warning(1)
     endif
 
     ! apply rotation to geometry
