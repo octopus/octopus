@@ -119,6 +119,9 @@ oct_xyz_anim_LDADD               = $(top_builddir)/src/ions/libions.a \
 
 oct_casida_spectrum_SOURCES = casida_spectrum.F90
 oct_casida_spectrum_LDADD        = $(top_builddir)/src/basic/libbasic.a \
+                                   $(top_builddir)/src/ions/libions.a \
+                                   $(top_builddir)/src/species/libspecies.a \
+                                   $(top_builddir)/src/math/libmath.a \
                                    $(other_LIBS)
 
 oct_vibrational_spectrum_SOURCES = vibrational.F90

@@ -23,6 +23,7 @@
 program casida_spectrum
   use command_line_m
   use datasets_m
+  use geometry_m
   use global_m
   use io_m
   use messages_m
@@ -42,8 +43,11 @@ program casida_spectrum
     integer :: ispin
   end type casida_spectrum_t
 
-  integer :: ierr
+  integer :: ierr, idir, jdir, iatom
   type(casida_spectrum_t) :: cs
+  FLOAT :: rotation(MAX_DIM, MAX_DIM), rot2(MAX_DIM, MAX_DIM), identity(MAX_DIM, MAX_DIM), coord(MAX_DIM)
+  type(block_t) :: blk
+  type(geometry_t) :: geo
 
   ! Initialize stuff
   call global_init()
@@ -107,6 +111,52 @@ program casida_spectrum
   call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, cs%max_energy, units_inp%energy)
 
   call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMaxEnergy'), cs%max_energy, unit = units_out%energy)
+
+  identity = M_ZERO
+  do idir = 1, cs%space%dim
+    identity(idir, idir) = M_ONE
+  enddo
+
+  !%Variable CasidaSpectrumRotationMatrix
+  !%Type block
+  !%Default identity
+  !%Section Utilities::oct-casida_spectrum
+  !%Description
+  !% Supply a rotation matrix to apply to the transition dipoles in generating the spectrum. The rotated atomic structure
+  !% will also be output. Size of matrix must be <tt>Dimensions</tt>.
+  !%End
+
+  if (parse_block(datasets_check('CasidaSpectrumRotationMatrix'), blk) == 0) then 
+    rotation(:,:) = M_ZERO
+    do idir = 1, cs%space%dim
+      do jdir = 1, cs%space%dim
+        call parse_block_float(blk, idir - 1,  jdir - 1, rotation(jdir, idir))
+      end do
+    end do
+    call parse_block_end(blk)
+
+    message(1) = "Info: Applying rotation matrix"
+    call messages_info(1)
+    call output_tensor(stdout, rotation, cs%space%dim, unit_one, write_average = .false.)
+
+    ! allowing inversions is fine
+    rot2(:,:) = abs(matmul(rotation, rotation))
+    if(any(abs(rot2(:,:) - identity(:,:)) > M_EPSILON)) then
+      message(1) = "Rotation matrix is not orthogonal."
+      call messages_fatal(1)
+    endif
+
+    ! apply rotation to geometry
+    call geometry_init(geo, cs%space)
+    do iatom = 1, geo%natoms
+      coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
+      geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
+    enddo
+    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated')
+    call geometry_end(geo)
+  else
+    rotation(:,:) = identity(:,:)
+  end if
 
   call calc_broad(cs, CASIDA_DIR, 'eps_diff', .true.)
   call calc_broad(cs, CASIDA_DIR, 'petersilka', .false.)
@@ -186,8 +236,9 @@ contains
 
         ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
         ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
-        tm_sq(1:cs%space%dim) = (re_tm(1:cs%space%dim))**2
-        if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + (im_tm(1:cs%space%dim))**2
+        tm_sq(1:cs%space%dim) = (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), re_tm(1:cs%space%dim)))**2
+        if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + &
+          (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), im_tm(1:cs%space%dim)))**2
         ff(1:cs%space%dim) = (M_TWO / cs%space%dim) * energy * tm_sq(1:cs%space%dim)
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
