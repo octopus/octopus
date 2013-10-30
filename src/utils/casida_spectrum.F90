@@ -219,9 +219,12 @@ contains
     do
       if(is_complex) then
         read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir), im_tm(idir), idir = 1, cs%space%dim), ff(cs%space%dim+1)
+        im_tm(:) = units_to_atomic(units_out%length, im_tm(:))
       else
         read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir),              idir = 1, cs%space%dim), ff(cs%space%dim+1)
       endif
+      re_tm(:) = units_to_atomic(units_out%length, re_tm(:))
+      ! ff, the last column, is a dimensionless number
 
       if(ios < 0) then
         exit ! end of file
@@ -240,7 +243,7 @@ contains
         tm_sq(1:cs%space%dim) = (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), re_tm(1:cs%space%dim)))**2
         if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + &
           (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), im_tm(1:cs%space%dim)))**2
-        ff(1:cs%space%dim) = (M_TWO / cs%space%dim) * energy * tm_sq(1:cs%space%dim)
+        ff(1:cs%space%dim) = M_TWO * energy * tm_sq(1:cs%space%dim)
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
@@ -252,7 +255,7 @@ contains
 
     write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
     do idir = 1, cs%space%dim
-      write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // '>^2'
+      write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // index2axis(idir) // '>'
     enddo
     write(iunit, '(a14)') '<f>'
 
