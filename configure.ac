@@ -345,6 +345,9 @@ ACX_LIBFM
 dnl check for PFFT
 ACX_PFFT
 
+dnl check for ISF included from version 1.7-dev.27 of BigDFT
+ACX_ISF
+
 dnl check for PNFFT
 ACX_PNFFT
 
