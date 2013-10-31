@@ -303,6 +303,7 @@ contains
           call parse_block_float(blk, 0, sb%dim + irad - 1, sb%hr_area%radius(irad))
           sb%hr_area%radius(irad) = units_to_atomic(units_inp%length, sb%hr_area%radius(irad))
         end do
+        call parse_block_end(blk)
 
         ! Create interpolation points (posi) and weights (ww)
 
@@ -710,7 +711,8 @@ contains
             call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
           end do
         end do
-        
+        call parse_block_end(blk)
+
         call messages_not_implemented('Non-orthogonal cells support')
 
       end if
