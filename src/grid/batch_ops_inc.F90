@@ -535,6 +535,7 @@ subroutine X(batch_set_state2)(this, index, np, psi)
 
   PUSH_SUB(X(batch_set_state2))
 
+  ASSERT(this%nst_linear > 0)
   call X(batch_set_state1)(this, batch_inv_index(this, index), np, psi)
 
   POP_SUB(X(batch_set_state2))
@@ -609,6 +610,7 @@ subroutine X(batch_get_state2)(this, index, np, psi)
 
   PUSH_SUB(X(batch_get_state2))
 
+  ASSERT(this%nst_linear > 0)
   call X(batch_get_state1)(this, batch_inv_index(this, index), np, psi)
 
   POP_SUB(X(batch_get_state2))
