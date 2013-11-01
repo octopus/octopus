@@ -63,7 +63,7 @@ static void write_iter_string_work(write_iter *w, char *s)
 	w->pos += l;
 }
 
-static char* _str_center(char *s1, int l2)
+static char* _str_center(const char *s1, int l2)
 {
 	char *s2;
 	int i, j, l1;
@@ -78,7 +78,7 @@ static char* _str_center(char *s1, int l2)
 	return s2;
 }
 
-void write_iter_header_work(write_iter *w, char *s)
+void write_iter_header_work(write_iter *w, const char *s)
 {
 	char *c;
 	c = _str_center(s, 20);
@@ -89,9 +89,9 @@ void write_iter_header_work(write_iter *w, char *s)
 /* Functions called from FORTRAN */
 void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 #ifdef SINGLE_PRECISION
-		 (void **v, fint *i, float  *d, STR_F_TYPE fname STR_ARG1)
+		 (void **v, const fint *i, const float  *d, STR_F_TYPE fname STR_ARG1)
 #else
-		 (void **v, fint *i, double *d, STR_F_TYPE fname STR_ARG1)
+		 (void **v, const fint *i, const double *d, STR_F_TYPE fname STR_ARG1)
 #endif
 {
 	write_iter *w;
@@ -155,7 +155,7 @@ void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 }
 
 void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
-		 (void **v, double *d, fint *no)
+		 (void **v, const double *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -168,7 +168,7 @@ void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 }
 
 void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
-		 (void **v, float *d, fint *no)
+		 (void **v, const float *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -181,7 +181,7 @@ void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
 }
 
 void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
-		 (void **v, double *d, fint *no)
+		 (void **v, const double *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -194,7 +194,7 @@ void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 }
 
 void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
-		 (void **v, float *d, fint *no)
+		 (void **v, const float *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -207,7 +207,7 @@ void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
 }
 
 void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
-		 (void **v, fint *d, fint *no)
+		 (void **v, const fint *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -220,7 +220,7 @@ void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 }
 
 void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
-		 (void **v, fint *d, fint *no)
+		 (void **v, const fint *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
