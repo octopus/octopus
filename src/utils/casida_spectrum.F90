@@ -156,6 +156,8 @@ contains
     read(iunit, *) ! skip header
     do
       read(iunit, *, end=100) trash(1:ncols), energy, tm(1:3), ff(4)
+      tm(1:3) = units_to_atomic(units_out%length, tm(1:3))
+      ! ff, the last column, is a dimensionless number
 
       energy = units_to_atomic(units_out%energy, energy)
 
@@ -164,7 +166,7 @@ contains
 
         ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
         ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
-        ff(1:3) = (M_TWO / cs%space%dim) * energy * (tm(1:3))**2
+        ff(1:3) = M_TWO * energy * (tm(1:3))**2
         spectrum(1:4, istep) = spectrum(1:4, istep) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
