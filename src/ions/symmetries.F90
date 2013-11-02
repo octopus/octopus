@@ -57,6 +57,7 @@ module symmetries_m
   !> these functions are defined in spglib_f.c
   interface
     integer function spglib_get_max_multiplicity(lattice, position, types, num_atom, symprec)
+      implicit none
       real(8), intent(in) :: lattice
       real(8), intent(in) :: position
       integer, intent(in) :: types
@@ -65,6 +66,7 @@ module symmetries_m
     end function spglib_get_max_multiplicity
 
     integer function spglib_get_symmetry(rotation, translation, max_size, lattice, position, types, num_atom, symprec)
+      implicit none
       integer, intent(out) :: rotation
       real(8), intent(out) :: translation
       integer, intent(in)  :: max_size
@@ -76,6 +78,7 @@ module symmetries_m
     end function spglib_get_symmetry
 
     subroutine spglib_show_symmetry(lattice, position, types, num_atom, symprec)
+      implicit none
       real(8), intent(in) :: lattice
       real(8), intent(in) :: position
       integer, intent(in) :: types
@@ -84,6 +87,7 @@ module symmetries_m
     end subroutine spglib_show_symmetry
 
     integer function spglib_get_group_number(lattice, position, types, num_atom, symprec)
+      implicit none
       real(8), intent(in) :: lattice
       real(8), intent(in) :: position
       integer, intent(in) :: types
@@ -120,7 +124,6 @@ contains
     interface
       subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
         implicit none
-
         integer, intent(in)    :: atoms_count
         integer, intent(in)    :: typs
         real(8), intent(in)    :: position
@@ -133,11 +136,13 @@ contains
       end subroutine symmetry_finite_end
 
       subroutine symmetry_finite_get_group_name(point_group, group_name)
+        implicit none
         integer,          intent(in)    :: point_group
         character(len=*), intent(out)   :: group_name
       end subroutine symmetry_finite_get_group_name
 
       subroutine symmetry_finite_get_group_elements(point_group, group_elements)
+        implicit none
         integer,          intent(in)    :: point_group
         character(len=*), intent(out)   :: group_elements
       end subroutine symmetry_finite_get_group_elements

@@ -43,7 +43,6 @@ module scalapack_m
   interface
     integer function iceil(inum, idenom)
       implicit none
-
       integer            idenom, inum
     end function iceil
   end interface
@@ -51,7 +50,6 @@ module scalapack_m
   interface
     subroutine descinit(desc, m, n, mb, nb, irsrc, icsrc, ictxt, lld, info)
       implicit none
-
       integer            icsrc, ictxt, info, irsrc, lld, m, mb, n, nb
       integer            desc
     end subroutine descinit
@@ -64,7 +62,6 @@ module scalapack_m
   interface scalapack_geqrf
     subroutine pdgeqrf(m, n, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
-
       integer            ia, info, ja, lwork, m, n
       integer            desca
       double precision   a, tau, work
@@ -72,7 +69,6 @@ module scalapack_m
     
     subroutine pzgeqrf(m, n, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
-      
       integer            ia, info, ja, lwork, m, n
       integer            desca
       complex*16         a, tau, work
@@ -91,7 +87,6 @@ module scalapack_m
   interface scalapack_orgqr
     subroutine pdorgqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info) 
       implicit none
-
       integer            ia, info, ja, k, lwork, m, n
       integer            desca
       double precision   a, tau, work
@@ -99,7 +94,6 @@ module scalapack_m
     
     subroutine pzungqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
-      
       integer            ia, info, ja, k, lwork, m, n
       integer            desca
       complex*16         a, tau, work
@@ -109,7 +103,6 @@ module scalapack_m
   interface
     subroutine pdgesv(n, nrhs, a, ia, ja, desca, ipiv, b, ib, jb, descb, info)
       implicit none
-
       integer            ia, ib, info, ja, jb, n, nrhs
       integer            desca, descb, ipiv
       double precision   a, b
@@ -119,7 +112,6 @@ module scalapack_m
   interface
     subroutine pzgesv(n, nrhs, a, ia, ja, desca, ipiv, b, ib, jb, descb, info)
       implicit none
-
       integer            ia, ib, info, ja, jb, n, nrhs
       integer            desca, descb, ipiv
       complex*16         a, b
@@ -149,7 +141,6 @@ module scalapack_m
   interface scalapack_syev
     subroutine pdsyev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, info)
       implicit none
-      
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
       integer,          intent(in)    :: n
@@ -169,7 +160,6 @@ module scalapack_m
 
     subroutine pzheev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, rwork, lrwork, info)
       implicit none
-
       character,        intent(in)    :: jobz
       character,        intent(in)    :: uplo
       integer,          intent(in)    :: n
@@ -198,7 +188,7 @@ module scalapack_m
   interface scalapack_syevx
     subroutine pdsyevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, &
          m, nz, w, orfac, z, iz, jz, descz, work, lwork, iwork, liwork, ifail, iclustr, gap, info )
-      
+      implicit none      
       character(1), intent(in)    :: jobz     
       character(1), intent(in)    :: range    
       character(1), intent(in)    :: uplo     
@@ -233,6 +223,7 @@ module scalapack_m
 
     subroutine pzheevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, &
          jz, descz, work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info )
+      implicit none
       character(1), intent(in)    :: jobz 
       character(1), intent(in)    :: range
       character(1), intent(in)    :: uplo 
@@ -280,7 +271,6 @@ module scalapack_m
       desca, b, ib, jb, descb, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, jz, descz,  &
       work, lwork, iwork, liwork, ifail, iclustr, gap, info)
       implicit none
-
       integer,             intent(in)    :: ibtype
       character,           intent(in)    :: jobz
       character,           intent(in)    :: range
@@ -332,7 +322,6 @@ module scalapack_m
       desca, b, ib, jb, descb, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, jz, descz,  &
       work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info)
       implicit none
-
       integer,             intent(in)    :: ibtype
       character,           intent(in)    :: jobz
       character,           intent(in)    :: range
@@ -391,7 +380,6 @@ module scalapack_m
   interface scalapack_potrf
     subroutine pdpotrf(uplo, n, a, ia, ja, desca, info)
       implicit none
-
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       real(8),      intent(inout) :: a
@@ -403,7 +391,6 @@ module scalapack_m
     
     subroutine pzpotrf(uplo, n, a, ia, ja, desca, info)
       implicit none
-
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n
       complex(8),   intent(inout) :: a

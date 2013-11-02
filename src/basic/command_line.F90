@@ -101,35 +101,44 @@ module command_line_m
   !! and are left unchanged if the corresponding option is not given.
   interface
     subroutine getopt_octopus(config_str)
+      implicit none
       character(len=*), intent(in) :: config_str
     end subroutine getopt_octopus
 
     subroutine getopt_casida_spectrum
+      implicit none
     end subroutine getopt_casida_spectrum
 
     subroutine getopt_center_geom
+      implicit none
     end subroutine getopt_center_geom
 
     subroutine getopt_dielectric_function
+      implicit none
     end subroutine getopt_dielectric_function
 
     subroutine getopt_propagation_spectrum(fname)
+      implicit none
       character(len=*), intent(inout) :: fname
     end subroutine getopt_propagation_spectrum
 
     subroutine getopt_rotatory_strength
+      implicit none
     end subroutine getopt_rotatory_strength
 
     subroutine getopt_vibrational(mode)
+      implicit none
       integer, intent(inout) :: mode
     end subroutine getopt_vibrational
 
     subroutine getopt_xyz_anim
+      implicit none
     end subroutine getopt_xyz_anim
 
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nresonances, nfrequencies, time, &
                                           l, m, damping, file)
+      implicit none
       integer, intent(inout) :: mode
       real(8), intent(inout) :: omega
       real(8), intent(inout) :: searchinterval
@@ -141,6 +150,7 @@ module command_line_m
     end subroutine getopt_oscillator_strength
 
     subroutine getopt_harmonic_spectrum(w0, m, ar, x, y, z, pol)
+      implicit none
       real(8)         , intent(inout) :: w0
       integer         , intent(inout) :: m
       integer         , intent(inout) :: ar
@@ -151,12 +161,14 @@ module command_line_m
     end subroutine getopt_harmonic_spectrum
 
     subroutine getopt_help(mode, name)
+      implicit none
       character(len=*), intent(inout) :: mode
       character(len=*), intent(inout) :: name
     end subroutine getopt_help
     
     subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
       thstep, thspan, phstep, phspan, pol, center, pvec, integrate)
+      implicit none
       integer, intent(inout) :: mode
       integer, intent(inout) :: interp
       real(8), intent(inout) :: estep
@@ -183,6 +195,7 @@ module command_line_m
   interface command_argument_count
 #ifdef FC_COMMAND_LINE_IMPLICIT
      integer function iargc() 
+       implicit none
      end function iargc
 #else
      module procedure iargc
@@ -192,6 +205,7 @@ module command_line_m
   interface get_command_argument
 #ifdef FC_COMMAND_LINE_IMPLICIT
      subroutine getarg(c, a)
+       implicit none
        integer,          intent(in)  :: c
        character(len=*), intent(out) :: a
      end subroutine getarg
@@ -209,15 +223,18 @@ module command_line_m
 
   interface 
     subroutine set_number_clarg(argc)
+      implicit none
       integer, intent(in) :: argc
     end subroutine set_number_clarg
 
     subroutine set_clarg(i, argstring)
+      implicit none
       integer, intent(in) :: i
       character(len=*), intent(in) :: argstring
     end subroutine set_clarg
 
     subroutine clean_clarg()
+      implicit none
     end subroutine clean_clarg
   end interface
 

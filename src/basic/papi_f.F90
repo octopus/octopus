@@ -31,12 +31,15 @@ module papi_m
   ! functions implemented in papi.c
   interface
     subroutine papi_init()
+      implicit none
     end subroutine papi_init
 
     subroutine papi_end()
+      implicit none
     end subroutine papi_end
     
     subroutine papi_get_count_and_reset(fp_ops)
+      implicit none
       real(8), intent(out) :: fp_ops
     end subroutine papi_get_count_and_reset
   end interface

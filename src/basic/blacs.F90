@@ -32,6 +32,7 @@ module blacs_m
 
   interface
     subroutine blacs_get(icontxt, what, val)
+      implicit none
       integer, intent(in)  :: icontxt
       integer, intent(in)  :: what
       integer, intent(out) :: val
@@ -40,6 +41,7 @@ module blacs_m
 
   interface
     subroutine blacs_gridinit(icontxt, order, nprow, npcol)
+      implicit none
       integer,   intent(inout) :: icontxt
       character, intent(in)    :: order
       integer,   intent(in)    :: nprow
@@ -49,6 +51,7 @@ module blacs_m
 
   interface
     subroutine blacs_gridmap(icontxt, usermap, ldumap, nprow, npcol)
+      implicit none
       integer, intent(inout) :: icontxt
       integer, intent(in)    :: usermap
       integer, intent(in)    :: ldumap
@@ -59,18 +62,21 @@ module blacs_m
 
   interface
     subroutine blacs_gridexit(icontxt)
+      implicit none
       integer, intent(in)  :: icontxt
     end subroutine blacs_gridexit
   end interface
 
   interface
     subroutine blacs_exit(icontxt)
+      implicit none
       integer, intent(in)  :: icontxt
     end subroutine blacs_exit
   end interface
 
   interface
     subroutine blacs_gridinfo(icontxt, nprow, npcol, myprow, mypcol)
+      implicit none
       integer, intent(in)  :: icontxt
       integer, intent(out) :: nprow
       integer, intent(out) :: npcol
@@ -82,6 +88,7 @@ module blacs_m
 
   interface
     integer function numroc(n, nb, iproc, isrcproc, nprocs)
+      implicit none
       integer, intent(in) :: n
       integer, intent(in) :: nb
       integer, intent(in) :: iproc

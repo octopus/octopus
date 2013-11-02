@@ -25,6 +25,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
   interface
     R_TYPE function dotp(x, y)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
@@ -73,6 +74,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   integer,        intent(in) :: iter
   interface
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
@@ -144,6 +146,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   R_TYPE,   intent(out)      :: vnew(:, :, :)
   interface
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
@@ -227,6 +230,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   R_TYPE,        intent(out)  :: vnew(:, :, :)
   interface
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
@@ -296,6 +300,7 @@ subroutine X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, df, dv,
   R_TYPE,  intent(out) :: vnew(:, :, :)
   interface
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp

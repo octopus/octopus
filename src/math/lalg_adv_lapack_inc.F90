@@ -32,6 +32,7 @@
 FLOAT function sfmin()
   interface
     FLOAT function DLAPACK(lamch)(cmach)
+      implicit none
       character(1), intent(in) :: cmach
     end function DLAPACK(lamch)
   end interface
@@ -463,6 +464,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   interface
     subroutine DLAPACK(sygvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
       integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
       character(1), intent(in)    :: jobz, range, uplo
       integer,      intent(out)   :: m, iwork, ifail, info
@@ -540,6 +542,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   interface
     subroutine ZLAPACK(hegvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
+      implicit none
       integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
       character(1), intent(in)    :: jobz, range, uplo
       integer,      intent(out)   :: m, iwork, ifail, info
@@ -718,6 +721,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   interface
     subroutine DLAPACK(syevx)(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
       integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
       character(1), intent(in)  :: jobz, range, uplo
       integer,      intent(out) :: m, iwork, ifail, info
@@ -772,6 +776,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   interface
     subroutine ZLAPACK(heevx)(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
       integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
       character(1), intent(in)  :: jobz, range, uplo
       integer,      intent(out) :: m, iwork, ifail, info
@@ -823,6 +828,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   interface
     subroutine DLAPACK(getrf) (m, n, a, lda, ipiv, info)
+      implicit none
       integer,      intent(in)    :: m, n, lda
       FLOAT,        intent(inout) :: a          ! a(lda, n)
       integer,      intent(out)   :: ipiv       ! ipiv(min(m,n)
@@ -830,6 +836,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
     end subroutine DLAPACK(getrf)
 
     subroutine DLAPACK(getri) (n, a, lda, ipiv, work, lwork, info )
+      implicit none
       integer,      intent(in)    :: n, lda, lwork
       FLOAT,        intent(inout) :: a       ! a(lda, n)
       integer,      intent(in)    :: ipiv    ! ipiv(n)
@@ -889,6 +896,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 
   interface
     subroutine ZLAPACK(getrf) (m, n, a, lda, ipiv, info)
+      implicit none
       integer,      intent(in)    :: m, n, lda
       CMPLX,        intent(inout) :: a          ! a(lda, n)
       integer,      intent(out)   :: ipiv       ! ipiv(min(m,n)
@@ -896,6 +904,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
     end subroutine ZLAPACK(getrf)
 
     subroutine ZLAPACK(getri) (n, a, lda, ipiv, work, lwork, info )
+      implicit none
       integer,      intent(in)    :: n, lda, lwork
       CMPLX,        intent(inout) :: a       ! a(lda, n)
       integer,      intent(in)    :: ipiv    ! ipiv(n)
@@ -954,6 +963,7 @@ subroutine dsym_inverter(uplo, n, a)
 
   interface
     subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, lwork
       FLOAT,        intent(inout) :: a
@@ -963,6 +973,7 @@ subroutine dsym_inverter(uplo, n, a)
     end subroutine DLAPACK(sytrf)
 
     subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
       FLOAT,        intent(inout) :: a
@@ -1009,6 +1020,7 @@ subroutine zsym_inverter(uplo, n, a)
 
   interface
     subroutine ZLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, lwork
       CMPLX,        intent(inout) :: a 
@@ -1018,6 +1030,7 @@ subroutine zsym_inverter(uplo, n, a)
     end subroutine ZLAPACK(sytrf)
 
     subroutine ZLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
       CMPLX,        intent(inout) :: a
@@ -1066,6 +1079,7 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   interface
     subroutine DLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
       c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
+      implicit none
       character(1), intent(in)    :: fact, trans
       integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
       FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nrhs)
@@ -1133,6 +1147,7 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
   interface
     subroutine ZLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
       c, b, ldb, x, ldx, rcond, ferr, berr, work, rwork, info)
+      implicit none
       character(1), intent(in)    :: fact, trans
       integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
       CMPLX,        intent(inout) :: a, af, b            ! a(lda, n), af(ldaf, n), b(ldb, nrhs)
@@ -1200,6 +1215,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   interface
     subroutine ZLAPACK(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
       vt, ldvt, work, lwork, rwork, info )
+      implicit none
       character(1), intent(in)    :: jobu, jobvt
       integer,      intent(in)    :: m, n
       CMPLX,        intent(inout) :: a, u, vt ! a(lda,n), b(ldu,n), b(ldvt,n)
@@ -1304,6 +1320,7 @@ subroutine dinvert_upper_triangular(n, a)
 
   interface
     subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: diag
       integer,      intent(in)    :: n
@@ -1340,6 +1357,7 @@ subroutine zinvert_upper_triangular(n, a)
 
   interface
     subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: diag
       integer,      intent(in)    :: n
@@ -1375,6 +1393,7 @@ subroutine dinvert_lower_triangular(n, a)
 
   interface
     subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: diag
       integer,      intent(in)    :: n
@@ -1410,6 +1429,7 @@ subroutine zinvert_lower_triangular(n, a)
 
   interface
     subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
+      implicit none
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: diag
       integer,      intent(in)    :: n

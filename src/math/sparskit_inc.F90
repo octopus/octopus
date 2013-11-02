@@ -218,10 +218,12 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 #ifdef R_TREAL
   interface
     subroutine op(x, y)
+      implicit none
       FLOAT, intent(in)  :: x(:)
       FLOAT, intent(out) :: y(:)
     end subroutine op
     subroutine opt(x, y)
+      implicit none
       FLOAT, intent(in)  :: x(:)
       FLOAT, intent(out) :: y(:)
     end subroutine opt
@@ -230,10 +232,12 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 #ifdef R_TCOMPLEX
   interface
     subroutine op(xre, xim, yre, yim)
+      implicit none
       FLOAT, intent(in)  :: xre(:), xim(:)
       FLOAT, intent(out) :: yre(:), yim(:)
     end subroutine op
     subroutine opt(xre, xim, yre, yim)
+      implicit none
       FLOAT, intent(in)  :: xre(:), xim(:)
       FLOAT, intent(out) :: yre(:), yim(:)
     end subroutine opt

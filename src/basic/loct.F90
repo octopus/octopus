@@ -58,6 +58,7 @@ module loct_m
 
   interface loct_strerror
     subroutine oct_strerror(errno, res)
+      implicit none
       integer, intent(in) :: errno
       character(len=*), intent(out)  :: res
     end subroutine oct_strerror
@@ -65,18 +66,21 @@ module loct_m
 
   interface loct_clock
     function oct_clock()
+     implicit none
       real(8) :: oct_clock
     end function oct_clock
   end interface loct_clock
 
   interface loct_gettimeofday
     subroutine oct_gettimeofday(sec, usec)
+      implicit none
       integer, intent(out) :: sec, usec
     end subroutine oct_gettimeofday
   end interface loct_gettimeofday
 
   interface loct_nanosleep
     subroutine oct_nanosleep(sec, nsec)
+      implicit none
       integer, intent(in) :: sec  !< number of seconds
       integer, intent(in) :: nsec !< + number of nanoseconds
     end subroutine oct_nanosleep
@@ -84,12 +88,14 @@ module loct_m
 
   interface loct_sysname
     subroutine oct_sysname(name)
+      implicit none
       character(len=*), intent(out) :: name
     end subroutine oct_sysname
   end interface loct_sysname
 
   interface loct_getcwd
     subroutine oct_getcwd(name)
+      implicit none
       character(len=*), intent(out) :: name
     end subroutine oct_getcwd
   end interface loct_getcwd
@@ -99,12 +105,14 @@ module loct_m
   !> File-handling
   interface loct_mkdir
     subroutine oct_mkdir(name)
+      implicit none
       character(len=*), intent(in) :: name
     end subroutine oct_mkdir
   end interface loct_mkdir
 
   interface loct_stat
     subroutine oct_stat(ierr, name)
+      implicit none
       integer,          intent(out) :: ierr
       character(len=*), intent(in)  :: name
     end subroutine oct_stat
@@ -112,18 +120,21 @@ module loct_m
 
   interface loct_rm
     subroutine oct_rm(name)
+      implicit none
       character(len=*), intent(in) :: name
     end subroutine oct_rm
   end interface loct_rm
 
   interface loct_number_of_lines
     integer function number_of_lines(filename)
+      implicit none
       character(len=*), intent(in) :: filename
     end function number_of_lines
   end interface loct_number_of_lines
 
   interface loct_search_file_lr
     subroutine oct_search_file_lr(freq, tag, ierr, dirname)
+      implicit none
       REAL_DOUBLE,      intent(inout) :: freq
       integer,          intent(in)    :: tag
       integer,          intent(out)   :: ierr
@@ -135,6 +146,7 @@ module loct_m
   !> Varia
   interface loct_getenv
     subroutine oct_getenv(var, val)
+      implicit none
       character(len=*), intent(in)  :: var
       character(len=*), intent(out) :: val
     end subroutine oct_getenv
@@ -142,12 +154,14 @@ module loct_m
 
   interface loct_progress_bar
     subroutine oct_progress_bar(a, maxcount)
+      implicit none
       integer, intent(in) :: a, maxcount
     end subroutine oct_progress_bar
   end interface loct_progress_bar
 
   interface loct_printRecipe
     subroutine oct_printRecipe(dir, filename)
+      implicit none
       character(len=*), intent(in)  :: dir
       character(len=*), intent(out) :: filename
     end subroutine oct_printRecipe
@@ -155,11 +169,13 @@ module loct_m
 
   interface
     subroutine loct_exit_failure()
+      implicit none
     end subroutine loct_exit_failure
   end interface
 
   interface loct_wfs_list
     subroutine oct_wfs_list(str, l)
+      implicit none
       character(len=*), intent(in)  :: str
       integer,          intent(out) :: l !< array
     end subroutine oct_wfs_list
@@ -171,6 +187,7 @@ module loct_m
   interface loct_gdimage_create_from
     function oct_gdimage_create_from(filename)
       use c_pointer_m
+      implicit none
       type(c_ptr) :: oct_gdimage_create_from
       character(len=*), intent(in) :: filename
     end function oct_gdimage_create_from
@@ -179,6 +196,7 @@ module loct_m
   interface loct_gdimage_sx
     function oct_gdimage_sx(im)
       use c_pointer_m
+      implicit none
       integer :: oct_gdimage_sx
       type(c_ptr), intent(in) :: im
     end function oct_gdimage_sx
@@ -187,6 +205,7 @@ module loct_m
   interface loct_gdimage_sy
     function oct_gdimage_sy(im)
       use c_pointer_m
+      implicit none
       integer :: oct_gdimage_sy
       type(c_ptr), intent(in) :: im
     end function oct_gdimage_sy
@@ -195,6 +214,7 @@ module loct_m
   interface loct_gdimage_get_pixel_rgb
     subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(in)  :: im
       integer,     intent(in)  :: x, y
       integer,     intent(out) :: r, g, b
@@ -204,6 +224,7 @@ module loct_m
 
  interface
    integer(SIZEOF_VOIDP) function get_memory_usage()
+     implicit none
    end function get_memory_usage
  end interface
 

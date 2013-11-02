@@ -37,10 +37,12 @@ module varinfo_m
 
   interface
     subroutine varinfo_init(filename)
+      implicit none
       character(len=*), intent(in) :: filename
     end subroutine varinfo_init
 
     subroutine varinfo_end()
+      implicit none
     end subroutine varinfo_end
   end interface
 

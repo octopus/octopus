@@ -26,6 +26,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
   R_TYPE, optional,      intent(in)   :: coeff(:)       !< polynomial coefficients
   interface
     subroutine func(z, f, jf)
+      implicit none
       R_TYPE, intent(in)  :: z(:)
       R_TYPE, intent(out) :: f(:), jf(:, :)
     end subroutine func

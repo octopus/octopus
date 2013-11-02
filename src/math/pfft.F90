@@ -67,11 +67,13 @@ module pfft_m
   !> PFFT initialization routines
   interface pfft_init
     subroutine PDFFT(init)
+      implicit none
     end subroutine PDFFT(init)
   end interface pfft_init
 
   interface pfft_create_procmesh_2d
     subroutine PDFFT(create_procmesh_2d) (ierror, mpi_comm, n1, n2, mpi_comm_2d)
+      implicit none
       integer, intent(in)  :: mpi_comm, n1, n2
       integer, intent(out) :: ierror, mpi_comm_2d
     end subroutine PDFFT(create_procmesh_2d)
@@ -83,6 +85,7 @@ module pfft_m
     subroutine PDFFT(local_size_dft_r2c_3d)(alloc_size, n, mpi_comm, pfft_flags, &
          local_ni, local_i_start, local_no, local_o_start)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
       integer(ptrdiff_t_kind), intent(inout) :: n             !< The size of the global matrix
       integer,                 intent(in)    :: mpi_comm, pfft_flags
@@ -97,6 +100,7 @@ module pfft_m
     subroutine PDFFT(local_size_many_dft_r2c)(alloc_size, rank_n, n, ni, no, howmany, iblock, oblock, &
          mpi_comm, pfft_flags, local_ni, local_i_start, local_no, local_o_start)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: alloc_size !< Size that has to be allocated
       integer(ptrdiff_t_kind), intent(in)    :: rank_n     !< The dimensions of the matrices
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
@@ -122,6 +126,7 @@ module pfft_m
     subroutine PDFFT(local_size_dft_3d)(alloc_size, n, mpi_comm, pfft_flags, &
          local_ni, local_i_start, local_no, local_o_start)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
       integer(ptrdiff_t_kind), intent(inout) :: n             !< The size of the global matrix
       integer,                 intent(in)    :: mpi_comm, pfft_flags
@@ -137,6 +142,7 @@ module pfft_m
          mpi_comm, pfft_flags, &
          local_ni, local_i_start, local_no, local_o_start)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
       integer(ptrdiff_t_kind), intent(in)    :: rank_n        !< The dimensions of the matrices
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
@@ -161,6 +167,7 @@ module pfft_m
     !> PFFT simple interface to create plan from real to complex
     subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
@@ -172,6 +179,7 @@ module pfft_m
     !> PFFT simple interface to create plan from complex to real
     subroutine PDFFT(plan_dft_c2r_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
@@ -184,6 +192,7 @@ module pfft_m
     subroutine PDFFT(plan_many_dft_r2c)(plan, rank_n, n, ni, no, howmany, &
          iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
@@ -207,6 +216,7 @@ module pfft_m
     subroutine PDFFT(plan_many_dft_c2r)(plan, rank_n, n, ni, no, howmany, &
          iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
@@ -229,6 +239,7 @@ module pfft_m
     !> Advanced interface for creating plan of FFT
     subroutine PDFFT(plan_dft_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
@@ -240,6 +251,7 @@ module pfft_m
   interface pfft_execute
     subroutine PDFFT(execute)(plan)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: plan
     end subroutine PDFFT(execute)
   end interface pfft_execute
@@ -247,12 +259,14 @@ module pfft_m
   interface pfft_destroy_plan
     subroutine PDFFT(destroy_plan)(plan)
       use pfft_params_m
+      implicit none
       integer(ptrdiff_t_kind), intent(inout) :: plan
     end subroutine PDFFT(destroy_plan)
   end interface pfft_destroy_plan
 
   interface pfft_cleanup
     subroutine PDFFT(cleanup)
+      implicit none
     end subroutine PDFFT(cleanup)
   end interface pfft_cleanup
 

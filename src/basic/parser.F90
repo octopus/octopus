@@ -71,6 +71,7 @@ module parser_m
 
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
+      implicit none
       character(len=*), intent(in)  :: file_out
       integer, intent(in) :: mpiv_node
     end function oct_parse_init
@@ -78,10 +79,12 @@ module parser_m
 
   interface parse_putsym
     subroutine oct_parse_putsym_int(sym, i)
+      implicit none
       character(len=*), intent(in)  :: sym
       integer, intent(in) :: i
     end subroutine oct_parse_putsym_int
     subroutine oct_parse_putsym_double(sym, d)
+      implicit none
       character(len=*), intent(in)  :: sym
       real(8), intent(in) :: d
     end subroutine oct_parse_putsym_double
@@ -90,23 +93,27 @@ module parser_m
 
   interface parse_input_file
     integer function oct_parse_input(file_in)
+      implicit none
       character(len=*), intent(in)  :: file_in
     end function oct_parse_input
   end interface parse_input_file
 
   interface parse_end
     subroutine oct_parse_end()
+      implicit none
     end subroutine oct_parse_end
   end interface parse_end
 
   interface parse_isdef
     integer function oct_parse_isdef(name)
+      implicit none
       character(len=*), intent(in) :: name
     end function oct_parse_isdef
   end interface parse_isdef
 
   interface parse_integer
     subroutine oct_parse_int(name, def, res)
+      implicit none
       character(len=*), intent(in) :: name
       integer, intent(in)          :: def
       integer, intent(out)         :: res
@@ -115,6 +122,7 @@ module parser_m
 
   interface parse_float
     subroutine oct_parse_double(name, def, res)
+      implicit none
       character(len=*), intent(in)  :: name
       real(8),          intent(in)  :: def
       real(8),          intent(out) :: res
@@ -125,6 +133,7 @@ module parser_m
 
   interface parse_cmplx
     subroutine oct_parse_complex(name, def, res)
+      implicit none
       character(len=*), intent(in) :: name
       complex(8), intent(in)       :: def
       complex(8), intent(out)      :: res
@@ -134,6 +143,7 @@ module parser_m
 
   interface parse_string
     subroutine oct_parse_string(name, def, res)
+      implicit none
       character(len=*), intent(in) :: name, def
       character(len=*), intent(out):: res
     end subroutine oct_parse_string
@@ -142,6 +152,7 @@ module parser_m
   interface parse_block
     integer function oct_parse_block(name, blk)
       use block_t_m
+      implicit none
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
     end function oct_parse_block
@@ -150,6 +161,7 @@ module parser_m
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
       use block_t_m
+      implicit none
       type(block_t), intent(inout) :: blk
     end subroutine oct_parse_block_end
   end interface parse_block_end
@@ -157,6 +169,7 @@ module parser_m
   interface parse_block_n
     integer function oct_parse_block_n(blk)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
   end interface parse_block_n
@@ -164,6 +177,7 @@ module parser_m
   interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
@@ -172,6 +186,7 @@ module parser_m
   interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       integer, intent(out)         :: res
@@ -181,6 +196,7 @@ module parser_m
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       real(8), intent(out)         :: res
@@ -193,6 +209,7 @@ module parser_m
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       complex(8), intent(out)      :: res
@@ -203,6 +220,7 @@ module parser_m
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
       use block_t_m
+      implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       character(len=*), intent(out):: res
@@ -224,6 +242,7 @@ module parser_m
 
   interface
     subroutine oct_parse_expression(re, im, ndim, x, r, t, pot)
+      implicit none
       real(8),          intent(in)  :: x, r, t
       integer,          intent(in)  :: ndim
       real(8),          intent(out) :: re, im
@@ -233,6 +252,7 @@ module parser_m
 
   interface parse_expression
     subroutine oct_parse_expression1(re, im, c, x, string)
+      implicit none
       real(8),          intent(out) :: re, im
       character(len=*), intent(in)  :: c
       real(8),          intent(in)  :: x

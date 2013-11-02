@@ -47,9 +47,11 @@ module minimizer_m
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
+      implicit none
       real(8), intent(inout) :: a, b, m
       interface
         subroutine f(x, fx)
+          implicit none
           real(8), intent(in)  :: x
           real(8), intent(out) :: fx
         end subroutine f
@@ -61,6 +63,7 @@ module minimizer_m
   interface loct_minimize
     integer function oct_minimize(method, dim, x, step, line_tol, &
       tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+      implicit none
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
       real(8), intent(inout) :: x
@@ -71,6 +74,7 @@ module minimizer_m
       integer, intent(in)    :: maxiter
       interface
         subroutine f(n, x, val, getgrad, grad)
+          implicit none
           integer, intent(in)    :: n
           real(8), intent(in)    :: x(n)
           real(8), intent(inout) :: val
@@ -78,6 +82,7 @@ module minimizer_m
           real(8), intent(inout) :: grad(n)
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+          implicit none
           integer, intent(in) :: iter
           integer, intent(in) :: n
           real(8), intent(in) :: val
@@ -92,6 +97,7 @@ module minimizer_m
 
   interface loct_minimize_direct
     function oct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
+     implicit none
       integer :: oct_minimize_direct
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
@@ -103,11 +109,13 @@ module minimizer_m
       !! also to newuoa routines in opt_control, and there the interface has no intents.
       interface
         subroutine f(n, x, val)
+          implicit none
           integer :: n
           real(8) :: x(n)
           real(8) :: val
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, x)
+          implicit none
           integer, intent(in) :: iter
           integer, intent(in) :: n
           real(8), intent(in) :: val
@@ -132,11 +140,13 @@ contains
     !! also to newuoa routines in opt_control, and there the interface has no intents.
     interface
       subroutine f(n, x, val)
+        implicit none
         integer :: n
         real(8) :: x(n)
         real(8) :: val
       end subroutine f
       subroutine write_iter_info(iter, n, val, maxdr, x)
+        implicit none
         integer, intent(in) :: iter
         integer, intent(in) :: n
         real(8), intent(in) :: val
@@ -188,6 +198,7 @@ contains
     integer, intent(in)    :: maxiter
     interface
       subroutine f(n, x, val, getgrad, grad)
+        implicit none
         integer, intent(in)    :: n
         real(8), intent(in)    :: x(n)
         real(8), intent(inout) :: val
@@ -195,6 +206,7 @@ contains
         real(8), intent(inout) :: grad(n)
       end subroutine f
       subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+        implicit none
         integer, intent(in) :: iter
         integer, intent(in) :: n
         real(8), intent(in) :: val
@@ -234,6 +246,7 @@ contains
     integer, intent(in)    :: maxiter
     interface
       subroutine f(n, x, val, getgrad, grad)
+        implicit none
         integer, intent(in)    :: n
         real(8), intent(in)    :: x(n)
         real(8), intent(inout) :: val
@@ -241,6 +254,7 @@ contains
         real(8), intent(inout) :: grad(n)
       end subroutine f
       subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+        implicit none
         integer, intent(in) :: iter
         integer, intent(in) :: n
         real(8), intent(in) :: val

@@ -60,10 +60,12 @@ module metis_m
 
 #if defined(HAVE_PARMETIS) || defined(HAVE_METIS)
     subroutine oct_metis_setdefaultoptions(options)
+      implicit none
       integer, intent(inout) :: options
     end subroutine oct_metis_setdefaultoptions
 
     subroutine oct_metis_partgraphrecursive(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
+      implicit none
       integer,     intent(in)  :: nvtxs      !< The number of vertices in the graph.
       integer,     intent(in)  :: ncon       !< The number of balancing constraints. It should be at least 1.
       integer,     intent(in)  :: xadj       !< The adjacency structure of the graph.
@@ -81,6 +83,7 @@ module metis_m
     end subroutine oct_metis_partgraphrecursive
 
     subroutine oct_metis_partgraphkway(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
+      implicit none
       integer,     intent(in)  :: nvtxs      !< The number of vertices in the graph.
       integer,     intent(in)  :: ncon       !< The number of balancing constraints. It should be at least 1.
       integer,     intent(in)  :: xadj       !< The adjacency structure of the graph.
@@ -101,6 +104,7 @@ module metis_m
 #if defined(HAVE_PARMETIS)
 
     subroutine oct_parmetis_v3_partkway(vtxdist, xadj, adjncy, ncon, nparts, tpwgts, ubvec, options, edgecut, part, comm)
+      implicit none
       integer,     intent(in)  :: vtxdist    !< This array describes how the vertices of the graph are distributed among 
                                              !! the processors. Its contents are identical for every processor.
       integer,     intent(in)  :: xadj       !< These store the (local) adjacency structure of the graph at each processor.

@@ -88,6 +88,7 @@ module fftw_m
   interface 
     subroutine DFFTW(plan_dft_r2c_1d)(plan, n, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
       FLOAT,       intent(in)    :: in  !< in(n)
@@ -97,6 +98,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_r2c_2d)(plan, n1, n2, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
       FLOAT,       intent(in)    :: in  !< in(n1, n2)
@@ -106,6 +108,7 @@ module fftw_m
     
     subroutine DFFTW(plan_dft_r2c_3d)(plan, n1, n2, n3, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
       FLOAT,       intent(in)    :: in  !< in(n1, n2, n3)
@@ -115,6 +118,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_c2r_1d)(plan, n, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
       CMPLX,       intent(in)    :: in  !< in(n/2+1)
@@ -124,6 +128,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_c2r_2d)(plan, n1, n2, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
       CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2)
@@ -133,6 +138,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_c2r_3d)(plan, n1, n2, n3, in, out, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
       CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2, n3)
@@ -142,6 +148,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_1d)(plan, n, in, out, sign, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
       CMPLX,       intent(in)    :: in  !< in(n/2+1)
@@ -151,6 +158,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_2d)(plan, n1, n2, in, out, sign, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
       CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2)
@@ -160,6 +168,7 @@ module fftw_m
 
     subroutine DFFTW(plan_dft_3d)(plan, n1, n2, n3, in, out, sign, flags)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
       CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2, n3)
@@ -171,6 +180,7 @@ module fftw_m
   interface fftw_set_timelimit
     subroutine DFFTW(set_timelimit)(time)
       use c_pointer_m
+      implicit none
       FLOAT, intent(in) :: time
     end subroutine DFFTW(set_timelimit)
   end interface fftw_set_timelimit
@@ -179,6 +189,7 @@ module fftw_m
   interface fftw_execute_dft
     subroutine DFFTW(execute_dft_r2c)(plan, in, out)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(in)  :: plan
       FLOAT,       intent(in)  :: in
       CMPLX,       intent(out) :: out
@@ -186,6 +197,7 @@ module fftw_m
 
     subroutine DFFTW(execute_dft_c2r)(plan, in, out)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(in)  :: plan
       CMPLX,       intent(in)  :: in
       FLOAT,       intent(out) :: out
@@ -193,6 +205,7 @@ module fftw_m
 
     subroutine DFFTW(execute_dft)(plan, in, out)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(in)  :: plan
       CMPLX,       intent(in)  :: in
       CMPLX,       intent(out) :: out
@@ -204,6 +217,7 @@ module fftw_m
   interface fftw_destroy_plan
     subroutine DFFTW(destroy_plan)(plan)
       use c_pointer_m
+      implicit none
       type(c_ptr), intent(inout) :: plan
     end subroutine DFFTW(destroy_plan)
   end interface fftw_destroy_plan
@@ -212,6 +226,7 @@ module fftw_m
   !> ----------------- cleanup ------------------
   interface fftw_cleanup
     subroutine DFFTW(cleanup)
+      implicit none
     end subroutine DFFTW(cleanup)
   end interface fftw_cleanup
 
@@ -220,18 +235,21 @@ module fftw_m
 
   interface fftw_init_threads
     subroutine DFFTW(init_threads)(iret)
+      implicit none
       integer, intent(out) :: iret
     end subroutine DFFTW(init_threads)
   end interface fftw_init_threads
 
   interface fftw_plan_with_nthreads
     subroutine DFFTW(plan_with_nthreads)(nthreads)
+      implicit none
       integer, intent(in) :: nthreads
     end subroutine DFFTW(plan_with_nthreads)
   end interface fftw_plan_with_nthreads
 
   interface fftw_cleanup_threads
     subroutine DFFTW(cleanup_threads)
+      implicit none
     end subroutine DFFTW(cleanup_threads)
   end interface fftw_cleanup_threads
 

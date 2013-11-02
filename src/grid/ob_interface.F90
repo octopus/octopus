@@ -79,6 +79,7 @@ contains
   ! ---------------------------------------------------------
   !> Calculate the member points of the interface region.
   subroutine interface_init(der, intf, il, lsize, extent_uc)
+    implicit none
     type(derivatives_t), intent(in)  :: der
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
@@ -163,6 +164,7 @@ contains
   ! ---------------------------------------------------------
   !> Checks if point number idx is an interface point of interface.
   logical function member_of_interface(idx, intf, index)
+    implicit none
     integer,           intent(in)  :: idx
     type(interface_t), intent(in)  :: intf
     integer,           intent(out) :: index ! index in interface
@@ -197,6 +199,7 @@ contains
   !> Get wavefunction points of interface intf.
   !! intf_wf must be of dimension intf\%np_uc.
   subroutine get_intf_wf(intf, zpsi, intf_wf)
+    implicit none
     type(interface_t), intent(in)  :: intf
     CMPLX,             intent(in)  :: zpsi(:)
     CMPLX,             intent(out) :: intf_wf(:)
@@ -213,6 +216,7 @@ contains
   !! Put wavefunction points of interface intf.
   !! intf_wf must be of dimension intf\%np_uc.
   subroutine put_intf_wf(intf, intf_wf, zpsi)
+    implicit none
     type(interface_t), intent(in)     :: intf
     CMPLX,             intent(in)     :: intf_wf(:)
     CMPLX,             intent(inout)  :: zpsi(:)
@@ -229,6 +233,7 @@ contains
   !> Apply an np x np operator op to the interface region of the wavefunction.
   !! np is the number of points in the interface: wf <- wf + alpha op wf
   subroutine interface_apply_op(intf, alpha, op, wf, res)
+    implicit none
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: alpha
     CMPLX,             intent(in)    :: op(:, :)
@@ -257,6 +262,7 @@ contains
   ! ---------------------------------------------------------
   !> Write number of interface points.
   subroutine interface_write_info(intf, iunit)
+    implicit none
     type(interface_t), intent(in) :: intf
     integer,           intent(in) :: iunit
 
@@ -273,6 +279,7 @@ contains
   ! ---------------------------------------------------------
   !> Free memory.
   subroutine interface_end(intf)
+    implicit none
     type(interface_t), intent(inout) :: intf
 
     PUSH_SUB(intface_end)

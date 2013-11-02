@@ -82,10 +82,12 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   R_TYPE,  intent(in)    :: b(:)
   interface
     subroutine op(x, y)
+      implicit none
       R_TYPE, intent(inout) :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(inout) :: x(:)
       R_TYPE, intent(in)    :: y(:)
     end function dotp
@@ -146,16 +148,19 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   R_TYPE,  intent(in)    :: b(:)
   interface
     subroutine op(x, y)
+      implicit none
       R_TYPE, intent(inout) :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
   end interface
   interface
     subroutine opt(x, y)
+      implicit none
       R_TYPE, intent(inout) :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine opt
     R_TYPE function dotp(x, y) result(res)
+      implicit none
       R_TYPE, intent(in) :: x(:)
       R_TYPE, intent(in) :: y(:)
     end function dotp
@@ -230,12 +235,14 @@ end subroutine X(bi_conjugate_gradients)
     R_TYPE,          intent(in)    :: b(:)  !< the right side
     interface
       subroutine op(x, y)                   !< the matrix A as operator, y <- Ax
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
       subroutine prec(x, y)                 !< preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
@@ -262,24 +269,28 @@ end subroutine X(bi_conjugate_gradients)
     R_TYPE,          intent(in)    :: b(:)   !< the right side
     interface
       subroutine op(x, y)                    !< the matrix A as operator y <- A*x
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
       subroutine opt(x, y)                   !< the transposed matrix A as operator y <- A^T*x
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
       subroutine prec(x, y)                  !< the preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
       subroutine prect(x, y)                 !< the transposed preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
@@ -322,23 +333,27 @@ end subroutine X(bi_conjugate_gradients)
     R_TYPE,  intent(in)    :: b(:)  !< the right side
     interface
       subroutine op(x, y)           !< the matrix A as operator
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
       R_TYPE function dotu(x, y)    !< the dot product (must be x^T*y, not daggered)
+        implicit none
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
       FLOAT function nrm2(x)        !< the 2-norm of the vector x
+        implicit none
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
       subroutine prec(x, y)         !< the preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
@@ -553,35 +568,41 @@ end subroutine X(bi_conjugate_gradients)
     R_TYPE,  intent(in)    :: b(:)    !< right side
     interface
       subroutine op(x, y)             !< the matrix A as operator: y <- A*x
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
       subroutine opt(x, y)            !< the transposed matrix A as operator: y <- A^T*x
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
       R_TYPE function dotu(x, y)      !< the dot product
+        implicit none
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
       FLOAT function nrm2(x)          !< the 2-norm of a vector
+        implicit none
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
       subroutine prec(x, y)           !< preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
       subroutine prect(x, y)          !< transposed preconditioner
+        implicit none
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect

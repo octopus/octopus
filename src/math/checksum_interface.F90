@@ -24,6 +24,7 @@ module checksum_m
 
   interface
     subroutine checksum_calculate(algorithm, narray, array, checksum)
+      implicit none
       integer,    intent(in)  :: algorithm
       integer,    intent(in)  :: narray
       integer,    intent(in)  :: array

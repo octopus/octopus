@@ -48,6 +48,7 @@ module c_pointer_m
   interface
     subroutine set_null(ptr)
       use c_pointer_types_m
+      implicit none
       type(c_ptr), intent(out) :: ptr
     end subroutine set_null
   end interface
@@ -55,6 +56,7 @@ module c_pointer_m
   interface
     function is_null_int(ptr)
       use c_pointer_types_m
+      implicit none
       type(c_ptr), intent(in) :: ptr
       integer :: is_null_int
     end function is_null_int

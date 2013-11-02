@@ -288,13 +288,13 @@ module splines_m
   interface
     subroutine oct_spline_end(spl, acc)
       use c_pointer_m
-
+      implicit none
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
       use c_pointer_m
-
+      implicit none
       integer,     intent(in) :: nrc
       real(8),     intent(in) :: x
       real(8),     intent(in) :: y
@@ -359,14 +359,14 @@ module splines_m
 
     subroutine oct_spline_y(spl, y)
       use c_pointer_m
-
+      implicit none
       type(c_ptr), intent(in) :: spl
       real(8),     intent(out) :: y
     end subroutine oct_spline_y
 
     real(8) pure function oct_spline_eval_integ(spl, a, b, acc)
       use c_pointer_m
-
+      implicit none
       type(c_ptr), intent(in) :: spl
       real(8),     intent(in) :: a
       real(8),     intent(in) :: b

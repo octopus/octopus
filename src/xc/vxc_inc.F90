@@ -938,6 +938,7 @@ subroutine stitch(get_branch, functionvalues, startpoint)
   ! Each value of the parameter 'branch' corresponds to one such value.
   interface
     CMPLX function get_branch(x, branch)
+      implicit none
       CMPLX,   intent(in) :: x
       integer, intent(in) :: branch
     end function get_branch
@@ -968,6 +969,7 @@ subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbr
   ! Each value of the parameter 'branch' corresponds to one such value.
   interface 
     CMPLX function get_branch(x, branch)
+      implicit none
       CMPLX,   intent(in) :: x
       integer, intent(in) :: branch
     end function get_branch
@@ -1123,6 +1125,7 @@ subroutine localstitch(mesh, array, get_branch)
 
   interface 
     CMPLX function get_branch(x, branch)
+      implicit none
       CMPLX,   intent(in) :: x
       integer, intent(in) :: branch
     end function get_branch

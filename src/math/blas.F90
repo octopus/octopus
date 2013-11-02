@@ -37,21 +37,25 @@ module blas_m
   !! Interchanges two vectors.
   interface blas_swap
     subroutine sswap(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       real(4),    intent(inout) :: dx, dy !< dx(n), dy(n)
     end subroutine sswap
 
     subroutine dswap(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       real(8),    intent(inout) :: dx, dy !< dx(n), dy(n)
     end subroutine dswap
 
     subroutine cswap(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       complex(4), intent(inout) :: dx, dy !< dx(n), dy(n)
     end subroutine cswap
 
     subroutine zswap(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       complex(8), intent(inout) :: dx, dy !< dx(n), dy(n)
     end subroutine zswap
@@ -61,36 +65,42 @@ module blas_m
   !! Scales a vector by a constant.
   interface blas_scal
     subroutine sscal(n, da, dx, incx)
+      implicit none
       integer,    intent(in)    :: n, incx
       real(4),    intent(in)    :: da
       real(4),    intent(inout) :: dx !< dx(n)
     end subroutine sscal
 
     subroutine dscal(n, da, dx, incx)
+      implicit none
       integer,    intent(in)    :: n, incx
       real(8),    intent(in)    :: da
       real(8),    intent(inout) :: dx !< dx(n)
     end subroutine dscal
 
     subroutine cscal(n, da, dx, incx)
+      implicit none
       integer,    intent(in)    :: n, incx
       complex(4), intent(in)    :: da
       complex(4), intent(inout) :: dx !< dx(n)
     end subroutine cscal
 
     subroutine zscal(n, da, dx, incx)
+      implicit none
       integer,    intent(in)    :: n, incx
       complex(8), intent(in)    :: da
       complex(8), intent(inout) :: dx !< dx(n)
     end subroutine zscal
 
     subroutine dazscal(n, da, dx)
+      implicit none
       integer,    intent(in)    :: n
       real(8),    intent(in)    :: da
       complex(8), intent(inout) :: dx !< dx(n)
     end subroutine dazscal
 
     subroutine sazscal(n, da, dx)
+      implicit none
       integer,    intent(in)    :: n
       real(4),    intent(in)    :: da
       complex(4), intent(inout) :: dx !< dx(n)
@@ -101,30 +111,35 @@ module blas_m
   !! Constant times a vector plus a vector.
   interface blas_axpy
     subroutine saxpy (n, da, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       real(4),    intent(in)    :: da, dx !< dx(n)
       real(4),    intent(inout) :: dy     !< dy(n)
     end subroutine saxpy
 
     subroutine daxpy (n, da, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       real(8),    intent(in)    :: da, dx !< dx(n)
       real(8),    intent(inout) :: dy     !< dy(n)
     end subroutine daxpy
 
     subroutine caxpy (n, da, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       complex(4), intent(in)    :: da, dx !< dx(n)
       complex(4), intent(inout) :: dy     !< dy(n)
     end subroutine caxpy
 
     subroutine zaxpy (n, da, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)    :: n, incx, incy
       complex(8), intent(in)    :: da, dx !< dx(n)
       complex(8), intent(inout) :: dy     !< dy(n)
     end subroutine zaxpy
 
     subroutine dazaxpy (n, da, dx, dy)
+      implicit none
       integer,    intent(in)    :: n
       real(8),    intent(in)    :: da
       complex(8), intent(in)    :: dx     !< dx(n)
@@ -132,6 +147,7 @@ module blas_m
     end subroutine dazaxpy
 
     subroutine sazaxpy (n, da, dx, dy)
+      implicit none
       integer,    intent(in)    :: n
       real(4),    intent(in)    :: da
       complex(4), intent(in)    :: dx     !< dx(n)
@@ -143,24 +159,28 @@ module blas_m
   !! Copies a vector, x, to a vector, y.
   interface blas_copy
     subroutine scopy(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)  :: n, incx, incy
       real(4),    intent(in)  :: dx !< dx(n)
       real(4),    intent(out) :: dy !< dy(n)
     end subroutine scopy
 
     subroutine dcopy(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)  :: n, incx, incy
       real(8),    intent(in)  :: dx !< dx(n)
       real(8),    intent(out) :: dy !< dy(n)
     end subroutine dcopy
 
     subroutine ccopy(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)  :: n, incx, incy
       complex(4), intent(in)  :: dx !< dx(n)
       complex(4), intent(out) :: dy !< dy(n)
     end subroutine ccopy
 
     subroutine zcopy(n, dx, incx, dy, incy)
+      implicit none
       integer,    intent(in)  :: n, incx, incy
       complex(8), intent(in)  :: dx !< dx(n)
       complex(8), intent(out) :: dy !< dy(n)
@@ -247,6 +267,7 @@ module blas_m
   !!  element vectors and A is an \f$n\times n\f$ symmetric matrix.
   interface blas_symv
     subroutine ssymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, incx, incy
       real(4),      intent(in)    :: alpha, beta
@@ -256,6 +277,7 @@ module blas_m
     end subroutine ssymv
 
     subroutine dsymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, incx, incy
       real(8),      intent(in)    :: alpha, beta
@@ -265,6 +287,7 @@ module blas_m
     end subroutine dsymv
 
     subroutine csymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, incx, incy
       complex(4),   intent(in)    :: alpha, beta
@@ -274,6 +297,7 @@ module blas_m
     end subroutine csymv
 
     subroutine zsymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, incx, incy
       complex(8),   intent(in)    :: alpha, beta
@@ -298,6 +322,7 @@ module blas_m
   !!  vectors and A is an \f$m\times n\f$ matrix.
   interface blas_gemv
     subroutine sgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
       real(4),      intent(in)    :: alpha, beta
@@ -307,6 +332,7 @@ module blas_m
     end subroutine sgemv
 
     subroutine dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
       real(8),      intent(in)    :: alpha, beta
@@ -316,6 +342,7 @@ module blas_m
     end subroutine dgemv
 
     subroutine cgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
       complex(4),   intent(in)    :: alpha, beta
@@ -325,6 +352,7 @@ module blas_m
     end subroutine cgemv
 
     subroutine zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
       complex(8),   intent(in)    :: alpha, beta
@@ -357,6 +385,7 @@ module blas_m
   !!  \times n \f$ matrix and C an \f$ m \times n \f$m matrix.
   interface blas_gemm
     subroutine sgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       real(4),      intent(in)    :: alpha, beta
@@ -366,6 +395,7 @@ module blas_m
     end subroutine sgemm
 
     subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       real(8),      intent(in)    :: alpha, beta
@@ -375,6 +405,7 @@ module blas_m
     end subroutine dgemm
 
     subroutine cgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       complex(4),   intent(in)    :: alpha, beta
@@ -384,6 +415,7 @@ module blas_m
     end subroutine cgemm
 
     subroutine zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       complex(8),   intent(in)    :: alpha, beta
@@ -393,6 +425,7 @@ module blas_m
     end subroutine zgemm
 
     subroutine csgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       real(4),      intent(in)    :: alpha, beta
@@ -402,6 +435,7 @@ module blas_m
     end subroutine csgemm
 
     subroutine zdgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
       real(8),      intent(in)    :: alpha, beta
@@ -427,6 +461,7 @@ module blas_m
   !! \f]
   interface blas_trmm
     subroutine strmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side, uplo, transa, diag
       integer,      intent(in)    :: m, n, lda, ldb
       real(4),      intent(in)    :: a, alpha
@@ -434,6 +469,7 @@ module blas_m
     end subroutine strmm
 
     subroutine dtrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side, uplo, transa, diag
       integer,      intent(in)    :: m, n, lda, ldb
       real(8),      intent(in)    :: a, alpha
@@ -441,6 +477,7 @@ module blas_m
     end subroutine dtrmm
 
     subroutine ctrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side, uplo, transa, diag
       integer,      intent(in)    :: m, n, lda, ldb
       complex(4),   intent(in)    :: a, alpha
@@ -448,6 +485,7 @@ module blas_m
     end subroutine ctrmm
 
     subroutine ztrmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side, uplo, transa, diag
       integer,      intent(in)    :: m, n, lda, ldb
       complex(8),   intent(in)    :: a, alpha
@@ -472,6 +510,7 @@ module blas_m
   !!  matrix and B and C are \f$m\times n\f$ matrices.
   interface blas_symm
     subroutine ssymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: side, uplo
       integer,      intent(in)    :: m, n, lda, ldb, ldc
       real(4),      intent(in)    :: alpha, beta, a, b
@@ -479,6 +518,7 @@ module blas_m
     end subroutine ssymm
 
     subroutine dsymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: side, uplo
       integer,      intent(in)    :: m, n, lda, ldb, ldc
       real(8),      intent(in)    :: alpha, beta, a, b
@@ -486,6 +526,7 @@ module blas_m
     end subroutine dsymm
 
     subroutine csymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: side, uplo
       integer,      intent(in)    :: m, n, lda, ldb, ldc
       complex(4),   intent(in)    :: alpha, beta, a, b
@@ -493,6 +534,7 @@ module blas_m
     end subroutine csymm
 
     subroutine zsymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      implicit none
       character(1), intent(in)    :: side, uplo
       integer,      intent(in)    :: m, n, lda, ldb, ldc
       complex(8),   intent(in)    :: alpha, beta, a, b
@@ -519,7 +561,6 @@ module blas_m
   interface blas_herk
     subroutine ssyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
       implicit none
-
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(4),      intent(in)    :: alpha, beta, a
@@ -528,7 +569,6 @@ module blas_m
 
     subroutine dsyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
       implicit none
-
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(8),      intent(in)    :: alpha, beta, a
@@ -537,7 +577,6 @@ module blas_m
 
     subroutine cherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
       implicit none
-
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(4),      intent(in)    :: alpha, beta
@@ -547,7 +586,6 @@ module blas_m
 
     subroutine zherk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
       implicit none
-
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
       real(8),      intent(in)    :: alpha, beta
@@ -578,6 +616,7 @@ module blas_m
   !!  The matrix X is overwritten on B.
   interface blas_trsm
     subroutine strsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa
@@ -592,6 +631,7 @@ module blas_m
     end subroutine strsm
 
     subroutine dtrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa
@@ -606,6 +646,7 @@ module blas_m
     end subroutine dtrsm
 
     subroutine ctrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa
@@ -620,6 +661,7 @@ module blas_m
     end subroutine ctrsm
 
     subroutine ztrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      implicit none
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa

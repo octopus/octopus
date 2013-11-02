@@ -124,6 +124,7 @@ module global_m
   !> This function is defined in messages.F90
   interface 
     subroutine assert_die(s, f, l)
+      implicit none
       character(len=*), intent(in) :: s, f
       integer, intent(in) :: l
     end subroutine assert_die

@@ -87,6 +87,7 @@ module lapack_m
   !!  positive definite.
   interface lapack_sygv
     subroutine ssygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: itype, n, lda, ldb, lwork
       real(4),      intent(inout) :: a, b    !< a(lda,n), b(ldb,n)
@@ -95,6 +96,7 @@ module lapack_m
     end subroutine ssygv
 
     subroutine dsygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: itype, n, lda, ldb, lwork
       real(8),      intent(inout) :: a, b    !< a(lda,n), b(ldb,n)
@@ -110,6 +112,7 @@ module lapack_m
   !!  positive definite.
   interface lapack_hegv
     subroutine chegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, itype, lda, ldb, lwork
       complex(4),   intent(inout) :: a, b     !< a(lda,n), b(ldb,n)
@@ -119,6 +122,7 @@ module lapack_m
     end subroutine chegv
 
     subroutine zhegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, itype, lda, ldb, lwork
       complex(8),   intent(inout) :: a, b     !< a(lda,n), b(ldb,n)
@@ -146,6 +150,7 @@ module lapack_m
   !!  equal to 1 and largest component real.
   interface lapack_geev
     subroutine sgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       real(4),      intent(inout) :: a !< a(lda,n)
@@ -156,6 +161,7 @@ module lapack_m
     end subroutine sgeev
 
     subroutine dgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       real(8),      intent(inout) :: a !< a(lda,n)
@@ -166,6 +172,7 @@ module lapack_m
     end subroutine dgeev
 
     subroutine cgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       complex(4),   intent(inout) :: a !< a(lda,n)
@@ -176,6 +183,7 @@ module lapack_m
     end subroutine cgeev
 
     subroutine zgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       complex(8),        intent(inout) :: a !< a(lda,n)
@@ -190,6 +198,7 @@ module lapack_m
   !!  real symmetric matrix A.
   interface lapack_syev
     subroutine ssyev(jobz, uplo, n, a, lda, w, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
       real(4),      intent(inout) :: a       !< a(lda,n)
@@ -198,6 +207,7 @@ module lapack_m
     end subroutine ssyev
 
     subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
       real(8),      intent(inout) :: a       !< a(lda,n)
@@ -210,6 +220,7 @@ module lapack_m
   !!  complex Hermitian matrix A.
   interface lapack_heev
     subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
       complex(4),   intent(inout) :: a        !< a(lda,n)
@@ -219,6 +230,7 @@ module lapack_m
     end subroutine cheev
 
     subroutine zheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
+      implicit none
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
       complex(8),   intent(inout) :: a        !< a(lda,n)
@@ -234,21 +246,25 @@ module lapack_m
   !! \f]
   interface lapack_geqrf
     subroutine sgeqrf( m, n, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, lda, lwork, m, n
       real(4)            a, tau, work
     end subroutine sgeqrf
 
     subroutine dgeqrf( m, n, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, lda, lwork, m, n
       double precision   a, tau, work
     end subroutine dgeqrf
 
     subroutine cgeqrf( m, n, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, lda, lwork, m, n
       complex(4)         a, tau, work
     end subroutine cgeqrf
     
     subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, lda, lwork, m, n
       complex(8)         a, tau, work
     end subroutine zgeqrf
@@ -265,21 +281,25 @@ module lapack_m
   !!  as returned by DGEQRF.
   interface lapack_orgqr 
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, k, lda, lwork, m, n
       double precision   a, tau, work
     end subroutine dorgqr
     
     subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, k, lda, lwork, m, n
       complex(8)         a, tau, work
     end subroutine zungqr
 
     subroutine sorgqr( m, n, k, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, k, lda, lwork, m, n
       real               a, tau, work
     end subroutine sorgqr
 
     subroutine cungqr( m, n, k, a, lda, tau, work, lwork, info )
+      implicit none
       integer            info, k, lda, lwork, m, n
       complex(4)         a, tau, work
     end subroutine cungqr

@@ -104,6 +104,7 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
 
   interface
     subroutine func(size, t, z, res)
+      implicit none
       integer, intent(in)  :: size
       FLOAT,   intent(in)  :: t
       R_TYPE,  intent(in)  :: z(:)
@@ -156,6 +157,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
 
   interface
     subroutine func(size, t, z, res)
+      implicit none
       integer, intent(in)  :: size
       FLOAT,   intent(in)  :: t
       R_TYPE,  intent(in)  :: z(:)

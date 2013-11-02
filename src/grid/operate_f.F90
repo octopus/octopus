@@ -30,6 +30,7 @@ module operate_f_m
 
   interface
     subroutine doperate_ri_vec(opn, w, opnri, opri, rimap_inv, rimap_inv_max, fi, ldfp, fo)
+      implicit none
       integer, intent(in)    :: opn
       FLOAT,   intent(in)    :: w
       integer, intent(in)    :: opnri
@@ -44,6 +45,7 @@ module operate_f_m
 
   interface
     subroutine zoperate_ri_vec(opn, w, opnri, opri, rimap_inv, rimap_inv_max, fi, ldfp, fo)
+      implicit none
       integer, intent(in)    :: opn
       FLOAT,   intent(in)    :: w
       integer, intent(in)    :: opnri
@@ -58,6 +60,7 @@ module operate_f_m
 
   interface
     subroutine dgauss_seidel(opn, w, opnri, opri, rimap_inv, rimap_inv_max, factor, pot, rho)
+      implicit none
       integer, intent(in)    :: opn
       FLOAT,   intent(in)    :: w
       integer, intent(in)    :: opnri

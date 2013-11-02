@@ -138,6 +138,7 @@ module nl_operator_m
 
   interface
     integer function op_is_available(opid, type)
+      implicit none
       integer, intent(in) :: opid, type
     end function op_is_available
   end interface

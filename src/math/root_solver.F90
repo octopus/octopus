@@ -316,6 +316,7 @@ contains
     logical,             intent(out) :: success
     interface
       subroutine func(z, f, jf)
+        implicit none
         FLOAT, intent(in)  :: z(:)
         FLOAT, intent(out) :: f(:), jf(:, :)
       end subroutine func

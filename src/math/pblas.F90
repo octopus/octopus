@@ -87,7 +87,6 @@ module pblas_m
   interface pblas_herk
     subroutine pdsyrk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
       implicit none
-      
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: n
@@ -106,7 +105,6 @@ module pblas_m
 
     subroutine pzherk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
       implicit none
-
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: n
@@ -147,7 +145,6 @@ module pblas_m
   interface pblas_trsm
     subroutine pdtrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
       implicit none
-
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa
@@ -167,7 +164,6 @@ module pblas_m
 
     subroutine pztrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
       implicit none
-
       character(1), intent(in)    :: side
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: transa
