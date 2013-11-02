@@ -181,6 +181,9 @@ contains
     call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
          partition%np_local, partition%part, ierr)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sdispls)
 #else
     !Get the global partition in the root node
     if (partition%mpi_grp%rank == 0) then
