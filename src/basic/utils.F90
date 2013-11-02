@@ -132,8 +132,11 @@ contains
 
     trace = M_ZERO
     do jj = 1, ndim
-      write(iunit, '(3f20.6)') (units_from_atomic(unit, tensor(jj, kk)), kk=1,ndim)
+      do kk = 1, ndim
+        write(iunit, '(f20.6)', advance='no') units_from_atomic(unit, tensor(jj, kk))
+      enddo
       trace = trace + tensor(jj, jj)
+      write(iunit, '(a)')
     end do
 
     trace = units_from_atomic(unit, trace/TOFLOAT(ndim))
