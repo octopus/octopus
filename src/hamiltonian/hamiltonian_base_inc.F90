@@ -22,8 +22,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(mesh_t),                intent(in)    :: mesh
   type(states_dim_t),          intent(in)    :: std
   integer,                     intent(in)    :: ispin
-  type(batch_t), target,       intent(in)    :: psib
-  type(batch_t), target,       intent(inout) :: vpsib
+  type(batch_t),               intent(in)    :: psib
+  type(batch_t),               intent(inout) :: vpsib
 
   PUSH_SUB(X(hamiltonian_base_local))
 

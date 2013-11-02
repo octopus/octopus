@@ -360,11 +360,10 @@ contains
 
   !-----------------------------------------------------------------
     
-  subroutine hamiltonian_base_build_proj(this, mesh, epot, geo)
+  subroutine hamiltonian_base_build_proj(this, mesh, epot)
     type(hamiltonian_base_t), target, intent(inout) :: this
     type(mesh_t),                     intent(in)    :: mesh
     type(epot_t),             target, intent(in)    :: epot
-    type(geometry_t),         target, intent(in)    :: geo
 
     integer :: iatom, iproj, ll, lmax, lloc, mm, ic
     integer :: nmat, imat, ip, iorder
@@ -372,7 +371,6 @@ contains
     integer, allocatable :: order(:), head(:), region_count(:)
     logical, allocatable :: atom_counted(:)
     logical :: overlap
-    type(ps_t), pointer :: ps
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
     type(profile_t), save :: color_prof
@@ -506,7 +504,6 @@ contains
           end do
         end do
 
-        ps => species_ps(geo%atom(iatom)%spec)
         pmat => this%projector_matrices(iproj)
 
         call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat)

@@ -1150,7 +1150,7 @@ contains
 
     this%geo => geo
     call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
-    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, this%geo)
+    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, time)
 
     POP_SUB(hamiltonian_epot_generate)
