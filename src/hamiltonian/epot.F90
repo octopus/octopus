@@ -668,7 +668,6 @@ contains
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
     integer :: counter, conversion(3), nx_half, ny_half, nz_half !ROA
-    integer :: nx, ny, nz !ROA
     logical :: cmplxscl
 
     PUSH_SUB(epot_local_potential)
@@ -729,9 +728,6 @@ contains
           rho_nuc(1:der%mesh%np) = rho_nuc(1:der%mesh%np) + rho(1:der%mesh%np)
           if (iatom==geo%natoms.and.calc_gate_energy==0) then
             write(68,*) "Entering the zone"
-            nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
-            ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
-            nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
             nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
             ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
             nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1

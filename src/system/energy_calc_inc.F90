@@ -27,7 +27,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   FLOAT,   optional,   intent(in)    :: time
 
   R_TYPE, allocatable :: eigen(:, :)
-  integer :: ik
   logical :: cmplxscl
 
   PUSH_SUB(X(calculate_eigenvalues))
@@ -128,7 +127,6 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: terms
 
-  integer :: ik, ib, minst, maxst
   R_TYPE, allocatable  :: tt(:, :)
  
   PUSH_SUB(X(energy_calc_electronic))
