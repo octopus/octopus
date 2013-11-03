@@ -94,9 +94,36 @@ module symmetries_m
       integer, intent(in) :: num_atom
       real(8), intent(in) :: symprec
     end function spglib_get_group_number
-
   end interface
-  
+
+  !> these functions are defined in symmetries_finite.c  
+  interface
+    subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
+      implicit none
+      integer, intent(in)    :: atoms_count
+      integer, intent(in)    :: typs
+      real(8), intent(in)    :: position
+      integer, intent(in)    :: verbosity
+      integer, intent(out)   :: point_group
+    end subroutine symmetries_finite_init
+    
+    subroutine symmetries_finite_end()
+      implicit none
+    end subroutine symmetries_finite_end
+    
+    subroutine symmetries_finite_get_group_name(point_group, group_name)
+      implicit none
+      integer,          intent(in)    :: point_group
+      character(len=*), intent(out)   :: group_name
+    end subroutine symmetries_finite_get_group_name
+    
+    subroutine symmetries_finite_get_group_elements(point_group, group_elements)
+      implicit none
+      integer,          intent(in)    :: point_group
+      character(len=*), intent(out)   :: group_elements
+    end subroutine symmetries_finite_get_group_elements
+  end interface
+
 contains
   
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, lsize)
@@ -120,34 +147,6 @@ contains
     character(len=30) :: group_elements
     integer :: natoms, identity(3,3)
     logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
-
-    interface
-      subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
-        implicit none
-        integer, intent(in)    :: atoms_count
-        integer, intent(in)    :: typs
-        real(8), intent(in)    :: position
-        integer, intent(in)    :: verbosity
-        integer, intent(out)   :: point_group
-      end subroutine symmetries_finite_init
-
-      subroutine symmetry_finite_end()
-        implicit none
-      end subroutine symmetry_finite_end
-
-      subroutine symmetry_finite_get_group_name(point_group, group_name)
-        implicit none
-        integer,          intent(in)    :: point_group
-        character(len=*), intent(out)   :: group_name
-      end subroutine symmetry_finite_get_group_name
-
-      subroutine symmetry_finite_get_group_elements(point_group, group_elements)
-        implicit none
-        integer,          intent(in)    :: point_group
-        character(len=*), intent(out)   :: group_elements
-      end subroutine symmetry_finite_get_group_elements
-
-    end interface
 
     PUSH_SUB(symmetries_init)
 
