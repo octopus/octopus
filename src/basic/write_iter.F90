@@ -23,7 +23,7 @@ module write_iter_m
 
   implicit none
 
-  ! Define which routines can be seen from the outside.
+  !> Define which routines can be seen from the outside.
   private
 
   public ::                  &
@@ -45,52 +45,59 @@ module write_iter_m
     subroutine write_iter_init(out,  iter, factor, file)
       use c_pointer_m
       implicit none
-      type(c_ptr)      :: out
-      integer          :: iter
-      FLOAT            :: factor
-      character(len=*) :: file
+      type(c_ptr),      intent(inout) :: out
+      integer,          intent(in)    :: iter
+      FLOAT,            intent(in)    :: factor
+      character(len=*), intent(in)    :: file
     end subroutine write_iter_init
+
     subroutine write_iter_clear(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_clear
+
     subroutine write_iter_flush(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_flush
+
     subroutine write_iter_end(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_end
+
     subroutine write_iter_start(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_start
     subroutine write_iter_string(out, string)
       use c_pointer_m
       implicit none
-      type(c_ptr)      :: out
-      character(len=*) :: string
+      type(c_ptr),      intent(inout) :: out
+      character(len=*), intent(in)    :: string
     end subroutine write_iter_string
+
     subroutine write_iter_header_start(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_header_start
+
     subroutine write_iter_header(out, string)
       use c_pointer_m
       implicit none
-      type(c_ptr)      :: out
-      character(len=*) :: string
+      type(c_ptr),      intent(inout) :: out
+      character(len=*), intent(in)    :: string
     end subroutine write_iter_header
+
     subroutine write_iter_nl(out)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
+      type(c_ptr), intent(inout) :: out
     end subroutine write_iter_nl
   end interface
 
@@ -98,30 +105,33 @@ module write_iter_m
     subroutine write_iter_double_1(out, d, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      real(8)   :: d
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      real(8),     intent(in)    :: d
     end subroutine write_iter_double_1
+
     subroutine write_iter_double_n(out, d, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      real(8)   :: d(n)
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      real(8),     intent(in)    :: d(n)
     end subroutine write_iter_double_n
+
     subroutine write_iter_float_1(out, d, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      real(4)   :: d
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      real(4),     intent(in)    :: d
     end subroutine write_iter_float_1
+
     subroutine write_iter_float_n(out, d, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      real(4)   :: d(n)
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      real(4),     intent(in)    :: d(n)
     end subroutine write_iter_float_n
   end interface write_iter_double
 
@@ -129,16 +139,16 @@ module write_iter_m
     subroutine write_iter_int_1(out, i, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      integer   :: i
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      integer,     intent(in)    :: i
     end subroutine write_iter_int_1
     subroutine write_iter_int_n(out, i, n)
       use c_pointer_m
       implicit none
-      type(c_ptr) :: out
-      integer   :: n
-      integer   :: i(n)
+      type(c_ptr), intent(inout) :: out
+      integer,     intent(in)    :: n
+      integer,     intent(in)    :: i(n)
     end subroutine write_iter_int_n
   end interface write_iter_int
 
