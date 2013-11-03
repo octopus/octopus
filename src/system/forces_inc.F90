@@ -142,7 +142,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ikpoint, iop, ii, iatom_symm
   integer :: ib, maxst, minst
-  FLOAT :: kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
+  FLOAT :: ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
@@ -170,8 +170,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   do iq = st%d%kpt%start, st%d%kpt%end
 
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
-    kpoint = M_ZERO
-    kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
     do ib = st%group%block_start, st%group%block_end
       minst = states_block_min(st, ib)
