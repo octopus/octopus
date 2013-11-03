@@ -509,7 +509,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt, iter)
-    type(td_write_t),    intent(in)    :: writ
+    type(td_write_t),    intent(inout) :: writ
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
@@ -579,7 +579,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_data(writ, gr, st, hm, xc, outp, geo, iter, dt)
-    type(td_write_t),     intent(in)    :: writ
+    type(td_write_t),     intent(inout) :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -623,7 +623,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, gr, st, iter)
-    type(c_ptr), intent(in)    :: out_spin
+    type(c_ptr), intent(inout)       :: out_spin
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(in)    :: st
     integer,           intent(in)    :: iter
@@ -675,7 +675,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
-    type(c_ptr),              intent(in)    :: out_magnets
+    type(c_ptr),              intent(inout) :: out_magnets
     type(grid_t),             intent(inout) :: gr
     type(states_t),           intent(in)    :: st
     type(geometry_t),         intent(in)    :: geo
@@ -733,7 +733,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
-    type(c_ptr),            intent(in)    :: out_angular
+    type(c_ptr),            intent(inout) :: out_angular
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
@@ -805,7 +805,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
-    type(c_ptr),        intent(in) :: out_multip
+    type(c_ptr),        intent(inout) :: out_multip
     type(grid_t),       intent(in) :: gr
     type(geometry_t),   intent(in) :: geo
     type(states_t),     intent(in) :: st
@@ -963,7 +963,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_ftchd(out_ftchd, gr, st, kick, iter)
-    type(c_ptr),        intent(in) :: out_ftchd
+    type(c_ptr),        intent(inout) :: out_ftchd
     type(grid_t),       intent(in) :: gr
     type(states_t),     intent(in) :: st
     type(kick_t),       intent(in) :: kick
@@ -1069,7 +1069,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_coordinates(out_coords, gr, geo, iter)
-    type(c_ptr),       intent(in) :: out_coords
+    type(c_ptr),       intent(inout) :: out_coords
     type(grid_t),      intent(in) :: gr
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iter
@@ -1142,7 +1142,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_temperature(out_temperature, geo, iter)
-    type(c_ptr),       intent(in) :: out_temperature
+    type(c_ptr),       intent(inout) :: out_temperature
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iter
 
@@ -1179,7 +1179,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_populations(out_populations, mesh, st, writ, dt, iter)
-    type(c_ptr),            intent(in)    :: out_populations
+    type(c_ptr),            intent(inout) :: out_populations
     type(mesh_t),           intent(in)    :: mesh
     type(states_t),         intent(inout) :: st
     type(td_write_t),       intent(in)    :: writ
@@ -1257,7 +1257,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
-    type(c_ptr),         intent(in)    :: out_acc
+    type(c_ptr),         intent(inout) :: out_acc
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
@@ -1309,7 +1309,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine td_write_vel(out_vel, gr, st, iter)
-    type(c_ptr),         intent(in)    :: out_vel
+    type(c_ptr),         intent(inout) :: out_vel
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iter
@@ -1356,7 +1356,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_laser(out_laser, gr, hm, dt, iter)
-    type(c_ptr),         intent(in) :: out_laser
+    type(c_ptr),         intent(inout) :: out_laser
     type(grid_t),        intent(in) :: gr
     type(hamiltonian_t), intent(in) :: hm
     FLOAT,               intent(in) :: dt
@@ -1456,7 +1456,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_energy(out_energy, hm, iter, ke)
-    type(c_ptr),         intent(in) :: out_energy
+    type(c_ptr),         intent(inout) :: out_energy
     type(hamiltonian_t), intent(in) :: hm
     integer,             intent(in) :: iter
     FLOAT,               intent(in) :: ke
@@ -1557,7 +1557,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_eigs(out_eigs, st, iter)
-    type(c_ptr),         intent(in) :: out_eigs
+    type(c_ptr),         intent(inout) :: out_eigs
     type(states_t),      intent(in) :: st
     integer,             intent(in) :: iter
 
@@ -1640,7 +1640,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_ionch(out_ionch, gr, st, iter)
-    type(c_ptr),         intent(in) :: out_ionch
+    type(c_ptr),         intent(inout) :: out_ionch
     type(grid_t),        intent(in) :: gr
     type(states_t),      intent(in) :: st
     integer,             intent(in) :: iter
@@ -1739,7 +1739,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
-    type(c_ptr),         intent(in) :: out_gauge
+    type(c_ptr),         intent(inout) :: out_gauge
     type(hamiltonian_t), intent(in) :: hm
     type(grid_t),        intent(in) :: gr
     integer,             intent(in) :: iter
@@ -1812,7 +1812,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
-    type(c_ptr),       intent(in)    :: out_proj
+    type(c_ptr),       intent(inout) :: out_proj
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(in)    :: geo
     type(states_t),    intent(inout) :: st
@@ -2023,7 +2023,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_print_header_init(out)
-    type(c_ptr), intent(in) :: out
+    type(c_ptr), intent(inout) :: out
 
     PUSH_SUB(td_write_print_header_init)
 
@@ -2039,7 +2039,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_print_header_end(out)
-    type(c_ptr), intent(in) :: out
+    type(c_ptr), intent(inout) :: out
 
     PUSH_SUB(td_write_print_header_end)
 
