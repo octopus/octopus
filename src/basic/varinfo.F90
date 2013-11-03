@@ -58,6 +58,13 @@ module varinfo_m
       type(c_ptr), intent(out) :: desc
     end subroutine varinfo_getinfo
 
+    subroutine varinfo_getopt(var, opt)
+      use c_pointer_m
+      implicit none
+      type(c_ptr), intent(in)  :: var
+      type(c_ptr), intent(out) :: opt
+    end subroutine varinfo_getopt
+
     subroutine varinfo_opt_getinfo(opt, name, val, desc)
       use c_pointer_m
       implicit none

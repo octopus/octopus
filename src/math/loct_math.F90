@@ -250,13 +250,13 @@ module loct_math_m
     end subroutine oct_combination_next
   end interface loct_combination_next
 
-!   interface loct_get_combination
-!     subroutine oct_get_combination(c, comb)
-!       use c_pointer_m
-!       type(c_ptr),      intent(in)  :: c
-!       integer, pointer, intent(out) :: comb(:)
-!     end subroutine oct_get_combination
-!   end interface loct_get_combination
+  interface
+    subroutine oct_get_combination(c, comb)
+      use c_pointer_m
+      type(c_ptr), intent(in)  :: c
+      integer,     intent(out) :: comb
+    end subroutine oct_get_combination
+  end interface
 
   ! ---------------------------------------------------------
   !> Functions to generate random numbers
@@ -308,7 +308,6 @@ module loct_math_m
   end interface loct_fft_optimize
 
 contains
-
   
   subroutine loct_get_combination(c, comb)
     use c_pointer_m
@@ -317,7 +316,6 @@ contains
 
     call oct_get_combination(c, comb(0))
   end subroutine loct_get_combination
-
 
   !> single-precision version of the functions
   real(4) function oct_gamma4(x)
