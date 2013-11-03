@@ -41,6 +41,48 @@ module varinfo_m
       character(len=*), intent(in) :: filename
     end subroutine varinfo_init
 
+    subroutine varinfo_getvar(name, var)
+      use c_pointer_m
+      implicit none
+      character(len=*), intent(in)    :: name
+      type(c_ptr),      intent(inout) :: var
+    end subroutine varinfo_getvar
+
+    subroutine varinfo_getinfo(var, name, type, section, desc)
+      use c_pointer_m
+      implicit none
+      type(c_ptr), intent(in)  :: var
+      type(c_ptr), intent(out) :: name
+      type(c_ptr), intent(out) :: type
+      type(c_ptr), intent(out) :: section
+      type(c_ptr), intent(out) :: desc
+    end subroutine varinfo_getinfo
+
+    subroutine varinfo_opt_getinfo(opt, name, val, desc)
+      use c_pointer_m
+      implicit none
+      type(c_ptr), intent(in)  :: opt
+      type(c_ptr), intent(out) :: name
+      integer,     intent(out) :: val
+      type(c_ptr), intent(out) :: desc
+    end subroutine varinfo_opt_getinfo
+
+    subroutine varinfo_search_var(name, var)
+      use c_pointer_m
+      implicit none
+      character(len=*), intent(in)    :: name
+      type(c_ptr),      intent(inout) :: var
+    end subroutine varinfo_search_var
+
+    subroutine varinfo_search_option(var, name, val, ierr)
+      use c_pointer_m
+      implicit none
+      type(c_ptr),      intent(in)  :: var
+      character(len=*), intent(in)  :: name
+      integer,          intent(out) :: val
+      integer,          intent(out) :: ierr
+    end subroutine varinfo_search_option
+
     subroutine varinfo_end()
       implicit none
     end subroutine varinfo_end
