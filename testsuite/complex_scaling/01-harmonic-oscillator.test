@@ -22,5 +22,3 @@ match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  2.0811
 match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  0.0
 match ; 3rd state Re    ; GREPFIELD(static/info, '  3   -- ',    3) ;  5.7692
 match ; 3rd state Im    ; GREPFIELD(static/info, '  3   -- ',    4) ;  0.0
-match ; 9th state Re    ; GREPFIELD(static/info, '  9   -- ',    3) ; 17.725802
-match ; 9th state Im    ; GREPFIELD(static/info, '  9   -- ',    4) ; -0.014293
