@@ -100,6 +100,12 @@
     end if
        
     tg%move_ions = ion_dynamics_ions_move(td%ions)
+    if(tg%move_ions) then
+      message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must not allow the ions'
+      message(2) = 'to move. If you want to move the ions, then you can get the same functionality'
+      message(3) = 'with OCTTargetOperator = oct_tg_classical.'
+      call messages_fatal(3)
+    end if
        
     if(oct%algorithm  ==  oct_algorithm_cg) then
       if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
@@ -272,27 +278,22 @@
 
     tg%td_fitness(time) = M_ZERO
 
-    ! If the ions move, the target is computed in the propagation routine.
-    if(.not.target_move_ions(tg)) then
-
-      SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
-      opsi = M_z0
-      ! WARNING This does not work for spinors.
-      do iatom = 1, geo%natoms
-        geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
-        do ik = 1, psi%d%nik
-          do ist = 1, psi%nst
-            do idim = 1, gr%sb%dim
-              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
-              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
-                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
-            end do
+    SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
+    opsi = M_z0
+    ! WARNING This does not work for spinors.
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+      do ik = 1, psi%d%nik
+        do ist = 1, psi%nst
+          do idim = 1, gr%sb%dim
+            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+            geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
+              zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
           end do
         end do
       end do
-      SAFE_DEALLOCATE_A(opsi)
-
-    end if
+    end do
+    SAFE_DEALLOCATE_A(opsi)
 
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF

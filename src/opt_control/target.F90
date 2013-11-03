@@ -277,7 +277,7 @@ contains
       call target_init_velocity(gr, geo, tg, oct, td, ep)
     case(oct_tg_classical)
       call messages_experimental('OCTTargetOperator = oct_tg_classical')
-      call target_init_classical(geo, tg, td)
+      call target_init_classical(geo, tg, td, oct)
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)

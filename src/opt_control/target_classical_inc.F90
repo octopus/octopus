@@ -20,10 +20,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_classical(geo, tg, td)
+  subroutine target_init_classical(geo, tg, td, oct)
     type(geometry_t), intent(in)    :: geo
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
+    type(oct_t),      intent(in)    :: oct
 
     integer             :: jj, ist, jst
     type(block_t)       :: blk
@@ -69,8 +70,8 @@
         end do
       end do
       call parse_block_end(blk)
-    else
-      message(1) = 'If OCTTargetOperator = oct_tg_classical, then you must define the'
+    elseif(oct%algorithm  ==  oct_algorithm_cg) then
+      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg", then you must define the'
       message(2) = 'blocks "OCTClassicalTarget", "OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
       call messages_fatal(2)
     end if
@@ -83,8 +84,8 @@
         end do
       end do
       call parse_block_end(blk)
-    else
-      message(1) = 'If OCTTargetOperator = oct_tg_classical, then you must define the'
+    elseif(oct%algorithm  ==  oct_algorithm_cg) then
+      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg", then you must define the'
       message(2) = 'blocks "OCTClassicalTarget", "OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
       call messages_fatal(2)
     end if
@@ -133,7 +134,6 @@
     call parse_array(inp_string, p, 'p')
     call conv_to_C_string(inp_string)
     call parse_expression(j1, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
-    !j1 = q(1, 1)
 
     nullify(q)
     POP_SUB(target_j1_classical)

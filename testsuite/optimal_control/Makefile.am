@@ -58,7 +58,6 @@ dist_share_DATA = \
 	08-velocities.test                     \
 	08-velocities.01-ground_state.inp      \
 	08-velocities.02-oct.inp               \
-	08-velocities.03-movingions.inp        \
 	09-density+current.test                \
 	09-density+current.01-ground_state.inp \
 	09-density+current.02-oct.inp          \

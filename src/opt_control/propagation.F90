@@ -142,16 +142,10 @@ contains
     integer :: iatom
     type(states_t), pointer :: psi
 
-!!!!NEW
-    FLOAT :: tinitial, tfinal
-!!!!ENDOFNEW
-
     PUSH_SUB(propagate_forward)
 
     message(1) = "Info: Forward propagation."
     call messages_info(1)
-
-
 
     call controlfunction_to_h(par, hm%ep)
 
@@ -180,6 +174,7 @@ contains
       call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
     end if
 
+
     if(target_type(tg)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
@@ -206,8 +201,6 @@ contains
     call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
-
-    tinitial = loct_clock()    
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
@@ -241,10 +234,6 @@ contains
 
       if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
-
-    tfinal = loct_clock()    
-
-    write(*, *) 'PROPAGATED TIME', (tfinal - tinitial)
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
