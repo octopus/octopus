@@ -8,7 +8,7 @@ module fio_mesh_m
 
   use datasets_m,      only: tmpdir
   use curvilinear_m,   only: CURV_METHOD_UNIFORM, curvilinear_t
-  use checksum_m,      only: checksum_calculate
+  use checksum_interface_m
   use io_binary_m,     only: io_binary_read
   use io_m,            only: io_open, io_close
   use json_m,          only: JSON_OK, json_object_t, json_get

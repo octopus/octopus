@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_init_m
+  use checksum_interface_m
   use cube_m
   use curvilinear_m
   use datasets_m
