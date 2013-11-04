@@ -89,6 +89,16 @@ module restart_m
 
   type(profile_t), save :: prof_read, prof_write
 
+  interface ! from signals.c
+    subroutine block_signals()
+      implicit none
+    end subroutine block_signals
+
+    subroutine unblock_signals()
+      implicit none
+    end subroutine unblock_signals
+  end interface
+
 contains
 
   !> returns true if a file named stop exists

@@ -38,6 +38,7 @@ module kick_m
   use states_dim_m
   use unit_m
   use unit_system_m
+  use write_iter_m
 
   implicit none
 
@@ -482,9 +483,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kick_write(kick, iunit, out)
-    type(kick_t),          intent(in) :: kick
-    integer,    optional,  intent(in) :: iunit
-    type(c_ptr), optional, intent(in) :: out
+    type(kick_t),          intent(in)    :: kick
+    integer,    optional,  intent(in)    :: iunit
+    type(c_ptr), optional, intent(inout) :: out
 
     integer :: im
     character(len=120) :: aux

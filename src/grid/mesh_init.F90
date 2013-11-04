@@ -56,6 +56,15 @@ module mesh_init_m
     mesh_read_lead
 
   type(profile_t), save :: mesh_init_prof
+
+  interface
+    subroutine hilbert_index_to_point(dim, nbits, index, point)
+      integer,   intent(in)  :: dim
+      integer,   intent(in)  :: nbits
+      integer*8, intent(in)  :: index
+      integer,   intent(out) :: point(:) !< (3)
+    end subroutine hilbert_index_to_point
+  end interface
   
 contains
 
