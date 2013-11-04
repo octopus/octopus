@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_MPI])
 acx_isf_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(isf-prefix, [AS_HELP_STRING([--with-isf-prefix=<lib>], [From version 1.7-dev.27, it is possible to compile only the Poisson Solver in a separate library, by using --disable-libbigdft in conjonction with --disable-binaries. The compilation will then enter in the PSolver/ subdirectory, compile libPSolver-1.a and stop. More information: http://bigdft.org])])
+AC_ARG_WITH(isf-prefix, [AS_HELP_STRING([--with-isf-prefix=<lib>], [From version 1.7-dev.27, it is possible to compile only the Poisson Solver in a separate library, by using --disable-libbigdft in conjunction with --disable-binaries. The compilation will then enter in the PSolver/ subdirectory, compile libPSolver-1.a and stop. More information: http://bigdft.org])])
 case $with_isf_prefix in
   yes | "") ;;
   no) acx_isf_ok=disable ;;
