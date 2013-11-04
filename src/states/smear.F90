@@ -237,9 +237,8 @@ contains
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     integer            :: ist, ik, iter
     FLOAT              :: drange, xx, emin, emax, sumq, dsmear
-    logical            :: conv, cmplxscl
+    logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
-    FLOAT,   allocatable :: Imeigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
     PUSH_SUB(smear_find_fermi_energy)
@@ -364,15 +363,10 @@ contains
     FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)
 
     integer :: ik, ist, ifermi
-    FLOAT   :: dsmear, xx, ixx
-    logical :: cmplxscl
+    FLOAT   :: dsmear, xx
 
     PUSH_SUB(smear_fill_occupations)
 
-    cmplxscl = .false.
-    if(present(Imeigenvalues)) cmplxscl = .true. 
-    ixx = M_ONE
-    
     if(this%method == SMEAR_FIXED_OCC) then
       ! do nothing
     else if(this%method == SMEAR_SEMICONDUCTOR) then

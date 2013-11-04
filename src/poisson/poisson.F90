@@ -688,10 +688,7 @@ contains
     integer :: ny_half, ny
     integer :: nz_half, nz
 
-    FLOAT :: xl, yl, zl
-
     FLOAT, allocatable :: vh0(:,:,:), rh0(:,:,:)
-
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
@@ -792,11 +789,6 @@ contains
       SAFE_ALLOCATE(rh0(1:nx, 1:ny, 1:nz))
       SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
 
-      ! The %size gives out half the size of a box. 
-      xl = 2*der%mesh%sb%lsize(1) 
-      yl = 2*der%mesh%sb%lsize(2) 
-      zl = 2*der%mesh%sb%lsize(3)
-
       do counter = 1, der%mesh%np
         call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
         conversion(1)=conversion(1)+nx_half
@@ -839,7 +831,7 @@ contains
     type(mesh_t), intent(in) :: mesh
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
-    FLOAT :: alpha, beta, rr, delta, norm, ralpha, hartree_nrg_num, &
+    FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 
     FLOAT :: total_charge
     integer :: ip, idir, ierr, iunit, nn, n_gaussians, times, itime
@@ -873,8 +865,6 @@ contains
 
     rho = M_ZERO
     do nn = 1, n_gaussians
-      norm = M_ZERO
-
       do idir = 1, mesh%sb%dim
         xx(idir, nn) = 0.000 
       end do
@@ -885,8 +875,6 @@ contains
         rhop(ip) = beta*exp(-(rr/alpha)**2)
       end do
 
-      norm = dmf_integrate(mesh, rhop)
-      
       rhop = (-1)**nn * rhop
       do ip = 1, mesh%np 
         rho(ip) = rho(ip) + rhop(ip)
