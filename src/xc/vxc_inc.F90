@@ -1182,7 +1182,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   logical,      intent(in)  :: polarized
 
   CMPLX, allocatable    :: rootrs(:), epsc(:), depsdrs(:), epsc1(:), zrhototal(:), &
-    depsdrs1(:), alpha(:), dalphadrs(:), zeta(:), xplus(:), xminus(:)!, decdzeta(:)
+    depsdrs1(:), alpha(:), dalphadrs(:), zeta(:), xplus(:), xminus(:)
   
   FLOAT, parameter :: C0I = 0.238732414637843, C1 = -0.45816529328314287, &
     CC1 = 1.9236610509315362, CC2 = 2.5648814012420482, IF2 = 0.58482236226346462
@@ -1191,14 +1191,12 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   
   PUSH_SUB(zxc_lda_correlation)
 
-  SAFE_ALLOCATE(zeta(1:mesh%np))
   SAFE_ALLOCATE(rootrs(1:mesh%np))
   SAFE_ALLOCATE(zrhototal(1:mesh%np))
   SAFE_ALLOCATE(epsc(1:mesh%np))
   SAFE_ALLOCATE(depsdrs(1:mesh%np))
 
   zrhototal(:) = sum(zrho, 2)
-  zeta(:) = (zrho(:, 1) - zrho(:, 2)) / (1e-30 + zrhototal(:))
   rootrs(:) = (M_THREE / (1e-30 + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / M_SIX)
   call localstitch(mesh, rootrs, get_root6_branch)
   
@@ -1206,12 +1204,15 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
     CNST(0.031091), CNST(0.21370), CNST(7.5957), CNST(3.5876), CNST(1.6382), CNST(0.49294))
 
   if(polarized) then
+    SAFE_ALLOCATE(zeta(1:mesh%np))
     SAFE_ALLOCATE(epsc1(1:mesh%np))
     SAFE_ALLOCATE(depsdrs1(1:mesh%np))
     SAFE_ALLOCATE(alpha(1:mesh%np))
     SAFE_ALLOCATE(dalphadrs(1:mesh%np))
     SAFE_ALLOCATE(xplus(1:mesh%np))
     SAFE_ALLOCATE(xminus(1:mesh%np))
+
+    zeta(:) = (zrho(:, 1) - zrho(:, 2)) / (1e-30 + zrhototal(:))
 
     call zxc_complex_lda_gamma(mesh, rootrs, epsc1, depsdrs1, &
       CNST(0.015545), CNST(0.20548), CNST(14.1189), CNST(6.1977), CNST(3.3662), CNST(0.62517))
@@ -1248,6 +1249,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
     SAFE_DEALLOCATE_A(dalphadrs)
     SAFE_DEALLOCATE_A(xplus)
     SAFE_DEALLOCATE_A(xminus)
+    SAFE_DEALLOCATE_A(zeta)
   else
     zvc(:, 1) = epsc(:) - rootrs(:)**2 * depsdrs(:) / M_THREE
     zec = sum(epsc(:) * zrho(:, 1)) * mesh%volume_element
@@ -1256,7 +1258,6 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   SAFE_DEALLOCATE_A(epsc)
   SAFE_DEALLOCATE_A(depsdrs)
   SAFE_DEALLOCATE_A(rootrs)
-  SAFE_DEALLOCATE_A(zeta)
   SAFE_DEALLOCATE_A(zrhototal)
 
   POP_SUB(zxc_lda_correlation)
@@ -1273,21 +1274,13 @@ subroutine zxc_complex_lda(mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   CMPLX, optional, intent(inout) :: zec
 
   ! LDA correlation parameters
-  !CMPLX                 :: zex, zec
-  integer               :: N, nspin
+  integer               :: N
   logical               :: calc_energy
   CMPLX                 :: zenergies1(2), zenergies2(2)
   CMPLX                 :: zextmp
 
   PUSH_SUB(zxc_complex_lda)
-
-  if (ispin == UNPOLARIZED) then
-    nspin = 1
-  else
-    ASSERT(ispin == SPIN_POLARIZED)
-    nspin = 2
-  end if
-
+  
   if(ispin == UNPOLARIZED) then
     call zxc_lda_exchange(mesh, zrho(:, 1), zvx(:, 1), zex, theta)
   else
@@ -1322,7 +1315,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   CMPLX, optional,      intent(inout) :: zex
   CMPLX, optional,      intent(inout) :: zec
 
-  integer               :: nn, nspin
+  integer               :: nn
   logical               :: calc_energy
   CMPLX                 :: zenergies1(2), zenergies2(2) ! XXX sum/broadcast
   CMPLX                 :: zextmp
