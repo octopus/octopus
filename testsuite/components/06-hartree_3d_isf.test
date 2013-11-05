@@ -8,4 +8,4 @@ Enabled    : Yes
 
 Precision : 0.005
 Input: 06-hartree_3d_isf.01-isf.inp
-match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 1.00035845
+match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035845
