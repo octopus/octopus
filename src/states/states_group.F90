@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states.F90 10697 2013-05-23 10:56:09Z acastro $
+!! $Id$
 
 #include "global.h"
 

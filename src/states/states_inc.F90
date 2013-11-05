@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states_inc.F90 7770 2011-04-26 00:51:17Z dstrubbe $
+!! $Id$
 
 subroutine X(states_get_state2)(st, mesh, ist, iqn, psi, left)
   type(states_t),    intent(in)    :: st

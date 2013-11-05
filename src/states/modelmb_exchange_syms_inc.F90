@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states.F90 5022 2009-03-03 17:47:58Z nitsche $
+!! $Id$
 
 !> project out states with proper symmetry for cases which are of symmetry = unknown
 subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &

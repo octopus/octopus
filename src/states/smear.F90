@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states.F90 4223 2008-05-31 13:28:56Z acastro $
+!! $Id$
 
 ! Some pieces glued from PW/w(0,1)gauss.f90 from PWSCF
 

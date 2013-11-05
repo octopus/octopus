@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: derivatives.F90 5812 2009-08-13 10:18:31Z marques $
+!! $Id$
 
 ! ---------------------------------------------------------
 !> The action of the angular momentum operator (three spatial components).

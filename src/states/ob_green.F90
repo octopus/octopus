@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
+!! $Id$
 
 ! Lead-related routines for open boundaries.
 
@@ -39,15 +39,15 @@ module ob_green_m
 
 contains
 
-  ! calculate the lead self-energy
-  ! prefer the fast method if possible, but if not converged check also other method
+  !> calculate the lead self-energy
+  !! prefer the fast method if possible, but if not converged check also other method
   subroutine lead_self_energy(energy, diag, offdiag, intf, self_energy, h_is_real)
-    FLOAT,             intent(in)  :: energy        ! Energy to calculate Green`s function for.
-    CMPLX,             intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
-    CMPLX,             intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
-    type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
-    CMPLX,             intent(inout) :: self_energy(:, :) ! The calculated self_energy.
-    logical,           intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
+    FLOAT,             intent(in)  :: energy              !< Energy to calculate Green`s function for.
+    CMPLX,             intent(in)  :: diag(:, :)          !< Diagonal block of lead Hamiltonian.
+    CMPLX,             intent(in)  :: offdiag(:, :)       !< Off-diagonal block of lead Hamiltonian.
+    type(interface_t), intent(in)  :: intf                !< => gr%intf(il)
+    CMPLX,             intent(inout) :: self_energy(:, :) !< The calculated self_energy.
+    logical,           intent(in)  :: h_is_real           !< Is the Hamiltonian real? (no vector potential)
 
     integer            :: np, np_uc
     FLOAT              :: threshold, eta, residual, residual2, eps
@@ -123,8 +123,8 @@ contains
   end subroutine lead_self_energy
 
 
-  ! check if the Green`s function gives the correct density of states
-  ! if not compute its Hermitian conjugate
+  !> check if the Green`s function gives the correct density of states
+  !! if not compute its Hermitian conjugate
   subroutine fix_green(np, green)
     integer, intent(in)    :: np
     CMPLX,   intent(inout) :: green(:, :)
@@ -157,7 +157,7 @@ contains
   end subroutine fix_green
 
 
-  ! calculate the residual of the Green`s function
+  !> calculate the residual of the Green`s function
   FLOAT function calc_residual_green(energy, green, diag, offdiag, intf) result(residual)
     FLOAT,   intent(in) :: energy
     CMPLX,   intent(in) :: green(:, :)
@@ -203,19 +203,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate head of the semi-infinite surface Green`s function with the
-  ! algorithm from the paper
-  ! Highly convergent schemes for the calculation of bulk and surface Green`s functions
-  ! M. P. Lopez Sancho, J. M. Lopez Sancho, and J. Rubio (1984)
-  ! J. Phys. F: Met. Phys. 15 (1985) 851-858
+  !> Calculate head of the semi-infinite surface Green`s function with the
+  !! algorithm from the paper
+  !! Highly convergent schemes for the calculation of bulk and surface Green`s functions
+  !! M. P. Lopez Sancho, J. M. Lopez Sancho, and J. Rubio (1984)
+  !! J. Phys. F: Met. Phys. 15 (1985) 851-858
   subroutine lead_green_sancho(energy, diag, offdiag, np, green, threshold, h_is_real)
-    CMPLX,   intent(in)  :: energy        ! Energy to calculate Green`s function for (already shifted).
-    CMPLX,   intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
-    CMPLX,   intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
-    integer, intent(in)  :: np            ! Number of interface points.
-    CMPLX,   intent(out) :: green(:, :)   ! The calculated Green`s function.
-    FLOAT,   intent(in)  :: threshold     ! this defines convergence
-    logical, intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
+    CMPLX,   intent(in)  :: energy        !< Energy to calculate Green`s function for (already shifted).
+    CMPLX,   intent(in)  :: diag(:, :)    !< Diagonal block of lead Hamiltonian.
+    CMPLX,   intent(in)  :: offdiag(:, :) !< Off-diagonal block of lead Hamiltonian.
+    integer, intent(in)  :: np            !< Number of interface points.
+    CMPLX,   intent(out) :: green(:, :)   !< The calculated Green`s function.
+    FLOAT,   intent(in)  :: threshold     !< this defines convergence
+    logical, intent(in)  :: h_is_real     !< Is the Hamiltonian real? (no vector potential)
 
     CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
@@ -300,10 +300,10 @@ contains
   end subroutine lead_green_sancho
 
 
-  ! create the Moebius transformation matrix which is to be diagonalized
-  ! (or used to create the matrices for the final transformation matrix)
+  !> create the Moebius transformation matrix which is to be diagonalized
+  !! (or used to create the matrices for the final transformation matrix)
   subroutine create_moeb_trans_matrix(intf, energy, diag, offdiag, matrix)
-    type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
+    type(interface_t), intent(in)  :: intf          !< => gr%intf(il)
     CMPLX,             intent(in)  :: energy
     CMPLX,             intent(in)  :: diag(1:intf%np_intf, 1:intf%np_intf)
     CMPLX,             intent(in)  :: offdiag(1:intf%np_intf, 1:intf%np_intf)
@@ -353,14 +353,14 @@ contains
   end subroutine create_moeb_trans_matrix
 
   
-  ! extract from the periodic Hamiltonian the submatrices of the size
-  ! of the interface
+  !> extract from the periodic Hamiltonian the submatrices of the size
+  !! of the interface
   subroutine extract_sub_matrices(intf, diag, offdiag, h, v)
-    type(interface_t), intent(in)  :: intf          ! => gr%intf(il)
-    CMPLX,   intent(in)    :: diag(1:intf%np_uc, 1:intf%np_uc)   ! the lead diagonal (of the unit cell)
-    CMPLX,   intent(in)    :: offdiag(1:intf%np_uc, 1:intf%np_uc)! the lead off-diagonal (of the unit cell)
-    CMPLX,   intent(out)   :: h(:, :, :) ! the diagonal sub blocks
-    CMPLX,   intent(out)   :: v(:, :, :) ! the off-diagonal sub blocks
+    type(interface_t), intent(in)  :: intf                       !< => gr%intf(il)
+    CMPLX,   intent(in)    :: diag(1:intf%np_uc, 1:intf%np_uc)   !< the lead diagonal (of the unit cell)
+    CMPLX,   intent(in)    :: offdiag(1:intf%np_uc, 1:intf%np_uc)!< the lead off-diagonal (of the unit cell)
+    CMPLX,   intent(out)   :: h(:, :, :)                         !< the diagonal sub blocks
+    CMPLX,   intent(out)   :: v(:, :, :)                         !< the off-diagonal sub blocks
 
     integer :: ni, iblock, np
 
@@ -394,9 +394,9 @@ contains
   end subroutine extract_sub_matrices
 
 
-  ! compute the semi-infinite surface Green`s function
-  ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
-  ! http://www.city.ac.uk/sems/dps/mathematics/research/nanostructures/prb55_5266.pdf
+  !> compute the semi-infinite surface Green`s function
+  !! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
+  !! http://www.city.ac.uk/sems/dps/mathematics/research/nanostructures/prb55_5266.pdf
   subroutine lead_green_umerski(energy, diag, offdiag, intf, green)
     CMPLX,     intent(in)  :: energy
     CMPLX,     intent(in)  :: diag(:, :)
