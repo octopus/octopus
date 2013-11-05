@@ -1,0 +1,41 @@
+CalculationMode = gs
+
+ExperimentalFeatures = yes
+ComplexScaling = space
+ComplexScalingTheta = 0.3
+
+Dimensions = 1
+ForceComplex = true # arpack solver works only if ForceComplex
+BoxShape = sphere
+fromScratch = yes
+Spacing = 0.04
+Radius = 10
+ExtraStates = 4
+XCFunctional = pbe_xc_cmplx
+PoissonSolver = direct_sum
+#SpinComponents = polarized
+
+# recommended 2 * nstates + 1 or more
+EigenSolverArnoldiVectors = 24
+
+#TheoryLevel = independent_particles
+TheoryLevel = DFT
+
+Eigensolver = arpack
+
+eith = exp(i * ComplexScalingTheta)
+
+d0 = 1
+
+%Species
+ 'ATOM' | 1 | spec_user_defined | 3 | "-4 * exp(-0.5*(x*eith)^2)"
+ 'FIELD' | 1 | spec_user_defined | 0 | "0.4 * (x + d0) * eith"
+%
+
+%Coordinates
+ 'ATOM' | 0
+ 'FIELD' | d0
+%
+
+Output = wfs + density + potential
+OutputHow = axis_x

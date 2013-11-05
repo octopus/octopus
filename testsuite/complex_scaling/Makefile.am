@@ -24,6 +24,8 @@ dist_share_DATA = \
 	01-harmonic-oscillator.02-complex_lda.inp \
 	01-harmonic-oscillator.test \
 	02-1dwell.01-lda.inp \
-	02-1dwell.test
+	02-1dwell.test \
+        03-stark.01-1d.inp \
+        03-stark.test
 
 CLEANFILES = *~ *.bak

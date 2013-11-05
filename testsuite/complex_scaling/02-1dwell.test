@@ -7,6 +7,10 @@ TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
 Processors: 1
+
+# Calculate a resonance where electrons tunnel out of a well
+# Minus twice the imaginary part of the total energy is the lifetime
+# (The Kohn-Sham energies do not have any real physical meaning)
 Input: 02-1dwell.01-lda.inp
 match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  -41.06552818
 match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  -4.267637E-03
