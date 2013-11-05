@@ -1,0 +1,15 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Hartree ISF
+Options    : libisf
+Programs   : oct-test; oct-test_mpi
+TestGroups : short-run, components
+Enabled    : Yes
+
+Precision : 0.005
+Input: 16-hartree_3d_libisf.01-libisf.inp
+match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035845
+
+Input: 16-hartree_3d_libisf.02-libisf.inp
+match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035845

@@ -77,11 +77,10 @@ module poisson_libisf_m
     !!                between the processors may overlap.
     character(len = 1) :: datacode = "G" 
 
-    integer :: isf_order !< order of the interpolating scaling functions used in the decomposition 
+    integer :: isf_order           !< order of the interpolating scaling functions used in the decomposition 
     integer :: localnscatterarr(5)
-    
-    integer     :: rs_n_global(3) !< total size of the fft in each direction in real space
-    integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
+    integer :: rs_n_global(3)      !< total size of the fft in each direction in real space
+    integer :: rs_istart(1:3)      !< where does the local portion of the function start in real space
 
   end type poisson_libisf_t
 
@@ -115,7 +114,7 @@ contains
     !%Option false
     !% Entire vector is saved in all the MPI processes
     !%End
-    call parse_logical('PoissonSolverISFParallelData', .false., data_is_parallel)
+    call parse_logical('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
       this%datacode = "D"
     else 
@@ -138,9 +137,6 @@ contains
 
     PUSH_SUB(poisson_libisf_end)
 
-    write(message(1),*) "memory has to be deallocated in LIBISF"
-    call messages_warning(1)
-
     POP_SUB(poisson_libisf_end)
   end subroutine poisson_libisf_end
 
@@ -155,16 +151,16 @@ contains
 #ifdef HAVE_LIBISF
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
-    double precision :: hartree_energy !<  Hartree energy
-    double precision :: offset !< offset  Total integral on the supercell of the final potential on output
-    !!                To be used only in the periodic case, ignored for other boundary conditions.
+    double precision :: hartree_energy !<  Hartree energy 
+    !> offset:  Total integral on the supercell of the final potential on output.
+    !! To be used only in the periodic case, ignored for other boundary conditions.
+    double precision :: offset
 
-     
-    double precision, allocatable :: pot_ion(:,:,:) !< pot_ion additional  external potential
-    !that is added to the output
-    !!                when the XC parameter ixc/=0 and sumpion=.true.
-    !!                When sumpion=.true., it is always provided in the distributed form,
-    !!                clearly without the overlapping terms which are needed only for the XC part
+    !> pot_ion:  additional external potential that is added to the output
+    !! when the XC parameter ixc/=0 and sumpion=.true.
+    !! When sumpion=.true., it is always provided in the distributed form,
+    !! clearly without the overlapping terms which are needed only for the XC part
+    double precision, allocatable :: pot_ion(:,:,:) 
 
     double precision :: strten(6)
     PUSH_SUB(poisson_libisf_parallel_solve)
@@ -184,10 +180,6 @@ contains
 
     call dcube_function_free_RS(cube, cf)
 
-    !! @TODO: All the other deallocations
-    write(message(1),*) "memory has to be deallocated in LIBISF"
-    call messages_warning(1)
-    
     POP_SUB(poisson_libisf_parallel_solve)
 #endif
   end subroutine poisson_libisf_parallel_solve
@@ -204,15 +196,16 @@ contains
 #ifdef HAVE_LIBISF
     type(cube_function_t) :: cf
     double precision :: hartree_energy !<  Hartree energy
-    double precision :: offset !< offset  Total integral on the supercell of the final potential on output
-    !!                To be used only in the periodic case, ignored for other boundary conditions.
+    
+    !> offset:  Total integral on the supercell of the final potential on output
+    !! To be used only in the periodic case, ignored for other boundary conditions.
+    double precision :: offset 
 
-     
-    double precision, allocatable ::  pot_ion(:,:,:) !< pot_ion additional  external potential
-    !!                that is added to the output
-    !!                when the XC parameter ixc/=0 and sumpion=.true.
-    !!                When sumpion=.true., it is always provided in the distributed form,
-    !!                clearly without the overlapping terms which are needed only for the XC part
+    !> pot_ion:  additional external potential
+    !! that is added to the output when the XC parameter ixc/=0 and sumpion=.true.
+    !! When sumpion=.true., it is always provided in the distributed form,
+    !! clearly without the overlapping terms which are needed only for the XC part
+    double precision, allocatable ::  pot_ion(:,:,:) 
 
     double precision :: strten(6)
 
@@ -229,7 +222,7 @@ contains
 
     call H_potential(this%datacode, this%kernel, &
          cf%dRS,  pot_ion, hartree_energy, offset, .false., &
-         quiet = "NO ", stress_tensor = strten) !optional argument
+         quiet = "YES ", stress_tensor = strten) !optional argument
 
     if(mesh%parallel_in_domains) then
       call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
@@ -238,10 +231,6 @@ contains
     end if
 
     call dcube_function_free_RS(cube, cf)
-
-    !! @TODO: All the other deallocations
-    write(message(1),*) "memory has to be deallocated in LIBISF"
-    call messages_warning(1)
 
     POP_SUB(poisson_libisf_global_solve)
 #endif
@@ -283,9 +272,9 @@ contains
     !!                For global disposition i3s is equal to distributed case with i3xcsh=0.
     integer :: i3s
 
-    !> use_gradient   .true. if functional is using the gradient.
+    !> use_gradient:  .true. if functional is using the gradient.
     logical :: use_gradient = .false.
-    !> use_wb_corr    .true. if functional is using WB corrections.
+    !> use_wb_corr:  .true. if functional is using WB corrections.
     logical :: use_wb_corr = .false.
 
     PUSH_SUB(poisson_libisf_get_dims)
