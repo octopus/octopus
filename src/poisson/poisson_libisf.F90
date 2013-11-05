@@ -173,7 +173,7 @@ contains
     call profiling_in(prof,"ISF_LIBRARY")
     call H_potential(this%datacode, this%kernel, &
          cf%dRS, pot_ion, hartree_energy, offset, .false., &
-         quiet = "NO ", stress_tensor = strten) !optional argument
+         quiet = "YES ", stress_tensor = strten) !optional argument
     call profiling_out(prof)
 
     call dcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
