@@ -1197,7 +1197,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   SAFE_ALLOCATE(depsdrs(1:mesh%np))
 
   zrhototal(:) = sum(zrho, 2)
-  rootrs(:) = (M_THREE / (1e-30 + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / M_SIX)
+  rootrs(:) = (M_THREE / (CNST(1e-30) + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / M_SIX)
   call localstitch(mesh, rootrs, get_root6_branch)
   
   call zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, &
@@ -1212,7 +1212,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
     SAFE_ALLOCATE(xplus(1:mesh%np))
     SAFE_ALLOCATE(xminus(1:mesh%np))
 
-    zeta(:) = (zrho(:, 1) - zrho(:, 2)) / (1e-30 + zrhototal(:))
+    zeta(:) = (zrho(:, 1) - zrho(:, 2)) / (CNST(1e-30) + zrhototal(:))
 
     call zxc_complex_lda_gamma(mesh, rootrs, epsc1, depsdrs1, &
       CNST(0.015545), CNST(0.20548), CNST(14.1189), CNST(6.1977), CNST(3.3662), CNST(0.62517))
@@ -1319,6 +1319,8 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   logical               :: calc_energy
   CMPLX                 :: zenergies1(2), zenergies2(2) ! XXX sum/broadcast
   CMPLX                 :: zextmp
+
+  ! XXX Some of the float parameters are repeated in LDA.  Define globally or something?
   FLOAT, parameter      :: &
     mu = 0.2195149727645171, kappa = 0.804, C0I = 0.238732414637843, &
     C1 = -0.45816529328314287, C2 = 0.26053088059892404, C3 = 0.10231023756535741, &

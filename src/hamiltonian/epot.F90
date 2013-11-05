@@ -554,7 +554,10 @@ contains
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
     FLOAT,    allocatable :: density(:)
+    FLOAT,    allocatable :: Imdensity(:)
     FLOAT,    allocatable :: tmp(:)
+    CMPLX,    allocatable :: zdensity(:)
+    CMPLX,    allocatable :: ztmp(:)
     type(profile_t), save :: epot_reduce
 
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
@@ -565,6 +568,10 @@ contains
 
     SAFE_ALLOCATE(density(1:mesh%np))
     density = M_ZERO
+    if(cmplxscl) then
+      SAFE_ALLOCATE(Imdensity(1:mesh%np))
+      Imdensity = M_ZERO
+    end if
 
     ! Local part
     ep%vpsl = M_ZERO
@@ -575,15 +582,15 @@ contains
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
         if(cmplxscl) then
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl, &
-          rho_core = st%rho_core, density = density)
+          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl, &
+            rho_core = st%rho_core, density = density, Imdensity = Imdensity)
         else
         call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
         end if
       else
         if(cmplxscl) then
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl, density = density)
+          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl, density = density, Imdensity = Imdensity)
         else
           call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
         end if
@@ -597,23 +604,36 @@ contains
       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ep%vpsl, dim = gr%mesh%np)
       if(associated(st%rho_core)) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
       if(ep%have_density) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
-
+      ASSERT(.not.cmplxscl) ! not implemented
       call profiling_out(epot_reduce)
     end if
 
     if(ep%have_density) then
       ! now we solve the poisson equation with the density of all nodes
-      SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
 
-      if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
+      if(cmplxscl) then
+        SAFE_ALLOCATE(ztmp(1:mesh%np))
+        SAFE_ALLOCATE(zdensity(1:mesh%np))
+        ztmp(:) = M_ZERO
+        zdensity(:) = density(:) + M_zI * Imdensity(:)
+        call zpoisson_solve(ep%poisson_solver, ztmp, zdensity)
+        forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + real(ztmp(ip), REAL_PRECISION)
+        forall(ip = 1:mesh%np) ep%Imvpsl(ip) = ep%Imvpsl(ip) + aimag(ztmp(ip))
+        SAFE_DEALLOCATE_A(zdensity)
+        SAFE_DEALLOCATE_A(ztmp)
+      else
+        SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
+        if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
+        call dpoisson_solve(ep%poisson_solver, tmp, density)
+        forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+        SAFE_DEALLOCATE_A(tmp)
+      end if
 
-      call dpoisson_solve(ep%poisson_solver, tmp, density)
-
-      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
-
-      SAFE_DEALLOCATE_A(tmp)
     end if
     SAFE_DEALLOCATE_A(density)
+    if(cmplxscl) then
+      SAFE_DEALLOCATE_A(Imdensity)
+    end if
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo, sb, gr, ep, ep%eii, ep%fii)
@@ -651,7 +671,7 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density)
+  subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
     type(epot_t),             intent(inout) :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
@@ -661,6 +681,7 @@ contains
     FLOAT,          optional, intent(inout) :: Imvpsl(:)
     FLOAT,          optional, pointer       :: rho_core(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
+    FLOAT,          optional, intent(inout) :: Imdensity(:) !< ...and here, for complex scaling
 
     integer :: ip
     FLOAT :: radius
@@ -674,7 +695,11 @@ contains
     call profiling_in(prof, "EPOT_LOCAL")
 
     cmplxscl = present(Imvpsl)
-
+    if(present(Imdensity)) then
+      ASSERT(cmplxscl)
+      ASSERT(present(density))
+    end if
+    
     if(ep%local_potential_precalculated) then
 
       forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
@@ -699,6 +724,9 @@ contains
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
+          if(cmplxscl) then
+            forall(ip = 1:der%mesh%np) Imdensity(ip) = Imdensity(ip) + Imrho(ip)
+          end if
         else
 
           SAFE_ALLOCATE(vl(1:der%mesh%np))
@@ -714,7 +742,7 @@ contains
           end if
 
           call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
-          if (cmplxscl) then
+          if (cmplxscl) then ! XXX this will not work for 1D because of soft-Coulomb not being Coulomb
             call dpoisson_solve(ep%poisson_solver, Imvl, Imrho, all_nodes = .false.)
           end if
         end if
@@ -751,7 +779,7 @@ contains
           SAFE_ALLOCATE(Imvl(1:der%mesh%np))
           call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, Imvl)
         else
-          call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)                      
+          call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
         end if
       end if
 
@@ -781,6 +809,7 @@ contains
         enddo
 
         SAFE_DEALLOCATE_A(vl)
+        ASSERT(.not.cmplxscl)
         call submesh_end(sphere)
 
       end if
@@ -797,7 +826,6 @@ contains
       SAFE_DEALLOCATE_A(rho)
       SAFE_DEALLOCATE_A(Imrho)
     end if
-
 
     call profiling_out(prof)
     POP_SUB(epot_local_potential)
