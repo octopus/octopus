@@ -72,7 +72,7 @@ dnl First, check LIBS_ISF environment variable
 if test x"$acx_isf_ok" = xno; then
   LIBS="$LIBS_ISF $LIBS_LAPACK $LIBS_BLAS $acx_isf_save_LIB"
   AC_MSG_CHECKING([for isf library])
-  AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; LIBS_ISF="$LIBS_ISF $LIBS_LAPACK $LIBS_BLAS"], [])
+  AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; LIBS_ISF="$LIBS_ISF "], [])
   if test $acx_isf_ok = no; then
     AC_MSG_RESULT([$acx_isf_ok])
   else
@@ -90,7 +90,7 @@ if test $acx_isf_ok = no; then
   else
     LIBS="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit $LIBS_LAPACK $LIBS_BLAS $acx_isf_save_LIB"
     AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; 
-                                  LIBS_ISF="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit $LIBS_LAPACK $LIBS_BLAS"], [])  
+                                  LIBS_ISF="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit "], [])  
   fi
   if test $acx_isf_ok = no; then
     AC_MSG_RESULT([$acx_isf_ok])
