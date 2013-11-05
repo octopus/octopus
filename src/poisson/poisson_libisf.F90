@@ -102,17 +102,18 @@ contains
     this%isf_order = 16
 
     !%Variable PoissonSolverISFParallelData
-    !%Type float
-    !%Section Hamiltonian::Poisson
+    !%Type logical
+    !%Section Hamiltonian::Poisson::ISF
     !%Description
-    !% Indicates the distribution of the data of the input/output array
-    !%
-    !% Default
+    !% Indicates whether data is partitioned within the ISF library.
+    !% If data is distributed among processes, Octopus uses parallel data-structures 
+    !% and, thus, less memory.
+    !%Default
     !% true
     !%Option true
-    !% Z axis of the rho vector is split among the MPI processes
+    !% Data is parallelized. The Z axis of the input (rho) vector is split among the MPI processes
     !%Option false
-    !% Entire vector is saved in all the MPI processes
+    !% Entire input and output vector is saved in all the MPI processes
     !%End
     call parse_logical('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
