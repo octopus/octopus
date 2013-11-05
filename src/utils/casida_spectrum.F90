@@ -234,16 +234,15 @@ contains
       endif
 
       energy = units_to_atomic(units_out%energy, energy)
+      ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
+      ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
+      tm_sq(1:cs%space%dim) = (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), re_tm(1:cs%space%dim)))**2
+      if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + &
+        (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), im_tm(1:cs%space%dim)))**2
+      ff(1:cs%space%dim) = M_TWO * energy * tm_sq(1:cs%space%dim)
 
       do istep = 1, nsteps
         omega = cs%min_energy + real(istep-1, REAL_PRECISION)*cs%energy_step
-
-        ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
-        ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
-        tm_sq(1:cs%space%dim) = (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), re_tm(1:cs%space%dim)))**2
-        if(is_complex) tm_sq(1:cs%space%dim) = tm_sq(1:cs%space%dim) + &
-          (matmul(rotation(1:cs%space%dim, 1:cs%space%dim), im_tm(1:cs%space%dim)))**2
-        ff(1:cs%space%dim) = M_TWO * energy * tm_sq(1:cs%space%dim)
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
