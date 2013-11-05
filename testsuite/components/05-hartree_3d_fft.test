@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+# $Id$
 
 Test       : Hartree FFT
 Programs   : oct-test; oct-test_mpi

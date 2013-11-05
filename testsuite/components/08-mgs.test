@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 07-gram_schmidt.test 2423 2006-09-24 21:25:52Z acastro $
+# $Id$
 
 Test       : Modified Gram-Schmidt orthogonalization
 Programs   : oct-test; oct-test_mpi

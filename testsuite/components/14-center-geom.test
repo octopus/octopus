@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 01-casida.test 10206 2013-03-11 22:10:21Z dstrubbe $
+# $Id$
 
 Test       : oct-center-geom
 Programs   : octopus; octopus_mpi

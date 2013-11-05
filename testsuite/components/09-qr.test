@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 09-qr.test 2423 2006-09-24 21:25:52Z acastro $
+# $Id$
 
 Test       : QR orthogonalization
 Options    : scalapack
