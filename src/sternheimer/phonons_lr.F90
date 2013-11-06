@@ -274,9 +274,9 @@ contains
       
       if(do_infrared) then
         if(states_are_real(st)) then
-          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared, born)
+          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         else
-          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared, born)
+          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         endif
       endif
 
@@ -296,6 +296,7 @@ contains
         message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
         call messages_info(1)
       else
+        call born_from_infrared(vib, born)
         call out_Born_charges(born, geo, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
       endif
@@ -426,6 +427,25 @@ contains
     end subroutine calc_infrared
 
   end subroutine phonons_lr_run
+
+
+  ! ---------------------------------------------------------
+  subroutine born_from_infrared(vib, born)
+    type(vibrations_t),   intent(in)    :: vib
+    type(Born_charges_t), intent(inout) :: born
+
+    integer :: imat, idir, iatom
+
+    PUSH_SUB(born_from_infrared)
+
+    do imat = 1, vib%num_modes
+      idir = vibrations_get_dir(vib, imat)
+      iatom = vibrations_get_atom(vib, imat)
+      born%charge(1:vib%ndim, idir, iatom) = -vib%infrared(imat, 1:vib%ndim)
+    enddo
+
+    POP_SUB(born_from_infrared)
+  end subroutine born_from_infrared
 
 
   ! ---------------------------------------------------------

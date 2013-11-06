@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, infrared, born)
+subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, infrared)
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(states_t),       intent(in)    :: st
@@ -27,7 +27,6 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
   integer,              intent(in)    :: iatom
   integer,              intent(in)    :: idir
   FLOAT,                intent(inout) :: infrared(:,:) !< (nmat, nmat)
-  type(Born_charges_t), intent(inout) :: born
 
   integer :: jdir, ik, ist
   FLOAT :: term
@@ -52,8 +51,6 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
     infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), TOFLOAT(lr%X(dl_rho)(:, 1)))
   end do
   infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%spec)
-  
-  born%charge(1:gr%sb%dim, idir, iatom) = -infrared(imat, 1:gr%sb%dim)
   
   POP_SUB(X(phonons_lr_infrared))
 end subroutine X(phonons_lr_infrared)
