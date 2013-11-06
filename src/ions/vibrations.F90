@@ -36,25 +36,28 @@ module vibrations_m
 
   private
   public :: &
-       vibrations_t,                    &
-       vibrations_init,                 &
-       vibrations_end,                  &
-       vibrations_symmetrize_dyn_matrix, &
-       vibrations_normalize_dyn_matrix, &
-       vibrations_out_dyn_matrix,       &
-       vibrations_norm_factor,          &
-       vibrations_diag_dyn_matrix,      &
-       vibrations_get_index,            &
-       vibrations_get_atom,             &
-       vibrations_get_dir,              &
-       vibrations_output,               &
-       vibrations_get_suffix
+    vibrations_t,                     &
+    vibrations_init,                  &
+    vibrations_end,                   &
+    vibrations_symmetrize_dyn_matrix, &
+    vibrations_normalize_dyn_matrix,  &
+    vibrations_out_dyn_matrix,        &
+    vibrations_norm_factor,           &
+    vibrations_diag_dyn_matrix,       &
+    vibrations_get_index,             &
+    vibrations_get_atom,              &
+    vibrations_get_dir,               &
+    vibrations_output,                &
+    vibrations_get_suffix
   
   type vibrations_t
     integer :: num_modes
     integer :: ndim
     integer :: natoms
-    FLOAT, pointer :: dyn_matrix(:,:), normal_mode(:,:), freq(:)
+    FLOAT, pointer :: dyn_matrix(:,:)
+    FLOAT, pointer :: infrared(:,:)
+    FLOAT, pointer :: normal_mode(:,:)
+    FLOAT, pointer :: freq(:)
     FLOAT :: disp
     FLOAT :: total_mass
     integer :: dyn_mat_unit
@@ -78,6 +81,7 @@ contains
     this%natoms = geo%natoms
     this%num_modes = geo%natoms*sb%dim
     SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
+    SAFE_ALLOCATE(this%infrared(1:this%num_modes, 1:this%ndim))
     SAFE_ALLOCATE(this%normal_mode(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%freq(1:this%num_modes))
 
@@ -103,6 +107,7 @@ contains
     PUSH_SUB(vibrations_end)
 
     SAFE_DEALLOCATE_P(this%dyn_matrix)
+    SAFE_DEALLOCATE_P(this%infrared)
     SAFE_DEALLOCATE_P(this%freq)
     SAFE_DEALLOCATE_P(this%normal_mode)
 

@@ -86,7 +86,6 @@ contains
     type(grid_t),     pointer :: gr
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, jmat_start
-    FLOAT, allocatable :: infrared(:,:)
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
@@ -197,7 +196,6 @@ contains
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
 
     if(do_infrared) then
-      SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
       call Born_charges_init(born, geo, st, ndim)
     endif
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
@@ -276,9 +274,9 @@ contains
       
       if(do_infrared) then
         if(states_are_real(st)) then
-          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, infrared, born)
+          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared, born)
         else
-          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, infrared, born)
+          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared, born)
         endif
       endif
 
@@ -302,7 +300,6 @@ contains
         call calc_infrared()
       endif
 
-      SAFE_DEALLOCATE_A(infrared)
       call Born_charges_end(born)
     endif
 
@@ -415,7 +412,7 @@ contains
 
           write(iunit, '(f14.5)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
           do jdir = 1, ndim
-            lir(jdir) = dot_product(infrared(:, jdir), vib%normal_mode(:, imat))
+            lir(jdir) = dot_product(vib%infrared(:, jdir), vib%normal_mode(:, imat))
             write(iunit, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
           end do
 
