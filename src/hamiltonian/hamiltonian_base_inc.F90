@@ -511,10 +511,11 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   type(batch_t),                    intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
-  integer :: npoints, nprojs, nst, d1
+  integer :: npoints, nprojs, nst
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
+  integer :: d1
   R_TYPE, allocatable :: projection_red(:, :)
   type(profile_t), save :: reduce_prof
 #endif

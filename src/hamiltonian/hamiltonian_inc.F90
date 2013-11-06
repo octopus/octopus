@@ -32,7 +32,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   R_TYPE, pointer     :: epsi(:)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
-  logical :: kinetic_only_, apply_phase, pack
+  logical :: apply_phase, pack
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:), hpsi(:)
   type(batch_t), pointer :: epsib
@@ -59,8 +59,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
-
-  kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
 
   if(present(time) .and. hm%d%cdft) call messages_not_implemented('TDCDFT')
 
@@ -839,10 +837,8 @@ subroutine X(rdmft_exchange_operator) (hm, der, psi, hpsi, ist)
   R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ist
 
-  R_TYPE, allocatable :: rho(:), pot(:), psi2(:,:),psi1(:,:), hpsi1(:)
-  integer :: jst,kst, ip, idim
-
-  FLOAT :: ff, sigma
+  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:)
+  integer :: jst, ip
 
   PUSH_SUB(X(rdmft_exchange_operator))
 

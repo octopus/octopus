@@ -111,7 +111,6 @@ contains
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
-    integer :: photoelectron_flags, par_strategy
     type(mpi_grp_t) :: mpi_grp_
     FLOAT  :: tp_enlarge_
 
@@ -599,11 +598,9 @@ contains
     integer          :: iunit          ! For debug output to files.
     character(len=3) :: filenum
     type(dimensions_t), allocatable :: part(:)
-    integer :: last_found_proc
     
     PUSH_SUB(cube_partition_messages_debug)
 
-    last_found_proc = 1
     if(in_debug_mode) then
       SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
       call cube_partition(cube, part)
@@ -625,7 +622,6 @@ contains
                 ixyz(1) = ii; ixyz(2) = jj; ixyz(3) = kk
                 if(cube_point_to_process(ixyz, part) == nn) then
                   write(iunit, '(3i8)') ii, jj, kk
-                  last_found_proc = nn
                 end if
               end do
             end do

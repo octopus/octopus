@@ -205,7 +205,7 @@ module hamiltonian_m
     CLASSICAL             = 5, &
     RDMFT                 = 7
 
-  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic_start, prof_kinetic_finish
+  type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
 
 contains
 
@@ -1195,7 +1195,7 @@ contains
     CMPLX,               intent(out) :: dvpsi(:, :, :)
 
     CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
-    integer :: idim, ip, j
+    integer :: idim, j
 
     PUSH_SUB(zhamiltonian_dervexternal)
 
@@ -1254,8 +1254,8 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: ia
-    CMPLX,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,   target,    intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+    CMPLX,               intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,               intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
 
     integer :: idim
     FLOAT, allocatable :: vlocal(:)
