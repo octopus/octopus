@@ -53,7 +53,7 @@ static void write_iter_realloc(write_iter *w, int s)
 	w->buf = (char *)realloc(w->buf, w->size);
 }
 
-static void write_iter_string_work(write_iter *w, char *s)
+static void write_iter_string_work(write_iter *w, const char *s)
 {
 	int l;
 
