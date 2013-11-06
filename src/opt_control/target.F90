@@ -91,7 +91,8 @@ module target_m
     oct_tg_hhg              = 9,      &
     oct_tg_velocity         = 10,     &
     oct_tg_hhgnew           = 12,     &
-    oct_tg_classical        = 13
+    oct_tg_classical        = 13,     &
+    oct_tg_spin             = 14
 
   integer, public, parameter ::       &
     oct_targetmode_static = 0,        &
@@ -136,6 +137,8 @@ module target_m
     CMPLX, pointer :: gvec(:, :)
     FLOAT, pointer :: alpha(:)
     type(fft_t) :: fft_handler
+
+    CMPLX :: spin_matrix(2, 2)
   end type target_t
 
 
@@ -240,6 +243,8 @@ contains
     !% by some user defined weight function.
     !%Option oct_tg_classical 13
     !% EXPERIMENTAL
+    !%Option oct_tg_spin 14
+    !% EXPERIMENTAL
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
@@ -278,6 +283,9 @@ contains
     case(oct_tg_classical)
       call messages_experimental('OCTTargetOperator = oct_tg_classical')
       call target_init_classical(geo, tg, td, oct)
+    case(oct_tg_spin)
+      call messages_experimental('OCTTargetOperator = oct_tg_spin')
+      call target_init_spin(tg)
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
@@ -509,6 +517,8 @@ contains
       j1 = target_j1_velocity(tg, geo)
     case(oct_tg_classical)
       j1 = target_j1_classical(tg, qcpsi)
+    case(oct_tg_spin)
+      j1 = target_j1_spin(tg, gr, psi)
     end select
 
     nullify(psi)
@@ -535,6 +545,7 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
+
       call target_chi_groundstate(tg, gr, psi_in, chi_out)
     case(oct_tg_excited) 
       call target_chi_excited(tg, gr, psi_in, chi_out)
@@ -564,6 +575,8 @@ contains
       call target_chi_velocity(gr, tg, chi_out, geo)
     case(oct_tg_classical)
       call target_chi_classical(tg, qcpsi_in, qcchi_out, geo)
+    case(oct_tg_spin)
+      call target_chi_spin(tg, gr, psi_in, chi_out)
     end select
 
     nullify(psi_in)
@@ -635,6 +648,7 @@ contains
 #include "target_local_inc.F90"
 #include "target_tdlocal_inc.F90"
 #include "target_classical_inc.F90"
+#include "target_spin_inc.F90"
 
 end module target_m
 

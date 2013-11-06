@@ -1,0 +1,252 @@
+#*********************************************************
+#Calculation mode, general variables.
+#*********************************************************
+
+CalculationMode = opt_control
+#CalculationMode = td
+#CalculationMode = gs
+#ExtraStates = 3
+
+fromScratch = yes
+
+TheoryLevel = independent_particles
+ExperimentalFeatures = yes
+SpinComponents = spinors
+
+
+#*********************************************************
+#Material parameters (In our case, the GaAs semiconductor)
+#
+# MISSING: Some references to justify these values
+#*********************************************************
+#Effective mass (in m_0 units)
+meff = 0.067
+#dielectric constant (in epsilon_0 units)
+epsilon = 13.1800003
+#Gyromagnetic factor (no units)
+gfactor = -0.44
+
+
+# About units, some reminders:
+#
+# In the following, [M] stands for "mass", [L] for "length",
+# [T] form "time", [E] for "energy", and "[EF]" for "electromagnetic field".
+# The relation between effective atomic units  (e.a.u.) and atomic units
+# (a.u.) is given by:
+#
+# e.a.u.[M] = meff a.u.[M]
+# e.a.u.[L] = (epsilon/meff) a.u.[L]
+# e.a.u.[T] = (epsilon^2/meff) a.u.[T]
+# e.a.u.[E] = (meff/epsilon^2) a.u.[E]
+# e.a.u.[EF] = (meff^4/epsilon^5) a.u.[EF]
+#
+# So, for example, to transform x a0 into effective atomic units of length,
+# multiply x by meff/epsilon
+#
+# To transform x Ha into effective atomic units of energy,
+# multiply x by (epsilon^2/meff)
+#
+# To transform x hbar/Ha into effectie atomic of time,
+# multiply x by (meff/epsilon^2)
+#
+# Regarding the units of electromagnetic field, it is good to remember that
+# 1 a.u.[EF] = 5.14220652e11 V/m
+#
+# Regarding the magnetic field:
+# 1Tesla corresponds to 5.8300355916580818e-4 a.u.[EF]
+# So to transform x Tesla into effective atomic units of electromagnetic
+# field, multiply x by 5.8300355916580818e-4 * sqrt(epsilon^5/meff^4)
+# However, due to the reasons explained in 02-fock-darwin.04-ground_state.inp,
+# one must divide the result by sqrt(epsilon).
+# Also, one must multiply the gyromagnetic ratio by meff.
+
+
+#*********************************************************
+#Confining potential
+#
+# MISSING: References with typical values for confining
+# potentials.
+#*********************************************************
+omega_meV = 0.001
+omega_Ha = 0.001 * ( 1e3 / 27211.384)
+omega = omega_Ha * (epsilon^2/meff)
+
+#These parameters are for the Q-ring
+#v0    = 0.2 * ( 1e3 / 27211.384) * (epsilon^2/meff)
+#d0    = 0.960634589
+
+%Species
+"potential" | 1 | spec_user_defined | 1 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"potential" | 0 | 0
+%
+
+
+#*********************************************************
+#Grid
+#*********************************************************
+
+Dimensions = 2 
+BoxShape = sphere
+Radius = 20.0
+Spacing = 1.0
+
+#*********************************************************
+#External Magnetic field
+#
+# MISSING: Reference with typical magnetic fields used in 
+# experiments or calculations.
+#*********************************************************
+
+# We need to multiply the true gyromagnetic factor by meff
+GyroMagneticRatio = gfactor * meff 
+
+# This i the magnetic field, in teslas:
+B = 1.0
+# Now we convert to atomic units:
+B = B * (1.0/1715.25539471980586102447) 
+# Now we convert to effective atomic units:
+B = B * sqrt(epsilon^5) / (meff^2) 
+# And now we divide by sqrt(epsilon):
+B = B / sqrt(epsilon)
+
+%StaticMagneticField
+0 | 0 | B
+%
+
+
+#*********************************************************
+#Rashba SOI parameter
+#
+# MISSING: References with typical values for the Rashba
+# spin orbit coupling.
+#*********************************************************
+
+# First, we express lambda in meV*nm
+lambda = 0.05 * ( 1.0e2 )
+# Then, we transform it into Ha * a0
+lambda = lambda * 0.00069446161
+# And then, to (Ha*) * (a0*)
+lambda = lambda * (epsilon^2/meff) * (meff/epsilon)
+RashbaSpinOrbitCoupling = lambda
+
+
+#*********************************************************
+#Eigensolver parameters
+#*********************************************************
+EigenSolver = cg
+#EigenSolverTolerance = 1.0e-6
+Mixing = 1.0
+TypeOfMixing = linear
+
+
+#*********************************************************
+#TD parameters
+#
+# MISSING: Typical "operation" times.
+#*********************************************************
+#Propagation times. For example,
+# 10 ps = 10000 fs = 413413.73395066120 a.u.[T] = 166.44865 e.a.u.[T] 
+
+# We will use the value of the confining harmonic potential frequency as
+# reference. The period associated to it is:
+period = 2*pi/omega
+# Then we will define the total propagation time in reference to that period:
+stime  = period
+# (For example, 2*period corresponds to 131.8877494489 e.a.u.[T] )
+# We want the time step to be an integer fraction of the propagation time:
+dt = period/400
+
+TDPropagator = exp_mid
+TDExponentialMethod = taylor
+TDExpOrder = 4
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+#*********************************************************
+#OCT parameters
+#*********************************************************
+OCTPenalty = 1.0
+OCTEps = 1.0e-6
+OCTMaxIter = 2
+OCTFixFluenceTo = -1
+OCTControlFunctionRepresentation = control_fourier_series_h
+OCTControlFunctionOmegaMax = (2*pi/stime)*1.5
+
+OCTInitialState = oct_is_groundstate
+
+#------------------------------------------
+#   If the target is a projection operator
+#------------------------------------------
+#OCTTargetOperator = oct_tg_gstransformation
+#%OCTTargetTransformStates
+#0 | 0 | 1 | 0  
+#%
+#------------------------------------------
+#   If the target is a spin operator
+#------------------------------------------
+OCTTargetOperator = oct_tg_spin
+%OCTTargetSpin
+0 | 0 | -1
+%
+
+OCTScheme  = oct_algorithm_cg
+
+#OCTDoubleCheck = yes
+#OCTDumpIntermediate = yes
+
+#OCTCheckGradient = 0.0001
+#OCTNumberCheckPoints = 10
+
+#*********************************************************
+# Laser field parameters
+#
+# MISSING: Typical electric field amplitudes in experiments.
+# It may come from currents in the semiconductor, or it may
+# be the electric field of an incoming laser.
+#
+# MISSING: Typical frequencies of those laser fields.
+#*********************************************************
+#------------------------------------------
+# Initial guess
+#------------------------------------------
+
+# Amplitude of the lser field
+# For example, 1000 V/m = 1000 * 1.94469046723545440170e-10 a.u.[EF] = 
+# 1000 * 2.785113504876579447118e-5 e.a.u.[EF]
+
+ampl_Vm = 1000
+ampl_au = ampl_Vm * 1.94469046723545440170e-10
+ampl = ampl_au * sqrt(epsilon^4/meff^5)
+
+%TDExternalFields
+electric_field | 1 | 1 | 0 | 0.0 | "envelope_function"
+%
+# Defining the initial laser pulse in this way we make sure that it is
+# compatible with the representation.
+%TDFunctions
+"envelope_function" | tdf_from_expr | "ampl*sin((2*pi/stime)*1*t)"
+%
+
+
+#------------------------------------------
+# To check the optimal run
+#------------------------------------------
+
+#%TDExternalFields
+#electric_field   | 1 | 1 | 0 | 0.0 | "envelope_function"
+#%
+#%TDFunctions
+#"envelope_function" | tdf_from_file | "./opt-control/laser.bestJ1/cp"
+#%
+
+
+#*********************************************************
+# Output
+#*********************************************************
+#Output = wfs + potential
+#OutputHow = plane_z + axis_x
+#TDOutput = laser + spin
