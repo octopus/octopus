@@ -663,7 +663,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
 
         dot = dot*st%occ(ist, ik)*factor
         
-        matrix(imat, jmat) = matrix(imat, jmat) + dot
+        matrix(jmat, imat) = matrix(jmat, imat) + dot
 
       end do
 
