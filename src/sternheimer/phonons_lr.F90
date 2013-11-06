@@ -264,12 +264,12 @@ contains
           call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
         endif
 
-        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
-        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
+        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) + TOFLOAT(force_deriv(jdir, jatom))
+        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, geo, iatom, jatom)
         
-        if(.not. symmetrize) vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
+        if(.not. symmetrize) vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(jmat, imat)
 
-        call vibrations_out_dyn_matrix(vib, imat, jmat)
+        call vibrations_out_dyn_matrix(vib, jmat, imat)
       end do
       
       if(do_infrared) then
@@ -380,7 +380,7 @@ contains
               end if
 
 
-              vib%dyn_matrix(vibrations_get_index(vib, iatom, idir), vibrations_get_index(vib, jatom, jdir)) = -ac
+              vib%dyn_matrix(vibrations_get_index(vib, jatom, jdir), vibrations_get_index(vib, iatom, idir)) = -ac
 
             end do
           end do

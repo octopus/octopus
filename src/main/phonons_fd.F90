@@ -186,7 +186,7 @@ contains
         do jatom = 1, geo%natoms
           do beta = 1, gr%mesh%sb%dim
             jmat = vibrations_get_index(vib, jatom, beta)
-            vib%dyn_matrix(imat, jmat) = &
+            vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &
               * vibrations_norm_factor(vib, geo, iatom, jatom)
             call vibrations_out_dyn_matrix(vib, imat, jmat)
