@@ -20,11 +20,11 @@ match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 
 match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ;    0.30478
 Precision : 700
 # precision is actually as good as 5, except for some versions of gfortran with -ffast-math
-match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 20)  ; -0.869331267453E+09
+match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5)  ; -0.869331267453E+09
 
 Input: 04-vib_modes.03-vib_modes_fd.inp
 Precision : 0.005
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 1421.6355
 Precision : 130000
-match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 20)  ; -877099414.8375
+match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5)  ; -877099414.8375
 # min -0.877159458025E+09, max -0.877039371650E+09

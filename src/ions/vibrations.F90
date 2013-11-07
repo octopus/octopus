@@ -19,6 +19,8 @@
 
 #include "global.h"
 
+#define UNITDYNMAT unit_invcm**2
+
 module vibrations_m
   use geometry_m
   use global_m
@@ -42,6 +44,7 @@ module vibrations_m
     vibrations_symmetrize_dyn_matrix, &
     vibrations_normalize_dyn_matrix,  &
     vibrations_out_dyn_matrix_row,    &
+    vibrations_out_dyn_matrix_header, &
     vibrations_norm_factor,           &
     vibrations_diag_dyn_matrix,       &
     vibrations_get_index,             &
@@ -133,17 +136,24 @@ contains
     type(vibrations_t), intent(inout) :: this
 
     integer :: imat, jmat
-    FLOAT :: average
+    FLOAT :: average, maxdiff
 
     PUSH_SUB(vibrations_symmetrize_dyn_matrix)
 
+    maxdiff = M_ZERO
     do imat = 1, this%num_modes
       do jmat = imat + 1, this%num_modes
         average = M_HALF * (this%dyn_matrix(imat, jmat) + this%dyn_matrix(jmat, imat))
+        maxdiff = max(maxdiff, abs(this%dyn_matrix(imat, jmat) - this%dyn_matrix(jmat, imat)))
         this%dyn_matrix(imat, jmat) = average
         this%dyn_matrix(jmat, imat) = average
       end do
     end do
+
+    write(message(1),'(a)') 'Info: Symmetrizing dynamical matrix.'
+    write(message(2),'(a,es12.6,a,a)') 'Info: Maximum discrepancy from symmetry: ', &
+      units_from_atomic(UNITDYNMAT, maxdiff), " ", trim(units_abbrev(UNITDYNMAT))
+    call messages_info(2)
 
     POP_SUB(vibrations_symmetrize_dyn_matrix)
   end subroutine vibrations_symmetrize_dyn_matrix
@@ -211,13 +221,29 @@ contains
       jatom = vibrations_get_atom(this, jmat)
       jdir  = vibrations_get_dir (this, jmat)
     
-      write(this%dyn_mat_unit, '(i6, i3, i6, i3, e20.12)') &
-        jatom, jdir, iatom, idir, units_from_atomic(unit_invcm**2, this%dyn_matrix(jmat, imat))
+      write(this%dyn_mat_unit, '(2(i8, i6), e25.12)') &
+        jatom, jdir, iatom, idir, units_from_atomic(UNITDYNMAT, this%dyn_matrix(jmat, imat))
 
     enddo
 
     POP_SUB(vibrations_out_dyn_matrix_row)
   end subroutine vibrations_out_dyn_matrix_row
+
+  ! ---------------------------------------------------------
+  subroutine vibrations_out_dyn_matrix_header(this)
+    type(vibrations_t), intent(in) :: this
+
+    integer :: iatom, idir, jatom, jdir, jmat
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
+    PUSH_SUB(vibrations_out_dyn_matrix_header)
+
+    write(this%dyn_mat_unit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
+      '[' // trim(units_abbrev(UNITDYNMAT)) // ']'
+
+    POP_SUB(vibrations_out_dyn_matrix_header)
+  end subroutine vibrations_out_dyn_matrix_header
 
   ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)

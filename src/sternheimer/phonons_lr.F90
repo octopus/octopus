@@ -217,6 +217,7 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
+    call vibrations_out_dyn_matrix_header(vib)
     do imat = 1, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)
