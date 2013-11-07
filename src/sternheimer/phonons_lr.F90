@@ -34,6 +34,7 @@ module phonons_lr_m
   use kdotp_calc_m
   use lalg_basic_m
   use linear_response_m
+  use loct_m
   use parser_m
   use math_m
   use mesh_m
@@ -85,7 +86,7 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, ierr
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit_restart, ierr, start_mode
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
@@ -217,7 +218,13 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    do imat = 1, vib%num_modes
+    call phonons_read_saved(fromScratch, vib, start_mode)
+
+    do imat = 1, start_mode - 1
+      call vibrations_out_dyn_matrix_row(vib, imat)
+    enddo
+
+    do imat = start_mode, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)
       
@@ -277,6 +284,13 @@ contains
         else
           call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         endif
+      endif
+
+      if(mpi_grp_is_root(mpi_world)) then
+        ! open and close makes sure output is not buffered
+        iunit_restart = io_open(trim(restart_dir)//VIB_MODES_DIR//'restart', action='write', position='append', is_tmp=.true.)
+        write(iunit_restart, *) imat, vib%dyn_matrix(:, imat), vib%infrared(imat, :)
+        call io_close(iunit_restart)
       endif
 
       message(1) = ""
@@ -521,6 +535,61 @@ contains
 
     POP_SUB(axsf_mode_output)
   end subroutine axsf_mode_output
+
+  ! ---------------------------------------------------------
+  subroutine phonons_read_saved(fromScratch, vib, start_mode)
+    logical,            intent(in)    :: fromScratch
+    type(vibrations_t), intent(inout) :: vib
+    integer,            intent(out)   :: start_mode
+
+    integer :: iunit, ierr, imode, number
+    FLOAT, allocatable :: dyn_row(:)
+    FLOAT :: infrared(MAX_DIM)
+    character(len=256) :: restart_file
+
+    PUSH_SUB(phonons_read_saved)
+
+    start_mode = 1
+    restart_file = trim(restart_dir)//VIB_MODES_DIR//'restart'
+    if(fromScratch) then
+      call loct_rm(trim(restart_file))
+    else if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(restart_file), action='read', &
+        status='old', die=.false., is_tmp=.true.)
+
+      if(iunit > 0) then
+        SAFE_ALLOCATE(dyn_row(vib%num_modes))
+
+        do imode = 1, vib%num_modes
+          read(iunit, fmt=*, iostat=ierr) number, dyn_row(:), infrared(1:vib%ndim)
+          if(ierr /= 0) exit
+          if(number /= imode) then
+            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: line ", imode, " is labeled as ", number
+            call messages_fatal(1)
+          endif
+          start_mode = imode + 1
+          vib%dyn_matrix(:, imode) = dyn_row(:)
+          vib%infrared(imode, 1:vib%ndim) = infrared(1:vib%ndim)
+        end do
+
+        write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
+          start_mode - 1, ' modes out of ', vib%num_modes
+        call messages_info(1)
+
+        SAFE_DEALLOCATE_A(dyn_row)
+        call io_close(iunit)
+      else
+        message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
+        call messages_warning(1)
+      endif
+    endif
+
+#ifdef HAVE_MPI
+    call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world, mpi_err)
+#endif
+
+    POP_SUB(phonons_read_saved)
+  end subroutine phonons_read_saved
 
 #include "complex.F90"
 #include "phonons_lr_inc.F90"

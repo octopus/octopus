@@ -28,6 +28,7 @@ module vibrations_m
   use global_m
   use io_m
   use lalg_adv_m
+  use loct_m
   use messages_m
   use mpi_m
   use profiling_m
@@ -99,6 +100,7 @@ contains
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(VIB_MODES_DIR)
+      call loct_rm(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     endif
 
