@@ -65,7 +65,7 @@ module vibrations_m
     FLOAT, pointer :: freq(:)
     FLOAT :: disp
     FLOAT :: total_mass
-    integer :: dyn_mat_unit
+    integer :: iunit_dynmat
     character (len=2) :: suffix
   end type vibrations_t
 
@@ -98,7 +98,7 @@ contains
     this%suffix = suffix
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(VIB_MODES_DIR)
-      this%dyn_mat_unit = io_open(VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix), action='write')
+      this%iunit_dynmat = io_open(VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix), action='write')
     endif
 
     POP_SUB(vibrations_init)
@@ -116,7 +116,7 @@ contains
     SAFE_DEALLOCATE_P(this%freq)
     SAFE_DEALLOCATE_P(this%normal_mode)
 
-    if(mpi_grp_is_root(mpi_world)) call io_close(this%dyn_mat_unit)
+    if(mpi_grp_is_root(mpi_world)) call io_close(this%iunit_dynmat)
 
     POP_SUB(vibrations_end)
   end subroutine vibrations_end
@@ -224,7 +224,7 @@ contains
       jatom = vibrations_get_atom(this, jmat)
       jdir  = vibrations_get_dir (this, jmat)
     
-      write(this%dyn_mat_unit, '(2(i8, i6), e25.12)') &
+      write(this%iunit_dynmat, '(2(i8, i6), e25.12)') &
         jatom, jdir, iatom, idir, units_from_atomic(UNITDYNMAT, this%dyn_matrix(jmat, imat))
 
     enddo
@@ -236,13 +236,11 @@ contains
   subroutine vibrations_out_dyn_matrix_header(this)
     type(vibrations_t), intent(in) :: this
 
-    integer :: iatom, idir, jatom, jdir, jmat
-
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(vibrations_out_dyn_matrix_header)
 
-    write(this%dyn_mat_unit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
+    write(this%iunit_dynmat, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
       '[' // trim(units_abbrev(UNITDYNMAT)) // ']'
 
     POP_SUB(vibrations_out_dyn_matrix_header)
@@ -317,7 +315,7 @@ contains
   subroutine vibrations_output(this)
     type(vibrations_t), intent(in) :: this
     
-    integer :: iunit, i, j
+    integer :: iunit, imat, jmat
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
@@ -325,17 +323,17 @@ contains
 
     ! output frequencies and eigenvectors
     iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
-    do i = 1, this%num_modes
-      write(iunit, '(i6,f14.5)') i, units_from_atomic(unit_invcm, this%freq(i))
+    do imat = 1, this%num_modes
+      write(iunit, '(i6,f14.5)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
     ! output eigenvectors
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write')
-    do i = 1, this%num_modes
-      write(iunit, '(i6)', advance='no') i
-      do j = 1, this%num_modes
-        write(iunit, '(es14.5)', advance='no') this%normal_mode(j, i)
+    do imat = 1, this%num_modes
+      write(iunit, '(i6)', advance='no') imat
+      do jmat = 1, this%num_modes
+        write(iunit, '(es14.5)', advance='no') this%normal_mode(jmat, imat)
       end do
       write(iunit, '(1x)')
     end do
