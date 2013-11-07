@@ -45,6 +45,7 @@ module linear_response_m
        lr_t,              &
        lr_init,           &
        lr_allocate,       &
+       lr_zero,           &
        lr_copy,           &
        dlr_orth_vector,   & 
        zlr_orth_vector,   & 
@@ -62,20 +63,20 @@ module linear_response_m
   type lr_t
     logical :: is_allocated
      
-    ! the real quantities
-    FLOAT, pointer :: ddl_rho(:,:)     ! response of the density
-    FLOAT, pointer :: ddl_psi(:,:,:,:) ! linear change of the real KS orbitals
+    !> the real quantities
+    FLOAT, pointer :: ddl_rho(:,:)     !< response of the density
+    FLOAT, pointer :: ddl_psi(:,:,:,:) !< linear change of the real KS orbitals
     
-    ! and the complex version
-    CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
-    CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the complex KS orbitals
+    !> and the complex version
+    CMPLX, pointer :: zdl_rho(:,:)     !< response of the density
+    CMPLX, pointer :: zdl_psi(:,:,:,:) !< linear change of the complex KS orbitals
 
-    !other observables
-    CMPLX, pointer :: dl_j(:,:,:)     ! response of the current
-    FLOAT, pointer :: ddl_de(:,:)     ! unnormalized ELF
-    FLOAT, pointer :: ddl_elf(:,:)    ! normalized ELF
-    CMPLX, pointer :: zdl_de(:,:)     ! unnormalized ELF
-    CMPLX, pointer :: zdl_elf(:,:)    ! normalized ELF
+    !> other observables
+    CMPLX, pointer :: dl_j(:,:,:)     !< response of the current
+    FLOAT, pointer :: ddl_de(:,:)     !< unnormalized ELF
+    FLOAT, pointer :: ddl_elf(:,:)    !< normalized ELF
+    CMPLX, pointer :: zdl_de(:,:)     !< unnormalized ELF
+    CMPLX, pointer :: zdl_elf(:,:)    !< normalized ELF
     
   end type lr_t
 
@@ -109,22 +110,40 @@ contains
     if (states_are_complex(st)) then
       SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
       SAFE_ALLOCATE(lr%zdl_rho(1:mesh%np, 1:st%d%nspin))
-      
-      lr%zdl_psi = M_ZERO
-      lr%zdl_rho = M_ZERO
     else
       SAFE_ALLOCATE(lr%ddl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
       SAFE_ALLOCATE(lr%ddl_rho(1:mesh%np, 1:st%d%nspin))
-
-      lr%ddl_psi = M_ZERO
-      lr%ddl_rho = M_ZERO
     end if
 
     lr%is_allocated = .true.
     
+    call lr_zero(lr, st)
+
     POP_SUB(lr_allocate)
 
   end subroutine lr_allocate
+
+
+  ! ---------------------------------------------------------
+  subroutine lr_zero(lr, st)
+    type(lr_t),     intent(inout) :: lr
+    type(states_t), intent(in)    :: st
+
+    PUSH_SUB(lr_zero)
+
+    ASSERT(lr%is_allocated)
+
+    if (states_are_complex(st)) then
+      lr%zdl_psi = M_ZERO
+      lr%zdl_rho = M_ZERO
+    else
+      lr%ddl_psi = M_ZERO
+      lr%ddl_rho = M_ZERO
+    end if
+
+    POP_SUB(lr_zero)
+
+  end subroutine lr_zero
 
 
   ! ---------------------------------------------------------

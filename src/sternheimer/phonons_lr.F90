@@ -225,6 +225,9 @@ contains
         "Calculating response to displacement of atom ", iatom, " in ", index2axis(idir), "-direction."
       call messages_info(1)
 
+      ! the converged wfns for the previous mode are probably not a good starting point
+      call lr_zero(lr(1), st)
+
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)

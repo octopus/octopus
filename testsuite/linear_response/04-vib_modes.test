@@ -16,7 +16,7 @@ match ; Dipole Moment  ; GREP(static/info, '<z>', 14)           ;  2.24560
 
 Precision : 0.002
 Input: 04-vib_modes.02-vib_modes.inp
-match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 1420.83393
+match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 1420.82523
 match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ;    0.30478
 Precision : 1e-7
 # precision is actually as good as 5, except for some versions of gfortran with -ffast-math
