@@ -248,13 +248,12 @@ contains
         call messages_warning(1)
       endif
       
-      if(symmetrize) then
-        jmat_start = 1
-      else
-        jmat_start = imat
-      endif
+      do jmat = 1, vib%num_modes
+        if(.not. symmetrize .and. jmat < imat) then
+          vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
+          cycle
+        endif
 
-      do jmat = jmat_start, vib%num_modes 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
@@ -266,11 +265,8 @@ contains
 
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, geo, iatom, jatom)
-        
-        if(.not. symmetrize) vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(jmat, imat)
-
-        call vibrations_out_dyn_matrix(vib, jmat, imat)
       end do
+      call vibrations_out_dyn_matrix_row(vib, imat)
       
       if(do_infrared) then
         if(states_are_real(st)) then

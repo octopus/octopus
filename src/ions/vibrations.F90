@@ -41,7 +41,7 @@ module vibrations_m
     vibrations_end,                   &
     vibrations_symmetrize_dyn_matrix, &
     vibrations_normalize_dyn_matrix,  &
-    vibrations_out_dyn_matrix,        &
+    vibrations_out_dyn_matrix_row,    &
     vibrations_norm_factor,           &
     vibrations_diag_dyn_matrix,       &
     vibrations_get_index,             &
@@ -195,27 +195,30 @@ contains
   end function vibrations_norm_factor
 
   ! ---------------------------------------------------------
-  subroutine vibrations_out_dyn_matrix(this, imat, jmat)
+  subroutine vibrations_out_dyn_matrix_row(this, imat)
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: imat
-    integer,            intent(in) :: jmat
 
-    integer :: iatom, idir, jatom, jdir
+    integer :: iatom, idir, jatom, jdir, jmat
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    PUSH_SUB(vibrations_out_dyn_matrix)
+    PUSH_SUB(vibrations_out_dyn_matrix_row)
 
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
-    jatom = vibrations_get_atom(this, jmat)
-    jdir  = vibrations_get_dir (this, jmat)
-    
-    write(this%dyn_mat_unit, '(i6, i3, i6, i3, e20.12)') iatom, idir, jatom, jdir, &
-      units_from_atomic(unit_invcm**2, this%dyn_matrix(imat, jmat))
 
-    POP_SUB(vibrations_out_dyn_matrix)
-  end subroutine vibrations_out_dyn_matrix
+    do jmat = 1, this%num_modes
+      jatom = vibrations_get_atom(this, jmat)
+      jdir  = vibrations_get_dir (this, jmat)
+    
+      write(this%dyn_mat_unit, '(i6, i3, i6, i3, e20.12)') &
+        jatom, jdir, iatom, idir, units_from_atomic(unit_invcm**2, this%dyn_matrix(jmat, imat))
+
+    enddo
+
+    POP_SUB(vibrations_out_dyn_matrix_row)
+  end subroutine vibrations_out_dyn_matrix_row
 
   ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)

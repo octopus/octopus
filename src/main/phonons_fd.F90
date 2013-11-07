@@ -189,9 +189,9 @@ contains
             vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &
               * vibrations_norm_factor(vib, geo, iatom, jatom)
-            call vibrations_out_dyn_matrix(vib, imat, jmat)
           end do
         end do
+        call vibrations_out_dyn_matrix_row(vib, imat)
 
       end do
     end do
