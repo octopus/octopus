@@ -146,7 +146,6 @@ contains
     forces = M_ZERO
     forces0 = M_ZERO
 
-    call vibrations_out_dyn_matrix_header(vib)
     do iatom = 1, geo%natoms
       do alpha = 1, mesh%sb%dim
         imat = vibrations_get_index(vib, iatom, alpha)

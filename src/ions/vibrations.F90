@@ -65,8 +65,8 @@ module vibrations_m
     FLOAT, pointer :: freq(:)
     FLOAT :: disp
     FLOAT :: total_mass
-    integer :: iunit_dynmat
     character (len=2) :: suffix
+    character (len=80) :: filename_dynmat
   end type vibrations_t
 
 contains
@@ -96,9 +96,10 @@ contains
     end do
 
     this%suffix = suffix
+    this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(VIB_MODES_DIR)
-      this%iunit_dynmat = io_open(VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix), action='write')
+      call vibrations_out_dyn_matrix_header(this)
     endif
 
     POP_SUB(vibrations_init)
@@ -115,8 +116,6 @@ contains
     SAFE_DEALLOCATE_P(this%infrared)
     SAFE_DEALLOCATE_P(this%freq)
     SAFE_DEALLOCATE_P(this%normal_mode)
-
-    if(mpi_grp_is_root(mpi_world)) call io_close(this%iunit_dynmat)
 
     POP_SUB(vibrations_end)
   end subroutine vibrations_end
@@ -211,7 +210,7 @@ contains
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: imat
 
-    integer :: iatom, idir, jatom, jdir, jmat
+    integer :: iatom, idir, jatom, jdir, jmat, iunit
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
@@ -220,14 +219,16 @@ contains
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
 
+    iunit = io_open(this%filename_dynmat, action='write', position='append')
+
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
       jdir  = vibrations_get_dir (this, jmat)
     
-      write(this%iunit_dynmat, '(2(i8, i6), e25.12)') &
+      write(iunit, '(2(i8, i6), e25.12)') &
         jatom, jdir, iatom, idir, units_from_atomic(UNITDYNMAT, this%dyn_matrix(jmat, imat))
-
     enddo
+    call io_close(iunit)
 
     POP_SUB(vibrations_out_dyn_matrix_row)
   end subroutine vibrations_out_dyn_matrix_row
@@ -236,12 +237,16 @@ contains
   subroutine vibrations_out_dyn_matrix_header(this)
     type(vibrations_t), intent(in) :: this
 
+    integer :: iunit
+
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(vibrations_out_dyn_matrix_header)
 
-    write(this%iunit_dynmat, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
+    iunit = io_open(this%filename_dynmat, action='write') ! start at the beginning
+    write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
       '[' // trim(units_abbrev(UNITDYNMAT)) // ']'
+    call io_close(iunit)
 
     POP_SUB(vibrations_out_dyn_matrix_header)
   end subroutine vibrations_out_dyn_matrix_header
