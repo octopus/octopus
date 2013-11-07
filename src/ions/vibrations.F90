@@ -154,7 +154,8 @@ contains
 
     write(message(1),'(a)') 'Info: Symmetrizing dynamical matrix.'
     write(message(2),'(a,es12.6,a,a)') 'Info: Maximum discrepancy from symmetry: ', &
-      units_from_atomic(UNITDYNMAT, maxdiff), " ", trim(units_abbrev(UNITDYNMAT))
+      units_from_atomic(UNITDYNMAT, maxdiff), &
+      " ", trim(units_abbrev(UNITDYNMAT))
     call messages_info(2)
 
     POP_SUB(vibrations_symmetrize_dyn_matrix)
