@@ -85,7 +85,7 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, ierr
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
@@ -174,7 +174,7 @@ contains
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
 
         ! load wavefunctions
-        str_tmp = kdotp_wfs_tag(idir)
+        str_tmp = trim(kdotp_wfs_tag(idir))
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
 
@@ -390,35 +390,36 @@ contains
     !> calculate infrared intensities
     subroutine calc_infrared()
 
+      integer :: iunit_ir
       FLOAT :: lir(1:MAX_DIM+1)
 
       PUSH_SUB(phonons_lr_run.calc_infrared)
 
-      iunit = io_open(VIB_MODES_DIR//'infrared', action='write')
+      iunit_ir = io_open(VIB_MODES_DIR//'infrared', action='write')
 
-      write(iunit, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
+      write(iunit_ir, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
       do idir = 1, ndim
-        write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // '> [' // trim(units_abbrev(units_out%length)) // ']'
+        write(iunit_ir, '(a14)', advance = 'no') '<' // index2axis(idir) // '> [' // trim(units_abbrev(units_out%length)) // ']'
       enddo
-      write(iunit, '(a14)') 'average [' // trim(units_abbrev(units_out%length)) // ']'
+      write(iunit_ir, '(a14)') 'average [' // trim(units_abbrev(units_out%length)) // ']'
 
       do iatom = 1, natoms
         do idir = 1, ndim
 
           imat = vibrations_get_index(vib, iatom, idir)
 
-          write(iunit, '(f14.5)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
+          write(iunit_ir, '(f14.5)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
           do jdir = 1, ndim
             lir(jdir) = dot_product(vib%infrared(:, jdir), vib%normal_mode(:, imat))
-            write(iunit, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
+            write(iunit_ir, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
           end do
 
           lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
-          write(iunit, '(f14.5)') units_from_atomic(units_out%length, lir(ndim + 1))
+          write(iunit_ir, '(f14.5)') units_from_atomic(units_out%length, lir(ndim + 1))
         end do
       end do
 
-      call io_close(iunit)
+      call io_close(iunit_ir)
       POP_SUB(phonons_lr_run.calc_infrared)
     end subroutine calc_infrared
 
