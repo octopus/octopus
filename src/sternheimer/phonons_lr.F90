@@ -85,7 +85,7 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, jmat_start
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born

@@ -19,7 +19,9 @@
 
 #include "global.h"
 
-#define UNITDYNMAT unit_invcm**2
+! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
+! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
+#define UNITDYNMAT units_out%energy / units_out%length**2
 
 module vibrations_m
   use geometry_m
