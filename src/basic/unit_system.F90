@@ -181,6 +181,7 @@ contains
     unit_debye%abbrev = 'Debye'
     unit_debye%name   = 'Debye'
 
+    ! this is the factor to convert 1 Ha to hc/cm in energy units
     unit_invcm%factor = M_ONE/CNST(219474.63)
     unit_invcm%abbrev = 'cm^-1'
     unit_invcm%name   = 'h times c over centimeters'

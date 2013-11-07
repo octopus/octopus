@@ -137,9 +137,8 @@ contains
 
     PUSH_SUB(vibrations_symmetrize_dyn_matrix)
 
-    ! FIXME: operations are duplicated
     do imat = 1, this%num_modes
-      do jmat = 1, this%num_modes
+      do jmat = imat + 1, this%num_modes
         average = M_HALF * (this%dyn_matrix(imat, jmat) + this%dyn_matrix(jmat, imat))
         this%dyn_matrix(imat, jmat) = average
         this%dyn_matrix(jmat, imat) = average
