@@ -284,8 +284,7 @@ contains
 
     call profiling_in(prof, "SPECIES_DENSITY")
 
-    cmplxscl = .false.
-    if (present(Imrho)) cmplxscl = .true.
+    cmplxscl = present(Imrho)
     
     select case(species_type(spec))
 
@@ -299,6 +298,7 @@ contains
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
+      ASSERT(.not.cmplxscl) ! not implemented
 
       ! A small amount of charge is missing with the cutoff, we
       ! renormalize so that the long range potential is exact
