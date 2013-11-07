@@ -45,9 +45,9 @@ match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.388160
 # FIXME: These precisions are too generous, and suggest a problem with vib_modes.
 Input: 01-casida.012-vib_modes.inp
 Precision : 0.002
-match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.152
+match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.15827
 Precision : 0.03
-match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.13371
+match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.12921
 
 Precision : 0.0001
 

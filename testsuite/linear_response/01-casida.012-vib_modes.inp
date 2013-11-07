@@ -32,3 +32,5 @@ EigenSolverMaxIter = 20
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
+
+LRConvAbsDens = 1e-6
