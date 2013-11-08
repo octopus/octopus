@@ -90,7 +90,7 @@ contains
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
-    logical :: normal_mode_wfs, use_restart, do_infrared, symmetrize
+    logical :: normal_mode_wfs, do_infrared, symmetrize
 
     PUSH_SUB(phonons_lr_run)
 
@@ -140,25 +140,8 @@ contains
     !%End
     call parse_logical(datasets_check('SymmetrizeDynamicalMatrix'), .true., symmetrize)
 
-    !%Variable UseRestartDontSolve
-    !%Type logical
-    !%Default false
-    !%Section Linear Response::Vibrational Modes
-    !%Description
-    !% If set to true, the restart info for each displacement will be used as is
-    !% in calculating normal modes, without trying to solve the Sternheimer equation.
-    !% This allows continuation of a previous calculation which did not complete
-    !% without doing anything at all with the displacements already solved, since
-    !% setting up the Sternheimer problem can be quite time-consuming for large systems.
-    !% Use with care: if the stored info is not the appropriate converged solution,
-    !% results will be incorrect.
-    !% If <tt>FromScratch = true</tt>, this variable is always false.
-    !%End
-    if(.not. fromScratch) then
-      call parse_logical(datasets_check('UseRestartDontSolve'), .false., use_restart)
-    else
-      use_restart = .false.
-    endif
+    ! replaced by properly saving and reading the dynamical matrix
+    call messages_obsolete_variable('UseRestartDontSolve')
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
@@ -245,19 +228,20 @@ contains
       call pert_setup_atom(ionic_pert, iatom)
       call pert_setup_dir(ionic_pert, idir)
       
-      if(.not. use_restart .or. ierr /= 0) then
-        if(states_are_real(st)) then
-          call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
-            VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
-        else
-          call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
-            VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
-        endif
+      if(states_are_real(st)) then
+        call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
+          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        message(1) = "Restart info being used without solving Sternheimer equation."
-        call messages_warning(1)
+        call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
+          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       endif
       
+      if(states_are_real(st)) then
+        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+      else
+        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+      endif
+
       do jmat = 1, vib%num_modes
         if(.not. symmetrize .and. jmat < imat) then
           vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
@@ -266,12 +250,6 @@ contains
 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
-
-        if(states_are_real(st)) then
-          call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
-        else
-          call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
-        endif
 
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, geo, iatom, jatom)
