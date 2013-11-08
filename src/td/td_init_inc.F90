@@ -210,6 +210,7 @@ subroutine td_end(td)
 
   call PES_end(td%PESv)
   call propagator_end(td%tr)  ! clean the evolution method
+  call ion_dynamics_end(td%ions)
 
   if(td%dynamics == BO) call scf_end(td%scf)
   

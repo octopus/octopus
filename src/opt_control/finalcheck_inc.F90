@@ -39,6 +39,7 @@
 
     call oct_iterator_bestpar(par, iterator)
 
+    call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys, hm, td, par, oct_target, qcpsi, write_iter = .true.)
     call opt_control_get_qs(psi, qcpsi)

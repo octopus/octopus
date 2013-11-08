@@ -4,7 +4,7 @@
 Test       : testsuite/optimal_control/11-classical.test
 Programs   : octopus; octopus_mpi
 TestGroups : short-run, optimal_control
-Enabled    : No
+Enabled    : Yes
 
 Input: 11-classical.01-ground_state.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 0.89379037

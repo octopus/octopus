@@ -40,6 +40,7 @@
     theta(index_) = x
 
     call controlfunction_set_theta(par_, theta)
+    call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
     f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
@@ -121,6 +122,7 @@
     else
       theta = x
       call controlfunction_set_theta(par_, theta)
+      call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
       f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
@@ -188,6 +190,7 @@
 
     if(oct%delta == M_ZERO) then
       ! We only need the value of the target functional.
+      call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
       f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)

@@ -238,6 +238,7 @@ contains
       type(opt_control_state_t) :: psi
       PUSH_SUB(opt_control_run.scheme_mt03)
 
+      call opt_control_state_null(psi)
       call opt_control_state_copy(psi, initial_st)
       call oct_prop_init(prop_chi, "chi")
       call oct_prop_init(prop_psi, "psi")
@@ -272,6 +273,8 @@ contains
         call controlfunction_set_alpha(par, sqrt( controlfunction_fluence(par) / controlfunction_targetfluence()))
       end if
 
+      call opt_control_state_null(psi)
+
       call controlfunction_copy(par_new, par)
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
@@ -295,6 +298,7 @@ contains
       type(opt_control_state_t) :: qcpsi
       PUSH_SUB(opt_control_run.scheme_zbr98)
 
+      call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call oct_prop_init(prop_chi, "chi")
       call oct_prop_init(prop_psi, "psi")
@@ -342,6 +346,7 @@ contains
 
       call controlfunction_set_rep(par)
 
+      call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
       f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
@@ -409,6 +414,7 @@ contains
       call controlfunction_set_rep(par)
       dim = controlfunction_dof(par)
 
+      call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
       f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
@@ -583,6 +589,7 @@ contains
 
     call controlfunction_copy(parp, par)
 
+    call opt_control_state_null(qcchi)
     call opt_control_state_copy(qcchi, qcpsi)
     call target_chi(oct_target, sys%gr, qcpsi, qcchi, sys%geo)
     call bwd_step(sys, td, hm, oct_target, par, parp, qcchi, prop_chi, prop_psi)
@@ -634,6 +641,7 @@ contains
     call controlfunction_copy(par_chi, par)
 
     ! First, a forward propagation with the input field.
+    call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
@@ -641,6 +649,7 @@ contains
     j1 = target_j1(oct_target, sys%gr, qcpsi, sys%geo)
 
     ! Set the boundary condition for the backward propagation.
+    call opt_control_state_null(qcchi)
     call opt_control_state_copy(qcchi, qcpsi)
     call target_chi(oct_target, sys%gr, qcpsi, qcchi, sys%geo)
 
@@ -688,6 +697,7 @@ contains
 
     call controlfunction_copy(par_chi, par)
 
+    call opt_control_state_null(qcchi)
     call opt_control_state_copy(qcchi, qcpsi)
     call target_chi(oct_target, sys%gr, qcpsi, qcchi, sys%geo)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, qcchi, prop_chi, prop_psi)

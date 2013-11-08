@@ -46,7 +46,9 @@ module opt_control_state_m
             opt_control_point_q,       &
             opt_control_point_p,       &
             opt_control_state_copy,    &
-            opt_control_state_end
+            opt_control_state_end,     &
+            opt_control_state_null
+
 
   !> This is the datatype that contains the objects that are propagated: in principle this
   !! could be both the quantum and the classical subsystems, but for the moment it is only
@@ -60,6 +62,15 @@ module opt_control_state_m
   end type opt_control_state_t
 
 contains
+
+
+  subroutine opt_control_state_null(ocs)
+    type(opt_control_state_t), intent(inout) :: ocs
+    SAFE_DEALLOCATE_A(ocs%q)
+    SAFE_DEALLOCATE_A(ocs%p)
+    call states_null(ocs%psi)
+  end subroutine opt_control_state_null
+
 
   function opt_control_point_qs(ocs)
     type(states_t), pointer :: opt_control_point_qs
@@ -169,6 +180,7 @@ contains
     type(opt_control_state_t), intent(in) :: ocsin
     type(opt_control_state_t), intent(inout) :: ocsout
 
+    call states_end(ocsout%psi)
     call states_copy(ocsout%psi, ocsin%psi)
     ocsout%ndim = ocsin%ndim
     ocsout%natoms = ocsin%natoms

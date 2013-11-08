@@ -339,6 +339,7 @@ contains
 
     call controlfunction_to_realtime(par)
 
+    call opt_control_state_null(qcchi)
     call opt_control_state_copy(qcchi, qcpsi)
 
     psi => opt_control_point_qs(qcpsi)
@@ -545,6 +546,7 @@ contains
     ! the first two iterations are done self-consistently nonetheless.
     call propagator_remove_scf_prop(tr_chi)
 
+    call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, qcchi)
     psi => opt_control_point_qs(qcpsi)
     call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
@@ -669,9 +671,7 @@ contains
     type(states_t) :: inh
     integer :: j, iatom, idim
     CMPLX, allocatable :: dvpsi(:, :, :)
-!!!!NEW
     integer :: ist, ik
-!!!!ENDOFNEW
 
     PUSH_SUB(update_hamiltonian_chi)
 
@@ -686,14 +686,6 @@ contains
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
       inh%zpsi = M_z0
-!!$      do iatom = 1, geo%natoms
-!!$        call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-!!$          st%d%dim, st%zpsi(:, :, 1, 1), dvpsi)
-!!$        do idim = 1, gr%sb%dim
-!!$          inh%zpsi(:, :, 1, 1) = inh%zpsi(:, :, 1, 1) + st%occ(1, 1) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
-!!$        end do
-!!$      end do
-!!!!NEW
       do ist = 1, st%nst
         do ik = 1, st%d%nik
           do iatom = 1, geo%natoms
@@ -705,7 +697,6 @@ contains
           end do
         end do
       end do
-!!!!ENDOFNEW
       SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
