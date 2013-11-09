@@ -56,15 +56,6 @@ module mesh_init_m
     mesh_read_lead
 
   type(profile_t), save :: mesh_init_prof
-
-  interface
-    subroutine hilbert_index_to_point(dim, nbits, index, point)
-      integer,   intent(in)  :: dim
-      integer,   intent(in)  :: nbits
-      integer*8, intent(in)  :: index
-      integer,   intent(out) :: point(:) !< (3)
-    end subroutine hilbert_index_to_point
-  end interface
   
 contains
 
@@ -535,6 +526,16 @@ contains
       ORDER_HILBERT    =  2, &
       ORDER_HILBERT_2D =  3
 
+   interface
+      subroutine hilbert_index_to_point(dim, nbits, index, point)
+        implicit none
+
+        integer,    intent(in)       :: dim
+        integer,    intent(in)       :: nbits
+        integer(8), intent(in)       :: index
+        integer,    intent(out)      :: point !< (1:3)
+      end subroutine hilbert_index_to_point
+    end interface
 
     PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
 
@@ -681,7 +682,7 @@ contains
       ien = mesh%np_global
       do ihilbert = 0, 2**(bits*3) - 1
 
-        call hilbert_index_to_point(3, bits, ihilbert, point)
+        call hilbert_index_to_point(3, bits, ihilbert, point(1))
 
         ix = point(1) + mesh%idx%nr(1, 1)
         iy = point(2) + mesh%idx%nr(1, 2)
@@ -746,7 +747,7 @@ contains
       do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
         do ihilbert = 0, 2**(bits*2) - 1
 
-          call hilbert_index_to_point(2, bits, ihilbert, point)
+          call hilbert_index_to_point(2, bits, ihilbert, point(1))
 
           ix = point(1) + mesh%idx%nr(1, 1)
           iy = point(2) + mesh%idx%nr(1, 2)
