@@ -246,6 +246,8 @@ contains
         call messages_warning(1)
       endif
       
+      call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        
       if(symmetrize) then
         jmat_start = 1
       else
@@ -255,8 +257,6 @@ contains
       do jmat = jmat_start, vib%num_modes 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
-
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
 
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
