@@ -167,6 +167,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   end if
 
+  call local_allocate()
+
   space_loop: do ip = 1, der%mesh%np, N_BLOCK_MAX
 
     call space_loop_init(n_block)
@@ -296,6 +298,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     end do functl_loop
   end do space_loop
 
+  call local_deallocate()
+
   if(present(deltaxc)) deltaxc = M_ZERO
 
   if(xcs%xc_density_correction == LR_X) then
@@ -418,8 +422,6 @@ contains
     PUSH_SUB(xc_get_vxc.lda_init)
 
     ! allocate some general arrays
-    SAFE_ALLOCATE(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
-    SAFE_ALLOCATE(l_zk(1:N_BLOCK_MAX))
 
     SAFE_ALLOCATE(dens(1:der%mesh%np_part, 1:spin_channels))
     dens       = M_ZERO
@@ -431,7 +433,6 @@ contains
       ec_per_vol = M_ZERO
     end if
 
-    SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
     SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
     dedd = M_ZERO
     
@@ -456,19 +457,14 @@ contains
     POP_SUB(xc_get_vxc.lda_init)
   end subroutine lda_init
 
-
   ! ---------------------------------------------------------
   !> deallocate variables allocated in lda_init
   subroutine lda_end()
     PUSH_SUB(xc_get_vxc.lda_end)
 
-    SAFE_DEALLOCATE_A(l_dens)
-    SAFE_DEALLOCATE_A(l_zk)
-
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(ex_per_vol)
     SAFE_DEALLOCATE_A(ec_per_vol)
-    SAFE_DEALLOCATE_A(l_dedd)
     SAFE_DEALLOCATE_A(dedd)
 
     POP_SUB(xc_get_vxc.lda_end)
@@ -520,11 +516,9 @@ contains
     if(ispin /= UNPOLARIZED) ii = 3
 
     ! allocate variables
-    SAFE_ALLOCATE(l_sigma(1:ii, 1:N_BLOCK_MAX))
     SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
-    SAFE_ALLOCATE(l_vsigma(1:ii, 1:N_BLOCK_MAX))
     SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
     dedgd = M_ZERO
 
@@ -544,9 +538,7 @@ contains
   subroutine gga_end()
     PUSH_SUB(xc_get_vxc.gga_end)
 
-    SAFE_DEALLOCATE_A(l_sigma)
     SAFE_DEALLOCATE_A(gdens)
-    SAFE_DEALLOCATE_A(l_vsigma)
     SAFE_DEALLOCATE_A(dedgd)
 
     POP_SUB(xc_get_vxc.gga_end)
@@ -600,14 +592,8 @@ contains
     SAFE_ALLOCATE( current (1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels) )
     SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
 
-    SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
-    SAFE_ALLOCATE(l_ldens(1:spin_channels, 1:N_BLOCK_MAX))
-
     SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
     dedldens = M_ZERO
-
-    SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
-    SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
 
     POP_SUB(xc_get_vxc.mgga_init)
   end subroutine mgga_init
@@ -659,17 +645,58 @@ contains
     SAFE_DEALLOCATE_A(current)
     SAFE_DEALLOCATE_A(ldens)
 
-    SAFE_DEALLOCATE_A(l_tau)
-    SAFE_DEALLOCATE_A(l_ldens)
-
     SAFE_DEALLOCATE_A(dedldens)
-
-    SAFE_DEALLOCATE_A(l_dedtau)
-    SAFE_DEALLOCATE_A(l_dedldens)
 
     POP_SUB(xc_get_vxc.mgga_end)
   end subroutine mgga_end
 
+  ! ---------------------------------------------------------
+  ! THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
+  subroutine local_allocate()
+    integer :: ii
+
+    allocate(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
+    allocate(l_zk(1:N_BLOCK_MAX))
+    allocate(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
+
+    if(gga .or. xcs%xc_density_correction == LR_X) then
+      ii = 1
+      if(ispin /= UNPOLARIZED) ii = 3
+      
+      allocate(l_sigma(1:ii, 1:N_BLOCK_MAX))
+      allocate(l_vsigma(1:ii, 1:N_BLOCK_MAX))
+    end if
+
+    if(mgga) then
+      allocate(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_ldens(1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
+    end if
+
+    end subroutine local_allocate
+
+  ! ---------------------------------------------------------
+  ! THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
+  subroutine local_deallocate()
+
+    deallocate(l_dens)
+    deallocate(l_zk)
+    deallocate(l_dedd)
+
+    if(gga .or. xcs%xc_density_correction == LR_X) then
+      deallocate(l_sigma)
+      deallocate(l_vsigma)
+    end if
+
+    if(mgga) then
+      deallocate(l_tau)
+      deallocate(l_ldens)
+      deallocate(l_dedtau)
+      deallocate(l_dedldens)
+    end if
+
+  end subroutine local_deallocate
 
   ! ---------------------------------------------------------
   !> calculate the mgga contribution to vxc
