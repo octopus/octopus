@@ -915,7 +915,6 @@ contains
     PUSH_SUB(tdf_copy)
 
     ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_ZERO_FOURIER) )
-    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_ZERO_FOURIER) )
 
     call tdf_end(fout)
     call tdf_init(fout)
