@@ -969,11 +969,14 @@ contains
   subroutine fft_operation_count(fft)
     type(fft_t), intent(in)  :: fft
 
-    real(8) :: count, fullsize
+    real(8) :: fullsize
+
+    PUSH_SUB(fft_operation_count)
 
     fullsize = product(dble(fft%fs_n(1:3)))
     call profiling_count_operations(5.0_8*fullsize*log(fullsize)/log(2.0_8))
-        
+
+    POP_SUB(fft_operation_count)
   end subroutine fft_operation_count
 
 
