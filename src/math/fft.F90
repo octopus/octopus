@@ -963,6 +963,20 @@ contains
     POP_SUB(get_exponents)
   end subroutine get_exponents
 
+
+  ! ----------------------------------------------------------
+
+  subroutine fft_operation_count(fft)
+    type(fft_t), intent(in)  :: fft
+
+    real(8) :: count, fullsize
+
+    fullsize = product(dble(fft%fs_n(1:3)))
+    call profiling_count_operations(5.0_8*fullsize*log(fullsize)/log(2.0_8))
+        
+  end subroutine fft_operation_count
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "fft_inc.F90"

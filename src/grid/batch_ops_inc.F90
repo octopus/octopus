@@ -112,6 +112,8 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     end do
   end select
 
+  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
+
   call batch_pack_was_modified(yy)
 
   call profiling_out(axpy_const_prof)

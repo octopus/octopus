@@ -107,6 +107,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
       call messages_fatal()
     end select
 
+    call fft_operation_count(fft)
+
     call profiling_out(prof_fw)
 
     POP_SUB(X(fft_forward))
@@ -152,6 +154,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
     
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
     
+    call fft_operation_count(fft)
+
     call opencl_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
@@ -173,6 +177,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     PUSH_SUB(X(fft_forward1))
 
     call fftw_execute_dft(fft_array(fft%slot)%planf, in(1), out(1))
+    call fft_operation_count(fft)
 
     POP_SUB(X(fft_forward1))
   end subroutine X(fft_forward1)
@@ -274,6 +279,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
       !$omp end parallel do
     end if
 
+    call fft_operation_count(fft)
+
     call profiling_out(prof_bw)
 
     POP_SUB(X(fft_backward))
@@ -320,6 +327,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
     
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
     
+    call fft_operation_count(fft)
+
     call opencl_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
@@ -340,6 +349,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
     PUSH_SUB(X(fft_backward1))
     
     call fftw_execute_dft(fft_array(fft%slot)%planb, in(1), out(1))
+
+    call fft_operation_count(fft)
 
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft_array(fft%slot)%rs_n_global(1), R_TOTYPE(M_ONE) / fft_array(fft%slot)%rs_n_global(1), out)
