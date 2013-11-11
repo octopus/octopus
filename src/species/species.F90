@@ -76,6 +76,7 @@ module species_m
     species_is_ps,                 &
     species_is_full,               &
     species_is_local,              &
+    species_represents_real_atom,  &
     species_real_nl_projector,     &
     species_nl_projector,          &
     species_get_iwf_radius,        &
@@ -94,9 +95,9 @@ module species_m
     SPEC_PS_FHI = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT format)
     SPEC_PS_UPF = PS_TYPE_UPF,   & !< UPF pseudopotential
     SPEC_PSPIO          = 110,   & !< pseudopotential parsed by pspio library
-    SPEC_USDEF          = 123,   & !< user-defined function
+    SPEC_USDEF          = 123,   & !< user-defined function for local potential
     SPEC_FULL_GAUSSIAN  = 124,   & !< full-potential atom
-    SPEC_CHARGE_DENSITY = 125,   &
+    SPEC_CHARGE_DENSITY = 125,   & !< user-defined function for charge density
     SPEC_FROM_FILE      = 126,   &
     SPEC_FULL_DELTA     = 127,   & !< full-potential atom
     SPEC_SOFT_COULOMB   = 128      !< soft-Coulomb potential
@@ -923,6 +924,22 @@ contains
   end function species_is_local
   ! ---------------------------------------------------------
 
+
+
+  logical function species_represents_real_atom(spec)
+    type(species_t), intent(in) :: spec
+    
+    integer :: type
+    species_represents_real_atom = .true.
+
+    PUSH_SUB(species_represents_real_atom)
+    
+    type = species_type(spec)
+    species_represents_real_atom = (type /= SPEC_USDEF .and. type /= SPEC_CHARGE_DENSITY .and. type /= SPEC_FROM_FILE &
+      .and. type /= SPEC_JELLI_SLAB)
+    
+    POP_SUB(species_represents_real_atom)
+  end function species_represents_real_atom
 
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector and its

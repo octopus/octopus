@@ -268,16 +268,6 @@ contains
       call xyz_file_end(xyz)
     end if
 
-    if(geometry_atoms_are_too_close(geo)) then
-      ! complain
-      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
-      write(message(2), '(a)') "Please review your input files and the output geometry."
-      ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir(STATIC_DIR)
-      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
-      call messages_fatal(2)
-    end if
-
     POP_SUB(geometry_init_xyz)
   end subroutine geometry_init_xyz
 
@@ -320,10 +310,8 @@ contains
       call species_set_index(geo%species(k), k)
       call species_read(geo%species(k))
       ! these are the species which do not represent atoms
-      geo%only_user_def = (geo%only_user_def .and. &
-        (species_type(geo%species(k)) == SPEC_USDEF .or. species_type(geo%species(k)) == SPEC_CHARGE_DENSITY .or. &
-        species_type(geo%species(k)) == SPEC_FROM_FILE .or. species_type(geo%species(k)) == SPEC_JELLI_SLAB))
-
+      geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
+      
       if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
         call messages_fatal(1)
@@ -375,6 +363,21 @@ contains
         end if
       end do
     end do
+
+    if(geometry_atoms_are_too_close(geo, .true.)) then
+      ! complain
+      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
+      write(message(2), '(a)') "Please review your input files and the output geometry."
+      ! then write out the geometry, whether asked for or not in Output variable
+      call io_mkdir(STATIC_DIR)
+      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
+      call messages_fatal(2)
+    else if(geometry_atoms_are_too_close(geo, .false.)) then
+      write(message(1), '(a)') "Some atoms with special representations sit very close to each other."
+      write(message(2), '(a)') "If these represent physical atoms, this is probably an error."
+      write(message(3), '(a)') "Please review your input files and the output geometry in this case."
+      call messages_warning(3)
+    end if
 
     ! find out if we need non-local core corrections
     geo%nlcc = .false.
@@ -740,12 +743,13 @@ contains
 
   ! ---------------------------------------------------------
   !> This function returns .true. if two atoms are too close.
-  logical function geometry_atoms_are_too_close(geo) result(too_close)
+  logical function geometry_atoms_are_too_close(geo, atomic_species_only) result(too_close)
     type(geometry_t), intent(in) :: geo
+    logical,          intent(in) :: atomic_species_only
 
     PUSH_SUB(geometry_atoms_are_too_close)
 
-    too_close = (geometry_min_distance(geo) < CNST(1.0e-5) .and. geo%natoms > 1)
+    too_close = (geometry_min_distance(geo, atomic_species_only) < CNST(1.0e-5) .and. geo%natoms > 1)
 
     POP_SUB(geometry_atoms_are_too_close)
   end function geometry_atoms_are_too_close
@@ -782,23 +786,34 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function geometry_min_distance(geo) result(rmin)
-    type(geometry_t), intent(in)  :: geo
+  FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
+    type(geometry_t),  intent(in) :: geo
+    logical, optional, intent(in) :: real_atoms_only
 
     integer :: i, j
-    FLOAT :: r
+    FLOAT   :: r
+    logical :: real_atoms_only_
+    type(species_t), pointer :: species
 
     PUSH_SUB(geometry_min_distance)
 
+    real_atoms_only_ = .false.
+    if(present(real_atoms_only)) real_atoms_only_ = real_atoms_only
+
     rmin = huge(rmin)
     do i = 1, geo%natoms
+      call atom_get_species(geo%atom(i), species)
+      if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
       do j = i + 1, geo%natoms
+        if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
         r = atom_distance(geo%atom(i), geo%atom(j))
         if(r < rmin) then
           rmin = r
         end if
       end do
     end do
+
+    nullify(species)
 
     POP_SUB(geometry_min_distance)
   end function geometry_min_distance
