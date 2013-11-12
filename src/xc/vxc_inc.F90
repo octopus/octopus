@@ -276,23 +276,23 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         ! seems it would be better to allocate and deallocate these arrays outside the space loop.
         SAFE_DEALLOCATE_A(unp_dens)
         SAFE_DEALLOCATE_A(unp_dedd)
+      end if
 
-        if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
-          do ib = 1, n_block
-            dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
-            if(ispin /= UNPOLARIZED) then
-              dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,2)
-              dedgd(ib + ip - 1,:,2) = dedgd(ib + ip - 1,:,2) +  &
-                M_TWO*l_vsigma(3, ib)*gdens(ib + ip - 1,:,2) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,1)
-            end if
-          end do
-        end if
+      if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
+        do ib = 1, n_block
+          dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
+          if(ispin /= UNPOLARIZED) then
+            dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,2)
+            dedgd(ib + ip - 1,:,2) = dedgd(ib + ip - 1,:,2) +  &
+                 M_TWO*l_vsigma(3, ib)*gdens(ib + ip - 1,:,2) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,1)
+          end if
+        end do
+      end if
 
-        if(functl(ixc)%family == XC_FAMILY_MGGA) then
-          call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
-          call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
-          vtau = vtau / M_TWO
-        end if
+      if(functl(ixc)%family == XC_FAMILY_MGGA) then
+        call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
+        call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
+        vtau = vtau / M_TWO
       end if
 
     end do functl_loop
