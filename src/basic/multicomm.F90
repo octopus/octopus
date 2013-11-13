@@ -105,7 +105,6 @@ module multicomm_m
     "par_other  "                    &
     /)
 
-  integer, public, parameter :: MAX_OMP_THREADS = 16
   integer, parameter :: MAX_INDEX = 5
 
   !> Stores all communicators and groups
@@ -323,11 +322,6 @@ contains
       mc%nthreads = omp_get_num_threads()
       !$omp end master
       !$omp end parallel
-      if(mc%nthreads > MAX_OMP_THREADS) then
-        write(message(1),'(a,i6,a,i6,a)') "Number of threads requested (", mc%nthreads, &
-          ") is larger than MAX_OMP_THREADS (", MAX_OMP_THREADS, ")."
-        call messages_fatal(1)
-      end if
 #endif
 
       if(mc%par_strategy == P_STRATEGY_SERIAL .and. mc%nthreads == 1) then
@@ -823,9 +817,9 @@ contains
   subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
     integer,           intent(in)    :: nobjs !< Number of points to divide
     integer,           intent(in)    :: nprocs !< Number of processors
-    integer,           intent(out)   :: istart(:)
-    integer,           intent(out)   :: ifinal(:)
-    integer, optional, intent(out)   :: lsize(:) !< Number of objects in each partition
+    integer,           intent(out) :: istart(:)
+    integer,           intent(out) :: ifinal(:)
+    integer, optional, intent(out) :: lsize(:) !< Number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
     integer :: ii, jj, rank, size
@@ -903,17 +897,24 @@ contains
     integer, intent(out)   :: ini         !< Start point of the partition
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
     
-    integer :: istart(MAX_OMP_THREADS), ifinal(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
+    integer :: rank, nthreads
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 
     ! no push_sub, threadsafe
     rank = 1
 #ifdef HAVE_OPENMP
-    call multicomm_divide_range(nobjs, omp_get_num_threads(), istart, ifinal, lsize)
-
+    nthreads = omp_get_num_threads()
+    SAFE_ALLOCATE(istart(nthreads))
+    SAFE_ALLOCATE(ifinal(nthreads))
+    SAFE_ALLOCATE(lsize(nthreads))
+    call multicomm_divide_range(nobjs, nthreads, istart, ifinal, lsize)
     rank   = 1 + omp_get_thread_num()
 #endif
     ini    = istart(rank)
     nobjs_loc = lsize(rank)
+    SAFE_DEALLOCATE_A(istart)
+    SAFE_DEALLOCATE_A(ifinal)
+    SAFE_DEALLOCATE_A(lsize)
 
   end subroutine multicomm_divide_range_omp
 
