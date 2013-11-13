@@ -781,9 +781,12 @@ contains
       call profiling_out(prof)
     end do !iter
     
+    if(scf%max_iter > 0 .and. scf%mix_field == MIXPOT) then
+      call v_ks_calc(ks, hm, st, geo)
+    endif
+
     select case(scf%mix_field)
     case(MIXPOT)
-      call v_ks_calc(ks, hm, st, geo)
       SAFE_DEALLOCATE_A(vout)
       SAFE_DEALLOCATE_A(vin)
       SAFE_DEALLOCATE_A(vnew)
