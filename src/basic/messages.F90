@@ -547,7 +547,7 @@ contains
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
-    write(message(1), '(a,i14,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
+    write(message(1), '(a,i18,3a,i5)') "Failed to allocate ", size, " words in file '", trim(file), "' line ", line
     call messages_fatal(1)
 
   end subroutine alloc_error
@@ -559,7 +559,7 @@ contains
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
-    write(message(1), '(a,i14,3a,i5)') "Failed to deallocate array of ", size, " words in file '", trim(file), "' line ", line
+    write(message(1), '(a,i18,3a,i5)') "Failed to deallocate array of ", size, " words in file '", trim(file), "' line ", line
     call messages_fatal(1)
 
   end subroutine dealloc_error
