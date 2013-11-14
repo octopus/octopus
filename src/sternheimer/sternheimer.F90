@@ -122,7 +122,7 @@ contains
     logical, optional,   intent(in)    :: set_last_occ_response
     integer, optional,   intent(in)    :: set_default_solver
 
-    integer :: ham_var, default_solver
+    integer :: ham_var
     logical :: default_preorthog
 
     PUSH_SUB(sternheimer_init)
@@ -230,21 +230,7 @@ contains
     endif
     call messages_info(3) 
 
-    if(present(set_default_solver)) then
-      default_solver = set_default_solver
-    else
-      if(conf%devel_version) then
-        default_solver = LS_QMR_DOTP
-      else
-        if(states_are_real(sys%st)) then
-          default_solver = LS_QMR_SYMMETRIC
-          ! in this case, it is equivalent to LS_QMR_DOTP
-        else
-          default_solver = LS_QMR_SYMMETRIZED
-        endif
-      endif
-    endif
-    call linear_solver_init(this%solver, sys%gr, prefix, default_solver)
+    call linear_solver_init(this%solver, sys%gr, prefix, states_are_real(sys%st), set_default_solver)
 
     if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then

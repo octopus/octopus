@@ -88,10 +88,11 @@ module linear_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, prefix, def_solver)
+  subroutine linear_solver_init(this, gr, prefix, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: prefix
+    logical,                intent(in)    :: states_are_real !< for choosing solver
     integer, optional,      intent(in)    :: def_solver
 
     integer :: fsolver
@@ -137,8 +138,20 @@ contains
     !% Unlike the other methods, may not give the correct answer.
     !%End
 
-    defsolver_ = LS_QMR_SYMMETRIZED
-    if(present(def_solver)) defsolver_ = def_solver
+    if(present(def_solver)) then
+      defsolver_ = def_solver
+    else
+      if(conf%devel_version) then
+        defsolver_ = LS_QMR_DOTP
+      else
+        if(states_are_real) then
+          defsolver_ = LS_QMR_SYMMETRIC
+          ! in this case, it is equivalent to LS_QMR_DOTP
+        else
+          defsolver_ = LS_QMR_SYMMETRIZED
+        endif
+      endif
+    endif
 
     if (parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
       call parse_integer(datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
