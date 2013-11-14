@@ -202,7 +202,12 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
     if(ff < oep%scftol%conv_abs_dens) exit
   end do
 
-  write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", ff
+  if(ff > oep%scftol%conv_abs_dens) then
+    write(message(1), '(a)') "OEP did not converge."
+    call messages_warning(1)
+  endif
+
+  write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP residual = ", ff
   message(2) = ''
   call messages_info(2)
 
