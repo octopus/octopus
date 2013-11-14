@@ -7,238 +7,315 @@ TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input: 03-xc.01-gs.inp
-match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.45473695
+match ; Hartree-Fock energy Total              ; GREP(static/info, 'Total       =', 20)   ; -0.45473695
 match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;   -1.128711
 match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;   -0.683557
 
 Input: 03-xc.lda_x.inp
-match ; lda_x                                  ; GREP(static/info, 'Exchange    =', 20) ; -0.27231872
+match ; lda_x Exchange                         ; GREP(static/info, 'Exchange    =', 20) ; -0.27231872
+match ; lda_x Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.36309178
 
 Input: 03-xc.lda_c_wigner.inp
-match ; lda_c_wigner                           ; GREP(static/info, 'Correlation =', 20) ; -0.04403771
+match ; lda_c_wigner Correlation               ; GREP(static/info, 'Correlation =', 20) ; -0.04403771
+match ; lda_c_wigner Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04707102
 
 Input: 03-xc.lda_c_rpa.inp
-match ; lda_c_rpa                              ; GREP(static/info, 'Correlation =', 20) ; -0.04203203
+match ; lda_c_rpa Correlation                  ; GREP(static/info, 'Correlation =', 20) ; -0.04203203
+match ; lda_c_rpa Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.05434014
 
 Input: 03-xc.lda_c_hl.inp
-match ; lda_c_hl                               ; GREP(static/info, 'Correlation =', 20) ; -0.04827922
+match ; lda_c_hl Correlation                   ; GREP(static/info, 'Correlation =', 20) ; -0.04827922
+match ; lda_c_hl Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.05476427
 
 Input: 03-xc.lda_c_gl.inp
-match ; lda_c_gl                               ; GREP(static/info, 'Correlation =', 20) ; -0.04909824
+match ; lda_c_gl Correlation                   ; GREP(static/info, 'Correlation =', 20) ; -0.04909824
+match ; lda_c_gl Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.05675021
 
 Input: 03-xc.lda_c_xalpha.inp
-match ; lda_c_xalpha                           ; GREP(static/info, 'Correlation =', 20) ; -0.13615936
+match ; lda_c_xalpha Correlation               ; GREP(static/info, 'Correlation =', 20) ; -0.13615936
+match ; lda_c_xalpha Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.18154589
 
 Input: 03-xc.lda_c_vwn.inp
-match ; lda_c_vwn                              ; GREP(static/info, 'Correlation =', 20) ; -0.03869312
+match ; lda_c_vwn Correlation                  ; GREP(static/info, 'Correlation =', 20) ; -0.03869312
+match ; lda_c_vwn Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04453260
 
 Input: 03-xc.lda_c_vwn_rpa.inp
-match ; lda_c_vwn_rpa                          ; GREP(static/info, 'Correlation =', 20) ; -0.05551530
+match ; lda_c_vwn_rpa Correlation              ; GREP(static/info, 'Correlation =', 20) ; -0.05551530
+match ; lda_c_vwn_rpa Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.06201510
 
 Input: 03-xc.lda_c_pz.inp
-match ; lda_c_pz                               ; GREP(static/info, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz Correlation                   ; GREP(static/info, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04338461
 
 Input: 03-xc.lda_c_pz_mod.inp
-match ; lda_c_pz_mod                           ; GREP(static/info, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz_mod Correlation               ; GREP(static/info, 'Correlation =', 20) ; -0.03787715
+match ; lda_c_pz_mod Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04338461
 
 Input: 03-xc.lda_c_ob_pz.inp
-match ; lda_c_ob_pz                            ; GREP(static/info, 'Correlation =', 20) ; -0.03653120
+match ; lda_c_ob_pz Correlation                ; GREP(static/info, 'Correlation =', 20) ; -0.03653120
+match ; lda_c_ob_pz Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04134321
 
 Input: 03-xc.lda_c_pw.inp
-match ; lda_c_pw                               ; GREP(static/info, 'Correlation =', 20) ; -0.03849585
+match ; lda_c_pw Correlation                   ; GREP(static/info, 'Correlation =', 20) ; -0.03849585
+match ; lda_c_pw Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04428533
 
 Input: 03-xc.lda_c_pw_mod.inp
-match ; lda_c_pw_mod                           ; GREP(static/info, 'Correlation =', 20) ; -0.03849578
+match ; lda_c_pw_mod Correlation               ; GREP(static/info, 'Correlation =', 20) ; -0.03849578
+match ; lda_c_pw_mod Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04428522
 
 Input: 03-xc.lda_c_ob_pw.inp
-match ; lda_c_ob_pw                            ; GREP(static/info, 'Correlation =', 20) ; -0.03723110
+match ; lda_c_ob_pw Correlation                ; GREP(static/info, 'Correlation =', 20) ; -0.03723110
+match ; lda_c_ob_pw Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.04277282
 
 Input: 03-xc.lda_c_vbh.inp
-match ; lda_c_vbh                              ; GREP(static/info, 'Correlation =', 20) ; -0.05507011
+match ; lda_c_vbh Correlation                  ; GREP(static/info, 'Correlation =', 20) ; -0.05507011
+match ; lda_c_vbh Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.06144438
 
 Input: 03-xc.lda_xc_teter93.inp
-match ; lda_xc_teter93                         ; GREP(static/info, 'Correlation =', 20) ; -0.31070454
+match ; lda_xc_teter93 Correlation             ; GREP(static/info, 'Correlation =', 20) ; -0.31070454
+match ; lda_xc_teter93 Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ; -0.40719607
 
 Input: 03-xc.gga_x_pbe.inp
-match ; gga_x_pbe                              ; GREP(static/info, 'Exchange    =', 20)   ; -0.31679142
+match ; gga_x_pbe Exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.31679142
+match ; gga_x_pbe Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40378233
 
 Input: 03-xc.gga_x_pbe_r.inp
-match ; gga_x_pbe_r                            ; GREP(static/info, 'Exchange    =', 20)   ; -0.32398108
+match ; gga_x_pbe_r Exchange                   ; GREP(static/info, 'Exchange    =', 20)   ; -0.32398108
+match ; gga_x_pbe_r Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40834182
 
 Input: 03-xc.gga_x_b86.inp
-match ; gga_x_b86                              ; GREP(static/info, 'Exchange    =', 20)   ; -0.32201027
+match ; gga_x_b86 Exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.32201027
+match ; gga_x_b86 Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40802468
 
 Input: 03-xc.gga_x_b86_mgc.inp
-match ; gga_x_b86_mgc                          ; GREP(static/info, 'Exchange    =', 20)   ; -0.32026479
+match ; gga_x_b86_mgc Exchange                 ; GREP(static/info, 'Exchange    =', 20)   ; -0.32026479
+match ; gga_x_b86_mgc Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40684895
 
 Input: 03-xc.gga_x_b88.inp
-match ; gga_x_b88                              ; GREP(static/info, 'Exchange    =', 20)   ; -0.32282696
+match ; gga_x_b88 Exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.32282696
+match ; gga_x_b88 Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40726620
 
 Input: 03-xc.gga_x_g96.inp
-match ; gga_x_g96                              ; GREP(static/info, 'Exchange    =', 20)   ; -0.32654330
+match ; gga_x_g96 Exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.32654330
+match ; gga_x_g96 Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40827895
 
 Input: 03-xc.gga_x_pw86.inp
-match ; gga_x_pw86                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.32233736
+match ; gga_x_pw86 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.32233736
+match ; gga_x_pw86 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40891537
 
 Input: 03-xc.gga_x_pw91.inp
-match ; gga_x_pw91                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.31717671
+match ; gga_x_pw91 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.31717671
+match ; gga_x_pw91 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40494697
 
 Input: 03-xc.gga_x_optx.inp
-match ; gga_x_optx                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.32831885
+match ; gga_x_optx Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.32831885
+match ; gga_x_optx Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.41150893
 
 Input: 03-xc.gga_x_dk87_r1.inp
-match ; gga_x_dk87_r1                          ; GREP(static/info, 'Exchange    =', 20)   ; -0.32024775
+match ; gga_x_dk87_r1 Exchange                 ; GREP(static/info, 'Exchange    =', 20)   ; -0.32024775
+match ; gga_x_dk87_r1 Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40613695
 
 Input: 03-xc.gga_x_dk87_r2.inp
-match ; gga_x_dk87_r2                          ; GREP(static/info, 'Exchange    =', 20)   ; -0.32006476
+match ; gga_x_dk87_r2 Exchange                 ; GREP(static/info, 'Exchange    =', 20)   ; -0.32006476
+match ; gga_x_dk87_r2 Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40607858
 
 Input: 03-xc.gga_x_lg93.inp
-match ; gga_x_lg93                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.32083551
+match ; gga_x_lg93 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.32083551
+match ; gga_x_lg93 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40730182
 
 Input: 03-xc.gga_x_ft97_a.inp
-match ; gga_x_ft97_a                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.32902638
+match ; gga_x_ft97_a Exchange                  ; GREP(static/info, 'Exchange    =', 20)   ; -0.32902638
+match ; gga_x_ft97_a Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40931294
 
 Input: 03-xc.gga_x_ft97_b.inp
-match ; gga_x_ft97_b                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.32881732
+match ; gga_x_ft97_b Exchange                  ; GREP(static/info, 'Exchange    =', 20)   ; -0.32881732
+match ; gga_x_ft97_b Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40910896
 
 Input: 03-xc.gga_x_pbe_sol.inp
-match ; gga_x_pbe_sol                          ; GREP(static/info, 'Exchange    =', 20)   ; -0.30262561
+match ; gga_x_pbe_sol Exchange                 ; GREP(static/info, 'Exchange    =', 20)   ; -0.30262561
+match ; gga_x_pbe_sol Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.38928631
 
 Input: 03-xc.gga_x_rpbe.inp
-match ; gga_x_rpbe                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.32449509
+match ; gga_x_rpbe Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.32449509
+match ; gga_x_rpbe Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40926462
 
 Input: 03-xc.gga_x_wc.inp
-match ; gga_x_wc                               ; GREP(static/info, 'Exchange    =', 20)   ; -0.30960897
+match ; gga_x_wc Exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.30960897
+match ; gga_x_wc Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.39699708
 
 Input: 03-xc.gga_x_mpw91.inp
-match ; gga_x_mpw91                            ; GREP(static/info, 'Exchange    =', 20)   ; -0.32036364
+match ; gga_x_mpw91 Exchange                   ; GREP(static/info, 'Exchange    =', 20)   ; -0.32036364
+match ; gga_x_mpw91 Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40649881
 
 Input: 03-xc.gga_x_am05.inp
-match ; gga_x_am05                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.28774147
+match ; gga_x_am05 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.28774147
+match ; gga_x_am05 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.37311270
 
 Input: 03-xc.gga_x_pbea.inp
-match ; gga_x_pbea                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.31200606
+match ; gga_x_pbea Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.31200606
+match ; gga_x_pbea Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40021553
 
 Input: 03-xc.gga_x_mpbe.inp
-match ; gga_x_mpbe                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.31887879
+match ; gga_x_mpbe Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.31887879
+match ; gga_x_mpbe Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40534630
 
 Input: 03-xc.gga_x_xpbe.inp
-match ; gga_x_xpbe                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.32072116
+match ; gga_x_xpbe Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.32072116
+match ; gga_x_xpbe Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40702683
 
 Input: 03-xc.gga_x_bayesian.inp
-match ; gga_x_bayesian                         ; GREP(static/info, 'Exchange    =', 20)   ; -0.31915901
+match ; gga_x_bayesian Exchange                ; GREP(static/info, 'Exchange    =', 20)   ; -0.31915901
+match ; gga_x_bayesian Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40362487
 
 Input: 03-xc.gga_x_pbe_jsjr.inp
-match ; gga_x_pbe_jsjr                         ; GREP(static/info, 'Exchange    =', 20)   ; -0.30720216
+match ; gga_x_pbe_jsjr Exchange                ; GREP(static/info, 'Exchange    =', 20)   ; -0.30720216
+match ; gga_x_pbe_jsjr Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.39384119
 
 Input: 03-xc.gga_c_pbe.inp
-match ; gga_c_pbe                              ; GREP(static/info, 'Correlation =', 20)   ; -0.01453915
+match ; gga_c_pbe Correlation                  ; GREP(static/info, 'Correlation =', 20)   ; -0.01453915
+match ; gga_c_pbe Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02080323
 
 Input: 03-xc.gga_c_lyp.inp
-match ; gga_c_lyp                              ; GREP(static/info, 'Correlation =', 20)   ; -0.01069976
+match ; gga_c_lyp Correlation                  ; GREP(static/info, 'Correlation =', 20)   ; -0.01069976
+match ; gga_c_lyp Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.01708249
 
 Input: 03-xc.gga_c_p86.inp
-match ; gga_c_p86                              ; GREP(static/info, 'Correlation =', 20)   ; -0.01385540
+match ; gga_c_p86 Correlation                  ; GREP(static/info, 'Correlation =', 20)   ; -0.01385540
+match ; gga_c_p86 Int[n*v_xc]                  ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02106868
 
 Input: 03-xc.gga_c_pbe_sol.inp
-match ; gga_c_pbe_sol                          ; GREP(static/info, 'Correlation =', 20)   ; -0.01754529
+match ; gga_c_pbe_sol Correlation              ; GREP(static/info, 'Correlation =', 20)   ; -0.01754529
+match ; gga_c_pbe_sol Int[n*v_xc]              ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02447345
 
 Input: 03-xc.gga_c_pw91.inp
-match ; gga_c_pw91                             ; GREP(static/info, 'Correlation =', 20)   ; -0.01535887
+match ; gga_c_pw91 Correlation                 ; GREP(static/info, 'Correlation =', 20)   ; -0.01535887
+match ; gga_c_pw91 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02184211
 
 Input: 03-xc.gga_c_am05.inp
-match ; gga_c_am05                             ; GREP(static/info, 'Correlation =', 20)   ; -0.03372666
+match ; gga_c_am05 Correlation                 ; GREP(static/info, 'Correlation =', 20)   ; -0.03372666
+match ; gga_c_am05 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.03953788
 
 Input: 03-xc.gga_c_xpbe.inp
-match ; gga_c_xpbe                             ; GREP(static/info, 'Correlation =', 20)   ; -0.01404629
+match ; gga_c_xpbe Correlation                 ; GREP(static/info, 'Correlation =', 20)   ; -0.01404629
+match ; gga_c_xpbe Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02022460
 
 Input: 03-xc.gga_c_lm.inp
-match ; gga_c_lm                               ; GREP(static/info, 'Correlation =', 20)   ; -0.14127086
+match ; gga_c_lm Correlation                   ; GREP(static/info, 'Correlation =', 20)   ; -0.14127086
+match ; gga_c_lm Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.11167594
 
 Input: 03-xc.gga_c_pbe_jrgx.inp
-match ; gga_c_pbe_jrgx                         ; GREP(static/info, 'Correlation =', 20)   ; -0.01924435
+match ; gga_c_pbe_jrgx Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.01924435
+match ; gga_c_pbe_jrgx Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.02645532
 
 Input: 03-xc.gga_x_optb88_vdw.inp
-match ; gga_x_optb88_vdw                       ; GREP(static/info, 'Exchange    =', 20)   ; -0.31417392
+match ; gga_x_optb88_vdw Exchange              ; GREP(static/info, 'Exchange    =', 20)   ; -0.31417392
+match ; gga_x_optb88_vdw Int[n*v_xc]           ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.39946044
 
 Input: 03-xc.gga_x_pbek1_vdw.inp
-match ; gga_x_pbek1_vdw                        ; GREP(static/info, 'Exchange    =', 20)   ; -0.32039747
+match ; gga_x_pbek1_vdw Exchange               ; GREP(static/info, 'Exchange    =', 20)   ; -0.32039747
+match ; gga_x_pbek1_vdw Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.40612330
 
 Input: 03-xc.gga_x_optpbe_vdw.inp
-match ; gga_x_optpbe_vdw                       ; GREP(static/info, 'Exchange    =', 20)   ; -0.31463108
+match ; gga_x_optpbe_vdw Exchange              ; GREP(static/info, 'Exchange    =', 20)   ; -0.31463108
+match ; gga_x_optpbe_vdw Int[n*v_xc]           ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.39988484
 
 Input: 03-xc.gga_x_lb.inp
-match ; gga_x_lb                               ; GREP(static/info, 'Exchange    =', 20)   ; -0.20502974
+match ; gga_x_lb Exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.20502974
+match ; gga_x_lb Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.55604296
 
 Input: 03-xc.gga_xc_hcth_93.inp
-match ; gga_xc_hcth_93                         ; GREP(static/info, 'Correlation =', 20)   ; -0.34470063
+match ; gga_xc_hcth_93 Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.34470063
+match ; gga_xc_hcth_93 Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43460202
 
 Input: 03-xc.gga_xc_hcth_120.inp
-match ; gga_xc_hcth_120                        ; GREP(static/info, 'Correlation =', 20)   ; -0.34222215
+match ; gga_xc_hcth_120 Correlation            ; GREP(static/info, 'Correlation =', 20)   ; -0.34222215
+match ; gga_xc_hcth_120 Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43543457
 
 Input: 03-xc.gga_xc_hcth_147.inp
-match ; gga_xc_hcth_147                        ; GREP(static/info, 'Correlation =', 20)   ; -0.34454813
+match ; gga_xc_hcth_147 Correlation            ; GREP(static/info, 'Correlation =', 20)   ; -0.34454813
+match ; gga_xc_hcth_147 Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43691728
 
 Input: 03-xc.gga_xc_hcth_407.inp
-match ; gga_xc_hcth_407                        ; GREP(static/info, 'Correlation =', 20)   ; -0.34656464
+match ; gga_xc_hcth_407 Correlation            ; GREP(static/info, 'Correlation =', 20)   ; -0.34656464
+match ; gga_xc_hcth_407 Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43968789
 
 Input: 03-xc.gga_xc_edf1.inp
-match ; gga_xc_edf1                            ; GREP(static/info, 'Correlation =', 20)   ; -0.34151185
+match ; gga_xc_edf1 Correlation                ; GREP(static/info, 'Correlation =', 20)   ; -0.34151185
+match ; gga_xc_edf1 Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.42983244
 
 Input: 03-xc.gga_xc_xlyp.inp
-match ; gga_xc_xlyp                            ; GREP(static/info, 'Correlation =', 20)   ; -0.33505116
+match ; gga_xc_xlyp Correlation                ; GREP(static/info, 'Correlation =', 20)   ; -0.33505116
+match ; gga_xc_xlyp Int[n*v_xc]                ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.42659195
 
 Input: 03-xc.gga_xc_b97.inp
-match ; gga_xc_b97                             ; GREP(static/info, 'Correlation =', 20)   ; -0.27231614
+match ; gga_xc_b97 Correlation                 ; GREP(static/info, 'Correlation =', 20)   ; -0.27231614
+match ; gga_xc_b97 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.34773617
 
 Input: 03-xc.gga_xc_b97_1.inp
-match ; gga_xc_b97_1                           ; GREP(static/info, 'Correlation =', 20)   ; -0.26492862
+match ; gga_xc_b97_1 Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.26492862
+match ; gga_xc_b97_1 Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.33973285
 
 Input: 03-xc.gga_xc_b97_2.inp
-match ; gga_xc_b97_2                           ; GREP(static/info, 'Correlation =', 20)   ; -0.26946618
+match ; gga_xc_b97_2 Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.26946618
+match ; gga_xc_b97_2 Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.34296580
 
 Input: 03-xc.gga_xc_b97_d.inp
-match ; gga_xc_b97_d                           ; GREP(static/info, 'Correlation =', 20)   ; -0.34058884
+match ; gga_xc_b97_d Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.34058884
+match ; gga_xc_b97_d Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43151898
 
 Input: 03-xc.gga_xc_b97_k.inp
-match ; gga_xc_b97_k                           ; GREP(static/info, 'Correlation =', 20)   ; -0.19356517
+match ; gga_xc_b97_k Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.19356517
+match ; gga_xc_b97_k Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.24801510
 
 Input: 03-xc.gga_xc_b97_3.inp
-match ; gga_xc_b97_3                           ; GREP(static/info, 'Correlation =', 20)   ; -0.25035509
+match ; gga_xc_b97_3 Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.25035509
+match ; gga_xc_b97_3 Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.31916227
 
 Input: 03-xc.gga_xc_pbe1w.inp
-match ; gga_xc_pbe1w                           ; GREP(static/info, 'Correlation =', 20)   ; -0.33761061
+match ; gga_xc_pbe1w Correlation               ; GREP(static/info, 'Correlation =', 20)   ; -0.33761061
+match ; gga_xc_pbe1w Int[n*v_xc]               ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.43075520
 
 Input: 03-xc.gga_xc_mpwlyp1w.inp
-match ; gga_xc_mpwlyp1w                        ; GREP(static/info, 'Correlation =', 20)   ; -0.33442261
+match ; gga_xc_mpwlyp1w Correlation            ; GREP(static/info, 'Correlation =', 20)   ; -0.33442261
+match ; gga_xc_mpwlyp1w Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.42687531
 
 Input: 03-xc.gga_xc_pbelyp1w.inp
-match ; gga_xc_pbelyp1w                        ; GREP(static/info, 'Correlation =', 20)   ; -0.33476946
+match ; gga_xc_pbelyp1w Correlation            ; GREP(static/info, 'Correlation =', 20)   ; -0.33476946
+match ; gga_xc_pbelyp1w Int[n*v_xc]            ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.42800185
 
 Input: 03-xc.gga_xc_sb98_1a.inp
-match ; gga_xc_sb98_1a                         ; GREP(static/info, 'Correlation =', 20)   ; -0.25339616
+match ; gga_xc_sb98_1a Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.25339616
+match ; gga_xc_sb98_1a Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.32768011
 
 Input: 03-xc.gga_xc_sb98_1b.inp
-match ; gga_xc_sb98_1b                         ; GREP(static/info, 'Correlation =', 20)   ; -0.27188700
+match ; gga_xc_sb98_1b Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.27188700
+match ; gga_xc_sb98_1b Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.34418279
 
 Input: 03-xc.gga_xc_sb98_1c.inp
-match ; gga_xc_sb98_1c                         ; GREP(static/info, 'Correlation =', 20)   ; -0.27333098
+match ; gga_xc_sb98_1c Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.27333098
+match ; gga_xc_sb98_1c Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.34900792
 
 Input: 03-xc.gga_xc_sb98_2a.inp
-match ; gga_xc_sb98_2a                         ; GREP(static/info, 'Correlation =', 20)   ; -0.28194616
+match ; gga_xc_sb98_2a Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.28194616
+match ; gga_xc_sb98_2a Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.35549638
 
 Input: 03-xc.gga_xc_sb98_2b.inp
-match ; gga_xc_sb98_2b                         ; GREP(static/info, 'Correlation =', 20)   ; -0.25603741
+match ; gga_xc_sb98_2b Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.25603741
+match ; gga_xc_sb98_2b Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.32730296
 
 Input: 03-xc.gga_xc_sb98_2c.inp
-match ; gga_xc_sb98_2c                         ; GREP(static/info, 'Correlation =', 20)   ; -0.26344385
+match ; gga_xc_sb98_2c Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.26344385
+match ; gga_xc_sb98_2c Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.33715994
 
 Input: 03-xc.kli.inp
 match ; OEP KLI Exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -0.25285983
+match ; OEP KLI Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.50571990
 
 Input: 03-xc.exx.inp
-match ; OEP exact exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.25285983
+match ; OEP Exact Exchange                     ; GREP(static/info, 'Exchange    =', 20)   ; -0.25285983
+match ; OEP EXX Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.50571990
 
 Input: 03-xc.sic_pz.inp
-match ; OEP SIC exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -0.25286090
-match ; OEP SIC correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.01534592
+match ; OEP SIC Exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -0.25286090
+match ; OEP SIC Correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.01534592
+match ; OEP SIC correlation Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.52328211

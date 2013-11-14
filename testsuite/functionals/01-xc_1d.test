@@ -7,25 +7,31 @@ TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 01-xc_1d.01-wfs-lda.inp
-match ; LDA energy                               ; GREP(static/info, 'Total       =', 20)   ; -4.17967691
-match ; LDA eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.775161
-match ; LDA eigenvalue 2 up                      ; GREP(static/info, '  2   up', 13) ;  -0.087430
-match ; LDA eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.797099
-match ; LDA eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.167274
+match ; LDA Total Energy                         ; GREP(static/info, 'Total       =', 20)   ; -4.17967691
+match ; LDA Exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -1.00241236
+match ; LDA Correlation                          ; GREP(static/info, 'Correlation =', 20)   ; -0.04057719
+match ; LDA Int[n*v_xc]                          ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -1.30968982
+match ; LDA Eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.775161
+match ; LDA Eigenvalue 2 up                      ; GREP(static/info, '  2   up', 13) ;  -0.087430
+match ; LDA Eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.797099
+match ; LDA Eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.167274
 
 Input: 01-xc_1d.02-wfs-hf.inp
-match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.19644929
-match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.071001
-match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ;   0.003012
-match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.126189 
-match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;  -0.315508
+match ; Hartree-Fock Total Energy                ; GREP(static/info, 'Total       =', 20)   ; -4.19644929
+match ; Hartree-Fock Eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.071001
+match ; Hartree-Fock Eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ;   0.003012
+match ; Hartree-Fock Eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.126189 
+match ; Hartree-Fock Eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;  -0.315508
 
 Input: 01-xc_1d.lda_csc.inp
-match ; LDA exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -1.01931500
-match ; LDA CSC correlation                      ; GREP(static/info, 'Correlation =', 20)   ; -0.03745068
+match ; LDA Exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -1.01931500
+match ; LDA CSC Correlation                      ; GREP(static/info, 'Correlation =', 20)   ; -0.03745068
+match ; LDA CSC Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -1.32191340
 
 Input: 01-xc_1d.oep_kli.inp
-match ; OEP KLI                                  ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP KLI Exchange                         ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP KLI Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -1.97704513
 
 Input: 01-xc_1d.oep_exx.inp
-match ; OEP Exact exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP Exact Exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP EXX Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -676005.02574555

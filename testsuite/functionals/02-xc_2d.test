@@ -47,22 +47,28 @@ match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn',
 # We use the wave-functions obtained to test the 2D XC functionals
 
 Input: 02-xc_2d.lda_amgb.inp
-match ; LDA exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.62342504
-match ; LDA AMGB correlation                     ; GREP(static/info, 'Correlation =', 20)   ; -0.03534534
+match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.62342504
+match ; LDA AMGB Correlation                   ; GREP(static/info, 'Correlation =', 20)   ; -0.03534534
+match ; LDA AMGB Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97730047
 
 # (this calculation is done without spin polarization)
 Input: 02-xc_2d.lda_prm.inp
-match ; LDA exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -0.44082808
-match ; LDA PRM correlation                      ; GREP(static/info, 'Correlation =', 20)   ; -0.12223476
+match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.44082808
+match ; LDA PRM Correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.12223476
+match ; LDA PRM Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.81147437
 
 Input: 02-xc_2d.gga_b86.inp
-match ; GGA 2D B86 exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.66569035
+match ; GGA 2D B86 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.66569035
+match ; GGA 2D B86 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.96106957
 
 Input: 02-xc_2d.gga_b86_mgc.inp
-match ; GGA 2D B86 MGC exchange                  ; GREP(static/info, 'Exchange    =', 20)   ; -0.65901733
+match ; GGA 2D B86 MGC Exchange                ; GREP(static/info, 'Exchange    =', 20)   ; -0.65901733
+match ; GGA 2D B86 MGC Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.96391509
 
 Input: 02-xc_2d.gga_b88.inp
-match ; GGA 2D B88 exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.67040364
+match ; GGA 2D B88 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.67040364
+match ; GGA 2D B88 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97950183
 
 Input: 02-xc_2d.gga_pbe.inp
-match ; GGA 2D PBE exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.67022789
+match ; GGA 2D PBE Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.67022789
+match ; GGA 2D PBE Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97796406
