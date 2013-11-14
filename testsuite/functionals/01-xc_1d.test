@@ -34,4 +34,4 @@ match ; OEP KLI Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_
 
 Input: 01-xc_1d.oep_exx.inp
 match ; OEP Exact Exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
-match ; OEP EXX Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -676005.02574555
+match ; OEP EXX Int[n*v_xc]                      ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -2.14242036

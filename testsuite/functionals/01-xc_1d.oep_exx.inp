@@ -24,3 +24,4 @@ XCFunctional = oep_x
 OEPLevel = oep_full
 
 ExperimentalFeatures = yes
+OEPMixing = 0.001
