@@ -21,11 +21,11 @@ match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn',
 match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;  -0.315508
 
 Input: 01-xc_1d.lda_csc.inp
-match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01931500
-match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.03745068
+match ; LDA exchange                             ; GREP(static/info, 'Exchange    =', 20)   ; -1.01931500
+match ; LDA CSC correlation                      ; GREP(static/info, 'Correlation =', 20)   ; -0.03745068
 
 Input: 01-xc_1d.oep_kli.inp
-match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP KLI                                  ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828
 
 Input: 01-xc_1d.oep_exx.inp
-match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
+match ; OEP Exact exchange                       ; GREP(static/info, 'Exchange    =', 20)   ; -1.07717828

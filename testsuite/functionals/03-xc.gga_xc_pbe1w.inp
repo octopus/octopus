@@ -1,11 +1,11 @@
-CalculationMode = one_shot
+CalculationMode = gs
 
 %Coordinates
  'H' |  0.717157 | 0 | 0
  'H' | -0.717157 | 0 | 0
 %
 
-FromScratch = yes
+MaximumIter = 0
 
 SpinComponents = spin_polarized
 

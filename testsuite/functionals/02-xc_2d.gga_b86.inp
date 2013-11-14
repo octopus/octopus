@@ -1,6 +1,6 @@
-CalculationMode = one_shot
+CalculationMode = gs
 
-FromScratch = yes
+MaximumIter = 0
 Dimensions = 2
 
 lambda = 2.0
