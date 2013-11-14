@@ -126,14 +126,12 @@ module v_ks_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, dd, geo, mc, nel, theta)
+  subroutine v_ks_init(ks, gr, st, geo, mc)
     type(v_ks_t),         intent(out)   :: ks
     type(grid_t), target, intent(inout) :: gr
-    type(states_dim_t),   intent(in)    :: dd
+    type(states_t),       intent(in)    :: st
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
-    FLOAT,                intent(in)    :: nel !< the total number of electrons
-    FLOAT,      optional, intent(in)    :: theta !< cmplxscl
 
     PUSH_SUB(v_ks_init)
 
@@ -193,13 +191,13 @@ contains
         call messages_not_implemented("Hartree-Fock with k-points")
 
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.true.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, st%qtot, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, st%qtot, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
@@ -297,7 +295,7 @@ contains
       end if
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        call xc_oep_init(ks%oep, ks%xc_family, gr, dd, nel)
+        call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       endif
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
@@ -314,7 +312,8 @@ contains
       if(gr%have_fine_mesh) then
         ks%new_hartree = .true.
         SAFE_ALLOCATE(ks%hartree_solver)
-        call poisson_init(ks%hartree_solver, gr%fine%der, geo, mc%master_comm, label = " (fine mesh)", theta = theta)
+        call poisson_init(ks%hartree_solver, gr%fine%der, geo, mc%master_comm, &
+          label = " (fine mesh)", theta = st%cmplxscl%theta)
       else
         ks%hartree_solver => psolver
       end if

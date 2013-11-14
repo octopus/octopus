@@ -80,12 +80,11 @@ module xc_oep_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, family, gr, d, nel)
+  subroutine xc_oep_init(oep, family, gr, st)
     type(xc_oep_t),     intent(out)   :: oep
     integer,            intent(in)    :: family
     type(grid_t),       intent(inout) :: gr
-    type(states_dim_t), intent(in)    :: d
-    FLOAT,              intent(in)    :: nel
+    type(states_t),     intent(in)    :: st
 
     PUSH_SUB(xc_oep_init)
 
@@ -118,7 +117,7 @@ contains
     if(oep%level /= XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
 
-        if(d%nspin == SPINORS) &
+        if(st%d%nspin == SPINORS) &
           call messages_not_implemented("Full OEP with spinors")
 
         call messages_experimental("Full OEP")    
@@ -135,23 +134,23 @@ contains
       end if
 
      ! this routine is only prepared for finite systems
-      if(d%nik > d%ispin) then
+      if(st%d%nik > st%d%ispin) then
         message(1) = "OEP only works for finite systems."
         call messages_fatal(1)
       end if
     
       ! obtain the spin factors
-      call xc_oep_SpinFactor(oep, d%nspin)
+      call xc_oep_SpinFactor(oep, st%d%nspin)
 
       ! This variable will keep vxc across iterations
-      if (d%ispin==3) then !MG150512: temporary solution, not so elegant (just not to touch previous source)
-        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,d%nspin))
+      if (st%d%ispin==3) then !MG150512: temporary solution, not so elegant (just not to touch previous source)
+        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,st%d%nspin))
       else
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
       end if
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
-        call scf_tol_init(oep%scftol, "OEP", nel, def_maximumiter=10)
+        call scf_tol_init(oep%scftol, "OEP", st%qtot, def_maximumiter=10)
         call linear_solver_init(oep%solver, gr, "OEP")
         call lr_init(oep%lr)
       end if
@@ -159,7 +158,7 @@ contains
       ! the linear equation has to be more converged if we are to attain the required precision
       !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
 
-      if(d%nspin == SPINORS) &
+      if(st%d%nspin == SPINORS) &
         call messages_experimental("OEP with spinors")
 
     end if
