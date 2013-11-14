@@ -51,12 +51,6 @@ match ; LDA Exchange                           ; GREP(static/info, 'Exchange    
 match ; LDA AMGB Correlation                   ; GREP(static/info, 'Correlation =', 20)   ; -0.03534534
 match ; LDA AMGB Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97730047
 
-# (this calculation is done without spin polarization)
-Input: 02-xc_2d.lda_prm.inp
-match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.44082808
-match ; LDA PRM Correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.12223476
-match ; LDA PRM Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.81147437
-
 Input: 02-xc_2d.gga_b86.inp
 match ; GGA 2D B86 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.66569035
 match ; GGA 2D B86 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.96106957
@@ -72,3 +66,12 @@ match ; GGA 2D B88 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc
 Input: 02-xc_2d.gga_pbe.inp
 match ; GGA 2D PBE Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.67022789
 match ; GGA 2D PBE Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97796406
+
+# From PRM 2008 paper: "a spin-polarized extension of the present functional is still missing"
+# Though Octopus and libxc do not flag a problem when running spin-polarized,
+# we will do SCF from scratch spin-unpolarized. Restarting from spin-polarized Hartree-Fock like the others
+# would mean deliberately misunderstanding the restart wavefunctions.
+Input: 02-xc_2d.lda_prm.inp
+match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.40774389
+match ; LDA PRM Correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.11830011
+match ; LDA PRM Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.75815185

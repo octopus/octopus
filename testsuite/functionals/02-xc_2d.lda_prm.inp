@@ -1,6 +1,5 @@
 CalculationMode = gs
-
-MaximumIter = 0
+FromScratch = yes
 Dimensions = 2
 
 lambda = 2.0
