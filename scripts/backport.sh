@@ -57,6 +57,10 @@ if [ $# -ne 1 ]; then
     exit
 fi
 
+# Without this, svn 1.8 may give an error such as:
+#svn: E195020: Cannot merge into mixed-revision working copy [5751:5752]; try updating first
+svn update
+
 #Sample output from svn info with subversion 1.6
 #Path: .
 #URL: http://www.tddft.org/svn/octopus/trunk
