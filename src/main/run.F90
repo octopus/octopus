@@ -35,7 +35,6 @@ module run_m
   use mpi_debug_m
   use memory_m
   use multicomm_m
-  use one_shot_m
   use opt_control_m
   use phonons_fd_m
   use phonons_lr_m
@@ -157,7 +156,8 @@ contains
     case(CM_CASIDA)
       call casida_run(sys, hm, fromScratch)
     case(CM_ONE_SHOT)
-      call one_shot_run(sys, hm)
+      message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
+      call messages_fatal(1)
     case(CM_KDOTP)
       call kdotp_lr_run(sys, hm, fromScratch)
     case(CM_DUMMY)

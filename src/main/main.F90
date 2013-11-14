@@ -95,10 +95,7 @@ program octopus
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
   !%Option one_shot 14
-  !% Use the self-consistent wavefunctions in the <tt>restart</tt> directory to
-  !% evaluate the total energy using a different XC functional.
-  !% This is effectively a first-order perturbative calculation of the total energy, 
-  !% the perturbation being the difference between the two XC potentials used.
+  !% Obsolete. Use <tt>gs</tt> with <tt>MaximumIter = 0</tt> instead.
   !%Option kdotp 15
   !% Calculation of effective masses by <i>k.p</i> perturbation theory (experimental).
   !%Option gcm 16
