@@ -565,12 +565,12 @@ contains
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(calc_energy .and. functl(1)%id == XC_GGA_X_LB) then
-      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:3))
+      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
 
       do is = 1, spin_channels
         call dderivatives_grad(der, dedd(:, is), gf(:,:))
         do ip = 1, der%mesh%np
-          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(der%mesh%x(ip,:)*gf(ip,:))
+          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gf(ip, 1:der%mesh%sb%dim))
         end do
       end do
 
