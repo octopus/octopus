@@ -146,7 +146,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:3))
+      SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do isp = 1, spin_channels
         call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp(:, 1))
@@ -154,7 +154,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         call dsymmetrizer_apply(symmetrizer, ldens(:, isp), symmtmp(:, 1))
         ldens(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
         call dsymmetrizer_apply_vector(symmetrizer, gdens(:, :, isp), symmtmp)
-        gdens(1:der%mesh%np, 1:3, isp) = symmtmp(1:der%mesh%np, 1:3)
+        gdens(1:der%mesh%np, 1:der%mesh%sb%dim, isp) = symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
 
       call symmetrizer_end(symmetrizer)
@@ -516,10 +516,10 @@ contains
     if(ispin /= UNPOLARIZED) ii = 3
 
     ! allocate variables
-    SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:3, 1:spin_channels))
+    SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels))
     gdens = M_ZERO
 
-    SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
+    SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
     dedgd = M_ZERO
 
     do ii = 1, 2
