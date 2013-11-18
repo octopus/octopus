@@ -37,36 +37,40 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   integer, parameter :: N_BLOCK_MAX = 1000
   integer :: n_block
 
-  FLOAT, allocatable :: l_zk(:)        ! Local block of the energy functional (with the correct memory order for libxc)
-  FLOAT, allocatable :: l_dens(:,:)    ! Local block for the density 
-  FLOAT, allocatable :: l_dedd(:,:)    ! Local block of the exchange or correl. potential (with the correct memory order for libxc)
-  FLOAT, allocatable :: l_sigma(:,:)   
-  FLOAT, allocatable :: l_vsigma(:,:)  
-  FLOAT, allocatable :: l_tau(:,:)
-  FLOAT, allocatable :: l_ldens(:,:)
-  FLOAT, allocatable :: l_dedtau(:,:)
-  FLOAT, allocatable :: l_dedldens(:,:)
+  ! Local blocks (with the correct memory order for libxc):
+  !  Input quantities
+  FLOAT, allocatable :: l_dens(:,:)     ! Density 
+  FLOAT, allocatable :: l_sigma(:,:)    ! Modulus squared of the gradient of the density
+  FLOAT, allocatable :: l_ldens(:,:)    ! Laplacian of the density
+  FLOAT, allocatable :: l_tau(:,:)      ! Kinetic energy density
+  !  Energy
+  FLOAT, allocatable :: l_zk(:)
+  !  First order (functional) derivatives
+  FLOAT, allocatable :: l_dedd(:,:)     ! Derivative of the energy wrt the density
+  FLOAT, allocatable :: l_vsigma(:,:)   ! Derivative of the energy wrt sigma
+  FLOAT, allocatable :: l_dedldens(:,:) ! Derivative of the energy wrt the laplacian of the density
+  FLOAT, allocatable :: l_dedtau(:,:)   ! Derivative of the energy wrt tau
 
+  ! Global arrays
+  !  Input quantities
   FLOAT, allocatable :: dens(:,:)      ! Density
-  FLOAT, allocatable :: dedd(:,:)      ! (Functional) Derivative of the exchange or correlation energy with
-  ! respect to the density (vector used to store the exchange or the correlation potential)
-  FLOAT, allocatable :: ex_per_vol(:)  ! Exchange energy per unit volume 
-  FLOAT, allocatable :: ec_per_vol(:)  ! Correlation energy per unit volume 
   FLOAT, allocatable :: gdens(:,:,:)   ! Gradient of the density
-  FLOAT, allocatable :: dedgd(:,:,:)   ! (Functional) Derivative of the exchange or correlation energy with
-  !respect to the gradient of the density.
-  FLOAT, allocatable :: current(:,:,:) ! Paramagnetic or total current
   FLOAT, allocatable :: ldens(:,:)     ! Laplacian of the density
   FLOAT, allocatable :: tau(:,:)       ! Kinetic energy density
-  FLOAT, allocatable :: dedldens(:,:)  ! (Functional) Derivative of the exchange or correlation energy with
-  !respect to the laplacian of the density.
+  !  Energies
+  FLOAT, allocatable :: ex_per_vol(:)  ! Exchange energy per unit volume 
+  FLOAT, allocatable :: ec_per_vol(:)  ! Correlation energy per unit volume 
+  !  First order (functional) derivatives
+  FLOAT, allocatable :: dedd(:,:)      ! Derivative of the exchange or correlation energy wrt the density
+  FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
+  FLOAT, allocatable :: dedldens(:,:)  ! Derivative of the exchange or correlation energy wrt the laplacian of the density
+
   FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is
-  integer, save :: xc_get_vxc_counter = 0
-  FLOAT   :: rr,ipot_to_pass
+  FLOAT   :: rr
   logical :: gga, mgga
   type(profile_t), save :: prof
   logical :: calc_energy
@@ -78,9 +82,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
-
-  xc_get_vxc_counter = xc_get_vxc_counter + 1
-  !xprint*, "xc_get_vxc call number ", xc_get_vxc_counter
 
   !Pointer-shortcut for xcs%functl
   !It helps to remember that for xcs%functl(:,:)
@@ -124,12 +125,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
-    if (xc_get_vxc_counter  <=  2) then 
-      ipot_to_pass = M_ONE
-    else
-      ipot_to_pass = ioniz_pot
-    end if
-    !print *, "Ioniz potential to pass =", ipot_to_pass
     ! We calculate everything from the wavefunctions to benefit from
     ! the error cancellation between the gradient of the density and
     ! tau.
@@ -591,7 +586,6 @@ contains
 
     ! allocate variables
     SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
-    SAFE_ALLOCATE( current (1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels) )
     SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
 
     SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
@@ -644,7 +638,6 @@ contains
     PUSH_SUB(xc_get_vxc.mgga_end)
 
     SAFE_DEALLOCATE_A(tau)
-    SAFE_DEALLOCATE_A(current)
     SAFE_DEALLOCATE_A(ldens)
 
     SAFE_DEALLOCATE_A(dedldens)
