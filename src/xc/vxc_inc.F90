@@ -292,13 +292,15 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       if(functl(ixc)%family == XC_FAMILY_MGGA) then
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
         call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
-        vtau = vtau / M_TWO
       end if
 
     end do functl_loop
   end do space_loop
 
   call local_deallocate()
+
+  ! Definition of tau in libxc is different, so we need to divide vtau by a factor of two
+  if (present(vtau)) vtau = vtau / M_TWO
 
   if(present(deltaxc)) deltaxc = M_ZERO
 
