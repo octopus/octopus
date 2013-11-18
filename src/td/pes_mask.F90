@@ -213,9 +213,9 @@ contains
     
     
     if(sb%box_shape /= SPHERE) then
-      message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
-      message(2) = 'Modify the parameter and rerun.'
-      call messages_fatal(2)
+      message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
+      message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
+      call messages_warning(2)
     end if
 
     if( hm%ab  /=  NOT_ABSORBING) then
@@ -597,8 +597,13 @@ contains
     !%
     !%End
     if (parse_block(datasets_check('PESMaskSize'), blk) < 0)then
-      mask%mask_R(1)=mesh%sb%rsize/M_TWO
-      mask%mask_R(2)=mesh%sb%rsize
+      if (sb%box_shape == SPHERE) then
+        mask%mask_R(1)=mesh%sb%rsize/M_TWO
+        mask%mask_R(2)=mesh%sb%rsize
+      else if(sb%box_shape == PARALLELEPIPED) then
+        mask%mask_R(1)=mesh%sb%lsize(1)/M_TWO
+        mask%mask_R(2)=mesh%sb%lsize(1)        
+      end if    
       message(1)="PESMaskSize not specified. Using default values."
       call messages_info(1)
     else 
@@ -606,7 +611,11 @@ contains
       call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
     end if
     
-    if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
+    if (sb%box_shape == SPHERE) then
+      if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
+    else if (sb%box_shape == PARALLELEPIPED) then
+      if(mask%mask_R(2) > mesh%sb%lsize(1))  mask%mask_R(2) = mesh%sb%lsize(1) 
+    end if    
     
     
     
@@ -625,6 +634,7 @@ contains
     else
       call PES_mask_generate_mask(mask,mesh)
     end if
+    
     
 
 
@@ -897,9 +907,9 @@ contains
     FLOAT,            intent(in)    :: R(2)
     FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-    integer :: ip
+    integer :: ip, ierr, dir
     FLOAT   :: width
-    FLOAT   :: xx(1:MAX_DIM), rr, dd
+    FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
     CMPLX,allocatable :: mask_fn(:)
     logical :: local_
 
@@ -925,14 +935,36 @@ contains
           xx=mesh_x_global(mesh, ip) 
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
         end if
-        dd = rr -  R(1) 
-        if(dd > M_ZERO ) then 
-          if (dd  <  width) then
-            mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
-          else 
-            mask_fn(ip) = M_ONE 
+        if(mesh%sb%box_shape == SPHERE) then
+          
+          dd = rr -  R(1) 
+          if(dd > M_ZERO ) then 
+            if (dd  <  width) then
+              mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
+            else 
+              mask_fn(ip) = M_ONE 
+            end if
           end if
-        end if
+
+        else if (mesh%sb%box_shape == PARALLELEPIPED) then
+          
+          ! We are filling from the center opposite to the spherical case
+          tmp = M_ONE
+          mask_fn(ip) = M_ONE
+          ddv(:) = abs(xx(:)) -  R(1) 
+          do dir=1, mesh%sb%dim 
+            if(ddv(dir) >= M_ZERO ) then 
+              if (ddv(dir)  <=  width) then
+                tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width) ))**2
+              else 
+                tmp(dir) = M_ZERO
+              end if
+            end if        
+          mask_fn(ip) = mask_fn(ip)*tmp(dir)
+          end do
+          mask_fn(ip) = M_ONE - mask_fn(ip)
+          
+        end if  
       end do
 
     case(M_STEP)
@@ -963,6 +995,11 @@ contains
 
 
     mask_fn(:) = M_ONE - mask_fn(:)
+
+!   Keep this here to debug further mask shapes.    
+!     call zio_function_output(io_function_fill_how("PlaneZ"), &
+!                             ".", "mask",  mesh, mask_fn, unit_one, ierr)
+    
 
     call PES_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 
