@@ -3060,3 +3060,247 @@
 	  
 	  ------------------------------------------------------------------------
 
+2013-09-03 13:31  micael
+
+	* [r11230] ChangeLog: * Updating ChangeLog in 4.1.x.
+	  * Tagging version 4.1.1.
+
+2013-10-08 16:19  dstrubbe
+
+	* [r11300] src/grid/nl_operator.F90: Backport of 11292 to
+	  branches/4.1.x
+	  URL::
+	  ------------------------------------------------------------------------
+	  r11292 | dstrubbe | 2013-10-04 10:38:22 -0400 (Fri, 04 Oct 2013)
+	  | 2 lines
+	  
+	  The debug output for finite-difference weights overflowed the
+	  format for derivatives 1D test. I made it much larger.
+	  
+	  ------------------------------------------------------------------------
+
+2013-10-24 21:19  dstrubbe
+
+	* [r11390] src/basic/multicomm.F90: Backport of 11302 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11302 | dstrubbe | 2013-10-08 18:10:46 -0400 (Tue, 08 Oct 2013)
+	  | 3 lines
+	  
+	  * Minor bugfix to r7250: the sanity check for parallelization
+	  gives misleading information when there are slaves, since
+	  real_group_sizes is compared to the total number of MPI tasks in
+	  the output, whereas the error condition is flagged when
+	  mc%group_sizes and MPI tasks do not match.
+	  * Typo.
+	  
+	  ------------------------------------------------------------------------
+
+2013-10-24 21:31  dstrubbe
+
+	* [r11391] src/system/v_ks.F90: Backport of 11356 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11356 | dstrubbe | 2013-10-17 17:14:35 -0400 (Thu, 17 Oct 2013)
+	  | 2 lines
+	  
+	  A variable was not initialized for independent particles.
+	  
+	  ------------------------------------------------------------------------
+
+2013-10-24 22:56  dstrubbe
+
+	* [r11393] src/hamiltonian/hamiltonian_inc.F90,
+	  src/system/v_ks.F90: Backport of 11380 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11380 | dstrubbe | 2013-10-22 19:12:23 -0400 (Tue, 22 Oct 2013)
+	  | 2 lines
+	  
+	  Making messages_not_implemented calls for H(F) with k-points at
+	  the point of reading TheoryLevel, and broadening the condition in
+	  X(exchange_operator): what matters is the number of k-points in
+	  the full, not symmetry-reduced, Brillouin zone.
+	  
+	  ------------------------------------------------------------------------
+
+2013-10-24 23:04  dstrubbe
+
+	* [r11394] src/system/xc_oep.F90, src/system/xc_oep_inc.F90:
+	  Backport of 11386 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11386 | dstrubbe | 2013-10-23 17:13:10 -0400 (Wed, 23 Oct 2013)
+	  | 4 lines
+	  
+	  One of the three parts is relevant to 4.1.x:
+	  
+	  * Bugfix: an attempt to block full OEP parallel in states was
+	  ineffective since it was placed before initialization of the OEP
+	  method.
+	  
+	  ------------------------------------------------------------------------
+
+2013-10-30 22:48  dstrubbe
+
+	* [r11436] src/basic/multicomm.F90: Backport of 11422 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11422 | dstrubbe | 2013-10-29 16:12:25 -0400 (Tue, 29 Oct 2013)
+	  | 2 lines
+	  
+	  Making an error message more informative.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-01 15:07  dstrubbe
+
+	* [r11439] src/utils/casida_spectrum.F90: Backport of 11435 (most
+	  of it) to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11435 | dstrubbe | 2013-10-30 18:04:17 -0400 (Wed, 30 Oct 2013)
+	  | 6 lines
+	  
+	  Bugfixes for the three directions of the spectrum in
+	  oct-casida_spectrum; the isotropic average is not affected.
+	  * The length units for the x, y, z dipole matrix elements were
+	  not considered, so the results were incorrect when using
+	  eV_Angstrom units.
+	  * The spectrum for x, y, z was mistakenly divided by the
+	  dimensionality of space; this is only supposed to be done for the
+	  isotropic average.
+	  * Corresponding updates to test values.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-09 23:41  dstrubbe
+
+	* [r11502] src/sternheimer/phonons_lr.F90: Backport of part of
+	  r11498 to 4.1.x:
+	  
+	  Bugfix (regarding performance) to r8180: when I moved to use
+	  forces_derivative instead of pert_expectation_value, I
+	  accidentally left it inside a loop over modes. As a result,
+	  rather than reducing the amount of work a bit, instead it
+	  multiplied the work by the number of modes. Now this is fixed.
+
+2013-11-14 20:42  dstrubbe
+
+	* [r11523] src/system/xc_oep_inc.F90: Backport of 11517 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11517 | dstrubbe | 2013-11-14 12:58:24 -0500 (Thu, 14 Nov 2013)
+	  | 2 lines
+	  
+	  Correcting misleading output from full OEP: it always said
+	  "converged" even when it was not.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-14 22:29  dstrubbe
+
+	* [r11524] src/xc/vxc_inc.F90: Backport of 11508 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11508 | micael | 2013-11-12 05:56:46 -0500 (Tue, 12 Nov 2013) |
+	  2 lines
+	  
+	  * Bug fix: the calculation of GGA and MGGA xc potentials was
+	  completely wrong due to a misplaced "end if". This bug was
+	  introduced in [9729].
+	  
+	  ------------------------------------------------------------------------
+	  
+	  Comment: I checked that the 1D, 2D, and 3D functionals tests in
+	  trunk are passed by 4.1.x as of this change, with two exceptions
+	  below. The reference value for gga_x_pbea had been changed in
+	  trunk due to a change in libxc. The 1D full OEP test differs by
+	  only a small amount, should not be affected by GGA/mGGA, and has
+	  convergence problems anyway. So everything seems fine.
+	  
+	  {{{
+	  Using input file : ./03-xc.gga_x_pbea.inp
+	  
+	  Match gga_x_pbea Exchange :
+	  
+	  Calculated value : -0.31167167
+	  Reference value : -0.31200606
+	  Difference : 0.000334389999999962
+	  Tolerance : 0.0001
+	  
+	  gga_x_pbea Exchange : [ FAIL ]
+	  
+	  Match gga_x_pbea Int[n*v_xc] :
+	  
+	  Calculated value : -0.39996075
+	  Reference value : -0.40021553
+	  Difference : 0.00025478000000001
+	  Tolerance : 0.0001
+	  
+	  gga_x_pbea Int[n*v_xc] : [ FAIL ]
+	  
+	  Using input file : ./01-xc_1d.oep_exx.inp
+	  
+	  OEP Exact Exchange : [ OK ] (Calculated value = -1.07717830)
+	  
+	  -----------------------------------------
+	  
+	  Match OEP EXX Int[n*v_xc] :
+	  
+	  Calculated value : -2.14114269
+	  Reference value : -2.14242036
+	  Difference : 0.0012776699999999
+	  Tolerance : 0.0001
+	  
+	  OEP EXX Int[n*v_xc] : [ FAIL ]
+	  
+	  -----------------------------------------
+	  }}}
+
+2013-11-15 00:35  dstrubbe
+
+	* [r11525] src/basic/messages.F90: Backport of 11511 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11511 | dstrubbe | 2013-11-12 23:39:03 -0500 (Tue, 12 Nov 2013)
+	  | 2 lines
+	  
+	  More space for info in error message from SAFE_ALLOCATE and
+	  SAFE_DEALLOCATE_A, SAFE_DEALLOCATE_P.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-15 16:11  dstrubbe
+
+	* [r11527] src/states/states.F90: Backport of 11526 to
+	  branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11526 | dstrubbe | 2013-11-14 20:02:09 -0500 (Thu, 14 Nov 2013)
+	  | 2 lines
+	  
+	  Although current DFT was removed in r8079, the variable
+	  CurrentDFT remained around to confuse users.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-16 02:10  dstrubbe
+
+	* [r11531] src/xc/vxc_inc.F90: Backport of 11528 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11528 | dstrubbe | 2013-11-15 16:32:27 -0500 (Fri, 15 Nov 2013)
+	  | 2 lines
+	  
+	  Bugfix: gga_x_lb with max-dim > 3 caused a segmentation fault.
+	  Correcting allocation.
+	  
+	  ------------------------------------------------------------------------
+
+2013-11-18 09:00  micael
+
+	* [r11533] src/xc/vxc_inc.F90: Backport of 11532 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r11532 | micael | 2013-11-18 08:59:49 +0000 (Mon, 18 Nov 2013) |
+	  2 lines
+	  
+	  * Fixed bug pointed out by Xavier: vtau should be divided by 2
+	  outside the space loop.
+	  
+	  ------------------------------------------------------------------------
+
