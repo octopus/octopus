@@ -188,7 +188,8 @@ contains
     !%Description
     !% Defines which method to use to solve the Poisson equation. Some incompatibilities apply depending on
     !% dimensionality, periodicity, etc.
-    !% For comparison of accuracy and performance of the methods in Octopus, see http://arxiv.org/abs/1211.2092. 
+    !% For comparison of accuracy and performance of the methods in Octopus, see P Garcia-Risueño, 
+    !% J Alberdi-Rodriguez et al., Journal of Computational Chemistry 35 (2014) http://arxiv.org/abs/1211.2092. 
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
@@ -249,7 +250,30 @@ contains
 
     call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call input_error('PoissonSolver')
-
+   
+    select case(this%method)
+    case (POISSON_DIRECT_SUM)
+      str = "direct sum"
+    case (POISSON_FMM)
+      str = "fast multipole methos"
+    case (POISSON_FFT)
+      str = "fast Fourier transform"
+    case (POISSON_CG)
+      str = "conjugate gradients"
+    case (POISSON_CG_CORRECTED)
+      str = "corrected conjugate gradients"
+    case (POISSON_MULTIGRID)
+      str = "multigrid"
+    case (POISSON_ISF)
+      str = "interpolating scaling function"
+    case (POISSON_SETE)
+      str = "SETE"
+    case (POISSON_LIBISF)
+      str = "interpolating scaling function (from BIGDFT)"
+    end select
+    write(message(1),'(a,a,a)') "The chosen Hartree potential solver is '",trim(str),"'"
+    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., JCC 35 (2014)"
+    call messages_info(2)
     call messages_print_var_option(stdout, "PoissonSolver", this%method)
 
     if(this%method /= POISSON_FFT) then
