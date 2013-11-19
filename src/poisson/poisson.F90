@@ -255,7 +255,7 @@ contains
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
     case (POISSON_FMM)
-      str = "fast multipole methos"
+      str = "fast multipole method"
     case (POISSON_FFT)
       str = "fast Fourier transform"
     case (POISSON_CG)
