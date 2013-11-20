@@ -201,15 +201,11 @@ contains
     integer :: defaultMask,k1,k2,st1,st2
     
     PUSH_SUB(PES_mask_init)
-    
-    
-    mask%mesh => mesh
-    
-    call messages_experimental('Photo-electron spectrum')  
+        
+    mask%mesh => mesh  
     
     write(message(1),'(a,i1,a)') 'Info: Calculating PES using mask technique.'
     call messages_info(1)
-    
     
     
     if(sb%box_shape /= SPHERE) then
@@ -953,8 +949,8 @@ contains
           mask_fn(ip) = M_ONE
           ddv(:) = abs(xx(:)) -  R(1) 
           do dir=1, mesh%sb%dim 
-            if(ddv(dir) >= M_ZERO ) then 
-              if (ddv(dir)  <=  width) then
+            if(ddv(dir) > M_ZERO ) then 
+              if (ddv(dir)  <  width) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width) ))**2
               else 
                 tmp(dir) = M_ZERO
@@ -997,8 +993,8 @@ contains
     mask_fn(:) = M_ONE - mask_fn(:)
 
 !   Keep this here to debug further mask shapes.    
-!     call zio_function_output(io_function_fill_how("PlaneZ"), &
-!                             ".", "mask",  mesh, mask_fn, unit_one, ierr)
+!     call dio_function_output(io_function_fill_how("PlaneZ"), &
+!                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)
     
 
     call PES_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
@@ -1020,17 +1016,20 @@ contains
     type(PES_mask_t), intent(in)    :: mask
     
     integer :: ik, ist, idim
-    CMPLX, allocatable :: mmask(:)
+    CMPLX, allocatable :: mmask(:), psi(:)
     
     PUSH_SUB(PES_mask_apply_mask)
-    SAFE_ALLOCATE(mmask(1:mask%mesh%np_part))
+    SAFE_ALLOCATE(mmask(1:mask%mesh%np))
+    SAFE_ALLOCATE(psi(mask%mesh%np))
     
     call PES_mask_cube_to_mesh(mask, mask%cM, mmask)
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-          st%zpsi(1:mask%mesh%np_part, idim, ist, ik) = st%zpsi(1:mask%mesh%np_part, idim, ist, ik)*mmask(1:mask%mesh%np_part)
+          call states_get_state(st, mask%mesh, idim, ist, ik, psi)
+          psi(1:mask%mesh%np) = psi(1:mask%mesh%np) * mmask(1:mask%mesh%np)
+          call states_set_state(st, mask%mesh, idim, ist, ik, psi)
         end do
       end do
     end do
