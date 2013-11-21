@@ -271,10 +271,9 @@ contains
     case (POISSON_LIBISF)
       str = "interpolating scaling function (from BIGDFT)"
     end select
-    write(message(1),'(a,a,a)') "The chosen Hartree potential solver is '",trim(str),"'"
-    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., JCC 35 (2014)"
+    write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
+    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., J. Comp. Chem 36 (2014)"
     call messages_info(2)
-    call messages_print_var_option(stdout, "PoissonSolver", this%method)
 
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
