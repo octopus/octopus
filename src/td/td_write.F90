@@ -589,7 +589,7 @@ contains
     integer,              intent(in)    :: iter
     FLOAT, optional,      intent(in)    :: dt
 
-    character(len=256) :: filename
+    character(len=256) :: filename, dir
     integer :: iout
     type(profile_t), save :: prof
 
@@ -603,8 +603,21 @@ contains
       end do
     end if
 
+    !%Variable OutputDir
+    !%Default "./"
+    !%Type string
+    !%Section Execution::IO
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores binary information
+    !% such as the density, forces, etc.
+    !%End
+    call parse_string('OutputDir', trim("./"), outputdir)
+    if (outputdir /= "./") then
+      call io_mkdir(outputdir, is_tmp=.true.)
+    end if
+
     ! now write down the rest
-    write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+    write(filename, '(a,a,i7.7)') trim(outputdir),"td.", iter  ! name of directory
 
     ! this is required if st%X(psi) is used
     call states_sync(st)
