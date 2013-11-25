@@ -211,6 +211,7 @@ contains
       this%e_fermi = eigenvalues(ist1, 1)
     else
       ASSERT(nik == 1)
+      ist = 1 ! if qtot_integer is zero
       do ii=1, qtot_integer
         ist = 1 + (ii - 1) / 2
         occupations(ist, 1) = occupations(ist, 1) + M_ONE + min(M_ZERO, qtot - ii)
