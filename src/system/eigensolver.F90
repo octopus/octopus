@@ -27,6 +27,7 @@ module eigensolver_m
   use eigen_cg_m
   use eigen_lobpcg_m
   use eigen_rmmdiis_m
+  use energy_calc_m
   use exponential_m
   use global_m
   use grid_m
@@ -98,6 +99,115 @@ module eigensolver_m
        RS_ARPACK  = 12
 
 contains
+
+  subroutine cmplxscl_figure_out_states(eigens, st, gr)
+    type(eigensolver_t), intent(inout) :: eigens
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
+    
+    !CMPLX, allocatable :: kinetic_elements(:, :) ! XXXXXX
+    integer :: ist
+    CMPLX, allocatable :: boundary_norms(:)
+
+    PUSH_SUB(cmplxscl_figure_out_states)
+
+    call states_orthogonalize_cproduct(st, gr%mesh)
+
+    !SAF!E_ALL!OCATE(kinetic_elements(1:st%nst, 1))
+    SAFE_ALLOCATE(boundary_norms(1:st%nst))
+    call identify_continuum_states(gr%mesh, st, boundary_norms)
+    call states_sort_complex(gr%mesh, st, eigens%diff, boundary_norms)
+    call identify_continuum_states(gr%mesh, st, boundary_norms)
+
+    write(message(1), *) 'Figure out states'
+    call messages_info(1)
+    do ist=1, st%nst
+      write(message(1), *) 'norm', ist, boundary_norms(ist)
+      call messages_info(1)
+    end do
+    SAFE_DEALLOCATE_A(boundary_norms)
+    !call cmplxscl_get_kinetic_elements(st, hm, gr%der, kinetic_elements)
+
+    !print*, 'kinetic elements'
+    !do ist = 1, st%nst
+    !  print*, kinetic_elements(ist, 1)
+    !end do
+
+    !print*, 'kinetic elements / eps'
+    !do ist = 1, st%nst
+    !  print*, kinetic_elements(ist, 1) / (st%zeigenval%Re(ist, 1) + M_zI * st%zeigenval%Im(ist, 1)) !&
+    !* exp(-M_TWO * M_zI * st%cmplxscl%theta)
+    !end do
+    !SAF!E_DEA!LLOC!ATE_A(kinetic_elements)
+    POP_SUB(cmplxscl_figure_out_states)
+  end subroutine cmplxscl_figure_out_states
+
+
+
+  ! XXXX complex scaling.  Move to some better place
+  ! This is a hack to identify continuum states.
+  ! Continuum states are the only states that do not approach 
+  ! zero asymptotically.  Thus they will be very nonzero even far
+  ! from the center of the system.  To identify them we therefore
+  ! look at a state and check whether a very large fraction of its norm
+  ! is contributed within some radius.
+  ! If it isn't, then it's considered a continuum state.
+  ! Really this method should consider only boundary points, because some continuum
+  ! states could potentially also have a large fraction of the norm in the center.
+  ! But this is difficult to implement when the box shape is user defined.
+  ! Hence we use a fixed radius related to total system size.
+  subroutine identify_continuum_states(mesh, st, boundary_norms)
+    type(mesh_t),   intent(in)   :: mesh
+    type(states_t), intent(in)   :: st
+    CMPLX,          intent(out)  :: boundary_norms(:)
+
+    FLOAT              :: r2
+    integer            :: ist, ik, ii
+    CMPLX, allocatable :: psi(:, :)
+    FLOAT, allocatable :: mask(:)
+    CMPLX              :: cnorm2
+
+    PUSH_SUB(identify_continuum_states)
+    !print*, size(mesh%x, 1)
+    !print*, size(mesh%x, 2)
+    !print*, mesh%x(1:5, 1)
+    !print*, mesh%x(1:5, 2)
+    !print*, mesh%x(1:5, 3)
+
+    ! Well, we hardcode that everything is centered on 0.
+    ! Then we calculate distances to 0 and use those to weight
+    ! the norm of each state.  Ugly ugly...
+    SAFE_ALLOCATE(mask(1:mesh%np_part))
+    SAFE_ALLOCATE(psi(1:mesh%np_part, 1))
+
+    r2 = st%cmplxscl%localizationradius**2
+    do ii=1, mesh%np_part
+      if(sum(mesh%x(ii, :)**2) < r2) then
+        mask(ii) = M_ZERO
+      else
+        mask(ii) = M_ONE
+      end if
+    end do
+    !print*, 'mask', sum(mask)
+
+    ASSERT(st%d%dim == 1)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist=1, st%nst
+        call states_get_state(st, mesh, ist, ik, psi)
+        psi(:, 1) = psi(:, 1) * mask(:)
+        cnorm2 = zmf_dotp(mesh, 1, psi, psi, dotu = .true.)
+        !print*, 'cnorm2', ist, cnorm2
+        boundary_norms(ist) = cnorm2
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(mask)
+
+    POP_SUB(identify_continuum_states)
+  end subroutine identify_continuum_states
+
+
 
   ! ---------------------------------------------------------
   subroutine eigensolver_init(eigens, gr, st)
@@ -171,7 +281,7 @@ contains
 
     call messages_obsolete_variable('EigensolverVerbose')
     call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
-    
+
     default_iter = 25
     default_tol = CNST(1e-6)
 
@@ -227,7 +337,7 @@ contains
 
 #if defined(HAVE_ARPACK) 
     case(RS_ARPACK) 
-      	 	 
+
       !%Variable EigensolverArnoldiVectors 
       !%Type integer 
       !%Default 20 
@@ -240,15 +350,15 @@ contains
       !%End 
       call parse_integer(datasets_check('EigensolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
       if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigensolverArnoldiVectors') 
-      
+
       eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
-      
+
       ! Arpack is not working in some cases, so let us check. 
       if(st%d%ispin  ==  SPINORS) then 
         write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
         write(message(2), '(a)') 'Please provide a different Eigensolver.' 
         call messages_fatal(2) 
-      end if 
+      end if
 
       call arpack_init(eigens%arpack, gr, st%nst)
 
@@ -301,7 +411,7 @@ contains
       call messages_write('often enough.')
       call messages_warning()
     end if
-    
+
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
@@ -316,7 +426,7 @@ contains
     SAFE_ALLOCATE(eigens%converged(1:st%d%nik))
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec = 0
-    
+
     call subspace_init(eigens%sdiag, st, no_sd = eigens%es_type == RS_ARPACK)
 
     ! print memory requirements
@@ -341,7 +451,7 @@ contains
     end select
 
     call messages_print_stress(stdout)
-      
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -401,7 +511,7 @@ contains
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
-      
+
       if(eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
@@ -411,7 +521,7 @@ contains
       end if
 
       if (states_are_real(st)) then
-        
+
         select case(eigens%es_type)
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -425,7 +535,7 @@ contains
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
           call deigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
@@ -458,10 +568,10 @@ contains
           call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik))
+            eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
           call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
+            eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
@@ -473,7 +583,7 @@ contains
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
-          end if         
+          end if
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 
           call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
@@ -499,15 +609,15 @@ contains
 
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
-    
+
     ! If we complex scale H the eigenstates need to be orthonormalized with respect to the c-product.
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
+    print*, 'about to figure out states'
     if(st%cmplxscl%space) then
-      call states_sort_complex(gr%mesh, st, eigens%diff)
-      call states_orthogonalize_cproduct(st, gr%mesh)
+      call cmplxscl_figure_out_states(eigens, st, gr)
     end if
-    
+
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
       write(stdout, '(1x)')
     end if
@@ -537,10 +647,10 @@ contains
         ldiff(1:st%d%kpt%nlocal) = eigens%diff(ist, st%d%kpt%start:st%d%kpt%end)
         leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
-                                 eigens%diff(ist, :), st%d%kpt%mpi_grp)
+          eigens%diff(ist, :), st%d%kpt%mpi_grp)
         ASSERT(outcount == st%d%nik)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, leigenval, outcount, &
-                                 st%eigenval(ist, :), st%d%kpt%mpi_grp)
+          st%eigenval(ist, :), st%d%kpt%mpi_grp)
         ASSERT(outcount == st%d%nik)
       end do
       SAFE_DEALLOCATE_A(ldiff)
@@ -556,7 +666,7 @@ contains
   ! ---------------------------------------------------------
   logical function eigensolver_parallel_in_states(this) result(par_stat)
     type(eigensolver_t), intent(in) :: this
-    
+
     PUSH_SUB(eigensolver_parallel_in_states)
 
     par_stat = .false.
@@ -565,10 +675,10 @@ contains
     case(RS_RMMDIIS, RS_LOBPCG)
       par_stat = .true.
     end select
-    
+
     POP_SUB(eigensolver_parallel_in_states)
   end function eigensolver_parallel_in_states
-    
+
 
   ! ---------------------------------------------------------
   logical function eigensolver_has_progress_bar(this) result(has)
@@ -585,7 +695,7 @@ contains
 
     POP_SUB(eigensolver_has_progress_bar)
   end function eigensolver_has_progress_bar
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_mg_inc.F90"
@@ -598,14 +708,14 @@ contains
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
-!#if defined(HAVE_ARPACK) 
-!#include "undef.F90" 
-!#include "real.F90" 
-!#include "eigen_arpack_inc.F90" 
-!#include "undef.F90" 
-!#include "complex.F90" 
-!#include "eigen_arpack_inc.F90" 
-!#endif 
+  !#if defined(HAVE_ARPACK) 
+  !#include "undef.F90" 
+  !#include "real.F90" 
+  !#include "eigen_arpack_inc.F90" 
+  !#include "undef.F90" 
+  !#include "complex.F90" 
+  !#include "eigen_arpack_inc.F90" 
+  !#endif 
 
 end module eigensolver_m
 

@@ -3,14 +3,15 @@ CalculationMode = gs
 ExperimentalFeatures = yes
 ComplexScaling = space
 
-ComplexScalingTheta = 0.4
+ComplexScalingTheta = 0.3
 
 Dimensions = 1
 ForceComplex = true # arpack solver works only if ForceComplex
 BoxShape = sphere
 fromScratch = yes
-Spacing = 0.08
-Radius = 4
+Spacing = 0.04
+Radius = 8
+ComplexScalingLocalizationRadius = Radius * 0.8
 ExtraStates = 8
 XCFunctional=lda_xc_cmplx
 #XCFunctional=None

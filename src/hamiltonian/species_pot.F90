@@ -430,7 +430,7 @@ contains
         end do
       end do
       if (cmplxscl) then 
-        rr = M_ONE
+        rr = M_ONE ! XXXXX normalization
         rho(1:mesh%np) = rr * rho(1:mesh%np)
         Imrho(1:mesh%np) = rr * Imrho(1:mesh%np)
       else

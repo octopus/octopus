@@ -20,6 +20,8 @@ EigenSolverArnoldiVectors = 50
 TheoryLevel = independent_particles
 #TheoryLevel = DFT
 
+ComplexScalingLocalizationRadius = Radius * 0.8
+
 Eigensolver = arpack
 
 eith = exp(i * ComplexScalingTheta)

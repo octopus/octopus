@@ -171,7 +171,8 @@ contains
     CMPLX, allocatable :: psi(:,:)
 
     PUSH_SUB(states_orthogonalize_cproduct)
-    SAFE_ALLOCATE(  psi(1:mesh%np_part, 1:st%d%dim))
+    ASSERT(st%d%dim == 1)
+    SAFE_ALLOCATE(psi(1:mesh%np_part, 1))
    
     ASSERT(st%cmplxscl%space .eqv. .true.)
 
@@ -184,7 +185,7 @@ contains
 !            call zstates_orthogonalize_single(st, mesh, ist - 1, ik, psi, normalize = .true.,  norm = cnorm)
 !         else
 !         ! Normalize the first eigenstate  
-          cnorm = sqrt(zmf_dotp(mesh, st%d%dim, psi, psi, dotu = .true.))
+        cnorm = sqrt(zmf_dotp(mesh, 1, psi, psi, dotu = .true.))
 !           cnorm = sqrt(zmf_integrate(mesh, psi(:,1)**2))
 !         end if    
 
@@ -253,16 +254,21 @@ contains
   end subroutine reorder_states_by_args
 
 
-  subroutine states_sort_complex(mesh, st, diff)
-    type(mesh_t),      intent(in)    :: mesh
-    type(states_t),    intent(inout) :: st
-    FLOAT,             intent(inout) :: diff(:,:) !< eigenstates convergence error
+  subroutine states_sort_complex(mesh, st, diff, boundary_norms)
+    !(mesh, st, hm, der, diff)
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_t),      intent(inout) :: st
+    !type(hamiltonian_t), intent(in)    :: hm
+    !type(derivatives_t), intent(in)    :: der
+    FLOAT,               intent(inout) :: diff(:,:) !< eigenstates convergence error
+    CMPLX,               intent(in)    :: boundary_norms(:)
 
     integer              :: ik, ist, idim
     integer, allocatable :: index(:)
     FLOAT, allocatable   :: diff_copy(:,:)
     FLOAT, allocatable   :: buf(:)
     CMPLX, allocatable   :: cbuf(:)
+    !CMPLX, allocatable   :: kinetic_elements(:)
     
     PUSH_SUB(states_sort_complex)
     
@@ -270,13 +276,20 @@ contains
     SAFE_ALLOCATE(cbuf(st%nst))
     SAFE_ALLOCATE(buf(st%nst))
     SAFE_ALLOCATE(diff_copy(1:size(diff,1),1:size(diff,2)))
+
+    !SA!FE_AL!LOCATE(kinetic_elements(1:st%nst))
+    !call get_kinetic_elements(st, hm, der, kinetic_elements)
+    !print*, kinetic_elements
+    !SA!FE_DE!ALLOCA!TE_A(kinetic_elements)
+    
     
     diff_copy = diff
 
     do ik = st%d%kpt%start, st%d%kpt%end
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
       do ist=1, st%nst
-        buf(ist) = cmplxscl_energy_ordering_score(cbuf(ist), st%cmplxscl%penalizationfactor)
+        buf(ist) = abs(boundary_norms(ist))
+        !buf(ist) = cmplxscl_energy_ordering_score(cbuf(ist), st%cmplxscl%penalizationfactor)
       end do
 
       call sort(buf, index)
@@ -304,7 +317,6 @@ contains
     
     POP_SUB(states_sort_complex)
   end subroutine states_sort_complex
-
 
   ! -------------------------------------------------------
   subroutine states_degeneracy_matrix(sb, st)

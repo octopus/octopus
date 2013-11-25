@@ -11,9 +11,9 @@ Processors: 1
 # Calculate resonance energy and lifetime of an atom-like potential in an electric field
 # This tests the complex-scaled PBE implementation.
 Input: 03-stark.01-1d.inp
-match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  -6.86187121
-match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  -2.699473E-02
-match ; 1th state Re    ; GREPFIELD(static/info, '  1   -- ',     3) ;  -1.887434
-match ; 1th state Im    ; GREPFIELD(static/info, '  1   -- ',     4) ;  -0.028682
-match ; 2nd state Re    ; GREPFIELD(static/info, '  2   -- ',     3) ;  -0.471535
-match ; 2nd state Im    ; GREPFIELD(static/info, '  2   -- ',     4) ;  -0.042596
+match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  -6.77856984E+00
+match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  -7.77367046E-03
+match ; 1th state Re    ; GREPFIELD(static/info, '  1   -- ',     3) ;  -1.870398
+match ; 1th state Im    ; GREPFIELD(static/info, '  1   -- ',     4) ;  -0.013181
+match ; 2nd state Re    ; GREPFIELD(static/info, '  2   -- ',     3) ;  -0.410241
+match ; 2nd state Im    ; GREPFIELD(static/info, '  2   -- ',     4) ;  -0.016114
