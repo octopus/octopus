@@ -48,11 +48,12 @@ module energy_calc_m
   implicit none
 
   private
-  public ::                      &
-    energy_calc_total,           &
-    denergy_calc_electronic,     &
-    zenergy_calc_electronic,     &
-    energy_calc_eigenvalues
+  public ::                       &
+    energy_calc_total,            &
+    denergy_calc_electronic,      &
+    zenergy_calc_electronic,      &
+    energy_calc_eigenvalues,      &
+    cmplxscl_get_kinetic_elements
 
 contains
 
@@ -221,6 +222,38 @@ contains
 
     POP_SUB(energy_calc_eigenvalues)
   end subroutine energy_calc_eigenvalues
+
+  subroutine cmplxscl_get_kinetic_elements(st, hm, der, kinetic_energies)
+    type(states_t), intent(inout) :: st
+    type(hamiltonian_t), intent(in) :: hm
+    type(derivatives_t), intent(in) :: der
+    CMPLX, intent(out) :: kinetic_energies(:, :)
+
+    integer :: ist
+    integer :: ik
+    CMPLX, allocatable :: psi(:, :), hpsi(:, :)
+
+    PUSH_SUB(cmplxscl_get_kinetic_elements)
+
+    
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1))
+    SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1))
+    ASSERT(size(kinetic_energies, 2) == 1)
+
+    ik = 1 ! XXX nik
+    psi(der%mesh%np + 1:der%mesh%np_part, 1) = M_ZERO
+    
+    do ist=1, st%nst
+      call states_get_state(st, der%mesh, ist, ik, psi(1:der%mesh%np_part, :))
+      call zhamiltonian_apply(hm, der, psi, hpsi, ist, ik, terms = TERM_KINETIC)
+      kinetic_energies(ist, 1) = zmf_dotp(der%mesh, st%d%dim, psi, hpsi, dotu = .true.)
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
+    POP_SUB(cmplxscl_get_kinetic_elements)
+  end subroutine cmplxscl_get_kinetic_elements
+
 
 #include "undef.F90"
 #include "real.F90"
