@@ -46,6 +46,7 @@ module cmplxscl_m
     FLOAT              :: alphaL      !< time coordinate scaling angle for left states
     FLOAT              :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
     FLOAT              :: penalizationfactor  !< factor which penalizes imaginary parts of eigenvalues when ordering states
+    FLOAT              :: localizationradius !< integration radius used for distinguishing localized vs continuum states
   end type cmplxscl_t
 
   integer, parameter ::     &
@@ -155,7 +156,15 @@ contains
     !%End
     call parse_float(datasets_check('ComplexScalingAlphaLeft'), this%alphaR, this%alphaL)
 
-
+    !%Variable ComplexScalingLocalizationRadius
+    !%Type float
+    !%Default 0.0
+    !%Section States
+    !%Description
+    !% Radius used to determine whether a state is a continuum state.
+    !%End
+    call parse_float(datasets_check('ComplexScalingLocalizationRadius'), &
+      M_ZERO, this%localizationradius)
 
     if (this%space .or. this%time) then
       call messages_print_stress(stdout, "Complex Scaling")
