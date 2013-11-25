@@ -1219,10 +1219,8 @@ contains
         st%zpsi => st%psi%zR
         if(st%cmplxscl%space) then 
           if (st%have_left_states) then
-            print *, "ALLOCATE LEFT"
             SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
           else
-            print *, "POINT LEFT"          
             st%psi%zL => st%psi%zR  
           end if          
         end if
