@@ -613,7 +613,6 @@ contains
     ! If we complex scale H the eigenstates need to be orthonormalized with respect to the c-product.
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
-    print*, 'about to figure out states'
     if(st%cmplxscl%space) then
       call cmplxscl_figure_out_states(eigens, st, gr)
     end if
