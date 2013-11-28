@@ -1081,6 +1081,13 @@ end subroutine stitchline
 
 ! For evaluating values of multiple-valued functions when one value,
 ! e.g. the principal value, is known.  Used to stitch
+CMPLX function get_root2_branch(x, branch) result(y)
+  CMPLX, intent(in)   :: x
+  integer, intent(in) :: branch
+  
+  y = x * exp(branch * M_zI * M_PI)
+end function get_root2_branch
+
 CMPLX function get_root3_branch(x, branch) result(y)
   CMPLX,   intent(in) :: x
   integer, intent(in) :: branch
@@ -1206,8 +1213,8 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   CMPLX, allocatable    :: rootrs(:), epsc(:), depsdrs(:), epsc1(:), zrhototal(:), &
     depsdrs1(:), alpha(:), dalphadrs(:), zeta(:), xplus(:), xminus(:)
   
-  FLOAT, parameter :: C0I = 0.238732414637843, C1 = -0.45816529328314287, &
-    CC1 = 1.9236610509315362, CC2 = 2.5648814012420482, IF2 = 0.58482236226346462
+  FLOAT, parameter :: C0I = CNST(0.238732414637843), C1 = CNST(-0.45816529328314287), &
+    CC1 = CNST(1.9236610509315362), CC2 = CNST(2.5648814012420482), IF2 = CNST(0.58482236226346462)
   integer          :: gg
   FLOAT            :: ff, f1, xx, zeta3, zeta4, decdrs, decdzeta
   
@@ -1366,16 +1373,110 @@ subroutine cmplxscl_add_pbe_div_term(der, mesh, theta, depsdsigma, gradient, zvx
   POP_SUB(cmplxscl_add_pbe_div_term)
 end subroutine cmplxscl_add_pbe_div_term
 
+subroutine zxc_complex_lb94(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
+  type(derivatives_t),  intent(in)    :: der
+  type(mesh_t),         intent(in)    :: mesh
+  integer,              intent(in)    :: ispin
+  FLOAT,                intent(in)    :: theta
+  CMPLX,                intent(in)    :: zrho(:, :)
+  CMPLX,                intent(inout) :: zvx(:, :)
+  CMPLX,                intent(inout) :: zvc(:, :)
+  CMPLX,                intent(inout) :: zex
+  CMPLX,                intent(inout) :: zec
+  
+  CMPLX, allocatable :: gradient(:, :), ncuberoot(:), xbuf(:), x2plus1buf(:), fbuf(:)
+  FLOAT, parameter :: beta = CNST(0.05)
+
+  integer :: nn
+
+  PUSH_SUB(zxc_complex_lb94)
+  ASSERT(ispin == UNPOLARIZED)
+  
+  !print*, 'zxc complex lb94'
+  call zxc_complex_lda(mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
+  
+  SAFE_ALLOCATE(gradient(1:mesh%np, 1:mesh%sb%dim))
+  call cmplxscl_get_gradient(der, zrho, theta, gradient)
+
+  SAFE_ALLOCATE(xbuf(1:mesh%np))
+
+  xbuf(:) = sqrt(sum(gradient**2, 2))
+  SAFE_DEALLOCATE_A(gradient)
+  
+  ! Most horrible and awful!  Unstitchable when gradient is 0 at the origin.  But luckily we
+  ! will multiply this by some logarithmic expression which may be equally stomach-turning,
+  ! possibly cancelling out this twisted perversion of mathematics.
+  call localstitch(mesh, xbuf, get_root2_branch) ! Yuck !!!
+
+  SAFE_ALLOCATE(ncuberoot(1:mesh%np))
+  ncuberoot(:) = (zrho(:, 1) * exp(-M_zI * theta * mesh%sb%dim))**(M_ONE / M_THREE)
+  call localstitch(mesh, ncuberoot, get_root3_branch)
+  xbuf(:) = xbuf(:) / ncuberoot(:)**4 ! We could also just do n * ncuberoot of course...
+
+  do nn=1, mesh%np
+    if(abs(xbuf(nn)) > CNST(1e4)) then
+      xbuf(nn) = xbuf(nn) / abs(xbuf(nn)) ! XXX ?
+    end if
+  end do
+  
+  SAFE_ALLOCATE(x2plus1buf(1:mesh%np))
+  x2plus1buf(:) = sqrt(xbuf(:)**2 + M_ONE)
+  call localstitch(mesh, x2plus1buf, get_root2_branch) ! Less likely to cause trouble
+  
+  SAFE_ALLOCATE(fbuf(1:mesh%np))
+  fbuf(:) = log(xbuf(:) + x2plus1buf(:))
+  SAFE_DEALLOCATE_A(x2plus1buf)
+  call localstitch(mesh, fbuf, get_logarithm_branch)
+  fbuf(:) = -beta * xbuf(:)**2 / (M_ONE + M_THREE * beta * xbuf(:) * fbuf(:))
+  SAFE_DEALLOCATE_A(xbuf)
+
+  fbuf(:) = fbuf(:) * ncuberoot(:)
+  zvx(:, 1) = zvx(:, 1) + fbuf(:)
+
+  SAFE_DEALLOCATE_A(fbuf)  
+  SAFE_DEALLOCATE_A(ncuberoot)
+
+  ! We would have to sum up the energy over nodes, except with this functional we
+  ! don't adjust the energy from the LDA value which was already summed.
+
+  POP_SUB(zxc_complex_lb94)
+end subroutine zxc_complex_lb94
+
+subroutine cmplxscl_get_gradient(der, zrho, theta, gradient)
+  type(derivatives_t),  intent(in) :: der
+  CMPLX,                intent(in) :: zrho(:, :)
+  FLOAT,                intent(in) :: theta
+  CMPLX,               intent(out) :: gradient(:, :)
+  
+  CMPLX, allocatable :: zrhotemp(:)
+  CMPLX              :: dimphase
+
+  dimphase = exp(M_zI * theta * der%mesh%sb%dim)
+
+  PUSH_SUB(cmplxscl_get_gradient)
+
+  ASSERT(size(zrho, 2) == 1) ! no spin polarization for now
+  
+  SAFE_ALLOCATE(zrhotemp(1:der%mesh%np_part))
+  ! Divide by exp(i dim theta) to get Jacobian right and further by exp(i theta) due to derivative
+  zrhotemp(1:der%mesh%np) = zrho(:, 1) * exp(-M_zI * theta * (M_ONE + der%mesh%sb%dim))
+  zrhotemp(der%mesh%np + 1:der%mesh%np_part) = M_ZERO
+  call zderivatives_grad(der, zrhotemp, gradient)
+  SAFE_DEALLOCATE_A(zrhotemp)
+  POP_SUB(cmplxscl_get_gradient)
+end subroutine cmplxscl_get_gradient
+
+
 subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   type(derivatives_t),  intent(in)    :: der
   type(mesh_t),         intent(in)    :: mesh
   integer,              intent(in)    :: ispin
   FLOAT,                intent(in)    :: theta
   CMPLX,                intent(in)    :: zrho(:, :)
-  CMPLX, optional,      intent(inout) :: zvx(:, :)
-  CMPLX, optional,      intent(inout) :: zvc(:, :)
-  CMPLX, optional,      intent(inout) :: zex
-  CMPLX, optional,      intent(inout) :: zec
+  CMPLX,                intent(inout) :: zvx(:, :)
+  CMPLX,                intent(inout) :: zvc(:, :)
+  CMPLX,                intent(inout) :: zex
+  CMPLX,                intent(inout) :: zec
 
   integer               :: nn
   logical               :: calc_energy
@@ -1384,10 +1485,10 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
 
   ! XXX Some of the float parameters are repeated in LDA.  Define globally or something?
   FLOAT, parameter      :: &
-    mu = 0.2195149727645171, kappa = 0.804, C0I = 0.238732414637843, &
-    C1 = -0.45816529328314287, C2 = 0.26053088059892404, C3 = 0.10231023756535741, &
-    gamma = 0.0310906908697, CC1 = 1.9236610509315362, CC2 = 2.5648814012420482, &
-    IF2 = 0.58482236226346462, beta = 0.06672455060314922
+    mu = CNST(0.2195149727645171), kappa = CNST(0.804), C0I = CNST(0.238732414637843), &
+    C1 = CNST(-0.45816529328314287), C2 = CNST(0.26053088059892404), C3 = CNST(0.10231023756535741), &
+    gamma = CNST(0.0310906908697), CC1 = CNST(1.9236610509315362), CC2 = CNST(2.5648814012420482), &
+    IF2 = CNST(0.58482236226346462), beta = CNST(0.06672455060314922)
 
   CMPLX, allocatable    :: rootrs(:), gradient(:, :), a2(:), epsc(:), decdrs(:), zrhotemp(:), HH(:), depscdsigma(:), &
     depsxdsigma(:)
@@ -1396,6 +1497,8 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
 
   PUSH_SUB(zxc_complex_pbe)
 
+  ASSERT(ispin == UNPOLARIZED)
+
   dimphase = exp(mesh%sb%dim * M_zI * theta)
 
   SAFE_ALLOCATE(rootrs(1:mesh%np))
@@ -1403,12 +1506,9 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   call localstitch(mesh, rootrs, get_root6_branch)
 
   SAFE_ALLOCATE(gradient(1:mesh%np, mesh%sb%dim))
-  SAFE_ALLOCATE(zrhotemp(1:mesh%np_part))
-  ! Pre-divide by the exp(i theta) due to the differentiation
-  zrhotemp(1:mesh%np) = zrho(:, 1) / (dimphase * exp(M_zI * theta))
-  zrhotemp(mesh%np + 1:mesh%np_part) = M_ZERO
-  call zderivatives_grad(der, zrhotemp, gradient)
-  SAFE_DEALLOCATE_A(zrhotemp)
+
+  call cmplxscl_get_gradient(der, zrho, theta, gradient)
+
   SAFE_ALLOCATE(a2(1:mesh%np))
   a2(:) = sum(gradient**2, 2)
   SAFE_ALLOCATE(epsc(1:mesh%np))
@@ -1553,9 +1653,8 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
     call zxc_complex_lda(der%mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   else if(functl(1)%id == XC_PBE_XC_CMPLX) then
     call zxc_complex_pbe(der, der%mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
-    ASSERT(size(zvx, 2) == 1)
-    !zvx(:, :) = M_ZERO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !zvc(:, :) = M_ZERO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  else if(functl(1)%id == XC_LB94_XC_CMPLX) then
+    call zxc_complex_lb94(der, der%mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   else if(functl(1)%id == XC_HALF_HARTREE) then
     ! Exact exchange for 2 particles [vxc(r) = 1/2 * vh(r)]
     ! we keep it here for debug purposes
