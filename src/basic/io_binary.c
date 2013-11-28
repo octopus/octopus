@@ -338,7 +338,8 @@ void FC_FUNC_(read_binary,READ_BINARY)
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
   read_header(h, &correct_endianness, ierr, fname, fname_len);
-
+  if (*ierr != 0) return;
+  
   /* check whether the sizes match */ 
   if( h->np < *np + *offset ){ 
     *ierr = 4;
