@@ -43,7 +43,7 @@ program propagation_spectrum
   character(len=80) :: refmultipoles
 
   ! Initialize stuff
-  call global_init()
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   refmultipoles = ""

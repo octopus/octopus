@@ -53,7 +53,7 @@ program dielectric_function
   character(len=120) :: header
 
   ! Initialize stuff
-  call global_init()
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr == 0) call getopt_dielectric_function

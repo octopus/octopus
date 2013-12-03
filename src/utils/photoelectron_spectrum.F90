@@ -56,7 +56,7 @@ program photoelectron_spectrum
   mode = 1
   interpol = .true. 
 
-  call global_init()
+  call global_init(is_serial = .true.)
   call parser_init()
   
   if(parse_block('CalculationMode', blk) == 0) then

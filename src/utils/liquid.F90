@@ -44,7 +44,7 @@ program liquid
   type(space_t)     :: space
   integer, parameter :: dim = 3
 
-  call global_init()                       ! initialize
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr == 0) call getopt_center_geom

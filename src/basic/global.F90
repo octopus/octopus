@@ -133,12 +133,13 @@ module global_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine global_init()
+  subroutine global_init(is_serial)
+    logical, optional, intent(in) :: is_serial !< if .true., do not call MPI_Init
 
     character(len=256) :: share
 
     ! initialize mpi
-    call mpi_mod_init()
+    call mpi_mod_init(optional_default(is_serial, .false.))
 
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)

@@ -34,7 +34,7 @@ program oct_help
 
   integer, parameter :: help_stdout = 6, help_stderr = 0
 
-  call global_init()
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr /= 0) then

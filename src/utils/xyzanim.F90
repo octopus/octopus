@@ -43,7 +43,7 @@ program xyzanim
   type(space_t)     :: space
 
   ! Initialize stuff
-  call global_init()
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr == 0) call getopt_xyz_anim

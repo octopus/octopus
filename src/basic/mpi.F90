@@ -45,8 +45,11 @@ include "mpif.h"
   type(mpi_grp_t), public :: mpi_world
 
 contains
+
   ! ---------------------------------------------------------
-  subroutine mpi_mod_init()
+  subroutine mpi_mod_init(is_serial)
+    logical, intent(in) :: is_serial
+
 #if defined(HAVE_MPI)
     integer :: mpi_err
 #ifdef HAVE_OPENMP
@@ -55,6 +58,12 @@ contains
 #ifdef HAVE_SCALAPACK
     integer :: iam, nprocs
 #endif
+
+    if(is_serial) then
+      call mpi_grp_init(mpi_world, -1)
+      return
+    endif
+
     ! initialize MPI
 #if defined(HAVE_OPENMP) && defined(HAVE_MPI2)
     call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, mpi_err)
@@ -87,8 +96,8 @@ contains
 #if defined(HAVE_MPI)
     integer :: mpi_err
 
-    ! end MPI
-    call MPI_Finalize(mpi_err)
+    ! end MPI, if we started it
+    if(mpi_world%comm /= -1) call MPI_Finalize(mpi_err)
 #endif 
  
   end subroutine mpi_mod_end

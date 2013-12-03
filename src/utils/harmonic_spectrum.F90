@@ -64,7 +64,7 @@ program harmonic_spectrum
 
 
   ! Initialize stuff
-  call global_init()
+  call global_init(is_serial = .true.)
   call parser_init()
   call messages_init()
 

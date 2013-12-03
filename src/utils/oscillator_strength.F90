@@ -1167,7 +1167,7 @@ program oscillator_strength
   call getopt_end()
 
   ! Initialize stuff
-  call global_init()
+  call global_init(is_serial = .true.)
   in_debug_mode = .false.
   call io_init(defaults = .true.)
   call datasets_init(1)

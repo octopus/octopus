@@ -51,7 +51,7 @@
     integer, parameter :: max_freq = 10000
 
     ! Initialize stuff
-    call global_init()		 
+    call global_init(is_serial = .true.)		 
 
     call getopt_init(ierr)
 

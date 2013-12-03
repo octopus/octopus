@@ -40,7 +40,7 @@ program centergeom
   type(geometry_t)  :: geo
   type(space_t)     :: space
 
-  call global_init()                       ! initialize
+  call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr == 0) call getopt_center_geom
