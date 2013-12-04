@@ -278,7 +278,7 @@ contains
     end do
     vp%xlocal = vp%xlocal_vec(vp%partno)
     ! Set the local and boundary points
-    call init_local
+    call init_local()
 
     ! Format of ghost:
     !
@@ -449,7 +449,7 @@ contains
     SAFE_DEALLOCATE_P(part_inner)
     SAFE_DEALLOCATE_P(part_bndry)
 
-    call init_MPI_Alltoall
+    call init_MPI_Alltoall()
     tmp=0
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
     vp%total = tmp    
@@ -621,7 +621,7 @@ contains
     vp%np_global = np_global
     vp%npart     = npart
 
-    call init_send_points
+    call init_send_points()
 
     do inode = 1, npart
       call iihash_end(ghost_flag(inode))
@@ -631,9 +631,11 @@ contains
     POP_SUB(vec_init)
 
   contains
-    subroutine init_local
+    subroutine init_local()
+
       integer :: sp, ep, np_tmp
       integer, allocatable :: local_tmp(:), xlocal_tmp(:)
+
       PUSH_SUB(vec_init.init_local)
       
       sp = vp%xlocal
@@ -665,8 +667,10 @@ contains
       POP_SUB(vec_init.init_local)
     end subroutine init_local
 
-    subroutine init_MPI_Alltoall
+    subroutine init_MPI_Alltoall()
+
       integer :: ipg
+
       PUSH_SUB(vec_init.init_MPI_Alltoall)
       
       SAFE_ALLOCATE(vp%recv_count(1:npart))
@@ -702,7 +706,8 @@ contains
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
     
-    subroutine init_send_points
+    subroutine init_send_points()
+
       integer, allocatable :: displacements(:)
       integer :: ii, jj, kk, ipart, total
 

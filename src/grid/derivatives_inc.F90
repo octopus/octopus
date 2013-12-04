@@ -17,11 +17,11 @@
 !!
 !! $Id$
 
-! This module calculates the derivatives (gradients, Laplacians, etc.) 
-! of a function. Note that the function whose derivative is to be calculated
-! *has* to be defined (1:mesh%np_part), while the (1:mesh%np) values of the derivative
-! are calculated. This was made to simplify the parallel mode, and has to be
-! followed by the rest of the code.
+!> This module calculates the derivatives (gradients, Laplacians, etc.) 
+!! of a function. Note that the function whose derivative is to be calculated
+!! *has* to be defined (1:mesh%np_part), while the (1:mesh%np) values of the derivative
+!! are calculated. This was made to simplify the parallel mode, and has to be
+!! followed by the rest of the code.
 
 
 ! ---------------------------------------------------------
@@ -567,8 +567,8 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:)        ! ff(der%mesh%np_part)
-  R_TYPE,              intent(out)   :: op_ff(:, :)  ! op_ff(der%mesh%np, der%mesh%sb%dim)
+  R_TYPE,              intent(inout) :: ff(:)        !< ff(der%mesh%np_part)
+  R_TYPE,              intent(out)   :: op_ff(:, :)  !< op_ff(der%mesh%np, der%mesh%sb%dim)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 

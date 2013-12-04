@@ -935,7 +935,7 @@ contains
 
     ! the name might be truncated in sub_stack, so we copy to a string
     ! of the same size
-    sub_name_short = messages_clean_path(sub_name)
+    sub_name_short = trim(messages_clean_path(sub_name))
 
     if(sub_name_short /= sub_stack(no_sub_stack)) then
       write (message(1),'(a)') 'Wrong sub name on pop_sub :'
