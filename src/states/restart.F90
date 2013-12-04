@@ -546,7 +546,7 @@ contains
     integer,    optional, intent(out)   :: number_read(:, :)
     logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
 
-    integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
+    integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: iread, nread
     character(len=12)    :: filename
     character(len=1)     :: char
@@ -608,24 +608,78 @@ contains
     if(present(iter)) iter = 0
 
     ! open files to read
+    states_file  = io_open(trim(dir)//'/states', action='read', &
+      status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+    if(states_file < 0) then
+      write(message(1),'(a)') 'Cannot open restart file "states".'
+      call messages_warning(1)
+      ierr = -1
+    endif
+
     wfns_file  = io_open(trim(dir)//'/wfns', action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
-    if(wfns_file < 0) ierr = -1
+    if(wfns_file < 0) then
+      write(message(1),'(a)') 'Cannot open restart file "wfns".'
+      call messages_warning(1)
+      ierr = -1
+    endif
 
     occ_file = io_open(trim(dir)//'/occs', action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
-    if(occ_file < 0) ierr = -1
+    if(occ_file < 0) then
+      write(message(1),'(a)') 'Cannot open restart file "occs".'
+      call messages_warning(1)
+      ierr = -1
+    endif
 
     call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
     if(grid_changed .and. .not. grid_reordered .and. exact_) ierr = -1
 
     if(ierr /= 0) then
+      if(states_file > 0) call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
       if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
       if(exact_) call restart_fail()
       write(message(1),'(a)') 'Could not load restart information.'
       call messages_info(1)
       call messages_print_stress(stdout)
+      call profiling_out(prof_read)
+      POP_SUB(restart_read)
+      return
+    end if
+
+    ! sanity check on spin/k-points. Example file 'states':
+    ! nst=                         2
+    ! dim=                         1
+    ! nik=                         2
+    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
+    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
+    read(line, *) str, idim
+    if(idim == 2 .and. st%d%dim == 1) then
+      write(message(1),'(a)') 'Incompatible restart information: saved calculation is spinors, this one is not.'
+      call messages_warning(1)
+      ierr = -1
+    endif
+    if(idim == 1 .and. st%d%dim == 2) then
+      write(message(1),'(a)') 'Incompatible restart information: this calculation is spinors, saved one is not.'
+      call messages_warning(1)
+      ierr = -1
+    endif
+    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
+    read(line, *) str, ik
+    if(ik /= st%d%nik) then
+      write(message(1),'(a)') 'Incompatible restart information: wrong number of k-points.'
+      write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, '; Read ', ik
+      call messages_warning(2)
+      ierr = -1
+    endif
+    ! FIXME: we could restart anyway if we can check that existing k-points are used correctly
+    call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
+
+    if(ierr /= 0) then
+      if(states_file > 0) call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
+      if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
+      if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
       call profiling_out(prof_read)
       POP_SUB(restart_read)
       return
