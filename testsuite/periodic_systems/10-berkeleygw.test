@@ -68,7 +68,7 @@ Input      : 10-berkeleygw.02-unocc.inp
 match ; k-point 1 (x) ; GREP(static/eigenvalues, '#k =   1', 18) ;  0.0000
 match ; k-point 1 (y) ; GREP(static/eigenvalues, '#k =   1', 30) ;  0.0000
 match ; k-point 1 (z) ; GREP(static/eigenvalues, '#k =   1', 42) ;  0.0100
-match ; Eigenvalue  1 ; GREP(static/eigenvalues, '#k =   1', 12,  1) ; -0.286700
+match ; Eigenvalue  1 ; GREP(static/eigenvalues, '#k =   1', 12,  1) ; -0.287041
 match ; Eigenvalue  8 ; GREP(static/eigenvalues, '#k =   1', 12,  8) ;  0.045962
 match ; Eigenvalue 16 ; GREP(static/eigenvalues, '#k =   1', 12, 16) ;  0.151286
 match ; Eigenvalue 18 ; GREP(static/eigenvalues, '#k =   1', 12, 18) ;  0.161430
