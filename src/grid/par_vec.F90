@@ -333,23 +333,42 @@ contains
     ip       = 0
     np_inner = 0
     np_bndry = 0
-    SAFE_ALLOCATE(points(1:vp%np_local*stencil%size))
-    if (vp%np_bndry < 1) then
-      SAFE_ALLOCATE(points_bndry(1:stencil%size))
-    else
-      SAFE_ALLOCATE(points_bndry(1:vp%np_bndry*stencil%size))
-    end if
+    do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
+      ip = ip + 1
+      ! Get coordinates of current point.
+      call index_to_coords(idx, dim, vp%local(gip), p1)
+      ! For all points in stencil.
+      do jj = 1, stencil%size
+        ! Get point number of possible ghost point.
+        index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
+        ASSERT(index /= 0)
+        ! Global index can be either in the mesh or in the boundary.
+        ! Different treatment is needed for each case.
+        if (index > np_global) then
+          np_bndry = np_bndry + 1
+        else
+          np_inner = np_inner + 1
+        end if
+      end do
+    end do
 
+    SAFE_ALLOCATE(points(1:np_inner))
+    SAFE_ALLOCATE(points_bndry(1:np_bndry))
+    points       = 0
     points_bndry = 0
+    ip           = 0
+    np_inner     = 0
+    np_bndry     = 0
+
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       ! Update the receiving point
       ipart = vp%part_local(ip)
-   
+
       vp%send_count(ipart) = vp%send_count(ipart) + 1
       ! Get coordinates of current point.
       call index_to_coords(idx, dim, vp%local(gip), p1)
-      
+
       ! For all points in stencil.
       do jj = 1, stencil%size
         ! Get point number of possible ghost point.
@@ -366,17 +385,23 @@ contains
         end if
       end do
     end do
-    SAFE_ALLOCATE(part_inner(1:np_inner))
-    SAFE_ALLOCATE(part_bndry(1:np_bndry))
-    call MPI_Barrier(mpi_world%comm, mpi_err)
+
+    if (np_inner > 0) then
+      SAFE_ALLOCATE(part_inner(1:np_inner))
+    else 
+       SAFE_ALLOCATE(part_inner(1:1))
+    end if
+    if (np_bndry > 0) then
+       SAFE_ALLOCATE(part_bndry(1:np_bndry))
+     else
+       SAFE_ALLOCATE(part_bndry(1:1))
+    end if
 
     call partition_get_partition_number(inner_partition, np_inner, &
-      points, part_inner) 
-    call MPI_Barrier(mpi_world%comm, mpi_err)
-    if (np_bndry >= 0) then
-      call partition_get_partition_number(bndry_partition, np_bndry, &
-        points_bndry, part_bndry)
-    end if
+         points, part_inner) 
+    call partition_get_partition_number(bndry_partition, np_bndry, &
+         points_bndry, part_bndry)
+    
     call MPI_Barrier(mpi_world%comm, mpi_err)
 
     vp%total = 0
