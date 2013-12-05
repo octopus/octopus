@@ -31,3 +31,4 @@ Preconditioner = no
 
 ExperimentalFeatures = yes
 Output = BerkeleyGW
+BerkeleyGW_CalcExchange = yes

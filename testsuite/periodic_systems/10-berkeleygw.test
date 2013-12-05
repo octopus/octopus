@@ -88,3 +88,11 @@ match ; vxc k 1 2 Im    ; LINEFIELD(static/vxc.dat,   3, 4);     0.0
 match ; vxc k 1 8 8 Re  ; LINEFIELD(static/vxc.dat, 217, 4);   -10.62610554
 match ; vxc k 1 8 8 Im  ; LINEFIELD(static/vxc.dat, 217, 5);     0.0
 # unfortunately, offdiagonals are dependent on arbitrary phases, cannot be tested
+
+match ; x k 1 z       ; LINEFIELD(static/x.dat,   1, 3);     0.01
+match ; x k 1 diag    ; LINEFIELD(static/x.dat,   1, 4);    26
+match ; x k 1 offdiag ; LINEFIELD(static/x.dat,   1, 5);   676
+match ; x k 1 2 Re    ; LINEFIELD(static/x.dat,   3, 3);    -8.792822115
+match ; x k 1 2 Im    ; LINEFIELD(static/x.dat,   3, 4);     0.0
+match ; x k 1 8 8 Re  ; LINEFIELD(static/x.dat, 217, 4);    -6.962036810
+match ; x k 1 8 8 Im  ; LINEFIELD(static/x.dat, 217, 5);     0.0

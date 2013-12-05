@@ -100,7 +100,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1) * vxc(:, ispin))
         if(bgw%calc_exchange) then
-          !        call X(derivatives_set_bc)(gr%der, psi(:, 1))
+!        call X(derivatives_set_bc)(gr%der, psi(:, 1))
           xpsi(:,:) = M_ZERO
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
@@ -112,6 +112,12 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
         call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
         mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi2(:) * vxc(:, ispin))
+        ! FIXME: we should calc xpsi only for each state, not for each offdiag
+        if(bgw%calc_exchange) then
+          xpsi(:,:) = M_ZERO
+          call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
+          mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
+        endif
       enddo
     enddo
 

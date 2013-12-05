@@ -59,6 +59,7 @@ module output_m
   use par_vec_m
   use profiling_m
   use simul_box_m
+  use smear_m
   use solids_m
   use species_m
   use states_m
@@ -1087,18 +1088,22 @@ contains
       SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
       SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
       ifmin(:,:) = 1
-      ifmax(:,:) = st%nst
+      if(smear_is_semiconducting(st%smear)) then
+        ifmax(:,:) = st%qtot / st%smear%el_per_state
+      endif
       do ik = 1, st%d%nik
         is = states_dim_get_spin_index(st%d, ik)
         ikk = states_dim_get_kpoint_index(st%d, ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
-        do ist = 1, st%nst
-          if(st%eigenval(ist, ik) > st%smear%e_fermi) then
-            ifmax(ikk, is) = ist - 1
-            exit
-          endif
-        enddo
+        if(.not. smear_is_semiconducting(st%smear)) then
+          do ist = 1, st%nst
+            if(st%eigenval(ist, ik) > st%smear%e_fermi) then
+              ifmax(ikk, is) = ist - 1
+              exit
+            endif
+          enddo
+        endif
       enddo
 
       SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
