@@ -219,7 +219,7 @@ contains
     PUSH_SUB(partition_read)
     
     ! This is a writing to avoid an optimization of gfortran with -O3
-    write(message(1),'(a,i8)') "Info: partition of size =", size(partition%part)
+    write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)
     call messages_info(1)
     
     ! Calculate displacements for reading
