@@ -100,7 +100,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1) * vxc(:, ispin))
         if(bgw%calc_exchange) then
-!        call X(derivatives_set_bc)(gr%der, psi(:, 1))
           xpsi(:,:) = M_ZERO
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
@@ -172,7 +171,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
   logical,               intent(in)    :: is_wfn !< make false for RHO, VXC
 
   integer :: ig, ix, iy, iz, is
-  FLOAT :: norm
+  FLOAT :: norm, average
   CMPLX, pointer :: zfield_r(:)
 
   PUSH_SUB(X(bgw_write_fs))
@@ -193,6 +192,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
     call zmesh_to_cube(gr%mesh, zfield_r(:), cube, cf, local = .true.)
     call zcube_function_rs2fs(cube, cf)
 
+    ! norm in real space
     norm = M_ZERO
     do iz = 1, cube%rs_n_global(3)
       do iy = 1, cube%rs_n_global(2)
@@ -207,6 +207,10 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
     enddo
     norm = norm * gr%mesh%volume_element
     if(is_wfn) norm = sqrt(norm)
+!    write(0,*) 'norm in real space = ', norm
+
+    average = zmf_integrate(gr%mesh, zfield_r)
+!    write(0,*) 'total in real space = ', average
 
     norm = M_ZERO
     do iz = 1, cube%fs_n_global(3)
@@ -223,8 +227,12 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
     if(is_wfn) then
       norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
     else
-      norm = norm / product(cube%rs_n_global(1:3))
+!      norm = norm / product(cube%rs_n_global(1:3))
     endif
+!    write(0,*) 'norm in reciprocal space = ', norm
+
+!    write(0,*) 'grid size = ', product(cube%rs_n_global(1:3))
+!    write(0,*) 'volume element = ', gr%mesh%volume_element
     
     field_g(:,:) = M_ZERO
     norm = M_ZERO
@@ -237,7 +245,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
           sqrt(gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
         norm = norm + abs(field_g(ig,is))**2
       else
-        field_g(ig, is) = cf%fs(ix, iy, iz) / product(cube%rs_n_global(1:3))
+        field_g(ig, is) = cf%fs(ix, iy, iz) * gr%mesh%volume_element
         norm = norm + field_g(ig,is)
       endif
     enddo
@@ -250,12 +258,13 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
         write(message(1), '(a,f12.6)') 'Wavefunction norm within G-sphere (before renormalization) is only ', norm
         call messages_warning(1)
       endif
+!      write(0,*) 'average = fs: ', cf%fs(1,1,1) / sqrt(product(cube%rs_n_global(1:3)) * norm/gr%mesh%volume_element), &
+!' field_g: ', field_g(1,1)
     endif
 
-    if(.not. is_wfn) then
-      write(0,*) 'shell%red_gvec(1) = ', shell%red_gvec(1:3, 1)
-      write(0,*) 'average = ', cf%fs(1,1,1) / product(cube%rs_n_global(1:3))
-    endif
+!    if(.not. is_wfn) then
+!      write(0,*) 'average = fs: ', cf%fs(1,1,1) / product(cube%rs_n_global(1:3)), ' field_g: ', field_g(1,1)
+!    endif
   enddo
 
 #ifdef R_TREAL

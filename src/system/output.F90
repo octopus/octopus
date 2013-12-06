@@ -978,7 +978,8 @@ contains
       iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     endif
-    vxc(:,:) = vxc(:,:) * M_TWO ! convert from Ha to Ry
+    ! convert from Ha to Ry, make usable with same processing as RHO
+    vxc(:,:) = vxc(:,:) * M_TWO / (product(cube%rs_n_global(1:3)) * gr%mesh%volume_element)
     call dbgw_write_FS(iunit, vxc, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
     SAFE_DEALLOCATE_P(vxc)
