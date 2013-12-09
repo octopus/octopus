@@ -219,6 +219,13 @@ foreach my $octopus_exe (@executables){
 
   while ($_ = <TESTSUITE>) {
 
+    # remove trailing newline 
+    chomp; 
+    # remove trailing whitespace 
+    $_ =~ s/^\s+//; 
+    # skip blank lines
+    next if (length($_) == 0);
+
     # skip comments
     next if /^#/;
 
@@ -230,14 +237,22 @@ foreach my $octopus_exe (@executables){
 	print "Using executable : $octopus_exe\n";
 	print "Using test file  : $opt_f \n";
       }
-    }
-
-    if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
+    } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
       $enabled = $1;
       $enabled =~ s/^\s*//;
       $enabled =~ s/\s*$//;
       $test{"enabled"} = $enabled;
+    } elsif ( $_ =~ /^Programs/) {
+        # handled earlier
+    } elsif ( $_ =~ /^Options/) {
+        # handled earlier
+    } elsif ( $_ =~ /^TestGroups/) {
+        # handled by oct-run_testsuite.sh
+    } else {
+	if ( $enabled eq "") {
+	    die "Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
+	}
     }
 
     # Running this regression test if it is enabled
@@ -387,7 +402,7 @@ foreach my $octopus_exe (@executables){
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  exit 255;
         } else {
-	  die "Unknown option 'Enabled = $enabled' in testsuite file, or 'Enabled' has not been set.\n\n";
+	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
         }
       }
