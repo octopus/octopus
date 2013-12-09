@@ -87,6 +87,7 @@ contains
     !%Description
     !% If true, the convergence for the occupied states will be shown too in the output.
     !% This is useful for testing, or if the occupied states fail to converge.
+    !% It will be enabled automatically if only occupied states are being calculated.
     !%End
     call parse_logical(datasets_check('UnoccShowOccStates'), .false., showoccstates)
 
@@ -168,6 +169,10 @@ contains
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
+
+    ! it is strange and useless to see no eigenvalues written if you are only calculating
+    ! occupied states, on a different k-point.
+    if(showstart > sys%st%nst) showstart = 1
     
     SAFE_DEALLOCATE_A(states_read)
 
