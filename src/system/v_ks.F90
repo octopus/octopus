@@ -71,7 +71,8 @@ module v_ks_m
   integer, parameter, public :: &
     SIC_NONE   = 1,     &  !< no self-interaction correction
     SIC_PZ     = 2,     &  !< Perdew-Zunger SIC (OEP way)
-    SIC_AMALDI = 3         !< Amaldi correction term
+    SIC_AMALDI = 3,     &  !< Amaldi correction term
+    SIC_ADSIC  = 4         !< Averaged density SIC
 
   type v_ks_calc_t
     private
@@ -216,6 +217,9 @@ contains
         !% Perdew-Zunger SIC, handled by the OEP technique.
         !%Option sic_amaldi 3
         !% Amaldi correction term.
+        !%Option sic_adsic 4
+        !% Average-density SIC.
+        !% C. Legrand et al. J. Phys. B 35, 1115 (2002). 
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
@@ -600,7 +604,8 @@ contains
       logical :: cmplxscl
       FLOAT :: factor
       CMPLX :: ctmp
-      integer :: ispin
+      integer :: ispin, ip, ist
+      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -669,6 +674,42 @@ contains
               ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta)
           end if
         end if
+      end if
+
+      if (ks%sic_type == SIC_ADSIC) then
+        if (.not. cmplxscl .and. .not. (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) ) then
+          !ADSIC potential is:
+          !V_ADSIC[n] = V_ks[n] - (V_h[n/N] - V_xc[n/N])
+   
+          SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+          SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
+          SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+          SAFE_ALLOCATE(qsp(1:st%d%nspin))
+        
+          vxc_sic = M_ZERO
+          vh_sic = M_ZERO
+          qsp = M_ZERO
+          do ist = 1, st%nst
+            qsp(:) = qsp(:)+ st%occ(ist, :) * st%d%kweights(:)
+          end do
+          
+          do ispin = 1, st%d%nspin
+            rho(:,ispin) = ks%calc%density(:, ispin)/ qsp(ispin)
+          end do  
+          
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+            st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            vxc_sic)
+          rho(:,1) = ks%calc%total_density/st%qtot
+          call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
+          ks%calc%vxc = ks%calc%vxc - vxc_sic                  
+          forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip) 
+
+          SAFE_DEALLOCATE_P(vxc_sic)
+          SAFE_DEALLOCATE_P(vh_sic)                                
+          SAFE_DEALLOCATE_P(rho)
+          SAFE_DEALLOCATE_P(qsp)
+        end if                                
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
