@@ -1385,14 +1385,13 @@ subroutine zxc_complex_lb94(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   CMPLX,                intent(inout) :: zec
   
   CMPLX, allocatable :: gradient(:, :), ncuberoot(:), xbuf(:), x2plus1buf(:), fbuf(:)
-  FLOAT, parameter :: beta = CNST(0.05)
+  FLOAT, parameter   :: beta = CNST(0.05), xi = CNST(1.2599210498948732) ! 2^(1/3)
 
   integer :: nn
 
   PUSH_SUB(zxc_complex_lb94)
   ASSERT(ispin == UNPOLARIZED)
   
-  !print*, 'zxc complex lb94'
   call zxc_complex_lda(mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   
   SAFE_ALLOCATE(gradient(1:mesh%np, 1:mesh%sb%dim))
@@ -1424,16 +1423,16 @@ subroutine zxc_complex_lb94(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   call localstitch(mesh, x2plus1buf, get_root2_branch) ! Less likely to cause trouble
   
   SAFE_ALLOCATE(fbuf(1:mesh%np))
-  fbuf(:) = log(xbuf(:) + x2plus1buf(:))
+  fbuf(:) = log(xi * (xbuf(:) + x2plus1buf(:)))
   SAFE_DEALLOCATE_A(x2plus1buf)
   call localstitch(mesh, fbuf, get_logarithm_branch)
-  fbuf(:) = -beta * xbuf(:)**2 / (M_ONE + M_THREE * beta * xbuf(:) * fbuf(:))
+  fbuf(:) = -beta * xi * xbuf(:)**2 / (M_ONE + M_THREE * beta * xi * xbuf(:) * fbuf(:))
   SAFE_DEALLOCATE_A(xbuf)
 
   fbuf(:) = fbuf(:) * ncuberoot(:)
   zvx(:, 1) = zvx(:, 1) + fbuf(:)
 
-  SAFE_DEALLOCATE_A(fbuf)  
+  SAFE_DEALLOCATE_A(fbuf)
   SAFE_DEALLOCATE_A(ncuberoot)
 
   ! We would have to sum up the energy over nodes, except with this functional we
