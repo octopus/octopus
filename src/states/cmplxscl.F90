@@ -46,7 +46,8 @@ module cmplxscl_m
     FLOAT              :: alphaL      !< time coordinate scaling angle for left states
     FLOAT              :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
     FLOAT              :: penalizationfactor  !< factor which penalizes imaginary parts of eigenvalues when ordering states
-    FLOAT              :: localizationradius !< integration radius used for distinguishing localized vs continuum states
+    FLOAT              :: localizationradius  !< integration radius used for distinguishing localized vs continuum states
+    integer            :: nlocalizedstates    !< number of states to be considered localized and thus preferentially occupied
   end type cmplxscl_t
 
   integer, parameter ::     &
@@ -131,6 +132,20 @@ contains
     !%  \Re(\epsilon) + penalizationfactor (\Im(\epsilon))^2
     !%End
     call parse_float(datasets_check('ComplexScalingPenalizationFactor'), M_TWO, this%penalizationfactor)
+
+
+
+    !%Variable ComplexScalingLocalizedStates
+    !%Type integer
+    !%Default 0
+    !%Section Hamiltonian
+    !%Description
+    !% It will be assumed that this many localized states are present in the calculation.  Localized
+    !% states will be occupied as ordered by real part of the energy.  Any remaining states will then
+    !% be ordered by localization as measured.  Localization is measured by integrating the square
+    !% of each wavefunction within ComplexScalingLocalizationRadius.
+    !%End    
+    call parse_integer(datasets_check('ComplexScalingLocalizedStates'), 0, this%nlocalizedstates)
 
     !%Variable ComplexScalingAlpha
     !%Type float 

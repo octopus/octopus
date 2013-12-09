@@ -100,32 +100,58 @@ module eigensolver_m
 
 contains
 
-  subroutine cmplxscl_figure_out_states(eigens, st, gr)
+  subroutine cmplxscl_choose_state_order(eigens, st, gr)
     type(eigensolver_t), intent(inout) :: eigens
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     
     !CMPLX, allocatable :: kinetic_elements(:, :) ! XXXXXX
     integer :: ist
+    FLOAT   :: limitvalue
     CMPLX, allocatable :: boundary_norms(:)
+    FLOAT, allocatable :: buf(:), score(:)
 
-    PUSH_SUB(cmplxscl_figure_out_states)
+    PUSH_SUB(cmplxscl_choose_state_order)
 
     call states_orthogonalize_cproduct(st, gr%mesh)
 
     !SAF!E_ALL!OCATE(kinetic_elements(1:st%nst, 1))
+    SAFE_ALLOCATE(score(1:st%nst))
+    SAFE_ALLOCATE(buf(1:st%nst))
     SAFE_ALLOCATE(boundary_norms(1:st%nst))
-    call identify_continuum_states(gr%mesh, st, boundary_norms)
-    call states_sort_complex(gr%mesh, st, eigens%diff, boundary_norms)
-    call identify_continuum_states(gr%mesh, st, boundary_norms)
 
-    write(message(1), *) 'Figure out states'
+    call identify_continuum_states(gr%mesh, st, boundary_norms)
+        
+    buf(:) = abs(boundary_norms(:))
+    call sort(buf)
+    limitvalue = buf(st%cmplxscl%nlocalizedstates) + CNST(1e-12)
+    
+    do ist=1, st%nst
+      if(abs(boundary_norms(ist)) <= limitvalue) then ! XXX spin
+        score(ist) = -M_PI + atan(st%zeigenval%Re(ist, 1)) ! all negative values
+      else
+        score(ist) = M_PI + atan(abs(boundary_norms(ist))) ! all positive values
+      end if
+    end do
+    
+    write(message(1), *) 'Ordering states'
     call messages_info(1)
     do ist=1, st%nst
       write(message(1), *) 'norm', ist, boundary_norms(ist)
       call messages_info(1)
     end do
+    do ist=1, st%nst
+      write(message(1), *) 'score', ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
+      call messages_info(1)
+    end do
+
+    call states_sort_complex(gr%mesh, st, eigens%diff, score)
+
+    call identify_continuum_states(gr%mesh, st, boundary_norms) ! XXX This is just to get correct ordering again
+
     SAFE_DEALLOCATE_A(boundary_norms)
+    SAFE_DEALLOCATE_A(buf)
+    SAFE_DEALLOCATE_A(score)
     !call cmplxscl_get_kinetic_elements(st, hm, gr%der, kinetic_elements)
 
     !print*, 'kinetic elements'
@@ -139,8 +165,8 @@ contains
     !* exp(-M_TWO * M_zI * st%cmplxscl%theta)
     !end do
     !SAF!E_DEA!LLOC!ATE_A(kinetic_elements)
-    POP_SUB(cmplxscl_figure_out_states)
-  end subroutine cmplxscl_figure_out_states
+    POP_SUB(cmplxscl_choose_state_order)
+  end subroutine cmplxscl_choose_state_order
 
 
 
@@ -585,7 +611,7 @@ contains
               eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
           end if
 #if defined(HAVE_ARPACK) 
-       	case(RS_ARPACK) 
+       	case(RS_ARPACK)
           call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
             eigens%converged(ik), ik, eigens%diff(:,ik))
 #endif 
@@ -614,7 +640,7 @@ contains
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
     if(st%cmplxscl%space) then
-      call cmplxscl_figure_out_states(eigens, st, gr)
+      call cmplxscl_choose_state_order(eigens, st, gr)
     end if
 
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then

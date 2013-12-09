@@ -254,21 +254,17 @@ contains
   end subroutine reorder_states_by_args
 
 
-  subroutine states_sort_complex(mesh, st, diff, boundary_norms)
-    !(mesh, st, hm, der, diff)
+  subroutine states_sort_complex(mesh, st, diff, scores)
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
-    !type(hamiltonian_t), intent(in)    :: hm
-    !type(derivatives_t), intent(in)    :: der
     FLOAT,               intent(inout) :: diff(:,:) !< eigenstates convergence error
-    CMPLX,               intent(in)    :: boundary_norms(:)
+    FLOAT,               intent(in)    :: scores(:)
 
     integer              :: ik, ist, idim
     integer, allocatable :: index(:)
     FLOAT, allocatable   :: diff_copy(:,:)
     FLOAT, allocatable   :: buf(:)
     CMPLX, allocatable   :: cbuf(:)
-    !CMPLX, allocatable   :: kinetic_elements(:)
     
     PUSH_SUB(states_sort_complex)
     
@@ -277,20 +273,11 @@ contains
     SAFE_ALLOCATE(buf(st%nst))
     SAFE_ALLOCATE(diff_copy(1:size(diff,1),1:size(diff,2)))
 
-    !SA!FE_AL!LOCATE(kinetic_elements(1:st%nst))
-    !call get_kinetic_elements(st, hm, der, kinetic_elements)
-    !print*, kinetic_elements
-    !SA!FE_DE!ALLOCA!TE_A(kinetic_elements)
-    
-    
     diff_copy = diff
 
     do ik = st%d%kpt%start, st%d%kpt%end
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
-      do ist=1, st%nst
-        buf(ist) = abs(boundary_norms(ist))
-        !buf(ist) = cmplxscl_energy_ordering_score(cbuf(ist), st%cmplxscl%penalizationfactor)
-      end do
+      buf(:) = scores(:)
 
       call sort(buf, index)
       if (mpi_grp_is_root(mpi_world)) then

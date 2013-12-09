@@ -10,8 +10,11 @@ BoxShape = sphere
 fromScratch = yes
 Spacing = 0.05
 Radius = 10
+ComplexScalingRotateSpectrum = pi / 2 - ComplexScalingTheta
 ComplexScalingLocalizationRadius = Radius * 0.8
-ExtraStates = 4
+ComplexScalingLocalizedStates = 6
+
+ExtraStates = 8
 XCFunctional = pbe_xc_cmplx
 PoissonSolver = direct_sum
 
