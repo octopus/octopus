@@ -1437,7 +1437,7 @@ subroutine zxc_complex_lb94(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   SAFE_DEALLOCATE_A(ncuberoot)
 
   ! We would have to sum up the energy over nodes, except with this functional we
-  ! don't adjust the energy from the LDA value which was already summed.
+  ! do not adjust the energy from the LDA value which was already summed.
 
   POP_SUB(zxc_complex_lb94)
 end subroutine zxc_complex_lb94
