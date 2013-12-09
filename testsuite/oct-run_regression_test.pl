@@ -243,6 +243,15 @@ foreach my $octopus_exe (@executables){
       $enabled =~ s/^\s*//;
       $enabled =~ s/\s*$//;
       $test{"enabled"} = $enabled;
+
+      if ( $enabled eq "No") {
+          print stderr "Test disabled: skipping test\n\n";
+	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+	  exit 255;
+      } elsif ( $enabled ne "Yes") {
+	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+      }
     } elsif ( $_ =~ /^Programs/) {
         # handled earlier
     } elsif ( $_ =~ /^Options/) {
@@ -250,13 +259,11 @@ foreach my $octopus_exe (@executables){
     } elsif ( $_ =~ /^TestGroups/) {
         # handled by oct-run_testsuite.sh
     } else {
-	if ( $enabled eq "") {
-	    die "Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
-	}
-    }
+      if ( $enabled eq "") {
+	die "Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
+      }
 
-    # Running this regression test if it is enabled
-    if ( $enabled eq "Yes" ) {
+      # Running this regression test if it is enabled
       
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
 	$command = "$exec_directory/$1";
@@ -395,17 +402,6 @@ foreach my $octopus_exe (@executables){
 	}
       }
 
-    } else {
-      if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-        if ( $enabled eq "No") {
-          print stderr "Test disabled: skipping test\n\n";
-	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit 255;
-        } else {
-	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
-	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-        }
-      }
     }
 
   }
