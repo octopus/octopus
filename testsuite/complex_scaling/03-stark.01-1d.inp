@@ -11,8 +11,8 @@ fromScratch = yes
 Spacing = 0.05
 Radius = 10
 ComplexScalingRotateSpectrum = pi / 2 - ComplexScalingTheta
-ComplexScalingLocalizationRadius = Radius * 0.8
-ComplexScalingLocalizedStates = 6
+ComplexScalingLocalizationRadius = Radius * 0.9
+ComplexScalingLocalizedStates = 4
 
 ExtraStates = 8
 XCFunctional = pbe_xc_cmplx
