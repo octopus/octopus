@@ -163,8 +163,10 @@ contains
         ! if not all occupied states read, must recalculate
         nst_calculated = min(maxval(occ_states), minval(states_read))
       end if
-      call lcao_run(sys, hm, st_start = nst_calculated + 1)
       showstart = nst_calculated + 1
+      write(message(1),'(a,i8,a)') 'Performing LCAO to replace states ', showstart, ' and above'
+      call messages_info(1)
+      call lcao_run(sys, hm, st_start = showstart)
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
