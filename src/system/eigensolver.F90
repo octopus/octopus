@@ -124,7 +124,11 @@ contains
         
     buf(:) = abs(boundary_norms(:))
     call sort(buf)
-    limitvalue = buf(st%cmplxscl%nlocalizedstates) + CNST(1e-12)
+    if(st%cmplxscl%nlocalizedstates == 0) then
+      limitvalue = -M_ONE ! all states will be above limitvalue
+    else
+      limitvalue = buf(st%cmplxscl%nlocalizedstates) + CNST(1e-4)
+    end if
     
     do ist=1, st%nst
       if(abs(boundary_norms(ist)) <= limitvalue) then ! XXX spin
