@@ -595,7 +595,7 @@ contains
       read_occ = .not. st%fixed_occ
     endif
 
-    if(read_occ) then
+    if(.not. present(lr) .and. read_occ) then
       st%occ(:, :) = M_ZERO
       ! to be filled in from reading afterward
     endif
