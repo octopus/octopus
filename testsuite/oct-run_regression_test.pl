@@ -263,8 +263,6 @@ foreach my $octopus_exe (@executables){
 	die "Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
       }
 
-      # Running this regression test if it is enabled
-      
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
 	$command = "$exec_directory/$1";
 	if( ! -x "$command") {
@@ -278,15 +276,15 @@ foreach my $octopus_exe (@executables){
 	}
       }
 
-      if ( $_ =~ /^Not_Util/) {
+      elsif ( $_ =~ /^Not_Util/) {
         $command = $octopus_exe;
       }
 
-      if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
+      elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	$np = $1;
       }
 
-      if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+      elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
 	$input_base = $1;
 	$input_file = dirname($opt_f) . "/" . $input_base;
 
@@ -386,22 +384,25 @@ foreach my $octopus_exe (@executables){
 	chmod 0755, $mscript;
       }
 
-      if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
+      elsif ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
 	set_precision($1, $command) ;
       }
 
-      if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
-	if(run_match_new($_)){
-	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-	  if ($opt_v) { print_hline(); }
-	} else {
-	  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-	  print_hline();
-	  $test_succeeded = 0;
-	  $failures++;
-	}
+      elsif ( $_ =~ /^match/ ) {
+	  if (!$opt_n && $return_value == 0) {
+	      if(run_match_new($_)){
+		  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+		  if ($opt_v) { print_hline(); }
+	      } else {
+		  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+		  print_hline();
+		  $test_succeeded = 0;
+		  $failures++;
+	      }
+	  }
+      } else {
+	  die "Unknown command '$_'\n";
       }
-
     }
 
   }
