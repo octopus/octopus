@@ -21,6 +21,7 @@ TheoryLevel = independent_particles
 #TheoryLevel = DFT
 
 ComplexScalingLocalizationRadius = Radius * 0.8
+ComplexScalingLocalizedStates = 9
 
 Eigensolver = arpack
 
