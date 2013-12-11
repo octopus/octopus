@@ -50,15 +50,15 @@
 # Felipe Homrich da Jornada, September 2011
 # imported from BerkeleyGW r4576, r5630
 
-# Python script for updating a test suite given its result.
+# Python script for updating a test file given its result.
 # The script searches for all *.test files recursively, and updates those that
 # were affected by the result.
-# It can also help one develop a new test suite: just create the test skeleton
+# It can also help one develop a new test file: just create the test skeleton
 # and the fields you would like to match, and enter zero for the matched
 # values. The script will update these numbers accordingly.
 
 # USAGE: go to the testsuite directory and type ./fix_testsuite.py test_result
-#   where test_result contains the results from the test suite
+#   where test_result contains the results from the test file.
 
 # WARNING: this script updates all test results. Don't blindly accept all
 #   changes! You might have meant to change only one component (A), but you
@@ -131,7 +131,7 @@ def get_test_name(fname):
 #Find all tests and gets all titles
 test_files = recursive_glob('.', '*.test')
 test_names = [get_test_name(fname) for fname in test_files]
-print('Found %d test suites:'%(len(test_files)))
+print('Found %d test files:'%(len(test_files)))
 for test_file in test_files:
 	print('      %s'%(test_file))
 print('')
@@ -210,8 +210,9 @@ if not get_answer('Would you like to see the diff now? (Y/n) ', True):
 	sys.exit()
 
 for tfile in test_files:
-	os.system('diff -U 0 %s %s.new'%(tfile,tfile))
-	print('')
+	if (os.path.isfile(tfile+'.new')):
+                os.system('diff -U 0 %s %s.new'%(tfile,tfile))
+                print('')
 
 print('If you are happy with the diff, would you like me to update the files now?')
 if not get_answer('I\'ll not commit anything, so you can still "svn diff" to see the changes. (Y/n) ', True):
