@@ -532,7 +532,7 @@ contains
 
   ! ---------------------------------------------------------
   !> returns in ierr:
-  !! <0 => Fatal error
+  !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
   subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left)
@@ -604,7 +604,7 @@ contains
 
     ierr = 0
     ! make sure these intent(out)`s are initialized no matter what
-    if(present(lowest_missing)) lowest_missing = st%nst + 1
+    if(present(lowest_missing)) lowest_missing = 1
     if(present(iter)) iter = 0
 
     ! open files to read
@@ -763,6 +763,8 @@ contains
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
+
+    if(present(lowest_missing)) lowest_missing = st%nst + 1
 
     if(mpi_grp_is_root(mpi_world)) then
       iread = 1
@@ -1014,9 +1016,9 @@ contains
 
   ! ---------------------------------------------------------
   !> returns in ierr:
-  !! <0 => Fatal error
-  !! =0 => read all wavefunctions
-  !! >0 => could only read ierr wavefunctions
+  !! <0 => Fatal error, or nothing read
+  !! =0 => read all density components
+  !! >0 => could only read ierr density components
   subroutine restart_read_rho(dir, st, gr, ierr)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
@@ -1101,7 +1103,7 @@ contains
       if(err == 0) then
         ierr = ierr + 1
       else
-        message(1) = "Could not read density from file " // trim(filename)
+        message(1) = "Could not read density from file '" // trim(dir) // trim(filename) // ".obf'"
         call messages_warning(1)
       endif
     end do
@@ -1123,6 +1125,7 @@ contains
       write(stdout, '(1x)')
     end if
 
+    if(ierr == 0) ierr = -1 ! no files read
     if(ierr==st%d%nspin) ierr=0 ! All OK
 
     POP_SUB(restart_read_rho)
