@@ -595,6 +595,11 @@ contains
       read_occ = .not. st%fixed_occ
     endif
 
+    if(read_occ) then
+      st%occ(:, :) = M_ZERO
+      ! to be filled in from reading afterward
+    endif
+
     ! sanity check
     if(present(lr)) then
       lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
@@ -906,7 +911,6 @@ contains
             if(filled(idim, ist, ik)) cycle
 
             call states_generate_random(st, gr%mesh, ist, ist)
-            if(read_occ) st%occ(ist, ik) = M_ZERO
           end do
         end do
       end do
