@@ -62,7 +62,7 @@ contains
     logical :: converged, forced_finish, showoccstates, is_orbital_dependent
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
-    integer, allocatable :: states_read(:, :), occ_states(:)
+    integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=50) :: str
 
     PUSH_SUB(unocc_run)
@@ -102,9 +102,9 @@ contains
 
     call restart_read_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
 
-    SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
+    SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, number_read = states_read)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
@@ -124,7 +124,7 @@ contains
     if(ierr_rho /= 0 .or. is_orbital_dependent) then
       ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
       do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-        if(any(states_read(1:sys%st%d%dim, ik) < occ_states(ik))) then
+        if(any(lowest_missing(1:sys%st%d%dim, ik) <= occ_states(ik))) then
           message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
           message(2) = "Please run a ground-state calculation first!"
           call messages_fatal(2)
@@ -158,12 +158,13 @@ contains
 
     if(fromScratch .or. ierr /= 0) then
       if(ierr > 0 .and. .not. fromScratch) then
-        nst_calculated = minval(states_read)
+        nst_calculated = minval(lowest_missing) - 1
       else
         ! if not all occupied states read, must recalculate
-        nst_calculated = min(maxval(occ_states), minval(states_read))
+        nst_calculated = min(maxval(occ_states), minval(lowest_missing) - 1)
       end if
-      showstart = nst_calculated + 1
+      showstart = max(nst_calculated + 1, 1)
+      showstart = min(showstart, sys%st%nst)
       write(message(1),'(a,i8,a)') 'Performing LCAO to replace states ', showstart, ' and above'
       call messages_info(1)
       call lcao_run(sys, hm, st_start = showstart)
@@ -176,7 +177,7 @@ contains
     ! occupied states, on a different k-point.
     if(showstart > sys%st%nst) showstart = 1
     
-    SAFE_DEALLOCATE_A(states_read)
+    SAFE_DEALLOCATE_A(lowest_missing)
 
     if(showoccstates) showstart = 1
 
@@ -191,6 +192,11 @@ contains
 
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
+
+      ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
+      ! the occupations must be recalculated each time, though they do not affect the result of course.
+      ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
+      call states_fermi(sys%st, sys%gr%mesh)
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
       call messages_print_stress(stdout)
 

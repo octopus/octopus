@@ -535,7 +535,7 @@ contains
   !! <0 => Fatal error
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, number_read, read_left)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -543,7 +543,7 @@ contains
     integer,    optional, intent(out)   :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
-    integer,    optional, intent(out)   :: number_read(:, :)
+    integer,    optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
@@ -604,7 +604,7 @@ contains
 
     ierr = 0
     ! make sure these intent(out)`s are initialized no matter what
-    if(present(number_read)) number_read = 0
+    if(present(lowest_missing)) lowest_missing = st%nst + 1
     if(present(iter)) iter = 0
 
     ! open files to read
@@ -815,9 +815,10 @@ contains
 
 
           if(err <= 0) then
-            if(present(number_read)) INCR(number_read(idim, ik), 1)
             filled(idim, ist, ik) = .true.
             ierr = ierr + 1
+          else
+            lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
           end if
 
           if(mpi_grp_is_root(mpi_world)) then
