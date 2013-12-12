@@ -440,7 +440,7 @@ contains
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
-    
+
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
     logical  :: cmplxscl
@@ -448,7 +448,7 @@ contains
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
     cmplxscl = hm%cmplxscl%space
-   
+
     ASSERT(.not. ks%calc%calculating)
     ks%calc%calculating = .true.
 
@@ -486,12 +486,12 @@ contains
 
     SAFE_ALLOCATE(ks%calc%energy)
     energy => ks%calc%energy
-    
+
     call energy_copy(hm%energy, ks%calc%energy)
-    
+
     energy%intnvxc = M_ZERO
     energy%Imintnvxc = M_ZERO !cmplxscl
-    
+
     ! check whether we should introduce the Amaldi SIC correction
     ks%calc%amaldi_factor = M_ONE
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
@@ -501,8 +501,8 @@ contains
     !cmplxscl
     nullify(ks%calc%Imdensity, ks%calc%Imtotal_density)
     nullify(ks%calc%Imvxc, ks%calc%Imvtau, ks%calc%Imaxc)
-    
-    
+
+
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
       call calculate_density()
@@ -517,7 +517,7 @@ contains
 
       if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(geo, hm)
     else
-       ks%calc%total_density_alloc = .false.
+      ks%calc%total_density_alloc = .false.
     end if
 
     nullify(ks%calc%hf_st) 
@@ -542,7 +542,7 @@ contains
     POP_SUB(v_ks_calc_start)
 
   contains
-    
+
     subroutine calculate_density()
       integer :: ip
 
@@ -556,7 +556,7 @@ contains
         SAFE_ALLOCATE(ks%calc%Imdensity(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         call states_total_density(st, ks%gr%fine%mesh, ks%calc%density, ks%calc%Imdensity)
       end if
-      
+
       ! Amaldi correction
       if(ks%sic_type == SIC_AMALDI) &
         ks%calc%density = ks%calc%amaldi_factor*ks%calc%density
@@ -595,6 +595,90 @@ contains
       POP_SUB(v_ks_calc_start.calculate_density)
     end subroutine calculate_density
 
+    !ADSIC potential is:
+    !V_ADSIC[n] = V_ks[n] - (V_h[n/N] - V_xc[n/N])
+    subroutine add_adsic(cmplxscl, hm)
+      logical, intent(in)                :: cmplxscl
+      type(hamiltonian_t), intent(in)    :: hm
+
+      integer        :: ip, ispin, ist
+      FLOAT, pointer :: vxc_sic(:,:),  Imvxc_sic(:, :), vh_sic(:), rho(:, :), Imrho(:, :), qsp(:)
+      CMPLX, pointer :: zrho_total(:), zvh_sic(:)
+      
+      PUSH_SUB(add_adsic)
+      
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+        call messages_not_implemented('ADSIC with MGGAs')
+      end if
+      
+      SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
+      SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(qsp(1:st%d%nspin))
+      
+      vxc_sic = M_ZERO
+      vh_sic = M_ZERO
+      qsp = M_ZERO
+      do ist = 1, st%nst
+        qsp(:) = qsp(:)+ st%occ(ist, :) * st%d%kweights(:)
+      end do
+
+      do ispin = 1, st%d%nspin
+        rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
+      end do
+
+      if(cmplxscl) then
+        SAFE_ALLOCATE(Imrho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(Imvxc_sic(1:ks%gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(zvh_sic(1:ks%gr%mesh%np))
+        
+        do ispin = 1, st%d%nspin
+          Imrho(:, ispin) = ks%calc%Imdensity(:, ispin) / qsp(ispin)
+        end do
+
+        Imvxc_sic = M_ZERO
+        call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%nspin, rho, Imrho, &
+          vxc_sic, Imvxc_sic, st%cmplxscl%theta)
+
+        SAFE_ALLOCATE(zrho_total(1:ks%gr%mesh%np))
+
+        zrho_total(:) = sum(rho, 2) + M_zI * sum(Imrho, 2)
+        zrho_total(:) = zrho_total(:) / st%qtot
+
+        zvh_sic = M_ZERO
+        call zpoisson_solve(ks%hartree_solver, zvh_sic, zrho_total)
+
+        ks%calc%vxc = ks%calc%vxc - vxc_sic
+        ks%calc%Imvxc = ks%calc%Imvxc - Imvxc_sic
+
+        do ip=1, ks%gr%mesh%np
+          ks%calc%vxc(ip, :) = ks%calc%vxc(ip, :) - real(zvh_sic(ip), REAL_PRECISION)
+          ks%calc%Imvxc(ip, :) = ks%calc%Imvxc(ip, :) - aimag(zvh_sic(ip))
+        end do
+
+        SAFE_DEALLOCATE_P(Imrho)
+        SAFE_DEALLOCATE_P(Imvxc_sic)
+        SAFE_DEALLOCATE_P(zvh_sic)
+        SAFE_DEALLOCATE_P(zrho_total)
+      else
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+          st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+          vxc_sic)
+        rho(:, 1) = ks%calc%total_density / st%qtot
+        call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
+        ks%calc%vxc = ks%calc%vxc - vxc_sic
+        forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
+      end if
+
+      SAFE_DEALLOCATE_P(vxc_sic)
+      SAFE_DEALLOCATE_P(vh_sic)                                
+      SAFE_DEALLOCATE_P(rho)
+      SAFE_DEALLOCATE_P(qsp)
+
+      POP_SUB(add_adsic)
+    end subroutine add_adsic
+
+
     ! ---------------------------------------------------------
     subroutine v_a_xc(geo, hm)
       type(geometry_t),     intent(in) :: geo
@@ -605,13 +689,12 @@ contains
       FLOAT :: factor
       CMPLX :: ctmp
       integer :: ispin, ip, ist
-      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
-      
+
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
       cmplxscl = hm%cmplxscl%space
-      
+
       energy%exchange = M_ZERO
       energy%correlation = M_ZERO
       energy%xc_j = M_ZERO
@@ -677,39 +760,7 @@ contains
       end if
 
       if (ks%sic_type == SIC_ADSIC) then
-        if (.not. cmplxscl .and. .not. (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) ) then
-          !ADSIC potential is:
-          !V_ADSIC[n] = V_ks[n] - (V_h[n/N] - V_xc[n/N])
-   
-          SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-          SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
-          SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-          SAFE_ALLOCATE(qsp(1:st%d%nspin))
-        
-          vxc_sic = M_ZERO
-          vh_sic = M_ZERO
-          qsp = M_ZERO
-          do ist = 1, st%nst
-            qsp(:) = qsp(:)+ st%occ(ist, :) * st%d%kweights(:)
-          end do
-          
-          do ispin = 1, st%d%nspin
-            rho(:,ispin) = ks%calc%density(:, ispin)/ qsp(ispin)
-          end do  
-          
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            vxc_sic)
-          rho(:,1) = ks%calc%total_density/st%qtot
-          call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
-          ks%calc%vxc = ks%calc%vxc - vxc_sic                  
-          forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip) 
-
-          SAFE_DEALLOCATE_P(vxc_sic)
-          SAFE_DEALLOCATE_P(vh_sic)                                
-          SAFE_DEALLOCATE_P(rho)
-          SAFE_DEALLOCATE_P(qsp)
-        end if                                
+        call add_adsic(cmplxscl, hm)
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -736,7 +787,7 @@ contains
         if (cmplxscl) call messages_not_implemented('Complex Scaling with tail_correction')
         call tail_correction(ks%calc%vxc, geo)
       end if
-      
+
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         energy%intnvxc = M_ZERO
@@ -769,7 +820,7 @@ contains
     subroutine tail_correction(vxc,geo)
       FLOAT,            intent(inout) :: vxc(:, :) 
       type(geometry_t), intent(in)    :: geo
-      
+
       FLOAT :: pos(MAX_DIM), distance_cm
       FLOAT, allocatable :: vxcc(:)
       FLOAT ::  s_dens,vnew 
@@ -779,29 +830,29 @@ contains
       logical :: to_calc   
 
       PUSH_SUB(v_ks_calc_start.tail_correction)
-      
+
       SAFE_ALLOCATE(vxcc(1:ks%gr%fine%mesh%np))
-      
+
       counter = counter + 1
       !print *, "vxc tail correction call number" , counter
       nspin = 1
       if (st%d%ispin == SPIN_POLARIZED) nspin = 2
-      
-      
+
+
       spin_cycle: do is = 1,nspin
         kpoint_cycle: do ik_tmp = st%d%kpt%start, st%d%kpt%end, nspin
           ik = ik_tmp + is - 1
           state_cycle: do ist = st%st_start, st%st_end
-            
+
             to_calc = .false.
             if ((st%occ(ist,ik) /= M_ZERO) .and. (counter > ks%tc_delay) ) to_calc = .true.
-            
+
             ! If the state is not occupied and the call counter is greater than the desired value
             ! don`t apply the correction and cycle
             if (to_calc .eqv. .false.) cycle 
-            
+
             vxcc(1:ks%gr%fine%mesh%np) = vxc(1:ks%gr%fine%mesh%np, is)
-            
+
             ! some lines for debugging:
             ! set the name of the output file and print the XC potential before the tail correction 
             ! write (vxc_name,'(i10)') is
@@ -809,10 +860,10 @@ contains
             ! vxc_name =  "vxc"//trim(vxc_name(itmp:))
             ! call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("precorr"), &
             ! ks%gr%fine%mesh, vxcc, unit_one, ierr)
-            
+
             do ip = 1, ks%gr%fine%mesh%np
               s_dens = ks%calc%density(ip, is)
-              
+
               distance_cm = M_ZERO
               call cm_pos(geo,pos)
               pos = M_ZERO
@@ -820,12 +871,12 @@ contains
                 message(1) = "Simulation box dimension different from the dimension used in subroutine cm_pos."
                 call messages_fatal(1)
               end if
-              
+
               do idim = 1,ks%gr%mesh%sb%dim 
                 distance_cm = distance_cm +  (ks%gr%fine%mesh%x(ip,idim) - pos(idim) )**2
               end do
               distance_cm = sqrt(distance_cm)
-              
+
               !If:
               !- the density is not exactly zero (and)...
               !- at least we have reached the linking region (and)...
@@ -833,7 +884,7 @@ contains
               ! then apply the correction
               if( (s_dens /= M_ZERO) .and. (ks%calc%total_density(ip)  <  ks%tc_link_factor*ks%tail_correction_tol) & 
                 .and. (distance_cm > ks%tc_distance) ) then
-                
+
                 if (ks%calc%total_density(ip) > ks%tail_correction_tol ) then 
                   smooth_ratio =  ks%calc%total_density(ip)/ks%tail_correction_tol
                   vnew = - M_ONE/distance_cm
@@ -843,26 +894,26 @@ contains
                 end if
               end if
             end do
-            
+
             !Another output call for debugging
             !!print the XC potential after the tail correction
             !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("tcorrected") , &
             !ks%gr%fine%mesh, vxcc, unit_one, ierr)
-            
+
             vxc(1:ks%gr%fine%mesh%np, is) = vxcc(1:ks%gr%fine%mesh%np)
-            
-            
+
+
           end do state_cycle
         end do kpoint_cycle
       end do spin_cycle
-      
-      
+
+
       SAFE_DEALLOCATE_A(vxcc)
-      
+
       POP_SUB(v_ks_calc_start.tail_correction)
-      
+
     end subroutine tail_correction
-    
+
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
 
