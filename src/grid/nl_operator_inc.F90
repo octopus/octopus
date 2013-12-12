@@ -68,6 +68,13 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   nullify(wre)
   nullify(wim)
 
+#ifdef R_TREAL
+  if(op%cmplx_op) then
+    message(1) = "dnl_operator_operate_batch: cannot apply complex operator with real output."
+    call messages_fatal(1)
+  endif
+#endif
+
   if(op%const_w) then
     if(present(factor)) then
       SAFE_ALLOCATE(wre(1:op%stencil%size))
@@ -188,6 +195,7 @@ contains
     if(op%cmplx_op) then
       ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
 
+#ifdef R_TCOMPLEX
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
@@ -196,6 +204,7 @@ contains
         end forall
       end do
       !$omp end parallel do
+#endif
 
     else
 
@@ -203,6 +212,7 @@ contains
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
           forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            ! intel openmp seg faults here in testsuite/components/01-derivatives_1d.02-fortran.inp
             fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
           end forall
         end do
@@ -236,6 +246,7 @@ contains
     if(present(factor)) factor_ = factor
 
     if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         nn = op%nn(ll)
@@ -245,6 +256,7 @@ contains
         end forall
       end do
       !$omp end parallel do
+#endif
     else
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
@@ -433,6 +445,9 @@ subroutine X(nl_operator_operate_diag)(op, fo)
     else
       fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1:op%np), op%w_im(op%stencil%center, 1:op%np))
     end if
+#else
+    message(1) = "nl_operator_operate_diag: cannot express complex operator in real output."
+    call messages_fatal(1)
 #endif
   else
     if(op%const_w) then
