@@ -105,6 +105,10 @@ module output_m
     logical           :: complex
     character(len=80) :: wfn_filename
     logical           :: calc_exchange
+    logical           :: calc_vmtxel
+    integer           :: vmtxel_ncband
+    integer           :: vmtxel_nvband
+    FLOAT             :: vmtxel_polarization(3)
   end type output_bgw_t
 
   type output_t
@@ -473,7 +477,7 @@ contains
     end if
 
     if(iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, outp%bgw)
+      call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
     !%Variable OutputInterval
@@ -767,13 +771,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw_init(nst, bgw)
+  subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
     integer,            intent(in)  :: nst
     type(output_bgw_t), intent(out) :: bgw
-  
+    integer,            intent(in)  :: periodic_dim
+
+    integer :: idir
+    FLOAT :: norm
+    type(block_t) :: blk
+
     PUSH_SUB(output_berkeleygw_init)
   
-    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
+    ! FIXME:conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
     ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision, OEP, mGGA
 
     call messages_experimental("BerkeleyGW output")
@@ -893,11 +902,72 @@ contains
     !%Default false
     !%Section Output::BerkeleyGW
     !%Description
-    !% Whether to calculate exchange matrix elements to be written in <tt>x.dat</tt>.
+    !% Whether to calculate exchange matrix elements, to be written in <tt>x.dat</tt>.
     !% These will be calculated anyway by BerkeleyGW <tt>Sigma</tt>, so this is useful
     !% mainly for comparison and testing.
     !%End
     call parse_logical(datasets_check('BerkeleyGW_CalcExchange'), .false., bgw%calc_exchange)
+
+    !%Variable BerkeleyGW_CalcDipoleMtxels
+    !%Type logical
+    !%Default false
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Whether to calculate dipole matrix elements, to be written in <tt>vmtxel</tt>.
+    !% This should be done when calculating <tt>WFN_fi</tt> for Bethe-Salpeter calculations
+    !% with light polarization in a finite direction. In that case, a shifted grid
+    !% <tt>WFNq_fi</tt> cannot be calculated, but we can instead use matrix elements of
+    !% <math>r</math> in a more exact scheme. In <tt>absorption.inp</tt>, set <tt>read_vmtxel</tt>
+    !% and <tt>use_momentum</tt>. Specify the number of conduction and valence bands you will
+    !% use in BSE here with <tt>BerkeleyGW_VmtxelNumCondBands</tt> and <tt>BerkeleyGW_VmtxelNumValBands</tt>.
+    !%End
+    call parse_logical(datasets_check('BerkeleyGW_CalcDipoleMtxels'), .false., bgw%calc_vmtxel)
+
+    !%Variable BerkeleyGW_VmtxelPolarization
+    !%Type block
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Polarization, i.e. direction vector, for which to calculate <tt>vmtxel</tt>, if you have set
+    !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. May not have any component in a periodic direction.
+    !% The vector will be normalized.
+    !%End
+    if(bgw%calc_vmtxel .and. parse_block(datasets_check('BerkeleyGW_VmtxelPolarization'), blk)==0) then
+      do idir = 1, 3
+        call parse_block_float(blk, 0, idir - 1, bgw%vmtxel_polarization(idir))
+
+        if(idir <= periodic_dim .and. abs(bgw%vmtxel_polarization(idir)) > M_EPSILON) then
+          message(1) = "You cannot calculate vmtxel with polarization in a periodic direction. Use WFNq_fi instead."
+          call messages_fatal(1, only_root_writes = .true.)
+        endif
+      end do
+      call parse_block_end(blk)
+      norm = sum(abs(bgw%vmtxel_polarization(1:3))**2)
+      bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / norm
+    endif
+
+    !%Variable BerkeleyGW_VmtxelNumCondBands
+    !%Type integer
+    !%Default 0
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Number of conduction bands for which to calculate <tt>vmtxel</tt>, if you have set
+    !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
+    !% used in BSE.
+    !%End
+    if(bgw%calc_vmtxel) call parse_integer(datasets_check('BerkeleyGW_VmtxelNumCondBands'), 0, bgw%vmtxel_ncband)
+    ! The default should be the minimum number of occupied states on any k-point or spin.
+
+    !%Variable BerkeleyGW_VmtxelNumValBands
+    !%Type integer
+    !%Default 0
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Number of valence bands for which to calculate <tt>vmtxel</tt>, if you have set
+    !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
+    !% used in BSE.
+    !%End
+    if(bgw%calc_vmtxel) call parse_integer(datasets_check('BerkeleyGW_VmtxelNumValBands'), 0, bgw%vmtxel_nvband)
+    ! The default should be the minimum number of unoccupied states on any k-point or spin.
 
     POP_SUB(output_berkeleygw_init)
   end subroutine output_berkeleygw_init
@@ -939,11 +1009,8 @@ contains
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
-    if(bgw%calc_exchange) then
-      message(1) = "BerkeleyGW output: vxc.dat and x.dat"
-    else
-      message(1) = "BerkeleyGW output: vxc.dat"
-    endif
+    message(1) = "BerkeleyGW output: vxc.dat"
+    if(bgw%calc_exchange) message(1) = message(1) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
@@ -953,7 +1020,6 @@ contains
     endif
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
-
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1)
@@ -969,6 +1035,17 @@ contains
 
     call bgw_setup_header()
 
+
+    if(bgw%calc_vmtxel) then
+      write(message(1),'(a,3f12.6)') "BerkeleyGW output: vmtxel. Polarization = ", bgw%vmtxel_polarization(1:3)
+      call messages_info(1)
+
+      if(states_are_real(st)) then
+        call dbgw_vmtxel(bgw, dir, st, gr, ifmax)
+      else
+        call zbgw_vmtxel(bgw, dir, st, gr, ifmax)
+      endif
+    endif
 
     message(1) = "BerkeleyGW output: VXC"
     call messages_info(1)

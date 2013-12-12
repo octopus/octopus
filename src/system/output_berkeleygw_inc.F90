@@ -98,6 +98,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
       ikk = ik + ispin - 1
       do idiag = 1, ndiag
         call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
+        ! multiplying psi*vxc first might be more efficient
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1) * vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
@@ -157,6 +158,60 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
 
 end subroutine X(bgw_vxc_dat)
 
+! --------------------------------------------------------- 
+!> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
+subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
+  type(output_bgw_t), intent(in) :: bgw
+  character(len=*),   intent(in) :: dir
+  type(states_t),     intent(in) :: st
+  type(grid_t),       intent(in) :: gr
+  integer,            intent(in) :: ifmax(:,:)
+
+  integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv
+  R_TYPE, allocatable :: psi(:), rpsi(:)
+  CMPLX, allocatable :: vmtxel(:) ! could be real
+  FLOAT, allocatable :: rvec(:)
+
+  PUSH_SUB(X(bgw_vmtxel))
+
+  nmat = st%d%nik * bgw%vmtxel_ncband * bgw%vmtxel_nvband * st%d%nspin
+  SAFE_ALLOCATE(psi(gr%mesh%np))
+  SAFE_ALLOCATE(rpsi(gr%mesh%np))
+  SAFE_ALLOCATE(vmtxel(nmat))
+  SAFE_ALLOCATE(rvec(gr%mesh%np))
+
+  rvec(:) = matmul(gr%mesh%x(:, 1:3), bgw%vmtxel_polarization(1:3))
+
+  do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
+    do is = 1, st%d%nspin
+      ikk = ik + is - 1
+      do iv = 1, bgw%vmtxel_nvband
+        call states_get_state(st, gr%mesh, 1, ifmax(ik, is) - iv + 1, ikk, psi(:))
+        rpsi(:) = psi(:) * rvec(:)
+        do ic = 1, bgw%vmtxel_ncband
+          call states_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
+          ikcvs = is + (iv - 1 + (ic - 1 + (ik - 1)*bgw%vmtxel_ncband)*bgw%vmtxel_nvband)*st%d%nspin
+          vmtxel(ikcvs) = X(mf_dotp)(gr%mesh, psi(:), rpsi(:))
+        enddo
+      enddo
+    enddo
+  enddo
+
+  if(mpi_grp_is_root(mpi_world)) then
+    iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
+    write(iunit) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
+    write(iunit) (vmtxel(ikcvs),ikcvs=1,nmat)
+    call io_close(iunit)
+  endif
+
+  SAFE_DEALLOCATE_A(vmtxel)
+  SAFE_DEALLOCATE_A(rpsi)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(rvec)
+
+  POP_SUB(X(bgw_vmtxel))
+  
+end subroutine X(bgw_vmtxel)
 
 ! --------------------------------------------------------- 
 subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, is_wfn)
