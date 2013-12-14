@@ -125,7 +125,7 @@ contains
 
   function symm_op_rotation_matrix(this) result(matrix)
     type(symm_op_t),  intent(in)  :: this
-    FLOAT                         :: matrix(1:3, 1:3)
+    integer                       :: matrix(1:3, 1:3)
 
     matrix(1:3, 1:3) = this%rotation(1:3, 1:3)
 
