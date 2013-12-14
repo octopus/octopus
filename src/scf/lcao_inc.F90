@@ -398,13 +398,13 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     ASSERT(start == 1)
   end if
 
-  write(message(1), '(a,i6,a)') 'Info: Performing LCAO calculation with ', this%nbasis, ' orbitals.'
+  write(message(1), '(a,i6,a)') 'Info: Performing LCAO calculation with ', this%norbs, ' orbitals.'
   write(message(2), '(a)') ' '
   call messages_info(2)
 
-  if (this%nbasis < st%nst) then
+  if (this%norbs < st%nst) then
     write(message(1), '(a)') 'Not enough atomic orbitals to initialize all states,'
-    write(message(2), '(i6,a)') st%nst - this%nbasis, ' states will be randomized.'
+    write(message(2), '(i6,a)') st%nst - this%norbs, ' states will be randomized.'
     if(this%derivative) then
       call messages_warning(2)
     else
@@ -464,8 +464,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   ASSERT(start == 1)
 
   if(.not. this%parallel) then
-    SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
-    SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
+    SAFE_ALLOCATE(hamiltonian(1:this%norbs, 1:this%norbs))
+    SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs))
   else
     SAFE_ALLOCATE(hamiltonian(1:this%lsize(1), 1:this%lsize(2)))
     SAFE_ALLOCATE(overlap(1:this%lsize(1), 1:this%lsize(2)))
@@ -593,15 +593,15 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       call profiling_out(prof_matrix)
 
       ! the number of eigenvectors we need
-      nev = min(this%nbasis, st%nst) 
+      nev = min(this%norbs, st%nst) 
 
-      SAFE_ALLOCATE(eval(1:this%nbasis))
+      SAFE_ALLOCATE(eval(1:this%norbs))
 
       if(this%parallel) then
         SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
-        SAFE_ALLOCATE(evec(1:this%nbasis, st%st_start:st%st_end))
+        SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:st%st_end))
       else 
-        SAFE_ALLOCATE(evec(1:this%nbasis, 1:this%nbasis))
+        SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
       end if
 
       call diagonalization()
@@ -611,11 +611,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       call messages_write('Generating wavefunctions.')
       call messages_info()
 
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%nbasis)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs)
 
       ! set the eigenvalues
       st%eigenval(1:nev, ik) = eval(1:nev)
-      st%eigenval(this%nbasis + 1:st%nst, ik) = HUGE(M_ONE)
+      st%eigenval(this%norbs + 1:st%nst, ik) = HUGE(M_ONE)
       ! FIXME: we should calculate expectation values of the Hamiltonian here.
       ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
@@ -634,7 +634,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
 
         ibasis = ibasis + norbs
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%norbs)
       end do
 
       SAFE_DEALLOCATE_A(eval)
@@ -642,7 +642,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       SAFE_DEALLOCATE_A(levec)
 
       ! if we do not have enough basis functions randomize the missing orbitals
-      do ist = this%nbasis + 1, st%st_end
+      do ist = this%norbs + 1, st%st_end
         call X(mf_random)(gr%mesh, psii(:, 1, 1))
         call states_set_state(st, gr%mesh, 1, ist, ik, psii(:, 1, 1))
       end do
@@ -692,7 +692,7 @@ contains
 
     PUSH_SUB(X(lcao_alt_wf).diagonalization)
 
-    SAFE_ALLOCATE(ifail(1:this%nbasis))
+    SAFE_ALLOCATE(ifail(1:this%norbs))
 
     call profiling_in(prof, "LCAO_DIAG")
 
@@ -707,7 +707,7 @@ contains
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        n = this%norbs, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
@@ -716,7 +716,7 @@ contains
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #else
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        n = this%norbs, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
@@ -737,11 +737,11 @@ contains
       SAFE_ALLOCATE(iwork(1:liwork))
 
       SAFE_DEALLOCATE_A(ifail)
-      SAFE_ALLOCATE(ifail(1:this%nbasis))
+      SAFE_ALLOCATE(ifail(1:this%norbs))
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        n = this%norbs, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
@@ -753,7 +753,7 @@ contains
       SAFE_ALLOCATE(rwork(1:lrwork))
 
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
+        n = this%norbs, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
         b = overlap(1, 1), ib = 1, jb = 1, descb = this%desc(1), &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
@@ -779,7 +779,7 @@ contains
       ! First we count the number of points (to allocate the buffers)
       send_count = 0
       recv_count = 0
-      do ibasis = 1, this%nbasis
+      do ibasis = 1, this%norbs
         do jbasis = 1, st%nst
 
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
@@ -806,7 +806,7 @@ contains
 
       send_count = 0
       recv_count = 0
-      do ibasis = 1, this%nbasis
+      do ibasis = 1, this%norbs
         do jbasis = 1, st%nst
 
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
@@ -875,22 +875,22 @@ contains
 #endif /* HAVE_SCALAPACK */
     else
 
-      SAFE_ALLOCATE(iwork(1:5*this%nbasis))
+      SAFE_ALLOCATE(iwork(1:5*this%norbs))
 
 #ifdef R_TREAL    
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
         work = tmp(1), lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
 
-      SAFE_ALLOCATE(rwork(1:7*this%nbasis))
+      SAFE_ALLOCATE(rwork(1:7*this%norbs))
 
       call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
         work = tmp(1), lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
 #endif
@@ -905,15 +905,15 @@ contains
 
 #ifdef R_TREAL
       call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
         work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
       call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
+        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
+        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
         work = work(1), lwork = lwork,  rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
       SAFE_DEALLOCATE_A(rwork)

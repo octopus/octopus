@@ -101,7 +101,6 @@ module lcao_m
     FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
     integer             :: mult         !< The number of basis orbitals per atomic function (with derivatives is 2, 1 otherwise).
     integer             :: maxorb       !< The maximum value of the orbitals over all atoms.
-    integer             :: nbasis       !< The total number of basis functions.
     !> The following functions map between a basis index and atom/orbital index
     integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
     integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
@@ -485,18 +484,18 @@ contains
       SAFE_ALLOCATE(this%norb_atom(1:geo%natoms))
 
       this%maxorb = 0
-      this%nbasis = 0
+      this%norbs = 0
       do iatom = 1, geo%natoms
         this%norb_atom(iatom) = this%mult*species_niwfs(geo%atom(iatom)%spec)
         this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%spec))
-        this%nbasis = this%nbasis + species_niwfs(geo%atom(iatom)%spec)
+        this%norbs = this%norbs + species_niwfs(geo%atom(iatom)%spec)
       end do
 
       this%maxorb = this%maxorb*this%mult
-      this%nbasis = this%nbasis*this%mult
+      this%norbs = this%norbs*this%mult
 
-      SAFE_ALLOCATE(this%basis_atom(1:this%nbasis))
-      SAFE_ALLOCATE(this%basis_orb(1:this%nbasis))
+      SAFE_ALLOCATE(this%basis_atom(1:this%norbs))
+      SAFE_ALLOCATE(this%basis_orb(1:this%norbs))
       SAFE_ALLOCATE(this%atom_orb_basis(1:geo%natoms, 1:this%maxorb))
 
       ! Initialize the mapping between indices
@@ -545,18 +544,18 @@ contains
         .and. .not. blacs_proc_grid_null(st%dom_st_proc_grid)
 
       if(this%parallel) then      
-        nbl = min(16, this%nbasis)
+        nbl = min(16, this%norbs)
 
         ! The size of the distributed matrix in each node
-        this%lsize(1) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
-        this%lsize(2) = max(1, numroc(this%nbasis, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
+        this%lsize(1) = max(1, numroc(this%norbs, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
+        this%lsize(2) = max(1, numroc(this%norbs, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
 
         this%nproc(1) = st%dom_st_proc_grid%nprow
         this%nproc(2) = st%dom_st_proc_grid%npcol
         this%myroc(1) = st%dom_st_proc_grid%myrow
         this%myroc(2) = st%dom_st_proc_grid%mycol
 
-        call descinit(this%desc(1), this%nbasis, this%nbasis, nbl, nbl, 0, 0, &
+        call descinit(this%desc(1), this%norbs, this%norbs, nbl, nbl, 0, 0, &
           st%dom_st_proc_grid%context, this%lsize(1), info)
 
         ASSERT(info == 0)
