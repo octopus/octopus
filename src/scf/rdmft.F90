@@ -76,6 +76,12 @@ contains
 
     PUSH_SUB(rdmft_init)  
 
+    if(st%nst < st%qtot+5) then   
+      message(1) = "Too few states to run RDMFT calculation"
+      message(2) = "Number of states should be at least the number of electrons plus five"
+      call messages_fatal(2)
+    endif
+
     SAFE_ALLOCATE(rdm%eone(1:st%nst))
     SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))

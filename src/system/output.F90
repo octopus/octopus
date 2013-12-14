@@ -183,7 +183,7 @@ contains
 ! double definition is crappy
     !%Variable Output
     !%Type flag
-    !%Default no
+    !%Default none
     !%Section Output
     !%Description
     !% Specifies what to print. The output files go into the <tt>static</tt> directory, except when
@@ -296,8 +296,8 @@ contains
     !%Option mmb_wfs 268435456
     !% Triggers the ModelMB wavefunctions to be output for each state
     !%Option mmb_den 536870912
-    !% triggers the ModeMB density or density matrix to be output for each state, and the particles
-    !% speficied by the DensitytoCalc block. In the latter case, calculates, and outputs, the reduced density
+    !% Triggers the ModelMB density or density matrix to be output for each state, and the particles
+    !% specified by the <tt>DensitytoCalc</tt> block. In the latter case, calculates, and outputs, the reduced density
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
