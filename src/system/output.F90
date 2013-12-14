@@ -923,12 +923,17 @@ contains
 
     !%Variable BerkeleyGW_VmtxelPolarization
     !%Type block
+    !%Default (1, 0, 0)
     !%Section Output::BerkeleyGW
     !%Description
     !% Polarization, i.e. direction vector, for which to calculate <tt>vmtxel</tt>, if you have set
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. May not have any component in a periodic direction.
     !% The vector will be normalized.
     !%End
+
+    bgw%vmtxel_polarization(1:3) = M_ZERO
+    bgw%vmtxel_polarization(1) = M_ONE
+
     if(bgw%calc_vmtxel .and. parse_block(datasets_check('BerkeleyGW_VmtxelPolarization'), blk)==0) then
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, bgw%vmtxel_polarization(idir))
@@ -940,7 +945,11 @@ contains
       end do
       call parse_block_end(blk)
       norm = sum(abs(bgw%vmtxel_polarization(1:3))**2)
-      bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / norm
+      if(norm < M_EPSILON) then
+        message(1) = "A non-zero value must be set for BerkeleyGW_VmtxelPolarization when BerkeleyGW_CalcDipoleMtxels = yes."
+        call messages_fatal(1)
+      endif
+      bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / sqrt(norm)
     endif
 
     !%Variable BerkeleyGW_VmtxelNumCondBands
@@ -1026,7 +1035,7 @@ contains
     call xc_get_vxc(gr%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
-    if(bgw%calc_exchange) message(1) = message(1) // ", x.dat"
+    if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
@@ -1183,7 +1192,7 @@ contains
       SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
       ifmin(:,:) = 1
       if(smear_is_semiconducting(st%smear)) then
-        ifmax(:,:) = st%qtot / st%smear%el_per_state
+        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
       endif
       do ik = 1, st%d%nik
         is = states_dim_get_spin_index(st%d, ik)
