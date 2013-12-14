@@ -71,6 +71,7 @@ module output_m
   use unit_system_m
   use utils_m
   use varinfo_m
+  use v_ks_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -543,12 +544,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, gr, geo, st, hm, xc, dir)
+  subroutine output_all(outp, gr, geo, st, hm, ks, dir)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
-    type(xc_t),           intent(in)    :: xc
+    type(v_ks_t),         intent(in)    :: ks
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
@@ -592,7 +593,7 @@ contains
     end if
 
     if (iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, xc, hm, geo)
+      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
     if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
@@ -782,9 +783,6 @@ contains
 
     PUSH_SUB(output_berkeleygw_init)
   
-    ! FIXME:conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
-    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision, OEP, mGGA
-
     call messages_experimental("BerkeleyGW output")
 
 #ifndef HAVE_BERKELEYGW
@@ -974,12 +972,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, xc, hm, geo)
+  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, geo)
     type(output_bgw_t),  intent(in)    :: bgw
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
-    type(xc_t),          intent(in)    :: xc
+    type(v_ks_t),        intent(in)    :: ks
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)    :: geo
 
@@ -1002,12 +1000,30 @@ contains
       call messages_fatal(1)
     endif
 
+    if(st%d%ispin == SPINORS) &
+      call messages_not_implemented("BerkeleyGW output for spinors")
+
+    if(st%parallel_in_states) &
+      call messages_not_implemented("BerkeleyGW output parallel in states")
+
+    if(st%d%kpt%parallel) &
+      call messages_not_implemented("BerkeleyGW output parallel in k-points")
+
+    if(st%d%kpt%parallel) &
+      call messages_not_implemented("BerkeleyGW output parallel in k-points")
+
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
+      call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals")
+
+    if(geo%nlcc) &
+      call messages_not_implemented("BerkeleyGW output with NLCC")
+
 #ifdef HAVE_BERKELEYGW
 
     SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = message(1) // ", x.dat"

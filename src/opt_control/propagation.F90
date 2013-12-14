@@ -160,7 +160,7 @@ contains
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
-      call td_write_data(write_handler, gr, psi, hm, sys%ks%xc, sys%outp, sys%geo, 0)
+      call td_write_data(write_handler, gr, psi, hm, sys%ks, sys%outp, sys%geo, 0)
     end if
 
     call hamiltonian_not_adjoint(hm)
@@ -228,7 +228,7 @@ contains
         if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
           if(istep == td%max_iter) sys%outp%output_interval = ii - 1
           ii = istep
-          call td_write_data(write_handler, gr, psi, hm, sys%ks%xc, sys%outp, sys%geo, istep) 
+          call td_write_data(write_handler, gr, psi, hm, sys%ks, sys%outp, sys%geo, istep) 
         end if
       end if
 

@@ -247,7 +247,7 @@ contains
       call states_write_fermi_energy(STATIC_DIR, sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
-    call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks%xc, STATIC_DIR)
+    call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)

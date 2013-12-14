@@ -59,8 +59,8 @@ module td_write_m
   use unit_m
   use unit_system_m
   use varinfo_m
+  use v_ks_m
   use write_iter_m
-  use xc_m
 
   implicit none
 
@@ -578,12 +578,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(writ, gr, st, hm, xc, outp, geo, iter, dt)
+  subroutine td_write_data(writ, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
-    type(xc_t),           intent(in)    :: xc
+    type(v_ks_t),         intent(in)    :: ks
     type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: iter
@@ -622,7 +622,7 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    call output_all(outp, gr, geo, st, hm, xc, filename)
+    call output_all(outp, gr, geo, st, hm, ks, filename)
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
     else

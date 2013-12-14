@@ -136,7 +136,7 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks%xc, STATIC_DIR)
+    call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks, STATIC_DIR)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
     ! save files in restart format
