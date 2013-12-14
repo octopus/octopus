@@ -150,7 +150,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
 
   R_TYPE, allocatable :: ff(:)
   R_TYPE, allocatable :: psii(:, :), psia(:, :)
-  integer :: ip, ia, idim
+  integer :: ip, ia
   type(profile_t), save :: prof
 
   PUSH_SUB(X(ks_matrix_elements))
@@ -164,14 +164,8 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
     call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
-    ! FIXME: parallelize in states
-    ! use forall here
-    do ip = 1, mesh%np
-      ff(ip) = M_ZERO
-      do idim = 1, st%d%dim
-        ff(ip) = ff(ip) + dv(ip)*R_CONJ(psii(ip, idim))*psia(ip, idim)
-      end do
-    end do
+    forall(ip = 1:mesh%np) &
+      ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
 
     xx(ia) = X(mf_integrate)(mesh, ff)
   end do
