@@ -339,7 +339,9 @@ contains
       if(tr%method /= PROP_ETRS .and.    &
          tr%method /= PROP_AETRS .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
-         tr%method /= PROP_QOCT_TDDFT_PROPAGATOR) then
+         tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
+         tr%method /= PROP_CRANK_NICOLSON .and. &
+         tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call messages_fatal(1)
       end if
@@ -1094,6 +1096,7 @@ contains
       FLOAT :: dres
       FLOAT :: cgtol = CNST(1.0e-12)
       logical :: converged
+      type(ion_state_t) :: ions_state
 
       PUSH_SUB(propagator_dt.td_crank_nicolson)
 
@@ -1124,6 +1127,13 @@ contains
       SAFE_ALLOCATE(zpsi_rhs(1:np_part, 1:st%d%dim))
       SAFE_ALLOCATE(zpsi(1:np*st%d%dim))
       SAFE_ALLOCATE(rhs(1:np*st%d%dim))
+
+      !move the ions to time 'time - dt/2', and save the current status to return to it later.
+      if(ion_dynamics_ions_move(ions)) then
+        call ion_dynamics_save_state(ions, geo, ions_state)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
+      end if
         
       call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
       if(hm%cmplxscl%space) & 
@@ -1245,6 +1255,8 @@ contains
         
       end if
 
+      !restore to time 'time - dt'
+      if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)
