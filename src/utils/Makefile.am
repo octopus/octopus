@@ -192,4 +192,4 @@ help.o : help.F90
 dielectric_function.o : dielectric_function.F90
 liquid.o : liquid.F90
 photoelectron_spectrum.o : photoelectron_spectrum.F90
-convert.o : conversor.F90
+convert.o : convert.F90
