@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
+!! $Id$
 
 !> Lead-related routines for open boundaries.
 

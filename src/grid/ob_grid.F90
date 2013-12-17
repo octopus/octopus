@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: ob_grid.F90 6247 2009-12-20 13:20:41Z xavier $
+!! $Id$
 
 #include "global.h"
 

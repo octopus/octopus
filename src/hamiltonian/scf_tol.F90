@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: linear_response.F90 2647 2007-01-09 18:02:46Z lorenzen $
+!! $Id$
 
 #include "global.h"
 

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: propagator.F90 5406 2009-05-16 18:17:47Z xavier $
+!! $Id$
 
 
   ! ---------------------------------------------------------

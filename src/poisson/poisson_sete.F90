@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: poisson_multigrid.F90 5486 2009-05-24 14:09:52Z xavier $
+!! $Id$
 
 #include <global.h>
 

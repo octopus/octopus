@@ -16,7 +16,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: scaling_function.F90 2544 2006-11-03 17:41:04Z xavier $
+!! $Id$
 
 #include <global.h>
 

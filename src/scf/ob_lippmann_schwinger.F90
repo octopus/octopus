@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: scf.F90 4182 2008-05-14 14:02:30Z acastro $
+!! $Id$
 
 !> This module solves the Schroedinger equation for a system with open
 !! boundaries for a prescribed energy.

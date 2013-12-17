@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: loct_math.F90 9483 2012-10-05 16:19:43Z dstrubbe $
+!! $Id$
 
 #include "global.h"
 

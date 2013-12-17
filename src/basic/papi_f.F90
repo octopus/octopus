@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: papi_f.F90 5678 2009-07-01 21:52:38Z xavier $
+!! $Id$
 
 #include "global.h"
 

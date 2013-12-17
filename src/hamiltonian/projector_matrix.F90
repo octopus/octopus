@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: projector_matrix.F90 6489 2010-04-10 14:59:34Z xavier $
+!! $Id$
 
 #include "global.h"
 

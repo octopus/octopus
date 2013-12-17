@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: opt_control.F90 2873 2007-04-29 22:05:29Z acastro $
+!! $Id$
 
 #include "global.h"
 

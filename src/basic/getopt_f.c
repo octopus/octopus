@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 	02110-1301, USA.
 
-	$Id: getopt_f.c 2516 2006-10-24 21:31:59Z acastro $
+	$Id$
 */
 
 #include <config.h>

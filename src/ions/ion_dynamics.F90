@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: dynamics.F90 3813 2008-03-04 20:40:01Z xavier $
+!! $Id$
 
 #include "global.h"
 

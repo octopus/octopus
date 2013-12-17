@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: loct.F90 4640 2008-10-10 08:56:33Z xavier $
+!! $Id$
 
 ! SAFE ALLOCATE in this file causes the PGI compiler to crash:
 ! Lowering Error: bad ast optype in expression [ast=1125,asttype=12,datatype=0]

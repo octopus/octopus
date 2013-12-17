@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: checksum_interface.F90 4852 2009-01-08 23:31:14Z dstrubbe $
+!! $Id$
 
 module checksum_interface_m
   

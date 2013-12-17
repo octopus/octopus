@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: hamiltonian_base_inc.F90 3988 2008-03-31 15:06:50Z fnog $
+!! $Id$
 
 subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this

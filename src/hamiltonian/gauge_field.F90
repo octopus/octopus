@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: gauge_field.F90 3988 2008-03-31 15:06:50Z fnog $
+!! $Id$
 
 #include "global.h"
 

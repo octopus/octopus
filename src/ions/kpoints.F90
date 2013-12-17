@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: kpoints.F90 5635 2009-06-25 14:55:35Z nitsche $
+!! $Id$
 
 #include "global.h"
   

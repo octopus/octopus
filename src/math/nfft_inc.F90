@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-
+!! $Id$
 
 subroutine X(nfft_forward)(nfft, in, out)
   type(nfft_t), intent(in)  :: nfft

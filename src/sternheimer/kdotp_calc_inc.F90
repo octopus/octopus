@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: kdotp_calc.F90 2548 2006-11-06 21:42:27Z xavier $
+!! $Id$
 
 ! ---------------------------------------------------------
 !> m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>

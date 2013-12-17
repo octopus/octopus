@@ -16,7 +16,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id: dablas.c 2146 2006-05-23 17:36:00Z xavier $
+ $Id$
 */
 
 #include <config.h>

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
+!! $Id$
 
 !> Implementation of the propagator for open boundaries, i.e. the
 !! modified Crank-Nicolson with source and memory terms.

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: opt_control.F90 6950 2010-08-19 22:19:34Z dstrubbe $
+!! $Id$
 
   !> ---------------------------------------------------------
   !! The following routines are to be called by C routines, which in turn

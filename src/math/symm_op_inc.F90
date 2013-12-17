@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: symm_op_inc.F90 3479 2007-11-09 08:36:10Z xavier $
+!! $Id$
 
 ! -------------------------------------------------------------------------------
 pure function X(symm_op_apply)(this, aa) result(bb)

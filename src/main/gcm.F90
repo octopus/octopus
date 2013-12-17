@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: geom_opt.F90 3970 2008-03-29 11:38:27Z acastro $
+!! $Id$
 
 #include "global.h"
 

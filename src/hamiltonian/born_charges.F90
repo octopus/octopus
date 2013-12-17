@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: geometry.F90 5547 2009-06-03 12:27:56Z acastro $
+!! $Id$
 
 #include "global.h"
 

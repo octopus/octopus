@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: lasers.F90 2898 2007-05-08 19:13:46Z acastro $
+!! $Id$
 
 #include "global.h"
 

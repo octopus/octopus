@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: profiling.F90 8114 2011-07-27 18:31:58Z xavier $
+!! $Id$
 
 #include "global.h"
 

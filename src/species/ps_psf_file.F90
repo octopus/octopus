@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: psf.F90 2307 2006-07-29 00:50:22Z appel $
+!! $Id$
 
 #include "global.h"
 

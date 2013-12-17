@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: symmetrizer.F90 6112 2009-11-23 13:51:23Z xavier $
+!! $Id$
 
 #include "global.h"
 

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: hypercube.F90 4907 2009-01-31 11:21:32Z xavier $
+!! $Id$
 
 #include "global.h"
 

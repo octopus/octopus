@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: symmetrizer_inc.F90 5918 2009-09-25 21:43:56Z dstrubbe $
+!! $Id$
 
 subroutine X(symmetrizer_apply)(this, field, symmfield)
   type(symmetrizer_t), target, intent(in)    :: this

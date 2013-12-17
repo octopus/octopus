@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: blas.F90 9588 2012-11-09 11:31:08Z joseba $
+!! $Id$
 
 #include "global.h"
 

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: liquid.F90 6346 2010-03-08 22:05:37Z acastro $
+!! $Id$
 
 #include "global.h"
 

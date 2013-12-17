@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: global.F90 3856 2008-03-10 14:52:36Z marques $
+!! $Id$
 
 #include "global.h"
 module hardware_m

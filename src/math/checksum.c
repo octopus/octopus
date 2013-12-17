@@ -16,7 +16,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id: checksum.c 4577 2008-09-29 20:18:55Z xavier $
+ $Id$
 */
 
 #include <config.h>

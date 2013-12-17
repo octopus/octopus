@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: epot.F90 2648 2007-01-09 19:08:10Z lorenzen $
+!! $Id$
 
 #include "global.h"
 

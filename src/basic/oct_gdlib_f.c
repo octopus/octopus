@@ -16,7 +16,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id: oct_gsl_f.c 1935 2006-03-20 21:02:08Z appel $
+ $Id$
 */
 
 #include <config.h>

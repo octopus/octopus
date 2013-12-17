@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: sternheimer_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
+!! $Id$
 
 !--------------------------------------------------------------
 !> This routine calculates the first-order variations of the wavefunctions 

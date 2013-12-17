@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: target.F90 2870 2007-04-28 06:26:47Z acastro $
+!! $Id$
 
 #include "global.h"
 

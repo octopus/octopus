@@ -17,7 +17,7 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+## $Id$
 
 noinst_LIBRARIES = libhamiltonian.a
 

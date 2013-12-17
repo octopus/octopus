@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: simul_box.F90 3479 2007-11-09 08:36:10Z xavier $
+!! $Id$
 
 #include "global.h"
 

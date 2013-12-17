@@ -15,12 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: eigen.F90 3030 2007-06-25 16:45:05Z marques $
-
-! This module contains some common usage patterns of MPI routines.
+!! $Id$
 
 #include "global.h"
 
+!> This module contains some common usage patterns of MPI routines.
 module mpi_lib_m
   use global_m
   use messages_m

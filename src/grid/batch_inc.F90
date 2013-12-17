@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: batch_inc.F90 4298 2008-06-18 15:03:00Z dstrubbe $
+!! $Id$
 
 !--------------------------------------------------------------
 subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: stencil_cube.F90 3088 2007-07-18 15:41:33Z lorenzen $
+!! $Id$
 
 #include "global.h"
 

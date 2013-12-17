@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: poisson.F90 2660 2007-01-23 15:11:54Z lorenzen $
+!! $Id$
 
 #include "global.h"
 

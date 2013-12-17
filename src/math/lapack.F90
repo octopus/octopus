@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: lapack.F90 5550 2009-06-03 20:53:01Z xavier $
+!! $Id$
 
 #include "global.h"
 

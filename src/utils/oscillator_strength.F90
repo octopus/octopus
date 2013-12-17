@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: cross_section.F90 2781 2007-03-23 10:58:32Z lorenzen $
+!! $Id$
 
 #include "global.h"
 

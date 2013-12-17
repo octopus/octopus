@@ -17,7 +17,7 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+## $Id$
 
 noinst_HEADERS = \
 	global.h integer.F90 real.F90 complex.F90 undef.F90 vectors.h fortran_types.h

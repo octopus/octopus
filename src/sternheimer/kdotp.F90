@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: kdotp.F90 4145 2008-05-02 23:29:41Z xavier $
+!! $Id$
 
 #include "global.h"
 
