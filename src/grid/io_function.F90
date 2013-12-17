@@ -60,7 +60,8 @@ module io_function_m
     dio_function_input,           &
     zio_function_input,           &
     dio_function_output,          &
-    zio_function_output         
+    zio_function_output,          &
+    io_function_convert
 
 #if defined(HAVE_NETCDF)
  public ::                        &
@@ -447,7 +448,65 @@ contains
     POP_SUB(transpose3)
   end subroutine transpose3
 
+  ! ---------------------------------------------------------
+  !> Giving a range of input files, it writes the corresponding 
+  !! output files
+  subroutine io_function_convert(mesh, geo, basename, folder, c_start, c_end, c_step, how, iterate_folder)
+    type(mesh_t)    , intent(in)    :: mesh
+    type(geometry_t), intent(in)    :: geo
+    character(len=*), intent(inout) :: basename       !< Is the file name
+    character(len=*), intent(inout) :: folder         !< Is the folder name
+    integer,          intent(in)    :: c_start        !< The first file number
+    integer,          intent(in)    :: c_end          !< The last file number
+    integer,          intent(in)    :: c_step         !< The step between files
+    integer,          intent(in)    :: how            !< Decides the kind of the output
+    logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
+                                                      !! If false, it iterates over the filenames 
 
+    integer :: ierr, ii
+    character(64)  :: filename, out_name
+    FLOAT, allocatable :: read_ff(:)
+    type(unit_t) :: my_unit
+
+    my_unit%factor = 6.748333042
+    my_unit%factor = 0.148191421
+    my_unit%factor = P_Ang ** 3 ! 
+    my_unit%abbrev = "eV_to_A"
+    my_unit%name   = "From_elecltronV_to_Angstron"
+
+    SAFE_ALLOCATE(read_ff(1:mesh%np))
+    
+    write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(folder), "/", trim(basename), &
+         "' from ", c_start, " to ", c_end, " every ", c_step
+    call messages_info(1)
+
+    do ii = c_start, c_end, c_step
+      if (iterate_folder) then
+        write(folder,'(a,i0.7,a)') "td.",ii,"/"
+        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
+        out_name = trim(basename)
+      else
+        write(filename, '(a,a,i0.10,a)') trim(folder), trim(basename), ii, ".obf"
+        write(out_name, '(a,i0.10)') trim(basename), ii
+      end if
+
+      ! Read the obf file
+      call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
+
+      if (ierr /= 0) then
+        write(message(1), '(a,a)') "Error reading the file ", filename
+        write(message(2), '(a)') "Skiping...."
+        call messages_warning(2)
+      end if
+
+      ! Write the corresponding output
+      call dio_function_output(how, &
+           trim(folder), out_name, mesh, read_ff, my_unit, ierr, geo = geo)
+    end do
+    
+    SAFE_DEALLOCATE_A(read_ff)
+
+  end subroutine io_function_convert
 
 
 #include "undef.F90"
