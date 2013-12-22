@@ -106,7 +106,8 @@ module hamiltonian_m
     zexchange_operator,              &
     dhamiltonian_phase,              &
     zhamiltonian_phase,              &
-    zhamiltonian_dervexternal
+    zhamiltonian_dervexternal,       &
+    zhamiltonian_apply_atom
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -1223,7 +1224,7 @@ contains
     !    do idim = 1, dim
     !      do ip = 1, gr%mesh%np
     !        call mesh_r(gr%mesh, ip, rr, coords = xx, origin = qa)
-    !        dvpsi(ip, idim) = (xx(1) / sqrt( (xx(1)**2+M_ONE)**3 ) ) * psi(ip, idim)
+    !        dvpsi(ip, idim, 1) = (xx(1) / sqrt( (xx(1)**2+M_ONE)**3 ) ) * psi(ip, idim)
     !      end do
     !    end do
     !    _SAFE_DEALLOCATE_A(dvlocal)
@@ -1249,7 +1250,7 @@ contains
   end subroutine zhamiltonian_dervexternal
 
 
-  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)!, ist, ik, time, terms, Imtime)
+  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)    :: geo
     type(grid_t),        intent(in)    :: gr
