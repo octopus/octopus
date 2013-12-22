@@ -104,11 +104,12 @@ module propagator_m
     type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
     integer             :: scf_propagation_steps 
     logical             :: first
+#ifdef HAVE_SPARSKIT
+    type(sparskit_solver_t), pointer, private :: tdsk
+    integer             :: tdsk_size
+#endif
   end type propagator_t
 
-#ifdef HAVE_SPARSKIT
-  type(sparskit_solver_t), pointer, private :: tdsk
-#endif
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
   type(propagator_t),      pointer, private :: tr_p
@@ -152,6 +153,12 @@ contains
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       message(1) = 'Internal error at propagator_copy.'
       call messages_fatal(1)
+#ifdef HAVE_SPARSKIT
+    case(PROP_CRANK_NICOLSON_SPARSKIT)
+      SAFE_ALLOCATE(tro%tdsk)
+      tro%tdsk_size = tri%tdsk_size
+      call zsparskit_solver_init(tro%tdsk_size, tro%tdsk)
+#endif
     end select
 
     call loct_pointer_copy(tro%v_old, tri%v_old)
@@ -317,8 +324,9 @@ contains
 #ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux
       call mesh_init_mesh_aux(gr%mesh)
-      SAFE_ALLOCATE(tdsk)
-      call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
+      tr%tdsk_size = st%d%dim*gr%mesh%np
+      SAFE_ALLOCATE(tr%tdsk)
+      call zsparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
@@ -435,7 +443,7 @@ contains
       SAFE_DEALLOCATE_P(tr%vmagnus)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      call zsparskit_solver_end(tdsk)
+      call zsparskit_solver_end(tr%tdsk)
 #endif
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_end(tr%ob)
@@ -1169,7 +1177,7 @@ contains
 
           if(use_sparskit) then
 #ifdef HAVE_SPARSKIT
-            call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+            call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
 #endif
           else
             iter = 2000
@@ -1230,7 +1238,7 @@ contains
             ik_op = ik
             if(use_sparskit) then
 #ifdef HAVE_SPARSKIT
-              call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+              call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
 #endif
             else
               iter = 2000
