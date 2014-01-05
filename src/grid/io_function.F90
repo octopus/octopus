@@ -468,11 +468,13 @@ contains
     FLOAT, allocatable :: read_ff(:)
     type(unit_t) :: my_unit
 
+    PUSH_SUB(io_function_convert)
+
     my_unit%factor = 6.748333042
     my_unit%factor = 0.148191421
-    my_unit%factor = P_Ang ** 3 ! 
+    my_unit%factor = P_Ang ** 3
     my_unit%abbrev = "eV_to_A"
-    my_unit%name   = "From_elecltronV_to_Angstron"
+    my_unit%name   = "From_electronV_to_Angstrom"
 
     SAFE_ALLOCATE(read_ff(1:mesh%np))
     
@@ -495,7 +497,7 @@ contains
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
-        write(message(2), '(a)') "Skiping...."
+        write(message(2), '(a)') "Skipping...."
         call messages_warning(2)
       end if
 
@@ -505,7 +507,7 @@ contains
     end do
     
     SAFE_DEALLOCATE_A(read_ff)
-
+    POP_SUB(io_function_convert)
   end subroutine io_function_convert
 
 

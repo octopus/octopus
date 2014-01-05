@@ -73,7 +73,7 @@ program oct_convert
   !% Decides what kind of conversion should be performed.
   !%Option conv_from_binary 1
   !% Reads an obf file and writes an equivalent (in the same
-  !% folder in the types choosen in OutputHow
+  !% folder) in the format given by <tt>OutputHow</tt>.
   !%End
   call parse_integer('ConvertMode', CONV_FROM_BINARY, conv_mode)
   call datasets_init(conv_mode)  
@@ -116,15 +116,17 @@ contains
 
   ! -------------
   !> Reads an binary file and writes the equivalent files, 
-  !! defined with OutputHow
-  !! This is a high level interface that reads the input file and
-  !! calls the proper function
+  !! defined with OutputHow.
+  !! This is a high-level interface that reads the input file and
+  !! calls the proper function.
   subroutine convert()
     type(system_t) :: sys
 
     character(64)  :: basename, folder
     integer        :: c_start, c_end, c_step
     logical        :: iterate_folder
+
+    PUSH_SUB(convert)
 
     call system_init(sys)
 
@@ -137,8 +139,8 @@ contains
     !%Default density
     !%Section Utilities::oct-convert
     !%Description
-    !% Input filename. The original filename which is going to convert in the formats 
-    !% specified in OutputHow
+    !% Input filename. The original filename which is going to be converted in the format
+    !% specified in <tt>OutputHow</tt>.
     !%End
     call parse_string(datasets_check('ConvertFilename'), 'density', basename)
     if ( basename == " " ) basename = ""
@@ -148,7 +150,7 @@ contains
     !%Default td.
     !%Section Utilities::oct-convert
     !%Description
-    !% The folder name where are the input files.
+    !% The folder name where the input files are.
     !%End
     call parse_string(datasets_check('ConvertFolder'), 'td.', folder)
 
@@ -158,7 +160,7 @@ contains
     !%Default 0
     !%Section Utilities::oct-convert
     !%Description
-    !% The starting number of the filename
+    !% The starting number of the filename.
     !%End
     call parse_integer(datasets_check('ConvertStart'), 0, c_start)
 
@@ -167,7 +169,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-convert
     !%Description
-    !% The last number of the filename
+    !% The last number of the filename.
     !%End
     call parse_integer(datasets_check('ConvertEnd'), 1, c_end)
 
@@ -176,7 +178,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-convert
     !%Description
-    !% The padding between the filenames
+    !% The padding between the filenames.
     !%End
     call parse_integer(datasets_check('ConvertStep'), 1, c_step)
 
@@ -186,7 +188,7 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% This variable decides if a folder is going to be iterated or the 
-    !% filename is going to be iterated
+    !% filename is going to be iterated.
     !%End
     call parse_logical(datasets_check('ConvertIterateFolder'), .true., iterate_folder)
 
@@ -195,6 +197,7 @@ contains
 
     call system_end(sys)
 
+    POP_SUB(convert)
   end subroutine convert
 
 end program
