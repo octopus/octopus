@@ -200,6 +200,22 @@ contains
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
       call messages_print_stress(stdout)
 
+      ! write output file
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_mkdir(STATIC_DIR)
+        iunit = io_open(STATIC_DIR//'/eigenvalues', action='write')
+        
+        if(converged) then
+          write(iunit,'(a)') 'All states converged.'
+        else
+          write(iunit,'(a)') 'Some of the states are not fully converged!'
+        end if
+        write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
+        write(iunit,'(1x)')
+        call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
+        call io_close(iunit)
+      end if
+
       forced_finish = clean_stop(sys%mc%master_comm)
       
       ! write restart information.
@@ -225,22 +241,6 @@ contains
       write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
       call messages_warning(1)
     endif
-
-    ! write output file
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(STATIC_DIR)
-      iunit = io_open(STATIC_DIR//'/eigenvalues', action='write')
-      
-      if(converged) then
-        write(iunit,'(a)') 'All states converged.'
-      else
-        write(iunit,'(a)') 'Some of the states are not fully converged!'
-      end if
-      write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
-      write(iunit,'(1x)')
-      call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
-      call io_close(iunit)
-    end if
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
