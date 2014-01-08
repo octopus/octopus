@@ -167,7 +167,7 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   type(grid_t),       intent(in) :: gr
   integer,            intent(in) :: ifmax(:,:)
 
-  integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv
+  integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)
   CMPLX, allocatable :: vmtxel(:) ! could be real
   FLOAT, allocatable :: rvec(:)
@@ -180,7 +180,8 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   SAFE_ALLOCATE(vmtxel(nmat))
   SAFE_ALLOCATE(rvec(gr%mesh%np))
 
-  rvec(:) = matmul(gr%mesh%x(:, 1:3), bgw%vmtxel_polarization(1:3))
+  forall(ip = 1:gr%mesh%np) &
+    rvec(ip) = dot_product(gr%mesh%x(ip, 1:3), bgw%vmtxel_polarization(1:3))
 
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
     do is = 1, st%d%nspin
@@ -192,10 +193,19 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
           call states_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
           ikcvs = is + (iv - 1 + (ic - 1 + (ik - 1)*bgw%vmtxel_ncband)*bgw%vmtxel_nvband)*st%d%nspin
           vmtxel(ikcvs) = X(mf_dotp)(gr%mesh, psi(:), rpsi(:))
+!          write(6,*) ikcvs, ikk, is, ifmax(ik, is) - iv + 1, ifmax(ik, is) + ic, vmtxel(ikcvs)
+          ! NB: Casida eps_diff file has these values times sqrt(nspin)
         enddo
       enddo
     enddo
   enddo
+
+  if(mpi_grp_is_root(mpi_world)) then
+    iunit = io_open(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
+    write(iunit,*) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
+    write(iunit,*) (vmtxel(ikcvs),ikcvs=1,nmat)
+    call io_close(iunit)
+  endif
 
   if(mpi_grp_is_root(mpi_world)) then
     iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
