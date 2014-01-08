@@ -451,7 +451,8 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine io_function_convert(mesh, geo, basename, folder, c_start, c_end, c_step, how, iterate_folder)
+  subroutine io_function_convert(mesh, geo, basename, folder, c_start, c_end, c_step, how, iterate_folder, & 
+                                 subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
     character(len=*), intent(inout) :: basename       !< Is the file name
@@ -462,10 +463,13 @@ contains
     integer,          intent(in)    :: how            !< Decides the kind of the output
     logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
                                                       !! If false, it iterates over the filenames 
+    character(len=*), intent(inout) :: ref_name       !< Is the reference file name 
+    character(len=*), intent(inout) :: ref_folder     !< Is the reference folder name
+    logical,          intent(in)    :: subtract_file  !< If true, it subtractat the density from the reference
 
     integer :: ierr, ii
-    character(64)  :: filename, out_name
-    FLOAT, allocatable :: read_ff(:)
+    character(64)  :: filename, out_name, ref_filename
+    FLOAT, allocatable :: read_ff(:), read_rff(:)
     type(unit_t) :: my_unit
 
     PUSH_SUB(io_function_convert)
@@ -477,10 +481,18 @@ contains
     my_unit%name   = "From_electronV_to_Angstrom"
 
     SAFE_ALLOCATE(read_ff(1:mesh%np))
-    
+    SAFE_ALLOCATE(read_rff(1:mesh%np))
+    read_rff(:) = M_ZERO
+   
     write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(folder), "/", trim(basename), &
          "' from ", c_start, " to ", c_end, " every ", c_step
     call messages_info(1)
+ 
+    if (subtract_file) then
+      write(ref_filename, '(a,a,a)') trim(ref_folder), trim(ref_name),".obf"
+      write(message(1),'(a,a)')"Reading from : ",trim(ref_filename)
+      call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
+    endif
 
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
@@ -501,12 +513,15 @@ contains
         call messages_warning(2)
       end if
 
+      if (subtract_file) read_ff(:) = read_ff(:) - read_rff(:) 
+      if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
       ! Write the corresponding output
       call dio_function_output(how, &
            trim(folder), out_name, mesh, read_ff, my_unit, ierr, geo = geo)
     end do
     
     SAFE_DEALLOCATE_A(read_ff)
+    SAFE_DEALLOCATE_A(read_rff)
     POP_SUB(io_function_convert)
   end subroutine io_function_convert
 

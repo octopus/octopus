@@ -122,9 +122,9 @@ contains
   subroutine convert()
     type(system_t) :: sys
 
-    character(64)  :: basename, folder
-    integer        :: c_start, c_end, c_step
-    logical        :: iterate_folder
+    character(64)  :: basename, folder, refname, ref_folder, folder_default
+    integer        :: c_start, c_end, c_step, c_start_default
+    logical        :: iterate_folder, subtract_file
 
     PUSH_SUB(convert)
 
@@ -145,15 +145,31 @@ contains
     call parse_string(datasets_check('ConvertFilename'), 'density', basename)
     if ( basename == " " ) basename = ""
 
+    !%Variable ConvertIterateFolder
+    !%Type logical
+    !%Default true
+    !%Section Utilities::oct-convert
+    !%Description
+    !% This variable decides if a folder is going to be iterated or the 
+    !% filename is going to be iterated.
+    !%End
+    call parse_logical(datasets_check('ConvertIterateFolder'), .true., iterate_folder)
+
+    if (iterate_folder) then
+      folder_default  = 'td.'
+      c_start_default = 0
+    else
+      folder_default  = 'restart'
+      c_start_default = 1
+    end if
+    
     !%Variable ConvertFolder
     !%Type string
-    !%Default td.
     !%Section Utilities::oct-convert
     !%Description
     !% The folder name where the input files are.
     !%End
-    call parse_string(datasets_check('ConvertFolder'), 'td.', folder)
-
+    call parse_string(datasets_check('ConvertFolder'), folder_default, folder)
 
     !%Variable ConvertStart
     !%Type integer
@@ -162,7 +178,7 @@ contains
     !%Description
     !% The starting number of the filename.
     !%End
-    call parse_integer(datasets_check('ConvertStart'), 0, c_start)
+    call parse_integer(datasets_check('ConvertStart'), c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -182,18 +198,40 @@ contains
     !%End
     call parse_integer(datasets_check('ConvertStep'), 1, c_step)
 
-    !%Variable ConvertIterateFolder
+    !%Variable ConvertRefFileName
+    !%Type string
+    !%Default density
+    !%Section Utilities::oct-convert
+    !%Description
+    !% Input filename. The original filename which is going to convert in the formats 
+    !% specified in OutputHow
+    !%End
+    call parse_string(datasets_check('ConvertRefFileName'), 'density', refname)
+    if ( refname == " " ) refname = ""
+
+    !%Variable ConvertSubtractFolder
     !%Type logical
-    !%Default true
+    !%Default false
     !%Section Utilities::oct-convert
     !%Description
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_logical(datasets_check('ConvertIterateFolder'), .true., iterate_folder)
+    call parse_logical(datasets_check('ConvertSubtractFile'), .false., subtract_file)
+
+    !%Variable ConvertFolder
+    !%Type string
+    !%Default [blank]
+    !%Section Utilities::oct-convert
+    !%Description
+    !% The folder name where are the input files.
+    !%End
+    call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
+    if ( ref_folder == " " ) ref_folder = ""
 
     call io_function_convert(sys%gr%mesh, sys%geo, basename, folder, &
-         c_start, c_end, c_step, sys%outp%how, iterate_folder)
+         c_start, c_end, c_step, sys%outp%how, iterate_folder, &
+         subtract_file, refname, ref_folder )
 
     call system_end(sys)
 
