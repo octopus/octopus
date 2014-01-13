@@ -40,9 +40,9 @@ module box_m
     box_copy
 
   integer, parameter, public :: &
-    SPHERE         = 1,         &
-    CYLINDER       = 2,         &
-    PARALLELEPIPED = 3
+    BOX_SPHERE         = 1,         &
+    BOX_CYLINDER       = 2,         &
+    BOX_PARALLELEPIPED = 3
 
   type box_t
     private
@@ -74,10 +74,10 @@ contains
     box%center(1:dim) = center(1:dim)
 
     select case (shape)
-    case (SPHERE)
+    case (BOX_SPHERE)
       box%rsize = sizes(1)
 
-    case (CYLINDER)
+    case (BOX_CYLINDER)
       if (dim == 2) then
         message(1) = "Cannot create a cylinder in 2D. Use sphere if you want a circle."
         call messages_fatal(1)
@@ -85,7 +85,7 @@ contains
       box%rsize = sizes(1)
       box%xsize = sizes(2)
 
-    case (PARALLELEPIPED)
+    case (BOX_PARALLELEPIPED)
       box%lsize(1:dim) = sizes(1:dim)
 
     case default
@@ -149,18 +149,18 @@ contains
     end forall
 
     select case(box%shape)
-    case(SPHERE)
+    case(BOX_SPHERE)
       forall(ip = 1:npoints)
         inside(ip) = sum(xx(1:box%dim, ip)**2) <= (box%rsize + DELTA)**2
       end forall
 
-    case(CYLINDER)
+    case(BOX_CYLINDER)
       do ip = 1, npoints
         rr = sqrt(sum(xx(2:box%dim, ip)**2))
         inside(ip) = (rr <= box%rsize + DELTA .and. abs(xx(1, ip)) <= box%xsize + DELTA)
       end do
 
-    case(PARALLELEPIPED) 
+    case(BOX_PARALLELEPIPED) 
       llimit(1:box%dim) = -box%lsize(1:box%dim) - DELTA
       ulimit(1:box%dim) =  box%lsize(1:box%dim) + DELTA
 
