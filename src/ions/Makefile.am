@@ -27,6 +27,7 @@ libions_a_SOURCES =         \
 	geometry.F90        \
 	xyz_adjust.F90      \
 	kpoints.F90         \
+	box.F90             \
 	simul_box.F90       \
 	solids.F90          \
 	vibrations.F90      \
@@ -47,6 +48,7 @@ atom.o : atom.F90
 geometry.o : geometry.F90 atom.o xyz_file.o
 xyz_adjust.o : xyz_adjust.F90 geometry.o 
 kpoints.o : geometry.o symmetries.o
+box.o : box.F90
 simul_box.o : simul_box.F90 geometry.o kpoints.o symmetries.o
 solids.o: solids.F90 simul_box.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o

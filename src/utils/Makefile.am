@@ -32,7 +32,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spe
 		 oct-dielectric-function \
 		 oct-liquid \
 		 oct-photoelectron_spectrum \
-		 oct-convert
+		 oct-convert \
+                 oct-local_multipoles
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -158,8 +159,24 @@ oct_liquid_LDADD                 = $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
+
 oct_convert_SOURCES = convert.F90
 oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
+                                   $(top_builddir)/src/system/libsystem.a \
+                                   $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/xc/libxc.a \
+                                   $(top_builddir)/src/states/libstates.a \
+                                   $(top_builddir)/src/frozen/libfrozen.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
+                                   $(top_builddir)/src/grid/libgrid.a \
+                                   $(top_builddir)/src/ions/libions.a \
+                                   $(top_builddir)/src/species/libspecies.a \
+                                   $(top_builddir)/src/math/libmath.a \
+                                   $(top_builddir)/src/basic/libbasic.a \
+                                   $(other_LIBS)
+
+oct_local_multipoles_SOURCES = local_multipoles.F90
+oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/xc/libxc.a \
@@ -179,7 +196,7 @@ oct_help_LDADD                   = $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES)
 
 propagation_spectrum.o : propagation_spectrum.F90 
 rotatory_strength.o : rotatory_strength.F90 
