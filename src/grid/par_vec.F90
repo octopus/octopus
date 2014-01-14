@@ -231,9 +231,8 @@ contains
     integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
     !> Number of ghost points per
     !! neighbour per partition.      
-    integer, pointer            :: np_ghost_neigh(:, :) 
     integer, pointer            :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
-    integer, pointer            :: xghost_tmp(:)  
+    integer, pointer            :: xghost_tmp(:), np_ghost_neigh_partno_tmp(:)
     integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
     integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
     integer, pointer            :: points(:), points_bndry(:), part_bndry(:), part_inner(:)
@@ -452,25 +451,19 @@ contains
     call init_MPI_Alltoall()
     tmp=0
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
-    vp%total = tmp    
-    SAFE_ALLOCATE(np_ghost_neigh(1:npart, 1:npart))
-    ! Distribute local data to all processes
-    call MPI_Allgather(vp%np_ghost_neigh_partno(1),npart,MPI_INTEGER, &
-         np_ghost_neigh(1,1),npart,MPI_INTEGER, &
-         comm, mpi_err)
-
-    ! Transpose data
-    tmp = 0
-    do inode = 1, npart-1
-      do jnode = inode + 1, npart
-        tmp = np_ghost_neigh(jnode, inode)
-        np_ghost_neigh(jnode, inode) = np_ghost_neigh(inode, jnode)
-        np_ghost_neigh(inode, jnode) = tmp
-      end do
-    end do
-    vp%np_ghost_neigh_partno(1:npart) = np_ghost_neigh(1:npart, vp%partno)
+    vp%total = tmp
+    
+    SAFE_ALLOCATE(np_ghost_neigh_partno_tmp(1:npart))
     SAFE_ALLOCATE(vp%rcounts(1:npart))
-    vp%rcounts(1:npart) = np_ghost_neigh(vp%partno, 1:npart)
+    vp%rcounts(1:npart) = vp%np_ghost_neigh_partno(1:npart)
+    do inode = 1, npart
+      call MPI_Gather(vp%np_ghost_neigh_partno(inode), 1, MPI_INTEGER, &
+            np_ghost_neigh_partno_tmp(1), 1, MPI_INTEGER, &
+            inode-1, comm, mpi_err)
+    end do
+    vp%np_ghost_neigh_partno(1:npart) = np_ghost_neigh_partno_tmp(1:npart)
+    SAFE_DEALLOCATE_P(np_ghost_neigh_partno_tmp)
+
     ! Set index tables xghost and xghost_neigh. 
     SAFE_ALLOCATE(np_ghost_tmp(1:npart))
     call MPI_Allgather(vp%np_ghost, 1, MPI_INTEGER, &
@@ -484,26 +477,20 @@ contains
     end do
     vp%xghost = xghost_tmp(vp%partno)
 
-    SAFE_ALLOCATE(xghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(xghost_neigh_back(1:npart))
+    SAFE_ALLOCATE(xghost_neigh_partno(1:npart))
     tmp = 0
-    do inode = 1, npart
-      tmp = xghost_tmp(inode)
-      xghost_neigh_partno(inode) = xghost_tmp(inode) 
-      if (inode == vp%partno) then
-        xghost_neigh_back(1)   = xghost_tmp(inode)
-      end if
-      do jnode = 2, npart
-        tmp = tmp + np_ghost_neigh(inode, jnode - 1)
-        if (jnode == vp%partno) then
-          xghost_neigh_partno(inode) = tmp
-        end if
-        if (inode == vp%partno) then
-          xghost_neigh_back(jnode) = tmp
-        end if
-      end do
+    inode = vp%partno
+    tmp = xghost_tmp(inode)
+    xghost_neigh_back(1) = xghost_tmp(inode)
+    do jnode = 2, npart
+      tmp = tmp + vp%rcounts(jnode - 1)
+      xghost_neigh_back(jnode) = tmp
     end do
-    SAFE_DEALLOCATE_P(np_ghost_neigh)
+    ! xghost_neigh_partno is the transposed of xghost_neigh_back
+    call MPI_Alltoall(xghost_neigh_back(1), 1, MPI_INTEGER, &
+           xghost_neigh_partno(1), 1, MPI_INTEGER, &
+           comm, mpi_err)
     
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
