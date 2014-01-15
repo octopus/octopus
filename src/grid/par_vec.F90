@@ -225,6 +225,7 @@ contains
     integer                     :: iunit            !< For debug output to files.
     character(len=3)            :: filenum
     integer                     :: tmp, init, size, ii
+    integer, allocatable        :: init_v(:), size_v(:), init_recv(:)
     logical                     :: found
    
     integer                     :: idir, ipart, np_inner, np_bndry
@@ -507,18 +508,26 @@ contains
       end if
     end do
 
-    do inode =  1, npart
-      do jnode = 1, npart
-        if(inode /= jnode) then
-          init = xghost_neigh_partno(inode)
-          size = vp%np_ghost_neigh_partno(inode)
-          call MPI_Bcast(init, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
-          call MPI_Bcast(size, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
-          call MPI_Bcast(vp%ghost(init), size, MPI_INTEGER, &
-               inode-1, comm, mpi_err)
-        end if
-      end do
+    SAFE_ALLOCATE(init_v(1:npart)) 
+    SAFE_ALLOCATE(init_recv(1:npart))
+    SAFE_ALLOCATE(size_v(1:npart))
+    do inode = 1, npart
+       init = xghost_neigh_back(inode)
+       size = vp%rcounts(inode)
+       call MPI_Allgather(init, 1, MPI_INTEGER, &
+            init_v(1), 1, MPI_INTEGER, comm, mpi_err)
+       call MPI_Allgather(size, 1, MPI_INTEGER, &
+            size_v(1), 1, MPI_INTEGER, comm, mpi_err)
+       init_recv = init_v - 1
+       if (init_v(npart) > vp%total) init_v(npart) = vp%total
+       call MPI_Allgatherv(vp%ghost(init_v(vp%partno)), size_v(vp%partno), MPI_INTEGER, &
+            vp%ghost(1), size_v(1), init_recv(1), MPI_INTEGER, &
+            comm, mpi_err)
     end do
+
+    SAFE_DEALLOCATE_A(init_v) 
+    SAFE_DEALLOCATE_A(init_recv)
+    SAFE_DEALLOCATE_A(size_v)
 
     if(in_debug_mode) then
       ! Write numbers and coordinates of each process` ghost points
