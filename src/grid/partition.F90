@@ -433,11 +433,11 @@ contains
       if (rbuffer(ip) == 0) cycle
       rbuffer(ip) = partition%part(rbuffer(ip) - partition%istart + 1)
     end do
+#ifdef HAVE_MPI
     !Barrier to ensure that a deadlock is not possible
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     
     !Now we send the information backwards
-#ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
                        sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
