@@ -5,17 +5,6 @@
 # calculations work.
 # It is the calculation of one atom of Carbon, within the LSDA
 # calculation.
-#
-# The result *almost* compares (to within 0.1eV) with the results
-# given at the NIST webpage:
-# http://physics.nist.gov/PhysRefData/DFTdata/contents.html
-# The reasons for the discrepancy may be two:
-# o The NIST calculation is all-electron.
-# o The NIST calculation uses the VWN correlation. Here I have put
-#   put PZ, because otherwise the results are even worse (probably
-#   our VWN has some bug?)
-# It would be nice to investigate the reason for the small
-# discrepancy...
 
 CalculationMode = gs
 fromScratch = yes
@@ -26,7 +15,7 @@ units = ev_angstrom
 %
 
 %Species
-"C" | 12.0107000 | spec_ps_psf | 6 | 1 | 1
+"C" | 12.0107000 | spec_ps_fhi | 6 | 1 | 1
 %
 
 spacing = 0.19
@@ -36,8 +25,8 @@ SpinComponents = polarized
 
 ExtraStates = 2
 %Occupations
-1 | 2/3 | 2/3 | 2/3
-1 | 0 | 0 | 0
+2/3 | 2/3 | 2/3
+0 | 0 | 0
 %
 
 XCFunctional = lda_x + lda_c_pz

@@ -38,8 +38,6 @@ ExtraStates = 2
 
 XCFunctional = lda_x + lda_c_pz
 
-#EigenSolverTolerance = 1e-5
-
 ConvRelDens = 4e-6
 
 PoissonSolver = fft

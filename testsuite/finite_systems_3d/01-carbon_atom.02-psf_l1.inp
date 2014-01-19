@@ -1,0 +1,48 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 01-carbon_atom.01-ground_state.inp 2650 2007-01-16 21:35:53Z xavier $
+#
+# The purpose of this test is making sure that spin-polarized
+# calculations work.
+# It is the calculation of one atom of Carbon, within the LSDA
+# calculation.
+#
+# The result *almost* compares (to within 0.1eV) with the results
+# given at the NIST webpage:
+# http://physics.nist.gov/PhysRefData/DFTdata/contents.html
+# The reasons for the discrepancy may be two:
+# o The NIST calculation is all-electron.
+# o The NIST calculation uses the VWN correlation. Here I have put
+#   put PZ, because otherwise the results are even worse (probably
+#   our VWN has some bug?)
+# It would be nice to investigate the reason for the small
+# discrepancy...
+
+CalculationMode = gs
+fromScratch = yes
+units = ev_angstrom
+
+%Coordinates
+"C" | 0 | 0 | 0
+%
+
+%Species
+"C" | 12.0107000 | spec_ps_psf | 6 | 1 | 1
+%
+
+spacing = 0.19
+radius = 5.0
+
+SpinComponents = polarized
+
+ExtraStates = 2
+%Occupations
+2/3 | 2/3 | 2/3
+0 | 0 | 0
+%
+
+XCFunctional = lda_x + lda_c_pz
+
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
+
+ConvRelDens = 4e-6

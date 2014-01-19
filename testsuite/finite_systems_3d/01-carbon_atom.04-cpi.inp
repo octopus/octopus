@@ -1,0 +1,32 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 01-carbon_atom.01-ground_state.inp 2650 2007-01-16 21:35:53Z xavier $
+#
+CalculationMode = gs
+fromScratch = yes
+units = ev_angstrom
+
+%Coordinates
+"C" | 0 | 0 | 0
+%
+
+%Species
+"C" | 12.0107000 | spec_ps_cpi | 6 | 1 | 1
+%
+
+spacing = 0.19
+radius = 5.0
+
+SpinComponents = polarized
+
+ExtraStates = 2
+%Occupations
+2/3 | 2/3 | 2/3
+0 | 0 | 0
+%
+
+XCFunctional = lda_x + lda_c_pz
+
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
+
+ConvRelDens = 4e-6

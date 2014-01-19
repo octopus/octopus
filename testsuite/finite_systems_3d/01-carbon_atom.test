@@ -21,7 +21,7 @@ Enabled    : Yes
 #   our VWN has some bug?)
 # It would be nice to investigate the reason for the small
 # discrepancy...
-Input: 01-carbon_atom.01-ground_state.inp
+Input: 01-carbon_atom.01-psf_l0.inp
 Precision: 0.00011
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.74133256
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.461702
@@ -31,7 +31,7 @@ match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 # Now we repeat the calculation but making use of the l=1 component
 # of the pseudopotential to build the local component.
-Input: 01-carbon_atom.02-ground_state.inp
+Input: 01-carbon_atom.02-psf_l1.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81362567
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466513
 match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
@@ -46,4 +46,21 @@ match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.66216
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.418842
 match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
 match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.694731
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
+
+Processors: 2
+Input: 01-carbon_atom.04-cpi.inp
+Precision: 0.00011
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81452282
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.467194
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683530
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
+
+Input: 01-carbon_atom.05-fhi.inp
+Precision: 0.00011
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81452282
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.467194
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683530
 match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
