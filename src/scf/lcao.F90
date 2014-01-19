@@ -671,8 +671,6 @@ contains
           endif
         endif
       endif
-    else
-      if(.not. present(st_start)) call init_states(sys%st, sys%gr%mesh, sys%geo)
     end if
     
     if(.not. lcao_done) then
@@ -722,6 +720,7 @@ contains
 
   contains
 
+    ! currently unused. introduced r7716, deactivated r11613
     subroutine init_states(st, mesh, geo)
       type(states_t),   intent(inout) :: st
       type(mesh_t),     intent(inout) :: mesh
