@@ -17,19 +17,19 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-SUBDIRS = PSF HGH UPF CPI FHI
+upfdir = $(pkgdatadir)/PP/FHI
 
-ppdir = $(pkgdatadir)/PP
-dist_pp_DATA = defaults
+dist_upf_DATA = \
+        C.fhi
 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	for f in $(dist_pp_DATA); do \
+	for f in $(dist_upf_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
@@ -38,8 +38,8 @@ check:
 check-full: check
 
 clean-local:
-	if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_pp_DATA); \
+	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
+	  rm -f $(dist_upf_DATA); \
 	fi
 
 .PHONY: check check-full
