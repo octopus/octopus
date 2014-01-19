@@ -11,7 +11,7 @@ Radius  = 5.0
 Spacing = 0.35
 
 %Species
-  "Xe"  | 131.29 | spec_ps_hgh | 54 | 2 | 1
+  "Xe"  | 131.29 | spec_ps_hgh | 54
 %
 
 %Coordinates

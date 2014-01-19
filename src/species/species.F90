@@ -259,7 +259,7 @@ contains
     !% through a pseudopotential, or a user-defined model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
-    !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials you are
+    !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials, you are
     !% not required to define them explicitly in the <tt>Species</tt> block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% Additional pseudopotentials can be downloaded from the 
@@ -276,14 +276,15 @@ contains
     !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | 15.9994 | spec_ps_psf         | 8   | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       |  1.0079 | spec_ps_hgh         | 1   | 0 | 0
-    !% <br>&nbsp;&nbsp;'jlm'     | 23.2    | spec_jelli          | 8   | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | 17.0    | spec_charge_density | 6   | "exp(-r/a)"
-    !% <br>&nbsp;&nbsp;'pnt'     | 32.3    | spec_point          | 2.0
-    !% <br>&nbsp;&nbsp;'udf'     |  0.0    | spec_user_defined   | 8   | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_delta     | 1
-    !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_full_gaussian  | 1
+    !% <br>&nbsp;&nbsp;'O'       |  15.9994 | spec_ps_psf         | 8   | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       |   1.0079 | spec_ps_hgh         | 1 
+    !% <br>&nbsp;&nbsp;'jlm'     |  23.2    | spec_jelli          | 8   | 5.0
+    !% <br>&nbsp;&nbsp;'rho'     |  17.0    | spec_charge_density | 6   | "exp(-r/a)"
+    !% <br>&nbsp;&nbsp;'pnt'     |  32.3    | spec_point          | 2.0
+    !% <br>&nbsp;&nbsp;'udf'     |   0.0    | spec_user_defined   | 8   | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_delta     | 1
+    !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_gaussian  | 1
+    !% <br>&nbsp;&nbsp;'Xe'      | 131.29   | spec_ps_upf         | 54
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
@@ -302,7 +303,7 @@ contains
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
     !%Option spec_ps_psf  100
-    !% Troullier Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
+    !% Troullier-Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
     !% Columns 5 and 6 are the maximum
@@ -372,13 +373,13 @@ contains
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
     !%Option spec_soft_coulomb 128
-    !% The potential is a soft-Coulomb function, i.e. a function in the form:
+    !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
     !% <math>
     !% v(r) = - z_val / sqrt( a + r^2)
     !% </math>
     !%
-    !% The parameter a should be given in the fifth column.
+    !% The parameter <i>a</i> should be given in the fifth column.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1247,37 +1248,41 @@ contains
       nn = parse_block_cols(blk, row)
 
       call parse_block_float(blk, row, 3, spec%Z)
+      read_data = 4
 
-      if(spec%type == SPEC_PS_UPF) then 
-        read_data = 4
-      end if
+      if(spec%type == SPEC_PS_PSF .or. spec%type == SPEC_PS_CPI .or. spec%type == SPEC_PS_FHI) then
+        if(nn > 4) then
+          call parse_block_integer(blk, row, 4, spec%lmax)
+          read_data = 5
+        end if
 
-      if(nn > 4) then
-        call parse_block_integer(blk, row, 4, spec%lmax)
-        read_data = 5
-      end if
+        if(nn > 5) then
+          call parse_block_integer(blk, row, 5, spec%lloc)
+          read_data = 6
+        end if
 
-      if(nn > 5) then
-        call parse_block_integer(blk, row, 5, spec%lloc)
-        read_data = 6
-      end if
-
-      if(nn > 5 .and. spec%lloc > spec%lmax) then
-        message(1) = "lloc > lmax in Species block for " // trim(spec%label) // "."
-        call messages_fatal(1)
+        if(nn > 5 .and. spec%lloc > spec%lmax) then
+          message(1) = "lloc > lmax in Species block for " // trim(spec%label) // "."
+          call messages_fatal(1)
+        endif
       endif
 
-      if(nn > 6) then
-        call parse_block_float(blk, row, 6, spec%def_h)
+      if(nn > read_data) then
+        call parse_block_float(blk, row, read_data, spec%def_h)
         spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
-        read_data = 7
+        read_data = read_data + 1
       end if
 
-      if(nn > 7) then
-        call parse_block_float(blk, row, 7, spec%def_rsize)
+      if(nn > read_data) then
+        call parse_block_float(blk, row, read_data, spec%def_rsize)
         spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
-        read_data = 8
+        read_data = read_data + 1
       end if
+
+      if(nn > read_data) then
+        message(1) = "Too many columns in Species block for " // trim(spec%label) // "."
+        call messages_fatal(1)
+      endif
 
     case(SPEC_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
