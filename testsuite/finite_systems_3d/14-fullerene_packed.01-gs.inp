@@ -14,8 +14,8 @@ LCAOAlternative = yes
 
 ConvRelDens = 2e-6
 
-ExtraStates = 20
-
+ExtraStates = 130
+MaximumIter = 3
 StatesBlocksize = 32
 
 StatesPack = yes
