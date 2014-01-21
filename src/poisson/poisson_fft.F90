@@ -262,7 +262,7 @@ contains
     !% The default is half of the FFT box max dimension in a finite direction.
     !%End
 
-    default_r_c = db(1)*mesh%spacing(1)/M_TWO
+    default_r_c = db(3)*mesh%spacing(3)/M_TWO
     call get_cutoff(default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
