@@ -278,11 +278,11 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
     call messages_fatal(1)
   end if
   
-  SAFE_ALLOCATE(cube_f(np))    
+  SAFE_ALLOCATE(cube_f(1:np))
 
-  SAFE_ALLOCATE(kx(np))    
-  SAFE_ALLOCATE(ky(np))    
-  SAFE_ALLOCATE(kz(np))    
+  SAFE_ALLOCATE(kx(1:np))
+  SAFE_ALLOCATE(ky(1:np))
+  SAFE_ALLOCATE(kz(1:np))
 
   cube_f = M_ZERO
   kx = M_ZERO

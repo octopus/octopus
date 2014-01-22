@@ -251,8 +251,8 @@ contains
 
     if (in_debug_mode .or. library == METIS) then
       !Gather the global xadj and adjncy arrays
-      SAFE_ALLOCATE(rcounts(npart))
-      SAFE_ALLOCATE(rdispls(npart))
+      SAFE_ALLOCATE(rcounts(1:npart))
+      SAFE_ALLOCATE(rdispls(1:npart))
 
       SAFE_ALLOCATE(xadj_global(1:nv_global + 1))
       xadj_global(1) = 1
@@ -438,7 +438,7 @@ contains
 
     !Get the global indexes of the neighbours connected through the stencil
     !Neighbours that are not inner points get a value of 0
-    SAFE_ALLOCATE(neighbours_index(np*stencil%size))
+    SAFE_ALLOCATE(neighbours_index(1:np*stencil%size))
     neighbours_index = 0
 
     do is = 1, np
@@ -458,12 +458,12 @@ contains
     end do
 
     !Get the partition number of the neighbours
-    SAFE_ALLOCATE(neighbours_part(np*stencil%size))
+    SAFE_ALLOCATE(neighbours_part(1:np*stencil%size))
     call partition_get_partition_number(mesh%inner_partition, np*stencil%size, neighbours_index, neighbours_part)
     SAFE_DEALLOCATE_A(neighbours_index)
 
     !First round of voting
-    SAFE_ALLOCATE(part(np))
+    SAFE_ALLOCATE(part(1:np))
     SAFE_ALLOCATE(bps(1:vsize))
     SAFE_ALLOCATE(votes(1:vsize))
     SAFE_ALLOCATE(winner(1:vsize))
@@ -543,8 +543,8 @@ contains
     call partition_get_local_size(mesh%inner_partition, istart, np)
 
     !Get the partition number of each point from the parent mesh
-    SAFE_ALLOCATE(points(np))
-    SAFE_ALLOCATE(part(np))
+    SAFE_ALLOCATE(points(1:np))
+    SAFE_ALLOCATE(part(1:np))
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
       ix = 2*mesh%idx%lxyz(ip_global, 1)

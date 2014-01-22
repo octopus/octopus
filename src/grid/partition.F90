@@ -116,7 +116,7 @@ contains
 
     !Allocate memory for the partition
     nullify(partition%part)
-    SAFE_ALLOCATE(partition%part(partition%np_local))
+    SAFE_ALLOCATE(partition%part(1:partition%np_local))
 
     POP_SUB(partition_init)
   end subroutine partition_init
@@ -296,8 +296,8 @@ contains
 
     PUSH_SUB(partition_get_global)
 
-    SAFE_ALLOCATE(rdispls(partition%npart))
-    SAFE_ALLOCATE(rcounts(partition%npart))
+    SAFE_ALLOCATE(rdispls(1:partition%npart))
+    SAFE_ALLOCATE(rcounts(1:partition%npart))
 
     rcounts(1:partition%remainder) = partition%nppp + 1
     rcounts(partition%remainder + 1:partition%npart) = partition%nppp
@@ -391,12 +391,12 @@ contains
 
 
     rnp = sum(rcounts)
-    SAFE_ALLOCATE(sbuffer(np))
-    SAFE_ALLOCATE(rbuffer(rnp))
+    SAFE_ALLOCATE(sbuffer(1:np))
+    SAFE_ALLOCATE(rbuffer(1:rnp))
 
     !Put points in correct order for sending
     SAFE_ALLOCATE(ipos(1:partition%npart))
-    SAFE_ALLOCATE(order(np))
+    SAFE_ALLOCATE(order(1:np))
     ipos = 0
     zero_part = 1
     do ip = 1, np
