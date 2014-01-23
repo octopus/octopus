@@ -362,9 +362,9 @@ contains
         nproc = zero_part
         zero_part = mod(zero_part, partition%npart) + 1
       else if (points(ip) <= partition%remainder*(partition%nppp + 1)) then
-        nproc = ceiling(real(points(ip))/real(partition%nppp + 1))
+        nproc = ceiling(real(points(ip), 16)/real(partition%nppp + 1, 16))
       else
-        nproc = ceiling(real(points(ip) - partition%remainder)/real(partition%nppp))
+        nproc = ceiling(real(points(ip) - partition%remainder, 16)/real(partition%nppp, 16))
       end if
 
       !We increase the respective counter
@@ -405,9 +405,9 @@ contains
         nproc = zero_part
         zero_part = mod(zero_part, partition%npart) + 1
       else if (points(ip) <= partition%remainder*(partition%nppp + 1)) then
-        nproc = ceiling(real(points(ip))/real(partition%nppp + 1))
+        nproc = ceiling(real(points(ip), 16)/real(partition%nppp + 1), 16)
       else
-        nproc = ceiling(real(points(ip) - partition%remainder)/real(partition%nppp))
+        nproc = ceiling(real(points(ip) - partition%remainder, 16)/real(partition%nppp, 16))
       end if
 
       !We increase the respective counter
