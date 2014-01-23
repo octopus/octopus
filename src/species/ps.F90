@@ -138,6 +138,7 @@ contains
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
 
+    integer :: l
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
@@ -183,6 +184,9 @@ contains
       ps%conf%symbol = label(1:2)
       ps%conf%type   = 1
       ps%conf%p      = ps_cpi%ps_grid%no_l_channels
+      do l = 1, ps_cpi%ps_grid%no_l_channels
+        ps%conf%l(l) = l-1
+      end do
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
@@ -207,6 +211,9 @@ contains
       ps%conf%symbol = label(1:2)
       ps%conf%type   = 1
       ps%conf%p      = ps_fhi%ps_grid%no_l_channels
+      do l = 1, ps_fhi%ps_grid%no_l_channels
+        ps%conf%l(l) = l-1
+      end do
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
