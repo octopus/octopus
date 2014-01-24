@@ -264,7 +264,8 @@ contains
     !%Option dos 65536
     !% Outputs density of states.
     !%Option tpa 131072
-    !% Outputs transition-potential approximation (TPA) matrix elements.
+    !% Outputs transition-potential approximation (TPA) matrix elements, using q-vector specified
+    !% by <tt>MomentumTransfer</tt>.
     !%Option forces 262144
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
@@ -287,7 +288,7 @@ contains
     !%Option BerkeleyGW 16777216
     !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
     !%Option delta_perturbation 33554432
-    !% Outputs the "kick", or time-delta perturbation applied to compute linear response in real time.
+    !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential 67108864
     !% Outputs the (scalar) time-dependent potential.
     !%Option mmb 134217728

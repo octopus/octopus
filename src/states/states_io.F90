@@ -207,7 +207,7 @@ contains
 
     !%Variable OutputBandsGnuplotMode
     !%Type logical
-    !%Default no
+    !%Default yes
     !%Section Output
     !%Description
     !% The band file will be written in Gnuplot-friendly format to <tt>bands-gp.dat</tt>
@@ -378,7 +378,7 @@ contains
 
     !%Variable MomentumTransfer
     !%Type block
-    !%Section States
+    !%Section Output
     !%Description
     !% Momentum-transfer vector <i>q</i> to be used when calculating matrix elements
     !% &lt;f|exp(iq.r)|i&gt;. This enables the calculation of the dynamical structure factor,
@@ -490,7 +490,7 @@ contains
           dsf = abs(zmf_integrate(gr%mesh, cff))**2
         end if
 
-        ! write oscillator strengths (+ dynamic structure factor if qvector if given) into file
+        ! write oscillator strengths (+ dynamic structure factor if qvector is given) into file
         if(mpi_grp_is_root(mpi_world)) then
 
           if(use_qvector) then
@@ -611,7 +611,7 @@ contains
         end if
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
         ! write header
-        write(iunit(is), '(a)') '# energy, band resolved DOS'
+        write(iunit(is), '(a)') '# energy, band-resolved DOS'
       end do
 
       do ie = 1, epoints
