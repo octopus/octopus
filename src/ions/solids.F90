@@ -42,7 +42,7 @@ module solids_m
     periodic_copy_num,        &
     periodic_write_crystal
 
-  !> parts of this module explicitly work on for 3 dimensions
+  !> parts of this module explicitly work only for 3 dimensions
   type periodic_copy_t
     private
     FLOAT :: pos(1:3)
