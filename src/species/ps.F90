@@ -176,15 +176,21 @@ contains
       call ps_psf_process(ps_psf, lmax, ps%l_loc)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
-    case(PS_TYPE_CPI)
-      call ps_cpi_init(ps_cpi, trim(label))
-
+    case(PS_TYPE_CPI, PS_TYPE_FHI)
       call valconf_null(ps%conf)
+
+      if(flavour == PS_TYPE_CPI) then
+        call ps_cpi_init(ps_cpi, trim(label))
+        ps%conf%p      = ps_cpi%ps_grid%no_l_channels
+      else
+        call ps_fhi_init(ps_fhi, trim(label))
+        ps%conf%p      = ps_fhi%ps_grid%no_l_channels
+      endif
+
       ps%conf%z      = nint(z)
       ps%conf%symbol = label(1:2)
       ps%conf%type   = 1
-      ps%conf%p      = ps_cpi%ps_grid%no_l_channels
-      do l = 1, ps_cpi%ps_grid%no_l_channels
+      do l = 1, ps%conf%p
         ps%conf%l(l) = l-1
       end do
 
@@ -194,41 +200,19 @@ contains
 
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-
+      
       if(lmax /= ps%l_max) then
         message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
         call messages_fatal(1)
       endif
 
-      call ps_cpi_process(ps_cpi, ps%l_loc)
-      call logrid_copy(ps_cpi%ps_grid%g, ps%g)
-
-    case(PS_TYPE_FHI)
-      call ps_fhi_init(ps_fhi, trim(label))
-
-      call valconf_null(ps%conf)
-      ps%conf%z      = nint(z)
-      ps%conf%symbol = label(1:2)
-      ps%conf%type   = 1
-      ps%conf%p      = ps_fhi%ps_grid%no_l_channels
-      do l = 1, ps_fhi%ps_grid%no_l_channels
-        ps%conf%l(l) = l-1
-      end do
-
-      ps%z      = z
-      ps%kbc    = 1     ! only one projector per angular momentum
-      ps%l_loc  = lloc  ! the local part of the pseudo
-
-      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
-      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-
-      if(lmax /= ps%l_max) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-        call messages_fatal(1)
+      if(flavour == PS_TYPE_CPI) then
+        call ps_cpi_process(ps_cpi, ps%l_loc)
+        call logrid_copy(ps_cpi%ps_grid%g, ps%g)
+      else
+        call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
+        call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       endif
-
-      call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
-      call logrid_copy(ps_fhi%ps_grid%g, ps%g)
 
     case(PS_TYPE_HGH)
       call hgh_init(psp, trim(label))
