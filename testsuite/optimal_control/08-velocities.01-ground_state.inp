@@ -72,9 +72,6 @@ totaltime = 500.0
 
 TDOutput = multipoles + laser + geometry
 
-AbsorbingBoundaries = sin2
-AbWidth = 4.0
-
 # --------------
 # OCT parameters
 # --------------

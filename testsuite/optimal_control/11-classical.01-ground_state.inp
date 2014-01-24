@@ -39,10 +39,6 @@ MoveIons = yes
 stime  = 1.0
 dt = stime/100
 
-AbsorbingBoundaries = sin2
-AbWidth = 2.0
-AbHeight = -3.0
-
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExponentialOrder = 30
