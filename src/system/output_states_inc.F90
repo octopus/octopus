@@ -19,7 +19,6 @@
 
 ! ---------------------------------------------------------
 subroutine output_states(st, gr, geo, dir, outp)
-
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo

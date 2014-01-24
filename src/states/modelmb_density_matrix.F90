@@ -80,8 +80,8 @@ contains
     !%Type block
     !%Section States::ModelMB
     !%Description
-    !% choice of which particle density (event. matrices) will be calculated and output, in the
-    !%  modelmb particles scheme
+    !% Choice of which particle density (event. matrices) will be calculated and output, in the
+    !% modelmb particles scheme.
     !%
     !% <tt>%DensitytoCalc
     !% <br>&nbsp;&nbsp; proton   | 1 | 10

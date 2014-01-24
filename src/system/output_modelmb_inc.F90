@@ -113,9 +113,6 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
       call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     end if
 
-    if(gr%mesh%parallel_in_domains) then
-    end if
-
     if(iand(outp%what, C_OUTPUT_MMB_WFS) /= 0 .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm

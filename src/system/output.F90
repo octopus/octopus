@@ -294,10 +294,10 @@ contains
     !% This flag turns on the output for model many-body calculations, for
     !% particles described in the <tt>DescribeParticlesModelMB</tt> block.
     !%Option mmb_wfs 268435456
-    !% Triggers the ModelMB wavefunctions to be output for each state
+    !% Triggers the ModelMB wavefunctions to be output for each state.
     !%Option mmb_den 536870912
-    !% Triggers the ModelMB density or density matrix to be output for each state, and the particles
-    !% specified by the <tt>DensitytoCalc</tt> block. In the latter case, calculates, and outputs, the reduced density
+    !% Triggers the ModelMB density matrix to be output for each state, and the particles
+    !% specified by the <tt>DensitytoCalc</tt> block. Calculates, and outputs, the reduced density
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
@@ -337,7 +337,7 @@ contains
     end if
 
     if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0) then
-      call messages_experimental("Model many-body density and/or density matrix")
+      call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
       !   in principle all combinations are interesting, but this means we need to
