@@ -176,6 +176,7 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
+    integer :: what_no_how
 
     PUSH_SUB(output_init)
 
@@ -262,7 +263,8 @@ contains
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
     !%Option dos 65536
-    !% Outputs density of states.
+    !% Outputs density of states. See <tt>DOSEnergyMax</tt>, <tt>DOSEnergyMin</tt>, <tt>DOSEnergyPoints</tt>,
+    !% and <tt>DOSGamma</tt>.
     !%Option tpa 131072
     !% Outputs transition-potential approximation (TPA) matrix elements, using q-vector specified
     !% by <tt>MomentumTransfer</tt>.
@@ -526,8 +528,12 @@ contains
 
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    ! these two kinds of Output do not have a how
-    if(iand(outp%what, iand(not(C_OUTPUT_MATRIX_ELEMENTS), not(C_OUTPUT_BERKELEYGW))) /= 0) then
+    ! these kinds of Output do not have a how
+    what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &
+      C_OUTPUT_TPA + C_OUTPUT_MMB + C_OUTPUT_MMB_DEN
+
+    ! we are using a what that has a how.
+    if(iand(outp%what, not(what_no_how)) /= 0) then
       call io_function_read_how(sb, outp%how)
     else
       outp%how = 0
@@ -535,9 +541,9 @@ contains
 
     if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
       call messages_experimental("Frozen output")
-      if(iand(outp%what, C_OUTPUT_POTENTIAL)  == 0) outp%what = outp%what + C_OUTPUT_POTENTIAL 
-      if(iand(outp%what, C_OUTPUT_DENSITY)    == 0) outp%what = outp%what + C_OUTPUT_DENSITY 
-      if(iand(outp%how,  C_OUTPUT_HOW_BINARY) == 0) outp%how  = outp%how  + C_OUTPUT_HOW_BINARY 
+      outp%what = ior(outp%what, C_OUTPUT_POTENTIAL)
+      outp%what = ior(outp%what, C_OUTPUT_DENSITY)
+      outp%how  = ior(outp%how,  C_OUTPUT_HOW_BINARY)
     endif
 
     POP_SUB(output_init)
