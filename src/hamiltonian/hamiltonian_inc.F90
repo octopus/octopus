@@ -554,9 +554,11 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim, ispin
 
-  ! We will assume, for the moment, no spinors.
-
   PUSH_SUB(X(magnus))
+
+  ! We will assume, for the moment, no spinors.
+  if(hm%d%dim /= 1) &
+    call messages_not_implemented("Magnus with spinors")
 
   SAFE_ALLOCATE( auxpsi(1:der%mesh%np_part, 1:hm%d%dim))
   SAFE_ALLOCATE(aux2psi(1:der%mesh%np,      1:hm%d%dim))
