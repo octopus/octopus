@@ -92,7 +92,7 @@ module species_m
     SPEC_PS_PSF = PS_TYPE_PSF,   & !< SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,   & !< HGH pseudopotential
     SPEC_PS_CPI = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
-    SPEC_PS_FHI = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT format)
+    SPEC_PS_FHI = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT6 format)
     SPEC_PS_UPF = PS_TYPE_UPF,   & !< UPF pseudopotential
     SPEC_PSPIO          = 110,   & !< pseudopotential parsed by pspio library
     SPEC_USDEF          = 123,   & !< user-defined function for local potential
@@ -287,7 +287,7 @@ contains
     !% <br>&nbsp;&nbsp;'Xe'      | 131.29   | spec_ps_upf         | 54
     !% <br>%</tt>
     !%
-    !% Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
+    !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified).
     !%Option spec_user_defined 123
@@ -320,7 +320,7 @@ contains
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_fhi  103
-    !% Fritz-Haber pseudopotential (<tt>ABINIT</tt> format): the pseudopotential will be
+    !% Fritz-Haber pseudopotential (<tt>ABINIT6</tt> format): the pseudopotential will be
     !% read from a <tt>.fhi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
     !% Columns 5 and 6 are the maximum
