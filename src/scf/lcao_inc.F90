@@ -92,7 +92,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   call messages_info(1)
           
 
-  nst = st%nst
+  nst = min(st%nst, this%norbs)
   kstart = st%d%kpt%start
   kend = st%d%kpt%end
 
@@ -231,10 +231,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then
     ASSERT(.not. st%parallel_in_states)
-    SAFE_ALLOCATE(tmp(1:st%nst, kstart:kend))
-    tmp(1:st%nst, kstart:kend) = st%eigenval(1:st%nst, kstart:kend)
-    call MPI_Allgatherv(tmp(:, kstart:), st%nst * (kend - kstart + 1), MPI_FLOAT, &
-         st%eigenval, st%d%kpt%num(:) * st%nst, (st%d%kpt%range(1, :) - 1) * st%nst, MPI_FLOAT, &
+    SAFE_ALLOCATE(tmp(1:nst, kstart:kend))
+    tmp(1:nst, kstart:kend) = st%eigenval(1:nst, kstart:kend)
+    call MPI_Allgatherv(tmp(:, kstart:), nst * (kend - kstart + 1), MPI_FLOAT, &
+         st%eigenval, st%d%kpt%num(:) * nst, (st%d%kpt%range(1, :) - 1) * nst, MPI_FLOAT, &
          st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(tmp)
   end if
@@ -249,7 +249,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       do ik = kstart, kend
         if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
         do idim = 1, st%d%dim
-          do n1 = max(lcao_start, st%st_start), st%st_end
+          do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
             call states_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
             call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
             call states_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
@@ -640,12 +640,6 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       SAFE_DEALLOCATE_A(eval)
       SAFE_DEALLOCATE_A(evec)
       SAFE_DEALLOCATE_A(levec)
-
-      ! if we do not have enough basis functions randomize the missing orbitals
-      do ist = this%norbs + 1, st%st_end
-        call X(mf_random)(gr%mesh, psii(:, 1, 1))
-        call states_set_state(st, gr%mesh, 1, ist, ik, psii(:, 1, 1))
-      end do
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)

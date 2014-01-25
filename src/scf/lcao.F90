@@ -337,19 +337,17 @@ contains
       end if
 
       if(this%maxorbs < st%nst) then
-        this%initialized = .false.
-        call messages_write('Cannot do LCAO initial calculation because there are not enough atomic orbitals.')
+        call messages_write('Cannot do LCAO for all states because there are not enough atomic orbitals.')
         call messages_new_line()
 
         call messages_write('Required: ')
         call messages_write(st%nst)
         call messages_write('. Available: ')
         call messages_write(this%maxorbs)
-        call messages_write('.')
+        call messages_write('. ')
+        call messages_write(st%nst - this%maxorbs)
+        call messages_write(' orbitals will be randomized.')
         call messages_warning()
-
-        POP_SUB(lcao_init)
-        return
       end if
 
       !%Variable LCAODimension
@@ -379,7 +377,7 @@ contains
       !%End
       call parse_integer(datasets_check('LCAODimension'), 0, n)
 
-      if(n > 0 .and. n <= st%nst) then
+      if(n > 0 .and. n <= st%nst .and. st%nst <= this%maxorbs) then
         ! n was made too small
         this%norbs = st%nst
       else if(n > st%nst .and. n <= this%maxorbs) then
@@ -393,7 +391,6 @@ contains
         this%norbs = this%maxorbs
       end if
 
-      ASSERT(this%norbs >= st%nst)
       ASSERT(this%norbs <= this%maxorbs)
     else
       call lcao2_init()
@@ -598,7 +595,7 @@ contains
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
-    integer :: s1, s2, k1, k2, is, ik, ip, idim
+    integer :: s1, s2, k1, k2, is, ik, ip, idim, st_start_random
     logical :: lcao_done
     type(profile_t), save :: prof
 
@@ -649,7 +646,6 @@ contains
       
     end if
 
-
     lcao_done = .false.
 
     ! after initialized, can check that LCAO is possible
@@ -660,7 +656,7 @@ contains
       
       if (.not. present(st_start)) then
         call states_fermi(sys%st, sys%gr%mesh)
-        call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
+        call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
         
         ! Update the density and the Hamiltonian
         if (lcao%mode == LCAO_START_FULL) then
@@ -673,21 +669,33 @@ contains
       endif
     end if
     
-    if(.not. lcao_done) then
+    if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
 
       if(.not. sys%gr%ob_grid%open_boundaries) then
 
+        if(lcao_done) then
+          st_start_random = lcao%norbs + 1
+        else
+          st_start_random = 1
+        endif
+        if(present(st_start)) st_start_random = max(st_start, st_start_random)
+
         ! Randomly generate the initial wavefunctions.
-        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start)
+        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
 
         call messages_write('Orthogonalizing random wavefunctions.')
         call messages_info()
 
-        call states_orthogonalize(sys%st, sys%gr%mesh)
-        ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
-        ! of the occupied states.
-        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
-        if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
+        ! for now, to retain previous behavior of LCAOAlternative, we will not orthogonalize.
+        if(.not. lcao%alternative) &
+          call states_orthogonalize(sys%st, sys%gr%mesh)
+
+        if(.not. lcao_done) then
+          ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
+          ! of the occupied states.
+          call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+          if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
+        endif
 
       else
   
