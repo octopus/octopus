@@ -28,7 +28,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   R_TYPE  :: acc, acc_vector(1:3)
-  FLOAT   :: weight
+  FLOAT   :: weight, maxabsdiff, maxabs
   R_TYPE, pointer :: field_global(:), field_global_vector(:, :)
   type(pv_t), pointer :: vp
 
@@ -84,7 +84,9 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     else
       destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
     end if
+    ! offset moves corner of cell to origin, in integer mesh coordinates
 
+    ASSERT(all(destpoint >= 0))
     ASSERT(all(destpoint < lsize))
 
     if(present(field)) &
@@ -95,7 +97,9 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
       srcpoint = symm_op_apply_inv(this%mesh%sb%symm%ops(iop), destpoint)
-      do idir = 1, 3
+
+      ! apply periodic boundary conditions in periodic directions
+      do idir = 1, this%mesh%sb%periodic_dim
         if(srcpoint(idir) < 0) then
           srcpoint(idir) = srcpoint(idir) + lsize(idir)
           ASSERT(srcpoint(idir) >= 0)
@@ -122,6 +126,24 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       symmfield_vector(ip, 1:3) = weight * acc_vector(1:3)
 
   end do
+
+  if(present(field)) then
+    maxabs = maxval(abs(field(1:this%mesh%np)))
+    maxabsdiff = maxval(abs(field(1:this%mesh%np) - symmfield(1:this%mesh%np)))
+    if(maxabsdiff / maxabs > CNST(1e-6)) then
+      write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
+      call messages_warning(1)
+    endif
+  endif
+
+  if(present(field_vector)) then
+    maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
+    maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
+    if(maxabsdiff / maxabs > CNST(1e-6)) then
+      write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
+      call messages_warning(1)
+    endif
+  endif
 
   if(this%mesh%parallel_in_domains) then
     if(present(field)) then
