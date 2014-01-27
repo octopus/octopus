@@ -18,12 +18,15 @@
 !! $Id$
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector)
+subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, suppress_warning)
   type(symmetrizer_t), target, intent(in)    :: this
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (this%mesh%np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (this%mesh%np, 3)
   R_TYPE,            optional, intent(out)   :: symmfield(:) !< (this%mesh%np)
   R_TYPE,            optional, intent(out)   :: symmfield_vector(:, :) !< (this%mesh%np, 3)
+  logical,           optional, intent(in)    :: suppress_warning !< use to avoid output of discrepancy,
+    !! for forces, where this routine is not used to symmetrize something already supposed to be symmetric,
+    !! but rather to construct the quantity properly from reduced k-points
 
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
@@ -132,22 +135,23 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
   end do
 
-  if(present(field)) then
-    maxabs = maxval(abs(field(1:this%mesh%np)))
-    maxabsdiff = maxval(abs(field(1:this%mesh%np) - symmfield(1:this%mesh%np)))
-    if(maxabsdiff / maxabs > CNST(1e-6)) then
-      write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
-      call messages_warning(1)
+  if(.not. optional_default(suppress_warning, .false.)) then
+    if(present(field)) then
+      maxabs = maxval(abs(field(1:this%mesh%np)))
+      maxabsdiff = maxval(abs(field(1:this%mesh%np) - symmfield(1:this%mesh%np)))
+      if(maxabsdiff / maxabs > CNST(1e-6)) then
+        write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
+        call messages_warning(1)
+      endif
     endif
-  endif
-
-  ! FIXME: do not write this for forces, since they are not symmetric by construction.
-  if(present(field_vector)) then
-    maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
-    maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
-    if(maxabsdiff / maxabs > CNST(1e-6)) then
-      write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
-      call messages_warning(1)
+    
+    if(present(field_vector)) then
+      maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
+      maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
+      if(maxabsdiff / maxabs > CNST(1e-6)) then
+        write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
+        call messages_warning(1)
+      endif
     endif
   endif
 
