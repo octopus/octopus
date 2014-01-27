@@ -144,11 +144,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do isp = 1, spin_channels
-        call dsymmetrizer_apply(symmetrizer, tau(:, isp), symmtmp(:, 1))
+        call dsymmetrizer_apply(symmetrizer, field = tau(:, isp), symmfield = symmtmp(:, 1))
         tau(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply(symmetrizer, ldens(:, isp), symmtmp(:, 1))
+        call dsymmetrizer_apply(symmetrizer, field = ldens(:, isp), symmfield = symmtmp(:, 1))
         ldens(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply_vector(symmetrizer, gdens(:, :, isp), symmtmp)
+        call dsymmetrizer_apply(symmetrizer, field_vector = gdens(:, :, isp), symmfield_vector = symmtmp)
         gdens(1:der%mesh%np, 1:der%mesh%sb%dim, isp) = symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
 

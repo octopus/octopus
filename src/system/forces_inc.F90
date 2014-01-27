@@ -307,7 +307,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
     call symmetrizer_init(symmetrizer, gr%mesh)
     SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:3))
 
-    call dsymmetrizer_apply_vector(symmetrizer, grad_rho, symmtmp)
+    call dsymmetrizer_apply(symmetrizer, field_vector = grad_rho, symmfield_vector = symmtmp)
     grad_rho(1:gr%mesh%np, 1:3) = symmtmp(1:gr%mesh%np, 1:3)
 
     SAFE_DEALLOCATE_A(symmtmp)

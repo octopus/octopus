@@ -333,7 +333,7 @@ contains
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
       call symmetrizer_init(symmetrizer, gr%mesh)
-      call dsymmetrizer_apply_vector(symmetrizer, microcurrent, symmcurrent)
+      call dsymmetrizer_apply(symmetrizer, field_vector = microcurrent, symmfield_vector = symmcurrent)
       microcurrent(1:gr%mesh%np, 1:gr%sb%dim) = symmcurrent(1:gr%mesh%np, 1:gr%sb%dim)
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmcurrent)
