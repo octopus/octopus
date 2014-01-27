@@ -89,6 +89,9 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     ASSERT(all(destpoint >= 0))
     ASSERT(all(destpoint < lsize))
 
+    ! move to center of cell in real coordinates
+    destpoint = destpoint - lsize / 2
+
     if(present(field)) &
       acc = M_ZERO
     if(present(field_vector)) &
@@ -98,6 +101,8 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     do iop = 1, nops
       srcpoint = symm_op_apply_inv(this%mesh%sb%symm%ops(iop), destpoint)
 
+      ! move back to reference to origin at corner of cell
+      srcpoint = srcpoint + lsize / 2
       ! apply periodic boundary conditions in periodic directions
       do idir = 1, this%mesh%sb%periodic_dim
         if(srcpoint(idir) < 0) then
@@ -136,6 +141,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     endif
   endif
 
+  ! FIXME: do not write this for forces, since they are not symmetric by construction.
   if(present(field_vector)) then
     maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
     maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
