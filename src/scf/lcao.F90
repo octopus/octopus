@@ -159,6 +159,9 @@ contains
 
     this%initialized = .true.
 
+    ! initialization, in case we leave this routine before LCAOAlternative is parsed
+    this%alternative = .false.
+
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     mode_default = LCAO_START_FULL
@@ -683,12 +686,13 @@ contains
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
 
-        call messages_write('Orthogonalizing random wavefunctions.')
-        call messages_info()
-
         ! for now, to retain previous behavior of LCAOAlternative, we will not orthogonalize.
-        if(.not. lcao%alternative) &
+        if(.not. lcao%alternative) then
+          call messages_write('Orthogonalizing random wavefunctions.')
+          call messages_info()
+
           call states_orthogonalize(sys%st, sys%gr%mesh)
+        endif
 
         if(.not. lcao_done) then
           ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
