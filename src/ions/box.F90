@@ -115,12 +115,12 @@ contains
     type(box_t), intent(in) :: box
     FLOAT,       intent(in) :: point(:)
 
-    FLOAT :: xx(1:MAX_DIM, 1)
+    FLOAT :: xx(1, 1:MAX_DIM)
     logical :: inside2(1)
 
     ! no push_sub because this function is called very frequently
 
-    xx(1:box%dim, 1) = point(1:box%dim)
+    xx(1, 1:box%dim) = point(1:box%dim)
 
     call box_inside_vec(box, 1, xx, inside2)
     inside = inside2(1)
@@ -145,7 +145,7 @@ contains
 
     SAFE_ALLOCATE(xx(1:box%dim, 1:npoints))
     forall(ip = 1:npoints)
-      xx(1:box%dim, ip) = points(1:box%dim, ip) - box%center(1:box%dim)
+      xx(1:box%dim, ip) = points(ip, 1:box%dim) - box%center(1:box%dim)
     end forall
 
     select case(box%shape)

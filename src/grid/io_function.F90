@@ -470,15 +470,8 @@ contains
     integer :: ierr, ii
     character(64)  :: filename, out_name, ref_filename
     FLOAT, allocatable :: read_ff(:), read_rff(:)
-    type(unit_t) :: my_unit
 
     PUSH_SUB(io_function_convert)
-
-    my_unit%factor = 6.748333042
-    my_unit%factor = 0.148191421
-    my_unit%factor = P_Ang ** 3
-    my_unit%abbrev = "eV_to_A"
-    my_unit%name   = "From_electronV_to_Angstrom"
 
     SAFE_ALLOCATE(read_ff(1:mesh%np))
     SAFE_ALLOCATE(read_rff(1:mesh%np))
@@ -517,7 +510,7 @@ contains
       if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
       ! Write the corresponding output
       call dio_function_output(how, &
-           trim(folder), out_name, mesh, read_ff, my_unit, ierr, geo = geo)
+           trim(folder), out_name, mesh, read_ff, units_out%length, ierr, geo = geo)
     end do
     
     SAFE_DEALLOCATE_A(read_ff)

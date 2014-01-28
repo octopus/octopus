@@ -31,10 +31,11 @@ module box_union_m
   implicit none
 
   private
-  public ::              &
-    box_union_t,         &
-    box_union_init,      &
-    box_union_end,       &
+  public ::               &
+    box_union_t,          &
+    box_union_init,       &
+    box_union_end,        &
+    box_union_inside,     &
     box_union_inside_vec
 
   type box_union_t
@@ -108,6 +109,24 @@ contains
     SAFE_DEALLOCATE_A(inside2)
 
   end subroutine box_union_inside_vec
+  
+  !--------------------------------------------------------------
+  !> Checks if a point are inside the union box.
+  logical function box_union_inside(union, point) result(inside)
+    type(box_union_t),  intent(in)  :: union
+    FLOAT,              intent(in)  :: point(:)
+
+    integer :: ibox
+    logical :: inside2
+
+    ! no push_sub because this function is called very frequently
+
+    inside = .false.
+    do ibox = 1, union%n_boxes
+      if(box_inside(union%boxes(ibox), point)) inside = .true.
+    end do
+
+  end function box_union_inside
 
 end module box_union_m
 
