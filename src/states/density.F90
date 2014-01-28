@@ -115,7 +115,7 @@ contains
 
     this%packed = .true.
 #ifdef HAVE_OPENCL    
-    this%pnp = opencl_padded_size(this%gr%mesh%np)
+    this%pnp = opencl_padded_size(this%gr%fine%mesh%np)
     call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     ! set to zero
