@@ -1,0 +1,53 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : Boron Nitride Sheet
+Programs   : octopus; octopus_mpi
+TestGroups : long-run, periodic_systems
+Enabled    : Yes
+
+Processors : 4
+
+Input      : 12-boron_nitride.01-gs.inp
+
+match ; Total k-points     ; GREP(static/info, 'Total number of k-points', 38) ; 4
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; 751.05389207
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; 326.75322251
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -222.11242106
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   -587.66958008
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -166.61179870
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -23.85166307
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  416.67166784
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  785.76262137
+
+match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ;  0.000000
+match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ;  0.000000
+match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ;  0.000000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -28.745970
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  -2.660278
+match ; Eigenvalue 10 ; GREP(static/info, '#k =   1', 12, 10) ;  -1.514974
+
+match ; k-point 4 (x) ; GREP(static/info, '#k =   4', 18) ;  0.500000
+match ; k-point 4 (y) ; GREP(static/info, '#k =   4', 30) ;  0.500000
+match ; k-point 4 (z) ; GREP(static/info, '#k =   4', 42) ;  0.000000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   4', 12,  1) ; -25.866425
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   4', 12,  8) ;  -6.420443
+match ; Eigenvalue 10 ; GREP(static/info, '#k =   4', 12, 10) ;  0.765224
+
+# forces on 1 and 3; 2 and 4 must be equal by symmetry
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         B', 3)  ;  -1.585926
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         B', 4)  ;   0
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         B', 5)  ;   0
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         N', 3)  ;   2.029500
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         N', 4)  ;   0
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         N', 5)  ;   0
+
+match ; Force 3 (x)   ; GREPFIELD(static/info, '3         B', 3)  ;  -1.585820
+match ; Force 3 (y)   ; GREPFIELD(static/info, '3         B', 4)  ;   0
+match ; Force 3 (z)   ; GREPFIELD(static/info, '3         B', 5)  ;   0
+
+match ; Force 4 (x)   ; GREPFIELD(static/info, '4         N', 3)  ;   2.029528
+match ; Force 4 (y)   ; GREPFIELD(static/info, '4         N', 4)  ;   0
+match ; Force 4 (z)   ; GREPFIELD(static/info, '4         N', 5)  ;   0

@@ -1,0 +1,45 @@
+CalculationMode = gs
+FromScratch = yes
+PeriodicDimensions = 2
+ExperimentalFeatures = yes
+
+Units = ev_angstrom
+
+MixField = potential
+ExtraStates = 2
+
+XCfunctional = lda_x + lda_c_pw
+
+BoxShape = parallelepiped
+a = 1.45
+lx = 3*a
+ly = sqrt(3)*a
+lz = 4.0
+
+%Lsize
+  lx/2 | ly/2 | lz
+% 
+#Spacing = lx/2/14
+spacing = lx/12
+
+KPointsUseSymmetries = yes
+ParallelizationStrategy = par_kpoints
+%KPointsGrid
+  2 | 2 | 1
+  0 | 0 | 0
+%
+
+%Species
+ 'B' | 10.81 | spec_ps_hgh | 3 | 2 | 0
+%
+
+%Coordinates
+ 'B' | 0.0    | 0.0  | 0.00
+ 'N' | 2/3*lx | 0.0  | 0.00
+ 'B' | 1/2*lx | ly/2 | 0.00
+ 'N' | 1/6*lx | ly/2 | 0.00
+%
+
+# LCAO is actually metallic
+SmearingFunction = fermi_dirac
+Smearing = 0.01

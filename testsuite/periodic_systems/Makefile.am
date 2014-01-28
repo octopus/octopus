@@ -51,6 +51,10 @@ dist_share_DATA =                                \
         09-etsf_io.test                          \
         09-etsf_io.01-gs.inp                     \
         10-berkeleygw.test                       \
-        10-berkeleygw.01-gs.inp
+        10-berkeleygw.01-gs.inp                  \
+        11-silicon_force.test                    \
+        11-silicon_force.01-gs.inp               \
+        12-boron_nitride.test                    \
+        12-boron_nitride.01-gs.inp
 
 CLEANFILES = *~ *.bak
