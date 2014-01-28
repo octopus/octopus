@@ -40,7 +40,6 @@ BoxShape = parallelepiped
 0.1 | 0.785662 | 0.000000| 0.000000
 %
 
-LCAODimension = 9
 unocc_LCAOStart = lcao_none
 
 unocc_ExtraStates = 1

@@ -42,7 +42,6 @@ BoxShape = parallelepiped
 %
 SymmetrizeDensity = yes
 
-LCAODimension = 9
 unocc_LCAOStart = lcao_none
 
 unocc_ExtraStates = 1
