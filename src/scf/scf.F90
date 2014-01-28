@@ -1008,17 +1008,20 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(a)') 'Convergence:'
-        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
-          ' (', scf%conv_abs_dens, ')'
-        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
-          ' (', scf%conv_rel_dens, ')'
-        write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
-          ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
-          ' [',  trim(units_abbrev(units_out%energy)), ']'
-        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
-          ' (', scf%conv_rel_ev, ')'
-        write(iunit,'(1x)')
+        if(scf%max_iter > 0) then
+          write(iunit, '(a)') 'Convergence:'
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
+            ' (', scf%conv_abs_dens, ')'
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
+            ' (', scf%conv_rel_dens, ')'
+          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
+            ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
+            ' [',  trim(units_abbrev(units_out%energy)), ']'
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
+            ' (', scf%conv_rel_ev, ')'
+          write(iunit,'(1x)')
+        endif
+        ! otherwise, these values are uninitialized, and unknown.
 
         if(scf%calc_force) then
           write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
