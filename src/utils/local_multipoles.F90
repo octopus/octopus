@@ -1,4 +1,4 @@
-!! Copyright (C) 2014 M. Oliveira
+!! Copyright (C) 2014 M. Oliveira, J. Jornet-Somoza
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -199,7 +199,6 @@ contains
       call box_union_end(domain(id))
     end do
 
-    print*,
       message(1) = 'Info: Exiting local domains'
       message(2) = ''
       call messages_info(2)
