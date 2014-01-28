@@ -10,6 +10,8 @@ Input      : 04-silicon.01-gs.inp
 
 match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 64
 match ; Reduced k-points ; GREP(static/info, 'Number of symmetry-reduced k-points', 38) ; 4
+match ; Space group        ; GREP(out, 'Space group', 16)                      ; 227
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.17266048
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.79951714

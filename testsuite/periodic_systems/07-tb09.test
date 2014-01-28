@@ -9,6 +9,11 @@ Enabled    : Yes
 # ground state
 Input      : 07-tb09.01-gs_symm.inp
 
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 27
+match ; Reduced k-points ; GREP(static/info, 'Number of symmetry-reduced k-points', 38) ; 4
+match ; Space group        ; GREP(out, 'Space group', 16)                      ; 227
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
+
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -41.91336041
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -51.15076275
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -3.66647752
@@ -38,7 +43,14 @@ match ; Eigenvalue [  k=4, n=8   ] ; GREP(static/info, '#k =   4', 12,  9) ;  0.
 match ; Eigenvalue [  k=4, n=16  ] ; GREP(static/info, '#k =   4', 12, 17) ;  0.505459
 match ; Eigenvalue [  k=4, n=17  ] ; GREP(static/info, '#k =   4', 12, 18) ;  0.505459
 
+
 Input      : 07-tb09.02-gs_nosymm.inp
+
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 27
+match ; Reduced k-points ; GREP(static/info, 'Number of symmetry-reduced k-points', 38) ; 27
+match ; Space group        ; GREP(out, 'Space group', 16)                      ; 227
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
+
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -41.91336038
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -51.15076275
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -3.66647784

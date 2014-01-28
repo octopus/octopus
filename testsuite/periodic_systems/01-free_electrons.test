@@ -8,6 +8,17 @@ Enabled    : Yes
 
 Input: 01-free_electrons.01-ground_state.inp
 
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 6
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;   535738.21201662
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  535738.20362713
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  0.00838949
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  0.00000000
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  0.00000000
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  0.00000000
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   0.00838949
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;   0.00000000
+
 Input: 01-free_electrons.02-unocc.inp
 
 match ; Bands n=1,k=1; GREP(static/eigenvalues, '#k =   1', 12, 1) ; 0.000000
@@ -23,4 +34,3 @@ match ; Bands n=2,k=3; GREP(static/eigenvalues, '#k =   3', 12, 2) ; 0.031583
 match ; Bands n=2,k=4; GREP(static/eigenvalues, '#k =   4', 12, 2) ; 0.024181
 match ; Bands n=2,k=5; GREP(static/eigenvalues, '#k =   5', 12, 2) ; 0.017765
 match ; Bands n=2,k=6; GREP(static/eigenvalues, '#k =   6', 12, 2) ; 0.012337
-

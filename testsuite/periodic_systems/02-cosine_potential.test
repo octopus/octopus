@@ -7,7 +7,21 @@ TestGroups : short-run, periodic_systems
 Enabled    : Yes
 
 Input: 02-cosine_potential.01-ground_state.inp
+
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 6
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;   535737.93763927
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  535738.20362713
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -0.26598786
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  0.00000000
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  0.00000000
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  0.00000000
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   0.06357692
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;   -0.32956478
+
+
 Input: 02-cosine_potential.02-unocc.inp
+
 match ; Bands n=1,k=1; GREP(static/eigenvalues, '#k =   1', 12, 1) ; -0.133002
 match ; Bands n=1,k=2; GREP(static/eigenvalues, '#k =   2', 12, 1) ; -0.133000
 match ; Bands n=1,k=3; GREP(static/eigenvalues, '#k =   3', 12, 1) ; -0.132996

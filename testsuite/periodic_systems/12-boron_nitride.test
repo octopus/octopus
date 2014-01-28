@@ -11,6 +11,9 @@ Processors : 4
 Input      : 12-boron_nitride.01-gs.inp
 
 match ; Total k-points     ; GREP(static/info, 'Total number of k-points', 38) ; 4
+match ; Reduced k-points   ; GREP(static/info, 'Number of symmetry-reduced k-points', 38) ; 4
+match ; Space group        ; GREP(out, 'Space group', 16)                      ; 187
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; 751.05389207
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; 326.75322251

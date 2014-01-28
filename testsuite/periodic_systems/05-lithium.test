@@ -9,6 +9,10 @@ Enabled    : Yes
 # ground state
 Input      : 05-lithium.01-gs.inp
 
+match ; Total k-points     ; GREP(static/info, 'Total number of k-points', 38) ; 64
+match ; Space group        ; GREP(out, 'Space group', 16)                      ; 229
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  48
+
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -0.55438036
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -0.54866368
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -0.11103889

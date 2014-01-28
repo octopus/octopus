@@ -324,6 +324,8 @@ contains
       ! check all operations and leave those that kept the symmetry-breaking
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
+      write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
+      call messages_info(1)
       do iop = 1, fullnops
         call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
@@ -332,6 +334,9 @@ contains
           .and. (.not. is_supercell .or. all(abs(translation(1:3, iop)) < M_EPSILON))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
+
+          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') this%nops, ':', rotation(1:3, 1:3, iop), translation(1:3, iop)
+          call messages_info(1)
         end if
         call symm_op_end(tmpop)
       end do
