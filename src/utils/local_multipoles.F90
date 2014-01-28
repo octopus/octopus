@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: dielectric_function.F90 11591 2013-12-17 09:10:32Z joseba $
+!! $Id$
 
 #include "global.h"
 
