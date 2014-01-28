@@ -127,9 +127,9 @@ contains
       dt = M_ZERO
     end if
  
-    !%Variable GlobalDensitytFilename
+    !%Variable GlobalDensityFilename
     !%Type string
-    !%Default density
+    !%Default 'density'
     !%Section Utilities::oct-local_multipoles
     !%Description
     !% Input filename. The original filename for the density which is going to be 
@@ -141,7 +141,7 @@ contains
     SAFE_ALLOCATE(read_ff(1:(sys%gr%mesh%np))); read_ff(:) = M_ZERO
     call drestart_read_function(folder, filename, sys%gr%mesh, read_ff, err)
     if (err /= 0 ) then
-     write(message(1),*)'Error while reading density: ',trim(folder),trim(filename),' err:',err
+     write(message(1),*) 'While reading density: "',trim(folder),trim(filename),'", error code:',err
      call messages_fatal(1)
     end if
     
@@ -150,8 +150,8 @@ contains
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% This variable decides if a folder is going to be iterated or the 
-    !% filename is going to be iterated
+    !% This variable decides if a folder is going to be iterated or the
+    !% filename is going to be iterated.
     !%End
     call parse_logical(datasets_check('LocalMultipoles'), .false., wrt_multipoles)
 
@@ -160,7 +160,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-local_multipoles
     !%Description
-    !% This variable means the maximum electric multipole of the density output
+    !% This variable means the maximum electric multipole of the density output.
     !%End
     call parse_integer(datasets_check('LocalMultipoleLmax '), 1, lmax)
 
@@ -170,6 +170,7 @@ contains
     !%Description
     !% This variable stores the information about the local boxes 
     !% for each new local domain. Information is read in a block format.
+    !% <tt>
     !% %LocalDomains
     !% 'Label' | Shape | rsize  %< | Shape dependencies >%
     !% Label = string with the name of the new local domain.
@@ -181,9 +182,10 @@ contains
     !% case(MINIMUM):        | 'center_list' 
     !% rsize < Radius in input length units
     !% xsize < the length of the cylinder in the x-direction 
-    !% origine coordinates < in input length units separated by | . where is the box centered.
+    !% origin coordinates < in input length units separated by | . where is the box centered.
     !% lsize <  half of the length of the parallelepiped in each direction.
     !% center_list < string containing the list of atoms in xyz file for each domain in the form "2,16-23"
+    !% </tt>
     !%End
     call local_domains_read(domain, nd, lab)
 
@@ -199,9 +201,9 @@ contains
       call box_union_end(domain(id))
     end do
 
-      message(1) = 'Info: Exiting local domains'
-      message(2) = ''
-      call messages_info(2)
+    message(1) = 'Info: Exiting local domains'
+    message(2) = ''
+    call messages_info(2)
     POP_SUB(local_domains)
   end subroutine local_domains
 
@@ -225,6 +227,7 @@ contains
     !%Description
     !% Specifies the shape and properties of each local box.
     !%End
+
     ! First, find out if there is a Species block.
     ndomain = 0
     if(parse_block(datasets_check('LocalDomains'), blk) == 0) then
@@ -531,7 +534,7 @@ contains
 
     PUSH_SUB(write_multipoles_header)
 
-    write(iunit,'(a)') '################################################################################'
+    call messages_print_stress(iunit)
       write(iunit, '(a)', advance='no')'# Center of mass: ('
     do ll = 1, sys%space%dim-1
       write(iunit, '(f21.12,a2)', advance='no') units_from_atomic(units_out%length,center(ll)),' ,'
@@ -566,7 +569,7 @@ contains
         end do
       end do
     write(iunit,'(a)')""
-    write(iunit,'(a)') '################################################################################'
+    call messages_print_stress(iunit)
 
   POP_SUB(write_multipoles_header)
    
