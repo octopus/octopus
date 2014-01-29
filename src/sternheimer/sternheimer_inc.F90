@@ -149,13 +149,13 @@ subroutine X(sternheimer_solve)(                           &
             omega_sigma = -R_CONJ(omega)
           end if
 
+          !calculate the RHS of the Sternheimer eq
           ii = 0
           do ist = sst, est
             ii = ii + 1
 
             call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-            !calculate the RHS of the Sternheimer eq
             if(sternheimer_have_rhs(this)) then
               ASSERT(associated(this%X(rhs)))
               forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, ii) = this%X(rhs)(ip, idim, ist, ik)
@@ -194,14 +194,31 @@ subroutine X(sternheimer_solve)(                           &
               call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma)
             endif
 
-            !solve the Sternheimer equation
+          end do
+
+          !solve the Sternheimer equation
+          ii = 0
+          do ist = sst, est
+            ii = ii + 1
             call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
               rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
+            conv_iters(sigma, ist) = this%solver%iter
+            abs_psi(sigma, ist) = this%solver%abs_psi
+
+            states_conv = states_conv .and. (this%solver%abs_psi < tol)
+            total_iter = total_iter + this%solver%iter
+          end do
+
+          !re-orthogonalize the resulting vector
+          ii = 0
+          do ist = sst, est
+            ii = ii + 1
+
             if (this%preorthogonalization) then 
-              !re-orthogonalize the resulting vector
               if (this%occ_response) then
+                call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
                 proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
                 do idim = 1, st%d%dim
                   call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
@@ -211,16 +228,10 @@ subroutine X(sternheimer_solve)(                           &
               endif
             end if
 
-            ! store the norm of the variations, the number of
-            ! iterations and residual of the linear solver
             dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
-            conv_iters(sigma, ist) = this%solver%iter
-            abs_psi(sigma, ist) = this%solver%abs_psi
-
-            states_conv = states_conv .and. (this%solver%abs_psi < tol)
-            total_iter = total_iter + this%solver%iter
 
           end do !ist
+
         end do !sigma
 
         do ist = sst, est
