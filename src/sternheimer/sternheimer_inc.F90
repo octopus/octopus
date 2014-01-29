@@ -46,7 +46,7 @@ subroutine X(sternheimer_solve)(                           &
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
-
+  type(batch_t) :: rhsb, dlpsib
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
@@ -197,6 +197,9 @@ subroutine X(sternheimer_solve)(                           &
           end do
 
           !solve the Sternheimer equation
+          call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
+          call batch_init(rhsb, st%d%dim, sst, est, rhs)
+#if 0
           ii = 0
           do ist = sst, est
             ii = ii + 1
@@ -205,9 +208,15 @@ subroutine X(sternheimer_solve)(                           &
               rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, &
               residue(sigma, ist), conv_iters(sigma, ist), occ_response = this%occ_response)
 
-            states_conv = states_conv .and. (residue(sigma, ist) < tol)
-            total_iter = total_iter + conv_iters(sigma, ist)
           end do
+#else
+
+          call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
+            dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
+            residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
+#endif
+          call batch_end(dlpsib)
+          call batch_end(rhsb)
 
           !re-orthogonalize the resulting vector
           ii = 0
@@ -234,6 +243,9 @@ subroutine X(sternheimer_solve)(                           &
 
         do ist = sst, est
           do sigma = 1, nsigma
+            states_conv = states_conv .and. (residue(sigma, ist) < tol)
+            total_iter = total_iter + conv_iters(sigma, ist)
+
             write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
               ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), residue(sigma, ist)
             call messages_info(1)

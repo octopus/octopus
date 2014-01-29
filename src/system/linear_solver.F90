@@ -20,6 +20,7 @@
 #include "global.h"
 
 module linear_solver_m
+  use batch_m
   use datasets_m
   use global_m
   use grid_m
@@ -59,6 +60,8 @@ module linear_solver_m
        linear_solver_end,                &
        dlinear_solver_solve_HXeY,        & 
        zlinear_solver_solve_HXeY,        &
+       dlinear_solver_solve_HXeY_batch,  & 
+       zlinear_solver_solve_HXeY_batch,  &
        linear_solver_ops_per_iter,       &
        linear_solver_obsolete_variables
 

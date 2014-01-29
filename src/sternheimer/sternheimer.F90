@@ -20,6 +20,7 @@
 #include "global.h"
 
 module sternheimer_m
+  use batch_m
   use datasets_m
   use density_m
   use global_m

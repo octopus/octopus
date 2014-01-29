@@ -106,6 +106,35 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
 end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
+
+subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
+  type(linear_solver_t), target, intent(inout) :: this
+  type(hamiltonian_t),   target, intent(in)    :: hm
+  type(grid_t),          target, intent(inout) :: gr
+  type(states_t),        target, intent(in)    :: st
+  integer,                       intent(in)    :: ik
+  type(batch_t),                 intent(inout) :: xb
+  type(batch_t),                 intent(in)    :: yb
+  R_TYPE,                        intent(in)    :: shift(:)
+  FLOAT,                         intent(in)    :: tol
+  FLOAT,                         intent(out)   :: residue(:)
+  integer,                       intent(out)   :: iter_used(:)
+  logical, optional,             intent(in)    :: occ_response
+
+  integer :: ii
+
+  PUSH_SUB(X(linear_solver_solve_HXeY_batch))
+
+  do ii = 1, xb%nst
+    call X(linear_solver_solve_HXeY) (this, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
+      shift(ii), tol, residue(ii), iter_used(ii), occ_response)
+  end do
+
+  POP_SUB(X(linear_solver_solve_HXeY_batch))
+
+end subroutine X(linear_solver_solve_HXeY_batch)
+
+! ---------------------------------------------------------
 !> Conjugate gradients
 subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
