@@ -1181,8 +1181,8 @@ contains
 #endif
           else
             iter = 2000
-            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
-            propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
+            call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
+              propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
             if(.not.converged) then
               write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
@@ -1242,7 +1242,7 @@ contains
 #endif
             else
               iter = 2000
-              call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
+              call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
               propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
               if(.not.converged) then

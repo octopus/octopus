@@ -151,13 +151,13 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, zmf_dotu_aux, zmf_nrm2_aux, &
-                        ls_qmr_prec, iter, residue = res, threshold = eigens%tolerance, &
-                        converged = conv, showprogress = in_debug_mode)
+          call zqmr_sym_gen_dotu(dim*np, psi, rhs, lhs_symmetrized, zmf_dotu_aux, zmf_nrm2_aux, &
+            ls_qmr_prec, iter, residue = res, threshold = eigens%tolerance, &
+            converged = conv, showprogress = in_debug_mode)
         else
-          call zqmr_sym(dim*np, psi, rhs, lhs, zmf_dotu_aux, zmf_nrm2_aux, ls_qmr_prec, &
-                        iter, residue=res, threshold = eigens%tolerance, &
-                        converged = conv, showprogress = in_debug_mode)
+          call zqmr_sym_gen_dotu(dim*np, psi, rhs, lhs, zmf_dotu_aux, zmf_nrm2_aux, ls_qmr_prec, &
+            iter, residue=res, threshold = eigens%tolerance, &
+            converged = conv, showprogress = in_debug_mode)
         end if
         do idim = 1, dim
           call states_set_state(st, gr%mesh, idim, ist, ik, psi((idim-1)*np+1:idim*np))

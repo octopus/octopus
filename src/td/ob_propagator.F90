@@ -367,9 +367,9 @@ contains
         
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
-        call zqmr_sym(np*st%d%dim, psi2, rhs, h_eff_backward, zmf_dotu_aux, &
-                      zmf_nrm2_aux, ob_propagator_qmr_prec, qmr_iter, &
-                      residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
+        call zqmr_sym_gen_dotu(np*st%d%dim, psi2, rhs, h_eff_backward, zmf_dotu_aux, &
+          zmf_nrm2_aux, ob_propagator_qmr_prec, qmr_iter, &
+          residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
 
         do idim = 1, st%d%dim
           psi(1:np, idim) = psi2((idim - 1)*np + 1:idim*np)
@@ -501,9 +501,9 @@ contains
         ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
-        call zqmr_sym(np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, zmf_dotu_aux, &
-                      zmf_nrm2_aux, ob_propagator_qmr_prec, qmr_iter, &
-                      residue=dres, threshold=qmr_tol, showprogress=in_debug_mode)
+        call zqmr_sym_gen_dotu(np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, zmf_dotu_aux, &
+          zmf_nrm2_aux, ob_propagator_qmr_prec, qmr_iter, &
+          residue=dres, threshold=qmr_tol, showprogress=in_debug_mode)
 
         call states_set_state(st, gr%mesh, ist, ik, psi)
 
