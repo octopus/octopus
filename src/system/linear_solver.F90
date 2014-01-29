@@ -65,8 +65,6 @@ module linear_solver_m
   type linear_solver_t
      integer                :: solver         
      type(preconditioner_t) :: pre
-     FLOAT                  :: abs_psi
-     integer                :: iter
      integer                :: max_iter
   end type linear_solver_t
 

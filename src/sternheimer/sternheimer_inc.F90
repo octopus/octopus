@@ -37,7 +37,7 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_exact_freq
 
   FLOAT :: tol
-  FLOAT, allocatable :: dpsimod(:, :), abs_psi(:, :)
+  FLOAT, allocatable :: dpsimod(:, :), residue(:, :)
   integer, allocatable :: conv_iters(:, :)
   integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
@@ -66,7 +66,7 @@ subroutine X(sternheimer_solve)(                           &
   call mesh_init_mesh_aux(sys%gr%mesh)
 
   SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
-  SAFE_ALLOCATE(abs_psi(1:nsigma, st%st_start:st%st_end))
+  SAFE_ALLOCATE(residue(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(tmp(1:mesh%np))
   SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
@@ -202,13 +202,11 @@ subroutine X(sternheimer_solve)(                           &
             ii = ii + 1
             call X(linear_solver_solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
-              rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
+              rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, &
+              residue(sigma, ist), conv_iters(sigma, ist), occ_response = this%occ_response)
 
-            conv_iters(sigma, ist) = this%solver%iter
-            abs_psi(sigma, ist) = this%solver%abs_psi
-
-            states_conv = states_conv .and. (this%solver%abs_psi < tol)
-            total_iter = total_iter + this%solver%iter
+            states_conv = states_conv .and. (residue(sigma, ist) < tol)
+            total_iter = total_iter + conv_iters(sigma, ist)
           end do
 
           !re-orthogonalize the resulting vector
@@ -237,7 +235,7 @@ subroutine X(sternheimer_solve)(                           &
         do ist = sst, est
           do sigma = 1, nsigma
             write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
-              ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), abs_psi(sigma, ist)
+              ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), residue(sigma, ist)
             call messages_info(1)
           end do !sigma
         end do !ist
@@ -362,7 +360,7 @@ subroutine X(sternheimer_solve)(                           &
 
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(dpsimod)
-  SAFE_DEALLOCATE_A(abs_psi)
+  SAFE_DEALLOCATE_A(residue)
   SAFE_DEALLOCATE_A(conv_iters)
   SAFE_DEALLOCATE_A(rhs)
   SAFE_DEALLOCATE_A(hvar)
