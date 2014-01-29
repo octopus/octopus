@@ -41,7 +41,7 @@ subroutine X(sternheimer_solve)(                           &
   integer, allocatable :: conv_iters(:, :)
   integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: rhs(:, :, :, :), hvar(:, :, :), psi(:, :)
+  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
@@ -69,7 +69,7 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_ALLOCATE(abs_psi(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(tmp(1:mesh%np))
-  SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:nsigma, 1:st%d%block_size))
+  SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
   SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
   SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
@@ -141,30 +141,37 @@ subroutine X(sternheimer_solve)(                           &
       do sst = st%st_start, st%st_end, st%d%block_size
         est = min(sst + st%d%block_size - 1, st%st_end)
 
-        ii = 0
-        do ist = sst, est
-          ii = ii + 1
-          
-          call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        do sigma = 1, nsigma
 
-          do sigma = 1, nsigma
+          if(sigma == 1) then 
+            omega_sigma = omega
+          else 
+            omega_sigma = -R_CONJ(omega)
+          end if
+
+          ii = 0
+          do ist = sst, est
+            ii = ii + 1
+
+            call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+
             !calculate the RHS of the Sternheimer eq
             if(sternheimer_have_rhs(this)) then
               ASSERT(associated(this%X(rhs)))
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma, ii) = this%X(rhs)(ip, idim, ist, ik)
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, ii) = this%X(rhs)(ip, idim, ist, ik)
             else
-              rhs(1:mesh%np, 1:st%d%dim, sigma, ii) = R_TOTYPE(M_ZERO)
-              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma, ii))
+              rhs(1:mesh%np, 1:st%d%dim, ii) = R_TOTYPE(M_ZERO)
+              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, ii))
             end if
 
             do idim = 1, st%d%dim
-              rhs(1:mesh%np, idim, sigma, ii) = -rhs(1:mesh%np, idim, sigma, ii) &
+              rhs(1:mesh%np, idim, ii) = -rhs(1:mesh%np, idim, ii) &
                 - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
             end do
 
             if(sternheimer_have_inhomog(this)) then
               forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                rhs(ip, idim, sigma, ii) = rhs(ip, idim, sigma, ii) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+                rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik, sigma)
               end forall
             endif
 
@@ -175,27 +182,22 @@ subroutine X(sternheimer_solve)(                           &
             ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
             ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
 
-            if(sigma == 1) then 
-              omega_sigma = omega
-            else 
-              omega_sigma = -R_CONJ(omega)
-            end if
 
             if (conv_last .and. this%last_occ_response) then
               ! project out only the component of the unperturbed wavefunction
-              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma, ii))
+              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, ii))
               do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma, ii))
+                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, ii))
               end do
             else
               ! project RHS onto the unoccupied states
-              call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma, ii), ist, ik, omega_sigma)
+              call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma)
             endif
 
             !solve the Sternheimer equation
             call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
-              rhs(:, :, sigma, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
+              rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
             if (this%preorthogonalization) then 
               !re-orthogonalize the resulting vector
@@ -218,8 +220,8 @@ subroutine X(sternheimer_solve)(                           &
             states_conv = states_conv .and. (this%solver%abs_psi < tol)
             total_iter = total_iter + this%solver%iter
 
-          end do !sigma
-        end do !ist
+          end do !ist
+        end do !sigma
 
         do ist = sst, est
           do sigma = 1, nsigma
