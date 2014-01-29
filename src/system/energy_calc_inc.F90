@@ -52,6 +52,9 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   !      \ Psi_R | 0    H_RC H_RR | Psi_R /
   ! But I am not sure how to calculate this right now.
 
+  st%eigenval = M_ZERO
+  if(cmplxscl) st%zeigenval%Im = M_ZERO
+
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
   call X(calculate_expectation_values)(hm, der, st, eigen, time = time)
 
@@ -61,6 +64,9 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   if(cmplxscl) st%zeigenval%Im(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     aimag(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 #endif
+
+  call comm_allreduce(st%st_kpt_mpi_grp%comm, st%eigenval)
+  if(cmplxscl) call comm_allreduce(st%st_kpt_mpi_grp%comm, st%zeigenval%Im)
 
   SAFE_DEALLOCATE_A(eigen)
 
