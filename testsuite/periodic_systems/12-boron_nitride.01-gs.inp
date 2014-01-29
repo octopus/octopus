@@ -7,6 +7,8 @@ Units = ev_angstrom
 
 MixField = potential
 ExtraStates = 2
+ConvRelDens = 1e-6
+ConvEigenError = yes
 
 XCfunctional = lda_x + lda_c_pw
 
@@ -19,7 +21,6 @@ lz = 4.0
 %Lsize
   lx/2 | ly/2 | lz
 % 
-#Spacing = lx/2/14
 spacing = lx/12
 
 KPointsUseSymmetries = yes
