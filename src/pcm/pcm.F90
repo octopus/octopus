@@ -13,9 +13,9 @@ module pcm_m
 
   private
 
-  public :: cts_act,  &
-            nts_act,  &
-            pcm_init, &
+  public :: cts_act,    &
+            nts_act,    &
+            pcm_init,   &
             pcm_mat
 
  ! The cavity hosting the solute molecule is built from a set of 
@@ -28,14 +28,14 @@ module pcm_m
   end type
 
  ! The resulting cavity is discretized by a set of tesserae.  
-  type tess_pcm_t
+  type, public :: tess_pcm_t
     FLOAT :: x    !
     FLOAT :: y    ! -> representative point of the tessera 
     FLOAT :: z    !
     FLOAT :: area ! -> area of the tessera
     FLOAT :: n(3) ! -> unitary outgoing vector normal to the tessera surface 
     FLOAT :: rsfe ! -> radius of the sphere to which the tessera belongs
-  end type
+  end type tess_pcm_t
 
   integer :: nts_act                 ! total number of tesserae 
   FLOAT, allocatable :: pcm_mat(:,:) ! PCM response matrix 
