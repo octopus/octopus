@@ -36,10 +36,12 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
 
-  FLOAT :: dpsimod, tol
-  integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est
+  FLOAT :: tol
+  FLOAT, allocatable :: dpsimod(:, :), abs_psi(:, :)
+  integer, allocatable :: conv_iters(:, :)
+  integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
+  R_TYPE, allocatable :: rhs(:, :, :, :), hvar(:, :, :), psi(:, :)
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
@@ -63,8 +65,11 @@ subroutine X(sternheimer_solve)(                           &
 
   call mesh_init_mesh_aux(sys%gr%mesh)
 
+  SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
+  SAFE_ALLOCATE(abs_psi(1:nsigma, st%st_start:st%st_end))
+  SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(tmp(1:mesh%np))
-  SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:nsigma))
+  SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:nsigma, 1:st%d%block_size))
   SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
   SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
@@ -136,28 +141,30 @@ subroutine X(sternheimer_solve)(                           &
       do sst = st%st_start, st%st_end, st%d%block_size
         est = min(sst + st%d%block_size - 1, st%st_end)
 
+        ii = 0
         do ist = sst, est
-
+          ii = ii + 1
+          
           call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
           do sigma = 1, nsigma
             !calculate the RHS of the Sternheimer eq
             if(sternheimer_have_rhs(this)) then
               ASSERT(associated(this%X(rhs)))
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma, ii) = this%X(rhs)(ip, idim, ist, ik)
             else
-              rhs(1:mesh%np, 1:st%d%dim, sigma) = R_TOTYPE(M_ZERO)
-              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma))
+              rhs(1:mesh%np, 1:st%d%dim, sigma, ii) = R_TOTYPE(M_ZERO)
+              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma, ii))
             end if
 
             do idim = 1, st%d%dim
-              rhs(1:mesh%np, idim, sigma) = -rhs(1:mesh%np, idim, sigma) &
+              rhs(1:mesh%np, idim, sigma, ii) = -rhs(1:mesh%np, idim, sigma, ii) &
                 - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
             end do
 
             if(sternheimer_have_inhomog(this)) then
               forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                rhs(ip, idim, sigma) = rhs(ip, idim, sigma) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+                rhs(ip, idim, sigma, ii) = rhs(ip, idim, sigma, ii) + this%X(inhomog)(ip, idim, ist, ik, sigma)
               end forall
             endif
 
@@ -176,19 +183,19 @@ subroutine X(sternheimer_solve)(                           &
 
             if (conv_last .and. this%last_occ_response) then
               ! project out only the component of the unperturbed wavefunction
-              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma))
+              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma, ii))
               do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma))
+                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma, ii))
               end do
             else
               ! project RHS onto the unoccupied states
-              call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega_sigma)
+              call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma, ii), ist, ik, omega_sigma)
             endif
 
             !solve the Sternheimer equation
             call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
-              rhs(:, :, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
+              rhs(:, :, sigma, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
             if (this%preorthogonalization) then 
               !re-orthogonalize the resulting vector
@@ -202,20 +209,26 @@ subroutine X(sternheimer_solve)(                           &
               endif
             end if
 
-            ! print the norm of the variations, and the number of
+            ! store the norm of the variations, the number of
             ! iterations and residual of the linear solver
-            dpsimod = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
-
-            write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
-              ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
-            call messages_info(1)
+            dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+            conv_iters(sigma, ist) = this%solver%iter
+            abs_psi(sigma, ist) = this%solver%abs_psi
 
             states_conv = states_conv .and. (this%solver%abs_psi < tol)
             total_iter = total_iter + this%solver%iter
 
           end do !sigma
-
         end do !ist
+
+        do ist = sst, est
+          do sigma = 1, nsigma
+            write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
+              ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), abs_psi(sigma, ist)
+            call messages_info(1)
+          end do !sigma
+        end do !ist
+
       end do !sst
     end do !ik
 
@@ -335,6 +348,9 @@ subroutine X(sternheimer_solve)(                           &
   end do iter_loop
 
   SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(dpsimod)
+  SAFE_DEALLOCATE_A(abs_psi)
+  SAFE_DEALLOCATE_A(conv_iters)
   SAFE_DEALLOCATE_A(rhs)
   SAFE_DEALLOCATE_A(hvar)
   SAFE_DEALLOCATE_A(dl_rhoin)
