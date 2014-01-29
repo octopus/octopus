@@ -147,7 +147,7 @@ if($opt_D) {
 
 # Find out which executables are available.
 opendir(EXEC_DIRECTORY, $exec_directory) || 
- die "Could not open the directory $exec_directory to look for executables";
+ die "ERROR: Could not open the directory $exec_directory to look for executables";
 @octopus_execs = grep { /^oct/ } readdir(EXEC_DIRECTORY);
 closedir(EXEC_DIRECTORY);
 
@@ -206,14 +206,14 @@ foreach my $octopus_exe (@executables){
 
   # create script for cleanups in the current workdir
   $mscript = "$workdir/clean.sh";
-  open(SCRIPT, ">$mscript") or die "could not create script file\n";
+  open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
   print SCRIPT "#\!/usr/bin/env bash\n\n";
   print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
   close(SCRIPT);
   chmod 0755, $mscript;
 
   # testsuite
-  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file '$opt_f'.\n";
+  open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
 
   $command = $octopus_exe;
 
@@ -249,7 +249,7 @@ foreach my $octopus_exe (@executables){
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  exit 255;
       } elsif ( $enabled ne "Yes") {
-	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+	  die "ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
       }
     } elsif ( $_ =~ /^Programs/) {
@@ -260,7 +260,7 @@ foreach my $octopus_exe (@executables){
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
-	die "Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
+	die "ERROR: Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
       }
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
@@ -296,7 +296,7 @@ foreach my $octopus_exe (@executables){
 	  $mode = (stat "$workdir/inp")[2];
 	  chmod $mode|S_IWUSR, "$workdir/inp";
 	} else {
-	  die "could not find input file: $input_file\n";
+	  die "ERROR: could not find input file: $input_file\n";
 	}
 
 	$return_value = 0;
@@ -377,7 +377,7 @@ foreach my $octopus_exe (@executables){
 
 	# file for shell script with matches
 	$mscript = "$workdir/$input_base/matches.sh";
-	open(SCRIPT, ">$mscript") or die "could not create script file\n";
+	open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
 	# write skeleton for script
 	print SCRIPT "#\!/usr/bin/env bash\n\n";
 	close(SCRIPT);
@@ -401,7 +401,7 @@ foreach my $octopus_exe (@executables){
 	      }
 	  }
       } else {
-	  die "Unknown command '$_'\n";
+	  die "ERROR: Unknown command '$_'\n";
       }
     }
 
@@ -420,7 +420,7 @@ exit $failures;
 sub find_executables(){
   my $name;
 
-  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file '$opt_f'.\n";
+  open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
   while ($_ = <TESTSUITE>) {
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
@@ -469,7 +469,7 @@ sub find_executables(){
 }
 
 sub run_match_new(){
-  die "Have to run before matching" if !$test{"run"} && !opt_m;
+  die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
 
   # parse match line
   my $line, $match, $name, $pre_command, $ref_value;
