@@ -21,8 +21,8 @@
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
-     this, sys, hm, lr, nsigma, omega, perturbation,       &
-     restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
+  this, sys, hm, lr, nsigma, omega, perturbation,       &
+  restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
@@ -37,7 +37,7 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_exact_freq
 
   FLOAT :: dpsimod, tol
-  integer :: iter, sigma, sigma_alt, ik, ist, err
+  integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
   R_TYPE, allocatable :: tmp(:)
@@ -58,11 +58,11 @@ subroutine X(sternheimer_solve)(                           &
 
   mesh => sys%gr%mesh
   st => sys%st
-  
+
   call mix_clear(this%mixer, func_type = R_TYPE_VAL)
 
   call mesh_init_mesh_aux(sys%gr%mesh)
-  
+
   SAFE_ALLOCATE(tmp(1:mesh%np))
   SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:nsigma))
   SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
@@ -78,7 +78,7 @@ subroutine X(sternheimer_solve)(                           &
   have_restart_rho_ = .false.
   if(present(have_restart_rho)) have_restart_rho_ = have_restart_rho
   if(.not. have_restart_rho_) call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
-  
+
   message(1)="--------------------------------------------"
   call messages_info(1)
 
@@ -113,14 +113,14 @@ subroutine X(sternheimer_solve)(                           &
     endif
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", units_from_atomic(units_out%energy,  R_REAL(omega)), &
-         " Eta : ",     units_from_atomic(units_out%energy, R_AIMAG(omega))
+      "Frequency: ", units_from_atomic(units_out%energy,  R_REAL(omega)), &
+      " Eta : ",     units_from_atomic(units_out%energy, R_AIMAG(omega))
     write(message(2), '(a)') &
-         '   ik  ist                norm   iters            residual'
+      '   ik  ist                norm   iters            residual'
     call messages_info(2)
 
     do ispin = 1, st%d%nspin
-       call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
+      call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
     end do
 
     call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
@@ -133,93 +133,98 @@ subroutine X(sternheimer_solve)(                           &
 
       states_conv = .true.
 
-      do ist = st%st_start, st%st_end
+      do sst = st%st_start, st%st_end, st%d%block_size
+        est = min(sst + st%d%block_size - 1, st%st_end)
 
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        do ist = sst, est
 
-        do sigma = 1, nsigma
-          !calculate the RHS of the Sternheimer eq
-          if(sternheimer_have_rhs(this)) then
-            ASSERT(associated(this%X(rhs)))
-            forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
-          else
-            rhs(1:mesh%np, 1:st%d%dim, sigma) = R_TOTYPE(M_ZERO)
-            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma))
-          end if
+          call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-          do idim = 1, st%d%dim
-            rhs(1:mesh%np, idim, sigma) = -rhs(1:mesh%np, idim, sigma) &
-              - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
-          end do
+          do sigma = 1, nsigma
+            !calculate the RHS of the Sternheimer eq
+            if(sternheimer_have_rhs(this)) then
+              ASSERT(associated(this%X(rhs)))
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
+            else
+              rhs(1:mesh%np, 1:st%d%dim, sigma) = R_TOTYPE(M_ZERO)
+              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma))
+            end if
 
-          if(sternheimer_have_inhomog(this)) then
-            forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-              rhs(ip, idim, sigma) = rhs(ip, idim, sigma) + this%X(inhomog)(ip, idim, ist, ik, sigma)
-            end forall
-          endif
-
-          ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
-          ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
-          ! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
-          ! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
-          ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
-          ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
-
-          if(sigma == 1) then 
-            omega_sigma = omega
-          else 
-            omega_sigma = -R_CONJ(omega)
-          end if
-
-          if (conv_last .and. this%last_occ_response) then
-            ! project out only the component of the unperturbed wavefunction
-            proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma))
             do idim = 1, st%d%dim
-              call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma))
+              rhs(1:mesh%np, idim, sigma) = -rhs(1:mesh%np, idim, sigma) &
+                - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
             end do
-          else
-            ! project RHS onto the unoccupied states
-            call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega_sigma)
-          endif
 
-          !solve the Sternheimer equation
-          call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
-               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
-               rhs(:, :, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
+            if(sternheimer_have_inhomog(this)) then
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
+                rhs(ip, idim, sigma) = rhs(ip, idim, sigma) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+              end forall
+            endif
 
-          if (this%preorthogonalization) then 
-            !re-orthogonalize the resulting vector
-            if (this%occ_response) then
-              proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+            ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
+            ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
+            ! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
+            ! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
+            ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
+            ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
+
+            if(sigma == 1) then 
+              omega_sigma = omega
+            else 
+              omega_sigma = -R_CONJ(omega)
+            end if
+
+            if (conv_last .and. this%last_occ_response) then
+              ! project out only the component of the unperturbed wavefunction
+              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma))
               do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma))
               end do
             else
-              call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
+              ! project RHS onto the unoccupied states
+              call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega_sigma)
             endif
-          end if
 
-          ! print the norm of the variations, and the number of
-          ! iterations and residual of the linear solver
-          dpsimod = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+            !solve the Sternheimer equation
+            call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
+              lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
+              rhs(:, :, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
-          write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
-            ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
-          call messages_info(1)
+            if (this%preorthogonalization) then 
+              !re-orthogonalize the resulting vector
+              if (this%occ_response) then
+                proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+                do idim = 1, st%d%dim
+                  call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+                end do
+              else
+                call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
+              endif
+            end if
 
-          states_conv = states_conv .and. (this%solver%abs_psi < tol)
-          total_iter = total_iter + this%solver%iter
-          
-        end do !sigma
-      end do !ist
+            ! print the norm of the variations, and the number of
+            ! iterations and residual of the linear solver
+            dpsimod = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+
+            write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
+              ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
+            call messages_info(1)
+
+            states_conv = states_conv .and. (this%solver%abs_psi < tol)
+            total_iter = total_iter + this%solver%iter
+
+          end do !sigma
+
+        end do !ist
+      end do !sst
     end do !ik
-    
+
     SAFE_DEALLOCATE_A(psi)
-    
+
     call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
-    
+
     dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
-    
+
     if(this%add_fxc .or. this%add_hartree) then
       !write restart info
       !save all frequencies as positive
@@ -239,21 +244,21 @@ subroutine X(sternheimer_solve)(                           &
       write(dirname,'(2a)') trim(restart_dir), trim(wfs_tag_sigma(wfs_tag, sigma_alt))
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter = iter, lr = lr(sigma))
     end do
-    
+
     if (.not. states_conv) then
       message(1) = "Linear solver failed to converge all states."
       call messages_warning(1)
     endif
 
     if (.not.(this%add_fxc .or. this%add_hartree)) then
-    ! no need to deal with mixing, SCF iterations, etc.
-    ! dealing with restart density above not necessary, but easier to just leave it
-    ! convergence criterion is now about individual states, rather than SCF residual
+      ! no need to deal with mixing, SCF iterations, etc.
+      ! dealing with restart density above not necessary, but easier to just leave it
+      ! convergence criterion is now about individual states, rather than SCF residual
       this%ok = states_conv
 
       message(1)="--------------------------------------------"
       write(message(2), '(a, i8)') &
-           'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
+        'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call messages_info(2)
       exit
     endif
@@ -284,9 +289,9 @@ subroutine X(sternheimer_solve)(                           &
 
     message(2)="--------------------------------------------"
     call messages_info(2)
-      
+
     if( (abs_dens <= this%scf_tol%conv_abs_dens .or. this%scf_tol%conv_abs_dens <= M_ZERO) .and. &
-        (rel_dens <= this%scf_tol%conv_rel_dens .or. this%scf_tol%conv_rel_dens <= M_ZERO)) then 
+      (rel_dens <= this%scf_tol%conv_rel_dens .or. this%scf_tol%conv_rel_dens <= M_ZERO)) then 
       if(conv_last .and. states_conv) then 
         ! if not all states are converged, keep working
         conv = .true.
@@ -299,9 +304,9 @@ subroutine X(sternheimer_solve)(                           &
       this%ok = .true.
 
       write(message(1), '(a, i4, a)') &
-           'Info: SCF for response converged in ', iter, ' iterations.'
+        'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
-           '      Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
+        '      Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call messages_info(2)
       exit
     else
@@ -315,7 +320,7 @@ subroutine X(sternheimer_solve)(                           &
       do ispin = 1, st%d%nspin
         call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(1)%X(dl_rho)(:, ispin))
       end do
-      
+
       if(nsigma == 2) then
         ! we do it in this way to avoid a bug in ifort 11.1
         dl_rhonew(:, :, 1) = R_CONJ(dl_rhonew(:, :, 1))
@@ -323,10 +328,10 @@ subroutine X(sternheimer_solve)(                           &
           call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(2)%X(dl_rho)(:, ispin))
         end do
       end if
-      
+
       tol = scf_tol_step(this%scf_tol, iter, TOFLOAT(abs_dens))
     end if
-    
+
   end do iter_loop
 
   SAFE_DEALLOCATE_A(tmp)
