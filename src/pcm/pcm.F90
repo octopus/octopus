@@ -18,35 +18,35 @@ module pcm_m
             pcm_init,   &
             pcm_mat
 
- ! The cavity hosting the solute molecule is built from a set of 
- ! interlocking spheres with optimized radii centered at the nuclear positions.  
+ !> The cavity hosting the solute molecule is built from a set of 
+ !! interlocking spheres with optimized radii centered at the nuclear positions.  
   type sphere_t  
     FLOAT :: x ! 
-    FLOAT :: y ! -> center of the sphere  
+    FLOAT :: y !< center of the sphere  
     FLOAT :: z !
-    FLOAT :: r ! -> radius of the sphere (different for each species)
+    FLOAT :: r !< radius of the sphere (different for each species)
   end type
 
- ! The resulting cavity is discretized by a set of tesserae.  
+ !> The resulting cavity is discretized by a set of tesserae.  
   type, public :: tess_pcm_t
     FLOAT :: x    !
-    FLOAT :: y    ! -> representative point of the tessera 
+    FLOAT :: y    !< representative point of the tessera 
     FLOAT :: z    !
-    FLOAT :: area ! -> area of the tessera
-    FLOAT :: n(3) ! -> unitary outgoing vector normal to the tessera surface 
-    FLOAT :: rsfe ! -> radius of the sphere to which the tessera belongs
+    FLOAT :: area !< area of the tessera
+    FLOAT :: n(3) !< unitary outgoing vector normal to the tessera surface 
+    FLOAT :: rsfe !< radius of the sphere to which the tessera belongs
   end type tess_pcm_t
 
-  integer :: nts_act                 ! total number of tesserae 
-  FLOAT, allocatable :: pcm_mat(:,:) ! PCM response matrix 
+  integer :: nts_act                 !< total number of tesserae 
+  FLOAT, allocatable :: pcm_mat(:,:) !< PCM response matrix 
 
-  type(sphere_t), allocatable   :: sfe_act(:) ! -> set of spheres used to build the molecular cavity    
-  type(tess_pcm_t), allocatable :: cts_act(:) ! -> tesselation of the Van der Waals surface
+  type(sphere_t), allocatable   :: sfe_act(:) !< set of spheres used to build the molecular cavity    
+  type(tess_pcm_t), allocatable :: cts_act(:) !< tesselation of the Van der Waals surface
 
-  FLOAT, allocatable :: s_mat_act(:,:) ! -> S_I matrix 
-  FLOAT, allocatable :: d_mat_act(:,:) ! -> D_I matrix
-  FLOAT, allocatable :: Sigma(:,:)     ! -> S_E matrix
-  FLOAT, allocatable :: Delta(:,:)     ! -> D_E matrix in JCP 139, 024105 (2013).
+  FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
+  FLOAT, allocatable :: d_mat_act(:,:) !< D_I matrix
+  FLOAT, allocatable :: Sigma(:,:)     !< S_E matrix
+  FLOAT, allocatable :: Delta(:,:)     !< D_E matrix in JCP 139, 024105 (2013).
 
   integer :: pcminfo_unit
 
@@ -56,9 +56,10 @@ module pcm_m
 contains
 
   !--------------------------------------------------------------------------------------------
-  ! Initializes the PCM calculation: generate the molecular cavity and the PCM response matrix
+  !> Initializes the PCM calculation: generate the molecular cavity and the PCM response matrix
   subroutine pcm_init(geo)
     type(geometry_t), intent(in) :: geo
+
     type(tess_pcm_t) :: dum2(1)
     integer :: ia
     integer :: itess,jtess
@@ -90,7 +91,7 @@ contains
     !%Variable Solvation
     !%Type logical
     !%Default no
-    !%Section PCM
+    !%Section Hamiltonian::PCM
     !%Description
     !% If true, the calculation is performed accounting for solvation effects
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
@@ -106,8 +107,8 @@ contains
 
     !%Variable SolventDielectricConstant
     !%Type float
-    !%Default 1.0 gas phase
-    !%Section PCM
+    !%Default 1.0 (gas phase)
+    !%Section Hamiltonian::PCM
     !%Description
     !% Static dielectric constant of the solvent (\epsilon_0).
     !%End
@@ -115,7 +116,7 @@ contains
 
     !%Variable PCMRadii
     !%Type float
-    !%Section PCM
+    !%Section Hamiltonian::PCM
     !%Description
     !%
     !%
@@ -292,13 +293,13 @@ contains
 !==============================================================
 
   subroutine pcm_matrix(eps)
+    FLOAT :: eps ! FIXME: specify an intent here.
 
     integer :: i
     integer :: info
     integer, allocatable :: iwork(:)
 
     FLOAT, allocatable :: mat_tmp(:,:)
-    FLOAT :: eps
 
     PUSH_SUB(pcm_matrix)
 
@@ -436,6 +437,8 @@ contains
 !==============================================================
 
   FLOAT function s_mat_elem_I( tessi, tessj )
+    type(tess_pcm_t), intent(in) :: tessi
+    type(tess_pcm_t), intent(in) :: tessj
 
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.1)
@@ -444,9 +447,6 @@ contains
     FLOAT :: dist
     FLOAT :: s_diag
     FLOAT :: s_off_diag
-
-    type(tess_pcm_t), intent(in) :: tessi
-    type(tess_pcm_t), intent(in) :: tessj
 
 !   GREEN FUNCTION IN VACUO G_I(r,r^\prime) = 1/|r-r^\prime|
 
@@ -477,12 +477,12 @@ contains
 !==============================================================
 
   FLOAT function d_mat_elem_I( tessi, tessj )
+    type(tess_pcm_t), intent(in) :: tessi
+    type(tess_pcm_t), intent(in) :: tessj
+
 
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
-
-    type(tess_pcm_t), intent(in) :: tessi
-    type(tess_pcm_t), intent(in) :: tessj
 
     FLOAT :: diff(3)
     FLOAT :: dist
@@ -523,15 +523,12 @@ contains
 !==============================================================
 
   subroutine pedra(i_count, n_tes, nesf, sfe, nts, cts)
-
     integer, intent(in) :: i_count, n_tes, nesf
-
     type(sphere_t), intent(inout) :: sfe(:)
+    integer, intent(out) :: nts
     type(tess_pcm_t), intent(out) :: cts(:)
 
 !    TYPE(sphere_t), ALLOCATABLE   :: sfe(:)
-
-    integer, intent(out) :: nts
 
     FLOAT :: thev(24),fiv(24),fir,cv(122,3),th,fi,cth,sth
     FLOAT :: XCTST(240),YCTST(240),ZCTST(240),AST(240),nctst(3,240)
@@ -658,6 +655,10 @@ contains
       STOT=M_ZERO
 
       jvt1=reshape(idum,(/6,60/))
+
+! FIXME: much of the code below appears to come from some other (old) source.
+! Where does it come from? Is it compatible with our GPL license?
+
 !
 !*****COORDINATES OF VERTICES OF TESSERAE IN A SPHERE WITH UNIT RADIUS.
 !
@@ -902,6 +903,7 @@ contains
 !
       type(sphere_t), intent(in) :: sfe(:)
 
+      ! FIXME: please put intents here.
       FLOAT  :: PTS(3,10),CCC(3,10),PP(3),PP1(3),area
 
       integer :: INTSPH(10),ns,nesf,nv,nsfe1,n,i,j,icop
@@ -916,6 +918,7 @@ contains
       FLOAT  :: delr,delr2,rc,rc2,dnorm,dist,de2
       FLOAT, parameter :: tol= -1.d-10
 !
+! FIXME: please translate comments to English!
 !
 !     Coord. del centro che sottende l`arco tra i vertici
 !     n e n+1 (per i primi tre vertici e sicuramente il centro della
