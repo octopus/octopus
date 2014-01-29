@@ -57,42 +57,42 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
   select case(this%solver)
 
   case(LS_CG)
-    call X(ls_solver_cg)       (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+    call X(linear_solver_cg)       (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
   case(LS_BICGSTAB)
-    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
+    call X(linear_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
 
   case(LS_MULTIGRID)
-    call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+    call X(linear_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
   case(LS_QMR_SYMMETRIC)   
     ! complex symmetric: for Sternheimer, only if wfns are real
     call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-      X(ls_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
+      X(linear_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_SYMMETRIZED)
     ! symmetrized equation
     SAFE_ALLOCATE(z(1:gr%mesh%np, 1:1))
-    call X(ls_solver_operator_t_na)(y(:, 1), z(:, 1))
+    call X(linear_solver_operator_t_na)(y(:, 1), z(:, 1))
     call X(qmr_sym)(gr%mesh%np, x(:, 1), z(:, 1), &
-      X(ls_solver_operator_sym_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
+      X(linear_solver_operator_sym_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_DOTP)
     ! using conjugated dot product
     call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-      X(ls_solver_operator_na), X(mf_dotp_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
+      X(linear_solver_operator_na), X(mf_dotp_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_GENERAL)
     ! general algorithm
-    call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_solver_operator_t_na), &
-      X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), X(ls_preconditioner), &
+    call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(linear_solver_operator_na), X(linear_solver_operator_t_na), &
+      X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(LS_SOS)
-    call X(ls_solver_sos)(this, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
+    call X(linear_solver_sos)(this, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
@@ -136,7 +136,7 @@ end subroutine X(linear_solver_solve_HXeY_batch)
 
 ! ---------------------------------------------------------
 !> Conjugate gradients
-subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
@@ -155,14 +155,14 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, 
   integer :: iter, idim
   logical :: conv_last, conv
 
-  PUSH_SUB(X(ls_solver_cg))
+  PUSH_SUB(X(linear_solver_cg))
 
   SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(Hp(1:gr%mesh%np, 1:st%d%dim))
 
   ! Initial residue
-  call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, x, Hp)
+  call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, Hp)
   r(1:gr%mesh%np, 1:st%d%dim) = y(1:gr%mesh%np, 1:st%d%dim) - Hp(1:gr%mesh%np, 1:st%d%dim)
   
   ! Initial search direction
@@ -178,7 +178,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, 
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, p, Hp)
+    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, p, Hp)
 
     alpha = gamma/X(mf_dotp) (gr%mesh, st%d%dim, p, Hp)
 
@@ -208,13 +208,13 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, 
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(Hp)
 
-  POP_SUB(X(ls_solver_cg))
-end subroutine X(ls_solver_cg)
+  POP_SUB(X(linear_solver_cg))
+end subroutine X(linear_solver_cg)
 
 ! ---------------------------------------------------------
 !> BICONJUGATE GRADIENTS STABILIZED
 !! see http://math.nist.gov/iml++/bicgstab.h.txt
-subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
@@ -236,7 +236,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
   integer :: iter, idim, ip
   FLOAT :: gamma
   
-  PUSH_SUB(X(ls_solver_bicgstab))
+  PUSH_SUB(X(linear_solver_bicgstab))
 
   SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
@@ -250,7 +250,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
   SAFE_ALLOCATE(shat(1:gr%mesh%np_part, 1:st%d%dim))
 
   ! Initial residue
-  call X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, Hp)
+  call X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, Hp)
 
   forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
 
@@ -289,7 +289,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
 
     ! preconditioning 
     call X(preconditioner_apply)(ls%pre, gr, hm, ik, p, phat, shift)
-    call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, phat, Hp)
+    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, phat, Hp)
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
@@ -306,7 +306,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
     end if
 
     call X(preconditioner_apply)(ls%pre, gr, hm, ik, s, shat, shift)
-    call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, shat, Hs)
+    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, shat, Hs)
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
@@ -345,12 +345,12 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
   SAFE_DEALLOCATE_P(phat)
   SAFE_DEALLOCATE_P(shat)
 
-  POP_SUB(X(ls_solver_bicgstab))
-end subroutine X(ls_solver_bicgstab)
+  POP_SUB(X(linear_solver_bicgstab))
+end subroutine X(linear_solver_bicgstab)
 
 
 ! ---------------------------------------------------------
-subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
@@ -367,7 +367,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, re
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
 
-  PUSH_SUB(X(ls_solver_multigrid))
+  PUSH_SUB(X(linear_solver_multigrid))
 
   SAFE_ALLOCATE(diag(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
@@ -383,7 +383,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, re
     call smoothing(3)
 
     !calculate the residue
-    call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
+    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
     res(1:gr%mesh%np, 1:st%d%dim) = hx(1:gr%mesh%np, 1:st%d%dim) - y(1:gr%mesh%np, 1:st%d%dim)
     residue = X(mf_nrm2)(gr%mesh, st%d%dim, res)
 
@@ -403,7 +403,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, re
     call messages_warning(1)
   endif
 
-  POP_SUB(X(ls_solver_multigrid))
+  POP_SUB(X(linear_solver_multigrid))
 
 contains 
 
@@ -413,11 +413,11 @@ contains
     integer :: ii, ip, idim
     R_TYPE  :: rr
 
-    PUSH_SUB(X(ls_solver_multigrid).smoothing)
+    PUSH_SUB(X(linear_solver_multigrid).smoothing)
 
     do ii = 1, steps
 
-      call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
+      call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
@@ -430,15 +430,15 @@ contains
 
     call X(lr_orth_vector)(gr%mesh, st, x, ist, ik, shift + st%eigenval(ist, ik))
 
-    POP_SUB(X(ls_solver_multigrid).smoothing)
+    POP_SUB(X(linear_solver_multigrid).smoothing)
   end subroutine smoothing
 
-end subroutine X(ls_solver_multigrid)
+end subroutine X(linear_solver_multigrid)
 
 
 ! ---------------------------------------------------------
 !> This routine applies the operator hx = [H (+ Q) + shift] x
-subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
+subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
@@ -451,7 +451,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   integer :: idim, jst
   FLOAT   :: alpha_j, proj
 
-  PUSH_SUB(X(ls_solver_operator))
+  PUSH_SUB(X(linear_solver_operator))
 
   call X(hamiltonian_apply)(hm, gr%der, x, Hx, ist, ik)
 
@@ -461,7 +461,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   end do
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
-    POP_SUB(X(ls_solver_operator))
+    POP_SUB(X(linear_solver_operator))
     return
   end if
 
@@ -478,14 +478,14 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
 
   end do
 
-  POP_SUB(X(ls_solver_operator))
+  POP_SUB(X(linear_solver_operator))
 
-end subroutine X(ls_solver_operator)
+end subroutine X(linear_solver_operator)
 
 
 ! ---------------------------------------------------------
-!> applies ls_solver_operator with other arguments implicit as global variables
-subroutine X(ls_solver_operator_na) (x, hx)
+!> applies linear_solver_operator with other arguments implicit as global variables
+subroutine X(linear_solver_operator_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
@@ -496,19 +496,19 @@ subroutine X(ls_solver_operator_na) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
+  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
 
-end subroutine X(ls_solver_operator_na)
+end subroutine X(linear_solver_operator_na)
 
 
 ! ---------------------------------------------------------
-!> applies transpose of ls_solver_operator with other arguments implicit as global variables
+!> applies transpose of linear_solver_operator with other arguments implicit as global variables
 !! \f$ (H - shift)^T = H* - shift = (H - shift*)* \f$ 
-subroutine X(ls_solver_operator_t_na) (x, hx)
+subroutine X(linear_solver_operator_t_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
 
@@ -519,18 +519,18 @@ subroutine X(ls_solver_operator_t_na) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
   call lalg_copy(args%gr%mesh%np, R_CONJ(x), tmpx(:, 1))
-  call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(shift)), tmpx, tmpy)
+  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(shift)), tmpx, tmpy)
   call lalg_copy(args%gr%mesh%np, R_CONJ(tmpy(:, 1)), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
 
-end subroutine X(ls_solver_operator_t_na)
+end subroutine X(linear_solver_operator_t_na)
 
 
 ! ---------------------------------------------------------
-!> applies ls_solver_operator in symmetrized form: \f$  A^T A \f$ 
-subroutine X(ls_solver_operator_sym_na) (x, hx)
+!> applies linear_solver_operator in symmetrized form: \f$  A^T A \f$ 
+subroutine X(linear_solver_operator_sym_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
@@ -543,25 +543,25 @@ subroutine X(ls_solver_operator_sym_na) (x, hx)
   SAFE_ALLOCATE(tmpz(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
-  call X(ls_solver_operator_t_na)(tmpy(:, 1), tmpz(:, 1))
+  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
+  call X(linear_solver_operator_t_na)(tmpy(:, 1), tmpz(:, 1))
   call lalg_copy(args%gr%mesh%np, tmpz(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
   SAFE_DEALLOCATE_A(tmpz)
 
-end subroutine X(ls_solver_operator_sym_na)
+end subroutine X(linear_solver_operator_sym_na)
 
 ! ---------------------------------------------------------
-subroutine X(ls_preconditioner) (x, hx)
+subroutine X(linear_solver_preconditioner) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
-  PUSH_SUB(X(ls_preconditioner))
+  PUSH_SUB(X(linear_solver_preconditioner))
 
   SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
@@ -572,12 +572,12 @@ subroutine X(ls_preconditioner) (x, hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
-  POP_SUB(X(ls_preconditioner))
+  POP_SUB(X(linear_solver_preconditioner))
 
-end subroutine X(ls_preconditioner)
+end subroutine X(linear_solver_preconditioner)
 
 ! ---------------------------------------------------------
-subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
+subroutine X(linear_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t),            intent(in)    :: hm
   type(grid_t),                   intent(inout) :: gr
@@ -594,7 +594,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter
   R_TYPE  :: aa
   R_TYPE, allocatable  :: rr(:, :)
 
-  PUSH_SUB(X(ls_solver_sos))
+  PUSH_SUB(X(linear_solver_sos))
 
   x(1:gr%mesh%np, 1:st%d%dim) = M_ZERO
   
@@ -614,7 +614,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter
 
   ! calculate the residual
   SAFE_ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim))
-  call X(ls_solver_operator)(hm, gr, st, ist, ik, shift, x, rr)
+  call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, rr)
 
   do idim = 1, st%d%dim
     call lalg_axpy(gr%mesh%np, -M_ONE, y(:, idim), rr(:, idim))
@@ -624,9 +624,9 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter
   iter_used = 1
 
   SAFE_DEALLOCATE_A(rr)
-  POP_SUB(X(ls_solver_sos))
+  POP_SUB(X(linear_solver_sos))
 
-end subroutine X(ls_solver_sos)
+end subroutine X(linear_solver_sos)
 
 !! Local Variables:
 !! mode: f90

@@ -199,22 +199,11 @@ subroutine X(sternheimer_solve)(                           &
           !solve the Sternheimer equation
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
-#if 0
-          ii = 0
-          do ist = sst, est
-            ii = ii + 1
-            call X(linear_solver_solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
-              lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
-              rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, &
-              residue(sigma, ist), conv_iters(sigma, ist), occ_response = this%occ_response)
-
-          end do
-#else
 
           call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
-#endif
+
           call batch_end(dlpsib)
           call batch_end(rhsb)
 
