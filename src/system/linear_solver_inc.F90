@@ -22,7 +22,7 @@
 !> This subroutine calculates the solution of (H + shift) x = y
 !! Typically shift = - eigenvalue + omega
 ! ---------------------------------------------------------
-subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
+subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(in)    :: hm
   type(grid_t),          target, intent(inout) :: gr
@@ -38,7 +38,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
   logical :: occ_response_
   R_TYPE, allocatable :: z(:, :)
 
-  PUSH_SUB(X(solve_HXeY))
+  PUSH_SUB(X(linear_solver_solve_HXeY))
   call profiling_in(prof, "LINEAR_SOLVER")
 
   occ_response_ = .true.
@@ -100,9 +100,9 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
   end select
 
   call profiling_out(prof)
-  POP_SUB(X(solve_HXeY))
+  POP_SUB(X(linear_solver_solve_HXeY))
 
-end subroutine X(solve_HXeY)
+end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
 !> Conjugate gradients

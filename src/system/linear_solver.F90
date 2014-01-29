@@ -53,12 +53,12 @@ module linear_solver_m
        LS_QMR_GENERAL     = 84, &
        LS_SOS             = 9
 
-  public :: &
-       linear_solver_t,       &
-       linear_solver_init,    &
-       linear_solver_end,     &
-       dsolve_HXeY,           & 
-       zsolve_HXeY,           &
+  public ::                              &
+       linear_solver_t,                  &
+       linear_solver_init,               &
+       linear_solver_end,                &
+       dlinear_solver_solve_HXeY,        & 
+       zlinear_solver_solve_HXeY,        &
        linear_solver_ops_per_iter,       &
        linear_solver_obsolete_variables
 

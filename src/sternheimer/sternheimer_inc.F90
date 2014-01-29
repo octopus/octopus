@@ -200,7 +200,7 @@ subroutine X(sternheimer_solve)(                           &
           ii = 0
           do ist = sst, est
             ii = ii + 1
-            call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
+            call X(linear_solver_solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
               lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
               rhs(:, :, ii), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
