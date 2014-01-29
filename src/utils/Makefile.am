@@ -173,6 +173,7 @@ oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
+                                   $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
 oct_local_multipoles_SOURCES = local_multipoles.F90
@@ -188,6 +189,7 @@ oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
+                                   $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
 

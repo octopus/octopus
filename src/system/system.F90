@@ -38,6 +38,7 @@ module system_m
   use mpi_m
   use multicomm_m
   use opencl_m
+  use pcm_m
   use poisson_m
   use profiling_m
   use space_m
@@ -88,6 +89,9 @@ contains
     call space_init(sys%space)
 
     call geometry_init(sys%geo, sys%space)
+
+    call pcm_init(sys%geo) !Initializes PCM: cavity + PCM matrix
+
     call grid_init_stage_0(sys%gr, sys%geo, sys%space)
     call states_init(sys%st, sys%gr, sys%geo)
     call states_write_info(sys%st)

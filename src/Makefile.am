@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math species ions grid poisson frozen states \
+SUBDIRS = include basic math species ions pcm grid poisson frozen states \
 	xc hamiltonian system scf td opt_control sternheimer main utils
 
 
