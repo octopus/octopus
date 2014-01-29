@@ -117,7 +117,7 @@ match ; Vector potential [step 30] ; LINE(td.general/gauge_field,  -1, 30) ; 9.8
 Util : oct-dielectric-function
 Input      : 05-lithium.04-dielectric_function.inp
 
-match ; chi file  energy 0 ; LINE(td.general/chi,  1,  1) ;  0.000000E+00
+match ; chi file  energy 0 ; LINE(td.general/chi,  2,  1) ;  0.000000E+00
 match ; Re chi xx energy 0 ; LINE(td.general/chi,  2, 17) ;  0.112227E+00
 match ; Im chi xx energy 0 ; LINE(td.general/chi,  2, 32) ;  0.000000E+00
 match ; Re chi yy energy 0 ; LINE(td.general/chi,  2, 47) ;  0.859482E-13
@@ -129,7 +129,7 @@ match ; chi file  energy 1 ; LINE(td.general/chi, -1,  1) ;  0.734987E+00
 match ; Re chi xx energy 1 ; LINE(td.general/chi, -1, 17) ;  0.109442E+00
 match ; Im chi xx energy 1 ; LINE(td.general/chi, -1, 32) ;  0.225615E-01
 
-match ; epsilon file  energy 0 ; LINE(td.general/dielectric_function,  1,  1) ;  0.000000E+00
+match ; epsilon file  energy 0 ; LINE(td.general/dielectric_function,  2,  1) ;  0.000000E+00
 match ; Re epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 17) ;  0.100483E+01
 match ; Im epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 32) ;  0.000000E+00
 match ; Re epsilon yy energy 0 ; LINE(td.general/dielectric_function,  2, 47) ;  0.370108E-14

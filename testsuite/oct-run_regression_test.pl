@@ -23,6 +23,7 @@ use Getopt::Std;
 use File::Basename;
 use Fcntl ':mode';
 use Time::HiRes qw(gettimeofday tv_interval);
+use Scalar::Util qw(looks_like_number);
 
 sub usage {
 
@@ -555,7 +556,7 @@ echo";
 
   $value = `cd $workdir; $pre_command`;
 
-  $success = ("$value" ne "") && (abs(($value)-($ref_value)) <= $precnum);
+  $success = looks_like_number($value) && ("$value" ne "") && (abs(($value)-($ref_value)) <= $precnum);
 
   if(!$success || $opt_v) {
     print_hline();
