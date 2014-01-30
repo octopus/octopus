@@ -659,7 +659,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   R_TYPE, allocatable :: x(:, :), b(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
-  integer             :: err, ip, ilog_res, ilog_thr, ii, iter
+  integer             :: err, ip, ilog_res, ilog_thr, ii, iter, idim
   logical             :: showprogress_
 
   integer, parameter ::        &
@@ -727,10 +727,11 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
           exit
         end if
         alpha = alpha*xsi/rho
-        tmp = M_ONE/rho
-        forall (ip = 1:gr%mesh%np) v(ip, 1) = tmp*v(ip, 1)
-        tmp = M_ONE/xsi
-        forall (ip = 1:gr%mesh%np) z(ip, 1) = tmp*z(ip, 1)
+
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, CNST(1.0)/rho, v(:, idim))
+          call lalg_scal(gr%mesh%np, CNST(1.0)/xsi, z(:, idim))
+        end do
 
         delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
 
@@ -738,14 +739,21 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
           err = QMR_BREAKDOWN_VZ
           exit
         end if
+
         if(iter == 1) then
-          forall (ip = 1:gr%mesh%np) q(ip, 1) = z(ip, 1)
+          do idim = 1, st%d%dim
+            call lalg_copy(gr%mesh%np, z(:, idim), q(:, idim))
+          end do
         else
           rtmp = -rho*delta/epsilon
           forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
         end if
+
         call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), q, p)
-        forall (ip = 1:gr%mesh%np) p(ip, 1) = alpha*p(ip, 1)
+
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, alpha, p(:, idim))
+        end do
 
         epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
 
@@ -761,8 +769,10 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         rho = X(mf_nrm2)(gr%mesh, st%d%dim, v)
 
         call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
-        tmp = M_ONE/alpha
-        forall (ip = 1:gr%mesh%np) z(ip, 1) = tmp*z(ip, 1)
+
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, CNST(1.0)/alpha, z(:, idim))
+        end do
 
         xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
