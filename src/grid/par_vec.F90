@@ -326,7 +326,7 @@ contains
       ip = ip + 1
       points(ip) = gip
     end do
-    call partition_get_partition_number(inner_partition,vp%np_local, &
+    call partition_get_partition_number(inner_partition, vp%np_local, &
          points, vp%part_local)
     SAFE_DEALLOCATE_P(points)
 

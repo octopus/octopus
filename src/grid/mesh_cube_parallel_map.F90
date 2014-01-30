@@ -74,7 +74,7 @@ contains
     type(mesh_t),                   intent(in)  :: mesh
     type(cube_t),                   intent(in)  :: cube
 
-    integer :: im, ip, gip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
+    integer :: im, ip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
     integer, allocatable :: cube_part_local(:), global_index(:)
     integer, pointer :: mf_order(:), cf_order(:)
     type(dimensions_t), allocatable :: part(:)

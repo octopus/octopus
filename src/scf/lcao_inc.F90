@@ -102,9 +102,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels))
   SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(hpsi(gr%mesh%np, st%d%dim, kstart:kend))
-  SAFE_ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend))
-  SAFE_ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, kstart:kend))
+  SAFE_ALLOCATE(hamilt(1:this%norbs, 1:this%norbs, kstart:kend))
+  SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:st%d%spin_channels))
 
   ie = 0
   maxmtxel = this%norbs * (this%norbs + 1)/2
@@ -473,8 +473,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
   SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
-  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, this%maxorb))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, this%maxorb))
+  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, 1:this%maxorb))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:this%maxorb))
 
   call states_set_zero(st)
 
