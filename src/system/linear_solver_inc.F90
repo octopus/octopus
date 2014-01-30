@@ -124,12 +124,6 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
 
   PUSH_SUB(X(linear_solver_solve_HXeY_batch))
 
-  args%ls       => this
-  args%hm       => hm
-  args%gr       => gr 
-  args%st       => st
-  args%ik       = ik
-  iter_used(1:xb%nst) = this%max_iter
 
   select case(this%solver)
   case(LS_QMR_DOTP)
@@ -667,7 +661,14 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   integer             :: err, ip, ilog_res, ilog_thr, ii, iter
   logical             :: showprogress_
 
-  PUSH_SUB(X(qmr_sym_gen_dotu))
+  integer, parameter ::        &
+    QMR_NORMAL           = 0,  &
+    QMR_BREAKDOWN_PB     = 1,  &
+    QMR_BREAKDOWN_VZ     = 2,  &
+    QMR_BREAKDOWN_QP     = 3,  &
+    QMR_BREAKDOWN_GAMMA  = 4
+    
+  PUSH_SUB(X(linear_solver_qmr_dotp))
 
   if(present(converged)) converged = .false.
   threshold_ = optional_default(threshold, CNST(1.0e-6))
@@ -698,7 +699,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     norm_b   = X(mf_nrm2)(gr%mesh, st%d%dim, b)
 
     iter     = 0
-    err      = 0
+    err      = QMR_NORMAL
     res      = rho
 
     ! If rho is basically zero we are already done.
@@ -721,7 +722,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       do while(iter < this%max_iter)
         iter = iter + 1
         if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
-          err = 1
+          err = QMR_BREAKDOWN_PB
           exit
         end if
         alpha = alpha*xsi/rho
@@ -733,7 +734,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
 
         if(abs(delta) < M_EPSILON) then
-          err = 2
+          err = QMR_BREAKDOWN_VZ
           exit
         end if
         if(iter == 1) then
@@ -748,9 +749,10 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
 
         if(abs(epsilon) < M_EPSILON) then
-          err = 3
+          err = QMR_BREAKDOWN_QP
           exit
         end if
+
         beta = epsilon/delta
         forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
         oldrho = rho
@@ -767,10 +769,12 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         theta    = rho/(gamma*abs(beta))
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
+
         if(abs(gamma) < M_EPSILON) then
-          err = 4
+          err = QMR_BREAKDOWN_GAMMA
           exit
         end if
+
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
         rtmp = eta*alpha
@@ -822,7 +826,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
 
     select case(err)
-    case(0)
+    case(QMR_NORMAL)
       if(res < threshold_) then
         if (present(converged)) converged = .true.
       else
@@ -830,18 +834,17 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
         call messages_warning(2)
       end if
-    case(1)
+    case(QMR_BREAKDOWN_PB)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
-    case(2)
+    case(QMR_BREAKDOWN_VZ)
       write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
-    case(3)
+    case(QMR_BREAKDOWN_QP)
       write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
-    case(4)
+    case(QMR_BREAKDOWN_GAMMA)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
-    case(5)
     end select
 
-    if (err>0) then
+    if (err /= QMR_NORMAL) then
       write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
       call messages_fatal(2)
     end if
@@ -852,6 +855,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   end do
   
+  SAFE_DEALLOCATE_A(x)
+  SAFE_DEALLOCATE_A(b)
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(v)
   SAFE_DEALLOCATE_A(z)
