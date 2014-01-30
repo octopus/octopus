@@ -97,12 +97,14 @@ contains
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
     !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
     !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
-    !% only for ground state calculations.
+    !% only for ground state calculations. Experimental.
     !%End
     call parse_logical(datasets_check('Solvation'), .false., run_pcm)
     if (.not.(run_pcm)) then
         POP_SUB(pcm_init)
         return
+    else
+      call messages_experimental("polarizable continuum model")
     endif
 
     !%Variable SolventDielectricConstant
