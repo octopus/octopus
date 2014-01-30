@@ -76,7 +76,7 @@ contains
     type(symm_op_t) :: tmpop
     character(len=6) :: group_name
     character(len=30) :: group_elements
-    character(len=11) :: symbol
+    character :: symbol(11)
     integer :: natoms, identity(3,3)
     logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
 
