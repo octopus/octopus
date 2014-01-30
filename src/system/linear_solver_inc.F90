@@ -52,6 +52,7 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
   args%ist      = ist
   args%ik       = ik
   args%X(shift) = shift
+  iter_used = this%max_iter
 
   select case(this%solver)
 
