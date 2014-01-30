@@ -134,7 +134,6 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   select case(this%solver)
   case(LS_QMR_DOTP)
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, &
-      X(linear_solver_operator_na), X(mf_dotu_aux), &
       shift, iter_used, residue, tol)
 
   case default
@@ -646,7 +645,7 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shift, iter_used, &
+subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, &
   residue, threshold, showprogress, converged)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t),   intent(in)    :: hm
@@ -655,28 +654,14 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
   integer,               intent(in)    :: ik
   type(batch_t),         intent(inout) :: xb
   type(batch_t),         intent(in)    :: bb
-  interface
-    subroutine op(x, y)           !< the matrix A as operator
-      implicit none
-      R_TYPE, intent(in)  :: x(:)
-      R_TYPE, intent(out) :: y(:)
-    end subroutine op
-  end interface
-  interface
-    R_TYPE function dotu(x, y)    !< the dot product (must be x^T*y, not daggered)
-      implicit none
-      R_TYPE, intent(in) :: x(:)
-      R_TYPE, intent(in) :: y(:)
-    end function dotu
-  end interface
   R_TYPE,                intent(in)    :: shift(:)
-  integer,               intent(out)   :: iter_used(:)      !< [in] the maximum number of iterations, [out] used iterations
+  integer,               intent(out)   :: iter_used(:) 
   FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
   FLOAT,   optional,     intent(in)    :: threshold    !< convergence threshold
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
 
-  R_TYPE, allocatable :: x(:), b(:, :), r(:), v(:, :), z(:, :), q(:), p(:), deltax(:), deltar(:)
+  R_TYPE, allocatable :: x(:, :), b(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
   integer             :: err, ip, ilog_res, ilog_thr, ii, iter
@@ -688,25 +673,21 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
   threshold_ = optional_default(threshold, CNST(1.0e-6))
   showprogress_ = optional_default(showprogress, .false.)
 
-  SAFE_ALLOCATE(x(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(x(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(b(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(r(1:gr%mesh%np))
   SAFE_ALLOCATE(v(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(z(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(q(1:gr%mesh%np_part))
-  SAFE_ALLOCATE(p(1:gr%mesh%np))
+  SAFE_ALLOCATE(q(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(p(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(deltax(1:gr%mesh%np))
   SAFE_ALLOCATE(deltar(1:gr%mesh%np))
 
   do ii = 1, xb%nst
-    x(1:gr%mesh%np) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1)
+    x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     b(1:gr%mesh%np, 1:st%d%dim) = bb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
 
-    args%ist      = xb%states(ii)%ist
-    args%X(shift) = shift(ii)
-
-    ! use v as temp var
-    call op(x, v(:, 1))
+    call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), x, v)
 
     forall (ip = 1:gr%mesh%np)
       r(ip) = b(ip, 1) - v(ip, 1)
@@ -749,29 +730,29 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
         tmp = M_ONE/xsi
         forall (ip = 1:gr%mesh%np) z(ip, 1) = tmp*z(ip, 1)
 
-        delta = dotu(v(:, 1), z(:, 1))
+        delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
 
         if(abs(delta) < M_EPSILON) then
           err = 2
           exit
         end if
         if(iter == 1) then
-          forall (ip = 1:gr%mesh%np) q(ip) = z(ip, 1)
+          forall (ip = 1:gr%mesh%np) q(ip, 1) = z(ip, 1)
         else
           rtmp = -rho*delta/epsilon
-          forall (ip = 1:gr%mesh%np) q(ip) = rtmp*q(ip) + z(ip, 1)
+          forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
         end if
-        call op(q, p)
-        forall (ip = 1:gr%mesh%np) p(ip) = alpha*p(ip)
+        call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), q, p)
+        forall (ip = 1:gr%mesh%np) p(ip, 1) = alpha*p(ip, 1)
 
-        epsilon = dotu(q, p)
+        epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
 
         if(abs(epsilon) < M_EPSILON) then
           err = 3
           exit
         end if
         beta = epsilon/delta
-        forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip)
+        forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
         oldrho = rho
 
         rho = X(mf_nrm2)(gr%mesh, st%d%dim, v)
@@ -793,15 +774,16 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
         rtmp = eta*alpha
+
         if(iter == 1) then
 
           forall (ip = 1:gr%mesh%np)
-            deltax(ip) = rtmp*q(ip)
-            x(ip) = x(ip) + deltax(ip)
+            deltax(ip) = rtmp*q(ip, 1)
+            x(ip, 1) = x(ip, 1) + deltax(ip)
           end forall
 
           forall (ip = 1:gr%mesh%np)
-            deltar(ip) = eta*p(ip)
+            deltar(ip) = eta*p(ip, 1)
             r(ip) = r(ip) - deltar(ip)
           end forall
 
@@ -809,12 +791,12 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
 
           tmp  = (oldtheta*gamma)**2
           forall (ip = 1:gr%mesh%np)
-            deltax(ip) = tmp*deltax(ip) + rtmp*q(ip)
-            x(ip) = x(ip) + deltax(ip)
+            deltax(ip) = tmp*deltax(ip) + rtmp*q(ip, 1)
+            x(ip, 1) = x(ip, 1) + deltax(ip)
           end forall
 
           forall (ip = 1:gr%mesh%np)
-            deltar(ip) = tmp*deltar(ip) + eta*p(ip)
+            deltar(ip) = tmp*deltar(ip) + eta*p(ip, 1)
             r(ip) = r(ip) - deltar(ip)
           end forall
 
@@ -837,7 +819,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shi
     end if
     
     iter_used(ii) = iter
-    xb%states(ii)%X(psi)(1:gr%mesh%np, 1) = x(1:gr%mesh%np)
+    xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
 
     select case(err)
     case(0)
