@@ -391,10 +391,10 @@
       n_operations = dset_c % n_operations
       n_atoms      = dset_c % n_atoms
       
-      call c_f_pointer (dset_c % rotations       , rotations       , shape = (/3, 3, n_operations/))
-      call c_f_pointer (dset_c % translations    , translations    , shape = (/3,    n_operations/))
-      call c_f_pointer (dset_c % wyckoffs        , wyckoffs        , shape = (/n_atoms/))
-      call c_f_pointer (dset_c % equivalent_atoms, equivalent_atoms, shape = (/n_atoms/))
+      call c_f_pointer (dset_c % rotations       , rotations       , (/3, 3, n_operations/))
+      call c_f_pointer (dset_c % translations    , translations    , (/3,    n_operations/))
+      call c_f_pointer (dset_c % wyckoffs        , wyckoffs        , (/n_atoms/))
+      call c_f_pointer (dset_c % equivalent_atoms, equivalent_atoms, (/n_atoms/))
       
       allocate( dset % rotations       (3, 3, n_operations))
       allocate( dset % translations    (3,    n_operations))
