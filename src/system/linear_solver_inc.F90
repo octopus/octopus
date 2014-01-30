@@ -716,7 +716,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -825,7 +825,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         endif
 
         if(showprogress_) then
-          ilog_res = M_TEN**2*max(M_ZERO, -log(res))
+          ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
 

@@ -413,7 +413,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -508,7 +508,7 @@ end subroutine X(bi_conjugate_gradients)
         endif
 
         if(showprogress_) then
-          ilog_res = M_TEN**2*max(M_ZERO, -log(res))
+          ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
         
@@ -660,7 +660,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -737,7 +737,7 @@ end subroutine X(bi_conjugate_gradients)
         endif
 
         if(showprogress_) then
-          ilog_res = max(M_ZERO, -M_TEN**2*log(res))
+          ilog_res = max(M_ZERO, -CNST(100.0)*log(res))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
         
