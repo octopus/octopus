@@ -134,7 +134,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   select case(this%solver)
   case(LS_QMR_DOTP)
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, &
-      X(linear_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), &
+      X(linear_solver_operator_na), X(mf_dotu_aux), &
       shift, iter_used, residue, tol)
 
   case default
@@ -646,7 +646,7 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm2, shift, iter_used, &
+subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, shift, iter_used, &
   residue, threshold, showprogress, converged)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t),   intent(in)    :: hm
@@ -669,12 +669,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
       R_TYPE, intent(in) :: y(:)
     end function dotu
   end interface
-  interface
-    FLOAT function nrm2(x)        !< the 2-norm of the vector x
-      implicit none
-      R_TYPE, intent(in) :: x(:)
-    end function nrm2
-  end interface
   R_TYPE,                intent(in)    :: shift(:)
   integer,               intent(out)   :: iter_used(:)      !< [in] the maximum number of iterations, [out] used iterations
   FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
@@ -682,7 +676,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
 
-  R_TYPE, allocatable :: x(:), b(:), r(:), v(:, :), z(:, :), q(:), p(:), deltax(:), deltar(:)
+  R_TYPE, allocatable :: x(:), b(:, :), r(:), v(:, :), z(:, :), q(:), p(:), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
   integer             :: err, ip, ilog_res, ilog_thr, ii, iter
@@ -695,7 +689,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
   showprogress_ = optional_default(showprogress, .false.)
 
   SAFE_ALLOCATE(x(1:gr%mesh%np_part))
-  SAFE_ALLOCATE(b(1:gr%mesh%np))
+  SAFE_ALLOCATE(b(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(r(1:gr%mesh%np))
   SAFE_ALLOCATE(v(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(z(1:gr%mesh%np, 1:st%d%dim))
@@ -706,7 +700,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
 
   do ii = 1, xb%nst
     x(1:gr%mesh%np) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1)
-    b(1:gr%mesh%np) = bb%states(ii)%X(psi)(1:gr%mesh%np, 1)
+    b(1:gr%mesh%np, 1:st%d%dim) = bb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
 
     args%ist      = xb%states(ii)%ist
     args%X(shift) = shift(ii)
@@ -715,12 +709,12 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
     call op(x, v(:, 1))
 
     forall (ip = 1:gr%mesh%np)
-      r(ip) = b(ip) - v(ip, 1)
+      r(ip) = b(ip, 1) - v(ip, 1)
       v(ip, 1) = r(ip)
     end forall
 
-    rho      = nrm2(v(:, 1))
-    norm_b   = nrm2(b)
+    rho      = X(mf_nrm2)(gr%mesh, st%d%dim, v)
+    norm_b   = X(mf_nrm2)(gr%mesh, st%d%dim, b)
 
     iter     = 0
     err      = 0
@@ -730,7 +724,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
     if(abs(rho) > M_EPSILON) then
       call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
 
-      xsi = nrm2(z(:, 1))
+      xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
       gamma = M_ONE
       eta   = -M_ONE
@@ -780,13 +774,13 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
         forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip)
         oldrho = rho
 
-        rho = nrm2(v(:, 1))
+        rho = X(mf_nrm2)(gr%mesh, st%d%dim, v)
 
         call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
         tmp = M_ONE/alpha
         forall (ip = 1:gr%mesh%np) z(ip, 1) = tmp*z(ip, 1)
 
-        xsi = nrm2(z(:, 1))
+        xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
         oldtheta = theta
         theta    = rho/(gamma*abs(beta))
@@ -830,7 +824,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, op, dotu, nrm
         if(abs(norm_b) < M_EPSILON) then
           res = M_HUGE
         else
-          res = nrm2(r)/norm_b
+          res = X(mf_nrm2)(gr%mesh, r)/norm_b
         endif
 
         if(showprogress_) then
