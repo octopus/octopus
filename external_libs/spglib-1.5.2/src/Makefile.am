@@ -1,5 +1,5 @@
-lib_LTLIBRARIES = libsymspg.la 
-libsymspg_la_SOURCES = \
+noinst_LIBRARIES = libspglib.a
+libspglib_a_SOURCES = \
 cell.c \
 debug.c \
 hall_symbol.c \
@@ -32,24 +32,5 @@ spacegroup.h \
 spg_database.h \
 spglib.h \
 spin.h \
-symmetry.h
-
-pkginclude_HEADERS = \
-cell.h \
-debug.h \
-hall_symbol.h \
-kpoint.h \
-lattice.h \
-mathfunc.h \
-pointgroup.h \
-primitive.h \
-refinement.h \
-site_symmetry.h \
-sitesym_database.h \
-spacegroup.h \
-spg_database.h \
-spglib.h \
-spin.h \
-symmetry.h
-
-# libsymspg_la_LDFLAGS = -version-info 0:1:0
+symmetry.h \
+spglib_f08.f90

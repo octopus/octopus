@@ -29,6 +29,7 @@ module symmetries_m
   use profiling_m
   use species_m
   use symm_op_m
+  use spglib_f08
 
   implicit none
 
@@ -54,76 +55,6 @@ module symmetries_m
 
   real(8), parameter :: symprec = CNST(1e-5)
 
-  !> these functions are defined in spglib_f.c
-  interface
-    integer function spglib_get_max_multiplicity(lattice, position, types, num_atom, symprec)
-      implicit none
-      real(8), intent(in) :: lattice
-      real(8), intent(in) :: position
-      integer, intent(in) :: types
-      integer, intent(in) :: num_atom
-      real(8), intent(in) :: symprec
-    end function spglib_get_max_multiplicity
-
-    integer function spglib_get_symmetry(rotation, translation, max_size, lattice, position, types, num_atom, symprec)
-      implicit none
-      integer, intent(out) :: rotation
-      real(8), intent(out) :: translation
-      integer, intent(in)  :: max_size
-      real(8), intent(in)  :: lattice
-      real(8), intent(in)  :: position
-      integer, intent(in)  :: types
-      integer, intent(in)  :: num_atom
-      real(8), intent(in)  :: symprec
-    end function spglib_get_symmetry
-
-    subroutine spglib_show_symmetry(lattice, position, types, num_atom, symprec)
-      implicit none
-      real(8), intent(in) :: lattice
-      real(8), intent(in) :: position
-      integer, intent(in) :: types
-      integer, intent(in) :: num_atom
-      real(8), intent(in) :: symprec
-    end subroutine spglib_show_symmetry
-
-    integer function spglib_get_group_number(lattice, position, types, num_atom, symprec)
-      implicit none
-      real(8), intent(in) :: lattice
-      real(8), intent(in) :: position
-      integer, intent(in) :: types
-      integer, intent(in) :: num_atom
-      real(8), intent(in) :: symprec
-    end function spglib_get_group_number
-  end interface
-
-  !> these functions are defined in symmetries_finite.c  
-  interface
-    subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
-      implicit none
-      integer, intent(in)    :: atoms_count
-      integer, intent(in)    :: typs
-      real(8), intent(in)    :: position
-      integer, intent(in)    :: verbosity
-      integer, intent(out)   :: point_group
-    end subroutine symmetries_finite_init
-    
-    subroutine symmetries_finite_end()
-      implicit none
-    end subroutine symmetries_finite_end
-    
-    subroutine symmetries_finite_get_group_name(point_group, group_name)
-      implicit none
-      integer,          intent(in)    :: point_group
-      character(len=*), intent(out)   :: group_name
-    end subroutine symmetries_finite_get_group_name
-    
-    subroutine symmetries_finite_get_group_elements(point_group, group_elements)
-      implicit none
-      integer,          intent(in)    :: point_group
-      character(len=*), intent(out)   :: group_elements
-    end subroutine symmetries_finite_get_group_elements
-  end interface
-
 contains
   
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, lsize)
@@ -145,6 +76,7 @@ contains
     type(symm_op_t) :: tmpop
     character(len=6) :: group_name
     character(len=30) :: group_elements
+    character(len=11) :: symbol
     integer :: natoms, identity(3,3)
     logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
 
@@ -252,20 +184,20 @@ contains
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
-      ! This outputs information about the symmetries.
-      if(mpi_grp_is_root(mpi_world)) then
-        call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-      endif
+      this%space_group = spg_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      write(message(1),'(a, i4)') 'Space group No. ', this%space_group
+      write(message(2),'(2a)') 'International: ', symbol
+      this%space_group = spg_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      write(message(3),'(2a)') 'Schoenflies: ', symbol
+      call messages_info(3)
 
-      this%space_group = spglib_get_group_number(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-
-      max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+      fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)

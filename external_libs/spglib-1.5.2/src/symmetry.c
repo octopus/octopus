@@ -4,7 +4,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
+#if defined(ENABLE_OPENMP)
+  #include <omp.h>
+#endif
 #include "cell.h"
 #include "debug.h"
 #include "lattice.h"

@@ -362,7 +362,7 @@ AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 dnl now I run configure for the internal libraries
-AC_CONFIG_SUBDIRS([external_libs/spglibs])
+AC_CONFIG_SUBDIRS([external_libs/spglibs-1.5.2])
 
 # This is certainly wrong, but I don't know
 # how to do it right
@@ -379,8 +379,8 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile
-  external_libs/spglib/Makefile
-  external_libs/spglib/src/Makefile
+  external_libs/spglib-1.5.2/Makefile
+  external_libs/spglib-1.5.2/src/Makefile
   external_libs/newuoa/Makefile
   external_libs/slatec/Makefile
   external_libs/fortrancl/Makefile

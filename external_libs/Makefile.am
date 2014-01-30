@@ -19,4 +19,4 @@
 ##
 ## $Id$
 
-SUBDIRS = metis-5.1 qshep newuoa spglib slatec fortrancl bpdn
+SUBDIRS = metis-5.1 qshep newuoa spglib-1.5.2 slatec fortrancl bpdn

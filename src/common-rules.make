@@ -39,12 +39,13 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer         \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep     \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.5.2/src
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
 	-I$(top_builddir)/src/include \
-        -I$(top_srcdir)/external_libs/spglib/src \
+        -I$(top_srcdir)/external_libs/spglib-1.5.2/src \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
 	@METIS_INCLUDE@ \
@@ -83,7 +84,7 @@ core_LIBS = \
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
-	$(top_builddir)/external_libs/spglib/src/libspglib.a      \
+	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
 	$(top_builddir)/external_libs/slatec/libslatec.a          \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a
 
