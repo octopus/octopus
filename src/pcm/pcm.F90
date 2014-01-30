@@ -293,7 +293,7 @@ contains
 !==============================================================
 
   subroutine pcm_matrix(eps)
-    FLOAT :: eps ! FIXME: specify an intent here.
+    FLOAT, intent(in) :: eps
 
     integer :: i
     integer :: info
