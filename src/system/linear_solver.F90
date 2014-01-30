@@ -22,6 +22,7 @@
 module linear_solver_m
   use batch_m
   use datasets_m
+  use derivatives_m
   use global_m
   use grid_m
   use hamiltonian_m

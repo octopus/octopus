@@ -52,7 +52,6 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
   args%ist      = ist
   args%ik       = ik
   args%X(shift) = shift
-  iter_used = this%max_iter
 
   select case(this%solver)
 
@@ -125,10 +124,26 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
 
   PUSH_SUB(X(linear_solver_solve_HXeY_batch))
 
-  do ii = 1, xb%nst
-    call X(linear_solver_solve_HXeY) (this, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
-      shift(ii), tol, residue(ii), iter_used(ii), occ_response)
-  end do
+  args%ls       => this
+  args%hm       => hm
+  args%gr       => gr 
+  args%st       => st
+  args%ik       = ik
+  iter_used(1:xb%nst) = this%max_iter
+
+  select case(this%solver)
+  case(LS_QMR_DOTP)
+    call X(linear_solver_qmr_dotp)(this, hm, gr%der, st, xb, yb, &
+      X(linear_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
+      shift, iter_used, residue, tol)
+
+  case default
+    do ii = 1, xb%nst
+      call X(linear_solver_solve_HXeY) (this, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
+        shift(ii), tol, residue(ii), iter_used(ii), occ_response)
+    end do
+
+  end select
 
   POP_SUB(X(linear_solver_solve_HXeY_batch))
 
@@ -627,6 +642,259 @@ subroutine X(linear_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, 
   POP_SUB(X(linear_solver_sos))
 
 end subroutine X(linear_solver_sos)
+
+! ---------------------------------------------------------
+!> for complex symmetric matrices
+!! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
+subroutine X(linear_solver_qmr_dotp)(this, hm, der, st, xb, bb, op, dotu, nrm2, prec, shift, iter_used, &
+  residue, threshold, showprogress, converged)
+  type(linear_solver_t), intent(inout) :: this
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(derivatives_t),   intent(inout) :: der
+  type(states_t),        intent(in)    :: st
+  type(batch_t),         intent(inout) :: xb
+  type(batch_t),         intent(in)    :: bb
+  interface
+    subroutine op(x, y)           !< the matrix A as operator
+      implicit none
+      R_TYPE, intent(in)  :: x(:)
+      R_TYPE, intent(out) :: y(:)
+    end subroutine op
+  end interface
+  interface
+    R_TYPE function dotu(x, y)    !< the dot product (must be x^T*y, not daggered)
+      implicit none
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotu
+  end interface
+  interface
+    FLOAT function nrm2(x)        !< the 2-norm of the vector x
+      implicit none
+      R_TYPE, intent(in) :: x(:)
+    end function nrm2
+  end interface
+  interface
+    subroutine prec(x, y)         !< the preconditioner
+      implicit none
+      R_TYPE, intent(in)  :: x(:)
+      R_TYPE, intent(out) :: y(:)
+    end subroutine prec
+  end interface
+  R_TYPE,                intent(in)    :: shift(:)
+  integer,               intent(out)   :: iter_used(:)      !< [in] the maximum number of iterations, [out] used iterations
+  FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
+  FLOAT,   optional,     intent(in)    :: threshold    !< convergence threshold
+  logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
+  logical, optional,     intent(out)   :: converged    !< has the algorithm converged
+
+  R_TYPE, allocatable :: x(:), b(:), r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
+  R_TYPE              :: eta, delta, epsilon, beta, rtmp
+  FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
+  integer             :: err, ip, ilog_res, ilog_thr, np, ii, iter
+  logical             :: showprogress_
+
+  PUSH_SUB(X(qmr_sym_gen_dotu))
+
+  if(present(converged)) converged = .false.
+  threshold_ = optional_default(threshold, CNST(1.0e-6))
+  showprogress_ = optional_default(showprogress, .false.)
+
+  np = der%mesh%np
+
+  SAFE_ALLOCATE(x(1:np))
+  SAFE_ALLOCATE(b(1:np))
+  SAFE_ALLOCATE(r(1:np))
+  SAFE_ALLOCATE(v(1:np))
+  SAFE_ALLOCATE(z(1:np))
+  SAFE_ALLOCATE(q(1:ubound(x, 1)))
+  SAFE_ALLOCATE(p(1:np))
+  SAFE_ALLOCATE(deltax(1:np))
+  SAFE_ALLOCATE(deltar(1:np))
+
+  do ii = 1, xb%nst
+    x(1:np) = xb%states(ii)%X(psi)(1:np, 1)
+    b(1:np) = bb%states(ii)%X(psi)(1:np, 1)
+
+    args%ist      = xb%states(ii)%ist
+    args%X(shift) = shift(ii)
+
+    ! use v as temp var
+    call op(x, v)
+
+    forall (ip = 1:np)
+      r(ip) = b(ip) - v(ip)
+      v(ip) = r(ip)
+    end forall
+
+    rho      = nrm2(v)
+    norm_b   = nrm2(b)
+
+    iter     = 0
+    err      = 0
+    res      = rho
+
+    ! If rho is basically zero we are already done.
+    if(abs(rho) > M_EPSILON) then
+      call prec(v, z)
+
+      xsi = nrm2(z)
+
+      gamma = M_ONE
+      eta   = -M_ONE
+      alpha = M_ONE
+      theta = M_ZERO
+
+      ! initialize progress bar
+      if(showprogress_) then
+        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        call loct_progress_bar(-1, ilog_thr)
+      end if
+
+      do while(iter < this%max_iter)
+        iter = iter + 1
+        if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+          err = 1
+          exit
+        end if
+        alpha = alpha*xsi/rho
+        tmp = M_ONE/rho
+        forall (ip = 1:np) v(ip) = tmp*v(ip)
+        tmp = M_ONE/xsi
+        forall (ip = 1:np) z(ip) = tmp*z(ip)
+
+        delta = dotu(v, z)
+
+        if(abs(delta) < M_EPSILON) then
+          err = 2
+          exit
+        end if
+        if(iter == 1) then
+          forall (ip = 1:np) q(ip) = z(ip)
+        else
+          rtmp = -rho*delta/epsilon
+          forall (ip = 1:np) q(ip) = rtmp*q(ip) + z(ip)
+        end if
+        call op(q, p)
+        forall (ip = 1:np) p(ip) = alpha*p(ip)
+
+        epsilon = dotu(q, p)
+
+        if(abs(epsilon) < M_EPSILON) then
+          err = 3
+          exit
+        end if
+        beta = epsilon/delta
+        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)
+        oldrho = rho
+
+        rho = nrm2(v)
+
+        call prec(v, z)
+        tmp = M_ONE/alpha
+        forall (ip = 1:np) z(ip) = tmp*z(ip)
+
+        xsi = nrm2(z)
+
+        oldtheta = theta
+        theta    = rho/(gamma*abs(beta))
+        oldgamma = gamma
+        gamma    = M_ONE/sqrt(M_ONE+theta**2)
+        if(abs(gamma) < M_EPSILON) then
+          err = 4
+          exit
+        end if
+        eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+
+        rtmp = eta*alpha
+        if(iter == 1) then
+
+          forall (ip = 1:np)
+            deltax(ip) = rtmp*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np)
+            deltar(ip) = eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
+        else
+
+          tmp  = (oldtheta*gamma)**2
+          forall (ip = 1:np)
+            deltax(ip) = tmp*deltax(ip) + rtmp*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np)
+            deltar(ip) = tmp*deltar(ip) + eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
+        end if
+
+        ! avoid divide by zero
+        if(abs(norm_b) < M_EPSILON) then
+          res = M_HUGE
+        else
+          res = nrm2(r)/norm_b
+        endif
+
+        if(showprogress_) then
+          ilog_res = M_TEN**2*max(M_ZERO, -log(res))
+          call loct_progress_bar(ilog_res, ilog_thr)
+        end if
+
+        if(res < threshold_) exit
+      end do
+    end if
+    
+    iter_used(ii) = iter
+    xb%states(ii)%X(psi)(1:np, 1) = x(1:np)
+
+    select case(err)
+    case(0)
+      if(res < threshold_) then
+        if (present(converged)) converged = .true.
+      else
+        write(message(1), '(a)') "QMR solver not converged!"
+        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
+        call messages_warning(2)
+      end if
+    case(1)
+      write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
+    case(2)
+      write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
+    case(3)
+      write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
+    case(4)
+      write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
+    case(5)
+    end select
+
+    if (err>0) then
+      write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
+      call messages_fatal(2)
+    end if
+
+    if(showprogress_) write(*,*) ''
+
+    residue(ii) = res
+
+  end do
+  
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(v)
+  SAFE_DEALLOCATE_A(z)
+  SAFE_DEALLOCATE_A(q)
+  SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(deltax)
+  SAFE_DEALLOCATE_A(deltar)
+  
+  POP_SUB(X(linear_solver_qmr_dotp))
+end subroutine X(linear_solver_qmr_dotp)
+
 
 !! Local Variables:
 !! mode: f90
