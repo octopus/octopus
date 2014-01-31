@@ -464,8 +464,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   ASSERT(start == 1)
 
   if(.not. this%parallel) then
-    SAFE_ALLOCATE(hamiltonian(1:this%norbs, 1:this%norbs))
-    SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs))
+    if (mpi_grp_is_root(mpi_world)) then
+      SAFE_ALLOCATE(hamiltonian(1:this%norbs, 1:this%norbs))
+      SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs))
+    end if
   else
     SAFE_ALLOCATE(hamiltonian(1:this%lsize(1), 1:this%lsize(2)))
     SAFE_ALLOCATE(overlap(1:this%lsize(1), 1:this%lsize(2)))
@@ -510,9 +512,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
+      if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
       hamiltonian = R_TOTYPE(M_ZERO)
       overlap = R_TOTYPE(M_ZERO)
-
+    end if
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
       do iatom = 1, geo%natoms
@@ -554,7 +557,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
           !now, store the result in the matrix
 
-          if(.not. this%parallel) then
+          if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
             do iorb = 1, norbs
               do jorb = 1, this%norb_atom(jatom)
                 hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
@@ -586,12 +589,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       end do
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
-
+      !!end if
       call messages_write('Diagonalizing Hamiltonian.')
       call messages_info()
 
       call profiling_out(prof_matrix)
-
       ! the number of eigenvectors we need
       nev = min(this%norbs, st%nst) 
 
@@ -689,7 +691,6 @@ contains
     SAFE_ALLOCATE(ifail(1:this%norbs))
 
     call profiling_in(prof, "LCAO_DIAG")
-
     if(this%parallel) then
 #ifdef HAVE_SCALAPACK            
       SAFE_ALLOCATE(iclustr(1:2*st%dom_st_proc_grid%nprocs))
@@ -869,6 +870,7 @@ contains
 #endif /* HAVE_SCALAPACK */
     else
 
+    if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
       SAFE_ALLOCATE(iwork(1:5*this%norbs))
 
 #ifdef R_TREAL    
@@ -917,12 +919,15 @@ contains
         write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
+    end if
 
 #ifdef HAVE_MPI
     ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
     ! they must be consistent among processors in domain parallelization
-    if(gr%mesh%parallel_in_domains) &
-      call MPI_Bcast(hamiltonian(1, 1), size(hamiltonian), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+    if(gr%mesh%parallel_in_domains) then
+      call MPI_Bcast(evec(1,1), size(evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+      call MPI_Bcast(eval(1),   size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+    end if
 #endif
 
     end if
