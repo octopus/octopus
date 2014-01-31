@@ -66,54 +66,54 @@ subroutine X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
 
   PUSH_SUB(X(subspace_diag_standard))
 
-    ASSERT(.not. st%parallel_in_states)
+  ASSERT(.not. st%parallel_in_states)
 
-    SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
-
-    call X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
-
-    ! Diagonalize the Hamiltonian in the subspace.
-    ! only half of hmss has the matrix, but this is what Lapack needs
-    call lalg_eigensolve(st%nst, hmss, eigenval)
-
+  SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
+  
+  call X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
+  
+  ! Diagonalize the Hamiltonian in the subspace.
+  ! only half of hmss has the matrix, but this is what Lapack needs
+  call lalg_eigensolve(st%nst, hmss, eigenval)
+  
 #ifdef HAVE_MPI
-    ! the eigenvectors are not unique due to phases and degenerate subspaces, but
-    ! they must be consistent among processors in domain parallelization
-    if(der%mesh%parallel_in_domains) &
+  ! the eigenvectors are not unique due to phases and degenerate subspaces, but
+  ! they must be consistent among processors in domain parallelization
+  if(der%mesh%parallel_in_domains) &
       call MPI_Bcast(hmss, st%nst**2, R_MPITYPE, 0, der%mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    ! Calculate the new eigenfunctions as a linear combination of the
-    ! old ones.
-    call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
-
-    ! Recalculate the residues if requested by the diff argument.
-    if(present(diff)) then 
+  ! Calculate the new eigenfunctions as a linear combination of the
+  ! old ones.
+  call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
+  
+  ! Recalculate the residues if requested by the diff argument.
+  if(present(diff)) then 
+    
+    SAFE_ALLOCATE(rdiff(1:st%nst))
+    
+    do ib = st%group%block_start, st%group%block_end
       
-      SAFE_ALLOCATE(rdiff(1:st%nst))
+      minst = states_block_min(st, ib)
+      maxst = states_block_max(st, ib)
 
-      do ib = st%group%block_start, st%group%block_end
+      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
 
-        minst = states_block_min(st, ib)
-        maxst = states_block_max(st, ib)
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
+      call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
+      call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
 
-        call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+      call batch_end(hpsib, copy = .false.)
 
-        call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
-        call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
-        call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
+      diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
 
-        call batch_end(hpsib, copy = .false.)
+    end do
 
-        diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
+    SAFE_DEALLOCATE_A(rdiff)
 
-      end do
+  end if
 
-      SAFE_DEALLOCATE_A(rdiff)
-
-    end if
-
-    SAFE_DEALLOCATE_A(hmss)
+  SAFE_DEALLOCATE_A(hmss)
 
   POP_SUB(X(subspace_diag_standard))
 

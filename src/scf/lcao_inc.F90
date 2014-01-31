@@ -513,9 +513,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
       if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
-      hamiltonian = R_TOTYPE(M_ZERO)
-      overlap = R_TOTYPE(M_ZERO)
-    end if
+        hamiltonian = R_TOTYPE(M_ZERO)
+        overlap = R_TOTYPE(M_ZERO)
+      end if
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
       do iatom = 1, geo%natoms
@@ -554,7 +554,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           end if
 
           if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(jatom))
-
+          
           !now, store the result in the matrix
 
           if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
