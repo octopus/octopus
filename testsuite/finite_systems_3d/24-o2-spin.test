@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 23-go-na2.test $
+# $Id$
 
 Test       : O2 - Spin
 Programs   : octopus_mpi; octopus

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
+# $Id$
 
 Test       : Lithium
 Programs   : octopus; octopus_mpi

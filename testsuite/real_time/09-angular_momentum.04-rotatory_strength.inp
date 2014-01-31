@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 09-angular_momentum.01-ground_state.inp 2308 2006-07-29 00:56:52Z appel $
+# $Id$
 
 FromScratch = yes
 

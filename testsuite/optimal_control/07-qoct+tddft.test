@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 06-adw.test $
+# $Id$
 
 Test       : QOCT+TDDFT
 Programs   : octopus; octopus_mpi

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 01-carbon_atom.test 4011 2008-04-02 09:30:10Z marques $
+# $Id$
 
 Test       : Propagate eigenstate of 1D square well
 Programs   : octopus; octopus_mpi

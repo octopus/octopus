@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 09-spinors.01-ground_state.inp 6532 2010-04-23 20:30:46Z xavier $
+# $Id$
 
 CalculationMode = gs
 fromScratch = yes

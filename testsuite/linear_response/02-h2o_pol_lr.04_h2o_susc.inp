@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 14-h2o_pol_lr.02_h2o_dyn_pol.inp 2825 2007-04-10 14:11:58Z acastro $
+# $Id$
 
 # Results for the magnetic susceptibility of water can be found in JCP 67, 385 (1977)
 # The experimental value is -147 \pm 20 ppm a.u.

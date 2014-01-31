@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 03-asym_doublewell.test 2999 2007-06-16 12:56:04Z lorenzen $
+# $Id$
 
 Test       : Symmetric Double Well
 Programs   : octopus; octopus_single; octopus_mpi

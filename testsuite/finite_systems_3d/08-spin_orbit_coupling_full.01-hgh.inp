@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 07-spin_orbit_coupling.01-ground_state.inp 2655 2007-01-19 17:38:16Z xavier $
+# $Id$
 
 Units = ev_angstrom
 

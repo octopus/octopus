@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 13-full_potential_hydrogen.01-gs.inp 2743 2007-03-12 22:42:13Z xavier $
+# $Id$
 
 %Coordinates
  'H_f' | 0 | 0 | 0

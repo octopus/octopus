@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 04-vib_modes.test 4255 2008-06-10 12:56:21Z marques $
+# $Id$
 
 Test       : Sodium static polarizability
 Programs   : octopus; octopus_mpi

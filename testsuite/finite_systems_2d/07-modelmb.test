@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 07-modelmb.test 5186 2009-04-11 07:26:12Z xavier $
+# $Id$
 
 Test       : Model MB
 Programs   : octopus; octopus_mpi

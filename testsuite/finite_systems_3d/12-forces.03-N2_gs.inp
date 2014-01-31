@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 12-forces.01-N2_gs.inp 2308 2006-07-29 00:56:52Z appel $
+# $Id$
 
 CalculationMode = gs
 

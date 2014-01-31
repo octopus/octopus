@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 01-carbon_atom.01-ground_state.inp 2650 2007-01-16 21:35:53Z xavier $
+# $Id$
 #
 CalculationMode = gs
 fromScratch = yes

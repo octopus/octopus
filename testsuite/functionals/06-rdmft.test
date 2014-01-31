@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 06-rdmft.test $
+# $Id$
 
 Test       : RDMFT
 Programs   : octopus; octopus_mpi

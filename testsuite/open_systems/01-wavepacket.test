@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+# $Id$
 
 Test       : Open boundaries 1D
 Programs   : octopus; octopus_mpi

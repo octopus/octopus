@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
+# $Id$
 
 Test       : Approximated enforced time-reversal symmetry propagator
 Programs   : octopus_mpi; octopus

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 27-fine_mesh.test $
+# $Id$
 
 Test       : Fine mesh density - Benzene
 Options    : scalapack

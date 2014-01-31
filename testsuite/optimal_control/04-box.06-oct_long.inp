@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 04-box.03-oct_long.inp 3604 2007-11-25 22:23:24Z acastro $
+# $Id$
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes

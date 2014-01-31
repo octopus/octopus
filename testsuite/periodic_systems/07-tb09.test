@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 07-tb09.test 3344 2007-10-13 13:38:03Z acastro $
+# $Id$
 
 Test       : Diamond TB09 functional
 Programs   : octopus; octopus_mpi

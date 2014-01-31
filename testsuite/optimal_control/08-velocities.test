@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 08-velocities.test $
+# $Id$
 
 Test       : QOCT, velocity target
 Programs   : octopus; octopus_mpi
