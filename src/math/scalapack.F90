@@ -43,16 +43,42 @@ module scalapack_m
   interface
     integer function iceil(inum, idenom)
       implicit none
-      integer            idenom, inum
+      integer, intent(in) :: inum
+      integer, intent(in) :: idenom
     end function iceil
   end interface
 
   interface
     subroutine descinit(desc, m, n, mb, nb, irsrc, icsrc, ictxt, lld, info)
       implicit none
-      integer            icsrc, ictxt, info, irsrc, lld, m, mb, n, nb
-      integer            desc
+      integer, intent(in)  :: desc
+      integer, intent(in)  :: m
+      integer, intent(in)  :: n
+      integer, intent(in)  :: mb
+      integer, intent(in)  :: nb
+      integer, intent(in)  :: irsrc
+      integer, intent(in)  :: icsrc
+      integer, intent(in)  :: ictxt
+      integer, intent(in)  :: lld
+      integer, intent(out) :: info
     end subroutine descinit
+  end interface
+
+  interface
+    subroutine infog2l(grindx, gcindx, desc, nprow, npcol, myrow, mycol, lrindx, lcindx, rsrc, csrc)
+      implicit none
+      integer, intent(in)  :: grindx
+      integer, intent(in)  :: gcindx
+      integer, intent(in)  :: desc
+      integer, intent(in)  :: nprow
+      integer, intent(in)  :: npcol
+      integer, intent(in)  :: myrow
+      integer, intent(in)  :: mycol
+      integer, intent(out) :: lrindx
+      integer, intent(out) :: lcindx
+      integer, intent(out) :: rsrc
+      integer, intent(out) :: csrc
+    end subroutine infog2l
   end interface
 
   !>  Computes a QR factorization of a real distributed \f$ m \times n\f$
