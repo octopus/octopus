@@ -738,7 +738,9 @@ contains
 
             case (KICK_SPIN_DENSITY_MODE)
               do ip = 1, gr%mesh%np
+                kick_value = M_zI*kick%delta_strength*kick_function(ip)
                 cc(1) = exp(M_TWO*kick_value)
+
                 select case (st%d%ispin)
                 case (SPIN_POLARIZED)
                   if(is_spin_up(iqn)) then
