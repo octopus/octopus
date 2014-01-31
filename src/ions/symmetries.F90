@@ -76,7 +76,7 @@ contains
     type(symm_op_t) :: tmpop
     character(len=6) :: group_name
     character(len=30) :: group_elements
-    character :: symbol(11)
+    character(len=11) :: symbol
     integer :: natoms, identity(3,3)
     logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
 
@@ -113,12 +113,7 @@ contains
     endif
 
     if(any_non_spherical .or. .not. symmetries_compute) then
-      ! we only use the identity
-      SAFE_ALLOCATE(this%ops(1:1))
-      this%nops = 1
-      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
-      this%breakdir = M_ZERO
-      this%space_group = 1
+      call init_identity()
 
       POP_SUB(symmetries_init)
       return
@@ -129,12 +124,7 @@ contains
 
     if (periodic_dim == 0) then
 
-      ! we only have the identity
-      SAFE_ALLOCATE(this%ops(1:1))
-      this%nops = 1
-      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
-      this%breakdir = M_ZERO
-      this%space_group = 1
+      call init_identity()
 
       ! for the moment symmetries are only used for information, so we compute them only on one node.
       if(mpi_grp_is_root(mpi_world)) then
@@ -184,20 +174,31 @@ contains
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
-      this%space_group = spg_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
+      if(this%space_group == 0) then
+        message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
+        call messages_warning(1)
+        call init_identity()
+        SAFE_DEALLOCATE_A(rotation)
+        SAFE_DEALLOCATE_A(translation)
+        POP_SUB(symmetries_init)
+        return
+      endif
+
       write(message(1),'(a, i4)') 'Space group No. ', this%space_group
       write(message(2),'(2a)') 'International: ', symbol
-      this%space_group = spg_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      this%space_group = spglib_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
       write(message(3),'(2a)') 'Schoenflies: ', symbol
       call messages_info(3)
 
-      max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      max_size = spglib_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+      fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
@@ -284,6 +285,23 @@ contains
     call messages_print_stress(stdout)
 
     POP_SUB(symmetries_init)
+    
+  contains
+
+    subroutine init_identity()
+      
+      PUSH_SUB(symmetries_init.init_identity)
+      
+      SAFE_ALLOCATE(this%ops(1:1))
+      this%nops = 1
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
+      this%breakdir = M_ZERO
+      this%space_group = 1
+      
+      PUSH_SUB(symmetries_init.init_identity)
+      
+    end subroutine init_identity
+
   end subroutine symmetries_init
 
   ! -------------------------------------------------------------------------------

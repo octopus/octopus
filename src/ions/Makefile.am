@@ -34,7 +34,8 @@ libions_a_SOURCES =         \
 	vibrations.F90      \
 	ion_dynamics.F90    \
 	symmetries.F90      \
-	symmetries_finite.c
+	symmetries_finite.c \
+        spglib_f.c
 
 noinst_HEADERS =
 
@@ -56,3 +57,4 @@ vibrations.o : vibrations.F90 simul_box.o geometry.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o xyz_file.o
 symmetries.o : symmetries.F90 geometry.o
 symmetries_finite.o : symmetries_finite.c
+spglib_f.o : spglib_f.c
