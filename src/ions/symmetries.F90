@@ -298,7 +298,7 @@ contains
       this%breakdir = M_ZERO
       this%space_group = 1
       
-      PUSH_SUB(symmetries_init.init_identity)
+      POP_SUB(symmetries_init.init_identity)
       
     end subroutine init_identity
 
