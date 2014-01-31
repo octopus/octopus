@@ -567,7 +567,6 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           else
             do iorb = 1, norbs
               do jorb = 1, this%norb_atom(jatom)
-
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
                 if(all((/prow, pcol/) == this%myroc)) then
@@ -589,7 +588,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       end do
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
-      !!end if
+
       call messages_write('Diagonalizing Hamiltonian.')
       call messages_info()
 
@@ -603,11 +602,17 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
         SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:st%st_end))
       else 
-        SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
+        if (mpi_grp_is_root(mpi_world)) then 
+          SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
+        end if
       end if
 
       call diagonalization()
-
+  
+      if (this%parallel) then
+        SAFE_DEALLOCATE_A(hamiltonian)
+        SAFE_DEALLOCATE_A(overlap)
+      end if
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
       call messages_write('Generating wavefunctions.')
@@ -655,14 +660,13 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   end do
 
   SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(hpsi)  
-  SAFE_DEALLOCATE_A(hamiltonian)
-  SAFE_DEALLOCATE_A(overlap)
+  SAFE_DEALLOCATE_A(hpsi)
 
   POP_SUB(X(lcao_alt_wf))
 
 contains
-
+  
+  !> \return evec the eingevector
   subroutine diagonalization()
     integer              :: neval_found, info, lwork
     R_TYPE               :: tmp(3) !< size must be at least 3 according to ScaLAPACK
@@ -870,66 +874,71 @@ contains
 #endif /* HAVE_SCALAPACK */
     else
 
-    if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
-      SAFE_ALLOCATE(iwork(1:5*this%norbs))
+      if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
+        SAFE_ALLOCATE(iwork(1:5*this%norbs))
 
 #ifdef R_TREAL    
-      call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
-        work = tmp(1), lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
+        call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+          n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
+          vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+          m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
+          work = tmp(1), lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
 
-      SAFE_ALLOCATE(rwork(1:7*this%norbs))
+        SAFE_ALLOCATE(rwork(1:7*this%norbs))
 
-      call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
-        work = tmp(1), lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
+        call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+          n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
+          vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+          m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
+          work = tmp(1), lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
 #endif
-      if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'Workspace query for LCAO diagonalization failed. LAPACK returned info code ', info, '.'
-        call messages_warning(1)
-      end if
+        if(info /= 0) then
+          write(message(1), '(a,i4,a)') 'Workspace query for LCAO diagonalization failed. LAPACK returned info code ', info, '.'
+          call messages_warning(1)
+        end if
+        
+        lwork = nint(R_REAL(tmp(1)))
 
-      lwork = nint(R_REAL(tmp(1)))
-
-      SAFE_ALLOCATE(work(1:lwork))
+        SAFE_ALLOCATE(work(1:lwork))
 
 #ifdef R_TREAL
-      call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
-        work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
+        call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+          n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
+          vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+          m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
+          work = work(1), lwork = lwork, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
-      call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
-        n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
-        vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
-        m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
-        work = work(1), lwork = lwork,  rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
+        call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
+          n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
+          vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
+          m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
+          work = work(1), lwork = lwork,  rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
-      SAFE_DEALLOCATE_A(rwork)
+        SAFE_DEALLOCATE_A(rwork)
 #endif
 
-      if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
-        call messages_warning(1)
+        if(info /= 0) then
+          write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
+          call messages_warning(1)
+        end if
+        
+        SAFE_DEALLOCATE_A(hamiltonian)
+        SAFE_DEALLOCATE_A(overlap)
+      else
+        SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
       end if
-    end if
-
+      
 #ifdef HAVE_MPI
-    ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
-    ! they must be consistent among processors in domain parallelization
-    if(gr%mesh%parallel_in_domains) then
-      call MPI_Bcast(evec(1,1), size(evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
-      call MPI_Bcast(eval(1),   size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
-    end if
+      ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
+      ! they must be consistent among processors in domain parallelization
+      if(gr%mesh%parallel_in_domains) then
+        call MPI_Bcast(evec(1,1), size(evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(eval(1),   size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+      end if
 #endif
-
+      
     end if
 
     SAFE_DEALLOCATE_A(iwork)
