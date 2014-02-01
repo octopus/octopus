@@ -76,6 +76,8 @@ module batch_ops_m
   interface batch_xpay
     module procedure dbatch_xpay_vec
     module procedure zbatch_xpay_vec
+    module procedure dbatch_xpay_const
+    module procedure zbatch_xpay_const
   end interface batch_xpay
 
   interface batch_set_state

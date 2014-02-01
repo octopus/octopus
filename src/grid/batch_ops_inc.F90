@@ -467,6 +467,37 @@ end subroutine X(batch_xpay_vec)
 
 ! --------------------------------------------------------------
 
+subroutine X(batch_xpay_const)(np, xx, aa, yy)
+  integer,           intent(in)    :: np
+  type(batch_t),     intent(in)    :: xx
+  R_TYPE,            intent(in)    :: aa
+  type(batch_t),     intent(inout) :: yy
+
+  integer :: minst, maxst, ii, ist
+  R_TYPE, allocatable :: aavec(:)
+  
+  minst = HUGE(minst)
+  maxst = -HUGE(maxst)
+  
+  do ii = 1, xx%nst_linear
+    ist = batch_linear_to_ist(xx, ii)
+    minst = min(minst, ist)
+    maxst = max(maxst, ist)
+  end do
+
+
+  SAFE_ALLOCATE(aavec(minst:maxst))
+
+  aavec = aa
+
+  call X(batch_xpay_vec)(np, xx, aavec, yy, a_start = minst)
+
+  SAFE_DEALLOCATE_A(aavec)
+  
+end subroutine X(batch_xpay_const)
+
+! --------------------------------------------------------------
+
 subroutine X(batch_set_state1)(this, ist, np, psi)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: ist

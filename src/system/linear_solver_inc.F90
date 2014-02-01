@@ -697,7 +697,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
   
-  type(batch_t) :: vvb
+  type(batch_t) :: vvb, rrb
   R_TYPE, allocatable :: x(:, :), b(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
@@ -728,18 +728,18 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(deltar(1:gr%mesh%np))
 
   call batch_copy(xb, vvb, reference = .false.)
-
+  call batch_copy(xb, rrb, reference = .false.)
+  
   call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
+
+  call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
+  call batch_copy_data(gr%mesh%np, vvb, rrb)
 
   do ii = 1, xb%nst
     x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     b(1:gr%mesh%np, 1:st%d%dim) = bb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
-
-    forall (ip = 1:gr%mesh%np)
-      r(ip) = b(ip, 1) - v(ip, 1)
-      v(ip, 1) = r(ip)
-    end forall
+    r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
 
     rho      = X(mf_nrm2)(gr%mesh, st%d%dim, v)
     norm_b   = X(mf_nrm2)(gr%mesh, st%d%dim, b)
@@ -911,6 +911,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   end do
   
+  call batch_end(vvb)
+  call batch_end(rrb)
+
   SAFE_DEALLOCATE_A(x)
   SAFE_DEALLOCATE_A(b)
   SAFE_DEALLOCATE_A(r)
