@@ -62,10 +62,13 @@ contains
 
     type(tess_pcm_t) :: dum2(1)
     integer :: ia
-    integer :: itess,jtess
+    integer :: itess
+    integer :: jtess
     integer :: nesf_act
-    integer :: cav_unit, cav_unit_test
+    integer :: cav_unit
+    integer :: cav_unit_test
     integer :: pcmmat_unit
+    integer :: iunit
     integer, parameter :: mxts = 10000
 
     FLOAT   :: epsilon_static
@@ -77,6 +80,8 @@ contains
     FLOAT   :: rcav_F
 
     logical :: run_pcm 
+
+    character(len=80) :: str
 
     PUSH_SUB(pcm_init)
 
@@ -116,35 +121,55 @@ contains
     !%End
     call parse_float(datasets_check('SolventDielectricConstant'), CNST(1.0), epsilon_static)
 
-    !%Variable PCMRadii
-    !%Type float
+    !%Variable CavityGeometry
+    !%Type string
     !%Section Hamiltonian::PCM
     !%Description
-    !%
-    !%
+    !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
+    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units!.
     !%End
-!    if(parse_block(datasets_check('PCMRadii'), blk) == 0) then
-!      call check_duplicated(done)
 
-!      gf%n = parse_block_n(blk)
+    call parse_string(datasets_check('CavityGeometry'), '', str)
 
-!      message(1) = "Reading " // trim(what) // " from " // trim(what) // " block"
-!      call messages_info(1)
+    iunit = io_open(trim(str), status='old', action='read')
+    
+    read(iunit,*) nts_act
 
-!      temp_SAFE_ALLOCATE(gf%atom(1:gf%n))
+    if (nts_act.gt.mxts) then
+        write(message(1),'(a,I5)') "WARNING: total number of tesserae > 10 000 ", nts_act
+        call messages_info(1)     
+    endif
 
-!      do ia = 1, gf%n
-!        ncol = parse_block_cols(blk, ia - 1)
-!        if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
-!          write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
-!          call messages_fatal(1)
-!        end if
-!        call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
-!        call parse_block_float  (blk, ia - 1, 1, gf%atom(ia)%x(jdir))
-!      end do
+    SAFE_ALLOCATE(cts_act(1:nts_act))
 
-!      call parse_block_end(blk)
-!    end if
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%x
+    enddo
+	
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%y
+    enddo
+	
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%z
+    enddo
+
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%area
+    enddo
+
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%rsfe
+    enddo
+
+    do ia=1, nts_act
+       read(iunit,*) cts_act(ia)%n
+    enddo
+    
+    call io_close(iunit)    
+
+    message(1) = "Van der Waals surface has been read from " // trim(str)
+    call messages_info(1)
 
     nesf_act = 0
     do ia = 1, geo%natoms
@@ -160,7 +185,7 @@ contains
        if (geo%atom(ia)%label == 'H') cycle
        nesf_act = nesf_act + 1
       
-       ! This coordinates are already in atomic units (Bohr)
+       ! These coordinates are already in atomic units (Bohr)
        sfe_act(nesf_act)%x = geo%atom(ia)%x(1)
        sfe_act(nesf_act)%y = geo%atom(ia)%x(2)
        sfe_act(nesf_act)%z = geo%atom(ia)%x(3)
@@ -171,14 +196,7 @@ contains
        if (geo%atom(ia)%label == 'S') sfe_act(nesf_act)%r = rcav_S
        if (geo%atom(ia)%label == 'F') sfe_act(nesf_act)%r = rcav_F                
 
-!       do ib = 1, n_species_solv
-!          if (species_solv(ib)%symbol /= geo%atom(ia)%label) cycle
-!          sfe_act(nesf_act)%r = species_solv(ib)%r_cav 
-!       enddo
-
     enddo
-
-    return
 
     call io_mkdir('pcm')
 
@@ -207,21 +225,12 @@ contains
     enddo
     write(pcminfo_unit,'(2X)')  
 
-    cav_unit = io_open('pcm/cavity.xyz', action='write')
     cav_unit_test = io_open('pcm/cavity_mol.xyz', action='write')
 
-    write (cav_unit,'(2X,I4)') nts_act
     write (cav_unit_test,'(2X,I4)') nts_act+geo%natoms
-
-    write (cav_unit,'(2X)')
     write (cav_unit_test,'(2X)')
 
     do itess=1, nts_act
-
-       write(cav_unit,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', cts_act(itess)%x, &
-                                                                    cts_act(itess)%y, &
-                                                                    cts_act(itess)%z
-
        write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', cts_act(itess)%x*P_a_B, &
                                                                          cts_act(itess)%y*P_a_B, &
                                                                          cts_act(itess)%z*P_a_B
@@ -234,10 +243,11 @@ contains
                                                                     geo%atom(ia)%x(3)*P_a_B
     enddo
 
-    call io_close(cav_unit)
     call io_close(cav_unit_test)
 
-    call pcm_matrix(epsilon_static)
+    call pcm_matrix(epsilon_static) ! Calculates the PCM response matrix
+    message(1) = "PCM response matrix has been evaluated"
+    call messages_info(1)
 
     pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
 
@@ -248,17 +258,6 @@ contains
      enddo
 	 
     call io_close(pcmmat_unit)
-
-    if (nts_act.gt.mxts) then
-        write(message(1),'(a,I5)') "WARNING: total number of tesserae = ", nts_act
-        call messages_info(1)     
-    endif
-
-    message(1) = "Molecular cavity has been built"
-    message(2) = "PCM response matrix has been evaluated"
-
-    call messages_info(2)
-
     call io_close(pcminfo_unit)
 
     POP_SUB(pcm_init)
