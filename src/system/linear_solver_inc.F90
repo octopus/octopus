@@ -491,6 +491,47 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
 
 end subroutine X(linear_solver_operator)
 
+! ---------------------------------------------------------
+subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(grid_t),          intent(inout) :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(in)    :: shift(:)
+  type(batch_t),         intent(inout) :: xb   
+  type(batch_t),         intent(out)   :: hxb  
+
+  integer :: ii
+  R_TYPE, allocatable :: shift_ist_indexed(:)
+
+  PUSH_SUB(X(linear_solver_operator_batch))
+
+  if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
+
+    call X(hamiltonian_apply_batch)(hm, gr%der, xb, hxb, ik)
+    
+    SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
+    
+    do ii = 1, xb%nst 
+      shift_ist_indexed(xb%states(ii)%ist) = shift(ii)
+    end do
+    
+    call batch_axpy(gr%mesh%np, shift_ist_indexed, xb, hxb)
+    
+    SAFE_DEALLOCATE_A(shift_ist_indexed)
+
+  else
+
+    do ii = 1, xb%nst
+      call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), &
+        xb%states(ii)%X(psi), hxb%states(ii)%X(psi))
+    end do
+
+  end if
+    
+  POP_SUB(X(linear_solver_operator_batch))
+
+end subroutine X(linear_solver_operator_batch)
 
 ! ---------------------------------------------------------
 !> applies linear_solver_operator with other arguments implicit as global variables
@@ -655,7 +696,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   FLOAT,   optional,     intent(in)    :: threshold    !< convergence threshold
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
-
+  
+  type(batch_t) :: vvb
   R_TYPE, allocatable :: x(:, :), b(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
@@ -685,11 +727,14 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(deltax(1:gr%mesh%np))
   SAFE_ALLOCATE(deltar(1:gr%mesh%np))
 
+  call batch_copy(xb, vvb, reference = .false.)
+
+  call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
+
   do ii = 1, xb%nst
     x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     b(1:gr%mesh%np, 1:st%d%dim) = bb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
-
-    call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), x, v)
+    v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
 
     forall (ip = 1:gr%mesh%np)
       r(ip) = b(ip, 1) - v(ip, 1)

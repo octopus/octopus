@@ -21,6 +21,7 @@
 
 module linear_solver_m
   use batch_m
+  use batch_ops_m
   use datasets_m
   use derivatives_m
   use global_m
