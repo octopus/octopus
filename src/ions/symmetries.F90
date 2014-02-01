@@ -158,7 +158,7 @@ contains
 
     else
 
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)      ! transpose!!
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)  / maxval(abs(rlattice(1:periodic_dim, 1:periodic_dim)))     ! transpose!!
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
@@ -210,7 +210,7 @@ contains
       do iop = 1, fullnops
         if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(translation(1:3, iop)) > M_EPSILON)) then
+          if(symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
@@ -226,6 +226,7 @@ contains
         message(1) = "Disabling fractional translations. System appears to be a supercell."
         call messages_info(1)
       endif
+      ! actually, we do not use fractional translations regardless currently
 
       ! this is a hack to get things working, this variable should be
       ! eliminated and the direction calculated automatically from the
@@ -260,11 +261,12 @@ contains
       write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
       call messages_info(1)
       do iop = 1, fullnops
+        ! sometimes spglib may return lattice vectors as 'fractional' translations
+        translation(:, iop) = translation(:, iop) - int(translation(:, iop) + M_EPSILON)
         call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
-          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION)) &
-          .and. (.not. is_supercell .or. all(abs(translation(1:3, iop)) < M_EPSILON))) then
+          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
 

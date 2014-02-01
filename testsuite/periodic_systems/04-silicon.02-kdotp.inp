@@ -7,7 +7,7 @@ PeriodicDimensions = 3
 
 Spacing = 0.7
 
-a = 10.2000001
+a = 10.2
 
 BoxShape = parallelepiped
 Lsize = a/2
