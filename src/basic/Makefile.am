@@ -113,7 +113,7 @@ loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profi
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
-datasets.o : datasets.F90 parser.o c_pointer.o
+datasets.o : datasets.F90 parser.o c_pointer.o mpi.o
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o unit.o
 papi_f.o : papi_f.F90
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o

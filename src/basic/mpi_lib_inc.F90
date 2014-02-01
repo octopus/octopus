@@ -30,7 +30,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   R_TYPE,          intent(out) :: out(:)
   type(mpi_grp_t), intent(in)  :: mpi_grp
 
-  integer              :: mpi_err, inode
+  integer              :: inode
   integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
   PUSH_SUB(X(lmpi_gen_allgatherv))

@@ -44,6 +44,9 @@ include "mpif.h"
  
   type(mpi_grp_t), public :: mpi_world
 
+  !> used to store return values of mpi calls
+  integer, public :: mpi_err
+
 contains
 
   ! ---------------------------------------------------------
@@ -51,7 +54,6 @@ contains
     logical, intent(in) :: is_serial
 
 #if defined(HAVE_MPI)
-    integer :: mpi_err
 #ifdef HAVE_OPENMP
     integer :: provided
 #endif
@@ -93,9 +95,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mpi_mod_end()
-#if defined(HAVE_MPI)
-    integer :: mpi_err
 
+#if defined(HAVE_MPI)
     ! end MPI, if we started it
     if(mpi_world%comm /= -1) call MPI_Finalize(mpi_err)
 #endif 
@@ -109,8 +110,6 @@ contains
     integer,         intent(in)   :: comm  !< the communicator that defined the group
 
 #if defined(HAVE_MPI)
-    integer :: mpi_err
-
     if(comm /= -1 .and. comm /= MPI_COMM_NULL) then
       grp%comm = comm
       call MPI_Comm_rank(grp%comm, grp%rank, mpi_err)

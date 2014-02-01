@@ -77,7 +77,6 @@ contains
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy, id, xy(2)
     logical :: periods(1:2)
-    integer :: mpi_err
     integer :: comm
     logical :: reorder
     integer, allocatable :: procmap(:)

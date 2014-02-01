@@ -20,6 +20,7 @@
 #include "global.h"
 
 module datasets_m
+  use mpi_m
   use parser_m
 
   implicit none
@@ -49,9 +50,6 @@ contains
 
     integer :: ids, n_rows, n_cols
     integer, allocatable :: order(:)
-#ifdef HAVE_MPI
-    integer :: mpi_err
-#endif
 
     ! variable CalculationMode is defined in src/main/main.F90
 
