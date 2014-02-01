@@ -906,7 +906,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     if (err /= QMR_NORMAL) then
       write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
-      call messages_fatal(2)
+      call messages_warning(2)
     end if
 
     if(showprogress_) write(*,*) ''
