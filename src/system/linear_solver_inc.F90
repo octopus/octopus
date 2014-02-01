@@ -719,7 +719,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   showprogress_ = optional_default(showprogress, .false.)
 
   SAFE_ALLOCATE(x(1:gr%mesh%np_part, 1:st%d%dim))
-!  SAFE_ALLOCATE(b(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(r(1:gr%mesh%np))
   SAFE_ALLOCATE(v(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(z(1:gr%mesh%np, 1:st%d%dim))
