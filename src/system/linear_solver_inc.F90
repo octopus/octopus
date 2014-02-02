@@ -697,23 +697,24 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
 
-  type(batch_t) :: vvb, rrb
+  type(batch_t) :: vvb, rrb, exception_saved
   R_TYPE, allocatable :: x(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
   integer             :: ip, ilog_res, ilog_thr, ii, iter, idim, ist
   logical             :: showprogress_
   FLOAT, allocatable  :: rho(:), norm_b(:)
-  integer, allocatable :: status(:)
+  integer, allocatable :: status(:), saved_iter(:)
 
   integer, parameter ::        &
     QMR_NOT_CONVERGED    = 0,  &
-    QMR_DONE             = 1,  &
-    QMR_B_ZERO           = 2,  &
-    QMR_BREAKDOWN_PB     = 3,  &
-    QMR_BREAKDOWN_VZ     = 4,  &
-    QMR_BREAKDOWN_QP     = 5,  &
-    QMR_BREAKDOWN_GAMMA  = 6
+    QMR_CONVERGED        = 1,  &
+    QMR_RES_ZERO         = 2,  &
+    QMR_B_ZERO           = 3,  &
+    QMR_BREAKDOWN_PB     = 4,  &
+    QMR_BREAKDOWN_VZ     = 5,  &
+    QMR_BREAKDOWN_QP     = 6,  &
+    QMR_BREAKDOWN_GAMMA  = 7
 
   PUSH_SUB(X(linear_solver_qmr_dotp))
 
@@ -733,9 +734,11 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(rho(1:xb%nst))
   SAFE_ALLOCATE(norm_b(1:xb%nst))
   SAFE_ALLOCATE(status(1:xb%nst))
+  SAFE_ALLOCATE(saved_iter(1:xb%nst))
 
   call batch_copy(xb, vvb, reference = .false.)
   call batch_copy(xb, rrb, reference = .false.)
+  call batch_copy(xb, exception_saved, reference = .false.)
 
   call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
 
@@ -755,19 +758,21 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
 
     iter = 0
-    res = rho(ii)
+    residue(ii) = rho(ii)
 
     ! If rho(ii) is basically zero we are already done.
     if(abs(rho(ii)) <= M_EPSILON) then
-      status(ii) = QMR_DONE
-      exit
+      status(ii) = QMR_RES_ZERO
+      residue(ii) = rho(ii)
+      exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
+      saved_iter(ii) = iter
     end if
 
     if(abs(norm_b(ii)) <= M_EPSILON) then
       status(ii) = QMR_B_ZERO
-      x(1:gr%mesh%np, 1:st%d%dim) = CNST(0.0)
-      res = norm_b(ii)
-      exit
+      exception_saved%states(ii)%X(psi) = CNST(0.0)
+      residue(ii) = norm_b(ii)
+      saved_iter(ii) = iter
     end if
 
     call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
@@ -786,11 +791,15 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     end if
 
     do while(iter < this%max_iter)
+      if(status(ii) /= QMR_NOT_CONVERGED) exit
+
       iter = iter + 1
       if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_PB
-        exit
+        saved_iter(ii) = iter
       end if
+
       alpha = alpha*xsi/rho(ii)
 
       do idim = 1, st%d%dim
@@ -801,8 +810,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
 
       if(abs(delta) < M_EPSILON) then
+        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_VZ
-        exit
+        saved_iter(ii) = iter
       end if
 
       if(iter == 1) then
@@ -823,8 +833,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
 
       if(abs(epsilon) < M_EPSILON) then
+        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_QP
-        exit
+        saved_iter(ii) = iter
       end if
 
       beta = epsilon/delta
@@ -847,8 +858,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       gamma    = M_ONE/sqrt(M_ONE+theta**2)
 
       if(abs(gamma) < M_EPSILON) then
+        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_GAMMA
-        exit
+        saved_iter(ii) = iter
       end if
 
       eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
@@ -882,34 +894,33 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
       end if
 
-      ! avoid divide by zero
-      if(abs(norm_b(ii)) < M_EPSILON) then
-        res = M_HUGE
-      else
-        res = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
-      endif
+      residue(ii) = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
 
       if(showprogress_) then
         ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
         call loct_progress_bar(ilog_res, ilog_thr)
       end if
 
-      if(res < threshold_) then
-        status(ii) = QMR_DONE
+      if(residue(ii) < threshold_) then
+        status(ii) = QMR_CONVERGED
         exit
       end if
     end do
 
-    xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
-    residue(ii) = res
-    iter_used(ii) = iter
+    if(status(ii) == QMR_NOT_CONVERGED .or. status(ii) == QMR_CONVERGED) then
+      xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
+      iter_used(ii) = iter
+    else
+      xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+      iter_used(ii) = saved_iter(ii)
+    end if
 
     select case(status(ii))
     case(QMR_NOT_CONVERGED)
       write(message(1), '(a)') "QMR solver not converged!"
       write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
       call messages_warning(2)
-    case(QMR_DONE) 
+    case(QMR_CONVERGED, QMR_RES_ZERO, QMR_B_ZERO)
       if (present(converged)) converged = .true.
     case(QMR_BREAKDOWN_PB)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
@@ -931,6 +942,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   call batch_end(vvb)
   call batch_end(rrb)
+  call batch_end(exception_saved)
 
   SAFE_DEALLOCATE_A(x)
   SAFE_DEALLOCATE_A(r)
