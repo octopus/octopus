@@ -277,7 +277,7 @@ contains
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     endif
@@ -289,7 +289,7 @@ contains
       write(0,'(a)') 'Cannot open input file!'
       write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     endif
@@ -302,7 +302,7 @@ contains
       write(0,'(a)') 'Error initializing parser: cannot write to exec/parser.log.'
       write(0,'(a)') 'Do you have write permissions in this directory?'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     end if
@@ -314,7 +314,7 @@ contains
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     end if
@@ -327,7 +327,7 @@ contains
       write(0,'(a)') 'Cannot open input file!'
       write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     end if
@@ -559,7 +559,7 @@ contains
              write(0, '(a)') "*** Fatal Error (description follows)"
              write(0, '(a)') "Attempting to parse a string with array elements larger than 99"
 #ifdef HAVE_MPI
-             call MPI_Finalize(mpi_err)
+             if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
              stop
           end if

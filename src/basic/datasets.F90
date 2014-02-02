@@ -123,7 +123,7 @@ contains
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Ordering of the datasets seems to be wrong in block "%CalculationMode"'
 #ifdef HAVE_MPI
-      call MPI_Finalize(mpi_err)
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     end if
