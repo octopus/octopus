@@ -1859,7 +1859,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: ist_start_, ist_end_
 
-    integer :: ist, ik, id, ist_start, ist_end, jst, seed
+    integer :: ist, ik, id, ist_start, ist_end, jst
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
@@ -1869,10 +1869,8 @@ contains
 
     cmplxscl = st%cmplxscl%space
 
-    ist_start = optional_default(ist_start_, st%st_start)
-    ist_end   = optional_default(ist_end_,   st%st_end)
-
-    seed = 0
+    ist_start = optional_default(ist_start_, 1)
+    ist_end   = optional_default(ist_end_,   st%nst)
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1888,15 +1886,15 @@ contains
           st%eigenval(ist, ik) = M_ZERO
           if(cmplxscl) st%zeigenval%Im(ist, ik) = M_ZERO
           if (states_are_real(st)) then
-            call dmf_random(mesh, dpsi(:, 1), seed)
+            call dmf_random(mesh, dpsi(:, 1))
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, dpsi)
           else
-            call zmf_random(mesh, zpsi(:, 1), seed)
+            call zmf_random(mesh, zpsi(:, 1))
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
-              call zmf_random(mesh, zpsi(:, 1), seed)
+              call zmf_random(mesh, zpsi(:, 1))
               if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
@@ -1952,7 +1950,7 @@ contains
             end do
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
-            st%eigenval(ist, ik) = M_HUGE
+            st%eigenval(ist, ik) = M_ZERO
           end do
         end do
       end if
