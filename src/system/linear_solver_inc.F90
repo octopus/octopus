@@ -738,8 +738,10 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call batch_copy_data(gr%mesh%np, vvb, rrb)
 
-  call mesh_batch_nrm2(gr%mesh, vvb, rho)
-  call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+  ! This causing problems, so I am commenting it for the moment.
+  !
+  !  call mesh_batch_nrm2(gr%mesh, vvb, rho)
+  !  call mesh_batch_nrm2(gr%mesh, bb, norm_b)
 
   do ii = 1, xb%nst
     ist = batch_linear_to_ist(xb, ii)
@@ -747,6 +749,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
+
+    rho(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, v) 
+    norm_b(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, bb%states(ii)%X(psi))
 
     iter     = 0
     err      = QMR_NORMAL
