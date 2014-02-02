@@ -696,22 +696,25 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   FLOAT,   optional,     intent(in)    :: threshold    !< convergence threshold
   logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
   logical, optional,     intent(out)   :: converged    !< has the algorithm converged
-  
+
   type(batch_t) :: vvb, rrb
   R_TYPE, allocatable :: x(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
   FLOAT               :: xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
-  integer             :: err, ip, ilog_res, ilog_thr, ii, iter, idim, ist
+  integer             :: ip, ilog_res, ilog_thr, ii, iter, idim, ist
   logical             :: showprogress_
   FLOAT, allocatable  :: rho(:), norm_b(:)
+  integer, allocatable :: status(:)
 
   integer, parameter ::        &
-    QMR_NORMAL           = 0,  &
-    QMR_BREAKDOWN_PB     = 1,  &
-    QMR_BREAKDOWN_VZ     = 2,  &
-    QMR_BREAKDOWN_QP     = 3,  &
-    QMR_BREAKDOWN_GAMMA  = 4
-    
+    QMR_NOT_CONVERGED    = 0,  &
+    QMR_DONE             = 1,  &
+    QMR_B_ZERO           = 2,  &
+    QMR_BREAKDOWN_PB     = 3,  &
+    QMR_BREAKDOWN_VZ     = 4,  &
+    QMR_BREAKDOWN_QP     = 5,  &
+    QMR_BREAKDOWN_GAMMA  = 6
+
   PUSH_SUB(X(linear_solver_qmr_dotp))
 
   if(present(converged)) converged = .false.
@@ -729,19 +732,20 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   SAFE_ALLOCATE(rho(1:xb%nst))
   SAFE_ALLOCATE(norm_b(1:xb%nst))
+  SAFE_ALLOCATE(status(1:xb%nst))
 
   call batch_copy(xb, vvb, reference = .false.)
   call batch_copy(xb, rrb, reference = .false.)
-  
+
   call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
 
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call batch_copy_data(gr%mesh%np, vvb, rrb)
 
-  ! This causing problems, so I am commenting it for the moment.
-  !
   call mesh_batch_nrm2(gr%mesh, vvb, rho)
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+
+  status = QMR_NOT_CONVERGED
 
   do ii = 1, xb%nst
     ist = xb%states(ii)%ist
@@ -750,173 +754,181 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
 
-    iter     = 0
-    err      = QMR_NORMAL
-    res      = rho(ii)
+    iter = 0
+    res = rho(ii)
 
     ! If rho(ii) is basically zero we are already done.
-    if(abs(rho(ii)) > M_EPSILON) then
+    if(abs(rho(ii)) <= M_EPSILON) then
+      status(ii) = QMR_DONE
+      exit
+    end if
+
+    if(abs(norm_b(ii)) <= M_EPSILON) then
+      status(ii) = QMR_B_ZERO
+      x(1:gr%mesh%np, 1:st%d%dim) = CNST(0.0)
+      res = norm_b(ii)
+      exit
+    end if
+
+    call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
+
+    xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
+
+    gamma = M_ONE
+    eta   = -M_ONE
+    alpha = M_ONE
+    theta = M_ZERO
+
+    ! initialize progress bar
+    if(showprogress_) then
+      ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
+      call loct_progress_bar(-1, ilog_thr)
+    end if
+
+    do while(iter < this%max_iter)
+      iter = iter + 1
+      if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+        status(ii) = QMR_BREAKDOWN_PB
+        exit
+      end if
+      alpha = alpha*xsi/rho(ii)
+
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), v(:, idim))
+        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi, z(:, idim))
+      end do
+
+      delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
+
+      if(abs(delta) < M_EPSILON) then
+        status(ii) = QMR_BREAKDOWN_VZ
+        exit
+      end if
+
+      if(iter == 1) then
+        do idim = 1, st%d%dim
+          call lalg_copy(gr%mesh%np, z(:, idim), q(:, idim))
+        end do
+      else
+        rtmp = -rho(ii)*delta/epsilon
+        forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
+      end if
+
+      call X(linear_solver_operator)(hm, gr, st, ist, ik, shift(ii), q, p)
+
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, alpha, p(:, idim))
+      end do
+
+      epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
+
+      if(abs(epsilon) < M_EPSILON) then
+        status(ii) = QMR_BREAKDOWN_QP
+        exit
+      end if
+
+      beta = epsilon/delta
+      forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
+      oldrho = rho(ii)
+
+      rho(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, v)
+
       call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
+
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, CNST(1.0)/alpha, z(:, idim))
+      end do
 
       xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
-      gamma = M_ONE
-      eta   = -M_ONE
-      alpha = M_ONE
-      theta = M_ZERO
+      oldtheta = theta
+      theta    = rho(ii)/(gamma*abs(beta))
+      oldgamma = gamma
+      gamma    = M_ONE/sqrt(M_ONE+theta**2)
 
-      ! initialize progress bar
-      if(showprogress_) then
-        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
-        call loct_progress_bar(-1, ilog_thr)
+      if(abs(gamma) < M_EPSILON) then
+        status(ii) = QMR_BREAKDOWN_GAMMA
+        exit
       end if
 
-      do while(iter < this%max_iter)
-        iter = iter + 1
-        if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
-          err = QMR_BREAKDOWN_PB
-          exit
-        end if
-        alpha = alpha*xsi/rho(ii)
+      eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), v(:, idim))
-          call lalg_scal(gr%mesh%np, CNST(1.0)/xsi, z(:, idim))
-        end do
+      rtmp = eta*alpha
 
-        delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
+      if(iter == 1) then
 
-        if(abs(delta) < M_EPSILON) then
-          err = QMR_BREAKDOWN_VZ
-          exit
-        end if
+        forall (ip = 1:gr%mesh%np)
+          deltax(ip) = rtmp*q(ip, 1)
+          x(ip, 1) = x(ip, 1) + deltax(ip)
+        end forall
 
-        if(iter == 1) then
-          do idim = 1, st%d%dim
-            call lalg_copy(gr%mesh%np, z(:, idim), q(:, idim))
-          end do
-        else
-          rtmp = -rho(ii)*delta/epsilon
-          forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
-        end if
+        forall (ip = 1:gr%mesh%np)
+          deltar(ip) = eta*p(ip, 1)
+          r(ip) = r(ip) - deltar(ip)
+        end forall
 
-        call X(linear_solver_operator)(hm, gr, st, ist, ik, shift(ii), q, p)
-
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, alpha, p(:, idim))
-        end do
-
-        epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
-
-        if(abs(epsilon) < M_EPSILON) then
-          err = QMR_BREAKDOWN_QP
-          exit
-        end if
-
-        beta = epsilon/delta
-        forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
-        oldrho = rho(ii)
-
-        rho(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, v)
-
-        call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
-
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, CNST(1.0)/alpha, z(:, idim))
-        end do
-
-        xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
-
-        oldtheta = theta
-        theta    = rho(ii)/(gamma*abs(beta))
-        oldgamma = gamma
-        gamma    = M_ONE/sqrt(M_ONE+theta**2)
-
-        if(abs(gamma) < M_EPSILON) then
-          err = QMR_BREAKDOWN_GAMMA
-          exit
-        end if
-
-        eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
-
-        rtmp = eta*alpha
-
-        if(iter == 1) then
-
-          forall (ip = 1:gr%mesh%np)
-            deltax(ip) = rtmp*q(ip, 1)
-            x(ip, 1) = x(ip, 1) + deltax(ip)
-          end forall
-
-          forall (ip = 1:gr%mesh%np)
-            deltar(ip) = eta*p(ip, 1)
-            r(ip) = r(ip) - deltar(ip)
-          end forall
-
-        else
-
-          tmp  = (oldtheta*gamma)**2
-          forall (ip = 1:gr%mesh%np)
-            deltax(ip) = tmp*deltax(ip) + rtmp*q(ip, 1)
-            x(ip, 1) = x(ip, 1) + deltax(ip)
-          end forall
-
-          forall (ip = 1:gr%mesh%np)
-            deltar(ip) = tmp*deltar(ip) + eta*p(ip, 1)
-            r(ip) = r(ip) - deltar(ip)
-          end forall
-
-        end if
-
-        ! avoid divide by zero
-        if(abs(norm_b(ii)) < M_EPSILON) then
-          res = M_HUGE
-        else
-          res = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
-        endif
-
-        if(showprogress_) then
-          ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
-          call loct_progress_bar(ilog_res, ilog_thr)
-        end if
-
-        if(res < threshold_) exit
-      end do
-    end if
-    
-    iter_used(ii) = iter
-    xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
-
-    select case(err)
-    case(QMR_NORMAL)
-      if(res < threshold_) then
-        if (present(converged)) converged = .true.
       else
-        write(message(1), '(a)') "QMR solver not converged!"
-        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-        call messages_warning(2)
+
+        tmp  = (oldtheta*gamma)**2
+        forall (ip = 1:gr%mesh%np)
+          deltax(ip) = tmp*deltax(ip) + rtmp*q(ip, 1)
+          x(ip, 1) = x(ip, 1) + deltax(ip)
+        end forall
+
+        forall (ip = 1:gr%mesh%np)
+          deltar(ip) = tmp*deltar(ip) + eta*p(ip, 1)
+          r(ip) = r(ip) - deltar(ip)
+        end forall
+
       end if
+
+      ! avoid divide by zero
+      if(abs(norm_b(ii)) < M_EPSILON) then
+        res = M_HUGE
+      else
+        res = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
+      endif
+
+      if(showprogress_) then
+        ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
+        call loct_progress_bar(ilog_res, ilog_thr)
+      end if
+
+      if(res < threshold_) then
+        status(ii) = QMR_DONE
+        exit
+      end if
+    end do
+
+    xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
+    residue(ii) = res
+    iter_used(ii) = iter
+
+    select case(status(ii))
+    case(QMR_NOT_CONVERGED)
+      write(message(1), '(a)') "QMR solver not converged!"
+      write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
+      call messages_warning(2)
+    case(QMR_DONE) 
+      if (present(converged)) converged = .true.
     case(QMR_BREAKDOWN_PB)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
+      call messages_warning(1)
     case(QMR_BREAKDOWN_VZ)
       write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
+      call messages_warning(1)
     case(QMR_BREAKDOWN_QP)
       write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
+      call messages_warning(1)
     case(QMR_BREAKDOWN_GAMMA)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
+      call messages_warning(1)
     end select
-
-    if (err /= QMR_NORMAL) then
-      write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
-      call messages_warning(2)
-    end if
 
     if(showprogress_) write(*,*) ''
 
-    residue(ii) = res
-
   end do
-  
+
   call batch_end(vvb)
   call batch_end(rrb)
 
@@ -928,7 +940,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(deltax)
   SAFE_DEALLOCATE_A(deltar)
-  
+
   POP_SUB(X(linear_solver_qmr_dotp))
 end subroutine X(linear_solver_qmr_dotp)
 
