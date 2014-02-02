@@ -696,10 +696,11 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   type(batch_t) :: vvb, rrb, zzb, exception_saved
   R_TYPE, allocatable :: x(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
-  R_TYPE              :: eta, delta, epsilon, beta, rtmp
-  FLOAT               :: gamma, alpha, theta, res, oldtheta, oldgamma, oldrho, tmp
-  integer             :: ip, ilog_res, ilog_thr, ii, iter, idim, ist
-  FLOAT, allocatable  :: rho(:), norm_b(:), xsi(:)
+  R_TYPE              :: rtmp
+  FLOAT               :: oldgamma, tmp
+  integer             :: ip, ii, iter, idim, ist
+  FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:)
+  R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:)
   integer, allocatable :: status(:), saved_iter(:)
 
   integer, parameter ::        &
@@ -724,8 +725,18 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(deltar(1:gr%mesh%np))
 
   SAFE_ALLOCATE(rho(1:xb%nst))
+  SAFE_ALLOCATE(oldrho(1:xb%nst))
   SAFE_ALLOCATE(norm_b(1:xb%nst))
   SAFE_ALLOCATE(xsi(1:xb%nst))
+  SAFE_ALLOCATE(gamma(1:xb%nst))
+  SAFE_ALLOCATE(alpha(1:xb%nst))
+  SAFE_ALLOCATE(eta(1:xb%nst))
+  SAFE_ALLOCATE(theta(1:xb%nst))
+  SAFE_ALLOCATE(oldtheta(1:xb%nst))
+  SAFE_ALLOCATE(beta(1:xb%nst))
+  SAFE_ALLOCATE(delta(1:xb%nst))
+  SAFE_ALLOCATE(eps(1:xb%nst))
+
   SAFE_ALLOCATE(status(1:xb%nst))
   SAFE_ALLOCATE(saved_iter(1:xb%nst))
 
@@ -781,10 +792,10 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
  
     iter = 0
 
-    gamma = M_ONE
-    eta   = -M_ONE
-    alpha = M_ONE
-    theta = M_ZERO
+    gamma(ii) = M_ONE
+    eta(ii)   = -M_ONE
+    alpha(ii) = M_ONE
+    theta(ii) = M_ZERO
 
     do while(iter < this%max_iter)
       if(status(ii) /= QMR_NOT_CONVERGED) exit
@@ -796,16 +807,16 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         saved_iter(ii) = iter
       end if
 
-      alpha = alpha*xsi(ii)/rho(ii)
+      alpha(ii) = alpha(ii)*xsi(ii)/rho(ii)
 
       do idim = 1, st%d%dim
         call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), v(:, idim))
         call lalg_scal(gr%mesh%np, CNST(1.0)/xsi(ii), z(:, idim))
       end do
 
-      delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
+      delta(ii) = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
 
-      if(abs(delta) < M_EPSILON) then
+      if(abs(delta(ii)) < M_EPSILON) then
         exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_VZ
         saved_iter(ii) = iter
@@ -816,52 +827,52 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
           call lalg_copy(gr%mesh%np, z(:, idim), q(:, idim))
         end do
       else
-        rtmp = -rho(ii)*delta/epsilon
+        rtmp = -rho(ii)*delta(ii)/eps(ii)
         forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
       end if
 
       call X(linear_solver_operator)(hm, gr, st, ist, ik, shift(ii), q, p)
 
       do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, alpha, p(:, idim))
+        call lalg_scal(gr%mesh%np, alpha(ii), p(:, idim))
       end do
 
-      epsilon = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
+      eps(ii) = X(mf_dotp)(gr%mesh, st%d%dim, q, p)
 
-      if(abs(epsilon) < M_EPSILON) then
+      if(abs(eps(ii)) < M_EPSILON) then
         exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_QP
         saved_iter(ii) = iter
       end if
 
-      beta = epsilon/delta
-      forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
-      oldrho = rho(ii)
+      beta(ii) = eps(ii)/delta(ii)
+      forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta(ii)*v(ip, 1) + p(ip, 1)
+      oldrho(ii) = rho(ii)
 
       rho(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, v)
 
       call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
 
       do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, CNST(1.0)/alpha, z(:, idim))
+        call lalg_scal(gr%mesh%np, CNST(1.0)/alpha(ii), z(:, idim))
       end do
 
       xsi(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
-      oldtheta = theta
-      theta    = rho(ii)/(gamma*abs(beta))
-      oldgamma = gamma
-      gamma    = M_ONE/sqrt(M_ONE+theta**2)
+      oldtheta(ii) = theta(ii)
+      theta(ii) = rho(ii)/(gamma(ii)*abs(beta(ii)))
+      oldgamma = gamma(ii)
+      gamma(ii) = CNST(1.0)/sqrt(CNST(1.0) + theta(ii)**2)
 
-      if(abs(gamma) < M_EPSILON) then
+      if(abs(gamma(ii)) < M_EPSILON) then
         exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_GAMMA
         saved_iter(ii) = iter
       end if
 
-      eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+      eta(ii) = -eta(ii)*oldrho(ii)*gamma(ii)**2/(beta(ii)*oldgamma**2)
 
-      rtmp = eta*alpha
+      rtmp = eta(ii)*alpha(ii)
 
       if(iter == 1) then
 
@@ -871,20 +882,20 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         end forall
 
         forall (ip = 1:gr%mesh%np)
-          deltar(ip) = eta*p(ip, 1)
+          deltar(ip) = eta(ii)*p(ip, 1)
           r(ip) = r(ip) - deltar(ip)
         end forall
 
       else
 
-        tmp  = (oldtheta*gamma)**2
+        tmp  = (oldtheta(ii)*gamma(ii))**2
         forall (ip = 1:gr%mesh%np)
           deltax(ip) = tmp*deltax(ip) + rtmp*q(ip, 1)
           x(ip, 1) = x(ip, 1) + deltax(ip)
         end forall
 
         forall (ip = 1:gr%mesh%np)
-          deltar(ip) = tmp*deltar(ip) + eta*p(ip, 1)
+          deltar(ip) = tmp*deltar(ip) + eta(ii)*p(ip, 1)
           r(ip) = r(ip) - deltar(ip)
         end forall
 
@@ -940,6 +951,22 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(deltax)
   SAFE_DEALLOCATE_A(deltar)
+
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(oldrho)
+  SAFE_DEALLOCATE_A(norm_b)
+  SAFE_DEALLOCATE_A(xsi)
+  SAFE_DEALLOCATE_A(gamma)
+  SAFE_DEALLOCATE_A(alpha)
+  SAFE_DEALLOCATE_A(eta)
+  SAFE_DEALLOCATE_A(theta)
+  SAFE_DEALLOCATE_A(oldtheta)
+  SAFE_DEALLOCATE_A(beta)
+  SAFE_DEALLOCATE_A(delta)
+  SAFE_DEALLOCATE_A(eps)
+
+  SAFE_DEALLOCATE_A(status)
+  SAFE_DEALLOCATE_A(saved_iter)
 
   POP_SUB(X(linear_solver_qmr_dotp))
 end subroutine X(linear_solver_qmr_dotp)
