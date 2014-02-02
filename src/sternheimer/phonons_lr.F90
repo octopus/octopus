@@ -267,7 +267,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         ! open and close makes sure output is not buffered
         iunit_restart = io_open(trim(restart_dir)//VIB_MODES_DIR//'restart', action='write', position='append', is_tmp=.true.)
-        write(iunit_restart, *) imat, vib%dyn_matrix(:, imat), vib%infrared(imat, :)
+        write(iunit_restart, *) imat, vib%dyn_matrix(:, imat), (vib%infrared(imat, idir), idir = 1, ndim)
         call io_close(iunit_restart)
       endif
 
