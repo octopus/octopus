@@ -727,8 +727,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(deltax(1:gr%mesh%np))
   SAFE_ALLOCATE(deltar(1:gr%mesh%np))
 
-  SAFE_ALLOCATE(rho(1:st%nst))
-  SAFE_ALLOCATE(norm_b(1:st%nst))
+  SAFE_ALLOCATE(rho(1:xb%nst))
+  SAFE_ALLOCATE(norm_b(1:xb%nst))
 
   call batch_copy(xb, vvb, reference = .false.)
   call batch_copy(xb, rrb, reference = .false.)
@@ -740,25 +740,22 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   ! This causing problems, so I am commenting it for the moment.
   !
-  !  call mesh_batch_nrm2(gr%mesh, vvb, rho)
-  !  call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+  call mesh_batch_nrm2(gr%mesh, vvb, rho)
+  call mesh_batch_nrm2(gr%mesh, bb, norm_b)
 
   do ii = 1, xb%nst
-    ist = batch_linear_to_ist(xb, ii)
+    ist = xb%states(ii)%ist
 
     x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
     r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
 
-    rho(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, v) 
-    norm_b(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, bb%states(ii)%X(psi))
-
     iter     = 0
     err      = QMR_NORMAL
-    res      = rho(ist)
+    res      = rho(ii)
 
-    ! If rho(ist) is basically zero we are already done.
-    if(abs(rho(ist)) > M_EPSILON) then
+    ! If rho(ii) is basically zero we are already done.
+    if(abs(rho(ii)) > M_EPSILON) then
       call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
 
       xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
@@ -776,14 +773,14 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
       do while(iter < this%max_iter)
         iter = iter + 1
-        if((abs(rho(ist)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+        if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
           err = QMR_BREAKDOWN_PB
           exit
         end if
-        alpha = alpha*xsi/rho(ist)
+        alpha = alpha*xsi/rho(ii)
 
         do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ist), v(:, idim))
+          call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), v(:, idim))
           call lalg_scal(gr%mesh%np, CNST(1.0)/xsi, z(:, idim))
         end do
 
@@ -799,7 +796,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
             call lalg_copy(gr%mesh%np, z(:, idim), q(:, idim))
           end do
         else
-          rtmp = -rho(ist)*delta/epsilon
+          rtmp = -rho(ii)*delta/epsilon
           forall (ip = 1:gr%mesh%np) q(ip, 1) = rtmp*q(ip, 1) + z(ip, 1)
         end if
 
@@ -818,9 +815,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
         beta = epsilon/delta
         forall (ip = 1:gr%mesh%np) v(ip, 1) = -beta*v(ip, 1) + p(ip, 1)
-        oldrho = rho(ist)
+        oldrho = rho(ii)
 
-        rho(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, v)
+        rho(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, v)
 
         call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
 
@@ -831,7 +828,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
         oldtheta = theta
-        theta    = rho(ist)/(gamma*abs(beta))
+        theta    = rho(ii)/(gamma*abs(beta))
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
 
@@ -872,10 +869,10 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         end if
 
         ! avoid divide by zero
-        if(abs(norm_b(ist)) < M_EPSILON) then
+        if(abs(norm_b(ii)) < M_EPSILON) then
           res = M_HUGE
         else
-          res = X(mf_nrm2)(gr%mesh, r)/norm_b(ist)
+          res = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
         endif
 
         if(showprogress_) then
