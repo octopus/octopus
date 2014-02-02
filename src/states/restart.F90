@@ -766,7 +766,7 @@ contains
     !now we really read, to avoid serialisation of reads in the
     !parallel case (io_par works as a barrier)
 
-    SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
     filled = .false.
 
     if(present(lowest_missing)) lowest_missing = st%nst + 1
