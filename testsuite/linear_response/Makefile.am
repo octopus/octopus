@@ -23,6 +23,7 @@ sharedir = $(pkgdatadir)/testsuite/linear_response
 
 dist_share_DATA = \
 	01-casida.01-gs.inp                      \
+	01-casida.012-vib_modes.inp              \
 	01-casida.02-unocc.inp                   \
 	01-casida.022-unocc_restart.inp          \
 	01-casida.03-casida.inp                  \
