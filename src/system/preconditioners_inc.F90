@@ -209,7 +209,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   integer,                intent(in)    :: ik
   type(batch_t),          intent(inout) :: aa
   type(batch_t),          intent(inout) :: bb
-  R_TYPE,       optional, intent(in)    :: omega
+  R_TYPE,       optional, intent(in)    :: omega(:)
 
   integer :: ii
   type(profile_t), save :: prof
@@ -229,7 +229,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     ASSERT(.not. batch_is_packed(aa))
     ASSERT(.not. batch_is_packed(bb))
     do ii = 1, aa%nst
-      call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
+      call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega(ii))
     end do
   end if
 

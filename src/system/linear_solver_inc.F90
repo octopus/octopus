@@ -681,8 +681,7 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, &
-  residue, threshold, showprogress, converged)
+subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
@@ -693,17 +692,14 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   R_TYPE,                intent(in)    :: shift(:)
   integer,               intent(out)   :: iter_used(:) 
   FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
-  FLOAT,   optional,     intent(in)    :: threshold    !< convergence threshold
-  logical, optional,     intent(in)    :: showprogress !< should there be a progress bar
-  logical, optional,     intent(out)   :: converged    !< has the algorithm converged
+  FLOAT,                 intent(in)    :: threshold    !< convergence threshold
 
-  type(batch_t) :: vvb, rrb, exception_saved
+  type(batch_t) :: vvb, rrb, zzb, exception_saved
   R_TYPE, allocatable :: x(:, :), r(:), v(:, :), z(:, :), q(:, :), p(:, :), deltax(:), deltar(:)
   R_TYPE              :: eta, delta, epsilon, beta, rtmp
-  FLOAT               :: xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
+  FLOAT               :: gamma, alpha, theta, res, oldtheta, oldgamma, oldrho, tmp
   integer             :: ip, ilog_res, ilog_thr, ii, iter, idim, ist
-  logical             :: showprogress_
-  FLOAT, allocatable  :: rho(:), norm_b(:)
+  FLOAT, allocatable  :: rho(:), norm_b(:), xsi(:)
   integer, allocatable :: status(:), saved_iter(:)
 
   integer, parameter ::        &
@@ -718,10 +714,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   PUSH_SUB(X(linear_solver_qmr_dotp))
 
-  if(present(converged)) converged = .false.
-  threshold_ = optional_default(threshold, CNST(1.0e-6))
-  showprogress_ = optional_default(showprogress, .false.)
-
   SAFE_ALLOCATE(x(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(r(1:gr%mesh%np))
   SAFE_ALLOCATE(v(1:gr%mesh%np_part, 1:st%d%dim))
@@ -733,11 +725,13 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   SAFE_ALLOCATE(rho(1:xb%nst))
   SAFE_ALLOCATE(norm_b(1:xb%nst))
+  SAFE_ALLOCATE(xsi(1:xb%nst))
   SAFE_ALLOCATE(status(1:xb%nst))
   SAFE_ALLOCATE(saved_iter(1:xb%nst))
 
   call batch_copy(xb, vvb, reference = .false.)
   call batch_copy(xb, rrb, reference = .false.)
+  call batch_copy(xb, zzb, reference = .false.)
   call batch_copy(xb, exception_saved, reference = .false.)
 
   call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
@@ -750,14 +744,11 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   status = QMR_NOT_CONVERGED
 
+  iter = 0
+
   do ii = 1, xb%nst
     ist = xb%states(ii)%ist
 
-    x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
-    v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
-    r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
-
-    iter = 0
     residue(ii) = rho(ii)
 
     ! If rho(ii) is basically zero we are already done.
@@ -768,43 +759,48 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       saved_iter(ii) = iter
     end if
 
-    if(abs(norm_b(ii)) <= M_EPSILON) then
+    if(status(ii) == QMR_NOT_CONVERGED .and. abs(norm_b(ii)) <= M_EPSILON) then
       status(ii) = QMR_B_ZERO
       exception_saved%states(ii)%X(psi) = CNST(0.0)
       residue(ii) = norm_b(ii)
       saved_iter(ii) = iter
     end if
 
-    call X(preconditioner_apply)(this%pre, gr, hm, ik, v, z, omega = shift(ii))
+  end do
 
-    xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
+  call X(preconditioner_apply_batch)(this%pre, gr, hm, ik, vvb, zzb, omega = shift)
+  call mesh_batch_nrm2(gr%mesh, zzb, xsi)
+  
+  do ii = 1, xb%nst
+    ist = xb%states(ii)%ist
+
+    x(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+    v(1:gr%mesh%np, 1:st%d%dim) = vvb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+    z(1:gr%mesh%np, 1:st%d%dim) = zzb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+    r(1:gr%mesh%np) = rrb%states(ii)%X(psi)(1:gr%mesh%np, 1)
+ 
+    iter = 0
 
     gamma = M_ONE
     eta   = -M_ONE
     alpha = M_ONE
     theta = M_ZERO
 
-    ! initialize progress bar
-    if(showprogress_) then
-      ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
-      call loct_progress_bar(-1, ilog_thr)
-    end if
-
     do while(iter < this%max_iter)
       if(status(ii) /= QMR_NOT_CONVERGED) exit
 
       iter = iter + 1
-      if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+      if((abs(rho(ii)) < M_EPSILON) .or. (abs(xsi(ii)) < M_EPSILON)) then
         exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = x(1:gr%mesh%np, 1:st%d%dim)
         status(ii) = QMR_BREAKDOWN_PB
         saved_iter(ii) = iter
       end if
 
-      alpha = alpha*xsi/rho(ii)
+      alpha = alpha*xsi(ii)/rho(ii)
 
       do idim = 1, st%d%dim
         call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), v(:, idim))
-        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi, z(:, idim))
+        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi(ii), z(:, idim))
       end do
 
       delta = X(mf_dotp)(gr%mesh, st%d%dim, v, z)
@@ -850,7 +846,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
         call lalg_scal(gr%mesh%np, CNST(1.0)/alpha, z(:, idim))
       end do
 
-      xsi = X(mf_nrm2)(gr%mesh, st%d%dim, z)
+      xsi(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, z)
 
       oldtheta = theta
       theta    = rho(ii)/(gamma*abs(beta))
@@ -896,12 +892,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
       residue(ii) = X(mf_nrm2)(gr%mesh, r)/norm_b(ii)
 
-      if(showprogress_) then
-        ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
-        call loct_progress_bar(ilog_res, ilog_thr)
-      end if
-
-      if(residue(ii) < threshold_) then
+      if(residue(ii) < threshold) then
         status(ii) = QMR_CONVERGED
         exit
       end if
@@ -920,8 +911,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       write(message(1), '(a)') "QMR solver not converged!"
       write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
       call messages_warning(2)
-    case(QMR_CONVERGED, QMR_RES_ZERO, QMR_B_ZERO)
-      if (present(converged)) converged = .true.
     case(QMR_BREAKDOWN_PB)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
       call messages_warning(1)
@@ -936,14 +925,13 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       call messages_warning(1)
     end select
 
-    if(showprogress_) write(*,*) ''
-
   end do
 
   call batch_end(vvb)
   call batch_end(rrb)
+  call batch_end(zzb)
   call batch_end(exception_saved)
-
+  
   SAFE_DEALLOCATE_A(x)
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(v)
