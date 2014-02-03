@@ -175,24 +175,8 @@ subroutine X(sternheimer_solve)(                           &
               end forall
             endif
 
-            ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
-            ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
-            ! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
-            ! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
-            ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
-            ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
-
-
-            if (conv_last .and. this%last_occ_response) then
-              ! project out only the component of the unperturbed wavefunction
-              proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, ii))
-              do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, ii))
-              end do
-            else
-              ! project RHS onto the unoccupied states
-              call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma)
-            endif
+            call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma, &
+              min_proj = conv_last .and. this%last_occ_response)
 
           end do
 

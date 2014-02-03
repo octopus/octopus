@@ -19,16 +19,25 @@
 
 
 ! ---------------------------------------------------------
-! Orthogonalizes vec against all the occupied states.
-! For details on the metallic part, take a look at
-! de Gironcoli, PRB 51, 6773 (1995).
+!> Orthogonalizes vec against all the occupied states.
+!! For details on the metallic part, take a look at
+!! de Gironcoli, PRB 51, 6773 (1995).
+!!
+!! min_proj:
+!! Let Pc = projector onto unoccupied states, Pn` = projector that removes states degenerate with n
+!! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
+!! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
+!! previous steps will use Pc, which generally reduces the number of linear-solver iterations needed. Only the
+!! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
+!! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
+subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
   type(mesh_t),        intent(in)    :: mesh
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: vec(:,:)
   integer,             intent(in)    :: ist, ik
   R_TYPE,              intent(in)    :: omega
+  logical, optional,   intent(in)    :: min_proj
 
   integer :: jst
   FLOAT :: xx, yy, theta, theta_ij, theta_ji, alpha_j, dsmear, delta
@@ -44,13 +53,25 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
 
   if(smear_is_semiconducting(st%smear) .or. st%smear%integral_occs) then
     theta = st%occ(ist, ik) / st%smear%el_per_state
-    do jst = 1, st%nst
-      if(abs(st%occ(ist, ik) * st%occ(jst, ik)) > M_EPSILON) then
-        beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
-      else
-        beta_ij(jst) = M_ZERO
-      end if
-    end do
+
+    if(optional_default(min_proj, .false.)) then
+      do jst = 1, st%nst
+        if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) < CNST(1e-6)) then
+          ! degenerate
+          beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
+        else
+          beta_ij(jst) = M_ZERO
+        end if
+      end do
+    else
+      do jst = 1, st%nst
+        if(abs(st%occ(ist, ik) * st%occ(jst, ik)) > M_EPSILON) then
+          beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
+        else
+          beta_ij(jst) = M_ZERO
+        end if
+      end do
+    endif
   else
     SAFE_ALLOCATE(theta_Fi(1:st%nst))
     theta_Fi(1:st%nst) = st%occ(1:st%nst, ik) / st%smear%el_per_state
