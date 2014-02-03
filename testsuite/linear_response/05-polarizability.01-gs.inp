@@ -1,7 +1,6 @@
 CalculationMode = gs
 Units = eV_Angstrom
 fromScratch = yes
-LCAOStart = no # not enough orbitals
 
 SmearingFunction = methfessel_paxton
 Smearing = 0.5
