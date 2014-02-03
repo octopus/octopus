@@ -77,6 +77,8 @@ dist_share_DATA =                      \
 	13-absorption-spin.03-td-restart.inp   \
 	13-absorption-spin.04-spectrum.inp     \
         13-absorption-spin.05-spectrum_compressed_sensing.inp \
+	13-absorption-spin.06-td_spinkick.inp  \
+	13-absorption-spin.07-spectrum_triplet.inp \
 	14-absorption-spinors.test                \
 	14-absorption-spinors.01-gs.inp           \
 	14-absorption-spinors.02-td.inp           \
@@ -93,6 +95,5 @@ dist_share_DATA =                      \
         17-absorption-spin_symmetry.02-td_spin_and_density_kick.inp \
         17-absorption-spin_symmetry.03-spectrum_singlet_triplet.inp \
         17-absorption-spin_symmetry.test
-
 
 CLEANFILES = *~ *.bak
