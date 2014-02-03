@@ -190,8 +190,6 @@ ACX_FCCPP
 
 dnl how Fortran mangles function names
 AC_FC_WRAPPERS
-acx_save_libs="${LIBS}"
-LIBS="${FCEXTRALIBS} $FCLIBS"
 
 ACX_FC_INTEGER_SIZE
 ACX_CC_FORTRAN_INT
@@ -293,7 +291,6 @@ ACX_LAPACK([], AC_MSG_ERROR([could not find required LAPACK library]))
 
 dnl check for GSL
 AC_LANG_PUSH(C)
-LIBS="${acx_save_libs}"
 
 AX_PATH_GSL([1],[9],[], 
   AC_MSG_ERROR([could not find required GSL library]))
@@ -301,7 +298,6 @@ AX_PATH_GSL([1],[9],[],
 dnl check for GD library
 ACX_GDLIB
 
-LIBS="${FCLIBS}"
 AC_LANG_POP(C)
 
 dnl check for FFT
@@ -361,13 +357,6 @@ ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
-dnl now I run configure for the internal libraries
-AC_CONFIG_SUBDIRS([external_libs/spglibs-1.5.2])
-
-# This is certainly wrong, but I don't know
-# how to do it right
-LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
-AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
 
 ACX_OCTOPUS_COMPILATION_INFO
