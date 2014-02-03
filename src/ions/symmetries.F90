@@ -210,7 +210,7 @@ contains
       do iop = 1, fullnops
         if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
+          if(any(abs(translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
