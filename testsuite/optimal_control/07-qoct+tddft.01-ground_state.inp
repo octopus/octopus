@@ -65,17 +65,8 @@ OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
 #OCTTargetOperator = oct_tg_gstransformation
-#%OCTTargetTransformStates
-#0 | 0 | 1
-#%
 OCTTargetOperator = oct_tg_local
 OCTLocalTarget = "step(x)"
-
-#%OCTTargetTransformStates
-#1 | 0 | 0
-#0 | 0 | 0
-#0 | 0 | 1
-#%
 
 OCTDirectStep = 0.1
 #OCTNumberCheckPoints = 10
