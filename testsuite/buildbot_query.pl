@@ -5,8 +5,6 @@
 # Parses the HTML status pages.
 # Tested with BuildBot 0.7.12 and 0.8.5.
 
-use List::Util qw[min max];
-
 # modify these to choose the input file and match you want to search for
 $inputfile = "01-asym_doublewell.04-oct_run.inp";
 $match = "J1 1st iteration";
@@ -23,31 +21,50 @@ print "Match: $match\n\n";
 if(-e "one_box_per_builder") { system ("rm one_box_per_builder"); }
 system ("wget -nv $bbpath/one_box_per_builder");
 
+if(@ARGV > 0) {
+    open(ONEBOX, ">>one_box_per_builder") or die "cannot open one_box_per_builder\n";
+    print ONEBOX "\n";
+    foreach(@ARGV) {
+	print ONEBOX "LOCAL FILENAME: $_\n";
+    }
+    close(ONEBOX);
+}
+
 open(ONEBOX, "<one_box_per_builder") or die "cannot open one_box_per_builder\n";
 
 $total = 0.0;
 $counts = 0;
 $max = -inf;
+$maxname = "";
 $min = inf;
+$minname = "";
 
 while ($_ = <ONEBOX>) {
 # BB 0.7.12
 # <td align="center" class="LastBuild box success"><a href="builders/lascar_x86_64_gfortran_cl_intel/builds/139">10187</a><br />build<br />successful</td>
 # BB 0.8.5
 #<a href="builders/mauchly_x86_64_intel_openmp/builds/80">10898</a>
-    if ( $_ !~ /<a href="builders\/(.*)\/builds\/(.*)">(.*)<\/a>/) { next; }
-    $builder = $1;
-    $build_num = $2;
-    $svn_rev = $3;
-    # rebuild the URL
-    $url = "builders/$builder/builds/$build_num";
-    print "\nBuilder: $builder, at svn revision $svn_rev\n";
+    if ( $_ =~ /<a href="builders\/(.*)\/builds\/(.*)">(.*)<\/a>/) {
+	$builder = $1;
+	$build_num = $2;
+	$svn_rev = $3;
+	# rebuild the URL
+	$url = "builders/$builder/builds/$build_num";
+	print "\nBuilder: $builder, at svn revision $svn_rev\n";
 
-    # remove old file, or new ones will be named 'stdio.2' etc.
-    if(-e "stdio") { system ("rm stdio"); }
-    system ("wget -nv $bbpath/$url/steps/shell_$shell_num/logs/stdio");
+	# remove old file, or new ones will be named 'stdio.2' etc.
+	if(-e "stdio") { system ("rm stdio"); }
+	system ("wget -nv $bbpath/$url/steps/shell_$shell_num/logs/stdio");
 
-    open(TESTLOG, "<stdio") or print "cannot open test log\n";
+	$name = $builder;
+	open(TESTLOG, "<stdio") or print "cannot open test log\n";
+    } elsif ( $_ =~ /LOCAL FILENAME: (.*)/) {
+	print "\n$_\n";
+	$name = $1;
+	open(TESTLOG, "<$1");
+    } else {
+	next;
+    }
     $match_found = 0;
     while ($_ = <TESTLOG>) {
 	# do not use ~= / .. / here or $filename needs to have special characters escaped
@@ -73,8 +90,14 @@ while ($_ = <ONEBOX>) {
 		    }
 		    $total += $value;
 		    $counts += 1;
-		    $min = min($min, $value);
-		    $max = max($max, $value);
+		    if($value < $min) {
+			$minname = $name;
+			$min = $value;
+		    }
+		    if($value > $max) {
+			$maxname = $name;
+			$max = $value;
+		    }
 		    $match_found = 1;
 		}
 		if($_ =~ /Using input file/) { last; }
@@ -88,12 +111,18 @@ while ($_ = <ONEBOX>) {
     # why not? builder down, svn or compilation failed, not in the right category of builders, etc.
 }
 
-print "\n\n=== SUMMARY ===\n";
-print "Based on $counts matches found.\n";
-print "Minimum   = $min\n";
-print "Maximum   = $max\n";
-print "Average   = " . ($total / $counts) . "\n\n";
-print "Center    = " . ($max + $min)/2 . "\n";
-printf "Precision = %e\n", ($max - $min)/2;
+if($counts == 0) {
+    print "No matches found.\n";
+} else {
+    print "\n\n=== SUMMARY ===\n";
+    print "Based on $counts matches found.\n";
+    print "Minimum   = $min\n";
+    print "    ($minname)\n";
+    print "Maximum   = $max\n";
+    print "    ($maxname)\n";
+    print "Average   = " . ($total / $counts) . "\n\n";
+    print "Center    = " . ($max + $min)/2 . "\n";
+    printf "Precision = %e\n", ($max - $min)/2;
+}
 
 close(ONEBOX);
