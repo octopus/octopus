@@ -557,13 +557,15 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           
           !now, store the result in the matrix
 
-          if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
-            do iorb = 1, norbs
-              do jorb = 1, this%norb_atom(jatom)
-                hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
-                overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+          if (.not. this%parallel) then
+            if (mpi_grp_is_root(mpi_world)) then
+              do iorb = 1, norbs
+                do jorb = 1, this%norb_atom(jatom)
+                  hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
+                  overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+                end do
               end do
-            end do
+            end if
           else
             do iorb = 1, norbs
               do jorb = 1, this%norb_atom(jatom)
