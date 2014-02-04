@@ -595,6 +595,12 @@ contains
       read_occ = .not. st%fixed_occ
     endif
 
+    if(.not. present(lr)) then
+      st%eigenval(:, :) = M_ZERO
+      if(cmplxscl) st%zeigenval%Im(:, :) = M_ZERO
+      ! to be filled in from reading afterward
+    endif
+
     if(.not. present(lr) .and. read_occ) then
       st%occ(:, :) = M_ZERO
       ! to be filled in from reading afterward

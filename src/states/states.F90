@@ -1883,8 +1883,6 @@ contains
 
       do ik = 1, st%d%nik
         do ist = ist_start, ist_end
-          st%eigenval(ist, ik) = M_ZERO
-          if(cmplxscl) st%zeigenval%Im(ist, ik) = M_ZERO
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1))
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1937,8 +1935,6 @@ contains
             end if
             zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
             zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
-            st%eigenval(ist, ik) = M_ZERO
-
             call states_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
@@ -1950,7 +1946,6 @@ contains
             end do
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
-            st%eigenval(ist, ik) = M_ZERO
           end do
         end do
       end if
