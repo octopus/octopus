@@ -15,7 +15,7 @@ match ; Reduced k-points   ; GREP(static/info, 'Number of symmetry-reduced k-poi
 match ; Space group        ; GREP(out, 'Space group', 16)                      ; 187
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; 751.05446655
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; 751.054485812
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; 326.75322251
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -222.11242106
 match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   -587.67019075
