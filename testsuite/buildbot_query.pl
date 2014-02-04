@@ -5,6 +5,8 @@
 # Parses the HTML status pages.
 # Tested with BuildBot 0.7.12 and 0.8.5.
 
+use List::Util qw[min max];
+
 # modify these to choose the input file and match you want to search for
 $inputfile = "01-asym_doublewell.04-oct_run.inp";
 $match = "J1 1st iteration";
@@ -22,6 +24,11 @@ if(-e "one_box_per_builder") { system ("rm one_box_per_builder"); }
 system ("wget -nv $bbpath/one_box_per_builder");
 
 open(ONEBOX, "<one_box_per_builder") or die "cannot open one_box_per_builder\n";
+
+$total = 0.0;
+$counts = 0;
+$max = -inf;
+$min = inf;
 
 while ($_ = <ONEBOX>) {
 # BB 0.7.12
@@ -47,17 +54,27 @@ while ($_ = <ONEBOX>) {
 	if(index($_, $inputfile) != -1) {
 	    while ($_ = <TESTLOG>) {
 		if(index($_, $match) != -1) {
-		    if($_ =~ /Calculated value/) {  # match OK
+		    if($_ =~ /\(Calculated value = (.*)\)/) {  # match OK
 			print $_;
+			$value = $1;
 		    } else {  # match FAIL
 			while ($_ = <TESTLOG>) {
 			    if(index($_, $match) == -1) {
-				if($_ !~ /^$/) { print $_; } # print if not blank
+				if($_ !~ /^$/) { # print if not blank
+				    print $_;
+				    if($_ =~ /Calculated value : (.*)/) {
+					$value = $1;
+				    }
+				}
 			    } else {
 				last;
 			    }
 			}
 		    }
+		    $total += $value;
+		    $counts += 1;
+		    $min = min($min, $value);
+		    $max = max($max, $value);
 		    $match_found = 1;
 		}
 		if($_ =~ /Using input file/) { last; }
@@ -70,5 +87,13 @@ while ($_ = <ONEBOX>) {
     }
     # why not? builder down, svn or compilation failed, not in the right category of builders, etc.
 }
+
+print "\n\n=== SUMMARY ===\n";
+print "Based on $counts matches found.\n";
+print "Minimum   = $min\n";
+print "Maximum   = $max\n";
+print "Average   = " . ($total / $counts) . "\n\n";
+print "Center    = " . ($max + $min)/2 . "\n";
+printf "Precision = %e\n", ($max - $min)/2;
 
 close(ONEBOX);
