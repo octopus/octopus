@@ -830,7 +830,7 @@ contains
           if(err <= 0) then
             filled(idim, ist, ik) = .true.
             ierr = ierr + 1
-          else
+          else if(present(lowest_missing)) then
             lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
           end if
 
