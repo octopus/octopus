@@ -122,9 +122,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, nel, hartree_fock)
+  subroutine xc_init(xcs, ndim, periodic_dim, nel, hartree_fock)
     type(xc_t), intent(out) :: xcs
     integer,    intent(in)  :: ndim
+    integer,    intent(in)  :: periodic_dim
     FLOAT,      intent(in)  :: nel
     logical,    intent(in)  :: hartree_fock
 
@@ -168,6 +169,9 @@ contains
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
         call messages_fatal(2)
       end if
+
+      if(periodic_dim == ndim) &
+        call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
       if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &

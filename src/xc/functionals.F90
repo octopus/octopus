@@ -36,8 +36,8 @@ module xc_functl_m
     xc_functl_write_info
 
 
-  ! This adds to the constants defined in lib_xc. But since in that module
-  ! the OEP functionals are not included, it is better to put it here.
+  !> This adds to the constants defined in lib_xc. But since in that module
+  !! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange

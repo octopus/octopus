@@ -184,6 +184,8 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
+      if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
+        call messages_experimental("Hartree in fully periodic system")
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points")
 
@@ -192,13 +194,13 @@ contains
         call messages_not_implemented("Hartree-Fock with k-points")
 
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, st%qtot, hartree_fock=.true.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, st%qtot, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
