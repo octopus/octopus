@@ -319,11 +319,12 @@ contains
 
       call XC_F90(info_name)  (functl%info, s1)
       select case(functl%family)
-        case (XC_FAMILY_LDA);      write(s2,'(a)') "LDA"
-        case (XC_FAMILY_GGA);      write(s2,'(a)') "GGA"
-        case (XC_FAMILY_HYB_GGA);  write(s2,'(a)') "Hybrid GGA"
-        case (XC_FAMILY_MGGA);     write(s2,'(a)') "MGGA"
-        case (XC_FAMILY_LCA);      write(s2,'(a)') "LCA"
+        case (XC_FAMILY_LDA);       write(s2,'(a)') "LDA"
+        case (XC_FAMILY_GGA);       write(s2,'(a)') "GGA"
+        case (XC_FAMILY_HYB_GGA);   write(s2,'(a)') "Hybrid GGA"
+        case (XC_FAMILY_HYB_MGGA);  write(s2,'(a)') "Hybrid MGGA"
+        case (XC_FAMILY_MGGA);      write(s2,'(a)') "MGGA"
+        case (XC_FAMILY_LCA);       write(s2,'(a)') "LCA"
       end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call messages_info(2, iunit)

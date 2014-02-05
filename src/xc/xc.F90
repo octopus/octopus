@@ -160,7 +160,8 @@ contains
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
       .or.(xcs%functl(FUNC_X,1)%id == XC_OEP_X) &
-      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0)
+      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
+      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
     if(ll) then
       if((xcs%functl(FUNC_X,1)%id /= 0).and.(xcs%functl(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
@@ -169,7 +170,8 @@ contains
       end if
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) then
+      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
+         iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
         call XC_F90(hyb_exx_coef)(xcs%functl(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional

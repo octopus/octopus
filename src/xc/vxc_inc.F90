@@ -94,7 +94,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! is there anything to do ?
-  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
+  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA
   if(iand(xcs%family, families) == 0) then
     POP_SUB(xc_get_vxc)
     call profiling_out(prof)
@@ -102,8 +102,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   endif
 
   ! initialize a couple of handy variables
-  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA) /= 0
-  mgga = iand(xcs%family, XC_FAMILY_MGGA) /= 0
+  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
 
   !Read the spin channels
   spin_channels = functl(FUNC_X)%spin_channels
@@ -181,7 +181,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
           call XC_F90(gga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
             l_zk(1), l_dedd(1,1), l_vsigma(1,1))
 
-        case(XC_FAMILY_MGGA)
+        case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
             l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
@@ -208,7 +208,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
               l_dedd(1,1), l_vsigma(1,1))
           end if
 
-        case(XC_FAMILY_MGGA)
+        case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
             l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
@@ -247,7 +247,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         case(XC_FAMILY_LDA)
           call XC_F90(lda_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
           
-        case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
+        case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           l_vsigma = M_ZERO
           
           call messages_not_implemented('XC density correction for GGA/mGGA')
