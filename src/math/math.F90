@@ -999,6 +999,9 @@ contains
     mm = size
     pad_pow2 = 1
     
+    ! loop below never terminates otherwise! just pick 1 as value.
+    if(size == 0) return
+
     ! first we divide by two all the times we can, so we catch exactly
     ! the case when size is already a power of two
     do
