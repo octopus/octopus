@@ -787,7 +787,11 @@ contains
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
 
-          if(.not. restart_file_present(idim, ist, ik)) cycle
+          if(.not. restart_file_present(idim, ist, ik)) then
+            if(present(lowest_missing)) &
+              lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
+            cycle
+          endif
 
           if (states_are_real(st)) then
             if (.not. grid_changed) then
