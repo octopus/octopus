@@ -61,8 +61,6 @@ module mesh_function_m
     zmf_interpolate_points,&
     mf_surface_integral,   &
     mf_line_integral,      &
-    dmf_put_radial_spline, &
-    zmf_put_radial_spline, &
     dmf_dotp_aux,          &
     zmf_dotp_aux,          &
     dmf_multipoles,        &

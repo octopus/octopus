@@ -603,47 +603,6 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
 end function X(mf_line_integral_vector)
 
 
-! ---------------------------------------------------------
-!> Converts a spline that represents a radial function into a mesh.
-subroutine X(mf_put_radial_spline)(mesh, spl, center, ff, add)
-  type(mesh_t),        intent(in)    :: mesh
-  type(spline_t),      intent(in)    :: spl
-  FLOAT,               intent(in)    :: center(:)
-  R_TYPE,              intent(inout) :: ff(:)
-  logical, optional,   intent(in)    :: add
-
-  integer :: ip
-  FLOAT :: rr
-  logical :: add_
-
-  PUSH_SUB(X(mf_put_radial_spline))
-
-  add_ = .false.
-
-  if(present(add)) then
-    add_ = add
-  endif
-
-  if( add_ ) then 
-
-    do ip = 1, mesh%np
-      rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
-      ff(ip) = ff(ip) + spline_eval(spl, rr)
-    end do
-
-  else
-
-    do ip = 1, mesh%np
-      rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
-      ff(ip) = spline_eval(spl, rr)
-    end do
-
-  end if
-
-  POP_SUB(X(mf_put_radial_spline))
-end subroutine X(mf_put_radial_spline)
-
-
 ! -----------------------------------------------------------------------------
 !> This routine calculates the multipoles of a function ff,
 !! defined in the following way:

@@ -492,7 +492,8 @@ contains
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core(:)
 
-    integer :: icell
+    FLOAT :: center(MAX_DIM), rr
+    integer :: icell, ip
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
 
@@ -504,7 +505,13 @@ contains
       rho_core = M_ZERO
       call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        call dmf_put_radial_spline(mesh, ps%core, periodic_copy_position(pp, mesh%sb, icell), rho_core, add = .true.)
+        center = periodic_copy_position(pp, mesh%sb, icell)
+        do ip = 1, mesh%np
+          rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
+          if(rr < spline_range_max(ps%core)) then
+            rho_core(ip) = rho_core(ip) + spline_eval(ps%core, rr)
+          end if
+        end do
       end do
       call periodic_copy_end(pp)
     else
