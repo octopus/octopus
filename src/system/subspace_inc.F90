@@ -155,6 +155,11 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*der%mesh%np_part, info)
 
+  if(info /= 0) then
+    write(message(1), '(a,i6)') "subspace diagonalization descinit for psi failed with error code ", info
+    call messages_fatal(1)
+  endif
+
   ! select the blocksize, we use the division used for state
   ! parallelization but with a maximum of 64
   nbl = min(64, psi_block(2))
@@ -166,6 +171,11 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_ALLOCATE(hs(1:nrow, 1:ncol))
 
   call descinit(hs_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, nrow, info)
+
+  if(info /= 0) then
+    write(message(1), '(a,i6)') "subspace diagonalization descinit for Hamiltonian failed with error code ", info
+    call messages_fatal(1)
+  endif
 
   ! calculate |hpsi> = H |psi>
   do ist = st%st_start, st%st_end, st%d%block_size

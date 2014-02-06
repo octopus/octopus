@@ -558,7 +558,10 @@ contains
         call descinit(this%desc(1), this%norbs, this%norbs, nbl, nbl, 0, 0, &
           st%dom_st_proc_grid%context, this%lsize(1), info)
 
-        ASSERT(info == 0)
+        if(info /= 0) then
+          write(message(1), '(a,i6)') 'descinit for BLACS failed with error code ', info
+          call messages_fatal(1)
+        endif
 
         this%calc_atom = .false.
         do iatom = 1, geo%natoms
