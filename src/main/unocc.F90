@@ -165,8 +165,6 @@ contains
       end if
       showstart = max(nst_calculated + 1, 1)
       showstart = min(showstart, sys%st%nst)
-      write(message(1),'(a,i8,a)') 'Performing LCAO to replace states ', showstart, ' and above'
-      call messages_info(1)
       call lcao_run(sys, hm, st_start = showstart)
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)

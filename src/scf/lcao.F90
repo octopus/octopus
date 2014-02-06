@@ -655,6 +655,11 @@ contains
     if(lcao_is_available(lcao)) then
       lcao_done = .true.
       
+      if(present(st_start)) then
+        write(message(1),'(a,i8,a)') 'Performing LCAO to replace states ', st_start, ' and above'
+        call messages_info(1)
+      endif
+
       call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
       
       if (.not. present(st_start)) then
@@ -682,6 +687,11 @@ contains
           st_start_random = 1
         endif
         if(present(st_start)) st_start_random = max(st_start, st_start_random)
+
+        if(st_start_random > 1) then
+          write(message(1),'(a,i8,a)') 'Generating random wavefunctions to replace states ', st_start_random, ' and above'
+          call messages_info(1)
+        endif
 
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
