@@ -42,7 +42,7 @@ module box_union_m
     private
     
     !! TODO: make this a linked list, so that boxes can be added and removed efficiently on-the-fly
-    integer :: n_boxes
+    integer              :: n_boxes
     type(box_t), pointer :: boxes(:)
   end type box_union_t
 
@@ -101,10 +101,10 @@ contains
     SAFE_ALLOCATE(inside2(npoints))
 
     inside = .false.
-    do ibox = 1, union%n_boxes
-      call box_inside_vec(union%boxes(ibox), npoints, points, inside2)
-      inside = inside .or. inside2
-    end do
+      do ibox = 1, union%n_boxes
+        call box_inside_vec(union%boxes(ibox), npoints, points, inside2)
+        inside = inside .or. inside2
+      end do
 
     SAFE_DEALLOCATE_A(inside2)
 

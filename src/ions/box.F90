@@ -37,12 +37,16 @@ module box_m
     box_end,        &
     box_inside,     &
     box_inside_vec, &
-    box_copy
+    box_copy,       &
+    box_inside_bader, &
+    box_nearest_point
+
 
   integer, parameter, public :: &
     BOX_SPHERE         = 1,         &
     BOX_CYLINDER       = 2,         &
-    BOX_PARALLELEPIPED = 3
+    BOX_PARALLELEPIPED = 3,         &
+    BOX_BADER          = 4
 
   type box_t
     private
@@ -74,7 +78,7 @@ contains
     box%center(1:dim) = center(1:dim)
 
     select case (shape)
-    case (BOX_SPHERE)
+    case (BOX_SPHERE, BOX_BADER)
       box%rsize = sizes(1)
 
     case (BOX_CYLINDER)
@@ -168,6 +172,11 @@ contains
         inside(ip) = all(xx(1:box%dim, ip) >= llimit(1:box%dim) .and. xx(1:box%dim, ip) <= ulimit(1:box%dim))
       end forall
 
+    case(BOX_BADER) 
+      message(1) = 'Bader Volumes are not yet implemented'
+      call messages_fatal(1)
+      !TODO: call box_inside_bader(box, npoints, points, inside, ff, mesh)
+
     end select
 
     SAFE_DEALLOCATE_A(xx)
@@ -191,6 +200,65 @@ contains
     POP_SUB(box_copy)
   end subroutine box_copy
 
+  !--------------------------------------------------------------
+  !> Checks if a vector of points are inside the Bader volume defined by box%center.
+  ! TODO: Added the skeleton of a new routine that will check if a point is inside a Bader Volume. 
+  !--------------------------------------------------------------
+  subroutine box_inside_bader(box, npoints, points, inside)
+    type(box_t),  intent(in)  :: box
+    integer,      intent(in)  :: npoints
+    FLOAT,        intent(in)  :: points(:, :)
+    logical,      intent(out) :: inside(:)
+
+    integer :: ip, is, ix, iy, iz, rankmin
+    real(8), parameter :: DELTA = CNST(1e-12)
+    FLOAT, allocatable :: x(:), xx(:)
+    FLOAT :: dmin
+    logical :: rhomax
+    
+
+  end subroutine box_inside_bader
+
+  !---------------------------------------------------------------------
+  !> Returns the index of the point which is nearest to a given vector
+  !! position pos. Variable dmin will hold, on exit, the distance between
+  !! pos and this nearest mesh point. rankmin will be zero, if the mesh is
+  !! not partitioned, and the rank of the processor which holds the point
+  !! ind if the mesh is partitioned.
+  !! This routine is a copy of the mesh_nearest_point in grid/mesh.F90. 
+  !! Here the routine does not need a type(mesh_t) variable.
+  ! ----------------------------------------------------------------------
+  integer function box_nearest_point(npoints, points, pos, dim, dmin, rankmin) result(ind)
+    integer,      intent(in)  :: npoints
+    FLOAT,        intent(in)  :: points(:, :)
+    FLOAT,        intent(in)  :: pos(MAX_DIM)
+    integer,      intent(in)  :: dim
+    FLOAT,        intent(out) :: dmin
+    integer,      intent(out) :: rankmin
+    
+    FLOAT :: dd
+    integer :: imin, ip
+#if defined(HAVE_MPI)
+    FLOAT :: min_loc_in(2), min_loc_out(2)
+#endif
+    
+    PUSH_SUB(box_nearest_point)
+    
+    !find the point of the grid that is closer to the atom
+    imin = 0
+    dmin = M_ZERO
+    do ip = 1, npoints
+      dd = sum((pos(1:dim) - points(ip, 1:dim))**2)
+      if((dd < dmin) .or. (ip == 1)) then 
+        imin = ip
+        dmin = dd
+      end if
+    end do
+    
+    ind = imin
+    POP_SUB(box_nearest_point)
+  end function box_nearest_point
+  
 end module box_m
 
 

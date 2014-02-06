@@ -71,25 +71,26 @@ module io_function_m
 
 
   integer, parameter, public ::   &
-    C_OUTPUT_HOW_AXIS_X          =      1,    &
-    C_OUTPUT_HOW_AXIS_Y          =      2,    &
-    C_OUTPUT_HOW_AXIS_Z          =      4,    &
-    C_OUTPUT_HOW_PLANE_X         =      8,    &
-    C_OUTPUT_HOW_PLANE_Y         =     16,    &
-    C_OUTPUT_HOW_PLANE_Z         =     32,    &
-    C_OUTPUT_HOW_DX              =     64,    &
-    C_OUTPUT_HOW_NETCDF          =    128,    &
-    C_OUTPUT_HOW_MESH_INDEX      =    512,    &
-    C_OUTPUT_HOW_XCRYSDEN        =   1024,    &
-    C_OUTPUT_HOW_MATLAB          =   2048,    &
-    C_OUTPUT_HOW_MESHGRID        =   4096,    &
-    C_OUTPUT_HOW_BOUNDARY_POINTS =   8192,    &
-    C_OUTPUT_HOW_BINARY          =  16384,    &
-    C_OUTPUT_HOW_ETSF            =  32768,    &
-    C_OUTPUT_HOW_XYZ             =  65536,    &
-    C_OUTPUT_HOW_CUBE            = 131072,    &
-    C_OUTPUT_HOW_OPENSCAD        = 262144,    &
-    C_OUTPUT_HOW_JSON            = 524288
+    C_OUTPUT_HOW_AXIS_X          =       1,    &
+    C_OUTPUT_HOW_AXIS_Y          =       2,    &
+    C_OUTPUT_HOW_AXIS_Z          =       4,    &
+    C_OUTPUT_HOW_PLANE_X         =       8,    &
+    C_OUTPUT_HOW_PLANE_Y         =      16,    &
+    C_OUTPUT_HOW_PLANE_Z         =      32,    &
+    C_OUTPUT_HOW_DX              =      64,    &
+    C_OUTPUT_HOW_NETCDF          =     128,    &
+    C_OUTPUT_HOW_MESH_INDEX      =     512,    &
+    C_OUTPUT_HOW_XCRYSDEN        =    1024,    &
+    C_OUTPUT_HOW_MATLAB          =    2048,    &
+    C_OUTPUT_HOW_MESHGRID        =    4096,    &
+    C_OUTPUT_HOW_BOUNDARY_POINTS =    8192,    &
+    C_OUTPUT_HOW_BINARY          =   16384,    &
+    C_OUTPUT_HOW_ETSF            =   32768,    &
+    C_OUTPUT_HOW_XYZ             =   65536,    &
+    C_OUTPUT_HOW_CUBE            =  131072,    &
+    C_OUTPUT_HOW_OPENSCAD        =  262144,    &
+    C_OUTPUT_HOW_JSON            =  524288,    &
+    C_OUTPUT_HOW_BILD            = 1048576
     
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
@@ -192,6 +193,8 @@ contains
     !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
     !%Option json 524288
     !% Generates output in JSON format.
+    !%Option bild 1048576
+    !% Generates output BILD format (<tt>http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html </tt> )
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
@@ -493,9 +496,10 @@ contains
         write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
         out_name = trim(basename)
       else
-        write(filename, '(a,a,i0.10,a)') trim(folder), trim(basename), ii, ".obf"
-        write(out_name, '(a,i0.10)') trim(basename), ii
+        write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
+        write(out_name, '(a)') trim(basename)
       end if
+      print*,'Output File:',trim(folder),'/',trim(out_name)
 
       ! Read the obf file
       call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
@@ -510,7 +514,7 @@ contains
       if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
       ! Write the corresponding output
       call dio_function_output(how, &
-           trim(folder), out_name, mesh, read_ff, units_out%length, ierr, geo = geo)
+           trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
     end do
     
     SAFE_DEALLOCATE_A(read_ff)

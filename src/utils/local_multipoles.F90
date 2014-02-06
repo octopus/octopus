@@ -238,8 +238,12 @@ contains
 
     block: do id = 1, ndomain
       call parse_block_string(blk, id-1, 0, lab(id))
+      write(message(1),'(a,a)')' Reading Local Domain: ',trim(lab(id))
+      call messages_info(1)
       call read_from_domain_block(blk, id-1, domain(id))
     end do block
+    message(1) = ''
+    call messages_info(1)
 
     POP_SUB(local_domains_read)
   end subroutine local_domains_read
@@ -270,46 +274,54 @@ contains
     call parse_block_integer(blk, row, 1, shape)
 
     select case(shape)
-     case(MINIMUM)
-       if(sys%geo%reduced_coordinates) then
-         message(1) = "The 'minimum' box shape cannot be used if atomic positions"
-         message(2) = "are given as reduced coordinates."
-         call messages_fatal(2)
-       end if
-       call parse_block_float(blk, row, 2, rsize)
-       rsize = units_from_atomic(units_inp%length**(-1), rsize)
-       if(rsize < M_ZERO) call input_error('radius')
-       call parse_block_string(blk, row, 3, clist)
-       nb = 0
-       do ic = 1, sys%geo%natoms
-         if(loct_isinstringlist(ic, clist)) nb = nb + 1
-       end do
-     case(SPHERE)
-       call parse_block_float(blk, row, 2, rsize)
-       rsize = units_from_atomic(units_inp%length**(-1), rsize)
-       if(rsize < M_ZERO) call input_error('radius')
-       do ic = 1, dim 
-         call parse_block_float(blk, row, 2 + ic, center(ic))
-         center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
-       end do
-     case(CYLINDER)
-       call parse_block_float(blk, row, 2, rsize)
-       rsize = units_from_atomic(units_inp%length**(-1), rsize)
-       if(rsize < M_ZERO) call input_error('radius')
-       call parse_block_float(blk, row, 3, xsize)
-       do ic = 1, dim 
-         call parse_block_float(blk, row, 3 + ic, center(ic))
-         center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
-       end do
-     case(PARALLELEPIPED)
-       do ic = 1, dim 
-         call parse_block_float(blk, row, 2 + ic, lsize(ic))
-         lsize(ic) = units_from_atomic(units_inp%length**(-1), lsize(ic))
-       end do
-       do ic = 1, dim 
-         call parse_block_float(blk, row, 2 + dim + ic, center(ic))
-         center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
-       end do
+      case(MINIMUM)
+        if(sys%geo%reduced_coordinates) then
+          message(1) = "The 'minimum' box shape cannot be used if atomic positions"
+          message(2) = "are given as reduced coordinates."
+          call messages_fatal(2)
+        end if
+        call parse_block_float(blk, row, 2, rsize)
+        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        if(rsize < M_ZERO) call input_error('radius')
+        call parse_block_string(blk, row, 3, clist)
+        nb = 0
+        do ic = 1, sys%geo%natoms
+          if(loct_isinstringlist(ic, clist)) nb = nb + 1
+        end do
+      case(SPHERE)
+        call parse_block_float(blk, row, 2, rsize)
+        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        if(rsize < M_ZERO) call input_error('radius')
+        do ic = 1, dim 
+          call parse_block_float(blk, row, 2 + ic, center(ic))
+          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+        end do
+      case(CYLINDER)
+        call parse_block_float(blk, row, 2, rsize)
+        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        if(rsize < M_ZERO) call input_error('radius')
+        call parse_block_float(blk, row, 3, xsize)
+        do ic = 1, dim 
+          call parse_block_float(blk, row, 3 + ic, center(ic))
+          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+        end do
+      case(PARALLELEPIPED)
+        do ic = 1, dim 
+          call parse_block_float(blk, row, 2 + ic, lsize(ic))
+          lsize(ic) = units_from_atomic(units_inp%length**(-1), lsize(ic))
+        end do
+        do ic = 1, dim 
+          call parse_block_float(blk, row, 2 + dim + ic, center(ic))
+          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+        end do
+      case(BADER)
+        call parse_block_string(blk, row, 3, clist)
+        nb = 0
+        do ic = 1, sys%geo%natoms
+          if(loct_isinstringlist(ic, clist)) nb = nb + 1
+        end do
+        message(1) = 'Bader shape is not yet implemented'
+        call messages_fatal(1)
     end select
       ! fill in lsize structure
       select case(shape)
@@ -345,7 +357,7 @@ contains
     FLOAT,             intent(in)    :: xsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
-    character(len=80), intent(in)    :: clist
+    character(len=80), intent(out)    :: clist
 
     integer                  :: ia, ibox, ic, id, nboxes, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
@@ -374,6 +386,33 @@ contains
         end do
     end select
     call box_union_init(dom, nb, boxes)
+
+   !< Check for a conflict between box_unon and clist
+    ic = 0
+    if (shape == MINIMUM ) then
+      do ia = 1, sys%geo%natoms
+        if (box_union_inside(dom, sys%geo%atom(ia)%x).and. .not.loct_isinstringlist(ia, clist) ) then
+          ic = ic + 1
+          if( ic <= 20 ) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%spec)),ia, & 
+                                 ' is inside the union box BUT not in list: ',trim(clist)
+        end if
+      end do
+      if (ic > 0) then 
+         if( ic > 20 ) ic = 20
+         call messages_info(ic)
+         message(1) = '!'
+         message(2) = '! WARNING: THIS FACT COULD GIVE INCORRECT RESULTS '
+         message(3) = '! '
+         call messages_info(3)
+         if ( ic == 20 ) then
+           message(1) = 'WARNING: AT LIST 19 ATOMS ARE NOT PRESENT IN THE LIST'
+           call messages_info(1)
+         end if
+         message(1) = ''
+           call messages_info(1)
+      end if
+    end if
+
     do ibox = 1, nb 
       call box_end(boxes(ibox))
     end do
@@ -395,7 +434,7 @@ contains
     integer,                intent(in) :: iter
     FLOAT,                  intent(in) :: dt   
 
-    FLOAT, allocatable :: multipoles(:,:), ion_dipole(:,:), dwcenter(:,:)
+    FLOAT, allocatable :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
     integer            :: id, is, nspin
 
     PUSH_SUB(calc_local_multipoles)
@@ -405,13 +444,15 @@ contains
 !> TODO: For instance spin are not included and just work with real densities.
 
     nspin = sys%st%d%nspin
-    call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles)
+    call local_center_of_mass(nd, dom, sys%geo, dcenter)
     call local_geometry_dipole(nd, dom, sys%geo, ion_dipole)
-    call local_center_of_mass(nd, dom, sys%geo, dwcenter)
+    call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles)
     do id = 1, nd
       multipoles(2:sys%space%dim+1, id) = -ion_dipole(1:sys%space%dim, id)/nspin - multipoles(2:sys%space%dim+1, id)
-      call wrt_local_multipoles(multipoles(:,id), dwcenter(:,id), lmax, sys%st%d%nspin, lab(id), iter, dt)
+      call wrt_local_multipoles(multipoles(:,id), dcenter(:,id), lmax, sys%st%d%nspin, lab(id), iter, dt, &
+                                 local_geometry_charge(dom(id), sys%geo))
     end do
+    SAFE_DEALLOCATE_A(dcenter)
     SAFE_DEALLOCATE_A(ion_dipole)
     SAFE_DEALLOCATE_A(multipoles)
 
@@ -444,6 +485,7 @@ contains
     do id = 1, nd
       center(1:geo%space%dim,id) = center(1:geo%space%dim,id) / sumw(id)
     end do
+    SAFE_DEALLOCATE_A(sumw)
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
@@ -465,18 +507,36 @@ contains
       do  id = 1, nd
         if (box_union_inside(dom(id), geo%atom(ia)%x)) then
           dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) + &
-          species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:geo%space%dim)
+          species_zval(geo%atom(ia)%spec)*(geo%atom(ia)%x(1:geo%space%dim))
         end if
       end do
     end do
     dipole = P_PROTON_CHARGE*dipole
 
     POP_SUB(local_geometry_dipole)
-
   end subroutine local_geometry_dipole
 
   ! ---------------------------------------------------------
-  subroutine wrt_local_multipoles(multipoles, center, lmax, nspin, label, iter, dt)
+  real*8 function local_geometry_charge(dom, geo) result(charge)
+    type(box_union_t), intent(in)  :: dom
+    type(geometry_t),  intent(in)  :: geo
+
+    integer :: ia, ibox, id
+
+    PUSH_SUB(local_geometry_charge)
+
+    charge = M_ZERO
+    do ia = 1, geo%natoms
+      if (box_union_inside(dom, geo%atom(ia)%x)) then
+        charge = charge + species_zval(geo%atom(ia)%spec)
+      end if
+    end do
+
+    POP_SUB(local_geometry_charge)
+  end function local_geometry_charge
+
+  ! ---------------------------------------------------------
+  subroutine wrt_local_multipoles(multipoles, center, lmax, nspin, label, iter, dt, loc_charge)
     FLOAT,         intent(in) :: multipoles(:)
     FLOAT,         intent(in) :: center(:)
     integer,       intent(in) :: lmax
@@ -484,6 +544,7 @@ contains
     character(15), intent(in) :: label
     integer,       intent(in) :: iter
     FLOAT,         intent(in) :: dt   
+    FLOAT,         intent(in) :: loc_charge
    
     integer             :: add_lm, ll, mm, out_multipoles
     character(len=64)   :: filename
@@ -513,11 +574,55 @@ contains
         add_lm = add_lm + 1
       end do
     end do
-    write(out_multipoles,'(a)')""
+    write(out_multipoles,'(es21.12)')loc_charge
+!    write(out_multipoles,'(a)')""
+    
+    if(iand(sys%outp%how, C_OUTPUT_HOW_BILD) /= 0 .AND. sys%space%dim == 3)then
+      call out_bld_multipoles(multipoles(2:sys%space%dim+1), center, lmax, label, iter)
+    else
+      message(1) = "Error. Output Format not available."
+      message(2) = ''
+      call messages_info(2)
+    end if  
+    
+    call io_close(out_multipoles)
 
     POP_SUB(wrt_local_multipoles)
-  
   end subroutine wrt_local_multipoles
+
+  ! ---------------------------------------------------------
+  subroutine out_bld_multipoles(multipoles, center, lmax, label, iter)
+    FLOAT,         intent(in) :: multipoles(:)
+    FLOAT,         intent(in) :: center(:)
+    integer,       intent(in) :: lmax
+    character(15), intent(in) :: label
+    integer,       intent(in) :: iter
+   
+    integer             :: add_lm, ll, mm, out_bld
+    character(len=80)   :: filename, folder
+    FLOAT               :: dipolearrow(3,2)
+
+    PUSH_SUB(out_bld_multipoles)
+    
+    write(folder,'(a,a)')'local.multipoles/',trim(label)
+    call io_mkdir(folder)
+    write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
+!    out_bld = io_open(file=trim(filename), action='write', status='new')
+    out_bld = io_open(file=trim(filename), action='write')
+
+    write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
+                        trim(label), ' domain and iteration number: ',iter
+    write(out_bld,'(a)')''
+    write(out_bld,'(a)')'.color red'
+    write(out_bld,'(a,3(f12.6,2x),a)')'.sphere ',(units_from_atomic(units_out%length,center(ll)), ll= 1, 3),' 0.2' 
+    do ll = 1, 3
+      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll))
+      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll))
+    end do
+    write(out_bld,'(a,6(f12.6,2x),a)')'.arrow ',(dipolearrow(ll,1), ll= 1, 3), &
+                                     (dipolearrow(ll,2), ll= 1, 3), ' 0.1 0.5 0.90'
+    POP_SUB(out_bld_multipoles)
+  end subroutine out_bld_multipoles
 
   ! ---------------------------------------------------------
   !> Write header of multipoles files
@@ -547,6 +652,7 @@ contains
       write(aux,'(a4,i1,a1)')"<x>(",is,")";write(iunit,'(a)',advance='no')aux
       write(aux,'(a4,i1,a1)')"<y>(",is,")";write(iunit,'(a)',advance='no')aux
       write(aux,'(a4,i1,a1)')"<z>(",is,")";write(iunit,'(a)',advance='no')aux
+      write(aux,'(a12,i1,a1)')"Ion charges(",is,")";write(iunit,'(a)',advance='no')aux; write(iunit,'(a6)',advance='no')" "
     end do
     write(iunit,'(a)',advance='yes')""
     write(aux,'(a)')"#[Iter n.]";write(iunit,'(a16)',advance='no')aux
@@ -568,6 +674,7 @@ contains
           end do
         end do
       end do
+    write(aux,'(a)') 'Electrons';write(iunit,'(a)', advance='no') aux; write(iunit,'(a2)',advance='no')" "
     write(iunit,'(a)')""
     call messages_print_stress(iunit)
 
