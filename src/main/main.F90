@@ -113,7 +113,7 @@ program octopus
   !% the second is labels (optional; default is <tt>dsXX_</tt> where XX=01, 02, ...), and the third is the
   !% order for the runs (optional; default is the order listed). The labels will be used as prefixes for
   !% the output directories such as <tt>restart</tt>, <tt>static</tt>, <tt>td...</tt> etc., and can also
-  !% be used as prefixes to variables to indicate that they apply only to that dataset's calculation.
+  !% be used as prefixes to variables to indicate that they apply only to the calculation for that dataset.
   !%
   !% Example:
   !% <pre>%CalculationMode
