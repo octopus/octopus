@@ -164,7 +164,6 @@ contains
         nst_calculated = min(maxval(occ_states), minval(lowest_missing) - 1)
       end if
       showstart = max(nst_calculated + 1, 1)
-      showstart = min(showstart, sys%st%nst)
       call lcao_run(sys, hm, st_start = showstart)
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
