@@ -36,7 +36,7 @@ module xc_functl_m
     xc_functl_write_info
 
 
-  !> This adds to the constants defined in lib_xc. But since in that module
+  !> This adds to the constants defined in libxc. But since in that module
   !! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
@@ -45,9 +45,17 @@ module xc_functl_m
     XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
     XC_LB94_XC_CMPLX = 703,     &  !< complex-scaled LB94 exchange and correlation
     XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
-    XC_RDMFT_XC_M = 601,        &  !< RDMFT Mueller functional
-    XC_FAMILY_KS_INVERSION = 64,&
-    XC_FAMILY_RDMFT = 128          !< family for RDMFT functionals
+    XC_RDMFT_XC_M = 601            !< RDMFT Mueller functional
+
+  !> declaring 'family' constants for 'functionals' not handled by libxc
+  !! careful not to use a value defined in libxc for another family!
+  integer, public, parameter :: &
+    XC_FAMILY_KS_INVERSION = 1024, &
+    XC_FAMILY_RDMFT = 2048
+
+#ifndef HAVE_LIBXC_HYB_MGGA
+  integer, public, parameter :: XC_FAMILY_HYB_MGGA = 64
+#endif
 
   type xc_functl_t
     integer         :: family            !< LDA, GGA, etc.

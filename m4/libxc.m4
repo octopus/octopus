@@ -78,6 +78,20 @@ else
   AC_MSG_ERROR([Could not find required libxc library ( >= v 2.0.0).])
 fi
 
+acx_libxc_hyb_mgga_ok=no
+AC_MSG_CHECKING([whether libxc has support for hybrid meta-GGAs (>= v 2.1)])
+
+testprog="AC_LANG_PROGRAM([],[
+  use xc_f90_lib_m
+  implicit none
+  integer :: x = XC_FAMILY_HYB_MGGA])"
+AC_LINK_IFELSE($testprog, [acx_libxc_hyb_mgga_ok=yes], [])
+
+AC_MSG_RESULT([$acx_libxc_hyb_mgga_ok])
+if test x"$acx_libxc_hyb_mgga_ok" = xyes; then
+  AC_DEFINE(HAVE_LIBXC_HYB_MGGA, 1, [Defined if LIBXC library has support for hybrid meta-GGAs.])
+fi
+
 AC_SUBST(FCFLAGS_LIBXC)
 AC_SUBST(LIBS_LIBXC)
 FCFLAGS="$acx_libxc_save_FCFLAGS"
