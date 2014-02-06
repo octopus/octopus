@@ -272,7 +272,7 @@ contains
       str = "interpolating scaling function (from BIGDFT)"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
-    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., J. Comp. Chem 36 (2014)"
+    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., J. Comp. Chem 35, 427-444 (2014)"
     call messages_info(2)
 
     if(this%method /= POISSON_FFT) then

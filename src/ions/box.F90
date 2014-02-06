@@ -31,21 +31,21 @@ module box_m
   implicit none
 
   private
-  public ::         &
-    box_t,          &
-    box_create,     &
-    box_end,        &
-    box_inside,     &
-    box_inside_vec, &
-    box_copy,       &
+  public ::           &
+    box_t,            &
+    box_create,       &
+    box_end,          &
+    box_inside,       &
+    box_inside_vec,   &
+    box_copy,         &
     box_inside_bader, &
     box_nearest_point
 
 
   integer, parameter, public :: &
-    BOX_SPHERE         = 1,         &
-    BOX_CYLINDER       = 2,         &
-    BOX_PARALLELEPIPED = 3,         &
+    BOX_SPHERE         = 1,     &
+    BOX_CYLINDER       = 2,     &
+    BOX_PARALLELEPIPED = 3,     &
     BOX_BADER          = 4
 
   type box_t
@@ -201,8 +201,10 @@ contains
   end subroutine box_copy
 
   !--------------------------------------------------------------
-  !> Checks if a vector of points are inside the Bader volume defined by box%center.
-  ! TODO: Added the skeleton of a new routine that will check if a point is inside a Bader Volume. 
+  !! Checks if a vector of points are inside the Bader volume defined
+  !! by box\%center.  
+  !! \TODO: Added the skeleton of a new routine that will check if a
+  !! point is inside a Bader Volume.
   !--------------------------------------------------------------
   subroutine box_inside_bader(box, npoints, points, inside)
     type(box_t),  intent(in)  :: box
@@ -221,12 +223,13 @@ contains
 
   !---------------------------------------------------------------------
   !> Returns the index of the point which is nearest to a given vector
-  !! position pos. Variable dmin will hold, on exit, the distance between
-  !! pos and this nearest mesh point. rankmin will be zero, if the mesh is
-  !! not partitioned, and the rank of the processor which holds the point
-  !! ind if the mesh is partitioned.
-  !! This routine is a copy of the mesh_nearest_point in grid/mesh.F90. 
-  !! Here the routine does not need a type(mesh_t) variable.
+  !! position pos. Variable dmin will hold, on exit, the distance
+  !! between pos and this nearest mesh point. Variable rankmin will be
+  !! zero, if the mesh is not partitioned, and the rank of the
+  !! processor which holds the point ind if the mesh is partitioned.
+  !! This routine is a copy of the mesh_nearest_point in
+  !! grid/mesh.F90.  Here the routine does not need a type(mesh_t)
+  !! variable.
   ! ----------------------------------------------------------------------
   integer function box_nearest_point(npoints, points, pos, dim, dmin, rankmin) result(ind)
     integer,      intent(in)  :: npoints
