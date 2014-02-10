@@ -147,32 +147,20 @@ contains
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
 
           write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
-          if(simul_box_is_periodic(sb)) then
-            if(st%d%ispin == SPINORS) then
-              write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
-                units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
-              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik), ')'
+          if(st%d%ispin == SPINORS) then
+            write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
+              units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
+            if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik), ')'
+          else
+            if(st%cmplxscl%space) then !cmplxscl
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
+                units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
+                units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), occ
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
-              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik+is), ')'
             end if
-          else
-            if(st%d%ispin == SPINORS) then
-              write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
-                units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
-              if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik), ')'
-            else
-              if(st%cmplxscl%space) then !cmplxscl
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), occ
-              else
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
-              end if
-              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik+is), ')'
-            end if
+            if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik+is), ')'
           end if
           if(present(error)) then
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))//trim(tmp_str(3))
