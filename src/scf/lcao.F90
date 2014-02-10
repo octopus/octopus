@@ -698,13 +698,9 @@ contains
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
 
-        ! for now, to retain previous behavior of LCAOAlternative, we will not orthogonalize.
-        if(.not. lcao%alternative) then
-          call messages_write('Orthogonalizing random wavefunctions.')
-          call messages_info()
-
-          call states_orthogonalize(sys%st, sys%gr%mesh)
-        endif
+        call messages_write('Orthogonalizing random wavefunctions.')
+        call messages_info()
+        call states_orthogonalize(sys%st, sys%gr%mesh)
 
         if(.not. lcao_done) then
           ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations

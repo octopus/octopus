@@ -8,27 +8,27 @@ Enabled    : Yes
 
 Processors: 4
 Input: 14-fullerene_packed.01-gs.inp
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -362.75695256
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -363.91398457
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  3706.61771965
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -101.79878730
-match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4000.42722393
-match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -139.62656491
-match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -93.45224744
-match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.32297846
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   288.64363339
-match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8247.00820291
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -101.18321570
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4002.26397735
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -139.89199304
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -93.64322112
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.33328310
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   288.24155580
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8246.79555589
 
-match ; Eigenvalue  10     ; GREP(static/info, ' 10   --', 13) ;  -0.729137
-match ; Eigenvalue  20     ; GREP(static/info, ' 20   --', 13) ;  -0.649748
-match ; Eigenvalue  30     ; GREP(static/info, ' 30   --', 13) ;  -0.579237
-match ; Eigenvalue  40     ; GREP(static/info, ' 40   --', 13) ;  -0.509851
-match ; Eigenvalue  50     ; GREP(static/info, ' 50   --', 13) ;  -0.429589
-match ; Eigenvalue  60     ; GREP(static/info, ' 60   --', 13) ;  -0.394412
-match ; Eigenvalue  70     ; GREP(static/info, ' 70   --', 13) ;  -0.350219
-match ; Eigenvalue  80     ; GREP(static/info, ' 80   --', 13) ;  -0.322145
-match ; Eigenvalue  90     ; GREP(static/info, ' 90   --', 13) ;  -0.277777
-match ; Eigenvalue 100     ; GREP(static/info, '100   --', 13) ;  -0.233999
-match ; Eigenvalue 110     ; GREP(static/info, '110   --', 13) ;  -0.165333
-match ; Eigenvalue 120     ; GREP(static/info, '120   --', 13) ;  -0.121464
-match ; Eigenvalue 130     ; GREP(static/info, '130   --', 13) ;   0.007065
-match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.065426
+match ; Eigenvalue  10     ; GREP(static/info, ' 10   --', 13) ;  -0.728015
+match ; Eigenvalue  20     ; GREP(static/info, ' 20   --', 13) ;  -0.646886
+match ; Eigenvalue  30     ; GREP(static/info, ' 30   --', 13) ;  -0.576279
+match ; Eigenvalue  40     ; GREP(static/info, ' 40   --', 13) ;  -0.506850
+match ; Eigenvalue  50     ; GREP(static/info, ' 50   --', 13) ;  -0.427892
+match ; Eigenvalue  60     ; GREP(static/info, ' 60   --', 13) ;  -0.391399
+match ; Eigenvalue  70     ; GREP(static/info, ' 70   --', 13) ;  -0.346811
+match ; Eigenvalue  80     ; GREP(static/info, ' 80   --', 13) ;  -0.318199
+match ; Eigenvalue  90     ; GREP(static/info, ' 90   --', 13) ;  -0.275120
+match ; Eigenvalue 100     ; GREP(static/info, '100   --', 13) ;  -0.233342
+match ; Eigenvalue 110     ; GREP(static/info, '110   --', 13) ;  -0.163360
+match ; Eigenvalue 120     ; GREP(static/info, '120   --', 13) ;  -0.119440
+match ; Eigenvalue 130     ; GREP(static/info, '130   --', 13) ;   0.009299
+match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.068463
