@@ -20,17 +20,17 @@ match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.507715
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  13.22649026
 match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.95279501
 
-match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ; 0.000000
-match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ; 0.000000
-match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ; 0.000000
+match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.000000
+match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.000000
+match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ; 0.000000
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.280475
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  0.052868
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.160610
 match ; Eigenvalue 18 ; GREP(static/info, '#k =   1', 12, 18) ;  0.165239
 
-match ; k-point 2 (x) ; GREP(static/info, '#k =   2', 18) ; 0.500000
-match ; k-point 2 (y) ; GREP(static/info, '#k =   2', 30) ; 0.500000
-match ; k-point 2 (z) ; GREP(static/info, '#k =   2', 42) ; 0.500000
+match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ; 0.500000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; 0.500000
+match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ; 0.500000
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.191935
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ; -0.098940
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.115142

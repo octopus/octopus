@@ -22,17 +22,17 @@ match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.500245
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.47687684
 match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.39639832
 
-match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ;  0.250000
-match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ;  0.250000
-match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ;  0.250000
+match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ;  0.250000
+match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ;  0.250000
+match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ;  0.250000
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.257309
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  0.008457
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.123205
 match ; Eigenvalue 18 ; GREP(static/info, '#k =   1', 12, 18) ;  0.196285
 
-match ; k-point 2 (x) ; GREP(static/info, '#k =   2', 18) ;  0.250000
-match ; k-point 2 (y) ; GREP(static/info, '#k =   2', 30) ;  0.250000
-match ; k-point 2 (z) ; GREP(static/info, '#k =   2', 42) ; -0.250000
+match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.250000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.250000
+match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ; -0.250000
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.25730
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ;  0.008457
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.123205
@@ -65,9 +65,9 @@ match ; vxc k 1 1 Im    ; LINEFIELD(static/vxc.dat, 352, 4);     0.0
 
 Input      : 10-berkeleygw.02-unocc.inp
 
-match ; k-point 1 (x) ; GREP(static/eigenvalues, '#k =   1', 18) ;  0.0000
-match ; k-point 1 (y) ; GREP(static/eigenvalues, '#k =   1', 30) ;  0.0000
-match ; k-point 1 (z) ; GREP(static/eigenvalues, '#k =   1', 42) ;  0.0100
+match ; k-point 1 (x) ; GREPFIELD(static/eigenvalues, '#k =   1', 7) ;  0.0000
+match ; k-point 1 (y) ; GREPFIELD(static/eigenvalues, '#k =   1', 8) ;  0.0000
+match ; k-point 1 (z) ; GREPFIELD(static/eigenvalues, '#k =   1', 9) ;  0.0100
 match ; Eigenvalue  1 ; GREP(static/eigenvalues, '#k =   1', 12,  1) ; -0.287041
 match ; Eigenvalue  8 ; GREP(static/eigenvalues, '#k =   1', 12,  8) ;  0.045962
 match ; Eigenvalue 16 ; GREP(static/eigenvalues, '#k =   1', 12, 16) ;  0.151286
