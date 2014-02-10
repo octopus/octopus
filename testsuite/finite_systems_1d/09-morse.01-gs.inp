@@ -60,10 +60,4 @@ TheoryLevel = independent_particles
 
 ConvAbsDens = 1e-12
 
-LCAOStart = no
-
 EigenSolver = cg_new
-
-
-
-

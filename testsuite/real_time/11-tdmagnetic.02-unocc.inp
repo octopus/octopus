@@ -25,7 +25,6 @@ TheoryLevel = independent_particles
 
 MaximumIter = 2
 ConvAbsDens = 1e-10
-LCAOStart = lcao_none
 
 EigenSolver = plan
 EigenSolverTolerance = 1e-6

@@ -24,9 +24,6 @@ SpinComponents = spinors
 
 ConvAbsDens = 1e-10
 
-# We cannot use the LCAO because otherwise the InitialSpins don't work.
-LCAOStart = no
-
 %InitialSpins
  0.5 |  0.0 |  0.0
 %
