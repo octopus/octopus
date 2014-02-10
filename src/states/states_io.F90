@@ -92,33 +92,20 @@ contains
       return
     end if
 
-    if(present(error)) then
-      if(st%d%ispin  ==  SPINORS) then
-        write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
-          '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
-      else
-        if(st%cmplxscl%space) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x,a10)')   &
-            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation ', 'Error'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
-            '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
-        end if
-      end if
+    if(st%d%ispin  ==  SPINORS) then
+      write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
+        '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
     else
-      if(st%d%ispin  ==  SPINORS) then
-        write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
-          '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
+      if(st%cmplxscl%space) then
+        write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
+          '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
       else
-        if(st%cmplxscl%space) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x)')   &
-            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation '
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
-            '#st',' Spin',' Eigenvalue', 'Occupation '
-        end if
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation'
       end if
     end if
+    if(present(error)) &
+      write(message(1),'(a,a10)') trim(message(1)), ' Error'
     call messages_info(1, iunit)
 
     do ik = 1, st%d%nik, ns
@@ -126,7 +113,7 @@ contains
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .false.)
         write(message(1), '(a,i4,a)') '#k =', ik, ', k = ('
         do idir = 1, sb%dim
-          write(tmp_str(1), '(f12.6)') kpoint(idir)
+          write(tmp_str(1), '(f10.6)') kpoint(idir)
           message(1) = trim(message(1))//trim(tmp_str(1))
           if(idir < sb%dim) message(1) = trim(message(1))//','
         enddo
@@ -150,7 +137,7 @@ contains
           if(st%d%ispin == SPINORS) then
             write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
               units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
-            if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik), ')'
+            if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
           else
             if(st%cmplxscl%space) then !cmplxscl
               write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
@@ -160,7 +147,7 @@ contains
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
             end if
-            if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik+is), ')'
+            if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
           end if
           if(present(error)) then
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))//trim(tmp_str(3))
