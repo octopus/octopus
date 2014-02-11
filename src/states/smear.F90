@@ -237,7 +237,7 @@ contains
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     integer            :: ist, ik, iter
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
@@ -290,11 +290,11 @@ contains
       call sort(eigenval_list, reorder)
       
       do iter = 1, nst * nik
-        xx = kweights(k_list(reorder(iter)))
+        weight = kweights(k_list(reorder(iter)))
         this%e_fermi = eigenval_list(iter)
-        this%ef_occ  = sumq / (xx * this%el_per_state)
+        this%ef_occ  = sumq / (weight * this%el_per_state)
 
-        if(sumq - xx * this%el_per_state <= CNST(1e-10)) then
+        if(sumq - weight * this%el_per_state <= CNST(1e-10)) then
 
           ! count how many occupied states are at the fermi level,
           ! this is required later to fill the states
@@ -309,7 +309,7 @@ contains
         end if
 
 
-        sumq = sumq - xx * this%el_per_state
+        sumq = sumq - weight * this%el_per_state
       end do
 
       SAFE_DEALLOCATE_A(eigenval_list)
