@@ -84,7 +84,7 @@ module casida_m
     integer           :: nst            !< total number of states
     integer           :: nik
     integer           :: sb_dim         !< number of spatial dimensions
-    FLOAT             :: el_per_state
+    integer           :: el_per_state
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces

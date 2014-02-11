@@ -55,7 +55,7 @@ module smear_m
     FLOAT   :: dsmear       !< the parameter defining this function
     FLOAT   :: e_fermi      !< the Fermi energy
     
-    FLOAT   :: el_per_state !< How many electrons can we put in each state
+    integer :: el_per_state !< How many electrons can we put in each state (1 or 2)
     FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
     logical :: integral_occs !< for fixed_occ, are they all integers?
     integer :: MP_n         !< order of Methfessel-Paxton smearing
@@ -129,9 +129,9 @@ contains
 
     call messages_obsolete_variable("ElectronicTemperature", "Smearing")
 
-    this%el_per_state = M_ONE
+    this%el_per_state = 1
     if(ispin == 1) & ! unpolarized
-      this%el_per_state = M_TWO
+      this%el_per_state = 2
 
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then
