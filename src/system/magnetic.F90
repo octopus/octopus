@@ -136,7 +136,7 @@ contains
       else if(st%d%ispin == SPINORS) then ! non-collinear
         write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
         do ia = 1, geo%natoms
-          write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(1:mesh%sb%dim, ia)
+          write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(:, ia)
         end do
       end if
       
