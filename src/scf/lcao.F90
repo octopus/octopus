@@ -698,7 +698,7 @@ contains
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
 
-        call messages_write('Orthogonalizing random wavefunctions.')
+        call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
         call states_orthogonalize(sys%st, sys%gr%mesh)
 
@@ -730,6 +730,12 @@ contains
         end do
 
       end if
+
+    else if (present(st_start)) then
+
+      call messages_write('Orthogonalizing wavefunctions.')
+      call messages_info()
+      call states_orthogonalize(sys%st, sys%gr%mesh)
 
     end if
 
