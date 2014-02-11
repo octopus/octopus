@@ -237,17 +237,18 @@ contains
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     integer            :: ist, ik, iter
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight, maxq
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
     PUSH_SUB(smear_find_fermi_energy)
 
-    if ((this%el_per_state * nst) - qtot <= -CNST(1e-10)) then ! not enough states
+    maxq = this%el_per_state * nst * sum(kweights(:))
+    if (maxq - qtot <= -CNST(1e-10)) then ! not enough states
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
-        ' max charge = ', sumq
+        ' max charge = ', maxq
       call messages_fatal(2)
     end if
 
