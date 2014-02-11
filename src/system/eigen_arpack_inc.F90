@@ -61,18 +61,18 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   nev = st%nst
   lworkl  = 3*ncv**2+6*ncv
 
-  SAFE_ALLOCATE(d(ncv+1, 3))
-  SAFE_ALLOCATE(resid(ldv))       !residual vector
-  SAFE_ALLOCATE(v(ldv, ncv))      !Arnoldi basis vectors / Eigenstates
-  SAFE_ALLOCATE(workd(3*ldv))
-  SAFE_ALLOCATE(workev(3*ncv))
-  SAFE_ALLOCATE(workl(lworkl))
-  SAFE_ALLOCATE(select(ncv))
+  SAFE_ALLOCATE(d(1:ncv+1, 1:3))
+  SAFE_ALLOCATE(resid(1:ldv))       !residual vector
+  SAFE_ALLOCATE(v(1:ldv, 1:ncv))      !Arnoldi basis vectors / Eigenstates
+  SAFE_ALLOCATE(workd(1:3*ldv))
+  SAFE_ALLOCATE(workev(1:3*ncv))
+  SAFE_ALLOCATE(workl(1:lworkl))
+  SAFE_ALLOCATE(select(1:ncv))
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
   
 #if defined(R_TCOMPLEX)
-  SAFE_ALLOCATE(rwork(ncv))
-  SAFE_ALLOCATE(zd(ncv+1)) !!!! ncv+1 or nev+1?
+  SAFE_ALLOCATE(rwork(1:ncv))
+  SAFE_ALLOCATE(zd(1:ncv+1)) !!!! ncv+1 or nev+1?
 #endif
   which = arpack%sort
   select(:) = .true.
@@ -321,8 +321,8 @@ contains
 
     ASSERT(n == np .or. n == np_part)
 
-    SAFE_ALLOCATE(psi(np_part, hm%d%dim))
-    SAFE_ALLOCATE(hpsi(np_part, hm%d%dim))
+    SAFE_ALLOCATE(psi(1:np_part, 1:hm%d%dim))
+    SAFE_ALLOCATE(hpsi(1:np_part, 1:hm%d%dim))
 
 !     do i = 1, np
 !       psi(i, 1) = v(i)!/sqrt(gr%mesh%volume_element)

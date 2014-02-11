@@ -303,10 +303,10 @@ contains
 
     PUSH_SUB(lalg_zeigenderivatives)
 
-    SAFE_ALLOCATE(unit(n, n))
-    SAFE_ALLOCATE(knaught(n, n))
-    SAFE_ALLOCATE(lambdaminusdm(n, n))
-    SAFE_ALLOCATE(ilambdaminusdm(n, n))
+    SAFE_ALLOCATE(unit(1:n, 1:n))
+    SAFE_ALLOCATE(knaught(1:n, 1:n))
+    SAFE_ALLOCATE(lambdaminusdm(1:n, 1:n))
+    SAFE_ALLOCATE(ilambdaminusdm(1:n, 1:n))
 
     zeigenvec = mat
     call lalg_eigensolve_nonh(n, zeigenvec, zeigenval)
@@ -349,10 +349,10 @@ contains
 
     PUSH_SUB(lalg_zpseudoinverse)
 
-    SAFE_ALLOCATE(u(n, n)) 
-    SAFE_ALLOCATE(vt(n, n)) 
-    SAFE_ALLOCATE(sigma(n, n)) 
-    SAFE_ALLOCATE(sg_values(n))
+    SAFE_ALLOCATE(u(1:n, 1:n)) 
+    SAFE_ALLOCATE(vt(1:n, 1:n)) 
+    SAFE_ALLOCATE(sigma(1:n, 1:n)) 
+    SAFE_ALLOCATE(sg_values(1:n))
 
     imat = mat
     call  lalg_singular_value_decomp(n, imat, u, vt, sg_values)
@@ -408,16 +408,16 @@ contains
 
     PUSH_SUB(lalg_check_zeigenderivatives)
 
-    SAFE_ALLOCATE(zeigenvec(n, n))
-    SAFE_ALLOCATE(dm(n, n))
-    SAFE_ALLOCATE(zeigref_(n, n))
-    SAFE_ALLOCATE(zeigenval(n))
-    SAFE_ALLOCATE(mmatrix(n, n, n))
-    SAFE_ALLOCATE(zeigplus(n))
-    SAFE_ALLOCATE(zeigminus(n))
-    SAFE_ALLOCATE(zeig0(n))
-    SAFE_ALLOCATE(zeigplusminus(n))
-    SAFE_ALLOCATE(zeigminusplus(n))
+    SAFE_ALLOCATE(zeigenvec(1:n, 1:n))
+    SAFE_ALLOCATE(dm(1:n, 1:n))
+    SAFE_ALLOCATE(zeigref_(1:n, 1:n))
+    SAFE_ALLOCATE(zeigenval(1:n))
+    SAFE_ALLOCATE(mmatrix(1:n, 1:n, 1:n))
+    SAFE_ALLOCATE(zeigplus(1:n))
+    SAFE_ALLOCATE(zeigminus(1:n))
+    SAFE_ALLOCATE(zeig0(1:n))
+    SAFE_ALLOCATE(zeigplusminus(1:n))
+    SAFE_ALLOCATE(zeigminusplus(1:n))
 
     ASSERT(n  ==  2)
 

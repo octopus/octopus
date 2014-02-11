@@ -1230,9 +1230,9 @@ contains
     imthr_ = CNST(1E-6)
     if(present(imthr)) imthr_ = imthr
 
-    SAFE_ALLOCATE(table(dim))
-    SAFE_ALLOCATE(temp(dim))
-    SAFE_ALLOCATE(tempI(dim))
+    SAFE_ALLOCATE(table(1:dim))
+    SAFE_ALLOCATE(temp(1:dim))
+    SAFE_ALLOCATE(tempI(1:dim))
 
     tempI = Imvec
     call sort(tempI,table)
@@ -1260,7 +1260,7 @@ contains
 
     !first zero img parts
     if (n0 > 0) then
-      SAFE_ALLOCATE(idx0(n0))
+      SAFE_ALLOCATE(idx0(1:n0))
       call sort(temp(n2+1:n2+n0),idx0(:))
     end if
 

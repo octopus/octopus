@@ -309,7 +309,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   ! problem here is that a value is written somewhere into the array whether it is
   ! allocated or not. I noticed that it happens (hopefully) always at an index which
   ! is below the matrix dimension.
-  SAFE_ALLOCATE(work(n))
+  SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
@@ -352,10 +352,10 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
 
   if(present(sort_eigenvectors)) then
     if(sort_eigenvectors) then
-      SAFE_ALLOCATE(re(n))
-      SAFE_ALLOCATE(ind(n))
-      SAFE_ALLOCATE(e_copy(n))
-      SAFE_ALLOCATE(a_copy(n, n))
+      SAFE_ALLOCATE(re(1:n))
+      SAFE_ALLOCATE(ind(1:n))
+      SAFE_ALLOCATE(e_copy(1:n))
+      SAFE_ALLOCATE(a_copy(1:n, 1:n))
       re = real(e, REAL_PRECISION)
       e_copy = e
       a_copy = a
@@ -404,7 +404,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   ! problem here is that a value is written somewhere into the array whether it is
   ! allocated or not. I noticed that it happens (hopefully) always at an index which
   ! is below the matrix dimension.
-  SAFE_ALLOCATE(work(n))
+  SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))

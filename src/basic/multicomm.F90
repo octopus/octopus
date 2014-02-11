@@ -904,9 +904,9 @@ contains
     rank = 1
 #ifdef HAVE_OPENMP
     nthreads = omp_get_num_threads()
-    SAFE_ALLOCATE(istart(nthreads))
-    SAFE_ALLOCATE(ifinal(nthreads))
-    SAFE_ALLOCATE(lsize(nthreads))
+    SAFE_ALLOCATE(istart(1:nthreads))
+    SAFE_ALLOCATE(ifinal(1:nthreads))
+    SAFE_ALLOCATE(lsize(1:nthreads))
     call multicomm_divide_range(nobjs, nthreads, istart, ifinal, lsize)
     rank   = 1 + omp_get_thread_num()
 #endif

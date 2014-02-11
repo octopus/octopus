@@ -939,7 +939,7 @@ contains
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode  ==  TDF_FOURIER_SERIES .or. fin%mode  ==  TDF_ZERO_FOURIER) then
-      SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
+      SAFE_ALLOCATE(fout%valww(1:2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if

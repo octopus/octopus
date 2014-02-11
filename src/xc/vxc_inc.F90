@@ -646,7 +646,7 @@ contains
   end subroutine mgga_end
 
   ! ---------------------------------------------------------
-  ! THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
+  !> THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
   subroutine local_allocate()
     integer :: ii
 
@@ -672,7 +672,7 @@ contains
     end subroutine local_allocate
 
   ! ---------------------------------------------------------
-  ! THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
+  !> THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
   subroutine local_deallocate()
 
     deallocate(l_dens)
@@ -952,9 +952,9 @@ end function get_qxc
 !
 !------------------------------------------------------------
 
-! Subroutine to stitch discontinuous values of a multiple-valued function
-! together to a single continuous, single-valued function by smoothly
-! joining at the branch cuts.
+!> Subroutine to stitch discontinuous values of a multiple-valued function
+!! together to a single continuous, single-valued function by smoothly
+!! joining at the branch cuts.
 subroutine stitch(get_branch, functionvalues, startpoint)
   ! Function for getting values of multiple-valued functions.
   ! Each value of the parameter 'branch' corresponds to one such value.
@@ -984,7 +984,7 @@ subroutine stitch(get_branch, functionvalues, startpoint)
 end subroutine stitch
 
 
-! Like stitch, but stitches along one line only.
+!> Like stitch, but stitches along one line only.
 subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbranch)
   
   ! Function for getting values of multiple-valued functions.
@@ -1172,7 +1172,7 @@ subroutine localstitch(mesh, array, get_branch)
   call zcube_function_alloc_rs(cube, cf)
   call zmesh_to_cube(mesh, array, cube, cf, .true.)
   
-  SAFE_ALLOCATE(stitchbuffer(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+  SAFE_ALLOCATE(stitchbuffer(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
   stitchbuffer(:, :, :) = cf%zRS(:, :, :)
   call stitch(get_branch, stitchbuffer, cube%center)
   cf%zRS(:, :, :) = stitchbuffer(:, :, :)

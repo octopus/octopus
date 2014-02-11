@@ -138,7 +138,7 @@ contains
     call parse_string(datasets_check('GlobalDensityFilename'), 'density', filename)
     if ( filename == " " ) filename = ""
     
-    SAFE_ALLOCATE(read_ff(1:(sys%gr%mesh%np))); read_ff(:) = M_ZERO
+    SAFE_ALLOCATE(read_ff(1:sys%gr%mesh%np)); read_ff(:) = M_ZERO
     call drestart_read_function(folder, filename, sys%gr%mesh, read_ff, err)
     if (err /= 0 ) then
      write(message(1),*) 'While reading density: "',trim(folder),trim(filename),'", error code:',err
@@ -472,7 +472,7 @@ contains
     PUSH_SUB(local_center_of_mass)
 
     SAFE_ALLOCATE(center(1:sys%space%dim, nd)); center(:,:) = M_ZERO
-    SAFE_ALLOCATE(sumw(nd)); sumw(:) = M_ZERO
+    SAFE_ALLOCATE(sumw(1:nd)); sumw(:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
         if (box_union_inside(dom(id),geo%atom(ia)%x)) then

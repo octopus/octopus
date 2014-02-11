@@ -1036,7 +1036,7 @@ contains
 
 #ifdef HAVE_BERKELEYGW
 
-    SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
+    SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
@@ -1063,7 +1063,7 @@ contains
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
     call fourier_shell_init(shell_density, cube, gr%mesh)
     ecutrho = shell_density%ekin_cutoff
-    SAFE_ALLOCATE(field_g(shell_density%ngvectors, st%d%nspin))
+    SAFE_ALLOCATE(field_g(1:shell_density%ngvectors, 1:st%d%nspin))
 
     call bgw_setup_header()
 
@@ -1111,9 +1111,9 @@ contains
     call messages_info(2)
 
     if(states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%nspin))
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%nspin))
     else
-      SAFE_ALLOCATE(zpsi(gr%mesh%np, st%d%nspin))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%nspin))
     endif
 
     sheader = 'WFN'
@@ -1193,10 +1193,10 @@ contains
       enddo
       ! some further work on conventions of mtrx and tnp is required!
       
-      SAFE_ALLOCATE(ifmin(gr%sb%kpoints%reduced%npoints, st%d%nspin))
-      SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))
-      SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
-      SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
+      SAFE_ALLOCATE(ifmin(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(ifmax(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(energies(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(occupations(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
       ifmin(:,:) = 1
       if(smear_is_semiconducting(st%smear)) then
         ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
@@ -1216,7 +1216,7 @@ contains
         endif
       enddo
 
-      SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
+      SAFE_ALLOCATE(ngk(1:gr%sb%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
         call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
@@ -1225,8 +1225,8 @@ contains
       enddo
       ngkmax = maxval(ngk)
       
-      SAFE_ALLOCATE(atyp(geo%natoms))
-      SAFE_ALLOCATE(apos(3, geo%natoms))
+      SAFE_ALLOCATE(atyp(1:geo%natoms))
+      SAFE_ALLOCATE(apos(1:3, 1:geo%natoms))
       do iatom = 1, geo%natoms
         atyp(iatom) = species_index(geo%atom(iatom)%spec)
         apos(1:3, iatom) = geo%atom(iatom)%x(1:3)

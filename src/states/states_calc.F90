@@ -216,10 +216,10 @@ contains
     
     PUSH_SUB(reorder_states_by_args)
 
-    SAFE_ALLOCATE(ok(st%nst))
-    SAFE_ALLOCATE(rank(st%nst))
-    SAFE_ALLOCATE(buf(mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(buf1(mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(ok(1:st%nst))
+    SAFE_ALLOCATE(rank(1:st%nst))
+    SAFE_ALLOCATE(buf(1:mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(buf1(1:mesh%np_part,1:st%d%dim))
 
     do ist = 1, st%nst
       ok(ist) = .false.
@@ -261,16 +261,16 @@ contains
     FLOAT,               intent(in)    :: scores(:)
 
     integer              :: ik, ist, idim
-    integer, allocatable :: index(:)
+    integer, allocatable :: st_index(:)
     FLOAT, allocatable   :: diff_copy(:,:)
     FLOAT, allocatable   :: buf(:)
     CMPLX, allocatable   :: cbuf(:)
     
     PUSH_SUB(states_sort_complex)
     
-    SAFE_ALLOCATE(index(st%nst))
-    SAFE_ALLOCATE(cbuf(st%nst))
-    SAFE_ALLOCATE(buf(st%nst))
+    SAFE_ALLOCATE(st_index(1:st%nst))
+    SAFE_ALLOCATE(cbuf(1:st%nst))
+    SAFE_ALLOCATE(buf(1:st%nst))
     SAFE_ALLOCATE(diff_copy(1:size(diff,1),1:size(diff,2)))
 
     diff_copy = diff
@@ -279,25 +279,25 @@ contains
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
       buf(:) = scores(:)
 
-      call sort(buf, index)
+      call sort(buf, st_index)
       if (mpi_grp_is_root(mpi_world)) then
         write(message(1), *) 'Permutation of states'
-        write(message(2), *) index
+        write(message(2), *) st_index
         call messages_info(2)
       end if
       
       do ist=1, st%nst !reorder the eigenstates error accordingly
-        diff(ist, ik) = diff_copy(index(ist),ik)
-        st%zeigenval%Re(ist, ik) = real(cbuf(index(ist)))
-        st%zeigenval%Im(ist, ik) = aimag(cbuf(index(ist)))
+        diff(ist, ik) = diff_copy(st_index(ist),ik)
+        st%zeigenval%Re(ist, ik) = real(cbuf(st_index(ist)))
+        st%zeigenval%Im(ist, ik) = aimag(cbuf(st_index(ist)))
       end do
     
       do idim=1, st%d%dim
-        call reorder_states_by_args(st, mesh, index, ik)
+        call reorder_states_by_args(st, mesh, st_index, ik)
       end do
     end do
     
-    SAFE_DEALLOCATE_A(index)
+    SAFE_DEALLOCATE_A(st_index)
     SAFE_DEALLOCATE_A(diff_copy)
     SAFE_DEALLOCATE_A(buf)
     SAFE_DEALLOCATE_A(cbuf)

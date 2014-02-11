@@ -39,7 +39,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
 
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
-  SAFE_ALLOCATE(psi(gr%mesh%np, 1))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:1))
 
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
   if(bgw%vxc_diag_nmin < 1 .or. bgw%vxc_diag_nmax < 1) then
@@ -54,17 +54,17 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     noffdiag = (bgw%vxc_offdiag_nmax - bgw%vxc_offdiag_nmin + 1)**2
   endif
   if(noffdiag > 0) then
-    SAFE_ALLOCATE(psi2(gr%mesh%np))
-    SAFE_ALLOCATE(off1(noffdiag))
-    SAFE_ALLOCATE(off2(noffdiag))
+    SAFE_ALLOCATE(psi2(1:gr%mesh%np))
+    SAFE_ALLOCATE(off1(1:noffdiag))
+    SAFE_ALLOCATE(off2(1:noffdiag))
   endif
-  SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
+  SAFE_ALLOCATE(mtxel(1:ndiag + noffdiag, 1:st%d%nspin))
 
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
-    SAFE_ALLOCATE(xpsi(gr%mesh%np, 1))
+    SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:1))
     if(.not. associated(hm%hf_st)) hm%hf_st => st
-    SAFE_ALLOCATE(mtxel_x(ndiag + noffdiag, st%d%nspin))
+    SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
   endif
 
   ! BerkeleyGW allows using only spin down, but we will not give that option here
@@ -72,7 +72,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     spin_index(ispin) = ispin
   enddo
 
-  SAFE_ALLOCATE(diag(ndiag))
+  SAFE_ALLOCATE(diag(1:ndiag))
   do idiag = 1, ndiag
     diag(idiag) = bgw%vxc_diag_nmin + idiag - 1
   enddo
@@ -175,10 +175,10 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   PUSH_SUB(X(bgw_vmtxel))
 
   nmat = st%d%nik * bgw%vmtxel_ncband * bgw%vmtxel_nvband * st%d%nspin
-  SAFE_ALLOCATE(psi(gr%mesh%np))
-  SAFE_ALLOCATE(rpsi(gr%mesh%np))
-  SAFE_ALLOCATE(vmtxel(nmat))
-  SAFE_ALLOCATE(rvec(gr%mesh%np))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np))
+  SAFE_ALLOCATE(rpsi(1:gr%mesh%np))
+  SAFE_ALLOCATE(vmtxel(1:nmat))
+  SAFE_ALLOCATE(rvec(1:gr%mesh%np))
 
   forall(ip = 1:gr%mesh%np) &
     rvec(ip) = dot_product(gr%mesh%x(ip, 1:3), bgw%vmtxel_polarization(1:3))
@@ -245,7 +245,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
   ! the half-sphere Hermitian representation for real functions.
 
 #ifdef R_TREAL
-  SAFE_ALLOCATE(zfield_r(gr%mesh%np))
+  SAFE_ALLOCATE(zfield_r(1:gr%mesh%np))
 #endif
 
   do is = 1, nspin
