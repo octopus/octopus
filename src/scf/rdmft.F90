@@ -242,7 +242,6 @@ contains
     integer :: ist, icycle
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
     FLOAT, allocatable ::  occin(:,:), hpsi(:,:), pot(:), rho(:), dpsi(:,:), dpsi2(:,:), theta(:)
-    FLOAT :: el_per_state !maximum number of electrons per state
     FLOAT, parameter :: smallocc = CNST(0.0000001) 
 
     PUSH_SUB(scf_occ)
@@ -264,14 +263,11 @@ contains
     hpsi = M_ZERO
     energy = M_ZERO
 
-    if(hm%d%ispin == 1) el_per_state = M_TWO ! unpolarized
-    if(hm%d%ispin == 2) el_per_state = M_ONE ! spin polarized
-
     !Initialize the occin. Smallocc is used for numerical stability
     
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
     where(occin(:,:) < smallocc) occin(:,:) = smallocc 
-    where(occin(:,:) > el_per_state-smallocc) occin(:,:) = el_per_state - smallocc
+    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
     st%occ = occin
     
@@ -285,11 +281,11 @@ contains
     mu1 = rdm%mu   !initial guess for mu 
     mu2 = -CNST(1.0e-6)
     dinterv = M_HALF
-    theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
+    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
     call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
-    theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
+    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
     call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi2 = rdm%occsum - st%qtot
 
@@ -299,7 +295,7 @@ contains
         sumgi2 = sumgi1
         mu1 = mu1 - dinterv
         rdm%mu = mu1
-        theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
+        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
         call  multid_minimize(st%nst, 1000, theta, energy) 
         sumgi1 = rdm%occsum - st%qtot 
       else
@@ -307,7 +303,7 @@ contains
         sumgi1 = sumgi2
         mu2 = mu2 + dinterv
         rdm%mu = mu2
-        theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
+        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
         call  multid_minimize(st%nst, 1000, theta, energy) 
         sumgi2 = rdm%occsum - st%qtot 
       end if
@@ -316,7 +312,7 @@ contains
     do icycle = 1, 1000
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
-      theta(:) = asin(sqrt(occin(:, 1)/el_per_state))*(M_HALF/M_PI)
+      theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
       call  multid_minimize(st%nst, 1000, theta, energy) 
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
@@ -334,7 +330,7 @@ contains
     endif
 
     do ist = 1, st%nst
-      st%occ(ist, 1) = el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
+      st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
     end do
     
 
