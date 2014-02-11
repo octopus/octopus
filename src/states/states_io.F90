@@ -73,13 +73,14 @@ contains
     integer, optional, intent(in) :: st_start
 
     integer :: ik, ist, ns, is, idir, st_start_
-    FLOAT :: occ, kpoint(1:MAX_DIM)
-    character(len=80) :: tmp_str(MAX_DIM), cspin
+    FLOAT :: kpoint(1:MAX_DIM)
+    character(len=80) :: tmp_str(max(MAX_DIM, 3)), cspin
 
     PUSH_SUB(states_write_eigenvalues)
 
     st_start_ = 1
     if(present(st_start)) st_start_ = st_start
+    ASSERT(nst <= st%nst)
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -123,12 +124,6 @@ contains
 
       do ist = st_start_, nst
         do is = 0, ns-1
-          if(ist > st%nst) then
-            occ = M_ZERO
-          else
-            occ = st%occ(ist, ik+is)
-          end if
-
           if(is  ==  0) cspin = 'up'
           if(is  ==  1) cspin = 'dn'
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
@@ -136,16 +131,16 @@ contains
           write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
           if(st%d%ispin == SPINORS) then
             write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
-              units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
+              units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
             if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
           else
             if(st%cmplxscl%space) then !cmplxscl
               write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
                 units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), occ
+                units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
             end if
             if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
           end if
