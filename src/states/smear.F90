@@ -244,13 +244,7 @@ contains
 
     PUSH_SUB(smear_find_fermi_energy)
 
-    ! Initializations
-    emin = minval(eigenvalues)
-    emax = maxval(eigenvalues)
-
-    sumq = this%el_per_state * nst* sum(kweights(:))
-
-    if (sumq - qtot <= -CNST(1e-10)) then ! not enough states
+    if ((this%el_per_state * nst) - qtot <= -CNST(1e-10)) then ! not enough states
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
         ' max charge = ', sumq
@@ -320,8 +314,8 @@ contains
       dsmear = max(CNST(1e-14), this%dsmear)
       drange = dsmear * sqrt(-log(tol * CNST(.01)))
 
-      emin = emin - drange
-      emax = emax + drange
+      emin = minval(eigenvalues) - drange
+      emax = maxval(eigenvalues) + drange
 
       do iter = 1, nitmax
         this%e_fermi = M_HALF*(emin + emax)
@@ -356,12 +350,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst, Imeigenvalues)
+  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst)
     type(smear_t),   intent(in)    :: this
     FLOAT,           intent(in)    :: eigenvalues(:,:)
     FLOAT,           intent(inout) :: occupations(:,:)
     integer,         intent(in)    :: nik, nst
-    FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)
 
     integer :: ik, ist, ifermi
     FLOAT   :: dsmear, xx
