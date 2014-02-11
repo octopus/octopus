@@ -733,9 +733,11 @@ contains
 
     else if (present(st_start)) then
 
-      call messages_write('Orthogonalizing wavefunctions.')
-      call messages_info()
-      call states_orthogonalize(sys%st, sys%gr%mesh)
+      if(st_start > 1) then
+        call messages_write('Orthogonalizing wavefunctions.')
+        call messages_info()
+        call states_orthogonalize(sys%st, sys%gr%mesh)
+      endif
 
     end if
 
