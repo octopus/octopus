@@ -1056,7 +1056,7 @@ contains
       st%restart_reorder_occs = .false.
     endif
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
+    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, st%d%full_nik)
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
       if((st%d%ispin /= SPINORS .and. st%nst * 2  <=  st%qtot) .or. &
