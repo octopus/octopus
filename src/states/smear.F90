@@ -60,6 +60,7 @@ module smear_m
     logical :: integral_occs !< for fixed_occ, are they all integers?
     integer :: MP_n         !< order of Methfessel-Paxton smearing
     integer :: fermi_count  !< The number of occupied states at the fermi level
+    integer :: full_nik     !< number of k-points in full zone, for treating k-weights as integers
   end type smear_t
 
   integer, parameter, public ::       &
@@ -73,11 +74,12 @@ module smear_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ, integral_occs)
+  subroutine smear_init(this, ispin, fixed_occ, integral_occs, full_nik)
     type(smear_t), intent(out) :: this
     integer,       intent(in)  :: ispin
     logical,       intent(in)  :: fixed_occ
     logical,       intent(in)  :: integral_occs
+    integer,       intent(in)  :: full_nik
 
     PUSH_SUB(smear_init)
 
@@ -133,6 +135,8 @@ contains
     if(ispin == 1) & ! unpolarized
       this%el_per_state = 2
 
+    this%full_nik = full_nik
+
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then
       !%Variable SmearingMPOrder
@@ -163,6 +167,7 @@ contains
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
     to%fermi_count  = from%fermi_count
+    to%full_nik     = from%full_nik
 
     POP_SUB(smear_copy)
   end subroutine smear_copy

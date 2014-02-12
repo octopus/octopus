@@ -83,6 +83,7 @@ module states_dim_m
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
+    integer :: full_nik             !< Number of k-points in the full Brillouin zone (not including spins)
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
     integer :: nspin                !< dimension of rho (1, 2 or 4)
     integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
@@ -119,6 +120,7 @@ contains
 
     dout%dim            = din%dim
     dout%nik            = din%nik
+    dout%full_nik       = din%full_nik
     dout%ispin          = din%ispin
     dout%nspin          = din%nspin
     dout%spin_channels  = din%spin_channels
@@ -217,6 +219,7 @@ contains
     PUSH_SUB(states_choose_kpoints)
 
     dd%nik = kpoints_number(sb%kpoints)
+    dd%full_nik = sb%kpoints%full%npoints
 
     if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
 
