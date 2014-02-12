@@ -132,6 +132,12 @@ contains
     if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
     endif
+    if(sys%st%smear%method  ==  SMEAR_SEMICONDUCTOR .and. &
+      (abs(sys%st%smear%ef_occ) > M_EPSILON) .and. abs(sys%st%smear%ef_occ - M_ONE) > M_EPSILON) then
+      write(message(1),'(a,f12.6)') 'Partial occcupation at the Fermi level: ', sys%st%smear%ef_occ
+      message(2) = 'Semiconducting smearing cannot be used for Sternheimer in this situation.'
+      call messages_fatal(2)
+    endif
 
     if(wfs_are_cplx) then
       call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
