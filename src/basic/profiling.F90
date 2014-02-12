@@ -874,8 +874,11 @@ contains
         call messages_fatal(1)
       end if
     end if
-
-    write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
+    ii = 1
+    do while ( file(ii:ii+2) == "../" ) 
+      ii = ii + 3
+    end do
+    write(str, '(4a,i5,a)') var(1:jj), "(", trim(file(ii:len(file))), ":", line, ")"
     call compact(str)
 
   end subroutine profiling_make_position_str
