@@ -83,7 +83,6 @@ module states_dim_m
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
-    integer :: nik_axis(MAX_DIM)    !< Number of k-points per axis
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
     integer :: nspin                !< dimension of rho (1, 2 or 4)
     integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
@@ -120,7 +119,6 @@ contains
 
     dout%dim            = din%dim
     dout%nik            = din%nik
-    dout%nik_axis       = din%nik_axis
     dout%ispin          = din%ispin
     dout%nspin          = din%nspin
     dout%spin_channels  = din%spin_channels
