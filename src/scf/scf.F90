@@ -337,6 +337,11 @@ contains
       call messages_experimental('SCFinLCAO')
       message(1) = 'Info: SCF restricted to LCAO subspace.'
       call messages_info(1)
+
+      if(scf%conv_eigen_error) then
+        message(1) = "ConvEigenError cannot be used with SCFinLCAO, since error is unknown."
+        call messages_fatal(1)
+      endif
     end if
 
 
@@ -810,7 +815,7 @@ contains
     SAFE_DEALLOCATE_A(zrhoout)
     SAFE_DEALLOCATE_A(zrhoin)
 
-    if(any(scf%eigens%converged < st%nst)) then
+    if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
       write(message(1),'(a)') 'Some of the states are not fully converged!'
       call messages_warning(1)
     endif
@@ -976,7 +981,7 @@ contains
         end if
         write(iunit, '(1x)')
 
-        if(any(scf%eigens%converged < st%nst)) then
+        if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
           write(iunit,'(a)') 'Some of the states are not fully converged!'
         endif
 
