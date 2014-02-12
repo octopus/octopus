@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2014 M. Marques, A. Castro, A. Rubio, G. Bertsch, J. Alberdi, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -455,7 +455,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
   type(batch_t) :: hpsib, psib
   FLOAT, allocatable :: eval(:)
-  R_TYPE, allocatable :: evec(:, :), levec(:, :)  
+  R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
 
@@ -628,27 +628,71 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       ! FIXME: we should calculate expectation values of the Hamiltonian here.
       ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
-      ibasis = 1
-      do iatom = 1, geo%natoms
-        norbs = this%norb_atom(iatom)
-
-        call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
-
+      !
+      if (.not. this%parallel .and. gr%mesh%parallel_in_domains) then
+        ! We will work on each batch of states at a time, broadcasting only the portion of evec needed by that batch of states.
+        ! Unfortunately this means the loop over atoms will be repeated for each batch, which is not the most efficient way
+        ! of doing this, but it avoids storing the full evec matrix in all processes.
         do ib = st%group%block_start, st%group%block_end
-          ! FIXME: this call handles spinors incorrectly.
-          call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
-            this%orbitals(iatom), st%group%psib(ib, ik))
+          SAFE_ALLOCATE(block_evec(1:this%norbs, 1:st%group%block_size(ib)))
+
+          if (mpi_grp_is_root(mpi_world)) then
+            block_evec(1:this%norbs, 1:st%group%block_size(ib)) = &
+                 evec(1:this%norbs, states_block_min(st, ib):states_block_max(st, ib))
+          end if
+#ifdef HAVE_MPI
+          call MPI_Bcast(block_evec(1,1), size(block_evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+#endif
+          ibasis = 1
+          do iatom = 1, geo%natoms
+            norbs = this%norb_atom(iatom)
+
+            call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+
+            ! FIXME: this call handles spinors incorrectly.
+            call X(submesh_batch_add_matrix)(this%sphere(iatom), block_evec(ibasis:, :), &
+                 this%orbitals(iatom), st%group%psib(ib, ik))
+
+            ibasis = ibasis + norbs
+            if(mpi_grp_is_root(mpi_world)) then
+              call loct_progress_bar((ib - 1)*this%norbs+ibasis-1, this%norbs*(st%group%block_end-st%group%block_end+1))
+            end if
+          end do
+
+          if(.not. this%keep_orb) then
+            do iatom = 1, geo%natoms
+              call lcao_alt_end_orbital(this%orbitals(iatom))
+            end do
+          end if
+
+          SAFE_DEALLOCATE_A(block_evec)
         end do
 
-        if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
 
-        ibasis = ibasis + norbs
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%norbs)
-      end do
+      else
+        !
+        ibasis = 1
+        do iatom = 1, geo%natoms
+          norbs = this%norb_atom(iatom)
 
+          call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+
+          do ib = st%group%block_start, st%group%block_end
+            ! FIXME: this call handles spinors incorrectly.
+            call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
+                 this%orbitals(iatom), st%group%psib(ib, ik))
+          end do
+
+          if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
+
+          ibasis = ibasis + norbs
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%norbs)
+        end do
+        
+        SAFE_DEALLOCATE_A(evec)
+        SAFE_DEALLOCATE_A(levec)
+      end if
       SAFE_DEALLOCATE_A(eval)
-      SAFE_DEALLOCATE_A(evec)
-      SAFE_DEALLOCATE_A(levec)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
@@ -931,13 +975,14 @@ contains
       else
         SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
       end if
-      
+
 #ifdef HAVE_MPI
-      ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
-      ! they must be consistent among processors in domain parallelization
       if(gr%mesh%parallel_in_domains) then
-        call MPI_Bcast(evec(1,1), size(evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
-        call MPI_Bcast(eval(1),   size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+        ! Broadcast the eigenvalues to all the nodes
+        call MPI_Bcast(eval(1), size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+        ! We will not broadcast the eigenvectors at this point, because we do not
+        ! want all the processes to store the full matrix at the same time, as this
+        ! can use a lot of memory space.
       end if
 #endif
       
