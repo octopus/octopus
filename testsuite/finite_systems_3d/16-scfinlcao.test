@@ -1,0 +1,38 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : SCF in LCAO
+Programs   : octopus; octopus_mpi
+TestGroups : long-run, finite_systems_3d
+Enabled    : Yes
+
+Processors: 4
+Input: 16-scfinlcao.01-gs.inp
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -1390.61789364
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  1601.15113645
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -362.96926794
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  2714.74177593
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -374.56305604
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -262.87348750
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -25.74755476
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   556.96919670
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -5974.85901541
+
+match ; Eigenvalue  1     ; GREP(static/info, ' 1   --', 13) ;  -25.772779
+match ; Eigenvalue  2     ; GREP(static/info, ' 2   --', 13) ;  -22.562593
+match ; Eigenvalue  3     ; GREP(static/info, ' 3   --', 13) ;  -22.551807
+match ; Eigenvalue  4     ; GREP(static/info, ' 4   --', 13) ;  -17.523706
+match ; Eigenvalue  5     ; GREP(static/info, ' 5   --', 13) ;  -14.196190
+match ; Eigenvalue  6     ; GREP(static/info, ' 6   --', 13) ;  -13.125484
+match ; Eigenvalue  7     ; GREP(static/info, ' 7   --', 13) ;  -13.112095
+match ; Eigenvalue  8     ; GREP(static/info, ' 8   --', 13) ;   -9.344110
+match ; Eigenvalue  9     ; GREP(static/info, ' 9   --', 13) ;   -9.340413
+match ; Eigenvalue 10     ; GREP(static/info, '10   --', 13) ;   -8.689561
+match ; Eigenvalue 11     ; GREP(static/info, '11   --', 13) ;   -8.586431
+match ; Eigenvalue 12     ; GREP(static/info, '12   --', 13) ;   -8.576907
+match ; Eigenvalue 13     ; GREP(static/info, '13   --', 13) ;   -8.102558
+
+match ; Dipole Moment x   ; GREPFIELD(static/info, '<x>', 4) ;  0.0
+match ; Dipole Moment y   ; GREPFIELD(static/info, '<y>', 4) ;  7.18492E-03
+match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;  8.09807E-01
