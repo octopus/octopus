@@ -61,6 +61,7 @@ module smear_m
     integer :: MP_n         !< order of Methfessel-Paxton smearing
     integer :: fermi_count  !< The number of occupied states at the fermi level
     integer :: full_nik     !< number of k-points in full zone, for treating k-weights as integers
+    integer :: nspins       !< = 2 if spin_polarized, else 1.
   end type smear_t
 
   integer, parameter, public ::       &
@@ -134,6 +135,12 @@ contains
     this%el_per_state = 1
     if(ispin == 1) & ! unpolarized
       this%el_per_state = 2
+
+    if(ispin == 2) then
+      this%nspins = 2
+    else
+      this%nspins = 1
+    endif
 
     this%full_nik = full_nik
 
@@ -241,18 +248,18 @@ contains
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
-    integer            :: ist, ik, iter
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight, maxq
+    integer            :: ist, ik, iter, maxq
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
     PUSH_SUB(smear_find_fermi_energy)
 
-    maxq = this%el_per_state * nst * sum(kweights(:))
-    if (maxq - qtot <= -CNST(1e-10)) then ! not enough states
+    maxq = this%el_per_state * nst * this%nspins
+    if (maxq - qtot <= -tol) then ! not enough states
       message(1) = 'Not enough states'
-      write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
+      write(message(2),'(6x,a,f12.6,a,i10)')'(total charge = ', qtot, &
         ' max charge = ', maxq
       call messages_fatal(2)
     end if
@@ -294,7 +301,7 @@ contains
         this%e_fermi = eigenval_list(iter)
         this%ef_occ  = sumq / (weight * this%el_per_state)
 
-        if(sumq - weight * this%el_per_state <= CNST(1e-10)) then
+        if(sumq - weight * this%el_per_state <= tol) then
 
           ! count how many occupied states are at the fermi level,
           ! this is required later to fill the states
