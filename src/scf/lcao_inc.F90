@@ -689,9 +689,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%norbs)
         end do
         
-        SAFE_DEALLOCATE_A(evec)
         SAFE_DEALLOCATE_A(levec)
       end if
+      SAFE_DEALLOCATE_A(evec)
       SAFE_DEALLOCATE_A(eval)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
@@ -972,8 +972,6 @@ contains
         
         SAFE_DEALLOCATE_A(hamiltonian)
         SAFE_DEALLOCATE_A(overlap)
-      else
-        SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
       end if
 
 #ifdef HAVE_MPI
@@ -984,8 +982,7 @@ contains
         ! want all the processes to store the full matrix at the same time, as this
         ! can use a lot of memory space.
       end if
-#endif
-      
+#endif      
     end if
 
     SAFE_DEALLOCATE_A(iwork)
