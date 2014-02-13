@@ -636,7 +636,7 @@ contains
     ! initially we mark all 'formulas' as undefined
     st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
-    call states_read_initial_occs(st, excess_charge)
+    call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
     call states_read_initial_spins(st)
 
     nullify(st%zphi)
@@ -855,9 +855,10 @@ contains
   !! The resulting occupations are placed on the st\%occ variable. The
   !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
-  subroutine states_read_initial_occs(st, excess_charge)
-    type(states_t), intent(inout) :: st
-    FLOAT,          intent(in)    :: excess_charge
+  subroutine states_read_initial_occs(st, excess_charge, kpoints)
+    type(states_t),  intent(inout) :: st
+    FLOAT,           intent(in)    :: excess_charge
+    type(kpoints_t), intent(in)    :: kpoints
 
     integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos
     type(block_t) :: blk
@@ -1056,7 +1057,7 @@ contains
       st%restart_reorder_occs = .false.
     endif
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, st%d%nik_factor)
+    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
       if((st%d%ispin /= SPINORS .and. st%nst * 2  <=  st%qtot) .or. &

@@ -25,6 +25,7 @@ module smear_m
   use cmplxscl_m
   use datasets_m
   use global_m
+  use kpoints_m
   use loct_math_m
   use math_m
   use messages_m
@@ -75,12 +76,12 @@ module smear_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ, integral_occs, nik_factor)
-    type(smear_t), intent(out) :: this
-    integer,       intent(in)  :: ispin
-    logical,       intent(in)  :: fixed_occ
-    logical,       intent(in)  :: integral_occs
-    integer,       intent(in)  :: nik_factor
+  subroutine smear_init(this, ispin, fixed_occ, integral_occs, kpoints)
+    type(smear_t),   intent(out) :: this
+    integer,         intent(in)  :: ispin
+    logical,         intent(in)  :: fixed_occ
+    logical,         intent(in)  :: integral_occs
+    type(kpoints_t), intent(in)  :: kpoints
 
     PUSH_SUB(smear_init)
 
@@ -142,7 +143,14 @@ contains
       this%nspins = 1
     endif
 
-    this%nik_factor = nik_factor
+    if(this%method == SMEAR_SEMICONDUCTOR) then
+      this%nik_factor = kpoints_kweight_denominator(kpoints)
+
+      if(this%nik_factor == 0) then
+        message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers for semiconducting smearing."
+        call messages_fatal(1)
+      endif
+    endif
 
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then

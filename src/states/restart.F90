@@ -766,7 +766,7 @@ contains
 
     if(st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
-      call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, nik_factor = st%d%nik_factor)
+      call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
     endif
 
     !now we really read, to avoid serialisation of reads in the

@@ -51,7 +51,8 @@ module kpoints_m
     kpoints_write_info,           &
     kpoints_point_is_gamma,       &
     kpoints_get_symmetry_ops,     &
-    kpoints_get_num_symmetry_ops
+    kpoints_get_num_symmetry_ops, &
+    kpoints_kweight_denominator
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -70,7 +71,6 @@ module kpoints_m
     logical        :: use_symmetries
     logical        :: use_time_reversal
 
-    integer        :: nik_factor !< denominator of k-weights
     !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
@@ -337,7 +337,6 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%shifts(1:dim), this%full%red_point)
 
       this%full%weight = M_ONE / this%full%npoints
-      this%nik_factor = this%full%npoints
 
       call kpoints_grid_copy(this%full, this%reduced)
 
@@ -486,18 +485,6 @@ contains
         call messages_fatal(1)
       endif
       this%full%weight = this%full%weight / weight_sum
-
-      this%nik_factor = 0
-      do factor = 1, 100000
-        if(all(abs(int(this%full%weight(:) * factor) - this%full%weight(:) * factor) < CNST(10)*M_EPSILON)) then
-          this%nik_factor = factor
-          exit
-        endif
-      enddo
-      if(this%nik_factor == 0) then
-        message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers."
-        call messages_fatal(1)
-      endif
 
       ! for the moment we do not apply symmetries to user kpoints
       call kpoints_grid_copy(this%full, this%reduced)
@@ -958,6 +945,29 @@ contains
     end if
 
   end function kpoints_get_symmetry_ops
+
+  !--------------------------------------------------------
+  integer function kpoints_kweight_denominator(this)
+    type(kpoints_t),    intent(in) :: this
+
+    integer :: denom
+
+    PUSH_SUB(kpoints_kweight_denominator)
+
+    if(this%method == KPOINTS_MONKH_PACK) then
+      kpoints_kweight_denominator = this%full%npoints
+    else
+      kpoints_kweight_denominator = 0
+      do denom = 1, 100000
+        if(all(abs(int(this%full%weight(:) * denom) - this%full%weight(:) * denom) < CNST(10)*M_EPSILON)) then
+          kpoints_kweight_denominator = denom
+          exit
+        endif
+      enddo
+    endif
+
+    POP_SUB(kpoints_kweight_denominator)
+  end function kpoints_kweight_denominator
 
 end module kpoints_m
 
