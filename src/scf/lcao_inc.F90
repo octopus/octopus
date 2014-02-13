@@ -668,6 +668,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           SAFE_DEALLOCATE_A(block_evec)
         end do
 
+        if (mpi_grp_is_root(mpi_world)) then
+          SAFE_DEALLOCATE_A(evec)
+        end if
 
       else
         !
@@ -690,8 +693,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         end do
         
         SAFE_DEALLOCATE_A(levec)
+        SAFE_DEALLOCATE_A(evec)
       end if
-      SAFE_DEALLOCATE_A(evec)
       SAFE_DEALLOCATE_A(eval)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
