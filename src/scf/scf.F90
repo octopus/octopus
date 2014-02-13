@@ -483,8 +483,6 @@ contains
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
       end if
-      call lcao_init_orbitals(lcao, st, gr, geo)
-      call lcao_end(lcao)
     end if
 
     nspin = st%d%nspin
@@ -568,10 +566,8 @@ contains
       scf%eigens%converged = 0
 
       if(scf%lcao_restricted) then
-        call lcao_init(lcao, gr, geo, st)
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
-        call lcao_end(lcao)
       else
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
@@ -752,7 +748,7 @@ contains
           write(message(2), '(a)')        '' 
           call messages_info(2)
         end if
-!        if(scf%lcao_restricted) call lcao_end(lcao)
+        if(scf%lcao_restricted) call lcao_end(lcao)
         call profiling_out(prof)
         exit
       end if

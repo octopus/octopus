@@ -395,6 +395,9 @@ contains
       end if
 
       ASSERT(this%norbs <= this%maxorbs)
+
+      SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
+      SAFE_ALLOCATE(this%ck(1:this%norbs, 1:st%d%spin_channels))
     else
       call lcao2_init()
     end if
@@ -480,6 +483,9 @@ contains
       else
         this%mult = 1
       end if
+
+      SAFE_ALLOCATE(this%sphere(1:geo%natoms))
+      SAFE_ALLOCATE(this%orbitals(1:geo%natoms))
 
       SAFE_ALLOCATE(this%norb_atom(1:geo%natoms))
 

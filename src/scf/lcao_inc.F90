@@ -267,6 +267,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(lcaopsi)
   SAFE_DEALLOCATE_A(lcaopsi2)
 
+  SAFE_DEALLOCATE_P(this%X(buff))
+
   POP_SUB(X(lcao_wf))
 end subroutine X(lcao_wf)
 
@@ -296,8 +298,6 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
   ! to overwrite and then the rest is stored in a single-precision
   ! buffer.
 
-  SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
-  SAFE_ALLOCATE(this%ck(1:this%norbs, 1:st%d%spin_channels))
   SAFE_ALLOCATE(ao(1:gr%mesh%np, 1:st%d%dim))
 
   this%ck = 0
