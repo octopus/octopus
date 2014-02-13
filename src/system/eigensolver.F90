@@ -492,8 +492,6 @@ contains
 
     PUSH_SUB(eigensolver_end)
 
-    call subspace_end(eigens%sdiag)
-
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)

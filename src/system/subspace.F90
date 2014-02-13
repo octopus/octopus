@@ -61,7 +61,6 @@ module subspace_m
   public ::             &
     subspace_t,         &
     subspace_init,      &
-    subspace_end,       &
     dsubspace_diag,     &
     zsubspace_diag
 
@@ -160,13 +159,6 @@ contains
 
     POP_SUB(subspace_init)
   end subroutine subspace_init
-
-  ! ---------------------------------------------------------
-
-  subroutine subspace_end(this)
-    type(subspace_t), intent(inout) :: this
-    
-  end subroutine subspace_end
 
 #include "undef.F90"
 #include "real.F90"

@@ -39,7 +39,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     psi => st%X(psi)(:, :, :, ik)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
-    call X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
+    call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   case(SD_NONE)
     ! do nothing
   case default
@@ -52,8 +52,7 @@ end subroutine X(subspace_diag)
 
 ! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
-  type(subspace_t),       intent(in)    :: this
+subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -71,7 +70,7 @@ subroutine X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
   
-  call X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
+  call X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   
   ! Diagonalize the Hamiltonian in the subspace.
   ! only half of hmss has the matrix, but this is what Lapack needs
@@ -297,8 +296,7 @@ end subroutine X(subspace_diag_scalapack)
 ! ------------------------------------------------------
 
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
-  type(subspace_t),       intent(in)    :: this
+subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
