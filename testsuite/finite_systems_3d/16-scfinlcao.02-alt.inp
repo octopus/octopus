@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+CalculationMode = gs
+FromScratch = yes
+Units = ev_angstrom
+
+# Colmont et al
+rCCl  = 1.760
+rCH   = 1.080
+theta = 108.23 * pi / 180
+
+%Coordinates
+ "C"  |                          0 |                          0 |        0       
+ "H"  |                          0 |                          0 | rCH            
+ "Cl" |                          0 |  rCCl*sin(theta)           | rCCl*cos(theta)
+ "Cl" |  rCCl*sin(theta)*sin(pi/3) | -rCCl*sin(theta)*cos(pi/3) | rCCl*cos(theta)
+ "Cl" | -rCCl*sin(theta)*sin(pi/3) | -rCCl*sin(theta)*cos(pi/3) | rCCl*cos(theta)
+%
+
+%Species
+ 'C'  | 12.0107 | spec_ps_psf |  6 | 3 | 0
+ 'H'  | 1.00794 | spec_ps_psf |  1 | 3 | 0
+ 'Cl' | 35.4527 | spec_ps_psf | 17 | 3 | 0
+%
+
+Spacing = 0.25
+Radius = 6.0
+
+XCFunctional = gga_x_pbe + gga_c_pbe
+
+SCFinLCAO = yes
+LCAOAlternative = yes
+ExperimentalFeatures = yes

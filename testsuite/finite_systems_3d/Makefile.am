@@ -72,7 +72,8 @@ dist_share_DATA = \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
         16-scfinlcao.test \
-        16-scfinlcao.01-gs.inp \
+        16-scfinlcao.01-std.inp \
+        16-scfinlcao.02-alt.inp \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
