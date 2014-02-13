@@ -599,7 +599,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       if(this%parallel) then
         SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
-        SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:st%st_end))
+        SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:min(st%st_end, this%norbs)))
       else 
         if (mpi_grp_is_root(mpi_world)) then 
           SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
@@ -712,7 +712,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
 contains
   
-  !> \return evec the eingevector
+  !> \return evec the eigenvector
   subroutine diagonalization()
     integer              :: neval_found, info, lwork
     R_TYPE               :: tmp(3) !< size must be at least 3 according to ScaLAPACK
@@ -825,7 +825,7 @@ contains
       send_count = 0
       recv_count = 0
       do ibasis = 1, this%norbs
-        do jbasis = 1, st%nst
+        do jbasis = 1, nev
 
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
 
@@ -852,7 +852,7 @@ contains
       send_count = 0
       recv_count = 0
       do ibasis = 1, this%norbs
-        do jbasis = 1, st%nst
+        do jbasis = 1, nev
 
           call lcao_local_index(this, ibasis, jbasis, ilbasis, jlbasis, proc(1), proc(2))
 
