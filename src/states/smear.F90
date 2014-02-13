@@ -60,7 +60,7 @@ module smear_m
     logical :: integral_occs !< for fixed_occ, are they all integers?
     integer :: MP_n         !< order of Methfessel-Paxton smearing
     integer :: fermi_count  !< The number of occupied states at the fermi level
-    integer :: full_nik     !< number of k-points in full zone, for treating k-weights as integers
+    integer :: nik_factor   !< denominator, for treating k-weights as integers
     integer :: nspins       !< = 2 if spin_polarized, else 1.
   end type smear_t
 
@@ -75,12 +75,12 @@ module smear_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ, integral_occs, full_nik)
+  subroutine smear_init(this, ispin, fixed_occ, integral_occs, nik_factor)
     type(smear_t), intent(out) :: this
     integer,       intent(in)  :: ispin
     logical,       intent(in)  :: fixed_occ
     logical,       intent(in)  :: integral_occs
-    integer,       intent(in)  :: full_nik
+    integer,       intent(in)  :: nik_factor
 
     PUSH_SUB(smear_init)
 
@@ -142,7 +142,7 @@ contains
       this%nspins = 1
     endif
 
-    this%full_nik = full_nik
+    this%nik_factor = nik_factor
 
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then
@@ -174,7 +174,7 @@ contains
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
     to%fermi_count  = from%fermi_count
-    to%full_nik     = from%full_nik
+    to%nik_factor   = from%nik_factor
 
     POP_SUB(smear_copy)
   end subroutine smear_copy
@@ -295,11 +295,11 @@ contains
       
       call sort(eigenval_list, reorder)
 
-      sumq_int = int(qtot) * this%full_nik
-      sumq_frac = qtot * this%full_nik - sumq_int
+      sumq_int = int(qtot) * this%nik_factor
+      sumq_frac = qtot * this%nik_factor - sumq_int
       
       do iter = 1, nst * nik
-        weight = int(kweights(k_list(reorder(iter))) * this%full_nik + M_HALF)
+        weight = int(kweights(k_list(reorder(iter))) * this%nik_factor + M_HALF)
         ASSERT(weight > 0)
         this%e_fermi = eigenval_list(iter)
         this%ef_occ  = (sumq_int + sumq_frac) / (weight * this%el_per_state)

@@ -70,6 +70,7 @@ module kpoints_m
     logical        :: use_symmetries
     logical        :: use_time_reversal
 
+    integer        :: nik_factor !< denominator of k-weights
     !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
@@ -336,6 +337,7 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%shifts(1:dim), this%full%red_point)
 
       this%full%weight = M_ONE / this%full%npoints
+      this%nik_factor = this%full%npoints
 
       call kpoints_grid_copy(this%full, this%reduced)
 
@@ -485,15 +487,14 @@ contains
       endif
       this%full%weight = this%full%weight / weight_sum
 
-      this%nik_axis(2:3) = 1
-      this%nik_axis(1) = 0
+      this%nik_factor = 0
       do factor = 1, 100000
         if(all(abs(int(this%full%weight(:) * factor) - this%full%weight(:) * factor) < CNST(10)*M_EPSILON)) then
-          this%nik_axis(1) = factor
+          this%nik_factor = factor
           exit
         endif
       enddo
-      if(this%nik_axis(1) == 0) then
+      if(this%nik_factor == 0) then
         message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers."
         call messages_fatal(1)
       endif
