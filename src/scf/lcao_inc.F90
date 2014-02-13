@@ -414,9 +414,6 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     end if
   end if
 
-  SAFE_ALLOCATE(this%sphere(1:geo%natoms))
-  SAFE_ALLOCATE(this%orbitals(1:geo%natoms))
-
   dof = 0
   do iatom = 1, geo%natoms
     norbs = species_niwfs(geo%atom(iatom)%spec)
