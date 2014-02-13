@@ -140,6 +140,7 @@ contains
 #ifdef HAVE_SCALAPACK
     call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
+    ASSERT(associated(st%X(psi)))
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then
      st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
@@ -222,6 +223,7 @@ contains
 
       call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
+      ASSERT(associated(st%X(psi)))
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
         st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
@@ -350,6 +352,7 @@ contains
 
     SAFE_ALLOCATE(bb(1:nst))
 
+    ASSERT(associated(st%X(psi)))
     ! normalize the initial vectors
     do ist = 1, nst
       bb(ist) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
@@ -1023,6 +1026,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   PUSH_SUB(X(states_matrix))
 
   dim = st1%d%dim
+  ASSERT(associated(st1%X(psi)))
+  ASSERT(associated(st2%X(psi)))
 
   do ik = st1%d%kpt%start, st1%d%kpt%end
 

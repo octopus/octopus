@@ -35,6 +35,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
   select case(this%method)
   case(SD_SCALAPACK)
+    ASSERT(associated(st%X(psi)))
     psi => st%X(psi)(:, :, :, ik)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
