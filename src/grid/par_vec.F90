@@ -225,7 +225,7 @@ contains
     integer                     :: iunit            !< For debug output to files.
     character(len=3)            :: filenum
     integer                     :: tmp, init, size, ii
-    integer, allocatable        :: init_v(:), size_v(:), init_recv(:)
+    integer, allocatable        :: init_v(:), size_v(:), init_recv(:), sbuffer(:)
     logical                     :: found
    
     integer                     :: idir, ipart, np_inner, np_bndry
@@ -467,9 +467,11 @@ contains
 
     ! Set index tables xghost and xghost_neigh. 
     SAFE_ALLOCATE(np_ghost_tmp(1:npart))
+    call mpi_debug_in(comm, C_MPI_ALLGATHER)
     call MPI_Allgather(vp%np_ghost, 1, MPI_INTEGER, &
          np_ghost_tmp(1), 1, MPI_INTEGER, &
          comm, mpi_err)
+    call mpi_debug_out(comm, C_MPI_ALLGATHER)
    
     SAFE_ALLOCATE(xghost_tmp(1:npart))
     xghost_tmp(1) = 1
@@ -489,9 +491,11 @@ contains
       xghost_neigh_back(jnode) = tmp
     end do
     ! xghost_neigh_partno is the transposed of xghost_neigh_back
+    call mpi_debug_in(comm, C_MPI_ALLTOALL)
     call MPI_Alltoall(xghost_neigh_back(1), 1, MPI_INTEGER, &
            xghost_neigh_partno(1), 1, MPI_INTEGER, &
            comm, mpi_err)
+    call mpi_debug_out(comm, C_MPI_ALLTOALL)
     
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
@@ -514,15 +518,30 @@ contains
     do inode = 1, npart
        init = xghost_neigh_back(inode)
        size = vp%rcounts(inode)
+
+       call mpi_debug_in(comm, C_MPI_ALLGATHER)
        call MPI_Allgather(init, 1, MPI_INTEGER, &
             init_v(1), 1, MPI_INTEGER, comm, mpi_err)
+       call mpi_debug_out(comm, C_MPI_ALLGATHER)
+
+       call mpi_debug_in(comm, C_MPI_ALLGATHER)
        call MPI_Allgather(size, 1, MPI_INTEGER, &
             size_v(1), 1, MPI_INTEGER, comm, mpi_err)
+       call mpi_debug_out(comm, C_MPI_ALLGATHER)
+
        init_recv = init_v - 1
        if (init_v(npart) > vp%total) init_v(npart) = vp%total
-       call MPI_Allgatherv(vp%ghost(init_v(vp%partno)), size_v(vp%partno), MPI_INTEGER, &
+
+       SAFE_ALLOCATE(sbuffer(1:max(size_v(vp%partno), 1)))
+       sbuffer(1:size_v(vp%partno)) = vp%ghost(init_v(vp%partno):init_v(vp%partno)+size_v(vp%partno)-1)
+
+       call mpi_debug_in(comm, C_MPI_ALLGATHERV)
+       call MPI_Allgatherv(sbuffer(1), size_v(vp%partno), MPI_INTEGER, &
             vp%ghost(1), size_v(1), init_recv(1), MPI_INTEGER, &
             comm, mpi_err)
+       call mpi_debug_out(comm, C_MPI_ALLGATHERV)
+
+       SAFE_DEALLOCATE_A(sbuffer)
     end do
 
     SAFE_DEALLOCATE_A(init_v) 
