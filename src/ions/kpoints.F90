@@ -394,7 +394,7 @@ contains
     logical function read_user_kpoints()
       type(block_t) :: blk
       logical :: reduced
-      integer :: ik, idir
+      integer :: ik, idir, factor
 
       PUSH_SUB(kpoints_init.read_user_kpoints)
 
@@ -408,7 +408,7 @@ contains
       !% vector. You only need to specify the components for the
       !% periodic directions. Note that the <i>k</i>-points should be given in
       !% Cartesian coordinates (not in reduced coordinates), in the units of inverse length.
-      !% The weights will be renormalized so they sum to 1.
+      !% The weights will be renormalized so they sum to 1 (and must be rational numbers).
       !%
       !% For example, if you want to include only the Gamma point, you can
       !% use:
@@ -484,6 +484,19 @@ contains
         call messages_fatal(1)
       endif
       this%full%weight = this%full%weight / weight_sum
+
+      this%nik_axis(2:3) = 1
+      this%nik_axis(1) = 0
+      do factor = 1, 100000
+        if(all(abs(int(this%full%weight(:) * factor) - this%full%weight(:) * factor) < CNST(10)*M_EPSILON)) then
+          this%nik_axis(1) = factor
+          exit
+        endif
+      enddo
+      if(this%nik_axis(1) == 0) then
+        message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers."
+        call messages_fatal(1)
+      endif
 
       ! for the moment we do not apply symmetries to user kpoints
       call kpoints_grid_copy(this%full, this%reduced)

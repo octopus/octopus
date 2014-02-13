@@ -248,8 +248,8 @@ contains
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
-    integer            :: ist, ik, iter, maxq
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, weight
+    integer            :: ist, ik, iter, maxq, weight, sumq_int
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, sumq_frac
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
@@ -278,7 +278,6 @@ contains
       end do ist_cycle
 
     else if(this%method == SMEAR_SEMICONDUCTOR) then
-      sumq = qtot
       ! first we sort the eigenvalues
       SAFE_ALLOCATE(eigenval_list(1:nst * nik))
       SAFE_ALLOCATE(       k_list(1:nst * nik))
@@ -295,14 +294,17 @@ contains
       end do
       
       call sort(eigenval_list, reorder)
+
+      sumq_int = int(qtot) * this%full_nik
+      sumq_frac = qtot * this%full_nik - sumq_int
       
       do iter = 1, nst * nik
-        weight = kweights(k_list(reorder(iter)))
+        weight = int(kweights(k_list(reorder(iter))) * this%full_nik + M_HALF)
+        ASSERT(weight > 0)
         this%e_fermi = eigenval_list(iter)
-        this%ef_occ  = sumq / (weight * this%el_per_state)
+        this%ef_occ  = (sumq_int + sumq_frac) / (weight * this%el_per_state)
 
-        if(sumq - weight * this%el_per_state <= tol) then
-
+        if(sumq_int - weight * this%el_per_state <= 0) then
           ! count how many occupied states are at the fermi level,
           ! this is required later to fill the states
           this%fermi_count = 1
@@ -311,13 +313,12 @@ contains
             if(this%e_fermi /= eigenval_list(iter - this%fermi_count)) exit
             this%fermi_count = this%fermi_count + 1
           end do
-          
           exit
         end if
 
-
-        sumq = sumq - weight * this%el_per_state
+        sumq_int = sumq_int - weight * this%el_per_state
       end do
+      ASSERT(this%ef_occ < M_ONE + M_EPSILON)
 
       SAFE_DEALLOCATE_A(eigenval_list)
       SAFE_DEALLOCATE_A(k_list)

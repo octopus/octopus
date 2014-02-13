@@ -219,7 +219,7 @@ contains
     PUSH_SUB(states_choose_kpoints)
 
     dd%nik = kpoints_number(sb%kpoints)
-    dd%full_nik = sb%kpoints%full%npoints
+    dd%full_nik = product(sb%kpoints%nik_axis(:))
 
     if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
 
