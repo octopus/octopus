@@ -242,9 +242,9 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   end do
 
   ! The species
-  SAFE_ALLOCATE(geometry%atomic_numbers(geo%nspecies))
-  SAFE_ALLOCATE(geometry%chemical_symbols(geo%nspecies))
-  SAFE_ALLOCATE(geometry%atom_species_names(geo%nspecies))
+  SAFE_ALLOCATE(geometry%atomic_numbers(1:geo%nspecies))
+  SAFE_ALLOCATE(geometry%chemical_symbols(1:geo%nspecies))
+  SAFE_ALLOCATE(geometry%atom_species_names(1:geo%nspecies))
 
   do ispecies = 1, geo%nspecies
     geometry%atomic_numbers(ispecies) = species_z(geo%species(ispecies))
@@ -255,7 +255,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   end do
 
   ! The atoms
-  SAFE_ALLOCATE(geometry%atom_species(geo%natoms))
+  SAFE_ALLOCATE(geometry%atom_species(1:geo%natoms))
 
   do i = 1, geo%natoms
     do j = 1, geo%nspecies
@@ -267,7 +267,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   end do
 
   ! The coordinates
-  SAFE_ALLOCATE(geometry%reduced_atom_positions(3, geo%natoms))
+  SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:geo%natoms))
 
   offset = M_ZERO
   offset(1:geo%space%dim) = -matmul(sb%rlattice_primitive(1:geo%space%dim, 1:geo%space%dim), sb%lsize(1:geo%space%dim))

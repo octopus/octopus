@@ -160,7 +160,7 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
 
   PUSH_SUB(X(kdotp_add_diagonal))
 
-  SAFE_ALLOCATE(ppsi(sys%gr%mesh%np, sys%st%d%dim))
+  SAFE_ALLOCATE(ppsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   do idir = 1, sys%gr%sb%periodic_dim
     call pert_setup_dir(em_pert, idir)

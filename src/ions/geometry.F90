@@ -509,7 +509,7 @@ contains
       call messages_fatal(1)
       return
     end if
-    SAFE_ALLOCATE(this%species(this%nspecies))
+    SAFE_ALLOCATE(this%species(1:this%nspecies))
     call json_get(json, "species", species, ierr)
     if(ierr/=JSON_OK)then
       message(1) = 'Could not read "species" array from geometry data object.'
@@ -532,7 +532,7 @@ contains
       call messages_fatal(1)
       return
     end if
-    SAFE_ALLOCATE(this%atom(this%natoms))
+    SAFE_ALLOCATE(this%atom(1:this%natoms))
     call json_get(json, "atom", atoms, ierr)
     if(ierr/=JSON_OK)then
       message(1) = 'Could not read "atom" array from geometry data object.'
@@ -567,7 +567,7 @@ contains
       call messages_fatal(1)
       return
     end if
-    SAFE_ALLOCATE(this%catom(this%ncatoms))
+    SAFE_ALLOCATE(this%catom(1:this%ncatoms))
     call json_get(json, "catom", atoms, ierr)
     if(ierr/=JSON_OK)then
       message(1) = 'Could not read "catom" array from geometry data object.'

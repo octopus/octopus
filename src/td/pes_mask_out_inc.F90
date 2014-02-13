@@ -486,8 +486,8 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
 
   ASSERT(size(PESK, 1) == size(Lk,1))
 
-  SAFE_ALLOCATE(idx(maxval(ll(:)), 3))
-  SAFE_ALLOCATE(Lk_(size(Lk,1), 3))
+  SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
+  SAFE_ALLOCATE(Lk_(1:size(Lk,1), 1:3))
 
   Dk = abs(Lk(2)-Lk(1)) 
   
@@ -1413,9 +1413,9 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
     select case(mask%mesh%sb%dim)
       case(2)
       
-        SAFE_ALLOCATE(cube_f(np))    
-        SAFE_ALLOCATE(kx(np))    
-        SAFE_ALLOCATE(ky(np))    
+        SAFE_ALLOCATE(cube_f(1:np))    
+        SAFE_ALLOCATE(kx(1:np))    
+        SAFE_ALLOCATE(ky(1:np))    
         
         cube_f = M_ZERO
         kx = M_ZERO
@@ -1474,10 +1474,10 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
         
       case(3)
 
-        SAFE_ALLOCATE(cube_f(np))    
-        SAFE_ALLOCATE(kx(np))    
-        SAFE_ALLOCATE(ky(np))    
-        SAFE_ALLOCATE(kz(np))    
+        SAFE_ALLOCATE(cube_f(1:np))    
+        SAFE_ALLOCATE(kx(1:np))    
+        SAFE_ALLOCATE(ky(1:np))    
+        SAFE_ALLOCATE(kz(1:np))    
         
         cube_f = M_ZERO
         kx = M_ZERO

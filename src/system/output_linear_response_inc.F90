@@ -136,7 +136,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
 
   if(iand(outp%what, C_OUTPUT_WFS_SQMOD) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
-    SAFE_ALLOCATE(dtmp(gr%mesh%np_part))
+    SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = st%d%kpt%start, st%d%kpt%end

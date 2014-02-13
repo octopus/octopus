@@ -634,7 +634,7 @@ contains
     !
     PUSH_SUB(simul_box_lookup_init)
 
-    SAFE_ALLOCATE(pos(this%dim,geo%natoms))
+    SAFE_ALLOCATE(pos(1:this%dim,1:geo%natoms))
 
     do iatom = 1, geo%natoms
       pos(:,iatom) = geo%atom(iatom)%x(1:this%dim)
@@ -662,9 +662,9 @@ contains
       call messages_fatal(1)
     end if
     this%hr_area%interp%nn=2*this%hr_area%interp%order
-    SAFE_ALLOCATE(pos(this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%ww(this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%posi(this%hr_area%interp%nn))
+    SAFE_ALLOCATE(pos(1:this%hr_area%interp%nn))
+    SAFE_ALLOCATE(this%hr_area%interp%ww(1:this%hr_area%interp%nn))
+    SAFE_ALLOCATE(this%hr_area%interp%posi(1:this%hr_area%interp%nn))
     do ii = 1, this%hr_area%interp%order
       this%hr_area%interp%posi(ii)=1+2*(ii-1)
       this%hr_area%interp%posi(this%hr_area%interp%order+ii)=-this%hr_area%interp%posi(ii)

@@ -560,7 +560,7 @@ contains
 !!  Mask Function options
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    SAFE_ALLOCATE(mask%mask_R(2))
+    SAFE_ALLOCATE(mask%mask_R(1:2))
     
     !%Variable PESMaskShape
     !%Type integer
@@ -1020,7 +1020,7 @@ contains
     
     PUSH_SUB(PES_mask_apply_mask)
     SAFE_ALLOCATE(mmask(1:mask%mesh%np))
-    SAFE_ALLOCATE(psi(mask%mesh%np))
+    SAFE_ALLOCATE(psi(1:mask%mesh%np))
     
     call PES_mask_cube_to_mesh(mask, mask%cM, mmask)
     

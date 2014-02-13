@@ -90,7 +90,7 @@ contains
 
     if(this%npoints == this%nalloc_points) then
       SAFE_ALLOCATE(new_points(1:3, this%nalloc_points*2))
-      SAFE_ALLOCATE(new_point_indices(this%nalloc_points*2))
+      SAFE_ALLOCATE(new_point_indices(1:this%nalloc_points*2))
       new_points(1:3, 1:this%nalloc_points) = this%points(1:3, 1:this%nalloc_points)
       new_point_indices(1:this%nalloc_points) = this%point_indices(1:this%nalloc_points)
       this%nalloc_points = this%nalloc_points*2

@@ -761,10 +761,10 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
     enddo
   endif
   
-  SAFE_ALLOCATE(lr_hmat1(cas%nst, cas%nst, cas%nik))
-  SAFE_ALLOCATE(cas%X(lr_hmat2)(cas%n_pairs, cas%n_pairs))
-  SAFE_ALLOCATE(cas%X(mat2)(cas%n_pairs, cas%n_pairs))
-  SAFE_ALLOCATE(cas%X(w2)(cas%n_pairs))
+  SAFE_ALLOCATE(lr_hmat1(1:cas%nst, 1:cas%nst, 1:cas%nik))
+  SAFE_ALLOCATE(cas%X(lr_hmat2)(1:cas%n_pairs, 1:cas%n_pairs))
+  SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
+  SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
@@ -861,7 +861,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   PUSH_SUB(X(casida_get_lr_hmat1))
 
   lr_hmat1 = M_ZERO
-  SAFE_ALLOCATE(is_saved(cas%nst, cas%nst, cas%nik))
+  SAFE_ALLOCATE(is_saved(1:cas%nst, 1:cas%nst, 1:cas%nik))
   is_saved = .false.
   num_saved = 0
 

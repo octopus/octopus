@@ -45,7 +45,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
 
   ! Potential related quantities 
   ! (Built from HF potentials weighted with orbital densities)
-  SAFE_ALLOCATE(weighted_hf(mesh%np,st%d%dim,st%d%dim))
+  SAFE_ALLOCATE(weighted_hf(1:mesh%np, 1:st%d%dim,st%d%dim))
   weighted_hf = M_Z0
 
   ! w_{up,down} = \sum_i \phi_{i,down}^* u_x^{i,up}^* \phi_{i,up}
@@ -63,7 +63,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     call comm_allreduce(st%mpi_grp%comm, weighted_hf)
   end if
 
-  SAFE_ALLOCATE(t_v(mesh%np,4))
+  SAFE_ALLOCATE(t_v(1:mesh%np, 1:4))
   t_v = M_ZERO
   t_v(1:mesh%np,1) = real(weighted_hf(1:mesh%np,2,2), REAL_PRECISION)
   t_v(1:mesh%np,2) = real(weighted_hf(1:mesh%np,1,1), REAL_PRECISION)
@@ -71,7 +71,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   t_v(1:mesh%np,4) = -aimag(weighted_hf(1:mesh%np,1,2) - weighted_hf(1:mesh%np,2,1))
   SAFE_DEALLOCATE_A(weighted_hf)
 
-  SAFE_ALLOCATE(vloc(mesh%np,4))
+  SAFE_ALLOCATE(vloc(1:mesh%np, 1:4))
   vloc = M_ZERO
   vloc(1:mesh%np,1) = t_v(1:mesh%np,2) - t_v(1:mesh%np,1)
   vloc(1:mesh%np,2) = -vloc(1:mesh%np,1)
@@ -79,13 +79,13 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   vloc(1:mesh%np,4) = -t_v(1:mesh%np,4)
 
   ! Combine them to obtain Slater part
-  SAFE_ALLOCATE(rhov(mesh%np))
+  SAFE_ALLOCATE(rhov(1:mesh%np))
   rhov = M_ZERO
   forall (ip = 1:mesh%np) rhov(ip) = sum(rho(ip,1:4)*t_v(ip,1:4))
   rhov(1:mesh%np) = rhov(1:mesh%np)/lambda(1:mesh%np)
   SAFE_DEALLOCATE_A(t_v)
 
-  SAFE_ALLOCATE(t_rho(1:mesh%np, 4))
+  SAFE_ALLOCATE(t_rho(1:mesh%np, 1:4))
   t_rho(1:mesh%np,1) = rho(1:mesh%np,2)
   t_rho(1:mesh%np,2) = rho(1:mesh%np,1)
   t_rho(1:mesh%np,3:4) = -rho(1:mesh%np,3:4)
@@ -99,7 +99,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
 
   case (XC_OEP_KLI)
 
-    SAFE_ALLOCATE(vs(mesh%np,4))
+    SAFE_ALLOCATE(vs(1:mesh%np, 1:4))
     vs = vloc ! Slater part
 
     ! iteration criteria
@@ -114,7 +114,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     else
 
       ! orbital densities
-      SAFE_ALLOCATE(rho_i(mesh%np,st%d%dim,st%d%dim,eigen_n))
+      SAFE_ALLOCATE(rho_i(1:mesh%np, 1:st%d%dim,st%d%dim, 1:eigen_n))
       rho_i = M_Z0
       do ii = 1, st%d%dim
         do jj = ii, st%d%dim
@@ -128,7 +128,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       end do
 
       ! arrange them in a 4-vector
-      SAFE_ALLOCATE(p_i(mesh%np,4,eigen_n))
+      SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
       p_i = M_ZERO
       p_i(1:mesh%np,1,:) = real(rho_i(1:mesh%np,1,1,:)) 
       p_i(1:mesh%np,2,:) = real(rho_i(1:mesh%np,2,2,:))  
@@ -138,9 +138,9 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       SAFE_DEALLOCATE_A(rho_i)
 
       ! Calculate iteratively response part
-      SAFE_ALLOCATE(v_m1(mesh%np,4))
-      SAFE_ALLOCATE(delta_v(eigen_n)) 
-      SAFE_ALLOCATE(t_vi(mesh%np,4,eigen_n)) 
+      SAFE_ALLOCATE(v_m1(1:mesh%np, 1:4))
+      SAFE_ALLOCATE(delta_v(1:eigen_n)) 
+      SAFE_ALLOCATE(t_vi(1:mesh%np, 1:4, 1:eigen_n)) 
 
       vloc = M_ZERO
       KLI_iteration: do it = 1,oep%scftol%max_iter

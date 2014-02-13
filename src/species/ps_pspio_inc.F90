@@ -195,7 +195,7 @@
       end if
 
       !Wavefunctions
-      SAFE_ALLOCATE(wfs(ps%g%nrval))
+      SAFE_ALLOCATE(wfs(1:ps%g%nrval))
       call pspio_f90_state_wf_eval(state, ps%g%nrval, ps%g%rofi, wfs)
       do is = 1, ps%ispin
         call spline_fit(ps%g%nrval, ps%g%rofi, wfs, ps%ur(ist, is))
@@ -237,7 +237,7 @@
     ! Local potential
     call pspio_f90_pspdata_get_l_local(pspdata, ps%l_loc)
     call pspio_f90_pspdata_get_vlocal(pspdata, vlocal)
-    SAFE_ALLOCATE(v_local(ps%g%nrval))
+    SAFE_ALLOCATE(v_local(1:ps%g%nrval))
     call pspio_f90_potential_eval(vlocal, ps%g%nrval, ps%g%rofi, v_local)
     do ir = ps%g%nrval-1, 2, -1
       if(abs(v_local(ir)*ps%g%rofi(ir) + ps%z_val) > threshold) exit
@@ -260,7 +260,7 @@
     SAFE_ALLOCATE(ps%h  (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%k  (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(was_init(0:ps%l_max, 1:ps%kbc))
-    SAFE_ALLOCATE(proj(ps%g%nrval))
+    SAFE_ALLOCATE(proj(1:ps%g%nrval))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
 
@@ -341,7 +341,7 @@
       ps%icore=''
 
       ! get core density
-      SAFE_ALLOCATE(rho(ps%g%nrval))
+      SAFE_ALLOCATE(rho(1:ps%g%nrval))
       call pspio_f90_xc_nlcc_eval(xc, ps%g%nrval, ps%g%rofi, rho)
 
       ! find cutoff radius

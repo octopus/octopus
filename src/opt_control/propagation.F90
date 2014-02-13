@@ -551,7 +551,7 @@ contains
     psi => opt_control_point_qs(qcpsi)
     call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
 
-    SAFE_ALLOCATE(vhxc(gr%mesh%np, hm%d%nspin))
+    SAFE_ALLOCATE(vhxc(1:gr%mesh%np, 1:hm%d%nspin))
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)

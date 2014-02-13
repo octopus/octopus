@@ -85,7 +85,7 @@ contains
     call profiling_in(prof,"MC_PAR_INIT")
 
     !Get the cube partition on the mesh and the number of local cube points that are also on the mesh
-    SAFE_ALLOCATE(part(cube%mpi_grp%size))
+    SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
     call cube_partition(cube, part)
 
     ixyz = 0

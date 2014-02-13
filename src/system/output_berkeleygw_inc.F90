@@ -39,7 +39,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
 
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
-  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:1))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))
 
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
   if(bgw%vxc_diag_nmin < 1 .or. bgw%vxc_diag_nmax < 1) then
@@ -62,7 +62,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
 
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
-    SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:1))
+    SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
     if(.not. associated(hm%hf_st)) hm%hf_st => st
     SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
   endif

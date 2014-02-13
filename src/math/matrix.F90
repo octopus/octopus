@@ -59,9 +59,9 @@ contains
     ASSERT(type == TYPE_FLOAT .or. type == TYPE_CMPLX)
 
     if(type == TYPE_FLOAT) then
-      SAFE_ALLOCATE(this%dmat(dim1, dim2))
+      SAFE_ALLOCATE(this%dmat(1:dim1, 1:dim2))
     else
-      SAFE_ALLOCATE(this%zmat(dim1, dim2))
+      SAFE_ALLOCATE(this%zmat(1:dim1, 1:dim2))
     end if
 
     POP_SUB(matrix_init)

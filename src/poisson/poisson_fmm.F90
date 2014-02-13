@@ -332,9 +332,9 @@ contains
 
     ! allocate buffers.
     SAFE_ALLOCATE(q(this%sp:this%ep))
-    SAFE_ALLOCATE(xyz(3 * (this%nlocalcharges)))
+    SAFE_ALLOCATE(xyz(1:3 * (this%nlocalcharges)))
     SAFE_ALLOCATE(pot_lib_fmm(this%sp:this%ep))
-    SAFE_ALLOCATE(fields(3 * (this%nlocalcharges)))
+    SAFE_ALLOCATE(fields(1:3 * (this%nlocalcharges)))
 
     totalcharges = mesh%np_global 
 

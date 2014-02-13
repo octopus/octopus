@@ -196,7 +196,7 @@ contains
        nesf_act = nesf_act + 1 !counting the number of species different from Hydrogen
     enddo
 
-    SAFE_ALLOCATE(sfe_act(nesf_act))
+    SAFE_ALLOCATE(sfe_act(1:nesf_act))
     
     nesf_act = 0     
     do ia = 1, geo%natoms
@@ -296,23 +296,23 @@ contains
     PUSH_SUB(pcm_matrix)
 
 !   Conforming the S_I matrix
-    SAFE_ALLOCATE( s_mat_act(nts_act, nts_act) )
+    SAFE_ALLOCATE( s_mat_act(1:nts_act, 1:nts_act) )
     call s_i_matrix
 
 !   Defining the matrix S_E=S_I/eps
-    SAFE_ALLOCATE( Sigma(nts_act, nts_act) )
+    SAFE_ALLOCATE( Sigma(1:nts_act, 1:nts_act) )
     Sigma = s_mat_act/eps
 
 !   Conforming the D_I matrix
-    SAFE_ALLOCATE( d_mat_act(nts_act, nts_act) )
+    SAFE_ALLOCATE( d_mat_act(1:nts_act, 1:nts_act) )
     call d_i_matrix
 
 !   Defining the matrix D_E=D_I 
-    SAFE_ALLOCATE( Delta(nts_act, nts_act) )
+    SAFE_ALLOCATE( Delta(1:nts_act, 1:nts_act) )
     Delta = d_mat_act
 
 !   Start conforming the PCM matrix
-    SAFE_ALLOCATE( pcm_mat(nts_act, nts_act) )
+    SAFE_ALLOCATE( pcm_mat(1:nts_act, 1:nts_act) )
     pcm_mat = M_ZERO
 
     pcm_mat = -d_mat_act
@@ -323,7 +323,7 @@ contains
 
     SAFE_DEALLOCATE_A(d_mat_act) 
      
-    SAFE_ALLOCATE( iwork(nts_act) )
+    SAFE_ALLOCATE( iwork(1:nts_act) )
 
 !   Solving for X = S_I^-1*(2*Pi - D_I) 
 
@@ -341,10 +341,10 @@ contains
 
     pcm_mat = pcm_mat - Delta
     
-    SAFE_ALLOCATE( mat_tmp(nts_act,nts_act) )
+    SAFE_ALLOCATE( mat_tmp(1:nts_act,1:nts_act) )
     mat_tmp = M_ZERO
 
-    SAFE_ALLOCATE( d_mat_act(nts_act,nts_act) )  
+    SAFE_ALLOCATE( d_mat_act(1:nts_act,1:nts_act) )  
     call d_i_matrix
 
     mat_tmp = transpose(d_mat_act)        
@@ -355,7 +355,7 @@ contains
 
     SAFE_DEALLOCATE_A(d_mat_act)
 
-    SAFE_ALLOCATE( s_mat_act(nts_act,nts_act) )
+    SAFE_ALLOCATE( s_mat_act(1:nts_act,1:nts_act) )
     call s_i_matrix
 
     mat_tmp = mat_tmp + M_TWO*M_Pi*s_mat_act - matmul(Delta, s_mat_act)
@@ -366,7 +366,7 @@ contains
 
 !   Solving for [(2*pi - D_E)*S_I + S_E*(2*Pi + D_I*)]*X = [(2*Pi - D_E) - S_E*S_I^-1*(2*Pi - D_I)]    
 
-    SAFE_ALLOCATE( iwork(nts_act) )
+    SAFE_ALLOCATE( iwork(1:nts_act) )
 
     call dgesv(nts_act,nts_act,mat_tmp,nts_act,iwork,pcm_mat,nts_act,info)		  
 

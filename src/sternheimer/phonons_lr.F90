@@ -536,7 +536,7 @@ contains
         status='old', die=.false., is_tmp=.true.)
 
       if(iunit > 0) then
-        SAFE_ALLOCATE(dyn_row(vib%num_modes))
+        SAFE_ALLOCATE(dyn_row(1:vib%num_modes))
 
         do imode = 1, vib%num_modes
           read(iunit, fmt=*, iostat=ierr) number, dyn_row(:), infrared(1:vib%ndim)

@@ -242,7 +242,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
   PUSH_SUB(X(hamiltonian_external))
 
-  SAFE_ALLOCATE(vpsl_spin(mesh%np, this%d%nspin))
+  SAFE_ALLOCATE(vpsl_spin(1:mesh%np, 1:this%d%nspin))
   vpsl_spin(1:mesh%np, 1) = this%ep%vpsl(1:mesh%np)
   if(this%d%ispin == SPINORS) then
     ! yes this means a little unnecessary computation in the later call,
@@ -253,7 +253,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   endif
 
   if(this%cmplxscl%space) then
-    SAFE_ALLOCATE(Imvpsl_spin(mesh%np, this%d%nspin))
+    SAFE_ALLOCATE(Imvpsl_spin(1:mesh%np, 1:this%d%nspin))
     Imvpsl_spin(1:mesh%np, 1) = this%ep%Imvpsl(1:mesh%np)
     if(this%d%ispin == SPINORS) then
       Imvpsl_spin(1:mesh%np, 2) = this%ep%Imvpsl(1:mesh%np)

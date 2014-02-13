@@ -238,7 +238,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   SAFE_ALLOCATE(h_dir(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
   SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
   SAFE_ALLOCATE(gram_block(1:nst, 1:nst))
-  SAFE_ALLOCATE(eval(nst))
+  SAFE_ALLOCATE(eval(1:nst))
 
   ! Set them to zero, otherwise behaviour may be slightly nondeterministic.
   tmp   = R_TOTYPE(M_ZERO)

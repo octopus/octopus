@@ -247,8 +247,8 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
     call young_init (young, nspinup, nspindown_in(itype))
 
     ! allocate pointers to pairs of up and down spins in present Young diagram
-    SAFE_ALLOCATE(p_of_type_up(nspindown_in(itype)))
-    SAFE_ALLOCATE(p_of_type_down(nspindown_in(itype)))
+    SAFE_ALLOCATE(p_of_type_up(1:nspindown_in(itype)))
+    SAFE_ALLOCATE(p_of_type_down(1:nspindown_in(itype)))
     p_of_type_up   = modelmbparticles%particles_of_type(young%young_up  (1:nspindown_in(itype), iyoung_in(itype)), itype)
     p_of_type_down = modelmbparticles%particles_of_type(young%young_down(1:nspindown_in(itype), iyoung_in(itype)), itype)
 

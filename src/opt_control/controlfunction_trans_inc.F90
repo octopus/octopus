@@ -246,7 +246,7 @@
 
       if( cf_common%mode  ==  controlfunction_mode_f ) then
 
-        SAFE_ALLOCATE(fnn(par%dim))
+        SAFE_ALLOCATE(fnn(1:par%dim))
         do mm = 1, par%dim
           call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             cf_common%omegamax, rep = TDF_FOURIER_SERIES)
@@ -282,7 +282,7 @@
       par%u = M_ZERO
       w1 = (M_TWO*M_PI/(tdf_dt(par%f(1))*tdf_niter(par%f(1))))
 
-      SAFE_ALLOCATE(fnn(n))
+      SAFE_ALLOCATE(fnn(1:n))
       do mm = 1, n
         call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
           cf_common%omegamax, rep = TDF_ZERO_FOURIER)

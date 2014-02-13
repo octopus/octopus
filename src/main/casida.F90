@@ -507,9 +507,9 @@ contains
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        SAFE_ALLOCATE(cas%dmat_save(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%dmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       else
-        SAFE_ALLOCATE(cas%zmat_save(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%zmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       endif
       SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%sb_dim, 1:cas%n_pairs))
     endif

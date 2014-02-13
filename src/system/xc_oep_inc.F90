@@ -49,8 +49,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   nspin_ = min(st%d%nspin, 2)
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
   SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
-  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end,nspin_))
-  SAFE_ALLOCATE(oep%uxc_bar(1:st%nst,nspin_))
+  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
+  SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
   ! this part handles the (pure) orbital functionals
   oep%X(lxc) = M_ZERO

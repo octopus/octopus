@@ -970,7 +970,7 @@ contains
     else
       natom=geo%natoms+geo%ncatoms
       if(ep%ignore_external_ions) then
-        SAFE_ALLOCATE(in_box(natom))
+        SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
           in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
         end do

@@ -59,7 +59,7 @@ contains
     PUSH_SUB(box_union_init)
 
     union%n_boxes = n_boxes
-    SAFE_ALLOCATE(union%boxes(n_boxes))
+    SAFE_ALLOCATE(union%boxes(1:n_boxes))
 
     do  ibox = 1,n_boxes
       call box_copy(union%boxes(ibox), boxes(ibox))
@@ -98,7 +98,7 @@ contains
     logical, allocatable :: inside2(:)
 
     ! no push_sub because this function is called very frequently
-    SAFE_ALLOCATE(inside2(npoints))
+    SAFE_ALLOCATE(inside2(1:npoints))
 
     inside = .false.
       do ibox = 1, union%n_boxes

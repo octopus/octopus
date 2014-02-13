@@ -97,7 +97,7 @@ contains
     this%npoints = npoints
     SAFE_ALLOCATE(this%red_point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%point(1:dim, 1:npoints))
-    SAFE_ALLOCATE(this%weight(npoints))
+    SAFE_ALLOCATE(this%weight(1:npoints))
 
     POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
