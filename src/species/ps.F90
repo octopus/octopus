@@ -520,7 +520,7 @@ contains
 
     ! Fourier transform of the local part
     iunit = io_open(trim(dir)//'/local_ft', action='write')
-    SAFE_ALLOCATE(fw(1, 1))
+    SAFE_ALLOCATE(fw(1:1, 1:1))
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
     call spline_print(fw(1, 1), iunit)

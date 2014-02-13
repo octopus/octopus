@@ -187,9 +187,9 @@ contains
     if (mpi_world%size == 1) then
       cdim = 1
 
-      SAFE_ALLOCATE(this%disps(1))
-      SAFE_ALLOCATE(dend(1))
-      SAFE_ALLOCATE(this%dsize(1))
+      SAFE_ALLOCATE(this%disps(1:1))
+      SAFE_ALLOCATE(dend(1:1))
+      SAFE_ALLOCATE(this%dsize(1:1))
 
       dend = der%mesh%np
       this%sp = 1 

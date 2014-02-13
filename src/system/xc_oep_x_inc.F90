@@ -79,8 +79,8 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   SAFE_ALLOCATE(send_buffer(1:der%mesh%np))
   SAFE_ALLOCATE(recv_stack(1:st%nst+1))
   SAFE_ALLOCATE(send_stack(1:st%nst+1))
-  SAFE_ALLOCATE(psi(der%mesh%np))
-  SAFE_ALLOCATE(wf_ist(der%mesh%np))
+  SAFE_ALLOCATE(psi(1:der%mesh%np))
+  SAFE_ALLOCATE(wf_ist(1:der%mesh%np))
 
   ! This is the maximum number of blocks for each processor
   i_max = int((st%mpi_grp%size + 2)/2) - 1

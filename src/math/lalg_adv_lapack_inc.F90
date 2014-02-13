@@ -310,9 +310,9 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   ! allocated or not. I noticed that it happens (hopefully) always at an index which
   ! is below the matrix dimension.
   SAFE_ALLOCATE(work(1:n))
-  SAFE_ALLOCATE(vl(1, 1))
+  SAFE_ALLOCATE(vl(1:1, 1:1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
-  SAFE_ALLOCATE(rwork(1))
+  SAFE_ALLOCATE(rwork(1:1))
   call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
     work(1), lwork, rwork(1), info)
 
@@ -326,12 +326,12 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
   if (side_ == 'L'.or.side_ == 'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
-      SAFE_ALLOCATE(vr(1, 1))
+      SAFE_ALLOCATE(vr(1:1, 1:1))
       call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
-      SAFE_ALLOCATE(vl(1, 1))
+      SAFE_ALLOCATE(vl(1:1, 1:1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
       call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
@@ -405,9 +405,9 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   ! allocated or not. I noticed that it happens (hopefully) always at an index which
   ! is below the matrix dimension.
   SAFE_ALLOCATE(work(1:n))
-  SAFE_ALLOCATE(vl(1, 1))
+  SAFE_ALLOCATE(vl(1:1, 1:1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
-  SAFE_ALLOCATE(rwork(1))
+  SAFE_ALLOCATE(rwork(1:1))
   call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
      work(1), lwork, rwork(1), info)
 
@@ -421,12 +421,12 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
   if (side_ == 'L'.or.side_ == 'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
-      SAFE_ALLOCATE(vr(1, 1))
+      SAFE_ALLOCATE(vr(1:1, 1:1))
       call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
-      SAFE_ALLOCATE(vl(1, 1))
+      SAFE_ALLOCATE(vl(1:1, 1:1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
       call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
@@ -491,7 +491,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   abstol = 2*sfmin()
 
   ! Work size query.
-  SAFE_ALLOCATE(work(1))
+  SAFE_ALLOCATE(work(1:1))
   call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
@@ -571,7 +571,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   abstol = 2*sfmin()
 
   ! Work size query.
-  SAFE_ALLOCATE(work(1))
+  SAFE_ALLOCATE(work(1:1))
   call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
   lwork = int(real(work(1)))
@@ -742,7 +742,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   abstol = 2*sfmin()
 
   ! Work size query.
-  SAFE_ALLOCATE(work(1))
+  SAFE_ALLOCATE(work(1:1))
   call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
@@ -798,7 +798,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   abstol = 2*sfmin()
 
   ! Work size query.
-  SAFE_ALLOCATE(work(1))
+  SAFE_ALLOCATE(work(1:1))
   call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))

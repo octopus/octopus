@@ -920,7 +920,7 @@ contains
     PUSH_SUB(json_string_init)
     this%len=0
     this%size=JSON_STRING_INIT_LEN
-    SAFE_ALLOCATE(this%value(this%size))
+    SAFE_ALLOCATE(this%value(1:this%size))
     this%type=JSON_STRING_TYPE
     if(present(value))&
       call json_string_extend_char(this, value)
@@ -955,7 +955,7 @@ contains
       if(this%size<int(JSON_STRING_GROWTH_FACTOR*need))then
         n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(JSON_STRING_GROWTH_FACTOR)),1)
         this%size=ceiling((JSON_STRING_GROWTH_FACTOR**n)*real(this%size,kind=wp))
-        SAFE_ALLOCATE(buff(this%size))
+        SAFE_ALLOCATE(buff(1:this%size))
         forall(i=1:this%len)buff(i)=this%value(i)
         SAFE_DEALLOCATE_P(this%value)
         this%value=>buff
@@ -3035,7 +3035,7 @@ contains
     PUSH_SUB(json_object_init)
     this%used=0
     this%size=JSON_TABLE_INIT_LEN
-    SAFE_ALLOCATE(this%table(this%size))
+    SAFE_ALLOCATE(this%table(1:this%size))
     forall(i=1:this%size)this%table(i)%head=>null()
     this%type=JSON_OBJECT_TYPE
     POP_SUB(json_object_init)
@@ -3117,7 +3117,7 @@ contains
       buff%used=0
       n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(JSON_TABLE_GROWTH_FACTOR)),1)
       buff%size=ceiling((JSON_TABLE_GROWTH_FACTOR**n)*real(this%size,kind=wp))
-      SAFE_ALLOCATE(buff%table(buff%size))
+      SAFE_ALLOCATE(buff%table(1:buff%size))
       forall(i=1:buff%size)buff%table(i)%head=>null()
       do i = 1, this%size
         do

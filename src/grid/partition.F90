@@ -189,7 +189,7 @@ contains
     if (partition%mpi_grp%rank == 0) then
       SAFE_ALLOCATE(part_global(1:partition%np_global))
     else
-      SAFE_ALLOCATE(part_global(1))
+      SAFE_ALLOCATE(part_global(1:1))
     end if
     call partition_get_global(partition, part_global, 0)
     
@@ -244,7 +244,7 @@ contains
       SAFE_ALLOCATE(part_global(1:partition%np_global))
       call io_binary_read(filename, partition%np_global, part_global, ierr)
     else
-      SAFE_ALLOCATE(part_global(1))
+      SAFE_ALLOCATE(part_global(1:1))
     end if
 #ifdef HAVE_MPI
     ! All nodes need to know the result
