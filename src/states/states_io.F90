@@ -39,6 +39,7 @@ module states_io_m
   use parser_m
   use profiling_m
   use simul_box_m
+  use smear_m
   use states_m
   use states_dim_m
   use unit_m
@@ -153,6 +154,12 @@ contains
         end do
       end do
     end do
+
+    if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
+      write(message(1), '(a,f12.6,1x,a)') "Fermi energy = ", &
+        units_from_atomic(units_out%energy, st%smear%e_fermi), units_abbrev(units_out%energy)
+      call messages_info(1, iunit)
+    endif
 
     POP_SUB(states_write_eigenvalues)
   end subroutine states_write_eigenvalues

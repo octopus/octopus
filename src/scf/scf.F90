@@ -892,11 +892,6 @@ contains
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
         end if
 
-        if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
-          write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
-          call messages_info(1)
-        endif
-
         if(associated(hm%vberry)) then
           call calc_dipole(dipole)
           call write_dipole(stdout, dipole)
@@ -982,10 +977,6 @@ contains
         endif
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
-        if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
-          write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
-          call messages_info(1, iunit)
-        endif
         write(iunit, '(1x)')
 
         if(cmplxscl .and. hm%energy%Imtotal < M_ZERO) then

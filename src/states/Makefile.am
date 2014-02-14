@@ -67,6 +67,6 @@ excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_cal
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o smear.o
 restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o states_io.o smear.o
 density.o : states.o
-states_io.o : states.o
+states_io.o : states.o smear.o
 cmplxscl.o : cmplxscl.F90
 smear.o : smear.F90 cmplxscl.o
