@@ -883,16 +883,19 @@ contains
       bgw%vxc_offdiag_nmax = 0
     endif
 
-    !%Variable BerkeleyGW_Complex
-    !%Type logical
-    !%Default false
-    !%Section Output::BerkeleyGW
-    !%Description
-    !% Even when wavefunctions, density, and XC potential could be real in reciprocal space,
-    !% they will be output as complex.
-    !%End
-    call parse_logical(datasets_check('BerkeleyGW_Complex'), .false., bgw%complex)
+    !!%Variable BerkeleyGW_Complex
+    !!%Type logical
+    !!%Default false
+    !!%Section Output::BerkeleyGW
+    !!%Description
+    !!% Even when wavefunctions, density, and XC potential could be real in reciprocal space,
+    !!% they will be output as complex.
+    !!%End
+    !call parse_logical(datasets_check('BerkeleyGW_Complex'), .false., bgw%complex)
     
+    bgw%complex = .true.
+    ! real output not implemented, so currently this is always true
+
     !%Variable BerkeleyGW_WFN_filename
     !%Type string
     !%Default WFN
@@ -1197,23 +1200,25 @@ contains
       SAFE_ALLOCATE(ifmax(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
       SAFE_ALLOCATE(energies(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
       SAFE_ALLOCATE(occupations(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+
       ifmin(:,:) = 1
-      if(smear_is_semiconducting(st%smear)) then
-        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
-      endif
+!     This is how semiconducting smearing "should" work, but not in our implementation.
+!      if(smear_is_semiconducting(st%smear)) then
+!        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
+!      endif
       do ik = 1, st%d%nik
         is = states_dim_get_spin_index(st%d, ik)
         ikk = states_dim_get_kpoint_index(st%d, ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
-        if(.not. smear_is_semiconducting(st%smear)) then
-          do ist = 1, st%nst
-            if(st%eigenval(ist, ik) > st%smear%e_fermi) then
-              ifmax(ikk, is) = ist - 1
-              exit
-            endif
-          enddo
-        endif
+        do ist = 1, st%nst
+          ! M_EPSILON needed since e_fermi is top of valence band for fixed_occ and semiconducting smearing
+          if(st%eigenval(ist, ik) < st%smear%e_fermi + M_EPSILON) then
+            ifmax(ikk, is) = ist
+          else
+            exit
+          endif
+        enddo
       enddo
 
       SAFE_ALLOCATE(ngk(1:gr%sb%kpoints%reduced%npoints))
