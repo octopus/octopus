@@ -218,9 +218,6 @@ void write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname ST
     /* we couldn't write the complete header */
     inf_error("octopus.write_header in writing the header");
     *ierr = 3;
-    close(fd);
-    free(h);
-    return;
   }
 
   free(h);
@@ -234,6 +231,7 @@ void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ie
   char * filename;
   fname_len = l1;
   TO_C_STR1(fname, filename);
+  free(filename);
   write_header(np, type, ierr, fname, fname_len);
 }
 
@@ -245,7 +243,6 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   ssize_t moved;
   unsigned long fname_len;
   *ierr = 0;
-  fd = -132;
   
   fname_len = l1;
   TO_C_STR1(fname, filename);
@@ -253,13 +250,14 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 
   fd = open (filename, O_WRONLY, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+  free(filename);
   if( fd < 0 ) {
     inf_error("octopus.write_binary in opening the file");
     *ierr = 2;
     return;
   }
 
-  /* skip the header and go untill the end */
+  /* skip the header and go until the end */
   lseek(fd, 0, SEEK_END);
   
   /* now write the values */
@@ -271,7 +269,6 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
     *ierr = 3;
   }
 
-  free(filename);
   /* close the file */
   close(fd);
   return;
@@ -319,6 +316,7 @@ void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, f
   char * filename;
   fname_len = l1;
   TO_C_STR1(fname, filename);
+  free(filename);
   read_header(h, correct_endianness, ierr, fname, fname_len);
 }
 
@@ -353,6 +351,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   
   if(fd < 0){
     *ierr = 2;
+    free(h);
     return;
   }
 
@@ -373,15 +372,16 @@ void FC_FUNC_(read_binary,READ_BINARY)
   /* now read the values and close the file */
   moved = read(fd, read_f, (*np)*size_of[h->type]);
 
+  close(fd);
+  
   if ( moved != (*np)*size_of[h->type]) { 
     /* we couldn't read the whole dataset */
     *ierr = 3;
     free(h);
+    free(read_f);
     return;
   }
     
-  close(fd);
-  
   /* convert endianness */
   
   if(correct_endianness) {
