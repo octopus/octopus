@@ -40,15 +40,20 @@ gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
 
   TO_C_STR1(name, name_c);
 
-  if((in = fopen(name_c, "rb")) == NULL) 
+  if((in = fopen(name_c, "rb")) == NULL) {
+    free(name_c);
     return NULL; /* could not open file */
+  }
 
   /* get extension of filename */
   for(ext=name_c+strlen(name_c); *ext!='.' && ext>=name_c; ext--){
     *ext = tolower(*ext);
   }
-  if(ext < name_c || ext == name_c+strlen(name_c))
+  if(ext < name_c || ext == name_c+strlen(name_c)) {
+    free(name_c);
+    fclose(in);
     return NULL; /* could not find file type */
+  }
 
   /* get rid of . in extension */
   ext++;
