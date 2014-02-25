@@ -196,7 +196,6 @@ void FC_FUNC(zoct_get_f, ZOCT_GET_F)
 void FC_FUNC(zoct_set_f_hat, ZOCT_SET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double complex *VAL, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -220,7 +219,6 @@ void FC_FUNC(zoct_set_f_hat, ZOCT_SET_F_HAT)
 void FC_FUNC(zoct_get_f_hat, ZOCT_GET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double complex *val, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -295,7 +293,6 @@ void FC_FUNC(doct_get_f, DOCT_GET_F)
 void FC_FUNC(doct_set_f_hat, DOCT_SET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double *VAL, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -319,7 +316,6 @@ void FC_FUNC(doct_set_f_hat, DOCT_SET_F_HAT)
 void FC_FUNC(doct_get_f_hat, DOCT_GET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double *val, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -339,7 +335,5 @@ void FC_FUNC(doct_get_f_hat, DOCT_GET_F_HAT)
    }
 
 }
-
-
 
 #endif 
