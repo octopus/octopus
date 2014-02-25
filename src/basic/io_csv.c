@@ -107,20 +107,20 @@ void FC_FUNC_(read_csv,READ_CSV)
   char * buf;
   char * c;
   const char sep [] = "\t\n ,";
-  
   int buf_size = 65536;
-  buf = (char *) malloc(buf_size*sizeof(char));
-  assert(buf != NULL);
     
   TO_C_STR1(fname, filename);
   fd = fopen(filename, "r");
+  free(filename);
+  
   if(fd == NULL) {
     *ierr = 2;
     return;
   }
   
-  free(filename);
-  
+  buf = (char *) malloc(buf_size*sizeof(char));
+  assert(buf != NULL);
+
   if ( (*output_type) == TYPE_FLOAT ) {
     i = 0;
     while(fgets(buf,buf_size*sizeof(char),fd) != NULL){
@@ -170,11 +170,11 @@ void FC_FUNC_(get_info_csv,GET_INFO_CSV)
   
   TO_C_STR1(fname, filename);
   fd = fopen(filename, "r");
+  free(filename);
   if (fd == NULL) {
     *ierr = 2;
     return;
   }
-  free(filename);
   
   buf = (char *) malloc(buf_size*sizeof(char));
   assert(buf != NULL);
@@ -222,4 +222,3 @@ void FC_FUNC_(get_info_csv,GET_INFO_CSV)
   free(buf);
   fclose(fd);
 }
-
