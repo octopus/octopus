@@ -228,7 +228,6 @@ void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, f
   const gsl_min_fminimizer_type *T;
   gsl_min_fminimizer *s;
   gsl_function F;
-  int ierr;
   param_f1_t p;
 
   p.func = f;
@@ -239,7 +238,7 @@ void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, f
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
 
-  ierr = gsl_min_fminimizer_set (s, &F, *m, *a, *b);
+  *status = gsl_min_fminimizer_set (s, &F, *m, *a, *b);
 
   gsl_set_error_handler_off();
 
