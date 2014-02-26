@@ -209,22 +209,21 @@ contains
     call parse_string(datasets_check('ConvertRefFileName'), 'density', refname)
     if ( refname == " " ) refname = ""
 
-    !%Variable ConvertSubtractFolder
+    !%Variable ConvertSubtractFile
     !%Type logical
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% This variable decides if a folder is going to be iterated or the 
-    !% filename is going to be iterated.
+    !% The reference file that is going to be used to subtract from
     !%End
     call parse_logical(datasets_check('ConvertSubtractFile'), .false., subtract_file)
 
-    !%Variable ConvertFolder
+    !%Variable ConvertSubtractFolder
     !%Type string
     !%Default [blank]
     !%Section Utilities::oct-convert
     !%Description
-    !% The folder name where are the input files.
+    !% The folder name which is going to be subtracted
     !%End
     call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
     if ( ref_folder == " " ) ref_folder = ""
