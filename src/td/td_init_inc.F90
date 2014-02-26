@@ -119,6 +119,7 @@ subroutine td_init(td, sys, hm)
   !%End 
 
   call parse_integer(datasets_check('TDMaximumIter'), 1500, td%max_iter)
+  call messages_print_var_value(stdout, datasets_check('TDMaximumIter'), td%max_iter)
 
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"

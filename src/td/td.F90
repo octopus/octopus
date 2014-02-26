@@ -155,6 +155,12 @@ contains
 
     call init_wfs()
 
+    if(td%iter >= td%max_iter) then
+      call end_()
+      POP_SUB(td_run)
+      return
+    endif
+
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
@@ -367,6 +373,8 @@ contains
       if(td%iter >= td%max_iter) then
         message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
         call messages_info(1)
+        POP_SUB(td_run.init_wfs)
+        return
       endif
 
       if(.not. fromscratch) then
