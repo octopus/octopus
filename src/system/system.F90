@@ -22,6 +22,7 @@
 module system_m
   use calc_mode_m
   use octcl_kernel_m
+  use datasets_m
   use density_m
   use elf_m
   use energy_calc_m
@@ -38,6 +39,7 @@ module system_m
   use mpi_m
   use multicomm_m
   use opencl_m
+  use parser_m
   use pcm_m
   use poisson_m
   use profiling_m
@@ -89,9 +91,6 @@ contains
     call space_init(sys%space)
 
     call geometry_init(sys%geo, sys%space)
-
-    call pcm_init(sys%geo) !Initializes PCM: cavity + PCM matrix
-
     call grid_init_stage_0(sys%gr, sys%geo, sys%space)
     call states_init(sys%st, sys%gr, sys%geo)
     call states_write_info(sys%st)
@@ -106,6 +105,31 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
+
+    ! Begin: adelgado 12/01/2014
+    !%Variable Solvation
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If true, the calculation is performed accounting for solvation effects
+    !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
+    !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
+    !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
+    !% only for ground state calculations. Experimental.
+    !%End
+    call parse_logical(datasets_check('Solvation'), .false., run_pcm)
+    if (run_pcm) then
+      if (sys%gr%sb%box_shape /= 3) then
+          message(1) = "PCM is only available for BoxShape = minimum"
+          call messages_fatal(1)
+      else 
+          call messages_experimental("polarizable continuum model")
+          call pcm_init(sys%geo, sys%gr%mesh) 
+      endif
+    endif
+    ! End: adelgado 12/01/2014
+
     call output_init(sys%gr%sb, sys%st%nst, sys%outp)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)

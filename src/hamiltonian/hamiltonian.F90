@@ -57,6 +57,7 @@ module hamiltonian_m
   use poisson_m
   use profiling_m
   use projector_m
+  use pcm_m
   use simul_box_m
   use smear_m
   use species_m
@@ -977,6 +978,14 @@ contains
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+
+        if (run_pcm) then !< Begin: adelgado 26/01/2014 Adding pcm contribution
+            
+           forall (ip = 1:mesh%np) & 
+                   this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                                                       this%ep%v_pcm_e(ip) + this%ep%v_pcm_n(ip) 
+        endif !< End: adelgado 
+
         if(this%cmplxscl%space) then
           forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
         end if

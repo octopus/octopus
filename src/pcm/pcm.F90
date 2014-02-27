@@ -24,7 +24,9 @@ module pcm_m
   use global_m
   use geometry_m
   use io_m
+  use index_m
   use messages_m
+  use mesh_m 
   use parser_m
   use profiling_m
 
@@ -33,9 +35,13 @@ module pcm_m
   private
 
   public :: cts_act,    &
+            ind_vh,     &
             nts_act,    &
+            n_vertices, &
             pcm_init,   &
-            pcm_mat
+            pcm_mat,    &
+            pcm_charges,&
+            run_pcm
 
  !> The cavity hosting the solute molecule is built from a set of 
  !! interlocking spheres with optimized radii centered at the nuclear positions.  
@@ -67,7 +73,10 @@ module pcm_m
   FLOAT, allocatable :: Sigma(:,:)     !< S_E matrix
   FLOAT, allocatable :: Delta(:,:)     !< D_E matrix in JCP 139, 024105 (2013).
 
+  integer, allocatable :: ind_vh(:,:)
+  integer, parameter   :: n_vertices = 8
   integer :: pcminfo_unit
+  logical :: run_pcm 
 
   ! End of variable declaration.
   ! ----------------------------
@@ -76,10 +85,11 @@ contains
 
   !--------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: generate the molecular cavity and the PCM response matrix
-  subroutine pcm_init(geo)
+  subroutine pcm_init(geo, mesh)
     type(geometry_t), intent(in) :: geo
+    type(mesh_t), intent(in)     :: mesh
 
-    type(tess_pcm_t) :: dum2(1)
+!    type(tess_pcm_t) :: dum2(1)
     integer :: ia
     integer :: itess
     integer :: jtess
@@ -88,19 +98,20 @@ contains
     integer :: cav_unit_test
     integer :: pcmmat_unit
     integer :: iunit
-    integer, parameter :: mxts = 10000
+    integer, parameter   :: mxts = 10000
 
     FLOAT   :: epsilon_static
-
     FLOAT   :: rcav_C
     FLOAT   :: rcav_O
     FLOAT   :: rcav_N
     FLOAT   :: rcav_S
     FLOAT   :: rcav_F
+    FLOAT   :: rep_point(1:3)
 
-    logical :: run_pcm 
+!    logical :: run_pcm 
 
     character(len=80) :: str
+    integer :: tess_counter
 
     PUSH_SUB(pcm_init)
 
@@ -109,27 +120,6 @@ contains
     rcav_N = CNST(1.9)*P_Ang    ! Agnstrom -> Bohr 
     rcav_S = CNST(2.0175)*P_Ang !
     rcav_F = CNST(1.682)*P_Ang  ! 
-
-    ! -I need the RADII of the species within a block
-
-    !%Variable Solvation
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::PCM
-    !%Description
-    !% If true, the calculation is performed accounting for solvation effects
-    !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
-    !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
-    !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
-    !% only for ground state calculations. Experimental.
-    !%End
-    call parse_logical(datasets_check('Solvation'), .false., run_pcm)
-    if (.not.(run_pcm)) then
-        POP_SUB(pcm_init)
-        return
-    else
-      call messages_experimental("polarizable continuum model")
-    endif
 
     !%Variable SolventDielectricConstant
     !%Type float
@@ -155,7 +145,7 @@ contains
     read(iunit,*) nts_act
 
     if (nts_act.gt.mxts) then
-        write(message(1),'(a,I5)') "WARNING: total number of tesserae > 10 000 ", nts_act
+        write(message(1),'(a,I5)') "Info: WARNING: total number of tesserae > 10 000 ", nts_act
         call messages_info(1)     
     endif
 
@@ -185,10 +175,60 @@ contains
        read(iunit,*) cts_act(ia)%n
     enddo
     
-    call io_close(iunit)    
+    call io_close(iunit)
 
-    message(1) = "Van der Waals surface has been read from " // trim(str)
+    message(1) = "Info: van der Waals surface has been read from " // trim(str)
     call messages_info(1)
+
+    ! Creating the list of the nearest grid points to each tessera
+    ! to be used to "interpolate" the Hartree potential at the tesserae
+
+    SAFE_ALLOCATE( ind_vh(1:nts_act, 1:n_vertices) )
+    ind_vh = INT(M_ZERO)
+
+    ! only for testing 
+!    OPEN(500, FILE='pcm_cavity.xyz')
+!    OPEN(501, FILE='grid.xyz')
+
+!    OPEN(502, FILE='micael_test_1.xyz')
+!    OPEN(503, FILE='micael_test_2.xyz')
+
+!    DO ia=1,nts_act
+!       WRITE(500,*) cts_act(ia)%x, cts_act(ia)%y, cts_act(ia)%z
+!    ENDDO
+
+!    DO ia=1, mesh%np
+!   
+!       WRITE(501,*) mesh%x(ia,:)
+!       WRITE(502,*) mesh%x(ia,:)/P_Ang, NINT( mesh%x(ia,:)/mesh%spacing )
+!       WRITE(503,*) mesh%x(ia,:)/P_Ang, mesh%idx%lxyz(ia,:)
+    
+!    ENDDO
+    
+!    CLOSE(500)
+!    CLOSE(501)
+
+!    CLOSE(502)
+!    CLOSE(503)
+!    only for testing, will be cleaned soon 
+     
+!   OPEN(600, FILE='nearest_index.dat')
+!   OPEN(601, FILE='index_from_coords.dat')
+
+    do ia = 1, nts_act
+
+       rep_point(1) = cts_act(ia)%x
+       rep_point(2) = cts_act(ia)%y
+       rep_point(3) = cts_act(ia)%z
+
+      !Creating the list of the nearest grid points to each tessera
+      !to "interpolate" the Hartree potential at the tesserae.     
+       call nearest_cube_vertices( rep_point, mesh, ind_vh(ia,:), ia )
+
+    enddo
+
+!   CLOSE(600)
+!   CLOSE(601)
 
     nesf_act = 0
     do ia = 1, geo%natoms
@@ -265,7 +305,7 @@ contains
     call io_close(cav_unit_test)
 
     call pcm_matrix(epsilon_static) ! Calculates the PCM response matrix
-    message(1) = "PCM response matrix has been evaluated"
+    message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
 
     pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
@@ -282,6 +322,120 @@ contains
     POP_SUB(pcm_init)
     return
   end subroutine pcm_init
+!==============================================================
+  subroutine nearest_cube_vertices(point, mesh, vert_idx, ia)
+   FLOAT, intent(in)        :: point(1:3)
+   type(mesh_t), intent(in) :: mesh
+   integer, intent(out)     :: vert_idx(:)
+   integer, intent(in)      :: ia
+
+   FLOAT   :: dmin
+   integer :: rankmin
+
+   FLOAT   :: coord_0(1:3)
+   integer :: sign_x
+   integer :: sign_y
+   integer :: sign_z
+   integer :: point_0(1:3)
+   integer :: point_f(1:3)
+
+!   INTEGER :: ii
+!   CHARACTER(LEN=20) :: cc
+
+   PUSH_SUB(nearest_cube_vertices)    
+
+   vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
+       
+   coord_0 = mesh%x(vert_idx(1), :)
+   point_0 = NINT(coord_0/mesh%spacing)
+   
+!   WRITE(600,*) vert_idx(1)
+!   WRITE(601,*) index_from_coords(mesh%idx, mesh%sb%dim, point_0)
+
+   sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
+   sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
+   sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) ) 
+
+  !FRONT CUBE PLANE
+   point_f = point_0
+
+  !POINT P2
+   point_f(2) = point_f(2) + sign_y
+   vert_idx(2) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !POINT P3
+   point_f(3) = point_f(3) + sign_z
+   vert_idx(3) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !POINT P4
+   point_f(2) = point_f(2) - sign_y
+   vert_idx(4) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !REAR CUBE PLANE
+   point_f = point_0 
+
+  !POINT P5
+   point_f(1) = point_f(1) + sign_x
+   vert_idx(5) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !POINT P6
+   point_f(2) = point_f(2) + sign_y
+   vert_idx(6) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !POINT P7
+   point_f(3) = point_f(3) + sign_z
+   vert_idx(7) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+  !POINT P8
+   point_f(2) = point_f(2) - sign_y
+   vert_idx(8) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+
+!   WRITE(cc,'(I3)') ia
+
+!   OPEN(400, file=trim(cc)//'_tess.dat')
+!   OPEN(401, file=trim(cc)//'_points.dat')
+
+!      WRITE(400,*) point/P_Ang
+   
+!   DO ii=1, n_vertices
+!      WRITE(401,*) mesh%x(vert_idx(ii), :)/P_Ang 
+!   ENDDO
+
+!   CLOSE(400)
+!   CLOSE(401)
+
+   POP_SUB(nearest_cube_vertices)    
+  
+  end subroutine nearest_cube_vertices
+!==============================================================
+
+!==============================================================
+  subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav)
+!   Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
+!   defined in 'pcm/pcm.F90', provided the value of the molecule's electrostatic potential at 
+!   the tessera: q_pcm(ia) = \sum_{ib}^{nts_act} pcm_mat(ia,ib)*v_cav(ib).
+
+    FLOAT, intent(out) :: q_pcm(1:nts_act)
+    FLOAT, intent(in)  :: v_cav(1:nts_act)
+    FLOAT, intent(out) :: q_pcm_tot
+
+    integer :: ia
+    integer :: ib
+
+    PUSH_SUB(pcm_charges)
+
+    q_pcm     = M_ZERO
+    q_pcm_tot = M_ZERO
+
+    do ia = 1, nts_act
+       do ib = 1, nts_act
+          q_pcm(ia) = q_pcm(ia) + pcm_mat(ia,ib)*v_cav(ib) !< transpose matrix might speed up
+       enddo 
+       q_pcm_tot = q_pcm_tot + q_pcm(ia)
+    enddo
+    
+    POP_SUB(pcm_charges)
+  end subroutine pcm_charges
 !==============================================================
 
   subroutine pcm_matrix(eps)

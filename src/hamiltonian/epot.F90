@@ -50,6 +50,7 @@ module epot_m
   use profiling_m
   use projector_m
   use ps_m
+  use pcm_m 
   use simul_box_m
   use solids_m
   use species_m
@@ -72,7 +73,9 @@ module epot_m
     epot_end,                      &
     epot_generate,                 &
     epot_local_potential,          &
-    epot_precalc_local_potential
+    epot_precalc_local_potential,  &
+    epot_generate_pcm
+
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -87,6 +90,11 @@ module epot_m
     ! Classical charges:
     integer        :: classical_pot !< how to include the classical charges
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
+
+!   adelgado 7/01/2014: PCM stuff
+    FLOAT, pointer :: v_pcm_n(:) !< solvent response due to the nuclei charge density 
+    FLOAT, pointer :: v_pcm_e(:) !< solvent response due to the electronic charge density
+!   end adelgado 
 
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -480,6 +488,15 @@ contains
       nullify(ep%poisson_solver)
     end if
 
+    ! Begin: adelgado 7/01/2014
+    if (run_pcm) then
+      SAFE_ALLOCATE( ep%v_pcm_n(gr%mesh%np) ) !< serial running 
+      SAFE_ALLOCATE( ep%v_pcm_e(gr%mesh%np) )
+      ep%v_pcm_n = M_ZERO
+      ep%v_pcm_e = M_ZERO        
+    endif 
+    ! End: adelgado
+
     POP_SUB(epot_init)
   end subroutine epot_init
 
@@ -559,6 +576,12 @@ contains
     CMPLX,    allocatable :: zdensity(:)
     CMPLX,    allocatable :: ztmp(:)
     type(profile_t), save :: epot_reduce
+
+    !Begin: adelgado 7/01/2014
+    FLOAT :: v_n_cav(1:nts_act) !< 'nts_act' is global in 'pcm.F90'
+    FLOAT :: q_n_pcm(1:nts_act)
+    FLOAT :: q_n_pcm_tot, epsilon_test
+    !End: adelgado
 
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -652,6 +675,18 @@ contains
     ! add static electric fields
     if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
+
+    !Begin: adelgado 7/01/2014 
+    ! add PCM external field
+    if (run_pcm) then
+      call v_nuclei_cav(v_n_cav, geo)
+      call pcm_charges(q_n_pcm, q_n_pcm_tot, v_n_cav)
+!      epsilon_test = 100.d0
+!      write(*,*) 'Q_M^n', -(epsilon_test/(epsilon_test-1.d0))*q_n_pcm_tot
+!      pause
+      call epot_generate_pcm(ep%v_pcm_n, q_n_pcm, mesh)
+    endif 
+    !End: adelgado 
 
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
@@ -872,6 +907,94 @@ contains
   end subroutine epot_generate_classical
 
   ! ---------------------------------------------------------
+
+  !Begin: adelgado 7/01/2014 ----------------------------------
+  subroutine v_nuclei_cav(v_n_cav, geo)
+!   Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
+!   v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
+
+    FLOAT, intent(out)           :: v_n_cav(1:nts_act) !< 'nts_act' is global in 'pcm.F90'
+    type(geometry_t), intent(in) :: geo
+
+    FLOAT   :: diff(3)
+    FLOAT   :: dist
+    FLOAT   :: z_ia
+    integer :: ik
+    integer :: ia
+
+    type(species_t), pointer :: spci 
+
+    PUSH_SUB(v_nuclei_cav)
+     
+    v_n_cav = M_ZERO
+
+    do ik = 1, nts_act
+     do ia = 1, geo%natoms
+        diff(1) = geo%atom(ia)%x(1) - cts_act(ik)%x
+        diff(2) = geo%atom(ia)%x(2) - cts_act(ik)%y
+        diff(3) = geo%atom(ia)%x(3) - cts_act(ik)%z
+        
+        dist = dot_product( diff, diff )
+        dist = sqrt(dist)
+
+        spci => geo%atom(ia)%spec
+        z_ia = species_zval(spci)
+
+        v_n_cav(ik) = v_n_cav(ik) + z_ia/dist       
+     enddo
+
+    enddo
+
+    POP_SUB(v_nuclei_cav)
+  end subroutine v_nuclei_cav
+
+!=======================================================
+  subroutine epot_generate_pcm(v_pcm, q_pcm, mesh)
+!   Generates the potential 'v_pcm' in real-space.
+
+    type(mesh_t), intent(in)  :: mesh
+    FLOAT,        intent(out) :: v_pcm(1:mesh%np)!< running serially np=np_global
+    FLOAT,        intent(in)  :: q_pcm(1:nts_act)!< 'nts_act' is global in 'pcm.F90'
+
+    FLOAT, parameter :: p_1 = CNST(0.119763)
+    FLOAT, parameter :: p_2 = CNST(0.205117)
+    FLOAT, parameter :: q_1 = CNST(0.137546)
+    FLOAT, parameter :: q_2 = CNST(0.434344)
+    FLOAT            :: coord_tess(1:3) !probably might be changed to mesh%sb%dim ???
+    FLOAT            :: rr
+    FLOAT            :: arg
+    FLOAT            :: term
+    integer 	     :: ip
+    integer          :: ia
+
+    PUSH_SUB(epot_generate_pcm)
+
+    v_pcm = M_ZERO
+
+    do ia = 1, nts_act
+
+       coord_tess(1) = cts_act(ia)%x
+       coord_tess(2) = cts_act(ia)%y
+       coord_tess(3) = cts_act(ia)%z
+
+       do ip = 1, mesh%np !running serially np=np_global
+
+          call mesh_r(mesh, ip, rr, origin=coord_tess)
+          arg = rr/sqrt( cts_act(ia)%area ) 
+          term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
+          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( cts_act(ia)%area )
+
+       enddo 
+
+    enddo
+
+    v_pcm = M_TWO*v_pcm/sqrt(M_Pi) 
+
+    POP_SUB(epot_generate_pcm)
+  end subroutine epot_generate_pcm
+
+  ! END: adelgado ---------------------------------------------
+
   subroutine epot_precalc_local_potential(ep, gr, geo)
     type(epot_t),     intent(inout) :: ep
     type(grid_t),     intent(in)    :: gr

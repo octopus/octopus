@@ -26,6 +26,7 @@ module v_ks_m
   use derivatives_m
   use energy_m
   use energy_calc_m
+  use epot_m 
   use geometry_m
   use global_m
   use grid_m
@@ -43,6 +44,7 @@ module v_ks_m
   use poisson_m
   use poisson_sete_m
   use profiling_m
+  use pcm_m 
   use simul_box_m
   use states_m
   use states_dim_m
@@ -1083,6 +1085,14 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
+    !Begin: adelgado 25/02/2014
+    FLOAT   :: v_e_cav(1:nts_act) !< 'nts_act' is global in 'pcm.F90'
+    FLOAT   :: q_e_pcm(1:nts_act)
+    FLOAT   :: q_e_pcm_tot,epsilon_test
+    integer :: ia
+    integer :: ib
+    !End: adelgado
+
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
@@ -1125,6 +1135,31 @@ contains
         Impot =  aimag(zpot)
       end if
     end if
+
+    ! Begin: adelgado 25/02/2014 Reaction field due to the electronic density
+    if (run_pcm) then
+      v_e_cav = M_ZERO
+      q_e_pcm = M_ZERO
+      !Loop to calculate the Hartree potential at each representative point
+      do ia=1, nts_act !< global in 'pcm.F90'
+        do ib=1, n_vertices !< global in 'pcm.F90'
+           v_e_cav(ia) = v_e_cav(ia) + pot( ind_vh(ia,ib) )
+        enddo
+
+        v_e_cav(ia) = -v_e_cav(ia)/n_vertices !< taking the average of the Hartree potential
+                                              !  on the nearest cube vertices. Notice the
+                                              !  explicit minus sign. 
+      enddo
+
+      call pcm_charges(q_e_pcm, q_e_pcm_tot, v_e_cav) !<Calculation of the polarization charges due to electronic density.
+
+!      epsilon_test = 100.d0
+!      write(*,*) 'Q_M^e', -(epsilon_test/(epsilon_test-1.d0))*q_e_pcm_tot
+
+      call epot_generate_pcm(hm%ep%v_pcm_e, q_e_pcm, ks%gr%mesh)
+    endif !< pcm contribution
+
+    ! END: adelgado 
 
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy
