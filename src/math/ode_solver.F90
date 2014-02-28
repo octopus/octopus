@@ -31,14 +31,11 @@ module ode_solver_m
   private
   public ::                     &
     ode_solver_t,               &
-    dode_solver_init,           &
-    dode_solver_create,         &
+    ode_solver_init,            &
+    ode_solver_create,          &
     dode_solver_run,            &
-    dode_solver_end,            &
-    zode_solver_init,           &
-    zode_solver_create,         &
     zode_solver_run,            &
-    zode_solver_end
+    ode_solver_end
 
   integer, public, parameter :: &
     ODE_RK4    =  1,            &
@@ -61,6 +58,80 @@ module ode_solver_m
 
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine ode_solver_init(os)
+    type(ode_solver_t), intent(out) :: os
+    
+    PUSH_SUB(ode_solver_init)
+    
+    !%Variable ODESolver
+    !%Type integer
+    !%Default ode_rk4
+    !%Section Math::General
+    !%Description
+    !% Specifies what kind of ODE solver will be used.
+    !%Option ode_rk4 1
+    !% Standard Runge-Kutta, 4th order.
+    !%Option ode_fb78 2
+    !% Fehlberg solver.
+    !%Option ode_vr89 3
+    !% Verner solver.
+    !%Option ode_pd89 4
+    !% Prince-Dormand solver.
+    !%End
+    call parse_integer(datasets_check('ODESolver'),       ODE_RK4, os%solver_type)
+    if( os%solver_type  <  ODE_MINVAL .or. os%solver_type > ODE_MAXVAL ) then
+      call input_error(datasets_check('ODESolver'))
+    end if
+    
+    !%Variable ODESolverNSteps
+    !%Type integer
+    !%Default 100
+    !%Section Math::General
+    !%Description
+    !% Number of steps which the chosen ODE solver should perform
+    !% in the integration interval [a,b] of the ODE.
+    !%End
+    call parse_integer(datasets_check('ODESolverNSteps'),     100, os%nsteps)
+
+    call ode_solver_create(os)
+
+    POP_SUB(ode_solver_init)
+  end subroutine ode_solver_init
+
+  ! ---------------------------------------------------------
+  subroutine ode_solver_create(os)
+    type(ode_solver_t), intent(inout) :: os
+
+    PUSH_SUB(ode_solver_create)
+
+    select case(os%solver_type)
+    case(ODE_RK4)
+      os%vsize = 4
+      message(1) = 'Info: ode_solver: Using Runge-Kutta, 4th order.'
+      call messages_info(1)
+    case(ODE_FB78)
+      os%vsize = 13
+      message(1) = 'Info: ode_solver: Using Fehlberg, 7th/8th order.'
+      call messages_info(1)
+    case(ODE_VR89)
+      os%vsize = 16
+      message(1) = 'Info: ode_solver: Using Verner, 8th/9th order.'
+      call messages_info(1)
+    case(ODE_PD89)
+      os%vsize = 13
+      message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
+      call messages_info(1)
+    end select
+    
+    SAFE_ALLOCATE(os%a(1:os%vsize, 1:os%vsize))
+    SAFE_ALLOCATE(os%b(1:os%vsize))
+    SAFE_ALLOCATE(os%c(1:os%vsize))
+    SAFE_ALLOCATE(os%e(1:os%vsize))
+
+    POP_SUB(ode_solver_create)
+  end subroutine ode_solver_create
 
   ! ---------------------------------------------------------
   !> coefficients for standard Runge-Kutta 4th order
@@ -592,6 +663,20 @@ contains
     POP_SUB(ode_pd89_coeff)
   end subroutine ode_pd89_coeff
 
+! ---------------------------------------------------------
+subroutine ode_solver_end(os)
+  type(ode_solver_t), intent(inout) :: os
+
+  PUSH_SUB(ode_solver_end)
+
+  ! cleanup
+  SAFE_DEALLOCATE_P(os%a)
+  SAFE_DEALLOCATE_P(os%b)
+  SAFE_DEALLOCATE_P(os%c)
+  SAFE_DEALLOCATE_P(os%e)
+
+  POP_SUB(ode_solver_end)
+end subroutine ode_solver_end
 
 #include "undef.F90"
 #include "complex.F90"

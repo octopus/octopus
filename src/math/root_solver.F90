@@ -235,7 +235,7 @@ contains
     os%nsize       = order
     os%tmin        = M_ZERO
     os%tmax        = M_ONE
-    call zode_solver_create(os)
+    call ode_solver_create(os)
     call zode_solver_run(os, func_ws, base_roots, roots)
 
     SAFE_DEALLOCATE_A(gbase_coeff)
