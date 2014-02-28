@@ -98,9 +98,9 @@ end subroutine X(ode_solver_create)
 subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
   type(ode_solver_t), intent(inout) :: os
   R_TYPE,             intent(in)    :: startval(:)
-  ! values of the solution only at the endpoint of the interval
+  !> values of the solution only at the endpoint of the interval
   R_TYPE,             intent(out)   :: solutionp(:)
-  R_TYPE, optional,   intent(out)   :: solutionvec(:,:) ! full solution for all t
+  R_TYPE, optional,   intent(out)   :: solutionvec(:,:) !< full solution for all t
 
   interface
     subroutine func(size, t, z, res)
@@ -147,13 +147,12 @@ end subroutine X(ode_solver_run)
 
 
 ! ---------------------------------------------------------
-! ODE stepping for equally spaced steps
-!
+!> ODE stepping for equally spaced steps
 subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   type(ode_solver_t), intent(in)  :: os
   R_TYPE,                intent(in)  :: startval(:)
   R_TYPE,                intent(out) :: solutionp(:)
-  R_TYPE, optional,      intent(out) :: solutionvec(:,:) ! full solution for all t
+  R_TYPE, optional,      intent(out) :: solutionvec(:,:) !< full solution for all t
 
   interface
     subroutine func(size, t, z, res)

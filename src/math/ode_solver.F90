@@ -49,21 +49,21 @@ module ode_solver_m
     ODE_MAXVAL =  ODE_PD89
 
   type ode_solver_t
-    integer :: solver_type     ! what solver to use (see ODE_* variables above)_m
-    integer :: nsteps          ! how many steps to use
-    integer :: nsize           ! how many odes to solve simultaneously
-    integer :: vsize           ! vector size of ode method (used internally)
-    FLOAT   :: tmax, tmin      ! integrate ODE from tmin to tmax
-    logical :: adaptive_steps  ! should we use adaptive steps?
-    logical :: full_solution   ! if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
-    FLOAT, pointer :: a(:,:), b(:), c(:), e(:) ! coefficients dor the ode solver
+    integer :: solver_type     !< what solver to use (see ODE_* variables above)_m
+    integer :: nsteps          !< how many steps to use
+    integer :: nsize           !< how many odes to solve simultaneously
+    integer :: vsize           !< vector size of ode method (used internally)
+    FLOAT   :: tmax, tmin      !< integrate ODE from tmin to tmax
+    logical :: adaptive_steps  !< should we use adaptive steps?
+    logical :: full_solution   !< if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
+    FLOAT, pointer :: a(:,:), b(:), c(:), e(:) !< coefficients for the ode solver
   end type ode_solver_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  ! coefficients for standard Runge-Kutta 4.th order
+  !> coefficients for standard Runge-Kutta 4th order
   subroutine ode_rk4_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
@@ -92,7 +92,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! coefficients for Fehlberg 7/8.th order
+  !> coefficients for Fehlberg 7/8th order
   subroutine ode_fb78_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
@@ -238,15 +238,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! coefficients for Verner 8/9.th order
-  !
+  !> coefficients for Verner 8/9th order
   subroutine ode_vr89_coeff(os)
     type(ode_solver_t), intent(inout)  :: os
 
     FLOAT :: SQRT6
 
     PUSH_SUB(ode_vr89_coeff)
-
 
     SQRT6 = sqrt(M_SIX)
 
