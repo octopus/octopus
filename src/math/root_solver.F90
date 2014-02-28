@@ -36,21 +36,12 @@ module root_solver_m
     root_solver_init,                     &
     root_solver_read,                     &
     droot_solver_run,                     &
-    droot_solver_end,                     &
     zroot_solver_run,                     &
-    zroot_solver_end,                     &
     zroot_watterstrom
- 
-
 
   integer, public, parameter ::           &
-    ROOT_BISECTION   =  1,                &
-    ROOT_BRENT       =  2,                &
     ROOT_NEWTON      =  3,                &
-    ROOT_LAGUERRE    =  4,                &
-    ROOT_WATTERSTROM =  5,                &
-    ROOT_MINVAL      =  ROOT_BISECTION,   &
-    ROOT_MAXVAL      =  ROOT_WATTERSTROM
+    ROOT_WATTERSTROM =  5
 
   type root_solver_t
     private
@@ -114,19 +105,13 @@ contains
     !%Section Math::General
     !%Description
     !% Specifies what kind of root solver will be used.
-    !%Option root_bisection 1
-    !% Bisection method.
-    !%Option root_brent 2
-    !% Brent method.
     !%Option root_newton 3
     !% Newton method.
-    !%Option root_laguerre 4
-    !% Laguerre method.
     !%Option root_watterstrom 5
     !% Watterstrom method.
     !%End
     call parse_integer(datasets_check('RootSolver'), ROOT_NEWTON, rs%solver_type)
-    if( rs%solver_type < ROOT_MINVAL.or.rs%solver_type > ROOT_MAXVAL ) then
+    if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
       call input_error(datasets_check('RootSolver'))
     end if
 
@@ -180,16 +165,6 @@ contains
 
     POP_SUB(root_solver_read)
   end subroutine root_solver_read
-
-  ! ---------------------------------------------------------
-  subroutine droot_bisection
-    PUSH_SUB(droot_bisection)
-
-    call messages_not_implemented('root bisection')
-
-    POP_SUB(droot_bisection)
-  end subroutine droot_bisection
-
 
   ! ---------------------------------------------------------
   !> Implementation of J. Comp. Phys., 8, (1971), p. 304-308
