@@ -275,7 +275,10 @@ contains
       !%Section Mesh::KPoints
       !%Description
       !% When this block is given (and the <tt>KPoints</tt> block is not present),
-      !% <i>k</i>-points are distributed in a uniform grid.
+      !% <i>k</i>-points are distributed in a uniform grid, according to a modified
+      !% version of the Monkhorst-Pack scheme. For the original MP scheme, see
+      !% James D. Pack and Hendrik J. Monkhorst,
+      !% <i>Phys. Rev. B</i> <b>13</b>, 5188 (1976) and <i>Phys. Rev. B</i> <b>16</b>, 1748 (1977).
       !%
       !% The first row of the block is a set of integers defining
       !% the number of <i>k</i>-points to be used along each direction
@@ -654,7 +657,6 @@ contains
   !! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
   !! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
   !! used with a shift of (1/2, 1/2, 1/2).
-  !! For the original MP scheme, see (PRB 13, 518 (1976)) and (PRB 16, 1748 (1977))
   !! naxis(i) are the number of points in the three directions determined by the lattice vectors.
   !! shift(i) and sz shift the grid of integration points from the origin.
   subroutine kpoints_grid_generate(dim, naxis, shift, kpoints)  
