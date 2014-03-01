@@ -33,8 +33,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   FLOAT,  allocatable :: rho(:), grho(:,:)
   R_TYPE, allocatable :: dl_rho(:), gdl_rho(:,:)
   FLOAT,  allocatable :: elf(:,:), de(:,:), current(:, :, :)
-  FLOAT :: dl_d0, d0
-  FLOAT :: factor, spin_factor
+  R_TYPE :: dl_d0
+  FLOAT :: d0, factor, spin_factor
 
   FLOAT, parameter :: dmin = CNST(1e-10)
   FLOAT :: ik_weight
