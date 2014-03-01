@@ -55,6 +55,7 @@ module sparskit_m
     sparskit_solver_end
 
   type sparskit_solver_t
+    logical :: is_complex           !< whether set up for complex (otherwise real)
     integer :: size                 !< size of the linear system
     integer :: solver_type          !< which solver to use
     integer :: krylov_size          !< size of the Krylov subspace (used for some solvers)

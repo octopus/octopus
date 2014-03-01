@@ -18,13 +18,17 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(sparskit_solver_init)(n, sk)
+subroutine X(sparskit_solver_init)(n, sk, is_complex)
+  integer,                 intent(in)  :: n
   type(sparskit_solver_t), intent(out) :: sk
-  integer, intent(in)  :: n
+  logical,                 intent(in)  :: is_complex
 
   integer :: workspace_size, m
 
   PUSH_SUB(X(sparskit_solver_init))
+
+  sk%is_complex = is_complex
+  ! there might be some incompatibilities to check of real/complex and available methods?
 
   !%Variable SPARSKITSolver
   !%Type integer
@@ -124,10 +128,11 @@ subroutine X(sparskit_solver_init)(n, sk)
   call parse_logical(datasets_check('SPARSKITVerboseSolver'), .false., sk%verbose)
 
   ! size of the problem
-  sk%size = n
-#ifdef R_TCOMPLEX
-  sk%size = 2*n
-#endif
+  if(is_complex) then
+    sk%size = 2*n
+  else
+    sk%size = n
+  endif
 
   ! initialize workspace size
   workspace_size = 0 
@@ -252,11 +257,13 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   sk%used_iter = 0
 
 #ifdef R_TREAL
+  ASSERT(.not. sk%is_complex)
   sk%sk_b = rhs
   ! initial guess
   sk%sk_y = sol
 #endif
 #ifdef R_TCOMPLEX
+  ASSERT(sk%is_complex)
   do iter = 1, sk%size/2
     sk%sk_b(iter)           = real (rhs(iter))
     sk%sk_b(iter + sk%size/2) = aimag(rhs(iter))
