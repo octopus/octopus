@@ -157,7 +157,7 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-      call zsparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
 #endif
     end select
 
@@ -326,7 +326,7 @@ contains
       call mesh_init_mesh_aux(gr%mesh)
       tr%tdsk_size = st%d%dim*gr%mesh%np
       SAFE_ALLOCATE(tr%tdsk)
-      call zsparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, is_complex = .true.)
+      call sparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, is_complex = .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
