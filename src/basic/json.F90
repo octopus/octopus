@@ -382,9 +382,7 @@ module json_m
   end interface json_extend
 
   interface json_pop
-    module procedure json_string_pop
     module procedure json_array_pop
-    module procedure json_object_pop
   end interface json_pop
 
   interface json_next
@@ -1185,16 +1183,6 @@ contains
     end if
     return
   end subroutine json_string_get_char
-
-  elemental subroutine json_string_pop(this, char)
-    type(json_string_t), intent(inout) :: this
-    character,           intent(out)   :: char
-    !
-    char=this%value(this%len)
-    this%value(this%len)=""
-    this%len=this%len-1
-    return
-  end subroutine json_string_pop
 
   subroutine json_string_append(this, char)
     type(json_string_t), intent(inout) :: this
@@ -2648,17 +2636,6 @@ contains
     return
   end subroutine json_member_end
 
-  elemental function json_member_len(this) result(len)
-    type(json_member_t), intent(in) :: this
-    !
-    integer :: len
-    !
-    len=0
-    if(associated(this%value))&
-      len=json_value_len(this%value)
-    return
-  end function json_member_len
-
   recursive function json_member_equal(this_1, this_2) result(eqv)
     type(json_member_t), intent(in) :: this_1
     type(json_member_t), intent(in) :: this_2
@@ -3259,30 +3236,6 @@ contains
     POP_SUB(json_object_write)
     return
   end subroutine json_object_write
-
-  subroutine json_object_pop(this, member)
-    type(json_object_t),          intent(inout) :: this
-    type(json_member_t), pointer, intent(out)   :: member
-    !
-    type(json_member_node_t), pointer :: node
-    integer                           :: i
-    !
-    PUSH_SUB(json_object_pop)
-    member=>null()
-    do i = 1, this%size
-      if(associated(this%table(i)%head))then
-        node=>this%table(i)%head
-        this%table(i)%head=>node%next
-        this%used=this%used-1
-        member=>node%member
-        SAFE_DEALLOCATE_P(node)
-        node=>null()
-        exit
-      end if
-    end do
-    POP_SUB(json_object_pop)
-    return
-  end subroutine json_object_pop
 
   subroutine json_object_set_member(this, member)
     type(json_object_t),         intent(inout) :: this
