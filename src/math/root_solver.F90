@@ -102,7 +102,7 @@ contains
     !%Variable RootSolver
     !%Type integer
     !%Default root_newton
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% Specifies what kind of root solver will be used.
     !%Option root_newton 3
@@ -118,7 +118,7 @@ contains
     !%Variable RootSolverMaxIter
     !%Type integer
     !%Default 100
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
@@ -128,7 +128,7 @@ contains
     !%Variable RootSolverRelTolerance
     !%Type float
     !%Default 1e-8
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
@@ -137,7 +137,7 @@ contains
     !%Variable RootSolverAbsTolerance
     !%Type float
     !%Default 1e-8
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
@@ -146,7 +146,7 @@ contains
     !%Variable RootSolverHavePolynomial
     !%Type logical
     !%Default no
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !%  If set to yes, the coefficients of the polynomial have to be passed to
     !%  the root solver.
@@ -156,7 +156,7 @@ contains
     !%Variable RootSolverWSRadius
     !%Type float
     !%Default 1.0
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
     !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
@@ -204,7 +204,7 @@ contains
     !%Variable WatterstromODESolver
     !%Type integer
     !%Default ode_pd89
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
     !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
@@ -224,7 +224,7 @@ contains
     !%Variable WatterstromODESolverNSteps
     !%Type integer
     !%Default 400
-    !%Section Math::General
+    !%Section Math::RootSolver
     !%Description
     !% Number of steps which the chosen ODE solver should perform
     !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
