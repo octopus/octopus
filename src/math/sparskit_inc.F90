@@ -396,20 +396,6 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
 end subroutine X(sparskit_solver_run)
 
-
-! ---------------------------------------------------------
-subroutine X(sparskit_solver_end)(sk)
-  type(sparskit_solver_t), intent(inout) :: sk
-
-  PUSH_SUB(X(sparskit_solver_end))
-
-  SAFE_DEALLOCATE_A(sk%sk_b)
-  SAFE_DEALLOCATE_A(sk%sk_y)
-  SAFE_DEALLOCATE_A(sk%sk_work)
-
-  POP_SUB(X(sparskit_solver_end))
-end subroutine X(sparskit_solver_end)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

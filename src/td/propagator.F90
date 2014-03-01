@@ -443,7 +443,7 @@ contains
       SAFE_DEALLOCATE_P(tr%vmagnus)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      call zsparskit_solver_end(tr%tdsk)
+      call sparskit_solver_end(tr%tdsk)
 #endif
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_end(tr%ob)

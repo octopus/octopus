@@ -50,10 +50,9 @@ module sparskit_m
     sparskit_solver_t,           &
     dsparskit_solver_init,       &
     dsparskit_solver_run,        &
-    dsparskit_solver_end,        &
     zsparskit_solver_init,       &
     zsparskit_solver_run,        &
-    zsparskit_solver_end
+    sparskit_solver_end
 
   type sparskit_solver_t
     integer :: size                 !< size of the linear system
@@ -77,6 +76,18 @@ module sparskit_m
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine sparskit_solver_end(sk)
+    type(sparskit_solver_t), intent(inout) :: sk
+    
+    PUSH_SUB(sparskit_solver_end)
+    
+    SAFE_DEALLOCATE_A(sk%sk_b)
+    SAFE_DEALLOCATE_A(sk%sk_y)
+    SAFE_DEALLOCATE_A(sk%sk_work)
+    
+    POP_SUB(sparskit_solver_end)
+  end subroutine sparskit_solver_end
 
 #include "undef.F90"
 #include "real.F90"
