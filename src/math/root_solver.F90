@@ -209,7 +209,7 @@ contains
     !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
     !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
     !% ODEs. This variable specifies the solver that should be used for the ODE 
-    !% stepping. Valid solver types are those allowed for the <tt>ODESolver</tt> variable.
+    !% stepping.
     !%Option ode_rk4 1
     !% Standard 4th-order Runge-Kutta.
     !%Option ode_fb78 2

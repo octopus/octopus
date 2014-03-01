@@ -31,7 +31,6 @@ module ode_solver_m
   private
   public ::                     &
     ode_solver_t,               &
-    ode_solver_init,            &
     ode_solver_create,          &
     dode_solver_run,            &
     zode_solver_run,            &
@@ -58,47 +57,6 @@ module ode_solver_m
 
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine ode_solver_init(os)
-    type(ode_solver_t), intent(out) :: os
-    
-    PUSH_SUB(ode_solver_init)
-    
-    !%Variable ODESolver
-    !%Type integer
-    !%Default ode_rk4
-    !%Section Math::General
-    !%Description
-    !% Specifies what kind of ODE solver will be used.
-    !%Option ode_rk4 1
-    !% Standard Runge-Kutta, 4th order.
-    !%Option ode_fb78 2
-    !% Fehlberg solver.
-    !%Option ode_vr89 3
-    !% Verner solver.
-    !%Option ode_pd89 4
-    !% Prince-Dormand solver.
-    !%End
-    call parse_integer(datasets_check('ODESolver'),       ODE_RK4, os%solver_type)
-    if( os%solver_type  <  ODE_MINVAL .or. os%solver_type > ODE_MAXVAL ) then
-      call input_error(datasets_check('ODESolver'))
-    end if
-    
-    !%Variable ODESolverNSteps
-    !%Type integer
-    !%Default 100
-    !%Section Math::General
-    !%Description
-    !% Number of steps which the chosen ODE solver should perform
-    !% in the integration interval [a,b] of the ODE.
-    !%End
-    call parse_integer(datasets_check('ODESolverNSteps'),     100, os%nsteps)
-
-    call ode_solver_create(os)
-
-    POP_SUB(ode_solver_init)
-  end subroutine ode_solver_init
 
   ! ---------------------------------------------------------
   subroutine ode_solver_create(os)
