@@ -204,7 +204,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     if(states_are_complex(st)) then       
       do ip = 1, gr%mesh%np
         if(abs(st%rho(ip, is)) >= dmin) then
-          lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
+          lr%zdl_de(ip, is) = lr%zdl_de(ip, is) + &
             M_TWO * sum(current(ip, 1:gr%mesh%sb%dim, is) * lr%dl_j(ip, 1:gr%mesh%sb%dim, is))
         end if
       end do
@@ -710,60 +710,6 @@ contains
   end subroutine get_matrix_elements
 
 end subroutine X(lr_calc_beta)
-
-! ---------------------------------------------------------
-subroutine X(lr_calc_2np1) (hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, val)
-  type(hamiltonian_t),     intent(inout) :: hm
-  type(states_t),          intent(in)    :: st
-  type(geometry_t),        intent(in)    :: geo
-  type(grid_t),            intent(inout) :: gr
-  type(lr_t),              intent(in)    :: lr1
-  type(lr_t),              intent(in)    :: lr2
-  type(lr_t),              intent(in)    :: lr3
-  type(pert_t),            intent(in)    :: pert1
-  type(pert_t),            intent(in)    :: pert2
-  R_TYPE,                  intent(out)   :: val
-
-  integer :: ik, ist, jst
-  R_TYPE :: term
-  R_TYPE, allocatable :: tmp(:, :), me23(:, :)
-
-  PUSH_SUB(X(lr_calc_2np1))
-
-  SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(me23(1:st%nst, 1:st%nst))
-
-  val = R_TOTYPE(M_ZERO)
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-
-    !precalculate these matrix elements (it could be done in a better way)
-    do ist = 1, st%nst
-      do jst = 1, st%nst
-        me23(ist, jst) = X(mf_dotp)(gr%mesh, st%d%dim, lr2%X(dl_psi)(:, :, ist, ik), lr3%X(dl_psi)(:, :, jst, ik))
-      end do
-    end do
-
-    do ist = 1, st%nst
-      
-      call X(pert_apply)(pert2, gr, geo, hm, ik, lr3%X(dl_psi)(:, :, ist, ik), tmp)
-      term = X(mf_dotp)(gr%mesh, st%d%dim, lr1%X(dl_psi)(:, :, ist, ik), tmp)
-      
-      do jst = 1, st%nst
-        call X(pert_apply)(pert1, gr, geo, hm, ik, st%X(psi)(:, :, jst, ik), tmp)
-        term = term - X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), tmp)*me23(jst, ist)
-      end do
-
-      val = val + st%d%kweights(ik)*st%smear%el_per_state*term
-      
-    end do
-  end do
-  
-  SAFE_DEALLOCATE_A(tmp)
-  SAFE_DEALLOCATE_A(me23)
-
-  POP_SUB(X(lr_calc_2np1))
-end subroutine X(lr_calc_2np1)
 
 ! ---------------------------------------------------------
 subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, em_lr, kdotp_em_lr)
