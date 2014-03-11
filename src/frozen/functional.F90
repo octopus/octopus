@@ -12,24 +12,9 @@ module functional_m
   use mesh_m,          only: mesh_t
   use mesh_function_m, only: dmf_integrate
   use simulation_m,    only: simulation_t, simulation_get
+  use XC_F90(lib_m)
 
-  use interface_xc_m, only: &
-    XC_UNKNOWN,             &   
-    XC_NONE
-
-  use interface_xc_m, only:  &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  use interface_xc_m, only:  &
-    XC_FAMILY_LDA,           &
-    XC_FAMILY_GGA,           &
-    XC_FAMILY_MGGA,          &
-    XC_FAMILY_LCA,           &
-    XC_FAMILY_OEP,           &
-    XC_FAMILY_HYB_GGA
+  use interface_xc_m
 
   use gga_m, only:       &
     gga_t,               &

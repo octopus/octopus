@@ -12,44 +12,9 @@ module interface_xc_m
   use kinds_m,      only: wp
   use simulation_m, only: simulation_t, simulation_get_ndim
 
-  use XC_F90(lib_m), only: &
-    XC_POLARIZED,          &
-    XC_UNPOLARIZED
-
-  use XC_F90(lib_m), only:   &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  use XC_F90(lib_m), only: &
-    XC_FAMILY_LDA,         &
-    XC_FAMILY_GGA,         &
-    XC_FAMILY_MGGA,        &
-    XC_FAMILY_LCA,         &
-    XC_FAMILY_OEP,         &
-    XC_FAMILY_HYB_GGA
-
   implicit none
 
   private
-  public ::         &
-    XC_POLARIZED,   &
-    XC_UNPOLARIZED
-
-  public ::                  &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  public ::            &
-    XC_FAMILY_LDA,     &
-    XC_FAMILY_GGA,     &
-    XC_FAMILY_MGGA,    &
-    XC_FAMILY_LCA,     &
-    XC_FAMILY_OEP,     &
-    XC_FAMILY_HYB_GGA
 
   public ::                      &
     interface_xc_init,           &

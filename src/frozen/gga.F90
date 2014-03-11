@@ -3,6 +3,7 @@
 module gga_m
 
   use global_m
+  use XC_F90(lib_m)
   use messages_m
   use profiling_m
 
@@ -12,24 +13,7 @@ module gga_m
   use kinds_m,       only: wp
   use simulation_m,  only: simulation_t, simulation_get
 
-  use interface_xc_m, only: &
-    XC_NONE,                &
-    XC_POLARIZED,           &
-    XC_UNPOLARIZED
-
-  use interface_xc_m, only:    &
-    interface_xc_t,            &
-    interface_xc_init,         &
-    interface_xc_start,        &
-    interface_xc_is_polarized, &
-    interface_xc_get_nspin,    &
-    interface_xc_get_kind,     &
-    interface_xc_density,      &
-    interface_xc_gga_exc,      &
-    interface_xc_gga_vxc,      &
-    interface_xc_gga_exc_vxc,  &
-    interface_xc_copy,         &
-    interface_xc_end
+  use interface_xc_m
 
   implicit none
 
