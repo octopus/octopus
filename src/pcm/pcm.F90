@@ -46,13 +46,13 @@ module pcm_m
 
  !> The cavity hosting the solute molecule is built from a set of 
  !  interlocking spheres with optimized radii centered at the nuclear positions.  
-  type sphere_t  
+  type, public :: sphere_t  
     FLOAT :: x(MAX_DIM) !< center of the sphere  
     FLOAT :: r          !< radius of the sphere (different for each species)
   end type
 
  !> The resulting cavity is discretized by a set of tesserae.  
-  type :: tessera_t
+  type, public :: tessera_t
     FLOAT :: x(MAX_DIM) !< representative point of the tessera 
     FLOAT :: area       !< area of the tessera
     FLOAT :: n(MAX_DIM) !< unitary outgoing vector normal to the tessera surface 
