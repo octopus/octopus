@@ -76,7 +76,8 @@ program octopus
   !% Calculation of the ground state.
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states. Can also be used for a non-self-consistent
-  !% calculation of states at arbitrary k-points.
+  !% calculation of states at arbitrary k-points, if <tt>density.obf</tt> from <tt>gs</tt>
+  !% is provided in the <tt>restart/gs</tt> directory.
   !%Option td 03
   !% Time-dependent calculation (experimental for periodic systems).
   !%Option go 05

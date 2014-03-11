@@ -108,7 +108,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   resid(:) = M_ONE
   
   !if(info == 1) then !Calculate the residual vector
-  ! XXX let's not do this anymore.  Modifying residual seems to have little/no effect
+  ! XXX let`s not do this anymore.  Modifying residual seems to have little/no effect
   iparam(1) = 1
   iparam(3) = niter
   iparam(7) = 1
