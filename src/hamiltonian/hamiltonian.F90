@@ -140,7 +140,8 @@ module hamiltonian_m
     integer :: xc_family       !< copied from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
-
+    type(pcm_t)  :: pcm        !< handles pcm variables
+ 
     !> absorbing boundaries
     logical :: adjoint
     integer  :: ab                !< do we have absorbing boundaries?
@@ -790,9 +791,21 @@ contains
       SAFE_DEALLOCATE_P(hm%hf_st)
     endif
 
-
-
     SAFE_DEALLOCATE_P(hm%energy)
+     
+    if (hm%pcm%run_pcm) then
+     SAFE_DEALLOCATE_A(hm%pcm%spheres)
+     SAFE_DEALLOCATE_A(hm%pcm%tess)
+     SAFE_DEALLOCATE_A(hm%pcm%matrix)
+     SAFE_DEALLOCATE_A(hm%pcm%q_e)
+     SAFE_DEALLOCATE_A(hm%pcm%q_n) 
+     SAFE_DEALLOCATE_A(hm%pcm%v_e)
+     SAFE_DEALLOCATE_A(hm%pcm%v_n)
+     SAFE_DEALLOCATE_A(hm%pcm%v_e_rs)
+     SAFE_DEALLOCATE_A(hm%pcm%v_n_rs)
+     SAFE_DEALLOCATE_A(hm%pcm%ind_vh)
+     call io_close(hm%pcm%info_unit)
+    end if
 
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
@@ -978,13 +991,13 @@ contains
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-
-        if (run_pcm) then !< Begin: adelgado 26/01/2014 Adding pcm contribution
+        !> Adds PCM contributions
+        if (this%pcm%run_pcm) then
             
            forall (ip = 1:mesh%np) & 
                    this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                                                       this%ep%v_pcm_e(ip) + this%ep%v_pcm_n(ip) 
-        endif !< End: adelgado 
+                                                       this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip) 
+        endif
 
         if(this%cmplxscl%space) then
           forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)

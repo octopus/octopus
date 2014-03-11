@@ -1085,14 +1085,6 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
-    !Begin: adelgado 25/02/2014
-    FLOAT   :: v_e_cav(1:nts_act) !< 'nts_act' is global in 'pcm.F90'
-    FLOAT   :: q_e_pcm(1:nts_act)
-    FLOAT   :: q_e_pcm_tot,epsilon_test
-    integer :: ia
-    integer :: ib
-    !End: adelgado
-
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
@@ -1136,30 +1128,17 @@ contains
       end if
     end if
 
-    ! Begin: adelgado 25/02/2014 Reaction field due to the electronic density
-    if (run_pcm) then
-      v_e_cav = M_ZERO
-      q_e_pcm = M_ZERO
-      !Loop to calculate the Hartree potential at each representative point
-      do ia=1, nts_act !< global in 'pcm.F90'
-        do ib=1, n_vertices !< global in 'pcm.F90'
-           v_e_cav(ia) = v_e_cav(ia) + pot( ind_vh(ia,ib) )
-        enddo
+    !> PCM reaction field due to the electronic density
+    if (hm%pcm%run_pcm) then
 
-        v_e_cav(ia) = -v_e_cav(ia)/n_vertices !< taking the average of the Hartree potential
-                                              !  on the nearest cube vertices. Notice the
-                                              !  explicit minus sign. 
-      enddo
+        call v_electrons_cav(hm%pcm%v_e, pot, hm%pcm)
+        call pcm_charges(hm%pcm%q_e, hm%pcm%qtot_e, hm%pcm%v_e, hm%pcm%matrix, hm%pcm%n_tesserae) 
+        write(hm%pcm%info_unit,'(1X,A36,F12.8)') &
+                 "Electronic molecular charge Q_M^e = ", -(hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_e
 
-      call pcm_charges(q_e_pcm, q_e_pcm_tot, v_e_cav) !<Calculation of the polarization charges due to electronic density.
+        call pcm_pot_rs( hm%pcm%v_e_rs, hm%pcm%q_e, hm%pcm%tess, hm%pcm%n_tesserae, ks%gr%mesh )
 
-!      epsilon_test = 100.d0
-!      write(*,*) 'Q_M^e', -(epsilon_test/(epsilon_test-1.d0))*q_e_pcm_tot
-
-      call epot_generate_pcm(hm%ep%v_pcm_e, q_e_pcm, ks%gr%mesh)
     endif !< pcm contribution
-
-    ! END: adelgado 
 
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy
