@@ -358,7 +358,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if(.not.fromscratch) then
-        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states)
+        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
         if(ierr /= 0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)
@@ -410,7 +410,7 @@ contains
 
       if(fromScratch) then
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true.)
+          call restart_read(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true., label = ": gs")
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)

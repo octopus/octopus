@@ -535,23 +535,24 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left)
-    character(len=*),     intent(in)    :: dir
-    type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(in)    :: gr
-    integer,              intent(out)   :: ierr
-    integer,    optional, intent(out)   :: iter
-    type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
-    logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
-    integer,    optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
-    logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left, label)
+    character(len=*),           intent(in)    :: dir
+    type(states_t),             intent(inout) :: st
+    type(grid_t),               intent(in)    :: gr
+    integer,                    intent(out)   :: ierr
+    integer,          optional, intent(out)   :: iter
+    type(lr_t),       optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
+    logical,          optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
+    integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
+    logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
+    character(len=*), optional, intent(in)    :: label
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: iread, nread
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
-    character(len=256)   :: line
+    character(len=256)   :: line, label_
     character(len=50)    :: str
     integer, pointer     :: map(:)
 
@@ -576,13 +577,26 @@ contains
     end if
     exact_ = optional_default(exact, .false.)
 
-    if(.not. present(lr)) then
-      write(message(1), '(a,i5)') 'Info: Loading restart information.'
-      st%fromScratch = .false. ! obviously, we are using restart info
+    if(present(label)) then
+      label_ = trim(label)
     else
-      write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
-    end if
+      if(present(lr)) then
+        label_ = "for linear response"
+      else
+        label_ = ""
+      endif
+    endif
+
+    message(1) = 'Info: Loading restart information'
+    if(len(trim(label_)) > 0) then
+      message(1) = trim(message(1)) // trim(label)
+    endif
+    message(1) = trim(message(1)) // "."
     call messages_info(1)
+
+    if(.not. present(lr)) then
+      st%fromScratch = .false. ! obviously, we are using restart info
+    endif
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from

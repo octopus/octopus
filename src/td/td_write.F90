@@ -321,7 +321,7 @@ contains
       end if
       call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       writ%gs_st%node(:)  = 0
-      call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, ierr)
+      call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, ierr, label = ': gs for TDOutput')
       if(ierr /= 0 .and.ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Could not load "//trim(restart_dir)//"gs"
         call messages_fatal(1)
@@ -589,7 +589,7 @@ contains
     integer,              intent(in)    :: iter
     FLOAT, optional,      intent(in)    :: dt
 
-    character(len=256) :: filename, dir
+    character(len=256) :: filename
     integer :: iout
     type(profile_t), save :: prof
 
