@@ -486,6 +486,9 @@ contains
     !%End
     call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
+    !> initializes PCM
+    call pcm_init(hm%pcm, geo, gr) 
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -793,19 +796,7 @@ contains
 
     SAFE_DEALLOCATE_P(hm%energy)
      
-    if (hm%pcm%run_pcm) then
-     SAFE_DEALLOCATE_A(hm%pcm%spheres)
-     SAFE_DEALLOCATE_A(hm%pcm%tess)
-     SAFE_DEALLOCATE_A(hm%pcm%matrix)
-     SAFE_DEALLOCATE_A(hm%pcm%q_e)
-     SAFE_DEALLOCATE_A(hm%pcm%q_n) 
-     SAFE_DEALLOCATE_A(hm%pcm%v_e)
-     SAFE_DEALLOCATE_A(hm%pcm%v_n)
-     SAFE_DEALLOCATE_A(hm%pcm%v_e_rs)
-     SAFE_DEALLOCATE_A(hm%pcm%v_n_rs)
-     SAFE_DEALLOCATE_A(hm%pcm%ind_vh)
-     call io_close(hm%pcm%info_unit)
-    end if
+    if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
@@ -996,7 +987,7 @@ contains
             
            forall (ip = 1:mesh%np) & 
                    this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                                                       this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip) 
+                                                       this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
         endif
 
         if(this%cmplxscl%space) then
@@ -1175,6 +1166,17 @@ contains
     call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, time)
+
+    !> Generates the real-space PCM potential due to nuclei which do not change
+    !! during the SCF calculation.
+    call v_nuclei_cav(this%pcm%v_n, geo, this%pcm%tess, this%pcm%n_tesserae)
+    call pcm_charges(this%pcm%q_n, this%pcm%qtot_n, this%pcm%v_n, this%pcm%matrix, this%pcm%n_tesserae)
+
+    write(this%pcm%info_unit,'(1X,A33,F12.8)') &
+                          "Nuclear molecular charge Q_M^n = ", &
+                          -( this%pcm%epsilon_0/(this%pcm%epsilon_0 - M_ONE) )*this%pcm%qtot_n
+
+    call pcm_pot_rs( this%pcm%v_n_rs, this%pcm%q_n, this%pcm%tess, this%pcm%n_tesserae, gr%mesh )
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate

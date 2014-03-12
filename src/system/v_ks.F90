@@ -1130,7 +1130,7 @@ contains
 
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm) then
-
+    !> Generates the real-space PCM potential due to electrons during the SCF calculation.
         call v_electrons_cav(hm%pcm%v_e, pot, hm%pcm)
         call pcm_charges(hm%pcm%q_e, hm%pcm%qtot_e, hm%pcm%v_e, hm%pcm%matrix, hm%pcm%n_tesserae) 
         write(hm%pcm%info_unit,'(1X,A36,F12.8)') &
@@ -1138,7 +1138,7 @@ contains
 
         call pcm_pot_rs( hm%pcm%v_e_rs, hm%pcm%q_e, hm%pcm%tess, hm%pcm%n_tesserae, ks%gr%mesh )
 
-    endif !< pcm contribution
+    endif
 
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy

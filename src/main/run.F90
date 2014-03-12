@@ -39,7 +39,6 @@ module run_m
   use phonons_fd_m
   use phonons_lr_m
   use poisson_m
-  use pcm_m 
   use kdotp_m
   use gcm_m
   use profiling_m
@@ -253,8 +252,6 @@ contains
       end if
       call restart_init()
     end if
-    ! initializes PCM
-    call pcm_init(sys%geo, sys%gr, hm%pcm, calc_mode_id) 
 
     POP_SUB(run_init)
 

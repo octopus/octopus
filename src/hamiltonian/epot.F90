@@ -50,7 +50,6 @@ module epot_m
   use profiling_m
   use projector_m
   use ps_m
-  use pcm_m 
   use simul_box_m
   use solids_m
   use species_m

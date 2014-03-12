@@ -39,15 +39,17 @@ module pcm_m
 
   public :: pcm_t,           &
             pcm_init,        &
-            v_nuclei_cav,    &
-            v_electrons_cav, &
+            pcm_end,         &
             pcm_charges,     &
-            pcm_pot_rs
+            pcm_pot_rs,      &
+            v_nuclei_cav,    &
+            v_electrons_cav
+
 
  !> The cavity hosting the solute molecule is built from a set of 
- !  interlocking spheres with optimized radii centered at the nuclear positions.  
+ !! interlocking spheres with optimized radii centered at the nuclear positions.  
   type, public :: sphere_t  
-    FLOAT :: x(MAX_DIM) !< center of the sphere  
+    FLOAT :: x(MAX_DIM) !< center of the sphere
     FLOAT :: r          !< radius of the sphere (different for each species)
   end type
 
@@ -77,7 +79,7 @@ module pcm_m
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                        :: epsilon_infty !< Infnite-frequency dielectric constant of the solvent 
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
-                                                  !  at the tesserae representative points 
+                                                  !! at the tesserae representative points 
     integer, allocatable         :: ind_vh(:,:)   !< Grid points used during interpolation 
     integer                      :: info_unit     !< unit for pcm info file 
     character(len=80)            :: input_cavity  !< file name containing the geometry of the VdW cavity
@@ -97,11 +99,10 @@ module pcm_m
 contains
 
   !-------------------------------------------------------------------------------------------------------
-  !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix
-  subroutine pcm_init(geo, grid, pcm, cm)
+  !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
+  subroutine pcm_init(pcm, geo, grid)
     type(geometry_t), intent(in) :: geo
     type(grid_t), intent(in)     :: grid
-    integer, intent(in)          :: cm
     type(pcm_t), intent(out)     :: pcm
 
     integer :: ia
@@ -113,6 +114,7 @@ contains
     integer :: iunit
     integer :: vdw_unit
     integer :: grid_unit
+    integer :: pcm_calc_mode
 
     integer, parameter :: mxts = 10000
     integer, parameter :: CM_GS_PCM = 1
@@ -137,11 +139,14 @@ contains
     !% only for ground state calculations. Experimental.
     !%End
     call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
+
+    call parse_integer('CalculationMode', CM_GS_PCM, pcm_calc_mode) !temporal
+
     if (pcm%run_pcm) then
       if (grid%sb%box_shape /= MINIMUM) then
           message(1) = "PCM is only available for BoxShape = minimum"
           call messages_fatal(1)
-      else if (cm /= CM_GS_PCM) then
+      else if (pcm_calc_mode /= CM_GS_PCM) then
           message(1) = "PCM is only available for ground state calculations"
           call messages_fatal(1)
       else 
@@ -154,7 +159,7 @@ contains
 
     rcav_C = CNST(2.4)*P_Ang    ! 
     rcav_O = CNST(1.8)*P_Ang    !    
-    rcav_N = CNST(1.9)*P_Ang    ! Agnstrom -> Bohr 
+    rcav_N = CNST(1.9)*P_Ang    ! Angstrom -> Bohr 
     rcav_S = CNST(2.0175)*P_Ang !
     rcav_F = CNST(1.682)*P_Ang  ! 
 
@@ -285,9 +290,6 @@ contains
 
     call io_close(cav_unit_test)
 
-    !> Creating the list of the nearest grid points to each tessera
-    !  to be used to "interpolate" the Hartree potential at the representative points
-
     pcm%n_vertices = 8
     SAFE_ALLOCATE( pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices) )
     pcm%ind_vh = INT(M_ZERO)
@@ -309,6 +311,8 @@ contains
     nearest_idx_unit    = io_open('pcm/nearest_index.dat', action='write')
     idx_from_coord_unit = io_open('pcm/index_from_coords.dat', action='write')
 
+    !> Creating the list of the nearest grid points to each tessera
+    !! to be used to "interpolate" the Hartree potential at the representative points
      do ia = 1, pcm%n_tesserae
         call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), ia, pcm%n_vertices )
      enddo
@@ -318,7 +322,7 @@ contains
 
     SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
-    call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) ! Calculates the PCM response matrix
+    call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
 
@@ -331,7 +335,6 @@ contains
      enddo
 	 
     call io_close(pcmmat_unit)
-!    call io_close(pcm%info_unit)
 
     SAFE_ALLOCATE( pcm%v_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_n(1:pcm%n_tesserae) )
@@ -339,16 +342,6 @@ contains
     pcm%v_n    = M_ZERO
     pcm%q_n    = M_ZERO
     pcm%v_n_rs = M_ZERO
-
-    !> Here we generate the real-space PCM potential due to nuclei which do not change
-    !  during the SCF calculation.
-    call v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
-    call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae)
-
-    write(pcm%info_unit,'(1X,A33,F12.8)') &
-                         "Nuclear molecular charge Q_M^n = ", -(pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_n
-
-    call pcm_pot_rs( pcm%v_n_rs, pcm%q_n, pcm%tess, pcm%n_tesserae, grid%mesh )
 
     SAFE_ALLOCATE( pcm%v_e(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_e(1:pcm%n_tesserae) )
@@ -360,10 +353,10 @@ contains
     POP_SUB(pcm_init)
     return
   end subroutine pcm_init
-!==============================================================
+!=======================================================================================
+  !> Calculates the Hartree potential at the tessera representative points by taking the 
+  !! average of 'v_hartree' over the closest 8 (cube vertices) grid points. 
   subroutine v_electrons_cav(v_e_cav, v_hartree, pcm)
-   !> Calculates the Hartree potential at the tessera representative points by taking the 
-   !  average of 'v_hartree' over the closest 8 (cube vertices) grid points. 
     type(pcm_t), intent(in)  :: pcm
     FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
     FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
@@ -380,18 +373,15 @@ contains
            v_e_cav(ia) = v_e_cav(ia) + v_hartree( pcm%ind_vh(ia,ib) )
         enddo
 
-        v_e_cav(ia) = -v_e_cav(ia)/pcm%n_vertices !< taking the average of the Hartree potential
-                                                  !  on the nearest cube vertices. Notice the
-                                                  !  explicit minus sign. 
+        v_e_cav(ia) = -v_e_cav(ia)/pcm%n_vertices !Notice the explicit minus sign. 
       enddo
 
     POP_SUB(v_electrons_cav)
   end subroutine v_electrons_cav      
 !==================================================================
+  !> Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
+  !! v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
   subroutine v_nuclei_cav(v_n_cav, geo, tess, n_tess)
-   !> Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
-   !  v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
-
     FLOAT, intent(out)           :: v_n_cav(:) !< (1:n_tess)
     type(geometry_t), intent(in) :: geo
     type(tessera_t), intent(in)  :: tess(:)    !< (1:n_tess)
@@ -425,10 +415,10 @@ contains
 
     POP_SUB(v_nuclei_cav)
   end subroutine v_nuclei_cav
-!==============================================================
+!==================================================================
+  !> Creating the list of the nearest 8 cube vertices in real-space 
+  !! to calculate the Hartree potential at 'point'
   subroutine nearest_cube_vertices(point, mesh, vert_idx, ia, n_vertices)
-   !> Creating the list of the nearest 8 cube vertices in real-space 
-   !  to calculate the Hartree potential at 'point'
    FLOAT, intent(in)        :: point(1:MAX_DIM)
    type(mesh_t), intent(in) :: mesh
    integer, intent(out)     :: vert_idx(:)
@@ -515,12 +505,11 @@ contains
    POP_SUB(nearest_cube_vertices)    
   
   end subroutine nearest_cube_vertices
-!==============================================================
+!==============================================================================================
+ !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
+ !! provided the value of the molecular electrostatic potential at 
+ !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
   subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess)
-   !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
-   !  provided the value of the molecular electrostatic potential at 
-   !  the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
-
     FLOAT, intent(out)   :: q_pcm(:)     !< (1:n_tess)
     FLOAT, intent(out)   :: q_pcm_tot
     FLOAT, intent(in)    :: v_cav(:)     !< (1:n_tess)
@@ -544,10 +533,9 @@ contains
     
     POP_SUB(pcm_charges)
   end subroutine pcm_charges
-!==============================================================
+!==================================================
+  !> Generates the potential 'v_pcm' in real-space.
   subroutine pcm_pot_rs(v_pcm, q_pcm, tess, n_tess, mesh)
-   !> Generates the potential 'v_pcm' in real-space.
-
     FLOAT,           intent(out) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
     FLOAT,           intent(in)  :: q_pcm(:)!< (1:n_tess)
     integer,         intent(in)  :: n_tess  
@@ -585,9 +573,9 @@ contains
 
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
-!==============================================================
+!=====================================================================================
+  !> Generates the PCM response matrix. J. Tomassi et al. Chem. Rev. 105, 2999 (2005). 
   subroutine pcm_matrix(eps, tess, n_tess, pcm_mat )
-   !> Generates the PCM response matrix.
     FLOAT, intent(in)           :: eps
     type(tessera_t), intent(in) :: tess(:)      !< (1:n_tess)
     integer, intent(in)         :: n_tess
@@ -601,23 +589,23 @@ contains
 
     PUSH_SUB(pcm_matrix)
 
-!   Conforming the S_I matrix
+    !> Conforming the S_I matrix
     SAFE_ALLOCATE( s_mat_act(1:n_tess, 1:n_tess) )
     call s_i_matrix(n_tess, tess)
 
-!   Defining the matrix S_E=S_I/eps
+    !> Defining the matrix S_E=S_I/eps
     SAFE_ALLOCATE( Sigma(1:n_tess, 1:n_tess) )
     Sigma = s_mat_act/eps
 
-!   Conforming the D_I matrix
+    !> Conforming the D_I matrix
     SAFE_ALLOCATE( d_mat_act(1:n_tess, 1:n_tess) )
     call d_i_matrix(n_tess, tess)
 
-!   Defining the matrix D_E=D_I 
+    !> Defining the matrix D_E=D_I 
     SAFE_ALLOCATE( Delta(1:n_tess, 1:n_tess) )
     Delta = d_mat_act
 
-!   Start conforming the PCM matrix
+    !> Start conforming the PCM matrix
     pcm_mat = -d_mat_act
 
     do i=1, n_tess
@@ -628,15 +616,15 @@ contains
      
     SAFE_ALLOCATE( iwork(1:n_tess) )
 
-!   Solving for X = S_I^-1*(2*Pi - D_I) 
-
+    !> Solving for X = S_I^-1*(2*Pi - D_I) 
     call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
 
     SAFE_DEALLOCATE_A(iwork)
 
     SAFE_DEALLOCATE_A(s_mat_act)
 
-    pcm_mat = -matmul( Sigma, pcm_mat ) ! Computing -S_E*S_I^-1*(2*Pi - D_I)
+    !> Computing -S_E*S_I^-1*(2*Pi - D_I)
+    pcm_mat = -matmul( Sigma, pcm_mat ) 
      
     do i=1, n_tess
        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
@@ -667,10 +655,9 @@ contains
     SAFE_DEALLOCATE_A(Sigma)
     SAFE_DEALLOCATE_A(Delta)
 
-!   Solving for [(2*pi - D_E)*S_I + S_E*(2*Pi + D_I*)]*X = [(2*Pi - D_E) - S_E*S_I^-1*(2*Pi - D_I)]    
-
     SAFE_ALLOCATE( iwork(1:n_tess) )
 
+    !> Solving for [(2*pi - D_E)*S_I + S_E*(2*Pi + D_I*)]*X = [(2*Pi - D_E) - S_E*S_I^-1*(2*Pi - D_I)]    
     call dgesv(n_tess, n_tess, mat_tmp, n_tess, iwork, pcm_mat, n_tess, info)		  		  
 
     SAFE_DEALLOCATE_A(iwork)
@@ -722,9 +709,10 @@ contains
     enddo
 
   end subroutine d_i_matrix
-!==============================================================
+!===========================================
+  !> electrostatic Green function in vacuo:
+  !! G_I(r,r^\prime) = 1 / | r - r^\prime |
   FLOAT function s_mat_elem_I( tessi, tessj )
-   !> electrostatic Green function in vacuo G_I(r,r^\prime) = 1 / | r - r^\prime |
     type(tessera_t), intent(in) :: tessi
     type(tessera_t), intent(in) :: tessj
 
@@ -758,13 +746,11 @@ contains
 
     return
     end function s_mat_elem_I
-!==============================================================
-
+!=================================================================
+  !> Gradient of the Green function in vacuo GRAD[G_I(r,r^\prime)]
   FLOAT function d_mat_elem_I( tessi, tessj )
-   !> Gradient of the Green function in vacuo GRAD[G_I(r,r^\prime)]
     type(tessera_t), intent(in) :: tessi
     type(tessera_t), intent(in) :: tessj
-
 
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
@@ -783,13 +769,13 @@ contains
     dist = sqrt(dist)
 
     IF (dist == M_ZERO) THEN
-        ! Diagonal matrix elements  
+        !> Diagonal matrix elements  
         d_diag = M_SD_DIAG*sqrt(M_FOUR*M_Pi*tessi%area)
         d_diag = -d_diag/(M_TWO*tessi%r_sphere)
         d_mat_elem_I = d_diag
    
     else
-        ! off-diagonal matrix elements  
+        !> off-diagonal matrix elements  
         if (dist > M_DIST_MIN) then
             d_off_diag = dot_product( diff, tessj%n(:) )	
             d_off_diag = d_off_diag*tessj%area/dist**3
@@ -802,5 +788,25 @@ contains
     return
     end function d_mat_elem_I
 !==============================================================
+  subroutine pcm_end(pcm)
+    type(pcm_t), intent(inout) :: pcm
+
+    PUSH_SUB(pcm_end)
+
+     SAFE_DEALLOCATE_A(pcm%spheres)
+     SAFE_DEALLOCATE_A(pcm%tess)
+     SAFE_DEALLOCATE_A(pcm%matrix)
+     SAFE_DEALLOCATE_A(pcm%q_e)
+     SAFE_DEALLOCATE_A(pcm%q_n) 
+     SAFE_DEALLOCATE_A(pcm%v_e)
+     SAFE_DEALLOCATE_A(pcm%v_n)
+     SAFE_DEALLOCATE_A(pcm%v_e_rs)
+     SAFE_DEALLOCATE_A(pcm%v_n_rs)
+     SAFE_DEALLOCATE_A(pcm%ind_vh)
+
+     call io_close(pcm%info_unit)
+
+    POP_SUB(pcm_end)
+  end subroutine pcm_end
 
 end module pcm_m
