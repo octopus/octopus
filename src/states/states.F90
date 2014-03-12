@@ -1401,15 +1401,15 @@ contains
       call messages_info()
       do ib = 1, st%group%nblocks
         call messages_write('      Block ')
-        call messages_write(ib)
+        call messages_write(ib, fmt = 'i8')
         call messages_write(' contains ')
-        call messages_write(st%group%block_size(ib))
+        call messages_write(st%group%block_size(ib), fmt = 'i8')
         call messages_write(' states')
         if(st%group%block_size(ib) > 0) then
           call messages_write(':')
-          call messages_write(st%group%block_range(ib, 1))
+          call messages_write(st%group%block_range(ib, 1), fmt = 'i8')
           call messages_write(' - ')
-          call messages_write(st%group%block_range(ib, 2))
+          call messages_write(st%group%block_range(ib, 2), fmt = 'i8')
         endif
         call messages_info()
       end do
