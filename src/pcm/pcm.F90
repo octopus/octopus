@@ -140,15 +140,15 @@ contains
     !%End
     call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
 
-    call parse_integer('CalculationMode', CM_GS_PCM, pcm_calc_mode) !temporal
+!    call parse_integer('CalculationMode', CM_GS_PCM, pcm_calc_mode) !temporal
 
     if (pcm%run_pcm) then
       if (grid%sb%box_shape /= MINIMUM) then
           message(1) = "PCM is only available for BoxShape = minimum"
           call messages_fatal(1)
-      else if (pcm_calc_mode /= CM_GS_PCM) then
-          message(1) = "PCM is only available for ground state calculations"
-          call messages_fatal(1)
+!      else if (pcm_calc_mode /= CM_GS_PCM) then
+!          message(1) = "PCM is only available for ground state calculations"
+!          call messages_fatal(1)
       else 
           call messages_experimental("polarizable continuum model")
       endif
