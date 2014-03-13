@@ -75,7 +75,7 @@ int get_real(char *s, double *d)
 
 static int oct_parser_lex (){
   int c;
-  char *symbuf = 0;
+  char *symbuf = 0, *symbuf2 = 0;
   int length = 0;
   
   /* Ignore whitespace, get first nonwhite character.  */
@@ -145,7 +145,13 @@ static int oct_parser_lex (){
       /* If buffer is full, make it larger.        */
       if (i == length){
 	length *= 2;
-	symbuf = (char *)realloc (symbuf, length + 1);
+	symbuf2 = (char *)realloc (symbuf, length + 1);
+	if (symbuf2 == NULL) {
+	  fprintf(stderr, "Error: failed to reallocate buffer to size %i", length);
+	  exit(1);
+	} else {
+	  symbuf = symbuf2;
+	}
       }
       /* Add this character to the buffer.         */
       symbuf[i++] = c;
