@@ -429,13 +429,13 @@ contains
     end if
     
     !Enlarge the bounding box region
-    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*mask%enlarge 
+    mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge)
     
     
     select case(mask%pw_map_how)
     case(PW_MAP_FFT)
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll)
-      mask%ll = ll !FFT optimization may change this values
+      mask%ll = ll !FFT optimization may change these values
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global 
       

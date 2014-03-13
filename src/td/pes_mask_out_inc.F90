@@ -148,13 +148,10 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   integer :: ist, ik, kx, ky, kz, idim
   FLOAT   :: scale
   FLOAT, pointer :: PESKloc(:,:,:)
-  character(len=128) :: file
-
 
 ! #ifdef HAVE_MPI
 !   type(profile_t), save :: reduce_prof
 ! #endif
-  
 
   PUSH_SUB(PES_mask_create_full_map)
 
