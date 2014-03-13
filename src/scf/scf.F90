@@ -1108,7 +1108,7 @@ contains
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
-          if (st%d%nik * st%smear%el_per_state /= 2) then
+          if (gr%sb%kpoints%full%npoints > 1) then
             write(iunit, '(a)') &
               "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
             write(iunit, '(a)') &
