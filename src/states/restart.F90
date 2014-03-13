@@ -589,7 +589,7 @@ contains
 
     message(1) = 'Info: Loading restart information'
     if(len(trim(label_)) > 0) then
-      message(1) = trim(message(1)) // trim(label)
+      message(1) = trim(message(1)) // trim(label_)
     endif
     message(1) = trim(message(1)) // "."
     call messages_info(1)
