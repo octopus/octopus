@@ -86,6 +86,8 @@ contains
     FLOAT, allocatable  :: coordinates(:, :), center(:, :)
     logical      :: too_close
 
+    PUSH_SUB(generate_liquid)
+
     ! we read the density in sensible units
     gr_per_cm3%factor = CNST(162.67263)
     gr_per_cm3%abbrev = 'gr/cm^3'
@@ -271,7 +273,9 @@ contains
 
     SAFE_DEALLOCATE_A(coordinates)
 
+    POP_SUB(generate_liquid)
   end subroutine generate_liquid
+
 end program liquid
 
 !! Local Variables:

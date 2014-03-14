@@ -134,6 +134,8 @@
 
       FLOAT :: charge
 
+      PUSH_SUB(read_dipole)
+
       ! Opens the coordinates files.
       iunit = io_open('td.general/multipoles', action='read')
 
@@ -176,6 +178,8 @@
       write (message(1), '(a)') "Read dipole moment from '"// &
         trim(io_workpath('td.general/multipoles'))//"'."
       call messages_info(1)
+
+      POP_SUB(read_dipole)
     end subroutine read_dipole
 
     ! -------------------------------------------------
@@ -187,6 +191,8 @@
 
       FLOAT :: ww, av, dt
       integer :: ifreq, count
+
+      PUSH_SUB(fourier)
 
       !apply an envelope
       do jj = ini_iter, end_iter
@@ -207,7 +213,7 @@
         fi(jj) = fi(jj) - av/(dt*count) 
       end do
 
-      write (message(1), '(a)') "Taking the fourier transform."
+      write (message(1), '(a)') "Taking the Fourier transform."
       call messages_info(1)
 
       !now calculate the FT
@@ -225,6 +231,7 @@
       write (message(1), '(a)') "Done."
       call messages_info(1)
 
+      POP_SUB(fourier)
     end subroutine fourier
 
   end program infrared

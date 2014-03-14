@@ -277,6 +277,8 @@
       FLOAT, intent(out) :: vaf(:)
       integer :: itm, itn
 
+      PUSH_SUB(calculate_vaf)
+
       write (message(1), '(a)') "Read velocities from '"// &
         trim(io_workpath('td.general/coordinates'))//"'"
       call messages_info(1)
@@ -306,6 +308,7 @@
       end do
       vaf(1) = M_ONE
 
+      POP_SUB(calculate_vaf)
     end subroutine calculate_vaf
 
   end program vibrational
