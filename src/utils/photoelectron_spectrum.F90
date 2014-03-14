@@ -59,14 +59,9 @@ program photoelectron_spectrum
   call global_init(is_serial = .true.)
   call parser_init()
   
-  if(parse_block('CalculationMode', blk) == 0) then
-    call datasets_init(3, blk)
-  else
-    call datasets_init(3)
-  end if
+  call datasets_init(1)
   
   call io_init()
-  call io_init_datasets()
 
   call messages_init()
 
@@ -225,11 +220,6 @@ program photoelectron_spectrum
 
   contains
 
-
-
-    ! ===============================
-    ! = get the laser polarization  =
-    ! ===============================
     subroutine get_laser_polarizaion(lPol)
        FLOAT,   intent(out) :: lPol(:) 
        
@@ -239,7 +229,7 @@ program photoelectron_spectrum
         PUSH_SUB(get_laser_polarization)
         
         no_l = 0
-        if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
+        if(parse_block('TDExternalFields', blk) == 0) then
           no_l = parse_block_n(blk)
 
           call parse_block_float(blk, 0, 1, lPol(1))
@@ -251,7 +241,7 @@ program photoelectron_spectrum
         end if
         
         if(no_l > 1) then
-          message(1)="There are more the one external field. Polarization will be selected "
+          message(1)="There is more than one external field. Polarization will be selected"
           message(2)="from the first field. Use -V to change axis."
           call messages_info(2)
         end if
@@ -279,7 +269,6 @@ program photoelectron_spectrum
           write(ch,'(i1)') ivar
       end select
     end function index2var
-
 
 end program photoelectron_spectrum
 

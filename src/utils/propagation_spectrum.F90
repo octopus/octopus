@@ -80,38 +80,38 @@ program propagation_spectrum
 
   contains
 
-    !/*----------------------------------------------------------------------------
-    ! Two spectra can be calculated with these routines: photoabsorption spectrum
-    ! or the dynamic struture factor. This is controlled by the input variable
-    ! PropagationSpectrumType. In the photoabsorption case the calculation
-    ! goes as follows: start the search for the file(s) that must be processed.
-    ! In a future version of octopus, this could be controlled by a
-    ! command-line option. The routine sets the eq_axes and calculate_tensor
-    ! variables, as well as the in_file unit numbers.
-    !
-    ! The options are:
-    ! (i)  A file called "multipoles" is found. In this case, no other file is
-    !      considered.
-    !      (i.1) If this file signals three equivalent axes, the full tensor is
-    !            calculated, and placed in "cross_section_tensor".
-    !      (i.2) If this file signals fewer than three equivalent axes, the full
-    !            tensor cannot be calculated, and instead a "cross_section_vector"
-    !            will be generated.
-    ! (ii) A file called "multipoles.1" is found. In this case, the program will
-    !      always try to generate the full tensor (calculate_tensor = .true.).
-    !      The file "cross_section_tensor" should be generated at the end.
-    !      Other files are searched for, depending on the equivalent axes that
-    !      are written in the "multipoles.1" file.
-    !      (ii.1) Three equivalent axes. No other file is searched for.
-    !      (ii.2) Two equivalent axes. File "multipoles.2" is searched for; the
-    !             program ends if it is not found.
-    !      (ii.3) No equivalent axes. Files "multipoles.2" and "multipoles.3" are
-    !             searched for; the program ends if they are not found.
-    ! In the case of dynamic structure factor calculation the program looks for
-    ! ftchds.cos and ftchds.sin. In the future versions it should also look for
-    ! the files ftchds.lXX_mYY, which would be used to obtain the directionally
-    ! averaged dynamic structure factor.
-    !---------------------------------------------------------------------------*/!
+    !>----------------------------------------------------------------------------
+    !! Two spectra can be calculated with these routines: photoabsorption spectrum
+    !! or the dynamic struture factor. This is controlled by the input variable
+    !! PropagationSpectrumType. In the photoabsorption case the calculation
+    !! goes as follows: start the search for the file(s) that must be processed.
+    !! In a future version of octopus, this could be controlled by a
+    !! command-line option. The routine sets the eq_axes and calculate_tensor
+    !! variables, as well as the in_file unit numbers.
+    !!
+    !! The options are:
+    !! (i)  A file called "multipoles" is found. In this case, no other file is
+    !!      considered.
+    !!      (i.1) If this file signals three equivalent axes, the full tensor is
+    !!            calculated, and placed in "cross_section_tensor".
+    !!      (i.2) If this file signals fewer than three equivalent axes, the full
+    !!            tensor cannot be calculated, and instead a "cross_section_vector"
+    !!            will be generated.
+    !! (ii) A file called "multipoles.1" is found. In this case, the program will
+    !!      always try to generate the full tensor (calculate_tensor = .true.).
+    !!      The file "cross_section_tensor" should be generated at the end.
+    !!      Other files are searched for, depending on the equivalent axes that
+    !!      are written in the "multipoles.1" file.
+    !!      (ii.1) Three equivalent axes. No other file is searched for.
+    !!      (ii.2) Two equivalent axes. File "multipoles.2" is searched for; the
+    !!             program ends if it is not found.
+    !!      (ii.3) No equivalent axes. Files "multipoles.2" and "multipoles.3" are
+    !!             searched for; the program ends if they are not found.
+    !! In the case of dynamic structure factor calculation the program looks for
+    !! ftchds.cos and ftchds.sin. In the future versions it should also look for
+    !! the files ftchds.lXX_mYY, which would be used to obtain the directionally
+    !! averaged dynamic structure factor.
+    !!---------------------------------------------------------------------------
     subroutine read_files(fname, reffname)
       character(len=*), intent(in) :: fname
       character(len=*), intent(in) :: reffname
