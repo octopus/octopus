@@ -548,11 +548,11 @@ contains
     character(len=*), optional, intent(in)    :: label
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
-    integer              :: iread, nread
+    integer              :: iread, nread, ierr_stat
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
-    character(len=256)   :: line, label_
+    character(len=256)   :: line, label_, mod_time, occ_filename
     character(len=50)    :: str
     integer, pointer     :: map(:)
 
@@ -649,12 +649,23 @@ contains
       ierr = -1
     endif
 
-    occ_file = io_open(trim(dir)//'/occs', action='read', &
+    occ_filename = trim(dir)//'/occs'
+    occ_file = io_open(trim(occ_filename), action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
     if(occ_file < 0) then
       write(message(1),'(a)') 'Cannot open restart file "occs".'
       call messages_warning(1)
       ierr = -1
+    else
+      call loct_stat(ierr_stat, trim(occ_filename), mod_time)
+      ! I have no idea why this could happen, but seems wise to check it.
+      if(ierr_stat /= 0) then
+        write(message(1),'(a)') 'Cannot open restart file "occs" (from C).'
+        call messages_warning(1)
+      else
+        message(1) = "Restart info was written at " // trim(mod_time)
+        call messages_info(1)
+      endif
     endif
 
     call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)

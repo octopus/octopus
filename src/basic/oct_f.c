@@ -82,15 +82,37 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
 }
 
 void FC_FUNC_(oct_stat, OCT_STAT)
-	(fint *ierr, STR_F_TYPE name STR_ARG1)
+     (fint *ierr, STR_F_TYPE name, STR_F_TYPE mod_time STR_ARG2)
 {
-  char *name_c;
+  char *name_c, *mod_time_c;
   struct stat statbuf;
+  time_t mtime;
+  struct tm * timeinfo;
 
   TO_C_STR1(name, name_c);
-  /* for the moment we are only interested in the return value
-     could be extended if required. */
   *ierr = stat(name_c, &statbuf);
+  free(name_c);
+
+  if(*ierr == 0)
+  {
+    mtime = statbuf.st_mtime; /* last modification time */
+    timeinfo = localtime(&mtime);
+    mod_time_c = asctime(timeinfo);
+  }
+  else
+  {
+    perror(name_c); /* what is the problem? */
+    mod_time_c = malloc(sizeof(char));
+    mod_time_c[0] = '\0';
+  }
+
+  TO_F_STR2(mod_time_c, mod_time);
+  if(*ierr != 0)
+  {
+    printf("ierr = %i\n", *ierr);
+    free(mod_time_c);
+  }
+  /* otherwise, do not do this since 'mod_time_c' points at static data of asctime */
 }
 
 void FC_FUNC_(oct_rm, OCT_RM)
