@@ -1168,12 +1168,8 @@ program oscillator_strength
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
-  in_debug_mode = .false.
   call io_init(defaults = .true.)
   call datasets_init(1)
-  if(in_debug_mode) then
-     call io_mkdir('debug')
-  end if
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
