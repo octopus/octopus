@@ -118,7 +118,7 @@ contains
     
     SAFE_ALLOCATE(this%co(this%interpolation_min:this%interpolation_max))
 
-    call calc_coefficients
+    call calc_coefficients()
 
     POP_SUB(double_grid_init)
 

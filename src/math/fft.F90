@@ -253,7 +253,7 @@ contains
     end do
 
 #ifdef HAVE_PFFT
-    call pfft_cleanup
+    call pfft_cleanup()
 #endif
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)

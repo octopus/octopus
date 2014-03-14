@@ -291,11 +291,11 @@ contains
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
-      call taylor_series
+      call taylor_series()
     case(EXP_LANCZOS)
-      call lanczos
+      call lanczos()
     case(EXP_CHEBYSHEV)
-      call cheby
+      call cheby()
     end select
 
     call profiling_out(exp_prof)
@@ -434,7 +434,7 @@ contains
     ! ---------------------------------------------------------
 
     ! ---------------------------------------------------------
-    subroutine lanczos
+    subroutine lanczos()
       integer ::  iter, l, idim
       CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :), psi(:, :)
       FLOAT :: beta, res, tol !, nrm

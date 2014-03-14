@@ -56,13 +56,11 @@ program dielectric_function
   call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
-  if(ierr == 0) call getopt_dielectric_function
+  if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
   call parser_init()
   call messages_init()
-
-  call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
 
   call datasets_init(1)
   call io_init()

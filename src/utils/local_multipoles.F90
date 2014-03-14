@@ -62,8 +62,6 @@ program oct_local_multipoles
   call parser_init()
   call messages_init()
 
-  call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
-
   call datasets_init(1)
   call io_init()
 

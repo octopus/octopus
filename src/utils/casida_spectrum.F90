@@ -53,7 +53,7 @@ program casida_spectrum
   call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
-  if(ierr == 0) call getopt_casida_spectrum
+  if(ierr == 0) call getopt_casida_spectrum()
   call getopt_end()
 
   call parser_init()
