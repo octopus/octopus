@@ -472,7 +472,7 @@ contains
         message(2) = 'not yet possible.'
         call messages_fatal(2)
       end if
-      call init_lead_h
+      call init_lead_h()
     end if
 
     !%Variable StatesPack
