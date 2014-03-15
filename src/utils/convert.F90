@@ -61,7 +61,6 @@ program oct_convert
   call getopt_end()
 
   call global_init()
-  call calc_mode_init()
   call messages_init()
 
   !%Variable ConvertMode
@@ -75,7 +74,6 @@ program oct_convert
   !% folder) in the format given by <tt>OutputHow</tt>.
   !%End
   call parse_integer('ConvertMode', CONV_FROM_BINARY, conv_mode)
-  call datasets_init(conv_mode)  
 
   call io_init()
   call profiling_init()
@@ -105,9 +103,7 @@ program oct_convert
   call profiling_end()
   call io_end()
   call print_date("Calculation ended on ")
-  call datasets_end()
   call messages_end()
-  call calc_mode_end()
   call global_end()
 
 contains
@@ -202,7 +198,7 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The original filename which is going to convert in the formats 
-    !% specified in OutputHow
+    !% specified in <tt>OutputHow</tt>.
     !%End
     call parse_string(datasets_check('ConvertRefFileName'), 'density', refname)
     if ( refname == " " ) refname = ""
@@ -212,7 +208,7 @@ contains
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% The reference file that is going to be used to subtract from
+    !% The reference file that is going to be used to subtract from.
     !%End
     call parse_logical(datasets_check('ConvertSubtractFile'), .false., subtract_file)
 
@@ -221,7 +217,7 @@ contains
     !%Default [blank]
     !%Section Utilities::oct-convert
     !%Description
-    !% The folder name which is going to be subtracted
+    !% The folder name which is going to be subtracted.
     !%End
     call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
     if ( ref_folder == " " ) ref_folder = ""
