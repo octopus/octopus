@@ -42,7 +42,6 @@ program rotational_strength
   if(ierr == 0) call getopt_rotatory_strength()
   call getopt_end()
 
-  call parser_init()
   call messages_init()
   call datasets_init(1)
   call io_init()
@@ -65,7 +64,6 @@ program rotational_strength
   call io_end()
   call datasets_end()
   call messages_end()
-  call parser_end()
   call global_end()
 end program rotational_strength
 

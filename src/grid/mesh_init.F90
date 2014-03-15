@@ -890,7 +890,6 @@ contains
       write(message(2),'(a)') "If you want to run your system, you don`t have to use MeshPartitionVirtualSize"
       call messages_warning(2)
       call messages_end()
-      call parser_end()
       call global_end()
       stop
     end if

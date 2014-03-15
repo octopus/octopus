@@ -62,7 +62,6 @@ program oct_convert
 
   call global_init()
   call calc_mode_init()
-  call parser_init()
   call messages_init()
 
   !%Variable ConvertMode
@@ -108,7 +107,6 @@ program oct_convert
   call print_date("Calculation ended on ")
   call datasets_end()
   call messages_end()
-  call parser_end()
   call calc_mode_end()
   call global_end()
 

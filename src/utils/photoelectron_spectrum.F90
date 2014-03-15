@@ -57,7 +57,6 @@ program photoelectron_spectrum
   interpol = .true. 
 
   call global_init(is_serial = .true.)
-  call parser_init()
   
   call datasets_init(1)
   
@@ -213,7 +212,7 @@ program photoelectron_spectrum
 
   call io_end()
   call datasets_end()
-  call parser_end()
+  call messages_end()
   call global_end()
   
   SAFE_DEALLOCATE_A(PESK)    

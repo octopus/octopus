@@ -47,7 +47,6 @@ program octopus
   call getopt_end()
 
   call global_init()
-  call parser_init()
   call messages_init()
 
   !%Variable ReportMemory
@@ -185,7 +184,6 @@ program octopus
 
   call datasets_end()
   call messages_end()
-  call parser_end()
   call global_end()
 
 contains

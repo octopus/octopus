@@ -118,6 +118,8 @@ contains
   !> datasets cannot be used since they have not been initialized yet
   subroutine messages_init()
 
+    call parser_init()
+
     call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
@@ -232,6 +234,8 @@ contains
       close(iunit_out)
  
     end if
+
+    call parser_end()
   
   end subroutine messages_end
 

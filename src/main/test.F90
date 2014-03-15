@@ -67,7 +67,6 @@ program oct_test
 
   call global_init()
   call calc_mode_init()
-  call parser_init()
   call messages_init()
 
   call messages_obsolete_variable('WhichTest', 'TestMode')
@@ -140,7 +139,6 @@ program oct_test
   call print_date("Calculation ended on ")
   call datasets_end()
   call messages_end()
-  call parser_end()
   call calc_mode_end()
   call global_end()
 

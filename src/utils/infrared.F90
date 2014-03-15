@@ -57,7 +57,6 @@
 
     call getopt_end()
 
-    call parser_init()
     call messages_init()
 
     call datasets_init(1)
@@ -124,7 +123,6 @@
     call io_end()
     call datasets_end()
     call messages_end()
-    call parser_end()
     call global_end()
 
   contains
