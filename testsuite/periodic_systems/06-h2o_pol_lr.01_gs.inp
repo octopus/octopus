@@ -13,6 +13,7 @@ BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3
 SCFCalculateDipole = yes
+Preconditioner = no
 
 %KPointsGrid
 1 | 1 | 1
