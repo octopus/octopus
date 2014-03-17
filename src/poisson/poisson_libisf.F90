@@ -35,6 +35,7 @@ module poisson_libisf_m
 #ifdef HAVE_LIBISF
   !! From BigDFT
   use poisson_solver
+  use dynamic_memory
 #endif
 
   implicit none
@@ -124,6 +125,8 @@ contains
         this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
     call pkernel_set(this%kernel,.false.)
 
+    ! Do not output the malloc.prc ISF profiling file
+    call f_set_status(output_level=0,iproc=mpi_world%rank)
 
     POP_SUB(poisson_libisf_init)
 #endif
