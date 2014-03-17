@@ -622,7 +622,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
   integer :: imat, jmat, iatom, idir, jdir
   FLOAT, allocatable :: vloc(:)
   R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :)
-  R_TYPE :: dot
+  FLOAT :: dot
 
   PUSH_SUB(X(ionic_pert_matrix_elements_2))
 
@@ -654,16 +654,14 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
         !2<f|dj^T v di |f>
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*gpsi(ip, idim, idir)
         call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
-        dot = dot + CNST(2.0)*X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1)
+        dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1))
 
         !2<f|di^T dj^T v |f> 
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim, ist)
         call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi(:, :, ist), tmp1, ik)
-        dot = dot + CNST(2.0)*X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1)
+        dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1))
 
-        dot = dot*st%occ(ist, ik)*factor
-        
-        matrix(jmat, imat) = matrix(jmat, imat) + dot
+        matrix(jmat, imat) = matrix(jmat, imat) + dot*st%occ(ist, ik)*factor
 
       end do
 
