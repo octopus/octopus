@@ -406,10 +406,9 @@ contains
   
   
   ! ---------------------------------------------------------
-  ! Implements the SOS formula of the polarizability, and writes
-  ! down to the "polarizability" file the real and imaginary part
-  ! of the dynamical polarizability.
-  ! ---------------------------------------------------------
+  !> Implements the SOS formula of the polarizability, and writes
+  !! down to the "polarizability" file the real and imaginary part
+  !! of the dynamical polarizability.
   subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
     integer, intent(in) :: nfrequencies, nresonances
     FLOAT, intent(in)   :: dw
@@ -527,7 +526,7 @@ contains
     case(SINE_TRANSFORM)
       power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
     case(COSINE_TRANSFORM)
-      ! WARNING: Something should go here.
+      call messages_not_implemented("resonance first order cosine transform")
     end select
   
     write(message(1), '(a)')                 '******************************************************************'
