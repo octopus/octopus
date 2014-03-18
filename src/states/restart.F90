@@ -581,7 +581,7 @@ contains
       label_ = trim(label)
     else
       if(present(lr)) then
-        label_ = "for linear response"
+        label_ = " for linear response"
       else
         label_ = ""
       endif
