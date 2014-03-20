@@ -713,6 +713,7 @@ contains
     call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
 
     if(ierr /= 0) then
+      if(exact_) call restart_fail()
       if(states_file > 0) call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
       if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
