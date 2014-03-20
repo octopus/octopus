@@ -505,7 +505,7 @@ contains
       rho_core = M_ZERO
       call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        center = periodic_copy_position(pp, mesh%sb, icell)
+        center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
           rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
           if(rr < spline_range_max(ps%core)) then
