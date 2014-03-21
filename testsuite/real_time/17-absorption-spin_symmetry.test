@@ -13,7 +13,7 @@ match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.35988933
 
 Processors : 4
 Not_Util
-Input      : 17-absorption-spin_symmetry.02-td_spin_and_density_kick.inp
+Input      : 17-absorption-spin_symmetry.02-td.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -1.135991911595e+01
 match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -1.135839524059e+01
 match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -1.135839521143e+01
@@ -21,7 +21,7 @@ match ; Energy [step  75] ; LINE(td.general/energy,  -26, 30) ; -1.135839517954e
 match ; Energy [step 100] ; LINE(td.general/energy,   -1, 30) ; -1.135839514958e+01
 
 Util       : oct-propagation_spectrum
-Input      : 17-absorption-spin_symmetry.03-spectrum_singlet_triplet.inp
+Input      : 17-absorption-spin_symmetry.03-spectrum.inp
 match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 1.976399
 match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 16.697646
 
