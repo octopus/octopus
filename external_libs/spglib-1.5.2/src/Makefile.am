@@ -33,3 +33,5 @@ spglib.h \
 spin.h \
 symmetry.h \
 spglib_f08.f90
+
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc*
