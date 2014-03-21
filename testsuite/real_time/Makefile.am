@@ -88,12 +88,12 @@ dist_share_DATA =                      \
         15-crank_nicolson.test                 \
         15-crank_nicolson.01-gs.inp            \
         15-crank_nicolson.02-kick.inp          \
+        17-absorption-spin_symmetry.01-gs.inp \
+        17-absorption-spin_symmetry.02-td.inp \
+        17-absorption-spin_symmetry.03-spectrum.inp \
         16-sparskit.test                 \
         16-sparskit.01-gs.inp            \
         16-sparskit.02-kick.inp          \
-        17-absorption-spin_symmetry.01-gs.inp                       \
-        17-absorption-spin_symmetry.02-td_spin_and_density_kick.inp \
-        17-absorption-spin_symmetry.03-spectrum_singlet_triplet.inp \
         17-absorption-spin_symmetry.test
 
 CLEANFILES = *~ *.bak
