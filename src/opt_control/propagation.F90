@@ -628,9 +628,6 @@ contains
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
     call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
-    call controlfunction_write('par_chi', par_chi)
-
-
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh)
