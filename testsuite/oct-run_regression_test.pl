@@ -473,7 +473,7 @@ sub run_match_new(){
   die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
 
   # parse match line
-  my ($line, $match, $name, $pre_command, $ref_value);
+  my ($line, $match, $pre_command, $ref_value);
   $line = $_[0];
   $line =~ s/\\;/_COLUMN_/g;
   ($match, $name, $pre_command, $ref_value) = split(/;/, $line);
