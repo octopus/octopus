@@ -458,20 +458,20 @@ contains
                                  subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
-    character(len=*), intent(inout) :: basename       !< Is the file name
-    character(len=*), intent(inout) :: folder         !< Is the folder name
+    character(len=*), intent(inout) :: basename       !< file name
+    character(len=*), intent(inout) :: folder         !< folder name
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
     integer,          intent(in)    :: how            !< Decides the kind of the output
     logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
                                                       !! If false, it iterates over the filenames 
-    character(len=*), intent(inout) :: ref_name       !< Is the reference file name 
-    character(len=*), intent(inout) :: ref_folder     !< Is the reference folder name
-    logical,          intent(in)    :: subtract_file  !< If true, it subtractat the density from the reference
+    character(len=*), intent(inout) :: ref_name       !< reference file name 
+    character(len=*), intent(inout) :: ref_folder     !< reference folder name
+    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference
 
     integer :: ierr, ii
-    character(64)  :: filename, out_name, ref_filename
+    character(64) :: filename, out_name, ref_filename
     FLOAT, allocatable :: read_ff(:), read_rff(:)
 
     PUSH_SUB(io_function_convert)
@@ -486,7 +486,6 @@ contains
  
     if (subtract_file) then
       write(ref_filename, '(a,a,a)') trim(ref_folder), trim(ref_name),".obf"
-      write(message(1),'(a,a)')"Reading from : ",trim(ref_filename)
       call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
     endif
 
@@ -499,7 +498,6 @@ contains
         write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
         write(out_name, '(a)') trim(basename)
       end if
-      print*,'Output File:',trim(folder),'/',trim(out_name)
 
       ! Read the obf file
       call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
@@ -514,7 +512,7 @@ contains
       if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
       ! Write the corresponding output
       call dio_function_output(how, &
-           trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
+        trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
     end do
     
     SAFE_DEALLOCATE_A(read_ff)
