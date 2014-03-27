@@ -699,8 +699,8 @@ contains
   !! with the "PoissonSolver" parameter
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
-    FLOAT,                intent(inout) :: pot(:)
-    FLOAT,                intent(inout) :: rho(:)
+    FLOAT,                intent(inout) :: pot(:) !< Local size of the \b potential vector. 
+    FLOAT,                intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
     !> Is the Poisson solver allowed to utilise
     !! all nodes or only the domain nodes for
     !! its calculations? (Defaults to .true.)

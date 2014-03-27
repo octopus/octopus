@@ -74,6 +74,7 @@ program oct_convert
   !% folder) in the format given by <tt>OutputHow</tt>.
   !%End
   call parse_integer('ConvertMode', CONV_FROM_BINARY, conv_mode)
+  call datasets_init(conv_mode)  
 
   call io_init()
   call profiling_init()
@@ -103,6 +104,7 @@ program oct_convert
   call profiling_end()
   call io_end()
   call print_date("Calculation ended on ")
+  call datasets_end()
   call messages_end()
   call global_end()
 
