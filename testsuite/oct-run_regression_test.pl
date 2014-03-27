@@ -19,6 +19,7 @@
 #
 # $Id$
 
+#use warnings;
 use Getopt::Std;
 use File::Basename;
 use Fcntl ':mode';
@@ -109,7 +110,7 @@ sub set_precision{
   }
 }
 
-# Check, if STDOUT is a terminal. If not, not ANSI sequences are
+# Check whether STDOUT is a terminal. If not, no ANSI sequences are
 # emitted.
 if(-t STDOUT) {
     $color_start{blue}="\033[34m";
@@ -140,7 +141,7 @@ my $exec_directory;
 if($opt_D) {
  $exec_directory = $opt_D;
  if($exec_directory !~ /^\//){
-  $exec_directory = $ENV{PWD}."/$exec_directory";
+  $exec_directory = get_env("PWD")."/$exec_directory";
  }
 } else {
  $exec_directory = "/usr/bin";
@@ -156,12 +157,11 @@ closedir(EXEC_DIRECTORY);
 $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; }
 
-$aexec = $ENV{EXEC};
-$global_np = $ENV{OCT_TEST_MPI_NPROCS};
+$aexec = get_env("EXEC");
+$global_np = get_env("OCT_TEST_MPI_NPROCS");
 
-# MPI stuff
-$mpiexec = $ENV{MPIEXEC};
-$machinelist = $ENV{MACHINELIST};
+$mpiexec = get_env("MPIEXEC");
+$machinelist = get_env("MACHINELIST");
 if ("$mpiexec" eq "") { $mpiexec = `which mpiexec 2> /dev/null`; }
 chomp($mpiexec);
 
@@ -188,7 +188,7 @@ find_executables();
 # This variable counts the number of failed testcases.
 $failures = 0;
 
-$tempdirpath = $ENV{TEMPDIRPATH};
+$tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 
 # Loop over all the executables.
@@ -572,4 +572,13 @@ echo";
 
 sub print_hline(){
   print "\n-----------------------------------------\n\n";
+}
+
+# return value of environment variable (specified by string argument), or "" if not set
+sub get_env {
+    if(exists($ENV{$_[0]})) {
+	return $ENV{$_[0]};
+    } else {
+	return "";
+    }
 }
