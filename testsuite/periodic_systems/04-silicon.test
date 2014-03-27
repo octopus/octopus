@@ -55,8 +55,27 @@ match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 16) ;  0.109820
 match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.223391
 
 Input      : 04-silicon.02-kdotp.inp
+
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06525
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32130
 match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ;  0.14636
 Precision : 0.0005
 match ; 1/m*  k1 st1  ; GREP(kdotp/kpoint_1_1, 'Isotropic average', 25, 0) ;  0.859345
+
+Input      : 04-silicon.03-emresp.inp
+
+Precision : 0.001
+match ; Re Epsilon XX w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  2, 1) ; 14.255349
+match ; Re Epsilon YY w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  3, 2) ; 14.255349
+match ; Re Epsilon ZZ w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  4, 3) ; 14.255349
+match ; Re Epsilon XY w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  2, 2) ;  0.000000
+								     
+match ; Re Epsilon XX w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  2, 1) ; 29.052408
+match ; Re Epsilon YY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  3, 2) ; 29.052408
+match ; Re Epsilon ZZ w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  4, 3) ; 29.052408
+match ; Re Epsilon XY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  2, 2) ;  0.000000
+								     
+match ; Im Epsilon XX w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  8, 1) ; 14.943228
+match ; Im Epsilon YY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  9, 2) ; 14.943228
+match ; Im Epsilon ZZ w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon, 10, 3) ; 14.943228
+match ; Im Epsilon XY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  8, 2) ;  0.000000

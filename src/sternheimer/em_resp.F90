@@ -127,7 +127,7 @@ contains
     ndim = sys%gr%sb%dim
 
     if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
-      call messages_not_implemented('em_resp with reduced k-grid')
+      call messages_experimental('em_resp with reduced k-grid')
     endif
 
     call parse_input()

@@ -39,7 +39,9 @@ module symmetrizer_m
     symmetrizer_init,                   &
     symmetrizer_end,                    &
     dsymmetrizer_apply,                 &
-    zsymmetrizer_apply
+    zsymmetrizer_apply,                 &
+    dsymmetrize_tensor,                 &
+    zsymmetrize_tensor
 
   type symmetrizer_t
     type(mesh_t), pointer :: mesh

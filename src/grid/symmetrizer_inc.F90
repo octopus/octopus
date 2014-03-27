@@ -42,6 +42,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   ! we will do nothing if following condition is not met!
   ASSERT(present(field) .or. present(field_vector))
 
+  ASSERT(associated(this%mesh))
   vp => this%mesh%vp
 
   ! With domain parallelization, we collect all points of the
@@ -166,6 +167,30 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
   POP_SUB(X(symmetrizer_apply))
 end subroutine X(symmetrizer_apply)
+
+! -------------------------------------------------------------------------------
+function X(symmetrize_tensor)(symm, tensor) result(tensor_symm)
+  type(symmetries_t), intent(in) :: symm
+  R_TYPE,             intent(in) :: tensor(:,:) !< (3, 3)
+  R_TYPE                         :: tensor_symm(3,3)
+  
+  integer :: iop, nops, idir
+  
+  PUSH_SUB(X(symmetrize_tensor))
+
+  nops = symmetries_number(symm)
+  
+  tensor_symm(:,:) = M_ZERO
+  do iop = 1, nops
+    tensor_symm(:,:) = tensor_symm(:,:) + &
+      matmul(matmul(dble(transpose(symm_op_rotation_matrix(symm%ops(iop)))), tensor(1:3, 1:3)), &
+      dble(symm_op_rotation_matrix(symm%ops(iop))))
+  enddo
+
+  tensor_symm(:,:) = tensor_symm(:,:) / nops
+
+  POP_SUB(X(symmetrize_tensor))
+end function X(symmetrize_tensor)
 
 !! Local Variables:
 !! mode: f90
