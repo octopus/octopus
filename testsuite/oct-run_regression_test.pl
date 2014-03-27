@@ -246,7 +246,7 @@ foreach my $octopus_exe (@executables){
       $test{"enabled"} = $enabled;
 
       if ( $enabled eq "No") {
-          print stderr "Test disabled: skipping test\n\n";
+          print STDERR "Test disabled: skipping test\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  exit 255;
       } elsif ( $enabled ne "Yes") {
@@ -462,9 +462,9 @@ sub find_executables(){
 
   # Die if no suitable executable was found.
   if( @executables == 0 ){
-    print stderr "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
-    print stderr "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
-    print stderr "Skipping ... \n\n";
+    print STDERR "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
+    print STDERR "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
+    print STDERR "Skipping ... \n\n";
     exit 255;
   }
 }
@@ -473,8 +473,8 @@ sub run_match_new(){
   die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
 
   # parse match line
-  my $line, $match, $name, $pre_command, $ref_value;
-  $line = @_[0];
+  my ($line, $match, $name, $pre_command, $ref_value);
+  $line = $_[0];
   $line =~ s/\\;/_COLUMN_/g;
   ($match, $name, $pre_command, $ref_value) = split(/;/, $line);
   $pre_command =~ s/_COLUMN_/;/g;
@@ -496,7 +496,7 @@ sub run_match_new(){
     $par[$params] =~ s/\s*$//;
   }
 
-  if    ($func eq "SHELL"){ # function SHELL(shell code)
+  if($func eq "SHELL"){ # function SHELL(shell code)
     $pre_command = $par[0];
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
@@ -533,7 +533,7 @@ sub run_match_new(){
     $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
 
   }else{ # error
-    printf stderr "Unknown command '$func'\n";
+    printf STDERR "Unknown command '$func'\n";
     return 0;
   }
 
