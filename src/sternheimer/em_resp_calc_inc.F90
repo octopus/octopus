@@ -313,8 +313,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   endif
 #endif
 
-  zpol_temp(1:mesh%sb%periodic_dim, 1:mesh%sb%dim) = zpol(1:mesh%sb%periodic_dim, 1:mesh%sb%dim)
-  zpol = zsymmetrize_tensor(mesh%sb%symm, zpol_temp)
+  call zsymmetrize_tensor(mesh%sb%symm, zpol)
 
   POP_SUB(X(calc_polarizability_periodic))
 

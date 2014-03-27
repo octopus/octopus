@@ -169,12 +169,12 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 end subroutine X(symmetrizer_apply)
 
 ! -------------------------------------------------------------------------------
-function X(symmetrize_tensor)(symm, tensor) result(tensor_symm)
-  type(symmetries_t), intent(in) :: symm
-  R_TYPE,             intent(in) :: tensor(:,:) !< (3, 3)
-  R_TYPE                         :: tensor_symm(3,3)
+subroutine X(symmetrize_tensor)(symm, tensor)
+  type(symmetries_t), intent(in)    :: symm
+  R_TYPE,             intent(inout) :: tensor(:,:) !< (3, 3)
   
   integer :: iop, nops, idir
+  R_TYPE :: tensor_symm(3, 3)
   
   PUSH_SUB(X(symmetrize_tensor))
 
@@ -187,10 +187,10 @@ function X(symmetrize_tensor)(symm, tensor) result(tensor_symm)
       dble(symm_op_rotation_matrix(symm%ops(iop))))
   enddo
 
-  tensor_symm(:,:) = tensor_symm(:,:) / nops
+  tensor(:,:) = tensor_symm(:,:) / nops
 
   POP_SUB(X(symmetrize_tensor))
-end function X(symmetrize_tensor)
+end subroutine X(symmetrize_tensor)
 
 !! Local Variables:
 !! mode: f90
