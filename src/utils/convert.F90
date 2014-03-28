@@ -254,7 +254,7 @@ contains
     character(64)      :: filename, out_name, ref_filename
     FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
 
-    PUSH_SUB(io_function_convert)
+    PUSH_SUB(convert_low)
 
     SAFE_ALLOCATE(read_ff(1:mesh%np))
     SAFE_ALLOCATE(read_rff(1:mesh%np))
@@ -307,7 +307,7 @@ contains
     SAFE_DEALLOCATE_A(read_ff)
     SAFE_DEALLOCATE_A(read_rff)
     SAFE_DEALLOCATE_A(pot)
-    POP_SUB(io_function_convert)
+    POP_SUB(convert_low)
   end subroutine convert_low
   
 end program
