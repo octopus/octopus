@@ -497,9 +497,11 @@ sub run_match_new(){
   }
 
   if($func eq "SHELL"){ # function SHELL(shell code)
+    check_num_args(1, 1, $#par, $func);
     $pre_command = $par[0];
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
+    check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
       $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
       $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1)' $par[0]";
@@ -509,6 +511,7 @@ sub run_match_new(){
     $pre_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
+    check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
       $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
       $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
@@ -516,13 +519,15 @@ sub run_match_new(){
       $pre_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
     }
 
-  }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
+  }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
+    check_num_args(3, 4, $#par, $func);
     my $off = 1*$par[3];
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]-";
 
-  }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, offset>)
+  }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
+    check_num_args(3, 4, $#par, $func);
     my $off = 1*$par[3];
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0]";
@@ -530,6 +535,7 @@ sub run_match_new(){
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
+    check_num_args(1, 1, $#par, $func);
     $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
 
   }else{ # error
@@ -580,5 +586,20 @@ sub get_env {
 	return $ENV{$_[0]};
     } else {
 	return "";
+    }
+}
+
+# args: min num args, max num args, args given, function name
+sub check_num_args {
+    my $min_num_args   = $_[0];
+    my $max_num_args   = $_[1];
+    my $given_num_args = $_[2]+1;
+    my $func_name      = $_[3];
+
+    if($given_num_args < $min_num_args) {
+	die "$func_name given $given_num_args argument(s) but needs at least $min_num_args.\n";
+    }
+    if($given_num_args > $max_num_args) {
+	die "$func_name given $given_num_args argument(s) but can take no more than $max_num_args.\n";
     }
 }
