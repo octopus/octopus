@@ -50,7 +50,6 @@ program oct_convert
   implicit none
 
   character*256 :: config_str
-  integer :: test_type
   integer :: conv_mode
   integer :: ierr
   
@@ -65,6 +64,8 @@ program oct_convert
 
   call global_init()
   call messages_init()
+
+  call messages_experimental("oct-convert utility")
 
   !%Variable ConvertMode
   !%Type integer

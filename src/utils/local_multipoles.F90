@@ -47,19 +47,15 @@ program oct_local_multipoles
 
   implicit none
   
-  integer           :: ierr
-  character*256     :: config_str
   type(system_t)    :: sys
   type(simul_box_t) :: sb
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
-  config_str = trim(get_config_opts()) // trim(get_optional_libraries())
-  if(ierr  ==  0) call getopt_octopus(config_str)
-  call getopt_end()
-
   call messages_init()
+
+  call messages_experimental("oct-local_multipoles utility")
 
   call datasets_init(1)
   call io_init()
@@ -86,11 +82,11 @@ contains
   subroutine local_domains()
     type(box_union_t), allocatable :: domain(:)
     integer                        :: err, id, nd, lmax, iter
-    FLOAT                          :: default_dt, dt, spacing
+    FLOAT                          :: default_dt, dt
     FLOAT, allocatable             :: read_ff(:)
     character(64)                  :: filename, folder, folder_default, aux
     character(len=15), allocatable :: lab(:)
-    logical                        :: wrt_multipoles, wrt_local_densities
+    logical                        :: wrt_multipoles
 
     PUSH_SUB(local_domains)
 
@@ -212,7 +208,7 @@ contains
     integer,                        intent(out) :: ndomain
     character(len=15), allocatable, intent(out) :: lab(:)
 
-    integer           :: ib, id
+    integer           :: id
     type(block_t)     :: blk
 
     PUSH_SUB(local_domains_read)
@@ -251,14 +247,13 @@ contains
     type(box_union_t), intent(inout)     :: dom
     
     integer           :: dim, ic, idir, nb, shape
-    character(len=80) :: clist, default
-    character(len=15) :: lab
+    character(len=80) :: clist
     FLOAT             :: lgst, val, rsize, xsize
     FLOAT             :: center(MAX_DIM), lsize(MAX_DIM)
    
     PUSH_SUB(read_from_domain_block)
 
-! > Initializing variables in dom
+!  Initializing variables in dom
     shape = 1
     nb = 1
     rsize = -M_ONE
@@ -337,25 +332,24 @@ contains
         end do
       end select
 
-    call local_domains_init(dom, dim, shape, center, rsize, xsize, lsize, nb, clist)
+    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
 
     POP_SUB(read_from_domain_block)
 
   end subroutine read_from_domain_block
 
   ! ---------------------------------------------------------
-  subroutine local_domains_init(dom, dim, shape, center, rsize, xsize, lsize, nb, clist)
+  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
     type(box_union_t), intent(inout) :: dom
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: shape
     FLOAT,             intent(in)    :: center(dim)
     FLOAT,             intent(in)    :: rsize
-    FLOAT,             intent(in)    :: xsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
     character(len=80), intent(out)    :: clist
 
-    integer                  :: ia, ibox, ic, id, nboxes, bshape
+    integer                  :: ia, ibox, ic, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
     type(box_t), allocatable :: boxes(:)
 
@@ -418,7 +412,7 @@ contains
   end subroutine local_domains_init
 
   ! ---------------------------------------------------------
-  !> Computes the local multipoles and write them on a files.  
+  !> Computes the local multipoles and writes them to a file. 
   ! ---------------------------------------------------------
   subroutine calc_local_multipoles(nd, dom, lab, lmax, ff, np, iter, dt)
     integer,                intent(in) :: nd
@@ -431,7 +425,7 @@ contains
     FLOAT,                  intent(in) :: dt   
 
     FLOAT, allocatable :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
-    integer            :: id, is, nspin
+    integer            :: id, nspin
 
     PUSH_SUB(calc_local_multipoles)
 
@@ -462,7 +456,7 @@ contains
     type(geometry_t),  intent(in)  :: geo
     FLOAT,allocatable, intent(out) :: center(:,:)
 
-    integer            :: ia, ibox, id
+    integer            :: ia, id
     FLOAT, allocatable :: sumw(:)
 
     PUSH_SUB(local_center_of_mass)
@@ -493,7 +487,7 @@ contains
     type(geometry_t),  intent(in)  :: geo
     FLOAT,allocatable, intent(out) :: dipole(:,:)
 
-    integer :: ia, ibox, id
+    integer :: ia, id
 
     PUSH_SUB(local_geometry_dipole)
 
@@ -517,7 +511,7 @@ contains
     type(box_union_t), intent(in)  :: dom
     type(geometry_t),  intent(in)  :: geo
 
-    integer :: ia, ibox, id
+    integer :: ia
 
     PUSH_SUB(local_geometry_charge)
 
@@ -574,11 +568,10 @@ contains
 !    write(out_multipoles,'(a)')""
     
     if(iand(sys%outp%how, C_OUTPUT_HOW_BILD) /= 0 .AND. sys%space%dim == 3)then
-      call out_bld_multipoles(multipoles(2:sys%space%dim+1), center, lmax, label, iter)
+      call out_bld_multipoles(multipoles(2:sys%space%dim+1), center, label, iter)
     else
-      message(1) = "Error. Output Format not available."
-      message(2) = ''
-      call messages_info(2)
+      message(1) = "Output format not available."
+      call messages_fatal(1)
     end if  
     
     call io_close(out_multipoles)
@@ -587,14 +580,13 @@ contains
   end subroutine wrt_local_multipoles
 
   ! ---------------------------------------------------------
-  subroutine out_bld_multipoles(multipoles, center, lmax, label, iter)
+  subroutine out_bld_multipoles(multipoles, center, label, iter)
     FLOAT,         intent(in) :: multipoles(:)
     FLOAT,         intent(in) :: center(:)
-    integer,       intent(in) :: lmax
     character(15), intent(in) :: label
     integer,       intent(in) :: iter
    
-    integer             :: add_lm, ll, mm, out_bld
+    integer             :: ll, out_bld
     character(len=80)   :: filename, folder
     FLOAT               :: dipolearrow(3,2)
 
@@ -630,7 +622,6 @@ contains
     FLOAT,             intent(in)    :: center(:)
 
     integer        :: is, ll, mm
-    character(64)  :: space,frmt
     character(21)  :: aux
 
     PUSH_SUB(write_multipoles_header)
