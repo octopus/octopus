@@ -418,8 +418,9 @@ foreach my $octopus_exe (@executables){
 exit $failures;
 
 
-sub find_executables(){
+sub find_executables {
   my $name;
+  $options = ""; # initialize in case no options specified
 
   open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
   while ($_ = <TESTSUITE>) {
@@ -469,7 +470,7 @@ sub find_executables(){
   }
 }
 
-sub run_match_new(){
+sub run_match_new {
   die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
 
   # parse match line
@@ -576,7 +577,7 @@ echo";
   return $success;
 }
 
-sub print_hline(){
+sub print_hline {
   print "\n-----------------------------------------\n\n";
 }
 
