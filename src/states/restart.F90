@@ -535,7 +535,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left, label)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left, label, verbose)
     character(len=*),           intent(in)    :: dir
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
@@ -546,6 +546,7 @@ contains
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
     character(len=*), optional, intent(in)    :: label
+    logical,          optional, intent(in)    :: verbose
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: iread, nread, ierr_stat
@@ -557,7 +558,7 @@ contains
     integer, pointer     :: map(:)
 
     FLOAT                :: my_occ, flt, imev
-    logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
+    logical              :: read_occ, lr_allocated, grid_changed, grid_reordered, verbose_
     logical              :: exact_, integral_occs, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
@@ -567,6 +568,8 @@ contains
     PUSH_SUB(restart_read)
 
     call profiling_in(prof_read, "RESTART_READ")
+
+    verbose_ = optional_default(verbose, .true.)
 
     cmplxscl = .false.
     if(associated(st%zeigenval%Im)) cmplxscl = .true.
@@ -592,7 +595,7 @@ contains
       message(1) = trim(message(1)) // trim(label_)
     endif
     message(1) = trim(message(1)) // "."
-    call messages_info(1)
+    if(verbose_) call messages_info(1)
 
     if(.not. present(lr)) then
       st%fromScratch = .false. ! obviously, we are using restart info
@@ -664,7 +667,7 @@ contains
         call messages_warning(1)
       else
         message(1) = "Restart info was written at " // trim(mod_time)
-        call messages_info(1)
+        if(verbose_) call messages_info(1)
       endif
     endif
 
@@ -803,7 +806,7 @@ contains
 
     if(present(lowest_missing)) lowest_missing = st%nst + 1
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world) .and. verbose_) then
       iread = 1
       nread = st%lnst*st%d%kpt%nlocal*st%d%dim
       call loct_progress_bar(-1, nread)
@@ -864,7 +867,7 @@ contains
             lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
           end if
 
-          if(mpi_grp_is_root(mpi_world)) then
+          if(mpi_grp_is_root(mpi_world) .and. verbose_) then
             call loct_progress_bar(iread, nread)
             INCR(iread, 1)
           end if
@@ -877,7 +880,7 @@ contains
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(zpsiL)
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world) .and. verbose_) then
       write(stdout, '(1x)')
     end if
 
@@ -910,7 +913,7 @@ contains
     else if(ierr == st%nst * st%d%nik * st%d%dim) then
       ierr = 0
       write(message(1), '(a)') 'Info: Restart loading done.'
-      call messages_info(1)
+      if(verbose_) call messages_info(1)
     else
       if(.not. present(lr)) then
         write(str, '(a,i5)') 'Loading restart information.'

@@ -234,6 +234,7 @@ contains
 
       if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
+    if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
@@ -530,9 +531,6 @@ contains
 
     PUSH_SUB(bwd_step_2)
 
-    message(1) = "Info: Backward propagation."
-    call messages_info(1)
-
     chi => opt_control_point_qs(qcchi)
     q => opt_control_point_q(qcchi)
     p => opt_control_point_p(qcchi)
@@ -565,6 +563,9 @@ contains
 
     if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, td%max_iter*abs(td%dt), td%dt)
 
+    message(1) = "Info: Backward propagation."
+    call messages_info(1)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
     do i = td%max_iter, 1, -1
 
       call oct_prop_check(prop_psi, psi, gr, i)
@@ -620,7 +621,12 @@ contains
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
 
+      if( (mod(i, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter-i, td%max_iter)
     end do
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(td%max_iter, td%max_iter)
+      write(stdout, '(1x)')
+    end if
 
     call states_end(st_ref)
 
@@ -964,7 +970,7 @@ contains
      if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), stored_st, gr, ierr)
+       call restart_read(trim(filename), stored_st, gr, ierr, verbose=.false.)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
@@ -1001,7 +1007,7 @@ contains
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), psi, gr, ierr)
+       call restart_read(trim(filename), psi, gr, ierr, verbose=.false.)
      end if
     end do
 
