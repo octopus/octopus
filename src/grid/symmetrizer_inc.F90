@@ -187,7 +187,7 @@ subroutine X(symmetrize_tensor)(symm, tensor)
       dble(symm_op_rotation_matrix(symm%ops(iop))))
   enddo
 
-  tensor(:,:) = tensor_symm(:,:) / nops
+  tensor(1:3,1:3) = tensor_symm(1:3,1:3) / nops
 
   POP_SUB(X(symmetrize_tensor))
 end subroutine X(symmetrize_tensor)

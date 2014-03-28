@@ -257,7 +257,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   type(lr_t),             intent(inout) :: em_lr(:,:)
   type(lr_t),             intent(inout) :: kdotp_lr(:)
   integer,                intent(in)    :: nsigma
-  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  CMPLX,                  intent(out)   :: zpol(:, :) !< (sb%dim, sb%dim)
   integer, optional,      intent(in)    :: ndir
 
   integer :: dir1, dir2, ndir_, ist, ik
