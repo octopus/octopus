@@ -27,7 +27,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(in)    :: lr(:,:)
   type(pert_t),           intent(inout) :: perturbation
-  FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:)
+  FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
   integer,                intent(in)    :: occ_solution_method
   FLOAT,                  intent(in)    :: degen_thres
 
@@ -52,7 +52,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 #ifdef HAVE_MPI
-  SAFE_ALLOCATE(eff_mass_inv_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim, 1:pdim))
+  SAFE_ALLOCATE(eff_mass_inv_temp(1:pdim, 1:pdim, 1:sys%st%d%nik, 1:sys%st%nst))
 #endif
 
   eff_mass_inv(:,:,:,:) = M_ZERO
@@ -71,8 +71,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
       do idir2 = 1, pdim
         do idir1 = 1, pdim
 
-          if (idir2 < idir1) then
-            eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik)
+          if (idir1 < idir2) then
+            eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir2, idir1, ist, ik)
             ! utilizing symmetry of inverse effective mass tensor
             cycle
           end if
@@ -97,7 +97,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
           ! contribution from Sternheimer equation
           term = X(mf_dotp)(mesh, sys%st%d%dim, proj_dl_psi, pertpsi(:, :, idir1))
-          eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * R_REAL(term)
+          eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           if (occ_solution_method == 1) then
           ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory

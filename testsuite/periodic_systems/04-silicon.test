@@ -61,6 +61,7 @@ match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32130
 match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ;  0.14636
 Precision : 0.0005
 match ; 1/m*  k1 st1  ; GREP(kdotp/kpoint_1_1, 'Isotropic average', 25, 0) ;  0.859345
+match ; 1/mxy k1 st1  ; GREPFIELD(kdotp/kpoint_1_1, 'State #1', 2, 1)      ; -0.008107
 
 Input      : 04-silicon.03-emresp.inp
 
