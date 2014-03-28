@@ -123,8 +123,6 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-# Option -d is ignored for the moment.
-#getopts("nlvhD:c:f:d:s:ipm");
 getopts("nlvhD:c:f:s:ipm");
 
 # Default values
@@ -133,9 +131,6 @@ use File::Temp qw/tempdir/;
 # Handle options
 $opt_h && usage;
 $opt_c && create_template;
-####NEW This has to be handled in a different way.
-#if($opt_d)  { $workdir = $opt_d; }
-####
 
 my $exec_directory;
 if($opt_D) {
@@ -474,7 +469,7 @@ sub run_match_new {
   die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
 
   # parse match line
-  my ($line, $match, $pre_command, $ref_value);
+  my ($line, $match, $pre_command, $ref_value, $off);
   $line = $_[0];
   $line =~ s/\\;/_COLUMN_/g;
   ($match, $name, $pre_command, $ref_value) = split(/;/, $line);
@@ -522,14 +517,22 @@ sub run_match_new {
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
     check_num_args(3, 4, $#par, $func);
-    my $off = 1*$par[3];
+    if($#par == 3) {
+	$off = $par[3];
+    } else {
+	$off = 0;
+    }
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
-    my $off = 1*$par[3];
+    if($#par == 3) {
+	$off = $par[3];
+    } else {
+	$off = 0;
+    }
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0]";
     $pre_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
