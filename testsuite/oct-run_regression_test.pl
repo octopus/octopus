@@ -41,7 +41,6 @@ Usage: oct-run_regression_test.pl [options]
     -s        exec suffix for the executables
     -c        create template
     -f        filename of testsuite
-    -i        print inputfile
     -p        preserve working directories
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
@@ -53,9 +52,6 @@ Exit codes:
 
 Report bugs to <octopus-devel\@tddft.org>
 EndOfUsage
-
-  # Option -d is ignored for the moment.
-  #    -d        working directory for the tests
 
   exit 0;
 }
@@ -123,7 +119,7 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhD:c:f:s:ipm");
+getopts("nlvhD:c:f:s:pm");
 
 # Default values
 use File::Temp qw/tempdir/;
@@ -227,12 +223,10 @@ foreach my $octopus_exe (@executables){
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
       $test{"name"} = $1;
-      if(!$opt_i) {
-	print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
-	print "Using workdir    : $workdir \n";
-	print "Using executable : $octopus_exe\n";
-	print "Using test file  : $opt_f \n";
-      }
+      print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
+      print "Using workdir    : $workdir \n";
+      print "Using executable : $octopus_exe\n";
+      print "Using test file  : $opt_f \n";
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
       $enabled = $1;
