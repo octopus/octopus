@@ -20,19 +20,22 @@
 #include "global.h"
 
 program oct_convert
-  use calc_mode_m
   use command_line_m
   use datasets_m
   use derivatives_m
   use fft_m
+  use geometry_m
   use global_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use io_binary_m
   use loct_m
   use messages_m
+  use mesh_m
   use mpi_m
   use multicomm_m
+  use output_m
   use parser_m
   use poisson_m
   use profiling_m
@@ -80,12 +83,6 @@ program oct_convert
   call profiling_init()
 
   call print_header()
-
-  if(no_datasets > 1) then
-    message(1) = 'Info: Multi-Dataset Mode'
-    message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
-    call messages_info(2, stress = .true.)
-  end if
 
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_var_option(stdout, "ConvertMode", conv_mode)
@@ -224,8 +221,8 @@ contains
     call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
     if ( ref_folder == " " ) ref_folder = ""
 
-    call io_function_convert(sys%gr%mesh, sys%geo, basename, folder, &
-         c_start, c_end, c_step, sys%outp%how, iterate_folder, &
+    call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
+         c_start, c_end, c_step, sys%outp%how, sys%outp%what, iterate_folder, &
          subtract_file, refname, ref_folder )
 
     call system_end(sys)
@@ -233,6 +230,86 @@ contains
     POP_SUB(convert)
   end subroutine convert
 
+  ! ---------------------------------------------------------
+  !> Giving a range of input files, it writes the corresponding 
+  !! output files
+  subroutine convert_low(mesh, geo, basename, folder, c_start, c_end, c_step, how, what, iterate_folder, & 
+                                 subtract_file, ref_name, ref_folder)
+    type(mesh_t)    , intent(in)    :: mesh
+    type(geometry_t), intent(in)    :: geo
+    character(len=*), intent(inout) :: basename       !< File name
+    character(len=*), intent(inout) :: folder         !< Folder name
+    integer,          intent(in)    :: c_start        !< The first file number
+    integer,          intent(in)    :: c_end          !< The last file number
+    integer,          intent(in)    :: c_step         !< The step between files
+    integer,          intent(in)    :: how            !< Decides the kind of the output
+    integer,          intent(in)    :: what           !< Decides what is going to be written
+    logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
+                                                      !! If false, it iterates over the filenames 
+    character(len=*), intent(inout) :: ref_name       !< Reference file name 
+    character(len=*), intent(inout) :: ref_folder     !< Reference folder name
+    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference
+
+    integer            :: ierr, ii
+    character(64)      :: filename, out_name, ref_filename
+    FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
+
+    PUSH_SUB(io_function_convert)
+
+    SAFE_ALLOCATE(read_ff(1:mesh%np))
+    SAFE_ALLOCATE(read_rff(1:mesh%np))
+    SAFE_ALLOCATE(pot(1:mesh%np))
+    read_rff(:) = M_ZERO
+   
+    write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(folder), "//", trim(basename), &
+         "' from ", c_start, " to ", c_end, " every ", c_step
+    call messages_info(1)
+ 
+    if (subtract_file) then
+      write(ref_filename, '(a,a,a)') trim(ref_folder), trim(ref_name),".obf"
+      call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
+    endif
+
+    call loct_progress_bar(-1, c_end-c_start) 
+    do ii = c_start, c_end, c_step
+      if (iterate_folder) then
+        write(folder,'(a,i0.7,a)') "td.",ii,"/"
+        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
+        out_name = trim(basename)
+      else
+        write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
+        write(out_name, '(a)') trim(basename)
+      end if
+
+      ! Read the obf file
+      call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
+
+      if (ierr /= 0) then
+        write(message(1), '(a,a)') "Error reading the file ", filename
+        write(message(2), '(a)') "Skipping...."
+        call messages_warning(2)
+      end if
+      if (subtract_file) read_ff(:) = read_ff(:) - read_rff(:) 
+      if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
+      ! Write the corresponding output
+      call dio_function_output(how, &
+        trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
+      
+      if (iand(what, C_OUTPUT_POTENTIAL) /= 0) then
+        write(out_name, '(a)') "potential"
+        call dpoisson_solve(psolver, pot, read_ff)
+        call dio_function_output(how, &
+             trim(folder), trim(out_name), mesh, pot, units_out%length, ierr, geo = geo)
+      end if
+      call loct_progress_bar(ii-c_start, c_end-c_start) 
+    end do
+    
+    SAFE_DEALLOCATE_A(read_ff)
+    SAFE_DEALLOCATE_A(read_rff)
+    SAFE_DEALLOCATE_A(pot)
+    POP_SUB(io_function_convert)
+  end subroutine convert_low
+  
 end program
 
 !! Local Variables:

@@ -60,8 +60,7 @@ module io_function_m
     dio_function_input,           &
     zio_function_input,           &
     dio_function_output,          &
-    zio_function_output,          &
-    io_function_convert
+    zio_function_output
 
 #if defined(HAVE_NETCDF)
  public ::                        &
@@ -450,75 +449,6 @@ contains
 
     POP_SUB(transpose3)
   end subroutine transpose3
-
-  ! ---------------------------------------------------------
-  !> Giving a range of input files, it writes the corresponding 
-  !! output files
-  subroutine io_function_convert(mesh, geo, basename, folder, c_start, c_end, c_step, how, iterate_folder, & 
-                                 subtract_file, ref_name, ref_folder)
-    type(mesh_t)    , intent(in)    :: mesh
-    type(geometry_t), intent(in)    :: geo
-    character(len=*), intent(inout) :: basename       !< file name
-    character(len=*), intent(inout) :: folder         !< folder name
-    integer,          intent(in)    :: c_start        !< The first file number
-    integer,          intent(in)    :: c_end          !< The last file number
-    integer,          intent(in)    :: c_step         !< The step between files
-    integer,          intent(in)    :: how            !< Decides the kind of the output
-    logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
-                                                      !! If false, it iterates over the filenames 
-    character(len=*), intent(inout) :: ref_name       !< reference file name 
-    character(len=*), intent(inout) :: ref_folder     !< reference folder name
-    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference
-
-    integer :: ierr, ii
-    character(64) :: filename, out_name, ref_filename
-    FLOAT, allocatable :: read_ff(:), read_rff(:)
-
-    PUSH_SUB(io_function_convert)
-
-    SAFE_ALLOCATE(read_ff(1:mesh%np))
-    SAFE_ALLOCATE(read_rff(1:mesh%np))
-    read_rff(:) = M_ZERO
-   
-    write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(folder), "/", trim(basename), &
-         "' from ", c_start, " to ", c_end, " every ", c_step
-    call messages_info(1)
- 
-    if (subtract_file) then
-      write(ref_filename, '(a,a,a)') trim(ref_folder), trim(ref_name),".obf"
-      call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
-    endif
-
-    do ii = c_start, c_end, c_step
-      if (iterate_folder) then
-        write(folder,'(a,i0.7,a)') "td.",ii,"/"
-        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
-        out_name = trim(basename)
-      else
-        write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
-        write(out_name, '(a)') trim(basename)
-      end if
-
-      ! Read the obf file
-      call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
-
-      if (ierr /= 0) then
-        write(message(1), '(a,a)') "Error reading the file ", filename
-        write(message(2), '(a)') "Skipping...."
-        call messages_warning(2)
-      end if
-
-      if (subtract_file) read_ff(:) = read_ff(:) - read_rff(:) 
-      if (subtract_file) write(out_name, '(a,a)') trim(out_name),"-ref"
-      ! Write the corresponding output
-      call dio_function_output(how, &
-        trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
-    end do
-    
-    SAFE_DEALLOCATE_A(read_ff)
-    SAFE_DEALLOCATE_A(read_rff)
-    POP_SUB(io_function_convert)
-  end subroutine io_function_convert
 
 
 #include "undef.F90"
