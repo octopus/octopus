@@ -19,7 +19,7 @@
 #
 # $Id$
 
-#use warnings;
+use warnings;
 use Getopt::Std;
 use File::Basename;
 use Fcntl ':mode';
@@ -115,11 +115,22 @@ if(-t STDOUT) {
     $color_end{red}="\033[0m";
     $color_start{green}="\033[32m";
     $color_end{green}="\033[0m";
+} else {
+    $color_start{blue}="";
+    $color_end{blue}="";
+    $color_start{red}="";
+    $color_end{red}="";
+    $color_start{green}="";
+    $color_end{green}="";
 }
 
 if (not @ARGV) { usage; }
 
 getopts("nlvhD:c:f:s:pm");
+
+# avoid warnings 'used only once: possible typo'
+$useless = $opt_h;
+$useless = $opt_l;
 
 # Default values
 use File::Temp qw/tempdir/;
