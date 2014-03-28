@@ -38,4 +38,5 @@ ExtraStates = 1
 %
 
 EMEta = 0.01
-#EMCalcBornCharges = yes
+EMCalcBornCharges = yes
+BornChargeSumRuleCorrection = no

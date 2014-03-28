@@ -65,6 +65,7 @@ match ; 1/mxy k1 st1  ; GREPFIELD(kdotp/kpoint_1_1, 'State #1', 2, 1)      ; -0.
 
 Input      : 04-silicon.03-emresp.inp
 
+# by symmetry, all tensors below must be diagonal and isotropic
 Precision : 0.001
 match ; Re Epsilon XX w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  2, 1) ; 14.255349
 match ; Re Epsilon YY w=0.0 ; LINEFIELD(em_resp/freq_0.0000/epsilon,  3, 2) ; 14.255349
@@ -80,3 +81,17 @@ match ; Im Epsilon XX w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  8, 1) ; 14
 match ; Im Epsilon YY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  9, 2) ; 14.943228
 match ; Im Epsilon ZZ w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon, 10, 3) ; 14.943228
 match ; Im Epsilon XY w=0.1 ; LINEFIELD(em_resp/freq_0.1000/epsilon,  8, 2) ;  0.000000
+
+match ; Born charge 1 XX w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     1", 1,  2) ;  -0.021640
+match ; Born charge 1 ZZ w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     1", 3,  4) ;  -0.021640
+match ; Born charge 1 XZ w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     1", 1,  4) ;   0.0
+match ; Born charge 5 XX w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     5", 1,  2) ;  -0.052269
+match ; Born charge diff w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  5) ;  -0.295630
+
+match ; Born charge 1 XX w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 1,  2) ;  -2.825265
+match ; Born charge 1 ZZ w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 3,  4) ;  -2.825265
+match ; Born charge 1 XZ w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 1,  4) ;   0.0
+match ; Born charge 5 XX w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     5", 1,  2) ;  -3.092646
+# this discrepancy is horrible!
+match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ; -23.671641
+match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3, 10) ; -18.851045

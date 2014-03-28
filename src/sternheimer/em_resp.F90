@@ -628,30 +628,28 @@ contains
             message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
             call messages_info(1)
     
-            do idir = 1, sys%gr%sb%dim
-              ! time = M_ZERO
-              if(states_are_complex(sys%st)) then
-                if(em_vars%nsigma == 2) then
-                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
-                else
-                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
-                endif
+            ! time = M_ZERO
+            if(states_are_complex(sys%st)) then
+              if(em_vars%nsigma == 2) then
+                call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 2, ifactor), &
+                  Born_charges = em_vars%Born_charges(ifactor))
               else
-                if(em_vars%nsigma == 2) then
-                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
-                else
-                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
-                endif
+                call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 1, ifactor), &
+                  Born_charges = em_vars%Born_charges(ifactor))
               endif
-            enddo
+            else
+              if(em_vars%nsigma == 2) then
+                call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 2, ifactor), &
+                  Born_charges = em_vars%Born_charges(ifactor))
+              else
+                call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 1, ifactor), &
+                  Born_charges = em_vars%Born_charges(ifactor))
+              endif
+            endif
           endif
 
         else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then

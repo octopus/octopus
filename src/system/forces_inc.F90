@@ -555,7 +555,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
   type(states_t),                 intent(inout) :: st
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
-  CMPLX,                          intent(out)   :: force_deriv(:,:)
+  CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
 
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
   FLOAT :: ff, kpoint(1:MAX_DIM)
@@ -670,31 +670,36 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
 end subroutine X(forces_derivative)
 
 ! --------------------------------------------------------------------------------
-subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, lr_dir, born_charges)
+!> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
+!! for each atom, Z*(i,j) = dF(j)/dE(i)
+subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
-  type(lr_t),                     intent(in)    :: lr
-  type(lr_t),                     intent(in)    :: lr2
-  integer,                        intent(in)    :: lr_dir
+  type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
+  type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges
 
-  ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
-  ! lr is for +omega, lr2 is for -omega.
-  ! for each atom, Z*(i,j) = dF(j)/dE(i)
-
-  integer :: iatom
+  integer :: iatom, idir
+  CMPLX, allocatable :: force_deriv(:, :)
 
   PUSH_SUB(X(forces_born_charges))
 
-  ! need all to calculate Born charges
-  ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
+  SAFE_ALLOCATE(force_deriv(gr%mesh%sb%dim, geo%natoms))
 
-  call X(forces_derivative)(gr, geo, ep, st, lr, lr2, born_charges%charge(lr_dir, :, :))
+  do idir = 1, gr%mesh%sb%dim
+    call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv)
+    do iatom = 1, geo%natoms
+      born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)
+      born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%spec)
+    enddo
+  enddo
+
+  SAFE_DEALLOCATE_A(force_deriv)
 
   do iatom = 1, geo%natoms
-    born_charges%charge(lr_dir, lr_dir, iatom) = born_charges%charge(lr_dir, lr_dir, iatom) + species_zval(geo%atom(iatom)%spec)
+    call zsymmetrize_tensor(gr%sb%symm, born_charges%charge(:, :, iatom))
   enddo
 
   POP_SUB(X(forces_born_charges))
