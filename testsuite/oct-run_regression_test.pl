@@ -207,14 +207,6 @@ foreach my $octopus_exe (@executables){
     mkdir $workdir;
   }
 
-  # create script for cleanups in the current workdir
-  $mscript = "$workdir/clean.sh";
-  open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
-  print SCRIPT "#\!/usr/bin/env bash\n\n";
-  print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
-  close(SCRIPT);
-  chmod 0755, $mscript;
-
   # testsuite
   open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
 
