@@ -341,8 +341,6 @@ foreach my $octopus_exe (@executables){
 	    $return_value = system("$command_line");
 	    $test_end   = [gettimeofday];
 
-	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
-
 	    $elapsed = tv_interval($test_start, $test_end);
 	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
 
