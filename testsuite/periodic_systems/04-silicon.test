@@ -86,12 +86,12 @@ match ; Born charge 1 XX w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "In
 match ; Born charge 1 ZZ w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     1", 3,  4) ;  -0.021640
 match ; Born charge 1 XZ w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     1", 1,  4) ;   0.0
 match ; Born charge 5 XX w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Index:     5", 1,  2) ;  -0.052269
-match ; Born charge diff w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  5) ;  -0.295630
+match ; Born charge diff w=0.0 ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  5) ;  -0.036954
 
 match ; Born charge 1 XX w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 1,  2) ;  -2.825265
 match ; Born charge 1 ZZ w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 3,  4) ;  -2.825265
 match ; Born charge 1 XZ w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     1", 1,  4) ;   0.0
 match ; Born charge 5 XX w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Index:     5", 1,  2) ;  -3.092646
 # this discrepancy is horrible!
-match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ; -23.671641
-match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3, 10) ; -18.851045
+match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ;  -2.958955
+match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3, 10) ;  -2.356381

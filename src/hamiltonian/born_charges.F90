@@ -44,7 +44,7 @@ module born_charges_m
   type Born_charges_t
     CMPLX, pointer :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
-    CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule
+    CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?
   end type Born_charges_t
 
@@ -78,7 +78,8 @@ contains
     !%Description
     !% Enforce the acoustic sum rule by distributing the excess sum of Born charges equally among the atoms.
     !% Sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2).
-    !% Violation of the sum rule may be caused by inadequate spacing, box size, or <i>k</i>-point sampling.
+    !% Violation of the sum rule may be caused by inadequate spacing, box size (in finite directions),
+    !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
     call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
@@ -116,12 +117,12 @@ contains
       Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(1:dim, 1:dim, iatom)
     enddo
 
-    this%delta(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)
+    this%delta(1:dim, 1:dim) = (Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)) / geo%natoms
 
     if(this%correct) then
       do iatom = 1, geo%natoms
         this%charge(1:dim, 1:dim, iatom) = &
-          this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim) / geo%natoms
+          this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim)
       enddo
     endif
 
@@ -178,7 +179,7 @@ contains
       enddo
     endif
 
-    write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction' 
+    write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction, per atom'
     if(.not. write_real) write(iunit,'(a)') 'Real:'
     call output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
     if(.not. write_real) then
