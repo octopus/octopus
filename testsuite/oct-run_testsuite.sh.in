@@ -30,9 +30,6 @@ datarootdir=@datarootdir@
 pkgdatadir=@datadir@/@PACKAGE@
 testsuite="$pkgdatadir/testsuite"
 
-# Architecture.
-arch=`echo "$MACHTYPE" | awk -F- '{print $1}'`
-
 # Failure reporting.
 failed_tests=0
 skipped_tests=0
@@ -59,7 +56,6 @@ Usage: oct-run_testsuite.sh [options]
      -p PREFIX     installation prefix [default: /usr]
      -w            without MPI tests (do not run parallel tests)
      -c            delete all .log files and work directories after the run
-     -m ADDRESS    mail report to address
 
 Report bugs to <octopus-devel@tddft.org>.
 EOF
@@ -226,29 +222,6 @@ done
 }
 
 
-# Send report via mail.
-# Arguments:
-# $1 : list of testfile names that have been run,
-# $2 : e-mail address to send report to.
-function mail_report() {
-
-tests="$1"
-datestamp=$(date +"%Y-%m-%d")
-
-for y in $tests; do
-    ybase=`basename $y`
-    xybase=${ybase%.test}
-    failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
-    echo "Checking for failed tests: ${xybase}.log"
-    if [ $failed_tests -gt 0 ]; then
-	echo "Found: $failed_tests"
-	echo "Mailing report to: $mailaddr"
-	cat oct-header ${xybase}.log ${xybase}.out.log | \
-	    mutt -s "[oct-run_testsuite.sh on $arch] daily report - $datestamp" $mailaddr
-    fi
-done
-}
-
 function trap_kill() {
  kill $OCT_QUEUE > /dev/null 2>&1
  echo "Killed"
@@ -262,7 +235,6 @@ function trap_kill() {
 
 # Some default settings.
 query="no"
-send_mail="no"
 cleanup="no"
 test_groups=""
 
@@ -276,7 +248,6 @@ while getopts "hnlwp:e:m:d:cg:q" opt ; do
 	g) test_groups="$OPTARG";;
 	q) query="yes";;
         w) run_in_parallel="no";;
-        m) mailaddr="$OPTARG"; send_mail="yes";;
 	d) directory="$OPTARG";;
 	c) cleanup="yes";;
         ?) echo "Error parsing arguments"; exit 1;;
@@ -308,13 +279,6 @@ fi
 # No testfiles found, abort.
 if [ -z "$testfiles" ]; then
     echo "No testfiles for group(s) $test_groups found."
-    # This is also mailed, if -m is present (this is to prevent
-    # erroneous cron-jobs and the like).
-    if [ "$send_mail" == "yes" ]; then
-	datestamp=`date +"%Y-%m-%d"`
-	echo "No testfiles for group(s) $test_groups found." | \
-	    mutt -s "[oct-run_testsuite.sh on $arch] daily report - $datestamp" $mailaddr
-    fi
 
 # Otherwise, start the whole machinery.
 else
@@ -356,26 +320,15 @@ else
     testsuite_end=$(date +%s)
     timediff_sec=$[ testsuite_end - testsuite_start ]
 
-    rm -rf oct-header
     RUNTIME="Total run-time of the testsuite: \
     $(printf '%02d:%02d:%02d' $[timediff_sec / 3600] \
     $[(timediff_sec % 3600) / 60 ] $[timediff_sec % 60])"
 
-    # Save runtime for mail header.
-    echo $RUNTIME > oct-header
-    echo "" >> oct-header
-
-    # And print also to the screen.
     echo $RUNTIME
     echo ""
 
-        
-    # Should we send a mail report?
-    [ "${send_mail}" == "yes" ] && mail_report "$testfiles" "$mailaddr"
-
-
     # Clean up.
-    [ "$cleanup" == "yes" ] && rm -f *.log oct-header
+    [ "$cleanup" == "yes" ] && rm -f *.log stamp build-stamp
 fi
 
 exit $failed_tests
