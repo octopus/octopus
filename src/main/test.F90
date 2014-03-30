@@ -26,22 +26,17 @@ program oct_test
   use derivatives_m
   use fft_m
   use global_m
-  use hamiltonian_m
   use io_m
-  use loct_m
   use messages_m
   use mpi_m
-  use multicomm_m
   use parser_m
   use poisson_m
   use profiling_m
   use states_calc_m
-  use string_m
   use system_m
   use unit_m
   use unit_system_m
   use utils_m
-  use varinfo_m
 
   implicit none
 

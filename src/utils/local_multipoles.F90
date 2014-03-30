@@ -20,7 +20,6 @@
 #include "global.h"
 
 program oct_local_multipoles
-  use batch_m
   use box_m
   use box_union_m
   use datasets_m
@@ -30,10 +29,9 @@ program oct_local_multipoles
   use io_m
   use io_binary_m
   use io_function_m
-  use lalg_adv_m
   use loct_m
-  use messages_m
   use mesh_function_m
+  use messages_m
   use parser_m
   use profiling_m
   use restart_m
