@@ -21,7 +21,6 @@
 
 module system_m
   use calc_mode_m
-  use octcl_kernel_m
   use datasets_m
   use density_m
   use elf_m
@@ -29,7 +28,6 @@ module system_m
   use geometry_m
   use global_m
   use grid_m
-  use output_m
   use hamiltonian_m
   use io_function_m
   use math_m
@@ -38,7 +36,9 @@ module system_m
   use modelmb_particles_m
   use mpi_m
   use multicomm_m
+  use octcl_kernel_m
   use opencl_m
+  use output_m
   use parser_m
   use pcm_m
   use poisson_m
