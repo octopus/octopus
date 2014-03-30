@@ -66,7 +66,6 @@ program oct_test
   call getopt_end()
 
   call global_init()
-  call calc_mode_init()
   call messages_init()
 
   call messages_obsolete_variable('WhichTest', 'TestMode')
@@ -85,7 +84,7 @@ program oct_test
   !% Tests the implementation of the orthogonalization routines.
   !%End
   call parse_integer('TestMode', HARTREE_TEST, test_mode)
-  call datasets_init(test_mode)
+  call datasets_init(1)
 
   call messages_obsolete_variable('TestDerivatives', 'TestType')
   call messages_obsolete_variable('TestOrthogonalization', 'TestType')
@@ -110,12 +109,6 @@ program oct_test
 
   call print_header()
 
-  if(no_datasets > 1) then
-    message(1) = 'Info: Multi-Dataset Mode'
-    message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
-    call messages_info(2, stress = .true.)
-  end if
-
   call messages_print_stress(stdout, "Test mode")
   call messages_print_var_option(stdout, "TestMode", test_mode)
   call messages_print_stress(stdout)
@@ -139,7 +132,6 @@ program oct_test
   call print_date("Calculation ended on ")
   call datasets_end()
   call messages_end()
-  call calc_mode_end()
   call global_end()
 
   contains

@@ -78,7 +78,7 @@ program oct_convert
   !% folder) in the format given by <tt>OutputHow</tt>.
   !%End
   call parse_integer('ConvertMode', CONV_FROM_BINARY, conv_mode)
-  call datasets_init(conv_mode)  
+  call datasets_init(1)
 
   call io_init()
   call profiling_init()
