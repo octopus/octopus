@@ -35,7 +35,9 @@ match ; Cross sect. (ani) w=0.1   ; LINE(em_resp/freq_0.1000/cross_section, -1, 
 match ; Born charge O XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5,  5) ; -0.501594
 match ; Born charge O YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 6, 25) ; -0.356658
 match ; Born charge O ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 7, 45) ; -0.634093
+match ; Born charge diff w=0.0    ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  5) ;  0.022272
 
 match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5) ; -0.539031
 match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.392687
 match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ; -0.688468
+match ; Born charge diff w=0.1    ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ; -0.019057
