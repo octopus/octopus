@@ -32,5 +32,5 @@ match ; Born charge zz ; LINE(em_resp_fd/Born_charges, 5, 45) ; 0.004802
 # the Born charges should all be zero by symmetry, if the calculation were converged
 match ; Born charge diff; GREPFIELD(em_resp_fd/Born_charges, "Discrepancy", 3,  4) ; 0.003975
 
-match ; beta xxx ; GREPFIELD(em_resp_fd/beta, "beta xxx", 3); -0.18928477E+00
-match ; beta xxx ; GREPFIELD(em_resp_fd/beta, "beta zxy", 3);  0.32859830E+00
+match ; beta xxx ; GREPFIELD(em_resp_fd/beta, "beta xxx", 3); -0.38630330E+00
+match ; beta zxy ; GREPFIELD(em_resp_fd/beta, "beta zxy", 3);  0.40435018E+00
