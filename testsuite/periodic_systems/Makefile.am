@@ -34,6 +34,7 @@ dist_share_DATA =                                \
 	04-silicon.test                          \
 	04-silicon.01-gs.inp                     \
 	04-silicon.02-kdotp.inp                  \
+	04-silicon.03-emresp.inp                 \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
