@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright (C) 2005-2012 H. Appel, M. Marques, X. Andrade, D. Strubbe
+# Copyright (C) 2005-2014 H. Appel, M. Marques, X. Andrade, D. Strubbe
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ sub usage {
 
   print <<EndOfUsage;
 
- Copyright (C) 2005 by Heiko Appel
+ Copyright (C) 2005-2014 H. Appel, M. Marques, X. Andrade, D. Strubbe
 
 Usage: oct-run_regression_test.pl [options]
 
@@ -542,7 +542,7 @@ sub run_match_new {
     return 0;
   }
 
-  $pre_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
+  $perl_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
 
   # append the command and the regexp also to the shell script matches.sh in the
   # current archive directory
@@ -559,9 +559,29 @@ echo
 echo";
   close(SCRIPT);
 
-  $value = `cd $workdir; $pre_command`;
+  # 'set -e; set -o pipefail' makes the whole pipe series gives an error if any step does;
+  # otherwise the error would come only if the last step (perl) failed, which will rarely happen.
+  $value = qx(set -e; set -o pipefail; cd $workdir && $pre_command $perl_command);
+  # Perl gives error code shifted, for some reason.
+  $exit_code = $? >> 8;
+  if($exit_code) {
+      print STDERR "Match command failed: $pre_command\n";
+      return 0;
+  }
 
-  $success = looks_like_number($value) && ("$value" ne "") && (abs(($value)-($ref_value)) <= $precnum);
+  chomp $value;
+  if(length($value) == 0) {
+      print STDERR "Match command returned nothing: $pre_command\n";
+      return 0;
+  }
+
+  if(!looks_like_number($value)) {
+      print STDERR "Match command returned non-numeric value '$value': $pre_command\n";
+      return 0;
+  }
+
+  # at this point, we know that the command was successful, and returned a number.
+  $success = (abs(($value)-($ref_value)) <= $precnum);
 
   if(!$success || $opt_v) {
     print_hline();
