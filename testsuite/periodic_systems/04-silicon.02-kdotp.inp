@@ -32,3 +32,4 @@ Lsize = a/2
 KPointsUseSymmetries = yes
 Preconditioner = no
 ExtraStates = 1
+KdotPCalcSecondOrder = yes
