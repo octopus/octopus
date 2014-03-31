@@ -238,7 +238,7 @@ query="no"
 cleanup="no"
 test_groups=""
 
-while getopts "hnlwp:e:m:d:cg:q" opt ; do
+while getopts "hnlwp:e:m:d:cg:q:" opt ; do
     case "$opt" in
         h) usage;;
         n) echo="echo"; dry_run="yes";; 
@@ -246,7 +246,7 @@ while getopts "hnlwp:e:m:d:cg:q" opt ; do
         e) exec_suffix="$OPTARG";;
         l) local_run="yes";;
 	g) test_groups="$OPTARG";;
-	q) query="yes";;
+	q) test_groups="$OPTARG"; query="yes";;
         w) run_in_parallel="no";;
 	d) directory="$OPTARG";;
 	c) cleanup="yes";;
