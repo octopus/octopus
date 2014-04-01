@@ -694,13 +694,14 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
 end subroutine X(mf_multipoles)
 
 
-subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole)
+subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole, inside2)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: n_domains
   type(box_union_t), intent(in)  :: domains(:)
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
+  logical, optional, intent(in)  :: inside2(:,:)
 
   integer :: idom, idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
@@ -713,11 +714,20 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
 
   SAFE_ALLOCATE(ff2(1:mesh%np))
   SAFE_ALLOCATE(inside(1:mesh%np, n_domains))
+  if(present(inside2)) inside = inside2
+    message(1) = 'inside allocated'
+    call messages_info(1)
 
   ff2(1:mesh%np) = ff(1:mesh%np)
 
   do idom = 1, n_domains
-    call box_union_inside_vec(domains(idom), mesh%np, mesh%x, inside(:,idom))
+    if(.not. present(inside2))call box_union_inside_vec(domains(idom), mesh%np, mesh%x, inside(:,idom))
+    ll = 0
+    do ip = 1, mesh%np
+      if(inside(ip,idom)) ll = ll + 1
+    end do
+    write(message(1),'(a,i3,a,i10,a,i10,a)')'Domain: ',idom,' contains ', ll, ' points over ',mesh%np,' points of the total mesh'
+    call messages_info(1)
     multipole(1, idom) = X(mf_integrate)(mesh, ff2, mask=inside(:,idom))
   end do
   
@@ -746,6 +756,8 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
       end do
     end do
   end if
+  SAFE_DEALLOCATE_A(inside)
+  SAFE_DEALLOCATE_A(ff2)
 
   POP_SUB(X(mf_local_multipoles))
 end subroutine X(mf_local_multipoles)
