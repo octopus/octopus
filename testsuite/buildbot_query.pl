@@ -11,7 +11,7 @@ $match = "J1 1st iteration";
 
 # options specifying setup for Octopus
 $bbpath = "http://www.tddft.org/programs/octopus/buildbot";
-$shell_num = 7;
+$shell_num = 4;
 
 print "URL: $bbpath\n";
 print "Input file: $inputfile\n";
@@ -74,6 +74,7 @@ while ($_ = <ONEBOX>) {
 		    if($_ =~ /\(Calculated value = (.*)\)/) {  # match OK
 			print $_;
 			$value = $1;
+			$match_found = 1;
 		    } else {  # match FAIL
 			while ($_ = <TESTLOG>) {
 			    if(index($_, $match) == -1) {
@@ -81,6 +82,7 @@ while ($_ = <ONEBOX>) {
 				    print $_;
 				    if($_ =~ /Calculated value : (.*)/) {
 					$value = $1;
+					$match_found = 1;
 				    }
 				}
 			    } else {
@@ -88,17 +90,19 @@ while ($_ = <ONEBOX>) {
 			    }
 			}
 		    }
-		    $total += $value;
-		    $counts += 1;
-		    if($value < $min) {
-			$minname = $name;
-			$min = $value;
+		    # If match failed and did not give a number, do not treat it as zero.
+		    if($match_found) {
+			$total += $value;
+			$counts += 1;
+			if($value < $min) {
+			    $minname = $name;
+			    $min = $value;
+			}
+			if($value > $max) {
+			    $maxname = $name;
+			    $max = $value;
+			}
 		    }
-		    if($value > $max) {
-			$maxname = $name;
-			$max = $value;
-		    }
-		    $match_found = 1;
 		}
 		if($_ =~ /Using input file/) { last; }
 	    }
