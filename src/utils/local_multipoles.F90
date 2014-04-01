@@ -416,7 +416,7 @@ contains
             
     call box_union_init(dom, nb, boxes)
 
-! TODO: Check for a conflict between box_union and clist for Bader Volumes
+    ! TODO: Check for a conflict between box_union and clist for Bader Volumes
     ic = 0
     if (shape == MINIMUM ) then
       do ia = 1, sys%geo%natoms
@@ -475,7 +475,7 @@ contains
 
     SAFE_ALLOCATE(multipoles(1:(lmax + 1)**2, nd)); multipoles(:,:) = M_ZERO
 
-! TODO: For instance spin are not included and just work with real densities.
+    ! TODO: For instance spin are not included and just work with real densities.
 
     nspin = sys%st%d%nspin
     if ( any( dshape(:) == BADER )) then
@@ -486,7 +486,7 @@ contains
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
       call basins_init(basins, sys%gr%mesh)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-! TODO: Make this part optional.      
+      ! TODO: Make this part optional.      
         filename = 'basinsmap'
         iunit = io_open(file=trim(filename), action='write')
         do ip = 1, sys%gr%mesh%np
@@ -636,7 +636,7 @@ contains
   end subroutine local_geometry_dipole
 
   ! ---------------------------------------------------------
-  real*8 function local_geometry_charge(dom, geo) result(charge)
+  FLOAT function local_geometry_charge(dom, geo) result(charge)
     type(box_union_t), intent(in)  :: dom
     type(geometry_t),  intent(in)  :: geo
 

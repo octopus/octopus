@@ -194,7 +194,7 @@ contains
   end subroutine box_copy
 
   ! --------------------------------------------------------------
-  function box_get_center(box) result(x)
+  pure function box_get_center(box) result(x)
     type(box_t), intent(in) :: box
     FLOAT, dimension(MAX_DIM) :: x
 
