@@ -21,13 +21,18 @@
 sharedir = $(pkgdatadir)/testsuite/photo_electron
 
 dist_share_DATA =                        \
+          01-h1d_lin.test                \
           01-h1d_lin.01-mask.inp         \
           01-h1d_lin.02-ba.inp           \
+          02-restart.test                \
           02-restart.01-ba.inp           \
           02-restart.02-restart_ba.inp   \
+          03-h1d_ati.test                \
           03-h1d_ati.01.inp              \
+          04-nfft.test                   \
           04-nfft.01-ba.inp              \
           04-nfft.02-ati.inp             \
+          05-pfft.test                   \
           05-pfft.01-gs.inp              \
           05-pfft.02-mask.inp            \
           05-pfft.03-ba.inp
