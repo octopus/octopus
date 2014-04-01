@@ -472,7 +472,7 @@ contains
     FLOAT,                  intent(in) :: dt   
 
     FLOAT, allocatable  :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
-    integer             :: id, ip, is, iunit, nspin
+    integer             :: id, ip, iunit, nspin
     FLOAT, allocatable  :: ff2(:,:)
     logical,allocatable :: inside(:,:)
     type(basins_t)      :: basins
@@ -486,9 +486,7 @@ contains
 
     nspin = sys%st%d%nspin
     if ( any( dshape(:) == BADER )) then
-      message(1)  = 'Bader Volumes is under development'
-      message(2)  = 'It might not work or produce wrong results.'
-      call messages_warning(2)
+      call messages_experimental('Bader Volumes')
       SAFE_ALLOCATE(inside(1:sys%gr%mesh%np, nd))
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
       call basins_init(basins, sys%gr%mesh)
@@ -536,10 +534,10 @@ contains
     character(len=15),      intent(in) :: lab(:)
     logical,           intent(out) :: inside(:,:)
 
-    integer           :: ib, ic, id, ip, ix, ixx, nb, rankmin
-    integer           :: max_check, xx, yy, zz, xmax, ymax, zmax
+    integer           :: ib, id, ip, ix, nb, rankmin
+    integer           :: max_check
     integer, allocatable :: dunit(:), domain_map(:,:)
-    FLOAT             :: dist,dmin, rs
+    FLOAT             :: dmin
     FLOAT,allocatable :: xi(:)
     character(len=64) :: filename
 
