@@ -559,9 +559,9 @@ echo
 echo";
   close(SCRIPT);
 
-  # 'set -e; set -o pipefail' makes the whole pipe series gives an error if any step does;
-  # otherwise the error would come only if the last step (perl) failed, which will rarely happen.
-  $value = qx(set -e; set -o pipefail; cd $workdir && $pre_command $perl_command);
+  # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
+  # otherwise the error comes only if the last step (perl) failed, which will rarely happen.
+  $value = qx(cd $workdir && $pre_command $perl_command);
   # Perl gives error code shifted, for some reason.
   $exit_code = $? >> 8;
   if($exit_code) {
