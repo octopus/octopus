@@ -201,7 +201,6 @@ contains
       message(1) = 'Info: Computing local multipoles'
       message(2) = ''
       call messages_info(2)
-!      call calc_local_multipoles(nd, domain, lab, lmax, read_ff, sys%gr%mesh%np_part, iter, dt) 
       call calc_local_multipoles(nd, domain, lab, lmax, read_ff, iter, dt) 
     end if
     SAFE_DEALLOCATE_A(lab)
@@ -286,7 +285,7 @@ contains
     lsize(:) = M_ZERO
     center(:) = M_ZERO
     dim = sys%space%dim
-!
+
     call parse_block_integer(blk, row, 1, shape)
     write(message(1),'(a,i0,a,i0)')' read_from_domain. shape:', shape,' space%dim:',sys%space%dim
     call messages_info(1)
@@ -417,7 +416,7 @@ contains
             
     call box_union_init(dom, nb, boxes)
 
-!< TODO: Check for a conflict between box_union and clist for Bader Volumes
+! TODO: Check for a conflict between box_union and clist for Bader Volumes
     ic = 0
     if (shape == MINIMUM ) then
       do ia = 1, sys%geo%natoms
@@ -436,12 +435,10 @@ contains
       if (ic > 0) then 
          if( ic > 20 ) ic = 20
          call messages_warning(ic)
-         message(1) = '!'
-         message(2) = '! WARNING: THIS FACT COULD GIVE INCORRECT RESULTS '
-         message(3) = '! '
-         call messages_warning(3)
+         message(1) = ' THIS COULD GIVE INCORRECT RESULTS '
+         call messages_warning(1)
          if ( ic == 20 ) then
-           message(1) = 'WARNING: AT LIST 19 ATOMS ARE NOT PRESENT IN THE LIST'
+           message(1) = ' AT LIST 19 ATOMS ARE NOT PRESENT IN THE LIST'
            call messages_warning(1)
          end if
       end if
@@ -478,7 +475,7 @@ contains
 
     SAFE_ALLOCATE(multipoles(1:(lmax + 1)**2, nd)); multipoles(:,:) = M_ZERO
 
-!> TODO: For instance spin are not included and just work with real densities.
+! TODO: For instance spin are not included and just work with real densities.
 
     nspin = sys%st%d%nspin
     if ( any( dshape(:) == BADER )) then
@@ -489,14 +486,14 @@ contains
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
       call basins_init(basins, sys%gr%mesh)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-!> TODO: Make this part optional.      
+! TODO: Make this part optional.      
         filename = 'basinsmap'
         iunit = io_open(file=trim(filename), action='write')
         do ip = 1, sys%gr%mesh%np
         write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,id)),id=1,3), &
                                basins%map(ip)
         end do
-!<
+
       call bader_union_inside(basins, nd, dom, lab, inside)
       message(1) = 'Calling dmf_local_multipoles'
       call messages_info(1)
