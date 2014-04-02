@@ -328,7 +328,7 @@ else
     echo ""
 
     # Clean up.
-    [ "$cleanup" == "yes" ] && rm -f *.log stamp build-stamp
+    [ "$cleanup" == "yes" ] && rm -f *.log
 fi
 
 exit $failed_tests
