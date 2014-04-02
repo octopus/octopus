@@ -40,7 +40,7 @@ Usage: oct-run_regression_test.pl [options]
     -D        name of the directory where to look for the executables   
     -s        exec suffix for the executables
     -c        create template
-    -f        filename of testsuite
+    -f        filename of testsuite [required]
     -p        preserve working directories
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
@@ -147,6 +147,10 @@ if($opt_D) {
  }
 } else {
  $exec_directory = "/usr/bin";
+}
+
+if(length($opt_f) == 0) {
+    die("ERROR: You must supply the name of a test file with the -f option.\n");
 }
 
 # Find out which executables are available.
