@@ -563,7 +563,7 @@ contains
     endif
 
 #ifdef HAVE_MPI
-    call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world, mpi_err)
+    call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
 #endif
 
     POP_SUB(phonons_read_saved)

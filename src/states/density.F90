@@ -416,7 +416,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, ik, ib, nblock
+    integer :: ist, ik, ib, nblock, status(MPI_STATUS_SIZE)
     type(states_t) :: staux
     CMPLX, allocatable :: psi(:, :, :)
     type(batch_t)  :: psib
@@ -488,7 +488,7 @@ contains
               ist, st%mpi_grp%comm, mpi_err)
 
             call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
-              ist, st%mpi_grp%comm, mpi_err)
+              ist, st%mpi_grp%comm, status, mpi_err)
           else
             st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
           end if

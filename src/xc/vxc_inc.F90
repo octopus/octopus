@@ -1333,14 +1333,15 @@ subroutine cmplxscl_energy_comm_sum(zex, zec)
   CMPLX                :: zenergies1(2), zenergies2(2)
 
   PUSH_SUB(cmplxscl_energy_comm_sum)
+
 #ifdef HAVE_MPI
   zenergies1(1) = zex
   zenergies1(2) = zec
-  call MPI_Allreduce(zenergies1, zenergies2, 2, MPI_CMPLX, MPI_SUM, mpi_world, mpi_err) ! XXX world
-  ! XXX mpi_err ?
+  call MPI_Allreduce(zenergies1, zenergies2, 2, MPI_CMPLX, MPI_SUM, mpi_world%comm, mpi_err) ! XXX world
   zex = zenergies2(1)
   zec = zenergies2(2)
 #endif
+
   POP_SUB(cmplxscl_energy_comm_sum)
 end subroutine cmplxscl_energy_comm_sum
 
