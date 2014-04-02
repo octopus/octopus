@@ -5,12 +5,11 @@ ExperimentalFeatures = yes
 
 PeriodicDimensions = 3
 
-Spacing = 0.7
-
 a = 10.2
 
 BoxShape = parallelepiped
 Lsize = a/2
+Spacing = Lsize/7
 
 %ReducedCoordinates
   "Si" |   0.0       | 0.0       | 0.0 
