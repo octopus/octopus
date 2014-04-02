@@ -416,11 +416,14 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, ik, ib, nblock, status(MPI_STATUS_SIZE)
+    integer :: ist, ik, ib, nblock
     type(states_t) :: staux
     CMPLX, allocatable :: psi(:, :, :)
     type(batch_t)  :: psib
     type(density_calc_t) :: dens_calc
+#ifdef HAVE_MPI
+    integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(states_freeze_orbitals)
 
