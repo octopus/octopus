@@ -24,7 +24,6 @@ program oct_local_multipoles
   use box_m
   use box_union_m
   use datasets_m
-!  use derivatives_m
   use command_line_m
   use geometry_m
   use global_m
@@ -279,7 +278,7 @@ contains
     !!% This shape can only be used in the local_multipoles utility.
     !!%End
 
-!  Initializing variables in dom
+    ! Initializing variables in dom
     shape = 1
     nb = 1
     rsize = -M_ONE
@@ -334,7 +333,7 @@ contains
           center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
         end do
       case(BADER)
-      ! FIXME: when input error exists --> segmentation fault appears
+        ! FIXME: when input error exists --> segmentation fault appears
         call parse_block_string(blk, row, 2, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -365,11 +364,11 @@ contains
   end subroutine read_from_domain_block
 
   ! ---------------------------------------------------------
-!> FIXME:
-!! local_multipoles.F90(340): warning #6843: A dummy argument with an explicit INTENT(OUT)
-!!     declaration is not given an explicit value.   [CLIST]
-!!  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
-!!---------------------------------------------------------------------------^
+  !> FIXME:
+  !! local_multipoles.F90(340): warning #6843: A dummy argument with an explicit INTENT(OUT)
+  !!     declaration is not given an explicit value.   [CLIST]
+  !!  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
+  !!---------------------------------------------------------------------------^
   subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
     type(box_union_t), intent(inout) :: dom
     integer,           intent(in)    :: dim
@@ -378,7 +377,7 @@ contains
     FLOAT,             intent(in)    :: rsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
-    character(len=80), intent(out)    :: clist
+    character(len=80), intent(out)   :: clist
 
     integer                  :: ia, ibox, ic, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
