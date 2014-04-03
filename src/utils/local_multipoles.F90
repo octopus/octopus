@@ -49,7 +49,7 @@ program oct_local_multipoles
   
   type(system_t)    :: sys
   type(simul_box_t) :: sb
-  integer, parameter   :: BADER = 8
+  integer, parameter   :: BADER = 512
   integer, allocatable :: dshape(:)
   FLOAT                :: BaderThreshold
 
@@ -170,14 +170,6 @@ contains
     !%End
     call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
 
-    !%Variable domain
-    !%Type union_box_t
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% This variable stores the information about the local boxes 
-    !% for each new local domain. Information is read in the LocalDomain block.
-    !%End
-
     call local_domains_read(domain, nd, lab)
 
     if ( wrt_multipoles ) then
@@ -238,7 +230,7 @@ contains
     !% 
     !%End
 
-    ! First, find out if there is a Species block.
+    ! First, find out if there is a LocalDomains block.
     ndomain = 0
     if(parse_block(datasets_check('LocalDomains'), blk) == 0) then
       ndomain = parse_block_n(blk)
@@ -272,13 +264,6 @@ contains
     FLOAT             :: center(MAX_DIM), lsize(MAX_DIM)
    
     PUSH_SUB(read_from_domain_block)
-    ! Read domain shape
-    !%Variable shape
-    !%Type integer
-    !%Option bader 8
-    !% The shape of the domain box will be read from a LocalDomain block.
-    !% This shape can only be used in the local_multipoles utility.
-    !%End
 
     ! Initializing variables in dom
     shape = 1
