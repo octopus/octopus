@@ -169,17 +169,12 @@ subroutine X(restart_read_lr_rho)(dl_rho, gr, nspin, restart_subdir, rho_tag, ie
     if( s_ierr /=0 ) ierr = s_ierr
   end do
 
-
   if( ierr == 0 ) then 
     write(message(1),'(a)') 'Loaded restart density '//trim(rho_tag)
-    call messages_info(1)
-
   else
-
     write(message(1),'(a)') 'Could not load restart '//trim(rho_tag)
-    call messages_info(1)
-
   end if
+  call messages_info(1)
 
   POP_SUB(X(restart_read_lr_rho))
 end subroutine X(restart_read_lr_rho)
