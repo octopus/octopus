@@ -128,7 +128,7 @@ subroutine td_init(td, sys, hm)
   end if
   
   ! Initialize the kick (if optical-spectrum calculations are to be performed)
-  call kick_init(hm%ep%kick, sys%st%d%ispin, sys%gr%mesh%sb%dim)
+  call kick_init(hm%ep%kick, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim)
 
   ! now the photoelectron stuff
   call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%output_interval, hm, td%max_iter, td%dt)

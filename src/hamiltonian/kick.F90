@@ -107,10 +107,11 @@ module kick_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, nspin, dim)
+  subroutine kick_init(kick, nspin, dim, periodic_dim)
     type(kick_t), intent(out) :: kick
     integer,      intent(in)  :: nspin
     integer,      intent(in)  :: dim
+    integer,      intent(in)  :: periodic_dim
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir
@@ -252,127 +253,136 @@ contains
       kick%function_mode = KICK_FUNCTION_DIPOLE
       kick%n_multipoles = 0
 
-    end if
-    
+      ! Find out how many equivalent axes we have...
+      !%Variable TDPolarizationEquivAxes
+      !%Type integer
+      !%Default 0
+      !%Section Time-Dependent::Response::Dipole
+      !%Description
+      !% Defines how many of the <tt>TDPolarization</tt> axes are equivalent. This information is stored in a file and then
+      !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
+      !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
+      !%End
+      call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, kick%pol_equiv_axes)
 
-    ! Find out how many equivalent axes we have...
-    !%Variable TDPolarizationEquivAxes
-    !%Type integer
-    !%Default 0
-    !%Section Time-Dependent::Response
-    !%Description
-    !% Defines how many of the <tt>TDPolarization</tt> axes are equivalent. This information is stored in a file and then
-    !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
-    !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
-    !%End
-    call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, kick%pol_equiv_axes)
+      !%Variable TDPolarizationDirection
+      !%Type integer
+      !%Default 1
+      !%Section Time-Dependent::Response::Dipole
+      !%Description
+      !% When a delta potential is included in a time-dependent run, this
+      !% variable defines in which direction the field will be applied
+      !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
+      !% typical run (without using symmetry), the <tt>TDPolarization</tt> block
+      !% would contain the three Cartesian unit vectors (the default
+      !% value), and one would make 3 runs varying
+      !% <tt>TDPolarization</tt> from 1 to 3.
+      !% If one is using symmetry,  <tt>TDPolarization</tt> should run only from 1
+      !% to <tt>TDPolarizationEquivAxes</tt>.
+      !%End
 
-    
-    !%Variable TDPolarizationDirection
-    !%Type integer
-    !%Default 1
-    !%Section Time-Dependent::Response
-    !%Description
-    !% When a delta potential is included in a time-dependent run, this
-    !% variable defines in which direction the field will be applied
-    !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
-    !% typical run (without using symmetry), the <tt>TDPolarization</tt> block
-    !% would contain the three Cartesian unit vectors (the default
-    !% value), and one would make 3 runs varying
-    !% <tt>TDPolarization</tt> from 1 to 3.
-    !% If one is using symmetry,  <tt>TDPolarization</tt> should run only from 1
-    !% to <tt>TDPolarizationEquivAxes</tt>.
-    !%End
+      call parse_integer(datasets_check('TDPolarizationDirection'), 0, kick%pol_dir)
 
-    call parse_integer(datasets_check('TDPolarizationDirection'), 0, kick%pol_dir)
+      if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call input_error('TDPolarizationDirection')
+      
+      !%Variable TDPolarization
+      !%Type block
+      !%Section Time-Dependent::Response::Dipole
+      !%Description
+      !% The (real) polarization of the delta electric field. Normally
+      !% one needs three perpendicular polarization directions to calculate a
+      !% spectrum (unless symmetry is used).
+      !% The format of the block is:
+      !%
+      !% <tt>%TDPolarization
+      !% <br>&nbsp;&nbsp;pol1x | pol1y | pol1z
+      !% <br>&nbsp;&nbsp;pol2x | pol2y | pol2z
+      !% <br>&nbsp;&nbsp;pol3x | pol3y | pol3z
+      !% <br>%</tt>
+      !%
+      !% <tt>Octopus</tt> uses both this block and the variable
+      !% <tt>TDPolarizationDirection</tt> to determine the polarization
+      !% vector for the run. For example, if
+      !% <tt>TDPolarizationDirection=2</tt> the polarization <tt>(pol2x,
+      !% pol2y, pol2z)</tt> would be used.
+      !% These directions may not be in periodic directions.
+      !%
+      !% The default value for <tt>TDPolarization</tt> is the three
+      !% Cartesian unit vectors (1,0,0), (0,1,0), and (0,0,1).
+      !%
+      !% Note that the directions do not necessarily need to be perpendicular
+      !% when symmetries are used.
+      !%
+      !% WARNING: If you want to obtain the cross-section tensor, the
+      !% <tt>TDPolarization</tt> block must be exactly the same for the run in
+      !% each direction. The direction must be selected by the
+      !% <tt>TDPolarizationDirection</tt> variable.
+      !%
+      !%End
 
-    if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call input_error('TDPolarizationDirection')
-
-    !%Variable TDPolarization
-    !%Type block
-    !%Section Time-Dependent::Response
-    !%Description
-    !% The (real) polarization of the delta electric field. Normally
-    !% one needs three perpendicular polarization directions to calculate a
-    !% spectrum (unless symmetry is used).
-    !% The format of the block is:
-    !%
-    !% <tt>%TDPolarization
-    !% <br>&nbsp;&nbsp;pol1x | pol1y | pol1z
-    !% <br>&nbsp;&nbsp;pol2x | pol2y | pol2z
-    !% <br>&nbsp;&nbsp;pol3x | pol3y | pol3z
-    !% <br>%</tt>
-    !%
-    !% <tt>Octopus</tt> uses both this block and the variable
-    !% <tt>TDPolarizationDirection</tt> to determine the polarization
-    !% vector for the run. For example, if
-    !% <tt>TDPolarizationDirection=2</tt> the polarization <tt>(pol2x,
-    !% pol2y, pol2z)</tt> would be used.
-    !%
-    !% The default value for <tt>TDPolarization</tt> is the three
-    !% Cartesian unit vectors (1,0,0), (0,1,0), and (0,0,1).
-    !%
-    !% Note that the directions do not necessarily need to be perpendicular
-    !% when symmetries are used.
-    !%
-    !% WARNING: If you want to obtain the cross-section tensor, the
-    !% <tt>TDPolarization</tt> block must be exactly the same for the run in
-    !% each direction. The direction must be selected by the
-    !% <tt>TDPolarizationDirection</tt> variable.
-    !%
-    !%End
-
-    kick%pol(:, :) = M_ZERO
-    if(parse_block(datasets_check('TDPolarization'), blk)==0) then
-      n_rows = parse_block_n(blk)
-
-      if(n_rows < dim) call input_error('TDPolarization')
-
-      do irow = 1, n_rows
-        do idir = 1, 3
-          call parse_block_float(blk, irow - 1, idir - 1, kick%pol(idir, irow))
+      kick%pol(:, :) = M_ZERO
+      if(parse_block(datasets_check('TDPolarization'), blk)==0) then
+        n_rows = parse_block_n(blk)
+        
+        if(n_rows < dim) call input_error('TDPolarization')
+        
+        do irow = 1, n_rows
+          do idir = 1, 3
+            call parse_block_float(blk, irow - 1, idir - 1, kick%pol(idir, irow))
+          end do
         end do
-      end do
-      if(n_rows < 3) kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
-      if(n_rows < 2) kick%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
-      call parse_block_end(blk)
-    else
-      ! Here the symmetry of the system should be analyzed, and the polarization
-      ! basis built accordingly.
-      kick%pol(1:3, 1) = (/ M_ONE,  M_ZERO, M_ZERO /)
-      kick%pol(1:3, 2) = (/ M_ZERO, M_ONE,  M_ZERO /)
-      kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE  /)
-    end if
+        if(n_rows < 3) kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+        if(n_rows < 2) kick%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+        call parse_block_end(blk)
+      else
+        ! FIXME: Here the symmetry of the system should be analyzed, and the polarization
+        ! basis built accordingly.
+        kick%pol(1:3, 1) = (/ M_ONE,  M_ZERO, M_ZERO /)
+        kick%pol(1:3, 2) = (/ M_ZERO, M_ONE,  M_ZERO /)
+        kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE  /)
+      end if
 
-    ! Normalize
-    do idir = 1, 3
-      kick%pol(1:3, idir) = kick%pol(1:3, idir) / sqrt(sum(kick%pol(1:3, idir)**2))
-    end do
-
-    !%Variable TDPolarizationWprime
-    !%Type block
-    !%Section Time-Dependent::Response
-    !%Description 
-    !% This block is needed only when
-    !% <tt>TDPolarizationEquivAxes</tt> is set to 3.  In such a case,
-    !% the three directions (<i>pol1</i>, <i>pol2</i>, and <i>pol3</i>) defined in
-    !% the <tt>TDPolarization</tt> block should be related by symmetry
-    !% operations. If <i>A</i> is the symmetry operation that takes you
-    !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
-    !% should be set to the direction defined by <i>A</i>^{-1} <i>pol3</i>.  
-    !% For more information see MJT Oliveira
-    !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
-    !% 3392 (2008).
-    !%End
-    if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
+      ! Normalize
       do idir = 1, 3
-        call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
+        kick%pol(1:3, idir) = kick%pol(1:3, idir) / sqrt(sum(kick%pol(1:3, idir)**2))
       end do
-      kick%wprime(1:3) = kick%wprime(1:3) / sqrt(sum(kick%wprime(1:3)**2))
-      call parse_block_end(blk)
-    else
-      kick%wprime(1:3) = (/ M_ZERO, M_ZERO, M_ONE /)
+
+      if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
+        message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
+        call messages_fatal(1)
+      endif
+
+      !%Variable TDPolarizationWprime
+      !%Type block
+      !%Section Time-Dependent::Response::Dipole
+      !%Description 
+      !% This block is needed only when
+      !% <tt>TDPolarizationEquivAxes</tt> is set to 3.  In such a case,
+      !% the three directions (<i>pol1</i>, <i>pol2</i>, and <i>pol3</i>) defined in
+      !% the <tt>TDPolarization</tt> block should be related by symmetry
+      !% operations. If <i>A</i> is the symmetry operation that takes you
+      !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
+      !% should be set to the direction defined by <i>A</i>^{-1} <i>pol3</i>.  
+      !% For more information see MJT Oliveira
+      !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
+      !% 3392 (2008).
+      !%End
+      if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
+        do idir = 1, 3
+          call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
+        end do
+        kick%wprime(1:3) = kick%wprime(1:3) / sqrt(sum(kick%wprime(1:3)**2))
+        call parse_block_end(blk)
+      else
+        kick%wprime(1:3) = (/ M_ZERO, M_ZERO, M_ONE /)
+      end if
     end if
+
+    ! for non-dipole, it is more complicated to check whether it is actually in the periodic direction
+    if(periodic_dim > 0) then
+      message(1) = "Kicks cannot be applied correctly in periodic directions."
+      call messages_warning(1)
+    endif
 
     !%Variable TDMomentumTransfer
     !%Type block
