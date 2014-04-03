@@ -185,7 +185,7 @@ contains
     character(len=256) :: string
     logical :: is_complex
 
-    nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
+    nsteps = int((cs%max_energy - cs%min_energy) / cs%energy_step)
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
 

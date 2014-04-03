@@ -43,9 +43,7 @@ program oct_convert
   implicit none
 
   character*256 :: config_str
-  integer :: conv_mode
   integer :: ierr
-  
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())

@@ -127,7 +127,7 @@ program dielectric_function
 
   istart = max(1, istart)
 
-  energy_steps = spectrum%max_energy / spectrum%energy_step
+  energy_steps = int(spectrum%max_energy / spectrum%energy_step)
 
   n0 = sqrt(sum(vecpot0(1:space%dim))**2)
 
@@ -163,7 +163,7 @@ program dielectric_function
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
 
-    invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + cmplx(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
+    invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + TOCMPLX(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
 
     ! calculate the full inverse dielectric matrix
     do idir = 1, space%dim
@@ -184,7 +184,7 @@ program dielectric_function
     
     dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
 
-    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(CNST(4.0)*M_PI)
+    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(M_FOUR*M_PI)
   end do
 
   SAFE_DEALLOCATE_A(fullmat)
