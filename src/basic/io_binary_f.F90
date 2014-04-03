@@ -24,6 +24,7 @@ module io_binary_m
   use global_m
   use messages_m
   use mpi_m
+  use profiling_m
 
   implicit none 
 
@@ -734,6 +735,8 @@ contains
     integer, optional,   intent(in)  :: offset
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+    integer :: read_np, number_type
+    real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(zread_binary)
 
@@ -741,7 +744,18 @@ contains
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+
+    call get_info_binary(read_np, number_type, ierr, fname)
+    ! if the type of the file is real, then read real numbers and convert to complex
+    ! @TODO other casts are missing
+    if (number_type /= type) then
+      SAFE_ALLOCATE(read_ff(1:np))
+      call dread_binary(fname, np, read_ff, ierr, offset)
+      ff = read_ff
+      SAFE_DEALLOCATE_A(read_ff)
+    else
+      call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    endif
     
     POP_SUB(zread_binary)
   end subroutine zread_binary
@@ -1074,15 +1088,16 @@ contains
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof(ff(1))+64
     
-    call get_info_binary(read_np, number_type, ierr, fname);
+    call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
-    ! @TODO other castings are missing
+    ! @TODO other casts are missing
     if (number_type /= type) then
-      write(message(1),*) "Found type =", number_type, "instead of ",TYPE_DOUBLE_COMPLEX
+      write(message(1),'(a,i2,a,i2)') "Found type = ", number_type, " instead of ", type
       call messages_warning(1)
-      allocate(read_ff(1:np))
+      SAFE_ALLOCATE(read_ff(1:np))
       call dread_parallel(fname, comm, xlocal, np, read_ff, ierr)
       ff = read_ff
+      SAFE_DEALLOCATE_A(read_ff)
     else
       amode = MPI_MODE_RDONLY
       mpi_info = MPI_INFO_NULL 
