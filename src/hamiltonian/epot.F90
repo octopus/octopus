@@ -232,14 +232,7 @@ contains
     ! lasers
     call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
 
-    select case(ispin)
-    case(UNPOLARIZED)
-      call kick_init(ep%kick, 1, gr%mesh%sb%dim)
-    case(SPIN_POLARIZED)
-      call kick_init(ep%kick, 2, gr%mesh%sb%dim)
-    case(SPINORS)
-      call kick_init(ep%kick, 4, gr%mesh%sb%dim)
-    end select
+    call kick_init(ep%kick, ispin, gr%mesh%sb%dim)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')

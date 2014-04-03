@@ -189,7 +189,7 @@ contains
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
-      if (nspin == 1) call input_error('TDDeltaStrengthMode')
+      if (nspin == UNPOLARIZED) call input_error('TDDeltaStrengthMode')
     case default
       call input_error('TDDeltaStrengthMode')
     end select
