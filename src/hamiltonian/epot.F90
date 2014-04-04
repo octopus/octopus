@@ -908,7 +908,6 @@ contains
       end do
     end if
     ep%local_potential_precalculated = .true.
-    stop
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(Imtmp)
