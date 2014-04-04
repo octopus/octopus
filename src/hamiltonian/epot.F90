@@ -897,17 +897,18 @@ contains
         tmp(1:gr%mesh%np) = M_ZERO
         Imtmp(1:gr%mesh%np) = M_ZERO
         call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp, Imtmp)!, time)
-        ep%local_potential(1:gr%mesh%np, iatom) = tmp(1:gr%mesh%np) 
-        ep%Imlocal_potential(1:gr%mesh%np, iatom) = Imtmp(1:gr%mesh%np)
+        ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
+        ep%Imlocal_potential(1:gr%mesh%np, iatom) = real(Imtmp(1:gr%mesh%np), 4)
       end do
     else
       do iatom = 1, geo%natoms
         tmp(1:gr%mesh%np) = M_ZERO
         call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
-        ep%local_potential(1:gr%mesh%np, iatom) = tmp(1:gr%mesh%np)
+        ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
       end do
     end if
     ep%local_potential_precalculated = .true.
+    stop
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(Imtmp)
@@ -1170,12 +1171,12 @@ contains
             sumatoms = sumatoms + phase(iatom)
           end do
           
-          efourier = efourier + factor*sumatoms*conjg(sumatoms)
+          efourier = efourier + TOFLOAT(factor*sumatoms*conjg(sumatoms))
           
           do iatom = 1, geo%natoms
             tmp(1:sb%dim) = M_ZI*gg(1:sb%dim)*phase(iatom)
             force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
-              - factor*(conjg(tmp(1:sb%dim))*sumatoms + tmp(1:sb%dim)*conjg(sumatoms))
+              - factor*TOFLOAT(conjg(tmp(1:sb%dim))*sumatoms + tmp(1:sb%dim)*conjg(sumatoms))
           end do
           
         end do
