@@ -173,7 +173,7 @@ subroutine X(symmetrize_tensor)(symm, tensor)
   type(symmetries_t), intent(in)    :: symm
   R_TYPE,             intent(inout) :: tensor(:,:) !< (3, 3)
   
-  integer :: iop, nops, idir
+  integer :: iop, nops
   R_TYPE :: tensor_symm(3, 3)
   
   PUSH_SUB(X(symmetrize_tensor))

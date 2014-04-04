@@ -647,6 +647,7 @@ contains
     ewsum = sum(sf(0, 1:nspin))
     polsum = M_ZERO
 
+    ! FIXME: wrong unless kick_density
     do ie = 1, no_e
       energy = ie * spectrum%energy_step
       ewsum = ewsum + sum(sf(ie, 1:nspin))
