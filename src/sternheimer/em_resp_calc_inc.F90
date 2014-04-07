@@ -263,7 +263,9 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   integer :: dir1, dir2, ndir_, ist, ik
   CMPLX :: term, subterm
   type(mesh_t), pointer :: mesh
+#ifdef HAVE_MPI
   CMPLX :: zpol_temp(1:MAX_DIM, 1:MAX_DIM)
+#endif
 
   PUSH_SUB(X(calc_polarizability_periodic))
 

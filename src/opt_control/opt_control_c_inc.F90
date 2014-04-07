@@ -137,6 +137,7 @@
 
 
   ! ---------------------------------------------------------
+  !> interface is required by its being passed as dummy routine to minimize_multidim
   subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
     integer,     intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx, maxdf

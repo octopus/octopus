@@ -19,7 +19,7 @@
 
 
 !------------------------------------------------------------
-!> This routine computes <psi|X, i.e. the exchange operator applied to a bra.
+!> This routine computes lxc = <psi|X, i.e. the exchange operator applied to a bra.
 !!
 !! The parallelization of this routine is done in the following way:
 !!
