@@ -203,12 +203,14 @@ foreach my $octopus_exe (@executables){
   set_precision("default", $octopus_exe);
   $test_succeeded = 1;
 
-  $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
-  chomp($workdir);
-
   if (!$opt_m) {
-    system ("rm -rf $workdir");
-    mkdir $workdir;
+      $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
+      chomp($workdir);
+
+      system ("rm -rf $workdir");
+      mkdir $workdir;
+  } else {
+      $workdir = get_env("PWD");
   }
 
   # testsuite
@@ -282,23 +284,21 @@ foreach my $octopus_exe (@executables){
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-	$input_base = $1;
-	$input_file = dirname($opt_f) . "/" . $input_base;
-
-	if( -f $input_file ) {
-	  print "\n\nUsing input file : $input_file \n";
-	  system("cp $input_file $workdir/inp");
-	  # Ensure that the input file is writable so that it can
-	  # be overwritten by the next test.
-	  $mode = (stat "$workdir/inp")[2];
-	  chmod $mode|S_IWUSR, "$workdir/inp";
-	} else {
-	  die "ERROR: could not find input file: $input_file\n";
-	}
-
-	$return_value = 0;
-
 	if ( !$opt_m ) {
+          $input_base = $1;
+          $input_file = dirname($opt_f) . "/" . $input_base;
+      
+          if( -f $input_file ) {
+            print "\n\nUsing input file : $input_file \n";
+            system("cp $input_file $workdir/inp");
+            # Ensure that the input file is writable so that it can
+            # be overwritten by the next test.
+            $mode = (stat "$workdir/inp")[2];
+            chmod $mode|S_IWUSR, "$workdir/inp";
+          } else {
+            die "ERROR: could not find input file: $input_file\n";
+          }
+      
 	  print "\nStarting test run ...\n";
 
 	  $command_suffix = $command;
@@ -360,23 +360,27 @@ foreach my $octopus_exe (@executables){
 	    }
 	    $test{"run"} = 1;
 	  }
+
+	  # copy all files of this run to archive directory with the name of the
+	  # current input file
+	  mkdir "$workdir/$input_base";
+	  @wfiles = `ls -d $workdir/* | grep -v inp`;
+	  $workfiles = join("",@wfiles);
+	  $workfiles =~ s/\n/ /g;
+	  system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+
+	  # file for shell script with matches
+	  $mscript = "$workdir/$input_base/matches.sh";
+	  open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
+	  # write skeleton for script
+	  print SCRIPT "#\!/usr/bin/env bash\n\n";
+	  close(SCRIPT);
+	  chmod 0755, $mscript;
 	}
-
-	# copy all files of this run to archive directory with the name of the
-	# current input file
-	mkdir "$workdir/$input_base";
-	@wfiles = `ls -d $workdir/* | grep -v inp`;
-	$workfiles = join("",@wfiles);
-	$workfiles =~ s/\n/ /g;
-	system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-
-	# file for shell script with matches
-	$mscript = "$workdir/$input_base/matches.sh";
-	open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
-	# write skeleton for script
-	print SCRIPT "#\!/usr/bin/env bash\n\n";
-	close(SCRIPT);
-	chmod 0755, $mscript;
+	else {
+          $return_value = 0;
+	  print "\n";
+	}
       }
 
       elsif ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
@@ -402,7 +406,7 @@ foreach my $octopus_exe (@executables){
 
   }
 
-  if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
+  if ($opt_l && !$opt_m)  { system ("cat $workdir/out >> out.log"); }
   if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
   print "\n";
@@ -548,10 +552,11 @@ sub run_match_new {
 
   $perl_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
 
-  # append the command and the regexp also to the shell script matches.sh in the
-  # current archive directory
-  open(SCRIPT, ">>$mscript");
-  print SCRIPT "
+  if(!$opt_m) {
+      # append the command and the regexp also to the shell script matches.sh in the
+      # current archive directory
+      open(SCRIPT, ">>$mscript");
+      print SCRIPT "
 echo '", "="x4, " [ $name - pre command ]'
 $pre_command
 echo
@@ -561,7 +566,8 @@ export LINE=`$pre_command`
 perl -e 'print \"Match: \".(abs(\$ENV{LINE}-($ref_value)) <= $precnum ? \"OK\" : \"FAILED\");'
 echo
 echo";
-  close(SCRIPT);
+      close(SCRIPT);
+  }
 
   # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
   # otherwise the error comes only if the last step (perl) failed, which will rarely happen.
