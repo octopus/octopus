@@ -115,7 +115,7 @@ contains
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none
 
-    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor
+    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff
     character(len=100) :: dirname_restart, dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq
 
@@ -493,44 +493,34 @@ contains
 
             ! if the frequency is zero, we do not need to calculate both responses
             if(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON .and. em_vars%nsigma == 2) then
+              nsigma_eff = 1
+            else
+              nsigma_eff = em_vars%nsigma
+            endif
 
+            if (states_are_complex(sys%st)) then
+              call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
+                em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
+                em_vars%perturbation, EM_RESP_DIR, &
+                em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
+                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
+            else
+              call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
+                em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+                em_vars%perturbation, EM_RESP_DIR, &
+                em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
+                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
+            end if
+
+            if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
               if (states_are_complex(sys%st)) then
-                call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:1, ifactor), 1, &
-                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                  em_vars%perturbation, EM_RESP_DIR, &
-                  em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                  em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-
                 em_vars%lr(idir, 2, ifactor)%zdl_psi = em_vars%lr(idir, 1, ifactor)%zdl_psi
                 em_vars%lr(idir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(idir, 1, ifactor)%zdl_rho)
               else
-                call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:1, ifactor), 1, &
-                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                  em_vars%perturbation, EM_RESP_DIR, &
-                  em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                  em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-
                 em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
                 em_vars%lr(idir, 2, ifactor)%ddl_rho = em_vars%lr(idir, 1, ifactor)%ddl_rho
               end if
-
-            else
-
-              if (states_are_complex(sys%st)) then
-                call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), em_vars%nsigma, &
-                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                  em_vars%perturbation, EM_RESP_DIR, &
-                  em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                  em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-              else
-                call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), em_vars%nsigma, &
-                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                  em_vars%perturbation, EM_RESP_DIR, &
-                  em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                  em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-              end if
-
-            end if
+            endif
 
             if(use_kdotp) then
               call sternheimer_unset_rhs(sh)
@@ -547,44 +537,30 @@ contains
                 ! need nsigma
                 ! need to give a proper name to the restart files
 
+                if (states_are_complex(sys%st)) then
+                  call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
+                    kdotp_lr(idir2, 1:1), nsigma_eff, &
+                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
+                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
+                    pert2_none, EM_RESP_DIR, &
+                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                    give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
+                else
+                  call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
+                    kdotp_lr(idir2, 1:1), nsigma_eff, &
+                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
+                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
+                    pert2_none, EM_RESP_DIR, &
+                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                    give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
+                end if
+
                 ! if the frequency is zero, we do not need to calculate both responses
-                if(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON .and. em_vars%nsigma == 2) then
+                if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
                   if (states_are_complex(sys%st)) then
-                    call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
-                      kdotp_lr(idir2, 1:1), 1, &
-                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
-                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
-                      pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
                     kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
                   else
-                    call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
-                      kdotp_lr(idir2, 1:1), 1, &
-                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
-                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
-                      pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
                     kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
-                  end if
-                else
-                  if (states_are_complex(sys%st)) then
-                    call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), &
-                      kdotp_lr(idir2, 1:1), em_vars%nsigma, &
-                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
-                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
-                      pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
-                  else
-                    call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), &
-                      kdotp_lr(idir2, 1:1), em_vars%nsigma, &
-                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
-                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
-                      pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
                   end if
                 endif
 
