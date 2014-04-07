@@ -534,7 +534,6 @@ contains
                 call messages_info(1)
                 call pert_setup_dir(pert_kdotp, idir2)
                 
-                ! need nsigma
                 ! need to give a proper name to the restart files
 
                 if (states_are_complex(sys%st)) then
@@ -604,27 +603,14 @@ contains
             message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
             call messages_info(1)
     
-            ! time = M_ZERO
             if(states_are_complex(sys%st)) then
-              if(em_vars%nsigma == 2) then
-                call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 2, ifactor), &
-                  Born_charges = em_vars%Born_charges(ifactor))
-              else
-                call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 1, ifactor), &
-                  Born_charges = em_vars%Born_charges(ifactor))
-              endif
+              call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
+                Born_charges = em_vars%Born_charges(ifactor))
             else
-              if(em_vars%nsigma == 2) then
-                call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 2, ifactor), &
-                  Born_charges = em_vars%Born_charges(ifactor))
-              else
-                call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                  lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, 1, ifactor), &
-                  Born_charges = em_vars%Born_charges(ifactor))
-              endif
+              call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
+                lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
+                Born_charges = em_vars%Born_charges(ifactor))
             endif
           endif
 
