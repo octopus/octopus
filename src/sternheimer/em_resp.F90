@@ -119,7 +119,8 @@ contains
     character(len=100) :: dirname_restart, dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq
 
-    FLOAT :: closest_omega, last_omega
+    FLOAT :: closest_omega, last_omega, frequency
+    CMPLX :: frequency_eta
 
     PUSH_SUB(em_resp_run)
 
@@ -274,6 +275,9 @@ contains
       em_vars%ok(1:3) = .true.
 
       do ifactor = 1, em_vars%nfactor
+        frequency = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
+        frequency_eta = frequency + M_zI * em_vars%eta
+
         do idir = 1, sys%gr%sb%dim
 
           ierr = 0
@@ -289,7 +293,7 @@ contains
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
-                                            - em_vars%freq_factor(ifactor) * em_vars%omega(iomega)) < M_EPSILON ) then
+                                            - frequency) < M_EPSILON ) then
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
@@ -309,7 +313,7 @@ contains
 
             ! if this frequency is minus the previous one, copy it inverted
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
-                                            + em_vars%freq_factor(ifactor) * em_vars%omega(iomega)) < M_EPSILON ) then 
+                                            + frequency) < M_EPSILON ) then 
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 2, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
@@ -332,7 +336,7 @@ contains
           if(iomega > 1 .and. ifactor == 1) then 
 
             ! if this frequency is the same as the previous one, just copy it
-            if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) - last_omega) < M_EPSILON ) then
+            if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 1, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 2, 1))
@@ -351,7 +355,7 @@ contains
             end if
 
             ! if this frequency is minus the previous one, copy it inverted
-            if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) + last_omega) < M_EPSILON ) then
+            if( have_to_calculate .and. abs(frequency + last_omega) < M_EPSILON ) then
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 2, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 1, 1))
@@ -373,7 +377,7 @@ contains
 
           if(have_to_calculate) then 
 
-            str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor) * em_vars%omega(iomega)))
+            str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
             write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
               '-direction and frequency ', trim(str_tmp), '.'
             call messages_info(1)
@@ -384,7 +388,7 @@ contains
               ! try to load wavefunctions, if first frequency; otherwise will already be initialized
               if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
                 do sigma = 1, em_vars%nsigma
-                  if(sigma == 2 .and. abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON) then
+                  if(sigma == 2 .and. abs(frequency) < M_EPSILON) then
                     if(states_are_real(sys%st)) then
                       em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
                     else
@@ -402,7 +406,7 @@ contains
                     endif
                   else
                     sigma_alt = sigma
-                    if(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < -M_EPSILON .and. em_vars%nsigma == 2) &
+                    if(frequency < -M_EPSILON .and. em_vars%nsigma == 2) &
                       sigma_alt = swap_sigma(sigma)
                     
                     str_tmp = em_wfs_tag(idir, ifactor)
@@ -448,7 +452,7 @@ contains
               closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
               call loct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
               sigma_alt = 1
-              if(closest_omega * em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < M_ZERO) opp_freq = .true.
+              if(closest_omega * frequency < M_ZERO) opp_freq = .true.
               if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
 
               !attempt to read 
@@ -462,7 +466,7 @@ contains
                 end if
 
                 if(ierr == 0 .and. &
-                  abs(abs(closest_omega) - abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega))) <= CNST(1e-4)) then
+                  abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
                   ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
                   exact_freq = .true.
                 endif
@@ -492,7 +496,7 @@ contains
             end if
 
             ! if the frequency is zero, we do not need to calculate both responses
-            if(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON .and. em_vars%nsigma == 2) then
+            if(abs(frequency) < M_EPSILON .and. em_vars%nsigma == 2) then
               nsigma_eff = 1
             else
               nsigma_eff = em_vars%nsigma
@@ -500,14 +504,12 @@ contains
 
             if (states_are_complex(sys%st)) then
               call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-                em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                em_vars%perturbation, EM_RESP_DIR, &
+                frequency_eta, em_vars%perturbation, EM_RESP_DIR, &
                 em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
                 em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
             else
               call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-                em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                em_vars%perturbation, EM_RESP_DIR, &
+                frequency, em_vars%perturbation, EM_RESP_DIR, &
                 em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
                 em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
             end if
@@ -538,16 +540,14 @@ contains
 
                 if (states_are_complex(sys%st)) then
                   call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-                    kdotp_lr(idir2, 1:1), nsigma_eff, &
-                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
+                    kdotp_lr(idir2, 1:1), nsigma_eff, frequency_eta, M_z0, &
                     em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
                     pert2_none, EM_RESP_DIR, &
                     "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
                     give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
                 else
                   call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-                    kdotp_lr(idir2, 1:1), nsigma_eff, &
-                    em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
+                    kdotp_lr(idir2, 1:1), nsigma_eff, frequency, M_ZERO, &
                     em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
                     pert2_none, EM_RESP_DIR, &
                     "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
