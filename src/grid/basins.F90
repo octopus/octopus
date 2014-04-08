@@ -101,9 +101,6 @@ contains
 
     ASSERT(associated(this%map))
 
-    message(1) = "Info: Calculating basins of attraction"
-    call messages_info(1)
-
     cur_color = 0
 
     xmax = 1; ymax = 1; zmax = 1

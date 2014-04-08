@@ -85,15 +85,17 @@ contains
   !! calls the proper function.
   subroutine local_domains()
     type(box_union_t), allocatable :: domain(:)
-    integer                        :: err, id, nd, lmax, iter, ii, l_start, l_end, l_step
+    integer                        :: err, id, nd, lmax, iter, l_start, l_end, l_step, last_slash
     FLOAT                          :: default_dt, dt
     FLOAT, allocatable             :: read_ff(:)
-    character(64)                  :: filename, folder, folder_default, aux
+    character(64)                  :: filename, folder, folder_default, aux, base_folder
     character(len=15), allocatable :: lab(:)
     logical                        :: wrt_multipoles, iterate
 
     PUSH_SUB(local_domains)
 
+    call io_mkdir('local.multipoles')
+    
     message(1) = 'Info: Creating local domains'
     message(2) = ''
     call messages_info(2)
@@ -107,7 +109,21 @@ contains
     !% The folder name where the input files are.
     !%End
     call parse_string(datasets_check('GlobalDensityFolder'), folder_default, folder)
-    aux = trim(folder(1:3))
+
+    ! Check if the folder is finished by an /
+    if (index(folder, '/', .true.) /= len_trim(folder)) then
+      write(folder,'(a,a1)') trim(folder), '/'
+    end if
+
+    ! Guess the base folder (which should change while iterating)
+    base_folder = ""
+    last_slash = index(folder(1:len_trim(folder)-1), '/', .true.)
+    if ( last_slash > 0) then
+      base_folder = folder(1:last_slash)
+      folder = folder(last_slash+1:len_trim(folder))
+    end if
+    
+    aux = folder(1:3)
     if (aux == 'td.') then
       aux = trim(folder(4:len_trim(folder)-1))
       read(aux,'(I10.0)')iter
@@ -122,7 +138,7 @@ contains
       iter = 0
       dt = M_ZERO
     end if
- 
+
     !%Variable GlobalDensityFilename
     !%Type string
     !%Default 'density'
@@ -133,22 +149,6 @@ contains
     !%End
     call parse_string(datasets_check('GlobalDensityFilename'), 'density', filename)
     if ( filename == " " ) filename = ""
-    
-    SAFE_ALLOCATE(read_ff(1:sys%gr%mesh%np)); read_ff(:) = M_ZERO
-    call drestart_read_function(folder, filename, sys%gr%mesh, read_ff, err)
-    if (err /= 0 ) then
-     write(message(1),*) 'While reading density: "', trim(folder), trim(filename), '", error code:', err
-     call messages_fatal(1)
-    end if
-    
-    !%Variable LocalMultipoles
-    !%Type logical
-    !%Default false
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% TODO
-    !%End
-    call parse_logical(datasets_check('LocalMultipoles'), .false., wrt_multipoles)
 
     !%Variable LocalMultipoleLmax 
     !%Type integer
@@ -169,32 +169,39 @@ contains
     !%End
     call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
 
-    write(folder_default,'(a)')'restart/'
     ! Documentation in convert.F90
     call parse_logical(datasets_check('ConvertIterateFolder'), .false., iterate)
-    if(iterate)then
-      call parse_integer(datasets_check('ConvertStart'), 1, l_start)
-      call parse_integer(datasets_check('ConvertEnd'), 1, l_end)
-      call parse_integer(datasets_check('ConvertStep'), 1, l_step)
+    call parse_integer(datasets_check('ConvertStart'), iter, l_start)
+    call parse_integer(datasets_check('ConvertEnd'), iter, l_end)
+    call parse_integer(datasets_check('ConvertStep'), 1, l_step)
 
-      write(folder_default,'(a,i0.7,a)') trim("td."), l_start, "/"
-    end if
-    do ii = l_start, l_end, l_step
+    message(1) = 'Info: Computing local multipoles'
+    message(2) = ''
+    call messages_info(2)
+    
+    call loct_progress_bar(-1, l_end-l_start) 
+    do iter = l_start, l_end, l_step
+      if (iterate) then
+        write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
+      end if
+      SAFE_ALLOCATE(read_ff(1:sys%gr%mesh%np)); read_ff(:) = M_ZERO
+      call drestart_read_function(trim(base_folder) // trim(folder), trim(filename), sys%gr%mesh, read_ff, err)
+      if (err /= 0 ) then
+        write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
+        call messages_fatal(1)
+      end if
       call local_domains_read(domain, nd, lab)
 
-      if ( wrt_multipoles ) then
-        message(1) = 'Info: Computing local multipoles'
-        message(2) = ''
-        call messages_info(2)
-        call calc_local_multipoles(nd, domain, lab, lmax, read_ff, iter, dt) 
-      end if
+      call calc_local_multipoles(nd, domain, lab, lmax, read_ff, iter, dt) 
       SAFE_DEALLOCATE_A(lab)
       do id = 1, nd
         call box_union_end(domain(id))
       end do
       SAFE_DEALLOCATE_A(domain)
       SAFE_DEALLOCATE_A(dshape)
+      SAFE_DEALLOCATE_A(read_ff)
 
+      call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
@@ -254,8 +261,6 @@ contains
 
     block: do id = 1, ndomain
       call parse_block_string(blk, id-1, 0, lab(id))
-      write(message(1),'(a,a)')' Reading Local Domain: ',trim(lab(id))
-      call messages_info(1)
       call read_from_domain_block(blk, id-1, domain(id), dshape(id))
     end do block
     message(1) = ''
@@ -288,8 +293,6 @@ contains
     dim = sys%space%dim
 
     call parse_block_integer(blk, row, 1, shape)
-    write(message(1),'(a,i0,a,i0)')' read_from_domain. shape:', shape,' space%dim:',sys%space%dim
-    call messages_info(1)
 
     select case(shape)
       case(MINIMUM)
@@ -412,8 +415,6 @@ contains
           end if
         end do
     end select
-    write(message(1),'(a,i0)')' local_domains_init. dim:', dim
-    call messages_info(1)
             
     call box_union_init(dom, nb, boxes)
 
@@ -465,12 +466,13 @@ contains
     integer,                intent(in) :: iter
     FLOAT,                  intent(in) :: dt   
 
-    FLOAT, allocatable  :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
-    integer             :: id, ip, iunit, nspin
-    FLOAT, allocatable  :: ff2(:,:)
-    logical,allocatable :: inside(:,:)
-    type(basins_t)      :: basins
-    character(len=64)   :: filename
+    FLOAT, allocatable   :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
+    integer              :: id, ip, iunit, nspin
+    FLOAT, allocatable   :: ff2(:,:)
+    logical, allocatable :: inside(:,:)
+    type(basins_t)       :: basins
+    character(len=64)    :: filename
+    logical              :: extra_write
 
     PUSH_SUB(calc_local_multipoles)
 
@@ -485,26 +487,27 @@ contains
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
       call basins_init(basins, sys%gr%mesh)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      ! TODO: Make this part optional.      
-      filename = 'basinsmap'
-      iunit = io_open(file=trim(filename), action='write')
-      do ip = 1, sys%gr%mesh%np
-        write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,id)),id=1,3), &
-             basins%map(ip)
-      end do
-      call io_close(iunit)
 
-      call bader_union_inside(basins, nd, dom, lab, inside)
-      message(1) = 'Calling dmf_local_multipoles'
-      call messages_info(1)
+      
+      call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
+!!$      ! TODO: Make this part optional.    
+      if (extra_write) then
+        filename = 'basinsmap'
+        iunit = io_open(file=trim(filename), action='write')
+        do ip = 1, sys%gr%mesh%np
+          write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,id)),id=1,3), &
+               basins%map(ip)
+        end do
+        call io_close(iunit)
+      end if
+
+      call bader_union_inside(basins, nd, dom, lab, inside) 
       call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles, inside)
       call local_center_of_mass(nd, dom, sys%geo, dcenter)
       call local_geometry_dipole(nd, dom, sys%geo, ion_dipole)
       SAFE_DEALLOCATE_A(ff2)
       SAFE_DEALLOCATE_A(inside)
     else
-      message(1) = 'Calling dmf_local_multipoles'
-      call messages_info(1)
       call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles)
       call local_center_of_mass(nd, dom, sys%geo, dcenter)
       call local_geometry_dipole(nd, dom, sys%geo, ion_dipole)
@@ -526,14 +529,15 @@ contains
     type(basins_t),    intent(in)  :: basins
     integer,           intent(in)  :: nd 
     type(box_union_t), intent(in)  :: dom(:)
-    character(len=15),      intent(in) :: lab(:)
+    character(len=15), intent(in)  :: lab(:)
     logical,           intent(out) :: inside(:,:)
 
     integer           :: ib, id, ip, ix, nb, rankmin
     integer           :: max_check
     integer, allocatable :: dunit(:), domain_map(:,:)
     FLOAT             :: dmin
-    FLOAT,allocatable :: xi(:)
+    FLOAT, allocatable :: xi(:)
+    logical           :: extra_write
     character(len=64) :: filename
 
     PUSH_SUB(bader_union_inside)
@@ -559,22 +563,34 @@ contains
       end if
     end do
 
-    SAFE_ALLOCATE(dunit(1:nd))
-    do ip = 1, sys%gr%mesh%np
-      do id = 1, nd
-        if(ip == 1)then
-          write(filename,'(a,a,a)')'local.multipoles/domain.',trim(lab(id)),'.xyz'
-          dunit(id) = io_open(file=trim(filename), action='write')
-        end if
-        if (inside(ip,id)) then
-          write(dunit(id),*)(units_from_atomic(units_out%length, sys%gr%mesh%x(ip,ib)),ib=1,3)
-        end if
-      end do
-    end do
+    !%Variable LocalMultipolesExtraWrite
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% Writes additional information to files, when computing local multipoles. For 
+    !% example, it writes coordinates of each local domain.
+    !%End
+    call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
 
-    do id = 1, nd
-      call io_close(dunit(id))
-    end do
+    if (extra_write) then
+      SAFE_ALLOCATE(dunit(1:nd))
+      do ip = 1, sys%gr%mesh%np
+        do id = 1, nd
+          if(ip == 1)then
+            write(filename,'(a,a,a)')'local.multipoles/domain.',trim(lab(id)),'.xyz'
+            dunit(id) = io_open(file=trim(filename), action='write')
+          end if
+          if (inside(ip,id)) then
+            write(dunit(id),*)(units_from_atomic(units_out%length, sys%gr%mesh%x(ip,ib)),ib=1,3)
+          end if
+        end do
+      end do
+      
+      do id = 1, nd
+        call io_close(dunit(id))
+      end do
+    end if
 
     SAFE_DEALLOCATE_A(xi)
     SAFE_DEALLOCATE_A(dunit)
@@ -676,7 +692,6 @@ contains
     
     PUSH_SUB(wrt_local_multipoles)
 
-    call io_mkdir('local.multipoles')
     write(filename,'(a,a,a)')'local.multipoles/',trim(label),'.multipoles'
     inquire(file=filename, exist=file_exists)
     if (file_exists) then 

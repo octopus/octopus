@@ -715,8 +715,6 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
   SAFE_ALLOCATE(ff2(1:mesh%np))
   SAFE_ALLOCATE(inside(1:mesh%np, n_domains))
   if(present(inside2)) inside = inside2
-    message(1) = 'inside allocated'
-    call messages_info(1)
 
   ff2(1:mesh%np) = ff(1:mesh%np)
 
@@ -726,8 +724,6 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
     do ip = 1, mesh%np
       if(inside(ip,idom)) ll = ll + 1
     end do
-    write(message(1),'(a,i3,a,i10,a,i10,a)')'Domain: ',idom,' contains ', ll, ' points over ',mesh%np,' points of the total mesh'
-    call messages_info(1)
     multipole(1, idom) = X(mf_integrate)(mesh, ff2, mask=inside(:,idom))
   end do
   
