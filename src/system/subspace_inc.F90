@@ -61,7 +61,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   FLOAT, optional,        intent(out)   :: diff(:)
 
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
-  integer             :: ib, jb, minst, maxst
+  integer             :: ib, minst, maxst
   type(batch_t)       :: hpsib
 
   PUSH_SUB(X(subspace_diag_standard))
