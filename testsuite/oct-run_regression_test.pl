@@ -368,14 +368,6 @@ foreach my $octopus_exe (@executables){
 	  $workfiles = join("",@wfiles);
 	  $workfiles =~ s/\n/ /g;
 	  system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-
-	  # file for shell script with matches
-	  $mscript = "$workdir/$input_base/matches.sh";
-	  open(SCRIPT, ">$mscript") or die "ERROR: could not create script file\n";
-	  # write skeleton for script
-	  print SCRIPT "#\!/usr/bin/env bash\n\n";
-	  close(SCRIPT);
-	  chmod 0755, $mscript;
 	}
 	else {
           $return_value = 0;
@@ -551,23 +543,6 @@ sub run_match_new {
   }
 
   $perl_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
-
-  if(!$opt_m) {
-      # append the command and the regexp also to the shell script matches.sh in the
-      # current archive directory
-      open(SCRIPT, ">>$mscript");
-      print SCRIPT "
-echo '", "="x4, " [ $name - pre command ]'
-$pre_command
-echo
-echo '", "-"x4, " [ $name - ref value   ]'
-echo $ref_value
-export LINE=`$pre_command`
-perl -e 'print \"Match: \".(abs(\$ENV{LINE}-($ref_value)) <= $precnum ? \"OK\" : \"FAILED\");'
-echo
-echo";
-      close(SCRIPT);
-  }
 
   # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
   # otherwise the error comes only if the last step (perl) failed, which will rarely happen.
