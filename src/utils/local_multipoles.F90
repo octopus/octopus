@@ -90,7 +90,7 @@ contains
     FLOAT, allocatable             :: read_ff(:)
     character(64)                  :: filename, folder, folder_default, aux, base_folder
     character(len=15), allocatable :: lab(:)
-    logical                        :: wrt_multipoles, iterate
+    logical                        :: iterate
 
     PUSH_SUB(local_domains)
 

@@ -216,7 +216,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_ALLOCATE(x_in(1:dims(1), 1:1))
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
-      do ii = 1, dims(1)
+      do ii = 1, int(dims(1))
         x_in(ii,:) = (/ real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) /)
       end do
 
@@ -235,8 +235,8 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)), 1:2))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)), 1:2))
       
-      do ii = 1, dims(2)
-        do jj = 1, dims(1)
+      do ii = 1, int(dims(2))
+        do jj = 1, int(dims(1))
           x_in((ii-1)*dims(1) + jj,:) = & 
               &(/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
               &   real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
@@ -257,9 +257,9 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)*dims(3)), 1:3))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)), 1:3))
       
-      do ii = 1, dims(3)
-        do jj = 1, dims(2)
-          do kk = 1, dims(1)
+      do ii = 1, int(dims(3))
+        do jj = 1, int(dims(2))
+          do kk = 1, int(dims(1))
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
               &(/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
               &   real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
@@ -446,13 +446,14 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
   logical,          optional, intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in)  :: geo
   type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
-  !
-  logical :: is_tmp_, i_am_root
-  integer :: comm
+
+  logical :: is_tmp_
 #if defined(HAVE_MPI)
+  logical :: i_am_root
+  integer :: comm
   R_TYPE, pointer :: ff_global(:)
 #endif
-  !
+
   PUSH_SUB(X(io_function_output))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
@@ -973,7 +974,6 @@ contains
 
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
     FLOAT :: lattice_vectors(3,3)
-    FLOAT :: offset(3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
@@ -1112,11 +1112,10 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
  
   subroutine out_openscad()
-    integer :: ip, ii, jp, jj, kk, iver, ntriangles, ll
+    integer :: ip, ii, jp, jj, kk, ntriangles, ll
     type(openscad_file_t) :: cad_file
     type(polyhedron_t) :: poly
     FLOAT, parameter :: isosurface_value = CNST(0.21)
-    logical :: inside, can_join, out
 
     integer, allocatable :: edges(:), triangles(:, :)
     integer :: iunit, cubeindex, cube_point(0:7)
@@ -1170,14 +1169,14 @@ contains
       if(any(cube_point < 1 .or. cube_point > mesh%np_global)) cycle
       
       cubeindex = 0
-      if(X(inside_isolevel)(mesh, ff, cube_point(0), isosurface_value)) cubeindex = cubeindex + 1
-      if(X(inside_isolevel)(mesh, ff, cube_point(1), isosurface_value)) cubeindex = cubeindex + 2
-      if(X(inside_isolevel)(mesh, ff, cube_point(2), isosurface_value)) cubeindex = cubeindex + 4
-      if(X(inside_isolevel)(mesh, ff, cube_point(3), isosurface_value)) cubeindex = cubeindex + 8
-      if(X(inside_isolevel)(mesh, ff, cube_point(4), isosurface_value)) cubeindex = cubeindex + 16
-      if(X(inside_isolevel)(mesh, ff, cube_point(5), isosurface_value)) cubeindex = cubeindex + 32
-      if(X(inside_isolevel)(mesh, ff, cube_point(6), isosurface_value)) cubeindex = cubeindex + 64
-      if(X(inside_isolevel)(mesh, ff, cube_point(7), isosurface_value)) cubeindex = cubeindex + 128
+      if(X(inside_isolevel)(ff, cube_point(0), isosurface_value)) cubeindex = cubeindex + 1
+      if(X(inside_isolevel)(ff, cube_point(1), isosurface_value)) cubeindex = cubeindex + 2
+      if(X(inside_isolevel)(ff, cube_point(2), isosurface_value)) cubeindex = cubeindex + 4
+      if(X(inside_isolevel)(ff, cube_point(3), isosurface_value)) cubeindex = cubeindex + 8
+      if(X(inside_isolevel)(ff, cube_point(4), isosurface_value)) cubeindex = cubeindex + 16
+      if(X(inside_isolevel)(ff, cube_point(5), isosurface_value)) cubeindex = cubeindex + 32
+      if(X(inside_isolevel)(ff, cube_point(6), isosurface_value)) cubeindex = cubeindex + 64
+      if(X(inside_isolevel)(ff, cube_point(7), isosurface_value)) cubeindex = cubeindex + 128
 
       if(edges(cubeindex) == 0) cycle
 
@@ -1266,8 +1265,7 @@ end subroutine X(io_function_output_global)
 
 ! -----------------------------------------------
 
-logical pure function X(inside_isolevel)(mesh, ff, ip, isosurface_value) result(inside)
-  type(mesh_t),    intent(in) :: mesh
+logical pure function X(inside_isolevel)(ff, ip, isosurface_value) result(inside)
   R_TYPE,          intent(in) :: ff(:)
   integer,         intent(in) :: ip
   FLOAT,           intent(in) :: isosurface_value
