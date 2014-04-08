@@ -223,13 +223,13 @@ contains
       !%Section Time-Dependent::Response
       !%Description
       !% If the block <tt>TDKickFunction</tt> is present in the input file, and the variable
-      !% "TDDeltaUserDefined" is not present in the input file, the kick function to
+      !% <tt>TDDeltaUserDefined</tt> is not present in the input file, the kick function to
       !% be applied at time zero of the time-propagation will not be a "dipole" function
       !% (<i>i.e.</i> phi => exp(i*k*z) phi), but a general multipole in the form r^l * Y_{lm}(r).
       !%
-      !% Each line has two columns of integers: the (<i>l</i>,<i>m</i>) pair that defines the
-      !% multipole. Any number of lines may be given, and the kick will be the sum of those
-      !% multipoles.
+      !% Each line has three columns: integers <i>l</i> and <i>m</i> that defines the
+      !% multipole, and a weight. Any number of lines may be given, and the kick will be the sum of those
+      !% multipoles with the given weights.
       !%
       !% This feature allows calculation of quadrupole, octupole, etc., response functions.
       !%End
@@ -451,20 +451,25 @@ contains
 
     PUSH_SUB(kick_read)
 
+    kick%function_mode = -1
+
     read(iunit, '(15x,i2)')     kick%delta_strength_mode
     read(iunit, '(15x,f18.12)') kick%delta_strength
     read(iunit, '(a)') line
     if(index(line,'defined') /= 0) then
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
-      read(line,'("# User defined:",1x,a)') kick%user_defined_function
+      ! "# User defined: "
+      read(line,'(16x,a)') kick%user_defined_function
     elseif(index(line,'multipole') /= 0) then
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
-      read(line, '("# N multipoles ",i3)') kick%n_multipoles
+      ! "# N multipoles "
+      read(line, '(15x,i3)') kick%n_multipoles
       SAFE_ALLOCATE(     kick%l(1:kick%n_multipoles))
       SAFE_ALLOCATE(     kick%m(1:kick%n_multipoles))
       SAFE_ALLOCATE(kick%weight(1:kick%n_multipoles))
       do im = 1, kick%n_multipoles
-        read(iunit, '("# multipole    ",2i3,f18.12)') kick%l(im), kick%m(im), kick%weight(im)
+        ! "# multipole    "
+        read(iunit, '(15x,2i3,f18.12)') kick%l(im), kick%m(im), kick%weight(im)
       end do
     else
       kick%function_mode = KICK_FUNCTION_DIPOLE
@@ -486,6 +491,10 @@ contains
       backspace(iunit)
     end if
 
+    if(kick%function_mode < 0) then
+      message(1) = "No kick could be read from file."
+      call messages_fatal(1)
+    endif
 
     POP_SUB(kick_read)
   end subroutine kick_read

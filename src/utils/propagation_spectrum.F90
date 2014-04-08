@@ -124,7 +124,7 @@ program propagation_spectrum
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname), '" found. This will be the only file to be processed.'
         write(message(2),'(a)')  '(If more than one file is to be used, the files should be called'
-        write(message(3),'(5a)') '"', trim(fname), '.1", "', trim(fname), '.2", etc.'
+        write(message(3),'(5a)') '"', trim(fname), '.1", "', trim(fname), '.2", etc.)'
         write(message(4),'(a)')
         call messages_info(4)
         

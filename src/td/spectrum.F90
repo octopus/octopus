@@ -546,7 +546,6 @@ contains
 
     cmplxscl = .false.
     if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) cmplxscl = .true.
-    
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -569,6 +568,16 @@ contains
       message(1) = 'Multipoles file should contain the dipole -- and only the dipole.'
       call messages_fatal(1)
     end if
+
+    if(kick%function_mode /= KICK_FUNCTION_DIPOLE) then
+      message(1) = "Kick function must have been dipole to run this utility."
+      call messages_fatal(1)
+    endif
+
+    if(kick%pol_dir < 1) then
+      message(1) = "Kick polarization direction is not set. Probably no kick was used."
+      call messages_fatal(1)
+    endif
 
     ! Find out the iteration numbers corresponding to the time limits.
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
