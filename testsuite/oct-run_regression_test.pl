@@ -203,14 +203,23 @@ foreach my $octopus_exe (@executables){
   set_precision("default", $octopus_exe);
   $test_succeeded = 1;
 
+  $pwd = get_env("PWD");
   if (!$opt_m) {
       $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
       chomp($workdir);
 
       system ("rm -rf $workdir");
       mkdir $workdir;
+      
+      $scriptname = "$workdir/matches.sh";
+      open(SCRIPT, ">$scriptname") or die "ERROR: could not create '$scriptname'.\n";
+      print SCRIPT "#\!/usr/bin/env bash\n\n";
+      print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
+      close(SCRIPT);
+      
+      $matchdir = $workdir;
   } else {
-      $workdir = get_env("PWD");
+      $workdir = $pwd;
   }
 
   # testsuite
@@ -284,10 +293,15 @@ foreach my $octopus_exe (@executables){
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-	if ( !$opt_m ) {
-          $input_base = $1;
-          $input_file = dirname($opt_f) . "/" . $input_base;
+
+        $input_base = $1;
+        $input_file = dirname($opt_f) . "/" . $input_base;
       
+	if ( $opt_m ) {
+	    print "\n\nFor input file : $input_file\n\n";
+	    $return_value = 0;
+	    $matchdir = "$workdir/$input_base";
+	} else {
           if( -f $input_file ) {
             print "\n\nUsing input file : $input_file \n";
             system("cp $input_file $workdir/inp");
@@ -368,10 +382,6 @@ foreach my $octopus_exe (@executables){
 	  $workfiles = join("",@wfiles);
 	  $workfiles =~ s/\n/ /g;
 	  system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-	}
-	else {
-          $return_value = 0;
-	  print "\n";
 	}
       }
 
@@ -546,7 +556,7 @@ sub run_match_new {
 
   # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
   # otherwise the error comes only if the last step (perl) failed, which will rarely happen.
-  $value = qx(cd $workdir && $pre_command $perl_command);
+  $value = qx(cd $matchdir && $pre_command $perl_command);
   # Perl gives error code shifted, for some reason.
   $exit_code = $? >> 8;
   if($exit_code) {
