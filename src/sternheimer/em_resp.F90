@@ -383,284 +383,32 @@ contains
             call messages_info(1)
 
             exact_freq = .false.
-            if(.not. fromscratch) then 
 
-              ! try to load wavefunctions, if first frequency; otherwise will already be initialized
-              if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
-                do sigma = 1, em_vars%nsigma
-                  if(sigma == 2 .and. abs(frequency) < M_EPSILON) then
-                    if(states_are_real(sys%st)) then
-                      em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
-                    else
-                      em_vars%lr(idir, 2, ifactor)%zdl_psi = em_vars%lr(idir, 1, ifactor)%zdl_psi
-                    endif
-
-                    if(em_vars%calc_hyperpol .and. use_kdotp) then
-                      do idir2 = 1, gr%sb%periodic_dim
-                        if(states_are_real(sys%st)) then
-                          kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
-                        else
-                          kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
-                        endif
-                      enddo
-                    endif
-                  else
-                    sigma_alt = sigma
-                    if(frequency < -M_EPSILON .and. em_vars%nsigma == 2) &
-                      sigma_alt = swap_sigma(sigma)
-                    
-                    str_tmp = em_wfs_tag(idir, ifactor)
-                    write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-                    call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-                    
-                    if(ierr /= 0) then
-                      message(1) = "Initializing to zero, could not load response wavefunctions from '" &
-                        //trim(tmpdir)//trim(dirname_restart)//"'"
-                      call messages_warning(1)
-                    end if
-
-                    if(em_vars%calc_hyperpol .and. use_kdotp) then
-                      do idir2 = 1, gr%sb%periodic_dim
-                        str_tmp = em_wfs_tag(idir, ifactor, idir2)
-                        write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-                        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, &
-                          lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
-                        
-                        if(ierr /= 0) then
-                          message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &
-                            //trim(tmpdir)//trim(dirname_restart)//"'"
-                          call messages_warning(1)
-                        end if
-                      enddo
-                    endif
-                  endif
-                end do
-              endif
-
-              ! if opposite sign from last frequency, swap signs to get a closer frequency
-              if(iomega > 1 .and. em_vars%nsigma == 2) then
-                if(em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
-                  if(states_are_complex(sys%st)) then
-                    call zlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-                  else
-                    call dlr_swap_sigma(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-                  endif
-                endif
-              end if
-                
-              !search for the density of the closest frequency, including negative
-              closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
-              call loct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
-              sigma_alt = 1
-              if(closest_omega * frequency < M_ZERO) opp_freq = .true.
-              if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
-
-              !attempt to read 
-              if(ierr == 0) then 
-                if(states_are_complex(sys%st)) then 
-                  call zrestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor)%zdl_rho, sys%gr, sys%st%d%nspin, &
-                    EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
-                else 
-                  call drestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor)%ddl_rho, sys%gr, sys%st%d%nspin, &
-                    EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
-                end if
-
-                if(ierr == 0 .and. &
-                  abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
-                  ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
-                  exact_freq = .true.
-                endif
-              end if
-
-              if(ierr == 0 .and. em_vars%nsigma == 2) then 
-                sigma_alt = 1
-                if(opp_freq) sigma_alt = 2
-
-                if(states_are_complex(sys%st)) then 
-                  em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%zdl_rho = conjg(em_vars%lr(idir, sigma_alt, ifactor)%zdl_rho)
-                else 
-                  em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%ddl_rho =       em_vars%lr(idir, sigma_alt, ifactor)%ddl_rho
-                end if
-              end if
-
-            end if ! .not. fromscratch
-            
-            call pert_setup_dir(em_vars%perturbation, idir)
-
-            if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-              if (states_are_complex(sys%st)) then
-                call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
-              else
-                call dsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%ddl_psi)
-              endif
-            end if
-
-            ! if the frequency is zero, we do not need to calculate both responses
-            if(abs(frequency) < M_EPSILON .and. em_vars%nsigma == 2) then
-              nsigma_eff = 1
+            if(states_are_real(sys%st)) then
+              call drun_sternheimer()
             else
-              nsigma_eff = em_vars%nsigma
+              call zrun_sternheimer()
             endif
 
-            if (states_are_complex(sys%st)) then
-              call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-                frequency_eta, em_vars%perturbation, EM_RESP_DIR, &
-                em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-            else
-              call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-                frequency, em_vars%perturbation, EM_RESP_DIR, &
-                em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
-            end if
-
-            if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-              if (states_are_complex(sys%st)) then
-                em_vars%lr(idir, 2, ifactor)%zdl_psi = em_vars%lr(idir, 1, ifactor)%zdl_psi
-                em_vars%lr(idir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(idir, 1, ifactor)%zdl_rho)
-              else
-                em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
-                em_vars%lr(idir, 2, ifactor)%ddl_rho = em_vars%lr(idir, 1, ifactor)%ddl_rho
-              end if
-            endif
-
-            if(use_kdotp) then
-              call sternheimer_unset_rhs(sh)
-            end if
-
-            em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
-
-            if(em_vars%calc_hyperpol .and. use_kdotp) then
-              do idir2 = 1, gr%sb%periodic_dim
-                write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
-                call messages_info(1)
-                call pert_setup_dir(pert_kdotp, idir2)
-                
-                ! need to give a proper name to the restart files
-
-                if (states_are_complex(sys%st)) then
-                  call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-                    kdotp_lr(idir2, 1:1), nsigma_eff, frequency_eta, M_z0, &
-                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
-                    pert2_none, EM_RESP_DIR, &
-                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                    give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
-                else
-                  call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-                    kdotp_lr(idir2, 1:1), nsigma_eff, frequency, M_ZERO, &
-                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
-                    pert2_none, EM_RESP_DIR, &
-                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-                    give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
-                end if
-
-                ! if the frequency is zero, we do not need to calculate both responses
-                if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-                  if (states_are_complex(sys%st)) then
-                    kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
-                  else
-                    kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
-                  end if
-                endif
-
-                em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
-              enddo
-              write(message(1), '(a)') ''
-              call messages_info(1)
-            endif
           end if ! have_to_calculate
 
         end do ! idir
 
         if(.not. have_to_calculate) cycle
 
-        if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-    
-          ! calculate polarizability
-          message(1) = "Info: Calculating polarizabilities."
-          call messages_info(1)
-    
-          if(use_kdotp) then
-            if(states_are_complex(sys%st)) then
-              call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-                em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-            else
-              call dcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-                em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-            endif
-          endif
-
-          if(states_are_complex(sys%st)) then
-            call zcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-              em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
-          else
-            call dcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-              em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
-          end if
-    
-          if(em_vars%calc_Born) then
-            ! calculate Born effective charges
-            message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
-            call messages_info(1)
-    
-            if(states_are_complex(sys%st)) then
-              call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
-                Born_charges = em_vars%Born_charges(ifactor))
-            else
-              call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
-                lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
-                Born_charges = em_vars%Born_charges(ifactor))
-            endif
-          endif
-
-        else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-          message(1) = "Info: Calculating magnetic susceptibilities."
-          call messages_info(1)
-    
-          if(states_are_complex(sys%st)) then 
-            call zlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
-              em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
-          else
-            call dlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
-              em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
-          end if
-        end if
-
-        call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
+        if(states_are_real(sys%st)) then
+          call dcalc_properties_linear()
+        else
+          call zcalc_properties_linear()
+        endif
 
       end do ! ifactor
 
-      ! calculate hyperpolarizability
-      if(em_vars%calc_hyperpol) then
-        write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
-        call messages_info(1)
-
-        if(use_kdotp) then
-          if(states_are_complex(sys%st)) then
-            call zpost_orthogonalize(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
-              em_vars%omega(iomega), em_vars%eta, em_vars%lr, kdotp_em_lr2)
-            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
-              kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = .false.)
-          else
-            call dpost_orthogonalize(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
-              em_vars%omega(iomega), em_vars%eta, em_vars%lr, kdotp_em_lr2)
-            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
-              kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = .false.)
-          end if
-        else
-          if(states_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-          else
-            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-          end if
-        endif
-
-        str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
-        write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-        call io_mkdir(trim(dirname_output))
-        call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(1:3), em_vars%ok(1), dirname_output)
-      end if
+      if(states_are_real(sys%st)) then
+        call dcalc_properties_nonlinear()
+      else
+        call zcalc_properties_nonlinear()
+      endif
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
 
@@ -976,6 +724,15 @@ contains
       POP_SUB(em_resp_run.info)
 
     end subroutine info
+
+! Note: unlike the typical usage, here the templates make 'internal procedures'
+#include "undef.F90"
+#include "real.F90"
+#include "em_resp_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "em_resp_inc.F90"
 
   end subroutine em_resp_run
 
