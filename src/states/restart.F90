@@ -639,26 +639,16 @@ contains
     ! open files to read
     states_file  = io_open(trim(dir)//'/states', action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
-    if(states_file < 0) then
-      write(message(1),'(a)') 'Cannot open restart file "states".'
-      call messages_warning(1)
-      ierr = -1
-    endif
+    if(states_file < 0) ierr = -1
 
     wfns_file  = io_open(trim(dir)//'/wfns', action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
-    if(wfns_file < 0) then
-      write(message(1),'(a)') 'Cannot open restart file "wfns".'
-      call messages_warning(1)
-      ierr = -1
-    endif
+    if(wfns_file < 0) ierr = -1
 
     occ_filename = trim(dir)//'/occs'
     occ_file = io_open(trim(occ_filename), action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
     if(occ_file < 0) then
-      write(message(1),'(a)') 'Cannot open restart file "occs".'
-      call messages_warning(1)
       ierr = -1
     else
       call loct_stat(ierr_stat, trim(occ_filename), mod_time)
