@@ -47,8 +47,9 @@ Usage: oct-run_regression_test.pl [options]
 
 Exit codes:
     0         all tests passed
-    255       test skipped
-    1..254    number of test failures
+    1..253    number of test failures
+    254       test skipped
+    255       internal error
 
 Report bugs to <octopus-devel\@tddft.org>
 EndOfUsage
@@ -150,12 +151,12 @@ if($opt_D) {
 }
 
 if(length($opt_f) == 0) {
-    die("ERROR: You must supply the name of a test file with the -f option.\n");
+    die255("ERROR: You must supply the name of a test file with the -f option.\n");
 }
 
 # Find out which executables are available.
 opendir(EXEC_DIRECTORY, $exec_directory) || 
- die "ERROR: Could not open the directory $exec_directory to look for executables";
+ die255("ERROR: Could not open the directory $exec_directory to look for executables");
 @octopus_execs = grep { /^oct/ } readdir(EXEC_DIRECTORY);
 closedir(EXEC_DIRECTORY);
 
@@ -212,7 +213,7 @@ foreach my $octopus_exe (@executables){
       mkdir $workdir;
       
       $scriptname = "$workdir/matches.sh";
-      open(SCRIPT, ">$scriptname") or die "ERROR: could not create '$scriptname'.\n";
+      open(SCRIPT, ">$scriptname") or die255("ERROR: could not create '$scriptname'.\n");
       print SCRIPT "#\!/usr/bin/env bash\n\n";
       print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
       close(SCRIPT);
@@ -223,7 +224,7 @@ foreach my $octopus_exe (@executables){
   }
 
   # testsuite
-  open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
+  open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
 
   $command = $octopus_exe;
 
@@ -255,9 +256,9 @@ foreach my $octopus_exe (@executables){
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit 255;
+	  exit 254;
       } elsif ( $enabled ne "Yes") {
-	  die "ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
       }
     } elsif ( $_ =~ /^Programs/) {
@@ -268,7 +269,7 @@ foreach my $octopus_exe (@executables){
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
-	die "ERROR: Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n";
+	die255("ERROR: Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n");
       }
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
@@ -310,7 +311,7 @@ foreach my $octopus_exe (@executables){
             $mode = (stat "$workdir/inp")[2];
             chmod $mode|S_IWUSR, "$workdir/inp";
           } else {
-            die "ERROR: could not find input file: $input_file\n";
+            die255("ERROR: could not find input file: $input_file\n");
           }
       
 	  print "\nStarting test run ...\n";
@@ -341,7 +342,7 @@ foreach my $octopus_exe (@executables){
 	    } else {
 	      print "No mpiexec found: Skipping parallel test \n";
 	      if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	      exit 255;
+	      exit 254;
 	    }
 	  } else {
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
@@ -402,7 +403,7 @@ foreach my $octopus_exe (@executables){
 	      }
 	  }
       } else {
-	  die "ERROR: Unknown command '$_'\n";
+	  die255("ERROR: Unknown command '$_'\n");
       }
     }
 
@@ -422,7 +423,7 @@ sub find_executables {
   my $name;
   $options = ""; # initialize in case no options specified
 
-  open(TESTSUITE, "<".$opt_f ) or die "ERROR: cannot open testsuite file '$opt_f'.\n";
+  open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
   while ($_ = <TESTSUITE>) {
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
@@ -461,17 +462,17 @@ sub find_executables {
   }
   close(TESTSUITE);
 
-  # Die if no suitable executable was found.
+  # Exit if no suitable executable was found.
   if( @executables == 0 ){
     print STDERR "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
     print STDERR "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
     print STDERR "Skipping ... \n\n";
-    exit 255;
+    exit 254;
   }
 }
 
 sub run_match_new {
-  die "ERROR: Have to run before matching" if !$test{"run"} && !opt_m;
+  die255("ERROR: Have to run before matching\n") if !$test{"run"} && !opt_m;
 
   # parse match line
   my ($line, $match, $pre_command, $ref_value, $off);
@@ -611,9 +612,14 @@ sub check_num_args {
     my $func_name      = $_[3];
 
     if($given_num_args < $min_num_args) {
-	die "$func_name given $given_num_args argument(s) but needs at least $min_num_args.\n";
+	die255("$func_name given $given_num_args argument(s) but needs at least $min_num_args.\n");
     }
     if($given_num_args > $max_num_args) {
-	die "$func_name given $given_num_args argument(s) but can take no more than $max_num_args.\n";
+	die255("$func_name given $given_num_args argument(s) but can take no more than $max_num_args.\n");
     }
+}
+
+sub die255 {
+    print STDERR $_[0];
+    exit 255;
 }

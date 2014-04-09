@@ -144,7 +144,7 @@ function checkqueue {
     # Look for failed/passed/skipped testcases and add to failure summary.
     if [ "${failures}" -eq 0 ]; then
 	passed_tests=$((passed_tests + 1))
-    elif [ ${failures} -eq 255 ]; then
+    elif [ ${failures} -eq 254 ]; then
 	skipped_tests=$((skipped_tests + 1))
     else
 	failed_tests=$((failed_tests + 1))
