@@ -74,8 +74,8 @@ module kpoints_m
     !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
-    integer, pointer :: symmetry_ops(:, :)
-    integer, pointer :: num_symmetry_ops(:)
+    integer, pointer :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, pointer :: num_symmetry_ops(:) !< (reduced%npoints)
 
     FLOAT, pointer :: klattice(:, :)
   end type kpoints_t

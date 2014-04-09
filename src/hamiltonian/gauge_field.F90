@@ -43,7 +43,9 @@ module gauge_field_m
   use states_m
   use states_dim_m
   use submesh_m
+  use symmetries_m
   use symmetrizer_m
+  use symm_op_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -100,7 +102,7 @@ contains
     type(gauge_field_t),     intent(out)   :: this
     type(simul_box_t),       intent(in)    :: sb
 
-    integer :: ii
+    integer :: ii, iop, iop2, ik
     type(block_t) :: blk
 
     PUSH_SUB(gauge_field_init)
@@ -119,6 +121,8 @@ contains
     !% a periodic system. An optional second row specifies the initial
     !% value for the time derivative of the gauge field (which is set
     !% to zero by default). By default this field is not included.
+    !% If <tt>KPointsUseSymmetries = yes</tt>, then <tt>SymmetryBreakDir</tt>
+    !% must be set in the same direction.
     !% This is used with utility <tt>oct-dielectric_function</tt>
     !% according to GF Bertsch, J-I Iwata, A Rubio, and K Yabana,
     !% <i>Phys. Rev. B</i> <b>62</b>, 7998-8002 (2000).
@@ -137,6 +141,24 @@ contains
       call parse_block_end(blk)
       
     end if
+
+    if(.not. simul_box_is_periodic(sb)) then
+      message(1) = "GaugeVectorField is intended for periodic systems."
+      call messages_warning(1)
+    endif
+
+    if(sb%kpoints%use_symmetries) then
+      do ik = 1, sb%kpoints%reduced%npoints
+        do iop = 1, sb%kpoints%num_symmetry_ops(ik)
+          iop2 = sb%kpoints%symmetry_ops(ik, iop)
+          if(.not. symm_op_invariant(sb%symm%ops(iop2), this%vecpot, CNST(1e-5))) then
+            message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
+            message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
+            call messages_fatal(2)
+          endif
+        enddo
+      enddo
+    endif
 
     POP_SUB(gauge_field_init)
   end subroutine gauge_field_init
