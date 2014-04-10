@@ -25,7 +25,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   occ_solution_method, degen_thres)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
-  type(lr_t),             intent(in)    :: lr(:,:)
+  type(lr_t),             intent(in)    :: lr(:,:) !< (1, pdim)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
   integer,                intent(in)    :: occ_solution_method
@@ -77,7 +77,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
             cycle
           end if
 
-          proj_dl_psi(1:mesh%np, 1:hm%d%dim) = lr(idir2, 1)%X(dl_psi)(1:mesh%np, 1:hm%d%dim, ist, ik)
+          proj_dl_psi(1:mesh%np, 1:hm%d%dim) = lr(1, idir2)%X(dl_psi)(1:mesh%np, 1:hm%d%dim, ist, ik)
           
           if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace

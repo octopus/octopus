@@ -124,14 +124,14 @@ contains
     kdotp_vars%velocity(:,:,:) = 0 
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
-    SAFE_ALLOCATE(kdotp_vars%lr(1:pdim, 1:1))
+    SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
     call parse_input()
 
     if(calc_2nd_order) then
       call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
-      SAFE_ALLOCATE(kdotp_vars%lr2(1:pdim, 1:pdim, 1:1))
+      SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     endif
 
     ! setup Hamiltonian
@@ -171,13 +171,13 @@ contains
     endif
 
     do idir = 1, pdim
-      call lr_init(kdotp_vars%lr(idir, 1))
-      call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
+      call lr_init(kdotp_vars%lr(1, idir))
+      call lr_allocate(kdotp_vars%lr(1, idir), sys%st, sys%gr%mesh)
 
       if(calc_2nd_order) then
         do idir2 = 1, pdim
-          call lr_init(kdotp_vars%lr2(idir, idir2, 1))
-          call lr_allocate(kdotp_vars%lr2(idir, idir2, 1), sys%st, sys%gr%mesh)
+          call lr_init(kdotp_vars%lr2(1, idir, idir2))
+          call lr_allocate(kdotp_vars%lr2(1, idir, idir2), sys%st, sys%gr%mesh)
         enddo
       endif
 
@@ -185,7 +185,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(idir, 1))
+        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
           
         if(ierr /= 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
@@ -196,7 +196,7 @@ contains
           do idir2 = 1, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(idir, idir2, 1))
+            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
           
             if(ierr /= 0) then
               message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
@@ -220,11 +220,11 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
+        call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
           M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
       else
-        call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
+        call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
       endif
@@ -233,16 +233,16 @@ contains
 
       errornorm = M_ZERO
       if(states_are_real(sys%st)) then 
-        call doutput_lr(sys%st, sys%gr, kdotp_vars%lr(idir, 1), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+        call doutput_lr(sys%st, sys%gr, kdotp_vars%lr(1, idir), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(idir, 1)%ddl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin)), 8))
         end do
       else
-        call zoutput_lr(sys%st, sys%gr, kdotp_vars%lr(idir, 1), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+        call zoutput_lr(sys%st, sys%gr, kdotp_vars%lr(1, idir), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(idir, 1)%zdl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin)), 8))
         end do
       endif
 
@@ -257,14 +257,14 @@ contains
           call messages_info(1)
 
           if(states_are_real(sys%st)) then
-            call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(idir, 1:1), kdotp_vars%lr(idir, 1:1), &
+            call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, kdotp_vars%perturbation, &
-              kdotp_vars%lr2(idir, idir2, 1:1), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
-            call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(idir, 1:1), kdotp_vars%lr(idir, 1:1), &
+            call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, kdotp_vars%perturbation, &
-              kdotp_vars%lr2(idir, idir2, 1:1), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           endif
 
@@ -293,11 +293,11 @@ contains
 
     ! clean up some things
     do idir = 1, pdim
-      call lr_dealloc(kdotp_vars%lr(idir, 1))
+      call lr_dealloc(kdotp_vars%lr(1, idir))
 
       if(calc_2nd_order) then
         do idir2 = 1, pdim
-          call lr_dealloc(kdotp_vars%lr2(idir, idir2, 1))
+          call lr_dealloc(kdotp_vars%lr2(1, idir, idir2))
         enddo
       endif
     end do
