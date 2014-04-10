@@ -528,9 +528,9 @@ contains
 
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
-      SAFE_ALLOCATE(periodic_mask_tmp(1:mc%n_index))
 
 #if defined(HAVE_MPI)
+      SAFE_ALLOCATE(periodic_mask_tmp(1:mc%n_index))
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
@@ -618,6 +618,7 @@ contains
         mc%st_kpt_comm = base_grp%comm
         mc%dom_st_kpt_comm = base_grp%comm
       end if
+      SAFE_DEALLOCATE_A(periodic_mask_tmp)
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
@@ -629,7 +630,6 @@ contains
       mc%slave_intercomm = -1
 #endif
 
-      SAFE_DEALLOCATE_A(periodic_mask_tmp)
       POP_SUB(multicomm_init.group_comm_create)
     end subroutine group_comm_create
 
