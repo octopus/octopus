@@ -517,6 +517,7 @@ contains
       logical :: dim_mask(MAX_INDEX)
       integer :: i_strategy
       logical :: reorder, periodic_mask(MAX_INDEX)
+      logical, allocatable :: periodic_mask_tmp(:)
       integer :: coords(MAX_INDEX)
       integer :: new_comm
 #endif
@@ -527,6 +528,7 @@ contains
 
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
+      SAFE_ALLOCATE(periodic_mask_tmp(1:mc%n_index))
 
 #if defined(HAVE_MPI)
       mc%full_comm = MPI_COMM_NULL
@@ -543,10 +545,11 @@ contains
         ! The domain and states dimensions have to be periodic (2D torus)
         ! in order to circulate matrix blocks.
         periodic_mask(P_STRATEGY_DOMAINS) = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
-        periodic_mask(P_STRATEGY_STATES) = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
+        periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
-        ! We allow reordering of ranks.
-        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
+        periodic_mask_tmp(1:mc%n_index) = periodic_mask(1:mc%n_index)
+        ! We allow reordering of ranks. 
+        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -567,7 +570,7 @@ contains
         call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
 
         reorder = .false.
-        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
+        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%master_comm, mpi_err)
 
         call MPI_Comm_free(new_comm, mpi_err)
 
@@ -626,6 +629,7 @@ contains
       mc%slave_intercomm = -1
 #endif
 
+      SAFE_DEALLOCATE_A(periodic_mask_tmp)
       POP_SUB(multicomm_init.group_comm_create)
     end subroutine group_comm_create
 
