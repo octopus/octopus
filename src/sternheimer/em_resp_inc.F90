@@ -199,13 +199,13 @@ subroutine X(calc_properties_linear)()
   
   call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
   
-  POP_SUB(X(calc_properties_linear))
+  POP_SUB(em_resp_run.X(calc_properties_linear))
 end subroutine X(calc_properties_linear)
 
 ! ---------------------------------------------------------
 subroutine X(calc_properties_nonlinear)()
 
-  PUSH_SUB(X(calc_properties_nonlinear))
+  PUSH_SUB(em_resp_run.X(calc_properties_nonlinear))
 
   ! calculate hyperpolarizability
   if(em_vars%calc_hyperpol) then
