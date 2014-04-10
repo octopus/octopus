@@ -192,7 +192,7 @@ contains
     !% linear-response run modes, the derivatives of many quantities can be printed, as listed in
     !% the options below; the files will be printed in the directory
     !% for the run mode. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin, <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band,
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>density + potential</tt>
