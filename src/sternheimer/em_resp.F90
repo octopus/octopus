@@ -150,6 +150,12 @@ contains
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
+    if(use_kdotp .and. .not. smear_is_semiconducting(sys%st%smear)) then
+      ! there needs to be a gap.
+      message(1) = "em_resp with kdotp can only be used with semiconducting smearing"
+      call messages_fatal(1)
+    endif
+
     if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call messages_not_implemented('Magnetic perturbation in periodic system')
     endif

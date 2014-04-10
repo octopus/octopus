@@ -108,6 +108,9 @@ contains
       call messages_not_implemented('Commutator of Fock operator')
     endif
 
+    complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
+    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
+
     pdim = sys%gr%sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then
@@ -130,9 +133,6 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:pdim, 1:pdim, 1:1))
     endif
-
-    complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -332,7 +332,7 @@ contains
       !%Section Linear Response::KdotP
       !%Description
       !% Method of calculating the contribution of the projection of the
-      !%  linear-response wavefunctions in the occupied subspace.
+      !% linear-response wavefunctions in the occupied subspace.
       !%Option sternheimer_eqn 0
       !% The Sternheimer equation is solved including the occupied subspace,
       !% to get the full linear-response wavefunctions.
@@ -369,7 +369,7 @@ contains
       !%Section Linear Response::KdotP
       !%Description
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
-      !% to calculate effective masses.
+      !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
       call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
       call parse_logical(datasets_check('KdotPCalculateEffectiveMasses'), .true., calc_eff_mass)
