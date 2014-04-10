@@ -79,37 +79,23 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
           proj_dl_psi(1:mesh%np, 1:hm%d%dim) = lr(1, idir2)%X(dl_psi)(1:mesh%np, 1:hm%d%dim, ist, ik)
           
-          if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace
-            do ist2 = 1, sys%st%nst
+          do ist2 = 1, sys%st%nst
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
 !                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(psi)(1:mesh%np, 1, ist2, ik) * &
 !                     X(mf_dotp)(m, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
-              orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
-              ! mask == .false. means do projection; .true. means do not
-            enddo
+            orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
+            ! mask == .false. means do projection; .true. means do not
+          enddo
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
 
-            call X(states_orthogonalize_single)(sys%st, mesh, sys%st%nst, ik, proj_dl_psi, mask = orth_mask)
-          endif
+          call X(states_orthogonalize_single)(sys%st, mesh, sys%st%nst, ik, proj_dl_psi, mask = orth_mask)
 
           ! contribution from Sternheimer equation
           term = X(mf_dotp)(mesh, sys%st%d%dim, proj_dl_psi, pertpsi(:, :, idir1))
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
-
-          if (occ_solution_method == 1) then
-          ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
-             do ist2 = 1, sys%st%nst
-                if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-
-                term = X(mf_dotp)(mesh, sys%st%d%dim, pertpsi(:, :, idir1), sys%st%X(psi)(:, :, ist2, ik)) * &
-                     X(mf_dotp)(mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :, idir2)) / &
-                     (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-                eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) + M_TWO * R_REAL(term)
-             enddo
-          endif
 
           call pert_setup_dir(perturbation, idir1, idir2)
           call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, &
@@ -145,6 +131,58 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 end subroutine X(calc_eff_mass_inv)
   
+
+! ---------------------------------------------------------
+!> add projection onto occupied states, by sum over states
+subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
+  type(system_t),      intent(in)    :: sys
+  type(hamiltonian_t), intent(inout) :: hm
+  type(pert_t),        intent(in)    :: pert
+  type(lr_t),          intent(inout) :: kdotp_lr
+  FLOAT,               intent(in)    :: degen_thres
+
+  integer :: ist, ist2, ik
+  R_TYPE :: mtxel
+  R_TYPE, allocatable :: pertpsi(:, :)
+
+  PUSH_SUB(X(kdotp_add_occ))
+
+  if(sys%st%parallel_in_states) then
+    call messages_not_implemented("kdotp_add_occ parallel in states")
+  endif
+
+  SAFE_ALLOCATE(pertpsi(sys%gr%mesh%np, sys%st%d%dim))
+
+! FIXME: occupations?
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    do ist = 1, sys%st%nst
+
+      call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, &
+        sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :))
+
+      ! FIXME: could halve the loops, but somehow the commented code below is wrong for ist > 1
+      do ist2 = 1, sys%st%nst
+!      do ist2 = ist + 1, sys%st%nst
+        if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
+        
+        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :))
+
+        kdotp_lr%X(dl_psi)(:, :, ist, ik) = kdotp_lr%X(dl_psi)(:, :, ist, ik) + &
+          sys%st%X(psi)(:, :, ist2, ik) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
+
+!        kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
+!          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
+
+      enddo
+    enddo
+  enddo
+
+  SAFE_DEALLOCATE_A(pertpsi)
+
+  POP_SUB(X(kdotp_add_occ))
+end subroutine X(kdotp_add_occ)
+
 
 ! ---------------------------------------------------------
 subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
