@@ -37,12 +37,14 @@ module pcm_m
 
   private
 
-  public :: pcm_t,           &
-            pcm_init,        &
-            pcm_end,         &
-            pcm_charges,     &
-            pcm_pot_rs,      &
-            v_nuclei_cav,    &
+  public :: pcm_t,              &
+            pcm_init,           &
+            pcm_end,            &
+            pcm_charges,        &
+            pcm_pot_rs,         &
+            pcm_classic_energy, &
+            v_nuclei_cav,       &
+            v_electrons_cav_li, &
             v_electrons_cav
 
 
@@ -75,7 +77,8 @@ module pcm_m
     FLOAT, allocatable           :: v_e(:)        !< Electrostatic potential produced by the electrons at each tessera
     FLOAT, allocatable           :: v_n(:)        !< Electrostatic potential produced by nuclei at each tessera
     FLOAT, allocatable           :: v_e_rs(:)     !< PCM real-space potential produced by q_e(:) 
-    FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:) 
+    FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:)
+    FLOAT, allocatable           :: arg_li(:,:)   !< 
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                        :: epsilon_infty !< Infnite-frequency dielectric constant of the solvent 
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
@@ -294,6 +297,9 @@ contains
     SAFE_ALLOCATE( pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices) )
     pcm%ind_vh = INT(M_ZERO)
 
+    SAFE_ALLOCATE( pcm%arg_li(1:pcm%n_tesserae, 1:MAX_DIM) )
+    pcm%arg_li = M_ZERO
+
     vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')
     grid_unit = io_open('pcm/grid.dat', action='write')
 
@@ -312,9 +318,9 @@ contains
     idx_from_coord_unit = io_open('pcm/index_from_coords.dat', action='write')
 
     !> Creating the list of the nearest grid points to each tessera
-    !! to be used to "interpolate" the Hartree potential at the representative points
+    !! to be used to interpolate the Hartree potential at the representative points
      do ia = 1, pcm%n_tesserae
-        call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), ia, pcm%n_vertices )
+        call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices )
      enddo
 
     call io_close(nearest_idx_unit)
@@ -374,10 +380,59 @@ contains
         enddo
 
         v_e_cav(ia) = -v_e_cav(ia)/pcm%n_vertices !Notice the explicit minus sign. 
+
       enddo
 
     POP_SUB(v_electrons_cav)
   end subroutine v_electrons_cav      
+!==================================================================
+  !> Calculates the Hartree potential at the tessera representative points by doing 
+  !! a 3D linear interpolation. 
+  subroutine v_electrons_cav_li(v_e_cav, v_hartree, pcm)
+    type(pcm_t), intent(in)  :: pcm
+    FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
+    FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
+
+    integer :: ia
+    integer :: ib
+
+    FLOAT :: C_00
+    FLOAT :: C_10
+    FLOAT :: C_01
+    FLOAT :: C_11
+    FLOAT :: C_0
+    FLOAT :: C_1
+
+    PUSH_SUB(v_electrons_cav_li)    
+
+     v_e_cav = M_ZERO
+
+     do ia=1, pcm%n_tesserae
+
+        C_00 = v_hartree( pcm%ind_vh(ia,1) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+               v_hartree( pcm%ind_vh(ia,5) )*( pcm%arg_li(ia,1) )
+
+        C_10 = v_hartree( pcm%ind_vh(ia,2) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+               v_hartree( pcm%ind_vh(ia,6) )*( pcm%arg_li(ia,1) )
+
+        C_01 = v_hartree( pcm%ind_vh(ia,4) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+               v_hartree( pcm%ind_vh(ia,8) )*( pcm%arg_li(ia,1) )
+
+        C_11 = v_hartree( pcm%ind_vh(ia,3) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+               v_hartree( pcm%ind_vh(ia,7) )*( pcm%arg_li(ia,1) )
+
+        C_0 = C_00*( M_ONE - pcm%arg_li(ia,2) ) + C_10*pcm%arg_li(ia,2)
+
+        C_1 = C_01*( M_ONE - pcm%arg_li(ia,2) ) + C_11*pcm%arg_li(ia,2)
+
+        v_e_cav(ia) = C_0*( M_ONE - pcm%arg_li(ia,3) ) + C_1*pcm%arg_li(ia,3)
+
+        v_e_cav(ia) = -v_e_cav(ia) !Notice the explicit minus sign. 
+         
+      enddo
+   
+    POP_SUB(v_electrons_cav_li)
+  end subroutine v_electrons_cav_li      
 !==================================================================
   !> Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
   !! v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
@@ -416,12 +471,54 @@ contains
     POP_SUB(v_nuclei_cav)
   end subroutine v_nuclei_cav
 !==================================================================
+  !> Calculates the classical electrostatic interaction energy between the polarization
+  !! charges and the ions U_pcm^n(e+n) = 1/2 \sum_{I=1}^{natoms} \sum_{j=1}^{n_tess} &
+  !! Z_val*(q_j^e+q_j^n) / |s_{j} - R_I|
+  FLOAT function pcm_classic_energy(geo, q_e, q_n, tess, n_tess)
+    type(geometry_t), intent(in) :: geo
+    FLOAT                        :: q_e(:)  !< (1:n_tess)
+    FLOAT                        :: q_n(:)  !< (1:n_tess)
+    type(tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+    integer, intent(in)          :: n_tess
+
+    FLOAT   :: diff(1:MAX_DIM)
+    FLOAT   :: dist
+    FLOAT   :: z_ia
+    integer :: ik
+    integer :: ia
+
+    type(species_t), pointer :: spci 
+
+    PUSH_SUB(pcm_classic_energy)
+     
+    pcm_classic_energy = M_ZERO
+
+    do ik = 1, n_tess
+     do ia = 1, geo%natoms
+        diff = geo%atom(ia)%x - tess(ik)%x 
+        
+        dist = dot_product( diff, diff )
+        dist = sqrt(dist)
+
+        spci => geo%atom(ia)%spec
+        z_ia = species_zval(spci)
+
+        pcm_classic_energy = pcm_classic_energy + z_ia*( q_e(ik) + q_n(ik) ) / dist       
+     enddo
+    enddo
+
+    pcm_classic_energy = M_HALF*pcm_classic_energy
+
+    POP_SUB(pcm_classic_energy)
+  end function pcm_classic_energy
+!==================================================================
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
-  subroutine nearest_cube_vertices(point, mesh, vert_idx, ia, n_vertices)
+  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li, ia, n_vertices)
    FLOAT, intent(in)        :: point(1:MAX_DIM)
    type(mesh_t), intent(in) :: mesh
    integer, intent(out)     :: vert_idx(:)
+   FLOAT, intent(out)       :: weight_li(:)
    integer, intent(in)      :: ia
    integer, intent(in)      :: n_vertices
 
@@ -452,7 +549,9 @@ contains
 
    sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
    sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
-   sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) ) 
+   sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) )
+
+   weight_li = ABS(point - coord_0)/mesh%spacing 
 
   !FRONT CUBE PLANE
    point_f = point_0
@@ -803,6 +902,7 @@ contains
      SAFE_DEALLOCATE_A(pcm%v_e_rs)
      SAFE_DEALLOCATE_A(pcm%v_n_rs)
      SAFE_DEALLOCATE_A(pcm%ind_vh)
+     SAFE_DEALLOCATE_A(pcm%arg_li)
 
      call io_close(pcm%info_unit)
 

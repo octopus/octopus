@@ -36,13 +36,16 @@ module energy_m
 
   type energy_t
     ! Energies
-    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
+    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
+                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm]
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
     FLOAT :: exchange
     FLOAT :: correlation
     FLOAT :: xc_j
     FLOAT :: intnvxc     !< Int[n vxc]
     FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
+    FLOAT :: int_e_pcm   !< solvent-electrons interaction energy: 1/2 Int[n^e v_pcm]
+    FLOAT :: int_n_pcm   !< solvent-nuclei interaction energy   : 1/2 Int[n^n v_pcm]             
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
     FLOAT :: entropy
@@ -79,6 +82,8 @@ contains
     this%xc_j         = M_ZERO
     this%intnvxc      = M_ZERO
     this%hartree      = M_ZERO
+    this%int_e_pcm    = M_ZERO
+    this%int_n_pcm    = M_ZERO
     this%kinetic      = M_ZERO
     this%extern       = M_ZERO
     this%entropy      = M_ZERO
@@ -115,6 +120,8 @@ contains
     eout%xc_j         = ein%xc_j
     eout%intnvxc      = ein%intnvxc
     eout%hartree      = ein%hartree
+    eout%int_e_pcm    = ein%int_e_pcm
+    eout%int_n_pcm    = ein%int_n_pcm
     eout%kinetic      = ein%kinetic
     eout%extern       = ein%extern
     eout%entropy      = ein%entropy
