@@ -21,14 +21,12 @@
 !> m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
 !! for each state, spin, and k-point
 !! The off-diagonal elements are not correct in a degenerate subspace
-subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
-  occ_solution_method, degen_thres)
+subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_thres)
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(in)    :: lr(:,:) !< (1, pdim)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
-  integer,                intent(in)    :: occ_solution_method
   FLOAT,                  intent(in)    :: degen_thres
 
   integer :: ik, ist, ist2, idir1, idir2, pdim
@@ -161,9 +159,7 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
       call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, &
         sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :))
 
-      ! FIXME: could halve the loops, but somehow the commented code below is wrong for ist > 1
-      do ist2 = 1, sys%st%nst
-!      do ist2 = ist + 1, sys%st%nst
+      do ist2 = ist + 1, sys%st%nst
         if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
         
         mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :))
@@ -171,8 +167,9 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
         kdotp_lr%X(dl_psi)(:, :, ist, ik) = kdotp_lr%X(dl_psi)(:, :, ist, ik) + &
           sys%st%X(psi)(:, :, ist2, ik) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
 
-!        kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
-!          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
+        ! note: there is a minus sign here, because the perturbation is an anti-Hermitian operator
+        kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
+          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(-mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
 
       enddo
     enddo

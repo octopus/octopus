@@ -285,10 +285,10 @@ contains
 
       if(states_are_real(sys%st)) then
         call dcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
         call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       endif
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
