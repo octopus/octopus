@@ -47,9 +47,8 @@ program photoelectron_spectrum
   FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpol
-  type(block_t)        :: blk
   
-  character(len=80) :: filename
+  character(len=512) :: filename
 
   !Initial values
   ll = 1 
@@ -88,7 +87,7 @@ program photoelectron_spectrum
   Emax = M_ZERO
   
   
-  call get_laser_polarizaion(pol)
+  call get_laser_polarization(pol)
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
                                      uThstep, uThspan, uPhstep, &
@@ -219,7 +218,7 @@ program photoelectron_spectrum
 
   contains
 
-    subroutine get_laser_polarizaion(lPol)
+    subroutine get_laser_polarization(lPol)
        FLOAT,   intent(out) :: lPol(:) 
        
         type(block_t)       :: blk
@@ -246,7 +245,7 @@ program photoelectron_spectrum
         end if
 
         POP_SUB(get_laser_polarization)
-    end subroutine get_laser_polarizaion
+    end subroutine get_laser_polarization
 
     character(5) pure function index2var(ivar) result(ch)
       integer, intent(in) :: ivar
