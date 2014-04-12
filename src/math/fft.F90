@@ -387,7 +387,7 @@ contains
 
     if(jj == 0) then
       message(1) = "Not enough slots for FFTs."
-      message(2) = "Please increase FFT_MAX in fftw3.F90 and recompile."
+      message(2) = "Please increase FFT_MAX in fft.F90 and recompile."
       call messages_fatal(2)
     end if
 
