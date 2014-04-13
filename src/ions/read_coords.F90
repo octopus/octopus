@@ -120,6 +120,31 @@ contains
 
     done = .false.
 
+    !%Variable PDBCoordinates
+    !%Type string
+    !%Section System::Coordinates
+    !%Description
+    !% If this variable is present, the program tries to read the atomic coordinates
+    !% from the file specified by its value. The PDB (Protein Data Bank,
+    !% <tt>http://www.rcsb.org/pdb/</tt>) format is quite complicated, and it goes 
+    !% well beyond the scope of this manual. You can find a comprehensive
+    !% description <a href='http://www.wwpdb.org/docs.html'>here</a>.
+    !% From the plethora of instructions defined in the PDB standard, <tt>Octopus</tt>
+    !% only reads two, <tt>ATOM</tt> and <tt>HETATOM</tt>. From these fields, it reads:
+    !% <ul>
+    !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
+    !% first letter - "CA" and "CB" will both refer to carbon - so elements whose
+    !% chemical symbol has more than one letter cannot be represented in this way.
+    !% So, if you want to run mercury (Hg), please use one of the other two methods
+    !% to input the coordinates: <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
+    !% <li> columns 18-21: The residue. If residue is <tt>QM</tt>, the atom is treated by quantum
+    !% mechanics; otherwise it is simply treated as an external classical point charge.
+    !% Its charge will be given by columns 61-65.</li>
+    !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is <tt>(3f8.3)</tt>.</li>
+    !% <li> columns 61-65: Classical charge of the atom. The Fortran format is <tt>(f6.2)</tt>.</li>
+    !% </ul>
+    !%End
+
     if(parse_isdef(datasets_check('PDB'//trim(what))) /= 0) then
       call check_duplicated(done)
 
@@ -137,6 +162,19 @@ contains
       call read_coords_read_PDB(what, iunit, gf)
       call io_close(iunit)
     end if
+
+    !%Variable XYZCoordinates
+    !%Type string
+    !%Section System::Coordinates
+    !%Description
+    !% If <tt>PDBCoordinates</tt> is not present, the program reads the atomic coordinates from
+    !% the XYZ file specified by the variable <tt>XYZCoordinates</tt> -- in case this variable
+    !% is present. The XYZ format is very simple: The first line of the file has an integer
+    !% indicating the number of atoms. The second can contain comments that are simply ignored by
+    !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
+    !% the Cartesian coordinates of the atom.
+    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
+    !%End
 
     if(parse_isdef(datasets_check('XYZ'//trim(what))) /= 0) then ! read an xyz file
       call check_duplicated(done)
@@ -161,6 +199,30 @@ contains
       call io_close(iunit)
     end if
     
+    !%Variable Coordinates
+    !%Type block
+    !%Section System::Coordinates
+    !%Description
+    !% If neither <tt>XYZCoordinates</tt> nor <tt>PDBCoordinates</tt> was found, <tt>Octopus</tt>
+    !% tries to read the coordinates for the atoms from the block <tt>Coordinates</tt>. The
+    !% format is quite straightforward:
+    !%
+    !% <tt>%Coordinates
+    !% <br>&nbsp;&nbsp;'C' |      -0.56415 | 0.0 | 0.0 | no
+    !% <br>&nbsp;&nbsp;'O' | &nbsp;0.56415 | 0.0 | 0.0 | no
+    !% <br>%</tt>
+    !%
+    !% The first line defines a carbon atom at coordinates (-0.56415, 0.0, 0.0),
+    !% that is <b>not</b> allowed to move during dynamical simulations. The second line has
+    !% a similar meaning. This block obviously defines a carbon monoxide molecule, if the
+    !% input units are <tt>eV_Angstrom</tt>. The number of coordinates for each species
+    !% must be equal to the dimension of your space (generally 3).
+    !% Note that in this way it is possible to fix some of the atoms (this
+    !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
+    !% <tt>XYZCoordinates</tt> file). The last column is optional, and the default is yes.
+    !% It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
+    !%End
+
     if(parse_block(datasets_check(trim(what)), blk) == 0) then
       call check_duplicated(done)
 
@@ -193,6 +255,22 @@ contains
 
       call parse_block_end(blk)
     end if
+
+    !%Variable ReducedCoordinates
+    !%Type block
+    !%Section System::Coordinates
+    !%Description
+    !% This block gives the atomic coordinates relative to the real
+    !% space unit cell. The format is the same as the
+    !% <tt>Coordinates</tt> block.
+    !%
+    !% Note that in Octopus the origin of coordinates is in the center
+    !% of the cell, so the coordinates inside the cell are in the
+    !% range [-0.5, 0.5).
+    !%
+    !% This block cannot be used with the <tt>minimum</tt> box shape.
+    !% 
+    !%End
 
     ! This is valid only for Coordinates.
     if(trim(what) == 'Coordinates' .and. parse_block(datasets_check('Reduced'//trim(what)), blk) == 0) then
