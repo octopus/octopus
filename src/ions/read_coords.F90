@@ -47,7 +47,8 @@ module read_coords_m
     READ_COORDS_PDB      = 1,      &
     READ_COORDS_XYZ      = 2,      &
     READ_COORDS_INP      = 3,      &
-    READ_COORDS_REDUCED  = 4
+    READ_COORDS_REDUCED  = 4,      &
+    READ_COORDS_XSF      = 5
 
   !> for read_coords_info::flags
   integer, public, parameter :: &
@@ -107,14 +108,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_coords_read(what, gf, space)
-    character(len=*),    intent(in)    :: what
+    character(len=*),       intent(in)    :: what
     type(read_coords_info), intent(inout) :: gf
-    type(space_t),       intent(in)    :: space
+    type(space_t),          intent(in)    :: space
 
-    integer :: ia, ncol, iunit, jdir
+    integer :: ia, ncol, iunit, jdir, int_one, periodic_dim
     type(block_t) :: blk
-    character(len=80) :: str
+    character(len=256) :: str
     logical :: done
+    FLOAT :: latvec(MAX_DIM, MAX_DIM)
 
     PUSH_SUB(read_coords_read)
 
@@ -188,10 +190,91 @@ contains
 
       iunit = io_open(str, status='old', action='read', is_tmp=.true.)
       read(iunit, *) gf%n
+
+      if(gf%n <= 0) then
+        write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
+        call messages_fatal(1)
+      endif
+
       read(iunit, *) ! skip comment line
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
+      do ia = 1, gf%n
+        read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
+      end do
+
+      call io_close(iunit)
+    end if
+
+    !%Variable XSFCoordinates
+    !%Type string
+    !%Section System::Coordinates
+    !%Description
+    !% Another option besides PDB and XYZ coordinates formats is XSF, as defined by the XCrySDen visualization
+    !% program (http://www.xcrysden.org/doc/XSF.html). Specify the filename with this variable.
+    !% is present. The XYZ format is very simple: The first line of the file has an integer
+    !% indicating the number of atoms. The second can contain comments that are simply ignored by
+    !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
+    !% the Cartesian coordinates of the atom.
+    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
+    !%End
+
+    if(parse_isdef(datasets_check('XSF'//trim(what))) /= 0) then ! read an xsf file
+      call check_duplicated(done)
+
+      gf%source = READ_COORDS_XSF
+      ! no default, since we do not do this unless the input tag is present
+      call parse_string(datasets_check('XSF'//trim(what)), '', str)
+
+      message(1) = "Reading " // trim(what) // " from " // trim(str)
+      call messages_info(1)
+
+      iunit = io_open(str, status='old', action='read', is_tmp=.true.)
+
+      read(iunit, *) str ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'; FIXME: or just 'ATOMS'
+      select case(trim(str))
+      case('CRYSTAL')
+        periodic_dim = 3
+      case('SLAB')
+        periodic_dim = 2
+      case('POLYMER')
+        periodic_dim = 1
+      case('MOLECULE')
+        periodic_dim = 0
+      case default
+        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
+        call messages_fatal(1)
+      end select
+
+      read(iunit, *) str
+      if(trim(str) /= 'PRIMVEC') then
+        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
+        call messages_warning(1)
+      endif
+
+      do jdir = 1, space%dim
+        read(iunit, *) latvec(1:space%dim, jdir)
+      enddo
+
+      read(iunit, *) str
+      if(trim(str) /= 'PRIMCOORD') then
+        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
+        call messages_warning(1)
+      endif
+
+      read(iunit, *) gf%n, int_one
+      if(gf%n <= 0) then
+        write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
+        call messages_fatal(1)
+      endif
+      if(int_one /= 1) then
+        write(message(1),'(a,i6,a)') 'Number in file was ', int_one, ' instead of 1.'
+        call messages_warning(1)
+      endif
+      SAFE_ALLOCATE(gf%atom(1:gf%n))
+
+      ! TODO: add support for velocities as vectors here?
       do ia = 1, gf%n
         read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
       end do
