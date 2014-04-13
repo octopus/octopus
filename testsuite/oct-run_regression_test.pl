@@ -553,11 +553,9 @@ sub run_match_new {
     return 0;
   }
 
-  $perl_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
-
   # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
-  # otherwise the error comes only if the last step (perl) failed, which will rarely happen.
-  $value = qx(cd $matchdir && $pre_command $perl_command);
+  # otherwise the error comes only if the last step failed.
+  $value = qx(cd $matchdir && $pre_command);
   # Perl gives error code shifted, for some reason.
   $exit_code = $? >> 8;
   if($exit_code) {
@@ -565,7 +563,11 @@ sub run_match_new {
       return 0;
   }
 
+  # extract numeric string (including possibility of NaN)
+  $value =~ /([0-9\-+.eEdDnNaA]+)/;
+  $value = $1;
   chomp $value;
+
   if(length($value) == 0) {
       print STDERR "Match command returned nothing: $pre_command\n";
       return 0;
