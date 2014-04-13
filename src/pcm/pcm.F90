@@ -37,14 +37,14 @@ module pcm_m
 
   private
 
-  public :: pcm_t,              &
-            pcm_init,           &
-            pcm_end,            &
-            pcm_charges,        &
-            pcm_pot_rs,         &
-            pcm_classic_energy, &
-            v_nuclei_cav,       &
-            v_electrons_cav_li, &
+  public :: pcm_t,                &
+            pcm_init,             &
+            pcm_end,              &
+            pcm_charges,          &
+            pcm_pot_rs,           &
+            pcm_classical_energy, &
+            v_nuclei_cav,         &
+            v_electrons_cav_li,   &
             v_electrons_cav
 
 
@@ -141,24 +141,19 @@ contains
     !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
     !% only for ground state calculations. Experimental.
     !%End
-    call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
+!    call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
 
-!    call parse_integer('CalculationMode', CM_GS_PCM, pcm_calc_mode) !temporal
-
-    if (pcm%run_pcm) then
-      if (grid%sb%box_shape /= MINIMUM) then
-          message(1) = "PCM is only available for BoxShape = minimum"
-          call messages_fatal(1)
-!      else if (pcm_calc_mode /= CM_GS_PCM) then
-!          message(1) = "PCM is only available for ground state calculations"
+!    if (pcm%run_pcm) then
+!      if (grid%sb%box_shape /= MINIMUM) then
+!          message(1) = "PCM is only available for BoxShape = minimum"
 !          call messages_fatal(1)
-      else 
-          call messages_experimental("polarizable continuum model")
-      endif
-    else
-      POP_SUB(pcm_init)
-      return
-    endif
+!      else 
+!          call messages_experimental("polarizable continuum model")
+!      endif
+!    else
+!      POP_SUB(pcm_init)
+!      return
+!    endif
 
     rcav_C = CNST(2.4)*P_Ang    ! 
     rcav_O = CNST(1.8)*P_Ang    !    
@@ -472,9 +467,9 @@ contains
   end subroutine v_nuclei_cav
 !==================================================================
   !> Calculates the classical electrostatic interaction energy between the polarization
-  !! charges and the ions U_pcm^n(e+n) = 1/2 \sum_{I=1}^{natoms} \sum_{j=1}^{n_tess} &
+  !! charges and the ions: int_n_pcm = 1/2 \sum_{I=1}^{natoms} \sum_{j=1}^{n_tess} &
   !! Z_val*(q_j^e+q_j^n) / |s_{j} - R_I|
-  FLOAT function pcm_classic_energy(geo, q_e, q_n, tess, n_tess)
+  FLOAT function pcm_classical_energy(geo, q_e, q_n, tess, n_tess)
     type(geometry_t), intent(in) :: geo
     FLOAT                        :: q_e(:)  !< (1:n_tess)
     FLOAT                        :: q_n(:)  !< (1:n_tess)
@@ -489,9 +484,9 @@ contains
 
     type(species_t), pointer :: spci 
 
-    PUSH_SUB(pcm_classic_energy)
+    PUSH_SUB(pcm_classical_energy)
      
-    pcm_classic_energy = M_ZERO
+    pcm_classical_energy = M_ZERO
 
     do ik = 1, n_tess
      do ia = 1, geo%natoms
@@ -503,14 +498,14 @@ contains
         spci => geo%atom(ia)%spec
         z_ia = species_zval(spci)
 
-        pcm_classic_energy = pcm_classic_energy + z_ia*( q_e(ik) + q_n(ik) ) / dist       
+        pcm_classical_energy = pcm_classical_energy + z_ia*( q_e(ik) + q_n(ik) ) / dist       
      enddo
     enddo
 
-    pcm_classic_energy = M_HALF*pcm_classic_energy
+    pcm_classical_energy = M_HALF*pcm_classical_energy
 
-    POP_SUB(pcm_classic_energy)
-  end function pcm_classic_energy
+    POP_SUB(pcm_classical_energy)
+  end function pcm_classical_energy
 !==================================================================
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'

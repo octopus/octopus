@@ -94,7 +94,7 @@ contains
         hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
 
         if (hm%pcm%run_pcm) then
-            hm%energy%int_n_pcm = pcm_classic_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
+            hm%energy%int_n_pcm = pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
         endif
             
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
@@ -195,11 +195,16 @@ contains
       write(message(7), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(8), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(9), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
-      write(message(10),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_e_pcm)
-      write(message(11),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_n_pcm)
-      write(message(12),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
+      call messages_info(9, iunit)
+      
+      if (hm%pcm%run_pcm) then
+          write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_e_pcm)
+          write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_n_pcm)
+          write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
                                                                              hm%energy%int_e_pcm + hm%energy%int_n_pcm)
-      call messages_info(12, iunit)
+          call messages_info(3, iunit)
+      endif
+
       if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
         if(cmplxscl) write(message(1), '(a, es18.6)') trim(message(1)), units_from_atomic(units_out%energy, hm%energy%Imkinetic)

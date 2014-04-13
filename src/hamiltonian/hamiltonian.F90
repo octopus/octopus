@@ -486,8 +486,28 @@ contains
     !%End
     call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
-    !> initializes PCM
-    call pcm_init(hm%pcm, geo, gr) 
+    !%Variable Solvation
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If true, the calculation is performed accounting for solvation effects
+    !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
+    !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
+    !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
+    !% only for ground state calculations. Experimental.
+    !%End
+    call parse_logical(datasets_check('Solvation'), .false., hm%pcm%run_pcm)
+
+    if (hm%pcm%run_pcm) then
+      if (gr%sb%box_shape /= MINIMUM) then
+          message(1) = "PCM is only available for BoxShape = minimum"
+          call messages_fatal(1)
+      else 
+          call messages_experimental("polarizable continuum model")
+          call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
+      endif
+    endif
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
