@@ -46,25 +46,28 @@ contains
     type(block_t)                :: block
     integer                      :: lin, nlin, ncls
     !
-    !%Variable FrozenSystems
-    !%Type block
-    !%Section System
-    !%Description
-    !% Lists the directories and the optional parameters to use on the reading of the frozen systems.
-    !% the parameters are: the type of interpolation to use, wether to use or not the frozen 
-    !% potential and the translation and rotation to apply to the system.
-    !%
-    !% <tt>%FrozenSystems
-    !% <br>&nbsp;&nbsp;'directory_1' | nearest | yes | x | y | z | theta_xy | theta_xz | theta_yz
-    !% <br>&nbsp;&nbsp;'directory_2' | nearest |  no | x | y | z | theta_xy
-    !% <br>&nbsp;&nbsp;'directory_2' | nearest | yes | x 
-    !% <br>%</tt>
-    !%
-    !%End
+    !!%Variable FrozenSystems
+    !!%Type block
+    !!%Section System
+    !!%Description
+    !!% (Experimental)
+    !!% Lists the directories and the optional parameters to use on the reading of the frozen systems.
+    !!% the parameters are: the type of interpolation to use, whether or not to use the frozen 
+    !!% potential, and the translation and rotation to apply to the system.
+    !!%
+    !!% <tt>%FrozenSystems
+    !!% <br>&nbsp;&nbsp;'directory_1' | nearest | yes | x | y | z | theta_xy | theta_xz | theta_yz
+    !!% <br>&nbsp;&nbsp;'directory_2' | nearest |  no | x | y | z | theta_xy
+    !!% <br>&nbsp;&nbsp;'directory_2' | nearest | yes | x 
+    !!% <br>%</tt>
+    !!%
+    !!%End
     !
     nullify(cnfg)
     call json_init(this)
     if(parse_block(datasets_check('FrozenSystems'),block)==0) then
+      call messages_experimental("frozen")
+
       nlin=parse_block_n(block)
       if(nlin>0)then
         do lin=1, nlin
@@ -183,18 +186,18 @@ contains
     real(kind=wp) :: factor, energy
     integer       :: id, family
     !
-    !%Variable TnaddFunctional
-    !%Type integer
-    !%Section Hamiltonian
-    !%Description
-    !% Chooses the Kinetic Functional to use and passes any additional parameters.
-    !%Variable TnaddFactor
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian
-    !%Description
-    !%
-    !%End
+    !!%Variable TnaddFunctional
+    !!%Type integer
+    !!%Section Hamiltonian
+    !!%Description
+    !!% Chooses the Kinetic Functional to use and passes any additional parameters.
+    !!%Variable TnaddFactor
+    !!%Type float
+    !!%Default 1.0
+    !!%Section Hamiltonian
+    !!%Description
+    !!%
+    !!%End
     call json_init(this)
     call json_set(this, "SpinComponents", nspin)
     call parse_integer(datasets_check('TnaddFunctional'), XC_NONE, id)
