@@ -35,13 +35,13 @@ module geometry_m
   use openscad_m
   use parser_m
   use profiling_m
+  use read_coords_m
   use space_m
   use species_m
   use string_m
   use unit_m
   use unit_system_m
   use varinfo_m
-  use xyz_file_m
 
   implicit none
 
@@ -133,15 +133,15 @@ contains
   subroutine geometry_init_xyz(geo)
     type(geometry_t), intent(inout) :: geo
 
-    type(xyz_file_info) :: xyz
+    type(read_coords_info) :: xyz
     integer             :: ia
     logical             :: move
 
     PUSH_SUB(geometry_init_xyz)
 
-    call xyz_file_init(xyz)
+    call read_coords_init(xyz)
 
-    ! NOTE: these input tags are read in the routine xyz_file_read, src/ions/xyz_file.F90
+    ! NOTE: these input tags are read in the routine read_coords_read, src/ions/read_coords.F90
 
     !%Variable PDBCoordinates
     !%Type string
@@ -222,7 +222,7 @@ contains
     !%End
 
     ! load positions of the atoms
-    call xyz_file_read('Coordinates', xyz, geo%space)
+    call read_coords_read('Coordinates', xyz, geo%space)
 
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
@@ -241,16 +241,16 @@ contains
       end do
     end if
 
-    geo%reduced_coordinates = xyz%file_type == XYZ_FILE_REDUCED
+    geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
 
-    call xyz_file_end(xyz)
+    call read_coords_end(xyz)
 
     ! load positions of the classical atoms, if any
-    call xyz_file_init(xyz)
+    call read_coords_init(xyz)
     nullify(geo%catom)
     geo%ncatoms = 0
-    call xyz_file_read('Classical', xyz, geo%space)
-    if(xyz%file_type /= XYZ_FILE_ERR) then ! found classical atoms
+    call read_coords_read('Classical', xyz, geo%space)
+    if(xyz%source /= READ_COORDS_ERR) then ! found classical atoms
       if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
@@ -265,7 +265,7 @@ contains
           call atom_classical_init(geo%catom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, xyz%atom(ia)%charge)
         end do
       end if
-      call xyz_file_end(xyz)
+      call read_coords_end(xyz)
     end if
 
     POP_SUB(geometry_init_xyz)

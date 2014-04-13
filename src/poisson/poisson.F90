@@ -58,7 +58,6 @@ module poisson_m
   use unit_m
   use unit_system_m
   use varinfo_m
-  use xyz_file_m      
 
   implicit none
 

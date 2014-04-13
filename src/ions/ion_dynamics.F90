@@ -31,6 +31,7 @@ module ion_dynamics_m
   use messages_m
   use mpi_m
   use parser_m
+  use read_coords_m
   use simul_box_m
   use species_m
   use tdfunction_m
@@ -38,7 +39,6 @@ module ion_dynamics_m
   use unit_m
   use unit_system_m
   use varinfo_m
-  use xyz_file_m
 
   implicit none
 
@@ -108,7 +108,7 @@ contains
     integer :: i, j, iatom, ierr
     FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
     type(c_ptr) :: random_gen_pointer
-    type(xyz_file_info) :: xyz
+    type(read_coords_info) :: xyz
     character(len=100)  :: temp_function_name
 
     PUSH_SUB(ion_dynamics_init)
@@ -293,9 +293,9 @@ contains
       !% in which the species were defined in the coordinates specifications.
       !%End
 
-      call xyz_file_init(xyz)
-      call xyz_file_read('Velocities', xyz, geo%space)
-      if(xyz%file_type /= XYZ_FILE_ERR) then
+      call read_coords_init(xyz)
+      call read_coords_read('Velocities', xyz, geo%space)
+      if(xyz%source /= READ_COORDS_ERR) then
         if(geo%natoms /= xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
           call messages_fatal(1)
@@ -306,7 +306,7 @@ contains
           geo%atom(i)%v = units_to_atomic(units_inp%velocity/units_inp%length, xyz%atom(i)%x)
         end do
 
-        call xyz_file_end(xyz)
+        call read_coords_end(xyz)
 
       else
         do i = 1, geo%natoms

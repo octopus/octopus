@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module xyz_file_m
+module read_coords_m
   use datasets_m
   use global_m
   use io_m
@@ -35,78 +35,80 @@ module xyz_file_m
 
   private
   public ::                     &
-    xyz_file_atom,              &
-    xyz_file_info,              &
-    xyz_file_init,              &
-    xyz_file_end,               &
-    xyz_file_read
+    read_coords_atom,              &
+    read_coords_info,              &
+    read_coords_init,              &
+    read_coords_end,               &
+    read_coords_read
 
+  !> for read_coords_info::file_type
   integer, public, parameter :: &
-    XYZ_FILE_ERR      = 0,      &
-    XYZ_FILE_PDB      = 1,      &
-    XYZ_FILE_XYZ      = 2,      &
-    XYZ_FILE_INP      = 3,      &
-    XYZ_FILE_REDUCED  = 4
+    READ_COORDS_ERR      = 0,      &
+    READ_COORDS_PDB      = 1,      &
+    READ_COORDS_XYZ      = 2,      &
+    READ_COORDS_INP      = 3,      &
+    READ_COORDS_REDUCED  = 4
 
+  !> for read_coords_info::flags
   integer, public, parameter :: &
     XYZ_FLAGS_RESIDUE = 1,      &
     XYZ_FLAGS_CHARGE  = 2,      &
     XYZ_FLAGS_MOVE    = 4
 
-  type xyz_file_atom
+  type read_coords_atom
     character(len=15) :: label  !< stuff that is always known
     FLOAT             :: x(MAX_DIM)
 
     FLOAT             :: charge !< stuff specific to PDB files
     character(len=3)  :: residue
     logical           :: move   !< stuff specific to the inp file
-  end type xyz_file_atom
+  end type read_coords_atom
 
-  type xyz_file_info
-    integer :: file_type
+  type read_coords_info
+    integer :: source
     integer :: flags
 
     integer :: n                !< number of atoms in file
-    type(xyz_file_atom), pointer :: atom(:)
-  end type xyz_file_info
+    type(read_coords_atom), pointer :: atom(:)
+  end type read_coords_info
 
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_init(gf)
-    type(xyz_file_info), intent(out) :: gf
+  subroutine read_coords_init(gf)
+    type(read_coords_info), intent(out) :: gf
 
-    PUSH_SUB(xyz_file_init)
+    PUSH_SUB(read_coords_init)
 
-    gf%file_type = XYZ_FILE_ERR
+    gf%source = READ_COORDS_ERR
     gf%flags     = 0
     gf%n         = 0
     nullify(gf%atom)
 
-    POP_SUB(xyz_file_init)
-  end subroutine xyz_file_init
+    POP_SUB(read_coords_init)
+  end subroutine read_coords_init
 
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_end(gf)
-    type(xyz_file_info), intent(inout) :: gf
+  subroutine read_coords_end(gf)
+    type(read_coords_info), intent(inout) :: gf
 
-    PUSH_SUB(xyz_file_end)
+    PUSH_SUB(read_coords_end)
 
     if(associated(gf%atom)) then
       SAFE_DEALLOCATE_P(gf%atom)
     end if
-    call xyz_file_init(gf)
+    call read_coords_init(gf)
 
-    POP_SUB(xyz_file_end)
-  end subroutine xyz_file_end
+    POP_SUB(read_coords_end)
+  end subroutine read_coords_end
 
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_read(what, gf, space)
+  subroutine read_coords_read(what, gf, space)
     character(len=*),    intent(in)    :: what
-    type(xyz_file_info), intent(inout) :: gf
+    type(read_coords_info), intent(inout) :: gf
     type(space_t),       intent(in)    :: space
 
     integer :: ia, ncol, iunit, jdir
@@ -114,14 +116,14 @@ contains
     character(len=80) :: str
     logical :: done
 
-    PUSH_SUB(xyz_file_read)
+    PUSH_SUB(read_coords_read)
 
     done = .false.
 
     if(parse_isdef(datasets_check('PDB'//trim(what))) /= 0) then
       call check_duplicated(done)
 
-      gf%file_type = XYZ_FILE_PDB
+      gf%source = READ_COORDS_PDB
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
@@ -132,14 +134,14 @@ contains
       call messages_info(1)
 
       iunit = io_open(str, action='read')
-      call xyz_file_read_PDB(what, iunit, gf)
+      call read_coords_read_PDB(what, iunit, gf)
       call io_close(iunit)
     end if
 
-    if(parse_isdef(datasets_check('XYZ'//trim(what))) /= 0) then ! read a xyz file
+    if(parse_isdef(datasets_check('XYZ'//trim(what))) /= 0) then ! read an xyz file
       call check_duplicated(done)
 
-      gf%file_type = XYZ_FILE_XYZ
+      gf%source = READ_COORDS_XYZ
       ! no default, since we do not do this unless the input tag is present
       call parse_string(datasets_check('XYZ'//trim(what)), '', str)
 
@@ -164,7 +166,7 @@ contains
 
       gf%n = parse_block_n(blk)
 
-      gf%file_type = XYZ_FILE_INP
+      gf%source = READ_COORDS_INP
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
 
       message(1) = "Reading " // trim(what) // " from " // trim(what) // " block"
@@ -198,7 +200,7 @@ contains
 
       gf%n = parse_block_n(blk)
 
-      gf%file_type = XYZ_FILE_REDUCED
+      gf%source = READ_COORDS_REDUCED
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
 
       message(1) = "Reading " // trim(what) // " from Reduced" // trim(what) // " block"
@@ -234,14 +236,14 @@ contains
       gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
     end do
 
-    POP_SUB(xyz_file_read)
+    POP_SUB(read_coords_read)
 
   contains
     
     subroutine check_duplicated(done)
       logical, intent(inout) :: done
       
-      PUSH_SUB(xyz_file_read.check_duplicated)
+      PUSH_SUB(read_coords_read.check_duplicated)
 
       if(.not. done) then
         done = .true.
@@ -250,23 +252,23 @@ contains
         call messages_fatal(1)
       end if
 
-      POP_SUB(xyz_file_read.check_duplicated)
+      POP_SUB(read_coords_read.check_duplicated)
     end subroutine check_duplicated
 
-  end subroutine xyz_file_read
+  end subroutine read_coords_read
 
 
   ! ---------------------------------------------------------
-  subroutine xyz_file_read_PDB(what, iunit, gf)
+  subroutine read_coords_read_PDB(what, iunit, gf)
     character(len=*),    intent(in)    :: what
     integer,             intent(in)    :: iunit
-    type(xyz_file_info), intent(inout) :: gf
+    type(read_coords_info), intent(inout) :: gf
 
     character(len=80) :: record
     character(len=6)  :: record_name
     integer :: na
 
-    PUSH_SUB(xyz_file_read_PDB)
+    PUSH_SUB(read_coords_read_PDB)
 
     ! First count number of atoms
     rewind(iunit)
@@ -304,10 +306,10 @@ contains
     end do
 991 continue
 
-    POP_SUB(xyz_file_read_PDB)
-  end subroutine xyz_file_read_PDB
+    POP_SUB(read_coords_read_PDB)
+  end subroutine read_coords_read_PDB
 
-end module xyz_file_m
+end module read_coords_m
 
 !! Local Variables:
 !! mode: f90
