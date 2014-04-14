@@ -237,7 +237,12 @@ contains
       !%Option 3
       !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
       !%End
-      call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
+
+      if(geo%periodic_dim == -1) then
+        call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
+      else
+        sb%periodic_dim = geo%periodic_dim
+      endif
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
@@ -479,7 +484,10 @@ contains
         !% single variable.
         !%End
 
-        if(parse_block(datasets_check('Lsize'), blk) == 0) then
+        if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
+          ! use value read from XSF lattice vectors
+          sb%lsize(:) = geo%lsize(:)
+        else if(parse_block(datasets_check('Lsize'), blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
@@ -496,6 +504,12 @@ contains
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
+      else
+        ! if not a compatible box-shape
+        if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
+          message(1) = "Ignoring lattice vectors from XSF file."
+          call messages_warning(1)
+        endif
       end if
 
       ! read in image for box_image

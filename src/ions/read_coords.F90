@@ -71,6 +71,10 @@ module read_coords_m
 
     integer :: n                !< number of atoms in file
     type(read_coords_atom), pointer :: atom(:)
+
+    !> variables for passing info from XSF input to simul_box_init
+    integer :: periodic_dim
+    FLOAT :: lsize(MAX_DIM)
   end type read_coords_info
 
 
@@ -86,6 +90,9 @@ contains
     gf%flags     = 0
     gf%n         = 0
     nullify(gf%atom)
+
+    gf%periodic_dim = -1
+    gf%lsize(:) = -M_ONE
 
     POP_SUB(read_coords_init)
   end subroutine read_coords_init
@@ -112,7 +119,7 @@ contains
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
 
-    integer :: ia, ncol, iunit, jdir, int_one, periodic_dim
+    integer :: ia, ncol, iunit, jdir, int_one
     type(block_t) :: blk
     character(len=256) :: str
     logical :: done
@@ -235,13 +242,13 @@ contains
       read(iunit, *) str ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'; FIXME: or just 'ATOMS'
       select case(trim(str))
       case('CRYSTAL')
-        periodic_dim = 3
+        gf%periodic_dim = 3
       case('SLAB')
-        periodic_dim = 2
+        gf%periodic_dim = 2
       case('POLYMER')
-        periodic_dim = 1
+        gf%periodic_dim = 1
       case('MOLECULE')
-        periodic_dim = 0
+        gf%periodic_dim = 0
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
         call messages_fatal(1)
@@ -253,9 +260,20 @@ contains
         call messages_warning(1)
       endif
 
+      latvec(:,:) = M_ZERO
       do jdir = 1, space%dim
         read(iunit, *) latvec(1:space%dim, jdir)
+        gf%lsize(jdir) = M_HALF * latvec(jdir, jdir)
+        latvec(jdir, jdir) = M_ZERO
       enddo
+      if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
+        message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
+        call messages_fatal(1)
+      endif
+      if(any(gf%lsize(1:space%dim) < M_EPSILON)) then
+        message(1) = "XSF file must have positive lattice vectors."
+        call messages_fatal(1)
+      endif
 
       read(iunit, *) str
       if(trim(str) /= 'PRIMCOORD') then

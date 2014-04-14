@@ -105,6 +105,11 @@ module geometry_m
 
     logical          :: reduced_coordinates !< If true the coordinates are stored in
                                             !! reduced coordinates and need to be converted.
+
+    !> variables for passing info from XSF input to simul_box_init
+    integer :: periodic_dim
+    FLOAT :: lsize(MAX_DIM)
+    
   end type geometry_t
 
 contains
@@ -157,12 +162,14 @@ contains
       SAFE_ALLOCATE(geo%atom(1:geo%natoms))
       do ia = 1, geo%natoms
         move=.true.
-        if(iand(xyz%flags, XYZ_FLAGS_MOVE) /= 0)move=xyz%atom(ia)%move
+        if(iand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
         call atom_init(geo%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
       end do
     end if
 
     geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
+    geo%periodic_dim = xyz%periodic_dim
+    geo%lsize(:) = xyz%lsize(:)
 
     call read_coords_end(xyz)
 
