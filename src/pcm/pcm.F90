@@ -141,19 +141,19 @@ contains
     !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
     !% only for ground state calculations. Experimental.
     !%End
-!    call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
 
-!    if (pcm%run_pcm) then
-!      if (grid%sb%box_shape /= MINIMUM) then
-!          message(1) = "PCM is only available for BoxShape = minimum"
-!          call messages_fatal(1)
-!      else 
-!          call messages_experimental("polarizable continuum model")
-!      endif
-!    else
-!      POP_SUB(pcm_init)
-!      return
-!    endif
+    !call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
+    !if (pcm%run_pcm) then
+    !  if (grid%sb%box_shape /= MINIMUM) then
+    !      message(1) = "PCM is only available for BoxShape = minimum"
+    !      call messages_fatal(1)
+    !  else 
+    !      call messages_experimental("polarizable continuum model")
+    !  endif
+    !else
+    !  POP_SUB(pcm_init)
+    !  return
+    !endif
 
     rcav_C = CNST(2.4)*P_Ang    ! 
     rcav_O = CNST(1.8)*P_Ang    !    
