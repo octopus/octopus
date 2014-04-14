@@ -489,8 +489,10 @@ contains
     !%Default 50
     !%Section Output
     !%Description
-    !% The output requested by variable <tt>OutputDuringSCF</tt> or <tt>TDOutput</tt> is written
+    !% The output requested by variable <tt>Output</tt> is written
     !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% For SCF calculations, <tt>OutputDuringSCF</tt> must be set too for this output to
+    !% be produced.
     !% (Output of restart files is controlled by <tt>RestartWriteInterval</tt>.)
     !% Must be > 0.
     !%End
