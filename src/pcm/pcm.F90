@@ -151,7 +151,6 @@ contains
     !      call messages_experimental("polarizable continuum model")
     !  endif
     !else
-    !  POP_SUB(pcm_init)
     !  return
     !endif
 
