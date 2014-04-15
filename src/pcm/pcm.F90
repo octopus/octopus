@@ -106,7 +106,7 @@ contains
   subroutine pcm_init(pcm, geo, grid)
     type(geometry_t), intent(in) :: geo
     type(grid_t), intent(in)     :: grid
-    type(pcm_t), intent(out)     :: pcm
+    type(pcm_t), intent(inout)   :: pcm
 
     integer :: ia
     integer :: itess
