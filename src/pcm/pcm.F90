@@ -127,6 +127,8 @@ contains
     FLOAT :: rcav_N
     FLOAT :: rcav_S
     FLOAT :: rcav_F
+    FLOAT :: rcav_Na
+    FLOAT :: rcav_Cl
 
     PUSH_SUB(pcm_init)
 
@@ -154,11 +156,13 @@ contains
     !  return
     !endif
 
-    rcav_C = CNST(2.4)*P_Ang    ! 
-    rcav_O = CNST(1.8)*P_Ang    !    
-    rcav_N = CNST(1.9)*P_Ang    ! Angstrom -> Bohr 
-    rcav_S = CNST(2.0175)*P_Ang !
-    rcav_F = CNST(1.682)*P_Ang  ! 
+    rcav_C  = CNST(2.4)*P_Ang    ! 
+    rcav_O  = CNST(1.8)*P_Ang    !    
+    rcav_N  = CNST(1.9)*P_Ang    !
+    rcav_S  = CNST(2.0175)*P_Ang ! Angstrom -> Bohr 
+    rcav_F  = CNST(1.682)*P_Ang  !
+    rcav_Na = CNST(2.772)*P_Ang  !  
+    rcav_Cl = CNST(2.172)*P_Ang  !
 
     !%Variable SolventDielectricConstant
     !%Type float
