@@ -330,8 +330,8 @@ contains
   end subroutine partition_get_global
 
   ! ---------------------------------------------------------
-  !> Given a list of _global_ indexes, it returns the partition number
-  !! were those points are stored.
+  !> Given a list of _global_ indexes, return the partition number
+  !! where those points are stored.
   !! Note that this routine will accept global indexes equal to 0. In that
   !! case it will return 0 as a partition number.
   subroutine partition_get_partition_number(partition, np, points, partno)
@@ -353,7 +353,7 @@ contains
     SAFE_ALLOCATE(sdispls(1:partition%npart))
     SAFE_ALLOCATE(rdispls(1:partition%npart))
 
-    ! How many points we will have to send/receive from each process?
+    ! How many points will we have to send/receive from each process?
     scounts = 0
     zero_part = 1
     do ip = 1, np
