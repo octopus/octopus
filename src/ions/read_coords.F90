@@ -119,7 +119,7 @@ contains
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
 
-    integer :: ia, ncol, iunit, jdir, int_one
+    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
     type(block_t) :: blk
     character(len=256) :: str
     logical :: done
@@ -222,6 +222,7 @@ contains
     !% program (http://www.xcrysden.org/doc/XSF.html). Specify the filename with this variable.
     !% <tt>PeriodicDimensions</tt> will be set based on the first line (CRYSTAL, SLAB, POLYMER, or MOLECULE),
     !% and <tt>Lsize</tt> will be set based on the lattice vectors, for compatible values of <tt>BoxShape</tt>.
+    !% The file should not contain 'ATOMS', 'CONVVEC', or 'PRIMCOORD'.
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
@@ -237,7 +238,35 @@ contains
 
       iunit = io_open(str, status='old', action='read', is_tmp=.true.)
 
-      read(iunit, *) str ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'; FIXME: or just 'ATOMS'
+      read(iunit, '(a256)') str
+      if(str(1:9) == 'ANIMSTEPS') then
+        read(str(10:), *) nsteps
+        read(iunit, *) str
+
+        !%Variable XSFCoordinatesAnimStep
+        !%Type integer
+        !%Default 1
+        !%Section System::Coordinates
+        !%Description
+        !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
+        !% will be used. The PRIMVEC block must be written for each step.
+        !%End
+        call parse_integer(datasets_check('XSFCoordinatesAnimStep'), 1, step_to_use)
+        if(step_to_use < 1) then
+          message(1) = "XSFCoordinatesAnimStep must be > 0."
+          call messages_fatal(1)
+        else if(step_to_use > nsteps) then
+          write(message(1),'(a,i9)') "XSFCoordinatesAnimStep must be <= available number of steps ", nsteps
+          call messages_fatal(1)
+        endif
+        write(message(1),'(a,i9,a,i9)') 'Using animation step ', step_to_use, ' out of ', nsteps
+        call messages_info(1)
+      else
+        nsteps = 0
+        step_to_use = 1
+      endif
+
+      ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'
       select case(trim(str))
       case('CRYSTAL')
         gf%periodic_dim = 3
@@ -247,15 +276,36 @@ contains
         gf%periodic_dim = 1
       case('MOLECULE')
         gf%periodic_dim = 0
+      case('ATOMS')
+        call messages_not_implemented("Input from XSF file beginning with ATOMS")
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
         call messages_fatal(1)
       end select
 
-      read(iunit, *) str
-      if(trim(str) /= 'PRIMVEC') then
+      do istep = 1, step_to_use - 1
+        read(iunit, *) ! PRIMVEC
+        do jdir = 1, space%dim
+          read(iunit, *) ! lattice vectors
+        enddo
+        read(iunit, *) ! PRIMCOORD istep
+        read(iunit, *) gf%n, int_one
+        do ia = 1, gf%n
+          read(iunit, *) ! atoms
+        enddo
+      enddo
+
+      read(iunit, '(a256)') str
+      if(str(1:7) /= 'PRIMVEC') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
         call messages_warning(1)
+      endif
+      if(nsteps > 0) then
+        read(str(8:), *) istep
+        if(istep /= step_to_use) then
+          write(message(1), '(a,i9,a,i9)') 'Found PRIMVEC index ', istep, ' instead of ', step_to_use
+          call messages_fatal(1)
+        endif
       endif
 
       latvec(:,:) = M_ZERO
@@ -273,10 +323,17 @@ contains
         call messages_fatal(1)
       endif
 
-      read(iunit, *) str
-      if(trim(str) /= 'PRIMCOORD') then
+      read(iunit, '(a256)') str
+      if(str(1:9) /= 'PRIMCOORD') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
         call messages_warning(1)
+      endif
+      if(nsteps > 0) then
+        read(str(10:), *) istep
+        if(istep /= step_to_use) then
+          write(message(1), '(a,i9,a,i9)') 'Found PRIMCOORD index ', istep, ' instead of ', step_to_use
+          call messages_fatal(1)
+        endif
       endif
 
       read(iunit, *) gf%n, int_one
