@@ -26,6 +26,8 @@ nk | nk | nk
 %
 
 KPointsUseSymmetries = yes
+ExperimentalFeatures = yes
+SymmetrizeDensity = yes
 
 ExtraStates = 2
 

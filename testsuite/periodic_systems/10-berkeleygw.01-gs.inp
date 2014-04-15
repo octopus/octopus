@@ -28,6 +28,7 @@ Lsize = a/2
 %
 KPointsUseSymmetries = yes
 KPointsUseTimeReversal = no
+SymmetrizeDensity = yes
 
 ExtraStates = 2
 

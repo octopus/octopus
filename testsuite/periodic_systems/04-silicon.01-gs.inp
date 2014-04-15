@@ -27,6 +27,8 @@ Spacing = Lsize/7
 %
 
 KPointsUseSymmetries = yes
+ExperimentalFeatures = yes
+SymmetrizeDensity = yes
 
 ExtraStates = 1
 ConvRelDens = 1e-7
