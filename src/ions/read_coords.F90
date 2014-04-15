@@ -220,10 +220,8 @@ contains
     !%Description
     !% Another option besides PDB and XYZ coordinates formats is XSF, as defined by the XCrySDen visualization
     !% program (http://www.xcrysden.org/doc/XSF.html). Specify the filename with this variable.
-    !% is present. The XYZ format is very simple: The first line of the file has an integer
-    !% indicating the number of atoms. The second can contain comments that are simply ignored by
-    !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
-    !% the Cartesian coordinates of the atom.
+    !% <tt>PeriodicDimensions</tt> will be set based on the first line (CRYSTAL, SLAB, POLYMER, or MOLECULE),
+    !% and <tt>Lsize</tt> will be set based on the lattice vectors, for compatible values of <tt>BoxShape</tt>.
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
@@ -263,7 +261,7 @@ contains
       latvec(:,:) = M_ZERO
       do jdir = 1, space%dim
         read(iunit, *) latvec(1:space%dim, jdir)
-        gf%lsize(jdir) = M_HALF * latvec(jdir, jdir)
+        gf%lsize(jdir) = M_HALF * units_to_atomic(units_inp%length, latvec(jdir, jdir))
         latvec(jdir, jdir) = M_ZERO
       enddo
       if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
@@ -407,13 +405,15 @@ contains
       call parse_block_end(blk)
     end if
 
-    ! adjust units
-    do ia = 1, gf%n
-      do jdir = space%dim + 1, MAX_DIM
-        gf%atom(ia)%x(jdir) = M_ZERO
+    if(gf%source /= READ_COORDS_REDUCED) then
+      ! adjust units
+      do ia = 1, gf%n
+        do jdir = space%dim + 1, MAX_DIM
+          gf%atom(ia)%x(jdir) = M_ZERO
+        end do
+        gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
       end do
-      gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
-    end do
+    endif
 
     POP_SUB(read_coords_read)
 
