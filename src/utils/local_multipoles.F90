@@ -63,6 +63,7 @@ program oct_local_multipoles
 
   call datasets_init(1)
   call io_init()
+  call profiling_init()
 
   call unit_system_init()
   call system_init(sys)
@@ -73,6 +74,8 @@ program oct_local_multipoles
   call simul_box_end(sb)
   call geometry_end(sys%geo)
   call space_end(sys%space)
+  call profiling_output()
+  call profiling_end()
   call io_end()
   call datasets_end()
   call messages_end()
