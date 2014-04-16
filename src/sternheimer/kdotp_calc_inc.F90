@@ -151,8 +151,6 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
 
   SAFE_ALLOCATE(pertpsi(sys%gr%mesh%np, sys%st%d%dim))
 
-! FIXME: occupations?
-
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = 1, sys%st%nst
 
@@ -160,7 +158,11 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
         sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :))
 
       do ist2 = ist + 1, sys%st%nst
+        ! avoid dividing by zero below; these contributions are arbitrary anyway
         if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
+
+        ! the unoccupied subspace was handled by the Sternheimer equation
+        if(sys%st%occ(ist2, ik) < M_HALF) cycle
         
         mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :))
 

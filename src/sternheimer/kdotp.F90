@@ -44,6 +44,7 @@ module kdotp_m
   use profiling_m
   use restart_m
   use simul_box_m
+  use smear_m
   use states_m
   use states_calc_m
   use states_dim_m
@@ -349,6 +350,9 @@ contains
       call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
       call parse_integer(datasets_check('KdotPOccupiedSolutionMethod'), 0, kdotp_vars%occ_solution_method)
+      if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
+        call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
+      endif
 
       call parse_float(datasets_check('DegeneracyThreshold'), &
         units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
