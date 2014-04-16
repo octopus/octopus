@@ -754,6 +754,63 @@ subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, eta, 
   POP_SUB(X(post_orthogonalize))
 end subroutine X(post_orthogonalize)
 
+
+! --------------------------------------------------------- 
+! <\psi|d/dk|\psi> cannot be calculated from kdotp perturbation which gives only diagonal matrix elements
+! but it can be approximated for large cells along the lines of the "single-point Berry phase":
+! <\psi|d/dk|\psi> =~ (L/2 \pi) Im <\psi|exp(-2 \pi i x / L)|\psi>
+subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
+  type(system_t),      intent(in)  :: sys
+  FLOAT,               intent(out) :: dl_eig(:,:,:) !< (ist, ik, idir)
+
+  integer :: ik, ist, ip, idim, idir
+  R_TYPE, allocatable :: psi(:,:)
+  CMPLX, allocatable :: integrand(:)
+#ifdef HAVE_MPI
+  FLOAT, allocatable :: dl_eig_temp(:,:,:)
+#endif
+
+  PUSH_SUB(X(em_resp_calc_eigenvalues))
+
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(integrand(1:sys%gr%mesh%np))
+
+  dl_eig(:, :, :) = M_ZERO
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    do ist = sys%st%st_start, sys%st%st_end
+        
+      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        
+      do idir = 1, sys%gr%sb%periodic_dim
+        do idim = 1, sys%st%d%dim
+          forall(ip = 1:sys%gr%mesh%np) &
+            integrand(ip) = exp(-M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+          dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
+            (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
+        enddo
+      end do
+    end do
+  enddo
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(integrand)
+
+#ifdef HAVE_MPI
+  if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
+    SAFE_ALLOCATE(dl_eig_temp(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
+
+    call MPI_Allreduce(dl_eig, dl_eig_temp, sys%st%nst * sys%st%d%nik * sys%gr%sb%periodic_dim, &
+      MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
+
+    dl_eig(:,:,:) = dl_eig_temp(:,:,:)
+    SAFE_DEALLOCATE_A(dl_eig_temp)
+  endif
+#endif
+
+  POP_SUB(X(em_resp_calc_eigenvalues))
+end subroutine X(em_resp_calc_eigenvalues)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

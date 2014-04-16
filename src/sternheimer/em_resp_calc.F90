@@ -66,7 +66,9 @@ module em_resp_calc_m
      em_wfs_tag,                       &
      em_rho_tag,                       &
      dpost_orthogonalize,              &
-     zpost_orthogonalize
+     zpost_orthogonalize,              &
+     dem_resp_calc_eigenvalues,        &
+     zem_resp_calc_eigenvalues
 
   type(profile_t), save :: beta_prof
 
@@ -211,7 +213,9 @@ contains
     POP_SUB(em_wfs_tag)
 
   end function em_wfs_tag
-  
+
+! ---------------------------------------------------------
+
 #include "undef.F90"
 #include "real.F90"
 #include "em_resp_calc_inc.F90"
