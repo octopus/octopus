@@ -1,14 +1,13 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 14-center-geom.test 11464 2013-11-05 08:08:24Z joseba $
+# $Id$
 
 Test       : oct-convert
 Programs   : octopus; octopus_mpi
 TestGroups : short-run; components
-Enabled    : Yes
-
-# quadricyclane molecule
+Enabled    : No
 
 Input : 17-convert.01-run.inp
+# FIXME: please add some matches here, so we know if the utility or the main octopus is at fault!
 
 Util  : oct-convert
 Input : 17-convert.02-convert.inp
