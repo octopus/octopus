@@ -159,7 +159,7 @@ contains
     !% or not against the occupied states, at the start of each SCF cycle.
     !% Default is true only if <tt>SmearingFunction = semiconducting</tt>,
     !% or if the <tt>Occupations</tt> block specifies all full or empty states,
-    !% and we are not solving for linear response in the unoccupied subspace only.
+    !% and we are not solving for linear response in the occupied subspace too.
     !%End 
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. sys%st%smear%integral_occs) &
                         .and. .not. this%occ_response
