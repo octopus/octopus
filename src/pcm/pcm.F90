@@ -106,7 +106,7 @@ contains
   subroutine pcm_init(pcm, geo, grid)
     type(geometry_t), intent(in) :: geo
     type(grid_t), intent(in)     :: grid
-    type(pcm_t), intent(inout)   :: pcm
+    type(pcm_t), intent(out)     :: pcm
 
     integer :: ia
     integer :: itess
@@ -120,7 +120,6 @@ contains
     integer :: pcm_calc_mode
 
     integer, parameter :: mxts = 10000
-    integer, parameter :: CM_GS_PCM = 1
 
     FLOAT :: rcav_C
     FLOAT :: rcav_O
@@ -144,17 +143,18 @@ contains
     !% only for ground state calculations. Experimental.
     !%End
 
-    !call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
-    !if (pcm%run_pcm) then
-    !  if (grid%sb%box_shape /= MINIMUM) then
-    !      message(1) = "PCM is only available for BoxShape = minimum"
-    !      call messages_fatal(1)
-    !  else 
-    !      call messages_experimental("polarizable continuum model")
-    !  endif
-    !else
-    !  return
-    !endif
+    call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
+    if (pcm%run_pcm) then
+      if (grid%sb%box_shape /= MINIMUM) then
+          message(1) = "PCM is only available for BoxShape = minimum"
+          call messages_fatal(1)
+      else 
+          call messages_experimental("polarizable continuum model")
+      endif
+    else
+      POP_SUB(pcm_init)
+      return
+    endif
 
     rcav_C  = CNST(2.4)*P_Ang    ! 
     rcav_O  = CNST(1.8)*P_Ang    !    
