@@ -58,6 +58,12 @@ dist_share_DATA =                                  \
 	14-center-geom.01-run.inp                  \
 	15-cholesky_parallel.test                  \
 	15-cholesky_parallel.01-real.inp           \
-	15-cholesky_parallel.02-complex.inp
+	15-cholesky_parallel.02-complex.inp        \
+	16-hartree_3d_libisf.test                  \
+	16-hartree_3d_libisf.01-libisf.inp         \
+	16-hartree_3d_libisf.02-libisf.inp         \
+	17-convert.test                            \
+	17-convert.01-run.inp                      \
+	17-convert.02-convert.inp
 
 CLEANFILES = *~ *.bak

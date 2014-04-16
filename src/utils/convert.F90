@@ -88,7 +88,7 @@ contains
     type(system_t) :: sys
 
     character(64)  :: basename, folder, ref_name, ref_folder, folder_default
-    integer        :: c_start, c_end, c_step, c_start_default
+    integer        :: c_start, c_end, c_step, c_start_default, length
     logical        :: iterate_folder, subtract_file
 
     PUSH_SUB(convert)
@@ -109,6 +109,12 @@ contains
     !%End
     call parse_string(datasets_check('ConvertFilename'), 'density', basename)
     if ( basename == " " ) basename = ""
+    ! Delete the extension if present
+    length = len_trim(basename)
+    if ( basename(length-3:length) == '.obf' ) then
+      basename = trim(basename(1:length-4))
+    end if
+
 
     !%Variable ConvertIterateFolder
     !%Type logical
@@ -135,6 +141,10 @@ contains
     !% The folder name where the input files are.
     !%End
     call parse_string(datasets_check('ConvertFolder'), folder_default, folder)
+    ! Check if the folder is finished by an /
+    if (index(folder, '/', .true.) /= len_trim(folder)) then
+      write(folder,'(a,a1)') trim(folder), '/'
+    end if
 
     !%Variable ConvertStart
     !%Type integer
@@ -243,7 +253,7 @@ contains
       call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
     endif
 
-    call loct_progress_bar(-1, c_end-c_start) 
+!    call loct_progress_bar(-1, c_end-c_start) 
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
         write(folder,'(a,i0.7,a)') trim(in_folder),ii,"/"
@@ -278,7 +288,7 @@ contains
         call dio_function_output(how, &
              trim(folder), trim(out_name), mesh, pot, units_out%length, ierr, geo = geo)
       end if
-      call loct_progress_bar(ii-c_start, c_end-c_start) 
+!      call loct_progress_bar(ii-c_start, c_end-c_start) 
     end do
     
     SAFE_DEALLOCATE_A(read_ff)

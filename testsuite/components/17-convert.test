@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 14-center-geom.test 11464 2013-11-05 08:08:24Z joseba $
+
+Test       : oct-convert
+Programs   : octopus; octopus_mpi
+TestGroups : short-run; components
+Enabled    : Yes
+
+# quadricyclane molecule
+
+Input : 17-convert.01-run.inp
+
+Util  : oct-convert
+Input : 17-convert.02-convert.inp
+match ; Convert to dx (header)     ; GREP(restart/gs/0000000002.dx, 'origin', 8, 0); -3.909937
+match ; Convert to dx (line 513)   ; LINE(restart/gs/0000000002.dx, 513, 1);    0.000026930554955
+match ; Convert to dx (line 29355) ; LINE(restart/gs/0000000002.dx, 29355, 1); -0.000239829383461

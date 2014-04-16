@@ -86,6 +86,7 @@ contains
   subroutine local_domains()
     type(box_union_t), allocatable :: domain(:)
     integer                        :: err, id, nd, lmax, iter, l_start, l_end, l_step, last_slash
+    integer                        :: length
     FLOAT                          :: default_dt, dt
     FLOAT, allocatable             :: read_ff(:)
     character(64)                  :: filename, folder, folder_default, aux, base_folder
@@ -118,7 +119,7 @@ contains
     ! Guess the base folder (which should change while iterating)
     base_folder = ""
     last_slash = index(folder(1:len_trim(folder)-1), '/', .true.)
-    if ( last_slash > 0) then
+    if ( last_slash > 0 ) then
       base_folder = folder(1:last_slash)
       folder = folder(last_slash+1:len_trim(folder))
     end if
@@ -149,6 +150,11 @@ contains
     !%End
     call parse_string(datasets_check('GlobalDensityFilename'), 'density', filename)
     if ( filename == " " ) filename = ""
+    ! Delete the extension if present
+    length = len_trim(filename)
+    if ( filename(length-3:length) == '.obf' ) then
+      filename = trim(filename(1:length-4))
+    end if
 
     !%Variable LocalMultipoleLmax 
     !%Type integer

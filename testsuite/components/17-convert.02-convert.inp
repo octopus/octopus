@@ -1,0 +1,14 @@
+ExperimentalFeatures = yes
+Units = eV_Angstrom
+%Coordinates
+"C"  |    0   |    0  |      0
+%
+
+OutputHow = dx
+Output = density
+ConvertFolder = 'restart/gs'
+ConvertFilename = '0000000002'
+ConvertIterateFolder = no
+
+ConvertStart = 1
+ConvertEnd   = 1
