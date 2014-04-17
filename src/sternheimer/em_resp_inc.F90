@@ -132,6 +132,8 @@ subroutine X(run_sternheimer)()
   em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
   
   if(em_vars%calc_hyperpol .and. use_kdotp) then
+    call X(em_resp_calc_eigenvalues)(sys, dl_eig)
+
     do idir2 = 1, gr%sb%periodic_dim
       write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
       call messages_info(1)
@@ -144,7 +146,7 @@ subroutine X(run_sternheimer)()
         em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
         pert2_none, EM_RESP_DIR, &
         "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-        give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%X(dl_psi))
+        give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
       
       ! if the frequency is zero, we do not need to calculate both responses
       if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then

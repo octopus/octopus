@@ -120,6 +120,7 @@ contains
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq
 
     FLOAT :: closest_omega, last_omega, frequency
+    FLOAT, allocatable :: dl_eig(:,:,:)
     CMPLX :: frequency_eta
 
     PUSH_SUB(em_resp_run)
@@ -215,6 +216,7 @@ contains
       call sternheimer_init(sh_kdotp, sys, hm, "EM", complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
+      SAFE_ALLOCATE(dl_eig(sys%st%nst, sys%st%d%nik, sys%gr%sb%periodic_dim))
 
       message(1) = "Reading 2nd-order kdotp wavefunctions for periodic directions."
       call messages_info(1)
@@ -453,6 +455,7 @@ contains
         end do
       end do
       SAFE_DEALLOCATE_A(kdotp_em_lr2)
+      SAFE_DEALLOCATE_A(dl_eig)
     endif
 
     SAFE_DEALLOCATE_P(em_vars%omega)

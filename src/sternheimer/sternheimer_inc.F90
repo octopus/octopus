@@ -469,7 +469,7 @@ end subroutine X(sternheimer_set_inhomog)
 subroutine X(sternheimer_solve_order2)( &
      sh1, sh2, sh_2ndorder, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
      lr_2ndorder, pert_2ndorder, restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
-     give_pert1psi2)
+     give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
   type(sternheimer_t),    intent(inout) :: sh_2ndorder
@@ -490,6 +490,7 @@ subroutine X(sternheimer_solve_order2)( &
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
   R_TYPE,       optional, intent(in)    :: give_pert1psi2(:,:,:,:)
+  FLOAT,        optional, intent(in)    :: give_dl_eig1(:,:) !< (nst, nk) expectation values of bare perturbation
 
   integer :: isigma, ik, ist, idim, ispin
   R_TYPE :: dl_eig1, dl_eig2
@@ -505,6 +506,8 @@ subroutine X(sternheimer_solve_order2)( &
 
   mesh => sys%gr%mesh
   st => sys%st
+
+  ! FIXME: do not allocate ones we can point instead
 
   SAFE_ALLOCATE(inhomog(1:mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik, 1:nsigma))
   SAFE_ALLOCATE(hvar1(1:mesh%np, 1:st%d%nspin, 1:nsigma))
@@ -540,10 +543,16 @@ subroutine X(sternheimer_solve_order2)( &
         endif
         call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
-        ! derivative of the eigenvalues
-        dl_eig1 = X(mf_dotp)(mesh, st%d%dim, psi, pert1psi)
+        ! derivative of the eigenvalues:
+        ! bare perturbation
+        if(present(give_dl_eig1)) then
+          dl_eig1 = R_TOTYPE(give_dl_eig1(ist, ik))
+        else
+          dl_eig1 = X(mf_dotp)(mesh, st%d%dim, psi, pert1psi)
+        endif
         dl_eig2 = X(mf_dotp)(mesh, st%d%dim, psi, pert2psi)
 
+        ! Hxc perturbation
         do idim = 1, st%d%dim
           dl_eig1 = dl_eig1 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar1(:, ispin, isigma))
           dl_eig2 = dl_eig2 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar2(:, ispin, isigma))
