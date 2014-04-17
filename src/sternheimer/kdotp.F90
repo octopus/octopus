@@ -389,6 +389,7 @@ contains
       !%Description
       !% If true, calculates second-order response of wavefunctions as well as first-order response.
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
+      !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
       call parse_logical(datasets_check('KdotPCalcSecondOrder'), .false., calc_2nd_order)
 

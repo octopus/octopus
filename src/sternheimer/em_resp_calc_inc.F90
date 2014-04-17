@@ -429,7 +429,7 @@ end subroutine X(lr_calc_susceptibility)
 !! em_lr(dir, sigma, omega) = electric perturbation of ground-state wavefunctions
 !! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
 !! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
-subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response)
+subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response, dl_eig)
   type(sternheimer_t),     intent(inout) :: sh
   type(system_t), target,  intent(inout) :: sys
   type(hamiltonian_t),     intent(inout) :: hm
@@ -443,6 +443,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   !! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
   !!   The occ_response = no version can be used even if the wfns do include the
   !!   occupied subspace, it is just more efficient to use the other formula.
+  FLOAT,         optional, intent(in)    :: dl_eig(:,:,:) !< state, kpt, dir
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
@@ -471,6 +472,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   if(present(occ_response)) occ_response_ = occ_response
 
   ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
+  ASSERT(present(dl_eig) .eqv. present(kdotp_em_lr))
   ! either both are absent for finite, or both present for periodic
 
   if(sternheimer_add_fxc(sh)) then
@@ -651,8 +653,12 @@ contains
             do ifreq = 1, 3
 
               ! ist = ist2 term cannot be captured by k.p perturbation
-              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist /= ist2) then
-                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim) then
+                if(ist == ist2) then
+                  ppsi = M_ZERO ! will put in eigenvalue directly later
+                else
+                  forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                endif
               else
                 call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), ppsi)
               endif
@@ -663,6 +669,10 @@ contains
               end forall
 
               me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
+
+              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist == ist2) then
+                me010(ist, ist, ii, ifreq, ik) = me010(ist, ist, ii, ifreq, ik) + dl_eig(ist, ik, ii)
+              endif
 
             end do
 !            if(mpi_grp_is_root(mpi_world)) write(10,'(4i3,f10.6)') ist2, ist, ii, ik, me010(ist2, ist, ii, 1, ik)

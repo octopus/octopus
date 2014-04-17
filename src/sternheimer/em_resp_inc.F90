@@ -218,11 +218,10 @@ subroutine X(calc_properties_nonlinear)()
       call X(post_orthogonalize)(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
         em_vars%omega(iomega), em_vars%eta, em_vars%lr, kdotp_em_lr2)
       call X(lr_calc_beta)(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
-        kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = .false.)
+        kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, dl_eig = dl_eig, occ_response = .false.)
     else
       call X(lr_calc_beta)(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
     endif
-    
     
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
     write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)

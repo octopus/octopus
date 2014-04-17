@@ -234,7 +234,7 @@ contains
           
           if(ierr /= 0) then
             message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
-            message(2) = "Previous kdotp calculation required."
+            message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
             call messages_fatal(2)
           end if
         end do
