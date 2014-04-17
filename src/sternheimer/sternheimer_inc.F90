@@ -489,7 +489,7 @@ subroutine X(sternheimer_solve_order2)( &
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
-  R_TYPE,       optional, intent(in)    :: give_pert1psi2(:,:,:,:)
+  R_TYPE,       optional, intent(in)    :: give_pert1psi2(:,:,:,:) !< (np, ndim, ist, ik)
   FLOAT,        optional, intent(in)    :: give_dl_eig1(:,:) !< (nst, nk) expectation values of bare perturbation
 
   integer :: isigma, ik, ist, idim, ispin
@@ -537,7 +537,7 @@ subroutine X(sternheimer_solve_order2)( &
         call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, psi, pert1psi)
         call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
-          pert1psi2(:,:) = give_pert1psi2(:, :, ist, ik)
+          pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
           call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
         endif
@@ -561,11 +561,13 @@ subroutine X(sternheimer_solve_order2)( &
 !        write(message(1),*) 'dl_eig1 ist ', ist, 'ik ', ik, dl_eig1
 !        write(message(2),*) 'dl_eig2 ist ', ist, 'ik ', ik, dl_eig2
 !        call messages_info(2)
-        
+
+        ! FIXME: sort out proper isigma`s when not just freq = 0 for second perturbation?
+
         do idim = 1, st%d%dim
           inhomog(1:mesh%np, idim, ist, ik, isigma) = &
             - pert1psi2(1:mesh%np, idim) &
-            - (hvar1(1:mesh%np, ispin, isigma) - dl_eig1) * lr2(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik) &
+            - (hvar1(1:mesh%np, ispin, isigma) - dl_eig1) * lr2(1)%X(dl_psi)(1:mesh%np, idim, ist, ik) &
             - pert2psi1(1:mesh%np, idim) &
             - (hvar2(1:mesh%np, ispin, isigma) - dl_eig2) * lr1(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik)
         end do
