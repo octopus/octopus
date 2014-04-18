@@ -129,6 +129,9 @@ module epot_m
     logical          :: ignore_external_ions
     logical                  :: have_density
     type(poisson_t), pointer :: poisson_solver
+
+    logical :: force_total_enforce
+
   end type epot_t
 
 contains
@@ -432,6 +435,18 @@ contains
     if(ep%ignore_external_ions) then
       if(gr%sb%periodic_dim > 0) call input_error('IgnoreExternalIons')
     end if
+
+    !%Variable ForceTotalEnforce
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) If this variable is set to "yes", then the sum
+    !% of the total forces will be enforced to be zero. The default is
+    !% no.
+    !%End
+    call parse_logical(datasets_check('ForceTotalEnforce'), .false., ep%force_total_enforce)
+    if(ep%force_total_enforce) call messages_experimental('ForceTotalEnforce')
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
     do ia = 1, geo%natoms

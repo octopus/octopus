@@ -257,7 +257,7 @@ contains
 
     integer :: i, j, iatom, idir
     FLOAT :: x(MAX_DIM), time
-    FLOAT, allocatable :: force(:, :)
+    FLOAT, allocatable :: force(:, :), total_force(:)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -279,6 +279,8 @@ contains
     else
       call zforces_from_potential(gr, geo, hm, st, force)
     end if
+
+    if(hm%ep%force_total_enforce) call forces_set_total_to_zero(geo, force)
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
@@ -335,6 +337,30 @@ contains
     call profiling_out(forces_prof)
 
   end subroutine forces_calculate
+
+  ! ----------------------------------------------------------------------
+
+  subroutine forces_set_total_to_zero(geo, force)
+    type(geometry_t),    intent(in)    :: geo
+    FLOAT,               intent(inout) :: force(:, :)
+
+    FLOAT, allocatable :: total_force(:)
+    integer :: iatom
+
+    SAFE_ALLOCATE(total_force(1:geo%space%dim))
+
+    total_force(1:geo%space%dim) = CNST(0.0)
+    do iatom = 1, geo%natoms
+      total_force(1:geo%space%dim) = total_force(1:geo%space%dim) + force(1:geo%space%dim, iatom)/geo%natoms
+    end do
+
+    do iatom = 1, geo%natoms
+      force(1:geo%space%dim, iatom) = force(1:geo%space%dim, iatom) - total_force(1:geo%space%dim)
+    end do
+
+    SAFE_DEALLOCATE_A(total_force)
+
+  end subroutine forces_set_total_to_zero
 
 #include "undef.F90"
 #include "real.F90"
