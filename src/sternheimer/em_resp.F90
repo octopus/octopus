@@ -222,7 +222,7 @@ contains
       call messages_info(1)
 
       do idir = 1, gr%sb%periodic_dim
-        do idir2 = 1, gr%sb%periodic_dim
+        do idir2 = idir, gr%sb%periodic_dim
           call lr_init(kdotp_lr2(idir, idir2, 1))
           call lr_allocate(kdotp_lr2(idir, idir2, 1), sys%st, sys%gr%mesh)
 
@@ -445,8 +445,10 @@ contains
       call pert_end(pert_kdotp)
       call pert_end(pert2_none)
       do idir = 1, gr%sb%periodic_dim
-        do idir2 = 1, gr%sb%periodic_dim
+        do idir2 = idir, gr%sb%periodic_dim
           call lr_dealloc(kdotp_lr2(idir, idir2, 1))
+        enddo
+        do idir2 = 1, gr%sb%periodic_dim
           do sigma = 1, em_vars%nsigma
             do ifactor = 1, em_vars%nfactor
               call lr_dealloc(kdotp_em_lr2(idir, idir2, sigma, ifactor))

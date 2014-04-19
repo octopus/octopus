@@ -19,6 +19,8 @@
 
 subroutine X(run_sternheimer)()
 
+  R_TYPE, pointer :: kdotp_lr2_psi(:,:,:,:)
+
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
   if(.not. fromscratch) then
@@ -140,13 +142,19 @@ subroutine X(run_sternheimer)()
       call pert_setup_dir(pert_kdotp, idir2)
       
       ! FIXME: need to give a proper name to the restart files
+
+      if(idir2 > idir) then
+        kdotp_lr2_psi => kdotp_lr2(idir, idir2, 1)%X(dl_psi)
+      else
+        kdotp_lr2_psi => kdotp_lr2(idir2, idir, 1)%X(dl_psi)
+      endif
       
       call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
         kdotp_lr(idir2, 1:1), nsigma_eff, R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), &
         em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
         pert2_none, EM_RESP_DIR, &
         "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-        give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
+        give_pert1psi2 = kdotp_lr2_psi, give_dl_eig1 = dl_eig(:, :, idir2))
       
       ! if the frequency is zero, we do not need to calculate both responses
       if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then

@@ -176,7 +176,7 @@ contains
       call lr_allocate(kdotp_vars%lr(1, idir), sys%st, sys%gr%mesh)
 
       if(calc_2nd_order) then
-        do idir2 = 1, pdim
+        do idir2 = idir, pdim
           call lr_init(kdotp_vars%lr2(1, idir, idir2))
           call lr_allocate(kdotp_vars%lr2(1, idir, idir2), sys%st, sys%gr%mesh)
         enddo
@@ -194,7 +194,7 @@ contains
         end if
 
         if(calc_2nd_order) then
-          do idir2 = 1, pdim
+          do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
@@ -256,7 +256,8 @@ contains
 
       ! TODO: use equality of mixed partials to calculate fewer of these
       if(calc_2nd_order) then
-        do idir2 = 1, pdim
+        ! by equality of mixed partial derivatives, kdotp_vars%lr2(idir, idir2) = kdotp_vars%lr2(idir2, idir)
+        do idir2 = idir, pdim
           write(message(1), '(3a)') 'Info: Calculating second-order response in the ', index2axis(idir2), &
             '-direction.' 
           call messages_info(1)
@@ -301,7 +302,7 @@ contains
       call lr_dealloc(kdotp_vars%lr(1, idir))
 
       if(calc_2nd_order) then
-        do idir2 = 1, pdim
+        do idir2 = idir, pdim
           call lr_dealloc(kdotp_vars%lr2(1, idir, idir2))
         enddo
       endif
