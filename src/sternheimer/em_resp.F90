@@ -1052,18 +1052,24 @@ contains
       do idir = 1, gr%sb%dim
         if(states_are_complex(st)) then 
 
-          if(gr%sb%dim == 3) then
-            if(iand(outp%what, C_OUTPUT_ELF) /= 0) &
+          if(gr%sb%dim == 3 .and. iand(outp%what, C_OUTPUT_ELF) /= 0) then
+            if(em_vars%nsigma == 1) then
+              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+            else
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+            endif
           end if
           do isigma = 1, em_vars%nsigma
             call zoutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
           end do
         else
 
-          if(gr%sb%dim == 3) then
-            if(iand(outp%what, C_OUTPUT_ELF) /= 0) &
+          if(gr%sb%dim == 3 .and. iand(outp%what, C_OUTPUT_ELF) /= 0) then
+            if(em_vars%nsigma == 1) then
+              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+            else
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+            endif
           end if
 
           do isigma = 1, em_vars%nsigma

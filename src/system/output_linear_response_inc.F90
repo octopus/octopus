@@ -23,11 +23,11 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
   type(grid_t),         intent(inout) :: gr
   type(lr_t),           intent(inout) :: lr
   character(len=*),     intent(in)    :: dir
-  integer,              intent(in)    :: idir      ! direction of perturbation
+  integer,              intent(in)    :: idir      !< direction of perturbation
   integer,              intent(in)    :: isigma
   type(output_t),       intent(in)    :: outp
   type(geometry_t),     intent(in)    :: geo
-  type(unit_t),         intent(in)    :: pert_unit ! unit for perturbation
+  type(unit_t),         intent(in)    :: pert_unit !< unit for perturbation
 
   integer :: ik, ist, idim, ierr, is, idir2
   character(len=80) :: fname
@@ -167,7 +167,9 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
     end do
     SAFE_DEALLOCATE_A(dtmp)
   end if
+
 POP_SUB(X(output_lr))
+
 contains
 
   ! ---------------------------------------------------------
