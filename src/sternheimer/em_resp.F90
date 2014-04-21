@@ -212,7 +212,7 @@ contains
           enddo
         enddo
       enddo
-      call sternheimer_init(sh2, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = .true.)
+      call sternheimer_init(sh2, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = .false.)
       call sternheimer_init(sh_kdotp, sys, hm, "EM", complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
@@ -655,6 +655,8 @@ contains
       !%Description
       !% Solve for full response without projector into unoccupied subspace.
       !% Not possible if there are partial occupations.
+      !% When <tt>EMHyperpol</tt> is set for a periodic system, this variable is ignored and
+      !% the full response is always calculated.
       !%End
 
       call parse_logical(datasets_check('EMOccupiedResponse'), .false., em_vars%occ_response)
