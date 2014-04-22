@@ -6,9 +6,13 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run; components
 Enabled    : Yes
 
+# Run a simple ground-sate of a carbon molecule
 Input : 17-convert.01-run.inp
-# FIXME: please add some matches here, so we know if the utility or the main octopus is at fault!
+Precision: 0.00011
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -145.39939707
+match ; Eigenvalues        ; GREP(static/info, 'Eigenvalues =', 20) ; -36.59626127
 
+# Convert the density from obf to dx format and check it.
 Util  : oct-convert
 Input : 17-convert.02-convert.inp
 match ; Convert to dx (header)     ; GREP(restart/gs/density.dx, 'origin', 8, 0); -3.909937
