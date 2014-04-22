@@ -41,7 +41,7 @@ subroutine X(sternheimer_solve)(                           &
   integer, allocatable :: conv_iters(:, :)
   integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
+  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :), rhs_full(:, :, :)
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
@@ -70,6 +70,9 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(tmp(1:mesh%np))
   SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
+  if(this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
+    SAFE_ALLOCATE(rhs_full(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
+  endif
   SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
   SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
@@ -175,8 +178,11 @@ subroutine X(sternheimer_solve)(                           &
               end forall
             endif
 
+            if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) &
+              rhs_full(:, :, ii) = rhs(:, :, ii)
+
             call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma, &
-              min_proj = conv_last .and. this%last_occ_response)
+              min_proj = conv_last .and. this%last_occ_response .and. this%occ_response_by_sternheimer)
 
           end do
 
@@ -197,6 +203,7 @@ subroutine X(sternheimer_solve)(                           &
             ii = ii + 1
 
             if (this%preorthogonalization) then 
+              ! should remove degenerate states here too
               if (this%occ_response) then
                 call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
                 proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
@@ -211,6 +218,10 @@ subroutine X(sternheimer_solve)(                           &
             dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
 
           end do !ist
+
+          if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
+            call X(sternheimer_add_occ)(sys, lr(sigma), rhs_full, sst, est, omega_sigma, CNST(1e-5))
+          endif
 
         end do !sigma
 
@@ -348,6 +359,9 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_DEALLOCATE_A(residue)
   SAFE_DEALLOCATE_A(conv_iters)
   SAFE_DEALLOCATE_A(rhs)
+  if(this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
+    SAFE_DEALLOCATE_A(rhs_full)
+  endif
   SAFE_DEALLOCATE_A(hvar)
   SAFE_DEALLOCATE_A(dl_rhoin)
   SAFE_DEALLOCATE_A(dl_rhonew)
@@ -358,6 +372,62 @@ subroutine X(sternheimer_solve)(                           &
   POP_SUB(X(sternheimer_solve))
 
 end subroutine X(sternheimer_solve)
+
+
+! ---------------------------------------------------------
+!> add projection onto occupied states, by sum over states
+subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thres)
+  type(system_t),      intent(in)    :: sys
+  type(lr_t),          intent(inout) :: lr
+  R_TYPE,              intent(in)    :: rhs(:,:,:) !< (np, ndim, nst)
+  integer,             intent(in)    :: sst !< start state
+  integer,             intent(in)    :: est !< start state
+  R_TYPE,              intent(in)    :: omega_sigma
+  FLOAT,               intent(in)    :: degen_thres
+
+  integer :: ist, ist2, ik, ii
+  R_TYPE :: mtxel
+  R_TYPE, allocatable :: psi(:,:)
+
+  PUSH_SUB(X(sternheimer_add_occ))
+
+  if(sys%st%parallel_in_states) then
+    call messages_not_implemented("sternheimer_add_occ parallel in states")
+  endif
+
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    ii = 0
+    ! iteration within states block
+    do ist = sst, est
+      ii = ii + 1
+
+      do ist2 = 1, sys%st%nst
+        ! avoid dividing by zero below; these contributions are arbitrary anyway
+        if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
+
+        ! the unoccupied subspace was handled by the Sternheimer equation
+        if(sys%st%occ(ist2, ik) < M_HALF) cycle
+
+        call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
+        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
+
+        lr%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = lr%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
+          psi(1:sys%gr%mesh%np, 1:sys%st%d%dim) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik) - omega_sigma)
+
+        ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
+!        lr%X(dl_psi)(:, :, ist2, ik) = lr%X(dl_psi)(:, :, ist2, ik) + &
+!          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) - omega_sigma)
+
+      enddo
+    enddo
+  enddo
+
+  SAFE_DEALLOCATE_A(psi)
+
+  POP_SUB(X(sternheimer_add_occ))
+end subroutine X(sternheimer_add_occ)
 
 
 !--------------------------------------------------------------

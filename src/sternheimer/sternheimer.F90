@@ -103,6 +103,7 @@ module sternheimer_m
      logical               :: ok
      logical               :: occ_response
      logical               :: last_occ_response
+     logical               :: occ_response_by_sternheimer
      logical               :: preorthogonalization
   end type sternheimer_t
   
@@ -112,7 +113,7 @@ contains
   
   !-----------------------------------------------------------
   subroutine sternheimer_init(this, sys, hm, prefix, wfs_are_cplx, &
-    set_ham_var, set_occ_response, set_last_occ_response, set_default_solver)
+    set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -121,6 +122,7 @@ contains
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
     logical, optional,   intent(in)    :: set_last_occ_response
+    logical, optional,   intent(in)    :: occ_response_by_sternheimer
     integer, optional,   intent(in)    :: set_default_solver
 
     integer :: ham_var
@@ -150,6 +152,8 @@ contains
     else
        this%occ_response = .false.
     endif
+
+    this%occ_response_by_sternheimer = optional_default(occ_response_by_sternheimer, .false.)
 
     !%Variable Preorthogonalization
     !%Type logical 
