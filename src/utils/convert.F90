@@ -105,14 +105,18 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The original filename which is going to be converted in the format
-    !% specified in <tt>OutputHow</tt>.
+    !% specified in <tt>OutputHow</tt>. It is going to convert various files, it should 
+    !% only contain the beginning of the name. For instance, in the case of the restart 
+    !% files it should be one space ' '.
     !%End
     call parse_string(datasets_check('ConvertFilename'), 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
-    if ( basename(length-3:length) == '.obf' ) then
-      basename = trim(basename(1:length-4))
+    if ( length > 4) then
+      if ( basename(length-3:length) == '.obf' ) then
+        basename = trim(basename(1:length-4))
+      end if
     end if
 
 
@@ -233,7 +237,7 @@ contains
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
     integer            :: ierr, ii
-    character(64)      :: filename, out_name, ref_filename, folder
+    character(64)      :: filename, out_name, ref_filename, folder, frmt
     FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
 
     PUSH_SUB(convert_low)
@@ -251,18 +255,30 @@ contains
       write(*,*) "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       write(ref_filename, '(a,a,a,a)') trim(ref_folder),"/", trim(ref_name),".obf"
       call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
-    endif
+    end if
 
-!    call loct_progress_bar(-1, c_end-c_start) 
+    call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
-        write(folder,'(a,i0.7,a)') trim(in_folder),ii,"/"
+        ! Delete the last / and add the corresponding folder number
+        write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),ii,"/"
         write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
         out_name = trim(basename)
       else
         folder = in_folder
-        write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
-        write(out_name, '(a)') trim(basename)
+        if ( c_start /= c_end ) then
+          ! Here, we are only considering 10 character long filenames.
+          ! Subtract the initial part given at 'ConvertFilename' from the format and pad
+          ! with zeros.
+          write(frmt,'(a,i0,a)')"(a,i0.",10-len_trim(basename),")"
+          write(filename, fmt=trim(frmt)) trim(basename), ii
+          write(out_name, '(a)') trim(filename)
+          write(filename, '(a,a,a,a)') trim(folder),"/", trim(out_name),".obf"
+        else 
+          ! Assuming filename is given complete in the 'ConvertFilename'
+          write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
+          write(out_name, '(a)') trim(basename)
+        end if
       end if
 
       ! Read the obf file
@@ -288,7 +304,7 @@ contains
         call dio_function_output(how, &
              trim(folder), trim(out_name), mesh, pot, units_out%length, ierr, geo = geo)
       end if
-!      call loct_progress_bar(ii-c_start, c_end-c_start) 
+      call loct_progress_bar(ii-c_start, c_end-c_start) 
     end do
     
     SAFE_DEALLOCATE_A(read_ff)

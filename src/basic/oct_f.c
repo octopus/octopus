@@ -196,6 +196,7 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
   (fint *a, fint *max)
 {
+  if (*max == 0) return; /* Skip the bar if the lenght is 0 */
   progress_bar(*a, *max);
 }
 

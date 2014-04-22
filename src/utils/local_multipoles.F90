@@ -155,8 +155,10 @@ contains
     if ( filename == " " ) filename = ""
     ! Delete the extension if present
     length = len_trim(filename)
-    if ( filename(length-3:length) == '.obf' ) then
-      filename = trim(filename(1:length-4))
+    if ( length > 4) then
+      if ( filename(length-3:length) == '.obf' ) then
+        filename = trim(filename(1:length-4))
+      end if
     end if
 
     !%Variable LocalMultipoleLmax 
