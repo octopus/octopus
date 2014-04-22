@@ -7,7 +7,7 @@ Units = eV_Angstrom
 OutputHow = dx
 Output = density
 ConvertFolder = 'restart/gs'
-ConvertFilename = '0000000002'
+ConvertFilename = 'density'
 ConvertIterateFolder = no
 
 ConvertStart = 1

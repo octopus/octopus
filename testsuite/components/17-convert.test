@@ -4,13 +4,13 @@
 Test       : oct-convert
 Programs   : octopus; octopus_mpi
 TestGroups : short-run; components
-Enabled    : No
+Enabled    : Yes
 
 Input : 17-convert.01-run.inp
 # FIXME: please add some matches here, so we know if the utility or the main octopus is at fault!
 
 Util  : oct-convert
 Input : 17-convert.02-convert.inp
-match ; Convert to dx (header)     ; GREP(restart/gs/0000000002.dx, 'origin', 8, 0); -3.909937
-match ; Convert to dx (line 513)   ; LINE(restart/gs/0000000002.dx, 513, 1);    0.000026930554955
-match ; Convert to dx (line 29355) ; LINE(restart/gs/0000000002.dx, 29355, 1); -0.000239829383461
+match ; Convert to dx (header)     ; GREP(restart/gs/density.dx, 'origin', 8, 0); -3.909937
+match ; Convert to dx (line 513)   ; LINE(restart/gs/density.dx, 513, 1);    0.000000004632849
+match ; Convert to dx (line 29355) ; LINE(restart/gs/density.dx, 29355, 1); -0.000000220757726
