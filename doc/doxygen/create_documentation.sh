@@ -35,7 +35,7 @@ cp $dox_dir/octopus.png .
 #copy to the new location
 sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
 #call doxygen
-doxygen 
+doxygen >/dev/null 2>/dev/null 
 
 cd ..
 echo "Doxygen documentation created in $dox_dir/html/index.html"
