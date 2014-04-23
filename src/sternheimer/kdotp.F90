@@ -164,8 +164,8 @@ contains
 
     call sternheimer_obsolete_variables('KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
-      set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = .true., &
-      occ_response_by_sternheimer = (kdotp_vars%occ_solution_method == 0))
+      set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
+      occ_response_by_sternheimer = .true.)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
     if(calc_2nd_order) then
       call sternheimer_init(sh2, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
@@ -225,10 +225,14 @@ contains
         call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
           M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
+        if(kdotp_vars%occ_solution_method == 1) &
+          call dkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       else
         call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
+        if(kdotp_vars%occ_solution_method == 1) &
+          call zkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       endif
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
