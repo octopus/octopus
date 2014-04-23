@@ -53,10 +53,10 @@ program oct_convert
   call global_init()
   call messages_init()
 
-  call messages_experimental("oct-convert utility")
   call datasets_init(1)
   call io_init()
   call profiling_init()
+  call messages_experimental("oct-convert utility")
 
   call print_header()
 
