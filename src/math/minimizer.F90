@@ -21,6 +21,7 @@
 
 module minimizer_m
   use global_m
+  use lalg_basic_m
   use profiling_m
   use messages_m
   use mpi_m
@@ -399,7 +400,7 @@ contains
 
       vec_delta_pos(1:dim)=vel(1:dim)*dt
       
-      delta_pos = norm2(vec_delta_pos)
+      delta_pos = lalg_nrm2(dim,vec_delta_pos)
 
       x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
       dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
@@ -427,8 +428,8 @@ contains
 
       x(1:dim)=x_new(1:dim)
 
-      mod_force = norm2(grad)
-      mod_vel = norm2(vel)
+      mod_force = lalg_nrm2(dim,grad)
+      mod_vel = lalg_nrm2(dim,vel)
       do i_tmp = 1, dim
         vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
       end do
