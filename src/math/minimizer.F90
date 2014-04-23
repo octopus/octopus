@@ -23,6 +23,7 @@ module minimizer_m
   use global_m
   use profiling_m
   use messages_m
+  use mpi_m
 #if defined(HAVE_NEWUOA)
   use newuoa_m
 #endif
@@ -32,6 +33,7 @@ module minimizer_m
   private
   public ::                    &
     loct_1dminimize,           &
+    minimize_fire,             &
     minimize_multidim,         &
     minimize_multidim_nograd
 
@@ -43,7 +45,8 @@ module minimizer_m
     MINMETHOD_BFGS2            =  5, &
     MINMETHOD_NMSIMPLEX        =  6, &
     MINMETHOD_SD_NATIVE        = -1, &
-    MINMETHOD_NEWUOA           =  7
+    MINMETHOD_NEWUOA           =  7, &
+    MINMETHOD_FIRE             =  8
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
@@ -290,7 +293,183 @@ contains
 
     POP_SUB(minimize_sd)
   end subroutine minimize_sd
+
+  !----------------------------------------------
+
+  subroutine minimize_fire(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, en, ierr, mass)
+    integer, intent(in)    :: dim
+    real(8), intent(inout) :: x(:)
+    real(8), intent(in)    :: step
+    real(8), intent(in)    :: tolgrad
+    real(8), intent(in)    :: toldr
+    integer, intent(in)    :: maxiter
+    interface
+      subroutine f(n, x, val, getgrad, grad)
+        integer, intent(in)    :: n
+        real(8), intent(in)    :: x(n)
+        real(8), intent(inout) :: val
+        integer, intent(in)    :: getgrad
+        real(8), intent(inout) :: grad(n)
+      end subroutine f
+      subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+        integer, intent(in) :: iter
+        integer, intent(in) :: n
+        real(8), intent(in) :: val
+        real(8), intent(in) :: maxdr
+        real(8), intent(in) :: maxgrad
+        real(8), intent(in) :: x(n)
+      end subroutine write_iter_info
+    end interface
+    real(8), intent(out)   :: en
+    integer, intent(out)   :: ierr
+    real(8), intent(in)    :: mass(:)
+
+    integer :: n_iter
+    real(8), allocatable :: grad(:)
+    real(8) :: dt
+    real(8) :: max_grad_atoms
+
+    integer :: n_min
+    real (8) :: alpha
+    real (8) :: alpha_start
+    real (8) :: f_alpha
+    real (8) :: p_value
+    real (8) :: f_inc
+    real (8) :: f_dec
+    real (8) :: dt_max
+
+    integer :: p_times
+
+    real (8), allocatable :: grad_atoms(:)
+    real (8), allocatable :: vel(:)
+    real (8), allocatable :: vec_delta_pos(:)
+    real (8), allocatable :: dr_i(:)
+    real (8), allocatable :: x_new(:)
+    real (8), allocatable :: dr_atoms(:)
+
+    integer :: dr_atom_iter
+    integer :: i_tmp
+
+    real (8) :: delta_pos
+    real (8) :: dr_i_max
+    real (8) :: da_max
+
+    real (8) :: mod_vel
+    real (8) :: mod_force
+
+    PUSH_SUB(minimize_fire)
+
+    if(mpi_grp_is_root(mpi_world)) then
+      call messages_experimental('GOMethod = fire')
+    end if
+
+    SAFE_ALLOCATE(grad_atoms(1:dim/3))
+    SAFE_ALLOCATE(grad(1:dim))
+
+    alpha_start = CNST(0.1)
+
+    dt = step
+
+    alpha = alpha_start
+    
+    p_times = 0
+
+    f_alpha = CNST(0.99)
+    n_min = 5
+    f_inc = CNST(1.1)
+    dt_max = 10.0 * dt
+    f_dec = CNST(0.5)
+
+    SAFE_ALLOCATE(vec_delta_pos(1:dim))
+
+    grad = 0.0
+
+    SAFE_ALLOCATE(vel(1:dim))
+    vel = 0.0
+
+    SAFE_ALLOCATE(dr_atoms(1:dim/3))
+    SAFE_ALLOCATE(x_new(1:dim))
+    SAFE_ALLOCATE(dr_i(1:dim))
+
+    x_new = 0.0
+    dr_i = 0.0
+
+    n_iter = 1
+    do while (n_iter <= maxiter)
+
+      vec_delta_pos(1:dim)=vel(1:dim)*dt
+      
+      delta_pos = norm2(vec_delta_pos)
+
+      x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
+      dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
+
+      do dr_atom_iter = 0, dim/3 - 1
+        dr_atoms(dr_atom_iter+1) = sqrt(dr_i(3*dr_atom_iter+1)**2+dr_i(3*dr_atom_iter+2)**2+dr_i(3*dr_atom_iter+3)**2)
+      end do
+
+      call f(dim, x_new, en, 1, grad)
+
+      vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
+      
+      grad_atoms = 0.0
+
+      do i_tmp = 0, dim/3 - 1
+        grad_atoms(i_tmp+1) = sqrt(grad(3*i_tmp+1)**2 + grad(3*i_tmp+2)**2 + grad(3*i_tmp+3)**2)
+      end do
+
+      max_grad_atoms = maxval(abs(grad_atoms(1:)))
+
+      p_value = 0.0
+      do i_tmp = 0, dim/3 - 1
+        p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
+      end do
+
+      x(1:dim)=x_new(1:dim)
+
+      mod_force = norm2(grad)
+      mod_vel = norm2(vel)
+      do i_tmp = 1, dim
+        vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
+      end do
+
+      if(p_value > 0.0) then
+        p_times = p_times + 1
+        if(p_times > n_min) then
+          dt = min(dt * f_inc , dt_max)
+          alpha = alpha * f_alpha
+        end if
+
+      else
+        p_times = 0
+        dt = dt * f_dec
+        alpha = alpha_start
+        vel = 0.0
+      end if
+
+      call write_iter_info(n_iter, dim, en, maxval(dr_atoms(1:)), max_grad_atoms, x_new)
+      
+      if(max_grad_atoms < tolgrad) then
+        ierr = 0
+        n_iter = maxiter+1
+      else
+        n_iter = n_iter + 1
+      end if
+      
+    end do
+
+    SAFE_DEALLOCATE_A(dr_atoms)
+    SAFE_DEALLOCATE_A(x_new)
+    SAFE_DEALLOCATE_A(dr_i)
+    SAFE_DEALLOCATE_A(vec_delta_pos)
+    SAFE_DEALLOCATE_A(vel)
+    SAFE_DEALLOCATE_A(grad)
+    SAFE_DEALLOCATE_A(grad_atoms)
+    
+    POP_SUB(minimize_fire)
   
+  end subroutine minimize_fire
+
 end module minimizer_m
 
 !! Local Variables:

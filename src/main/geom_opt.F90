@@ -39,6 +39,7 @@ module geom_opt_m
   use restart_m
   use scf_m
   use simul_box_m
+  use species_m
   use species_pot_m
   use states_m
   use states_calc_m
@@ -93,6 +94,10 @@ contains
     REAL_DOUBLE, allocatable :: coords(:)
     REAL_DOUBLE :: energy
 
+    real (8), allocatable :: mass(:)
+    real (8) :: au_mass
+    integer :: a
+    
     PUSH_SUB(geom_opt_run)
 
     call init_()
@@ -131,6 +136,17 @@ contains
       call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
         real(g_opt%toldr, 8), g_opt%max_iter, &
         calc_point_ng, write_iter_info_ng, energy, ierr)
+    case(MINMETHOD_FIRE)
+      au_mass = CNST(5.485799110e-4)
+      SAFE_ALLOCATE(mass(1:g_opt%size))
+      do a = 0, sys%geo%natoms - 1
+        mass(3*a+1) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
+        mass(3*a+2) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
+        mass(3*a+3) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
+      end do
+      call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8),&
+        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass)
+      SAFE_DEALLOCATE_A(mass)
     case default
       call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
         real(g_opt%line_tol, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
@@ -239,6 +255,8 @@ contains
       !% GNU Scientific Library (GSL). It does not make use of the gradients (<i>i.e.</i>, the
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
+      !%Option fire 8
+      !% (Experimental) The FIRE algorithm.
       !%End
       call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
