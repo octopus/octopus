@@ -202,7 +202,6 @@ contains
 
       !%Variable GOCenter
       !%Type logical
-      !%Default no
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% (Experimental) If set to yes, Octopus centers the geometry at
@@ -220,12 +219,11 @@ contains
       
       !%Variable GOMethod
       !%Type integer
-      !%Default steep
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Method by which the minimization is performed. For more information see the
       !% <a href=http://www.gnu.org/software/gsl/manual/html_node/Multidimensional-Minimization.html>
-      !% GSL documentation</a>.
+      !% GSL documentation</a>. The default is steep.
       !%Option steep 1
       !% Simple steepest descent.
       !%Option steep_native -1
@@ -264,14 +262,13 @@ contains
 
       !%Variable GOTolerance
       !%Type float
-      !%Default 0.001 H/b (0.05 eV/Ang)
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion, for stopping the minimization. In
       !% units of force; minimization is stopped when all forces on
       !% ions are smaller than this criterion, or the
       !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
-      !% this criterion is ignored.
+      !% this criterion is ignored. The default is 0.001 H/b (0.051 eV/A).
       !%End
       call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
       
@@ -299,31 +296,29 @@ contains
       
       !%Variable GOStep
       !%Type float
-      !%Default 0.5
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Initial step for the geometry optimizer.
+      !% Initial step for the geometry optimizer. The default is 0.5.
       !% WARNING: in some weird units.
       !%End
       call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step)
 
       !%Variable GOLineTol
       !%Type float
-      !%Default 0.1
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Tolerance for line-minimization. Applies only to GSL methods that use the forces.
+      !% Tolerance for line-minimization. Applies only to GSL methods
+      !% that use the forces. The default value is 0.1.
       !% WARNING: in some weird units.
       !%End
       call parse_float(datasets_check('GOLineTol'), CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer
-      !%Default 200
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Even if the convergence criterion is not satisfied, the minimization will stop
-      !% after this number of iterations.
+      !% after this number of iterations. The default is 200.
       !%End
       call parse_integer(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
@@ -335,12 +330,13 @@ contains
 
       !%Variable GOObjective
       !%Type integer
-      !%Default minimize_energy
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% This rather esoteric option allows one to choose which objective function
-      !% to minimize during a geometry minimization. The use of this variable may
-      !% lead to inconsistencies, so please make sure you know what you are doing!
+      !% This rather esoteric option allows one to choose which
+      !% objective function to minimize during a geometry
+      !% minimization. The use of this variable may lead to
+      !% inconsistencies, so please make sure you know what you are
+      !% doing. The default is minimize_energy.
       !%Option minimize_energy 1
       !% Use the total energy as objective function.
       !%Option minimize_forces 2
