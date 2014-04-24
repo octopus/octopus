@@ -96,7 +96,7 @@ contains
 
     real (8), allocatable :: mass(:)
     real (8) :: au_mass
-    integer :: a
+    integer :: iatom, imass
     
     PUSH_SUB(geom_opt_run)
 
@@ -139,11 +139,14 @@ contains
     case(MINMETHOD_FIRE)
       au_mass = CNST(5.485799110e-4)
       SAFE_ALLOCATE(mass(1:g_opt%size))
-      do a = 0, sys%geo%natoms - 1
-        mass(3*a+1) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
-        mass(3*a+2) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
-        mass(3*a+3) = species_weight(sys%geo%atom(a+1)%spec)*au_mass
+
+      imass = 1
+      do iatom = 1, sys%geo%natoms
+        if(g_opt%fixed_atom == iatom) cycle
+        mass(imass:imass + 2) = species_weight(sys%geo%atom(iatom)%spec)*au_mass
+        imass = imass + 3
       end do
+
       call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8),&
         g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass)
       SAFE_DEALLOCATE_A(mass)
