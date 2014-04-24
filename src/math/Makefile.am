@@ -118,3 +118,4 @@ scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
 compressed_sensing.o : compressed_sensing.F90 blas.o
+minimizer.o : minimizer.F90 lalg_basic.o
