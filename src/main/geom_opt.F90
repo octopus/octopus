@@ -351,6 +351,8 @@ contains
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
+      call loct_rm("geom/optimization.log")
+
       call loct_rm("./work-geom.xyz")
 
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
@@ -473,6 +475,7 @@ contains
     REAL_DOUBLE, intent(in) :: coords(size)
 
     character(len=256) :: c_geom_iter, title
+    integer :: iunit
 
     PUSH_SUB(write_iter_info)
     
@@ -483,6 +486,18 @@ contains
     call geometry_write_xyz(g_opt%geo, './last')
 
     call from_coords(g_opt, coords)
+
+
+    
+    iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
+
+    if(geom_iter == 1) then
+      write(iunit, '(a)') '#     iter                   energy                max_force                   max_dr'
+    end if
+
+    write(iunit, '(i10,3f25.15)')  geom_iter, energy, maxdf, maxdx
+
+    call io_close(iunit)
 
     call messages_new_line()
     call messages_new_line()
