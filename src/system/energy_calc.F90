@@ -92,11 +92,6 @@ contains
       if(states_are_real(st)) then
         hm%energy%kinetic  = denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
-
-        if (hm%pcm%run_pcm) then
-            hm%energy%int_n_pcm = pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
-        endif
-            
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
         etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
@@ -104,17 +99,20 @@ contains
         hm%energy%Imkinetic = aimag(etmp)
          
         etmp  = zenergy_calc_electronic(hm, gr%der, st, &
-          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         hm%energy%extern   =  real(etmp)
         hm%energy%Imextern =  aimag(etmp)
         
         etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
-        
+     
         evxctau   = real(etmp)
         Imevxctau = aimag(etmp)
       end if
     end if
 
+    if (hm%pcm%run_pcm) then
+        hm%energy%int_n_pcm = -pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
+    endif
 
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -135,6 +133,7 @@ contains
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau &
         + hm%energy%int_n_pcm - hm%energy%int_e_pcm
+
       if (cmplxscl) hm%energy%Imtotal = hm%energy%Imeigenvalues &
         - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation - hm%energy%Imintnvxc - Imevxctau
 

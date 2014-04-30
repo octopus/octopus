@@ -80,7 +80,8 @@ module pcm_m
     FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:)
     FLOAT, allocatable           :: arg_li(:,:)   !< 
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
-    FLOAT                        :: epsilon_infty !< Infnite-frequency dielectric constant of the solvent 
+    FLOAT                        :: epsilon_infty !< Infnite-frequency dielectric constant of the solvent
+    FLOAT                        :: gaussian_width!< Parameter to change the width of density of polarization charges  
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                   !! at the tesserae representative points 
     integer, allocatable         :: ind_vh(:,:)   !< Grid points used during interpolation 
@@ -173,13 +174,14 @@ contains
     !%End
     call parse_float(datasets_check('SolventDielectricConstant'), CNST(1.0), pcm%epsilon_0)
 
-    !%Variable CavityGeometry
-    !%Type string
+    !%Variable SmearingFactor
+    !%Type float
+    !%Default 1.0 (The width of the Gaussian density of polarization charges is the area of each tessera)
     !%Section Hamiltonian::PCM
     !%Description
-    !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
-    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units!.
+    !% Parameter used to control the width of the Gaussian density of polarization charges.
     !%End
+    call parse_float(datasets_check('SmearingFactor'), CNST(1.0), pcm%gaussian_width)
 
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
@@ -198,12 +200,13 @@ contains
        ! These coordinates are already in atomic units (Bohr)
        pcm%spheres(pcm%n_spheres)%x = geo%atom(ia)%x
 
-       if (geo%atom(ia)%label == 'C') pcm%spheres(pcm%n_spheres)%r = rcav_C
-       if (geo%atom(ia)%label == 'O') pcm%spheres(pcm%n_spheres)%r = rcav_O
-       if (geo%atom(ia)%label == 'N') pcm%spheres(pcm%n_spheres)%r = rcav_N
-       if (geo%atom(ia)%label == 'S') pcm%spheres(pcm%n_spheres)%r = rcav_S
-       if (geo%atom(ia)%label == 'F') pcm%spheres(pcm%n_spheres)%r = rcav_F                
-
+       if (geo%atom(ia)%label == 'C')  pcm%spheres(pcm%n_spheres)%r = rcav_C
+       if (geo%atom(ia)%label == 'O')  pcm%spheres(pcm%n_spheres)%r = rcav_O
+       if (geo%atom(ia)%label == 'N')  pcm%spheres(pcm%n_spheres)%r = rcav_N
+       if (geo%atom(ia)%label == 'S')  pcm%spheres(pcm%n_spheres)%r = rcav_S
+       if (geo%atom(ia)%label == 'F')  pcm%spheres(pcm%n_spheres)%r = rcav_F
+       if (geo%atom(ia)%label == 'Na') pcm%spheres(pcm%n_spheres)%r = rcav_Na
+       if (geo%atom(ia)%label == 'Cl') pcm%spheres(pcm%n_spheres)%r = rcav_Cl
     enddo
 
     call io_mkdir('pcm')
@@ -233,6 +236,13 @@ contains
     enddo
     write(pcm%info_unit,'(2X)')  
 
+    !%Variable CavityGeometry
+    !%Type string
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
+    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units!.
+    !%End
     call parse_string(datasets_check('CavityGeometry'), '', pcm%input_cavity)
 
     iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
@@ -425,8 +435,6 @@ contains
 
         v_e_cav(ia) = C_0*( M_ONE - pcm%arg_li(ia,3) ) + C_1*pcm%arg_li(ia,3)
 
-        v_e_cav(ia) = -v_e_cav(ia) !Notice the explicit minus sign. 
-         
       enddo
    
     POP_SUB(v_electrons_cav_li)
@@ -465,6 +473,8 @@ contains
         v_n_cav(ik) = v_n_cav(ik) + z_ia/dist       
      enddo
     enddo
+
+    v_n_cav = -v_n_cav
 
     POP_SUB(v_nuclei_cav)
   end subroutine v_nuclei_cav
@@ -632,9 +642,10 @@ contains
   end subroutine pcm_charges
 !==================================================
   !> Generates the potential 'v_pcm' in real-space.
-  subroutine pcm_pot_rs(v_pcm, q_pcm, tess, n_tess, mesh)
+  subroutine pcm_pot_rs(v_pcm, q_pcm, tess, n_tess, mesh, width_factor)
     FLOAT,           intent(out) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
     FLOAT,           intent(in)  :: q_pcm(:)!< (1:n_tess)
+    FLOAT,           intent(in)  :: width_factor
     integer,         intent(in)  :: n_tess  
     type(mesh_t),    intent(in)  :: mesh
     type(tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
@@ -659,9 +670,11 @@ contains
        do ip = 1, mesh%np !running serially np=np_global
 
           call mesh_r(mesh, ip, rr, origin=coord_tess)
-          arg = rr/sqrt( tess(ia)%area )  
+
+          arg = rr/sqrt( tess(ia)%area*width_factor )    
+
           term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
-          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area )
+          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor )
 
        enddo 
     enddo
