@@ -310,7 +310,8 @@ contains
       call messages_info(1)
       etime = loct_clock()
 
-      if(mod(iter, sys%outp%output_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! output
+      if((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
+         iter == td%max_iter .or. stopping) then ! output
         call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
@@ -583,7 +584,9 @@ contains
         call td_write_kick(gr, hm, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)
-      call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
+      if (sys%outp%output_interval > 0) then
+        call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
+      end if
 
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter

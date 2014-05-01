@@ -122,7 +122,6 @@ module output_m
     !> These variables fine-tune the output for some of the possible output options:
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
-    logical :: duringscf
 
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
 
@@ -491,15 +490,13 @@ contains
     !%Description
     !% The output requested by variable <tt>Output</tt> is written
     !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
-    !% For SCF calculations, <tt>OutputDuringSCF</tt> must be set too for this output to
-    !% be produced.
     !% (Output of restart files is controlled by <tt>RestartWriteInterval</tt>.)
-    !% Must be > 0.
+    !% Must be >= 0. If it is 0, then no output is written.
     !%End
     call parse_integer(datasets_check('OutputInterval'), 50, outp%output_interval)
     call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
-    if(outp%output_interval <= 0) then
-      message(1) = "OutputInterval must be > 0."
+    if(outp%output_interval < 0) then
+      message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1)
     endif
 
@@ -517,18 +514,7 @@ contains
       call messages_fatal(1)
     endif
 
-    !%Variable OutputDuringSCF
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
-    !% If this variable is set to yes, during a ground-state run,
-    !% <tt>Octopus</tt> output will be written after every <tt>OutputInterval</tt>
-    !% iterations to a directory called <tt>scf.nnnn/</tt> (with
-    !% <tt>nnnn</tt> the iteration number).
-    !%End
-
-    call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
+    call messages_obsolete_variable("OutputEvery", "OutputInterval")
 
     ! these kinds of Output do not have a how
     what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &
