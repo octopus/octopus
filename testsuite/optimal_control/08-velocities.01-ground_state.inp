@@ -83,7 +83,7 @@ OCTControlFunctionOmegaMax = 0.80
 OCTFixFluenceTo = -1
 OCTDoubleCheck = no
 
-OCTScheme = oct_algorithm_cg
+OCTScheme = oct_algorithm_bfgs
 OCTControlFunctionRepresentation = control_zero_fourier_series_h
 
 #OCTCheckGradient = 0.0001

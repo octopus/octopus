@@ -222,7 +222,7 @@
     type(target_t),   intent(inout) :: tg
     type(oct_t), intent(in)       :: oct
     PUSH_SUB(target_init_hhgnew)
-    if(oct%algorithm  ==  oct_algorithm_cg) then
+    if((oct%algorithm  ==  oct_algorithm_cg) .or. (oct%algorithm == oct_algorithm_bfgs)) then
       SAFE_DEALLOCATE_P(tg%grad_local_pot)
       SAFE_DEALLOCATE_P(tg%rho)
       SAFE_DEALLOCATE_P(tg%vel)

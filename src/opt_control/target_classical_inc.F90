@@ -70,10 +70,11 @@
         end do
       end do
       call parse_block_end(blk)
-    elseif(oct%algorithm  ==  oct_algorithm_cg) then
-      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg", then you must define the'
-      message(2) = 'blocks "OCTClassicalTarget", "OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
-      call messages_fatal(2)
+    elseif(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
+      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg" or'
+      message(2) = '"OCTScheme = oct_algorithm_bfgs", then you must define the blocks "OCTClassicalTarget",' 
+      message(3) = '"OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
+      call messages_fatal(3)
     end if
 
     if( parse_block(datasets_check('OCTPositionDerivatives'),blk)==0 ) then
@@ -84,10 +85,11 @@
         end do
       end do
       call parse_block_end(blk)
-    elseif(oct%algorithm  ==  oct_algorithm_cg) then
-      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg", then you must define the'
-      message(2) = 'blocks "OCTClassicalTarget", "OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
-      call messages_fatal(2)
+    elseif(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
+      message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg" or'
+      message(2) = '"OCTScheme = oct_algorithm_bfgs", then you must define the blocks "OCTClassicalTarget",'
+      message(3) = '"OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
+      call messages_fatal(3)
     end if
 
     POP_SUB(target_init_classical)

@@ -131,7 +131,7 @@ contains
 
     ! Initialization of the propagation_m module.
     call propagation_mod_init(td%max_iter, oct%eta, oct%delta, oct%number_checkpoints, &
-      (oct%algorithm == oct_algorithm_zbr98), (oct%algorithm == oct_algorithm_cg) )
+      (oct%algorithm == oct_algorithm_zbr98), (oct%algorithm == oct_algorithm_cg) .or. (oct%algorithm == oct_algorithm_bfgs))
 
 
     ! If filters are to be used, they also have to be initialized.
@@ -182,6 +182,10 @@ contains
         call scheme_straight_iteration()
       case(oct_algorithm_cg)
         message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
+        call messages_info(1)
+        call scheme_cg()
+      case(oct_algorithm_bfgs)
+        message(1) = "Info: Starting OCT iterations using scheme: BFGS"
         call messages_info(1)
         call scheme_cg()
       case(oct_algorithm_direct)
@@ -376,9 +380,16 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator) - 1
 
-      call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, real(0.1, 8), &
-        real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
-        maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
+      select case(oct%algorithm)
+      case(oct_algorithm_bfgs)
+        call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, real(0.1, 8), &
+          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+          maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
+      case(oct_algorithm_cg)
+        call minimize_multidim(MINMETHOD_FR_CG, dof, x, step, real(0.1, 8), &
+          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+          maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
+      end select
 
       if(ierr /= 0) then
         if(ierr <= 1024) then
@@ -386,7 +397,7 @@ contains
           call loct_strerror(ierr, message(2))
           call messages_fatal(2)
         else
-          message(1) = "The CG optimization did not meet the convergence criterion."
+          message(1) = "The optimization did not meet the convergence criterion."
           call messages_info(1)
         end if
       end if

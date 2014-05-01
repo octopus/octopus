@@ -49,8 +49,9 @@ module opt_control_global_m
     oct_algorithm_krotov             = 5,       &
     oct_algorithm_str_iter           = 6,       &
     oct_algorithm_cg                 = 7,       &
-    oct_algorithm_direct             = 8,       &
-    oct_algorithm_newuoa             = 9
+    oct_algorithm_bfgs               = 8,       &
+    oct_algorithm_direct             = 9,       &
+    oct_algorithm_newuoa             = 10
 
 
   !> The oct_t datatype stores the basic information about how the OCT run
@@ -131,14 +132,25 @@ contains
     !% iteration, both with the same control field. An output field is calculated with the
     !% resulting wavefunctions. 
     !%Option oct_algorithm_cg 7
-    !% Conjugate-gradients, as implemented in the GNU GSL library.
-    !%Option oct_algorithm_direct 8
+    !% Conjugate-gradients, as implemented in the GNU GSL library. In particular, the
+    !% Fletcher-Reeves version.
+    !%Option oct_algorithm_bfgs 8
+    !% The methods use the vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm.  
+    !% Also, it calls the GNU GSL library version of the algorithm. It is a quasi-Newton 
+    !% method which builds up an approximation to the second derivatives of the function using
+    !% the difference between successive gradient vectors.  By combining the first and second 
+    !% derivatives the algorithm is able to take Newton-type steps towards the function minimum, 
+    !% assuming quadratic behavior in that region. We have chosen to implement the "bfgs2" version,
+    !% as GSL calls it, which is supposed to be the most efficient version available, and a faithful 
+    !% implementation of the line minimization scheme described in "Practical Methods of
+    !% Optimization", (Fletcher), Algorithms 2.6.2 and 2.6.4.  
+    !%Option oct_algorithm_direct 9
     !% This is a "direct" optimization scheme. This means that we do not make use of the
     !% "usual" QOCT equations (backward-forward propagations, etc), but we use some gradient-free
     !% maximization algorithm for the function that we want to optimize. In this case, the
     !% maximization algorithm is the Nelder-Mead algorithm as implemeted in the GSL. The function
     !% values are obtained by successive forward propagations.
-    !%Option oct_algorithm_newuoa 9
+    !%Option oct_algorithm_newuoa 10
     !% This is exactly the same as <tt>oct_algorithm_direct</tt>, except in this case the maximization
     !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, <i>IMA J. Numer. Analysis</i>
     !% <b>28</b>, 649-664 (2008)].
@@ -160,6 +172,8 @@ contains
     case(oct_algorithm_str_iter)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_cg)
+      oct%delta = M_ZERO; oct%eta = M_ONE
+    case(oct_algorithm_bfgs)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
       call parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)

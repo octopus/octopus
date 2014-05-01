@@ -36,7 +36,7 @@ OCTTargetOperator = oct_tg_gstransformation
 
 #OCTCheckGradient = 0.0001
 OCTDirectStep = 0.1
-OCTScheme = oct_algorithm_cg
+OCTScheme = oct_algorithm_bfgs
 OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.20
 

@@ -71,7 +71,7 @@ OCTLocalTarget = "step(x)"
 
 OCTDirectStep = 0.1
 #OCTNumberCheckPoints = 10
-OCTScheme = oct_algorithm_cg
+OCTScheme = oct_algorithm_bfgs
 #OCTCheckGradient = 0.0001
 OCTControlFunctionOmegaMax = 8.0
 OCTControlFunctionRepresentation = control_fourier_series

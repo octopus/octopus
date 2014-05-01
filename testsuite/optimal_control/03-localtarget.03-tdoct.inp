@@ -59,7 +59,7 @@ OCTTargetOperator = oct_tg_td_local
 "exp(-(x-1)^2)"
 %
 
-OCTScheme = oct_algorithm_cg
+OCTScheme = oct_algorithm_bfgs
 OCTControlFunctionOmegaMax = 0.40
 
 OCTDirectStep = 0.1

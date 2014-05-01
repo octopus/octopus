@@ -193,7 +193,7 @@ OCTTargetOperator = oct_tg_spin
 0 | 0 | -1
 %
 
-OCTScheme  = oct_algorithm_cg
+OCTScheme  = oct_algorithm_bfgs
 
 #OCTDoubleCheck = yes
 #OCTDumpIntermediate = yes

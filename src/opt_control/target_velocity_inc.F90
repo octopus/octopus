@@ -62,9 +62,9 @@
     !%Section Calculation Modes::Optimal Control
     !%Description
     !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, and
-    !% <tt>OCTScheme = oct_algorithm_cg</tt> then you must supply 
-    !% the target in terms of the ionic velocities AND the derivatives
-    !% of the target with respect to the ionic velocity components.
+    !% <tt>OCTScheme = oct_algorithm_cg</tt> or <tt>OCTScheme = oct_algorithm_bfgs</tt>
+    !% then you must supply the target in terms of the ionic velocities AND
+    !% the derivatives of the target with respect to the ionic velocity components.
     !% The derivatives are supplied via strings through the block
     !% <tt>OCTVelocityDerivatives</tt>.
     !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
@@ -107,7 +107,7 @@
       call messages_fatal(3)
     end if
        
-    if(oct%algorithm  ==  oct_algorithm_cg) then
+    if(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
       if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
         SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
         do ist=0, geo%natoms-1
@@ -118,7 +118,7 @@
         call parse_block_end(blk)
       else
         message(1) = 'If OCTTargetOperator = oct_tg_velocity, and'
-        message(2) = 'OCTScheme = oct_algorithm_cg, then you must define the'
+        message(2) = 'OCTScheme = oct_algorithm_cg, or OCTScheme = oct_algorithm_bfgs then you must define the'
         message(3) = 'blocks "OCTVelocityTarget" AND "OCTVelocityDerivatives"'
         call messages_fatal(3)
       end if
@@ -162,7 +162,7 @@
     type(target_t),   intent(inout) :: tg
     type(oct_t), intent(in)       :: oct
     PUSH_SUB(target_end_velocity)
-    if(oct%algorithm  ==  oct_algorithm_cg) then
+    if(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm  ==  oct_algorithm_bfgs) then
       SAFE_DEALLOCATE_P(tg%vel_der_array)
       SAFE_DEALLOCATE_P(tg%grad_local_pot)
       SAFE_DEALLOCATE_P(tg%rho)

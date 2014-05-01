@@ -88,7 +88,7 @@ OCTTargetOperator = oct_tg_classical
 
 #OCTCheckGradient = 0.001
 OCTDirectStep = 0.1
-OCTScheme = oct_algorithm_cg
+OCTScheme = oct_algorithm_bfgs
 OCTControlFunctionRepresentation = control_fourier_series_h
 OCTControlFunctionOmegaMax = 10.0
 

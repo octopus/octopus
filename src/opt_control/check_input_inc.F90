@@ -191,6 +191,7 @@
     if(target_type(oct_target)  ==  oct_tg_velocity) then
        if( (oct%algorithm /= oct_algorithm_direct) .and. &
             (oct%algorithm /= oct_algorithm_newuoa) .and. & 
+            (oct%algorithm /= oct_algorithm_bfgs) .and. & 
             (oct%algorithm /= oct_algorithm_cg) ) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", you can only use'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
@@ -198,10 +199,11 @@
           write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
+       if( ((oct%algorithm  ==  oct_algorithm_cg) .or. (oct%algorithm == oct_algorithm_bfgs)) &
+           .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
-          write(message(3), '(a)') 'set "MoveIons = false"'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", or "OCTScheme = oct_algorithm_bfgs",'
+          write(message(3), '(a)') 'then you have to set "MoveIons = false"'
           call messages_fatal(3)
        end if
     end if
@@ -209,6 +211,7 @@
     if(target_type(oct_target)  ==  oct_tg_hhgnew) then
        if( (oct%algorithm /= oct_algorithm_direct) .and. &
             (oct%algorithm /= oct_algorithm_newuoa) .and. & 
+            (oct%algorithm /= oct_algorithm_bfgs) .and. & 
             (oct%algorithm /= oct_algorithm_cg) ) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", you can only use'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
@@ -216,10 +219,11 @@
           write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
+       if( ((oct%algorithm  ==  oct_algorithm_cg) .or. (oct%algorithm  ==  oct_algorithm_bfgs)) &
+           .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", and'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
-          write(message(3), '(a)') 'set "MoveIons = false"'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", or "OCTScheme = oct_algorithm_cg",'
+          write(message(3), '(a)') 'then you have to set "MoveIons = false"'
           call messages_fatal(3)
        end if
     end if
@@ -239,10 +243,10 @@
     select case(controlfunction_mode())
     case(controlfunction_mode_f)
       if(.not. oct_algorithm_is_direct(oct)) then
-        if(oct%algorithm /= oct_algorithm_cg) then
+        if(oct%algorithm /= oct_algorithm_cg .and. oct%algorithm /= oct_algorithm_bfgs) then
           message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
-          message(2) = 'you must use either a gradient-free algorithm, or the conjugate'
-          message(3) = 'gradients algorithm.'
+          message(2) = 'you must use either a gradient-free algorithm, oct_algorithm_cg, or'
+          message(3) = 'oct_algorithm_bfgs algorithm.'
           call messages_fatal(3)
         end if
       end if
