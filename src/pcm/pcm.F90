@@ -80,7 +80,7 @@ module pcm_m
     FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:)
     FLOAT, allocatable           :: arg_li(:,:)   !< 
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
-    FLOAT                        :: epsilon_infty !< Infnite-frequency dielectric constant of the solvent
+    FLOAT                        :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
     FLOAT                        :: gaussian_width!< Parameter to change the width of density of polarization charges  
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                   !! at the tesserae representative points 
@@ -141,7 +141,7 @@ contains
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
     !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
     !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
-    !% only for ground state calculations. Experimental.
+    !% only for ground-state calculations. Experimental.
     !%End
 
     call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
@@ -167,21 +167,22 @@ contains
 
     !%Variable SolventDielectricConstant
     !%Type float
-    !%Default 1.0 (gas phase)
+    !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Static dielectric constant of the solvent (\epsilon_0).
+    !% Static dielectric constant of the solvent (\epsilon_0). 1.0 indicates gas phase.
     !%End
-    call parse_float(datasets_check('SolventDielectricConstant'), CNST(1.0), pcm%epsilon_0)
+    call parse_float(datasets_check('SolventDielectricConstant'), M_ONE, pcm%epsilon_0)
 
     !%Variable SmearingFactor
     !%Type float
-    !%Default 1.0 (The width of the Gaussian density of polarization charges is the area of each tessera)
+    !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Parameter used to control the width of the Gaussian density of polarization charges.
+    !% Parameter used to control the width of the Gaussian density of polarization charges,
+    !% which is the area of each tessera.
     !%End
-    call parse_float(datasets_check('SmearingFactor'), CNST(1.0), pcm%gaussian_width)
+    call parse_float(datasets_check('SmearingFactor'), M_ONE, pcm%gaussian_width)
 
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
@@ -241,7 +242,7 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
-    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units!.
+    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units.
     !%End
     call parse_string(datasets_check('CavityGeometry'), '', pcm%input_cavity)
 

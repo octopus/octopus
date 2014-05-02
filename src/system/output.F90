@@ -514,7 +514,7 @@ contains
       call messages_fatal(1)
     endif
 
-    call messages_obsolete_variable("OutputEvery", "OutputInterval")
+    call messages_obsolete_variable("OutputDuringSCF", "OutputInterval")
 
     ! these kinds of Output do not have a how
     what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &

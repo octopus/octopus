@@ -99,7 +99,7 @@ contains
         hm%energy%Imkinetic = aimag(etmp)
          
         etmp  = zenergy_calc_electronic(hm, gr%der, st, &
-        terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         hm%energy%extern   =  real(etmp)
         hm%energy%Imextern =  aimag(etmp)
         
@@ -111,7 +111,7 @@ contains
     end if
 
     if (hm%pcm%run_pcm) then
-        hm%energy%int_n_pcm = -pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
+      hm%energy%int_n_pcm = -pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
     endif
 
     select case(hm%theory_level)
