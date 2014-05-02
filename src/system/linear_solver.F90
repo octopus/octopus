@@ -94,7 +94,7 @@ contains
   ! ---------------------------------------------------------
   subroutine linear_solver_init(this, gr, prefix, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: prefix
     logical,                intent(in)    :: states_are_real !< for choosing solver
     integer, optional,      intent(in)    :: def_solver

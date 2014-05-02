@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens_error, niter, converged, ik, diff)
+subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens_error, niter, converged, ik, diff)
   type(eigen_arpack_t),intent(in)    :: arpack
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
@@ -43,7 +43,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   character(len=2)     :: which
   	
   !!!!WARNING: No support for spinors, yet. 
-  PUSH_SUB(X(eigen_solver_arpack))
+  PUSH_SUB(X(eigensolver_arpack))
 
 #ifdef HAVE_ARPACK
 
@@ -300,7 +300,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
 #endif
 ! HAVE_ARPACK
 
-   POP_SUB(X(eigen_solver_arpack))
+   POP_SUB(X(eigensolver_arpack))
 
 contains
 
@@ -314,7 +314,7 @@ contains
     integer             :: i, np, np_part
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
-    PUSH_SUB(X(eigen_solver_arpack).av)
+    PUSH_SUB(X(eigensolver_arpack).av)
 
     np = gr%mesh%np
     np_part = gr%mesh%np_part
@@ -346,10 +346,10 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(hpsi)
 
-    POP_SUB(X(eigen_solver_arpack).av)
+    POP_SUB(X(eigensolver_arpack).av)
   end subroutine av
 
-end subroutine X(eigen_solver_arpack)
+end subroutine X(eigensolver_arpack)
 
 !! Local Variables:
 !! mode: f90

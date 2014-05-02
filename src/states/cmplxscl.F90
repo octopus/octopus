@@ -47,6 +47,7 @@ module cmplxscl_m
     FLOAT              :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
     FLOAT              :: penalizationfactor  !< factor which penalizes imaginary parts of eigenvalues when ordering states
     FLOAT              :: localizationradius  !< integration radius used for distinguishing localized vs continuum states
+    FLOAT              :: localizationthreshold !< states with delocalization larger than this value will be considered continuum
     integer            :: nlocalizedstates    !< number of states to be considered localized and thus preferentially occupied
   end type cmplxscl_t
 
@@ -146,6 +147,16 @@ contains
     !% of each wavefunction within ComplexScalingLocalizationRadius.
     !%End    
     call parse_integer(datasets_check('ComplexScalingLocalizedStates'), 0, this%nlocalizedstates)
+
+    !%Variable ComplexScalingLocalizationThreshold
+    !%Type float
+    !%Default 1
+    !%Section Hamiltonian
+    !%Description
+    !% If the part of a state beyond ComplexScalingLocalizationRadius has a norm greater than this value,
+    !% the state will be considered a continuum state.
+    !%End
+    call parse_float(datasets_check('ComplexScalingLocalizationThreshold'), M_ONE, this%localizationthreshold)
 
     !%Variable ComplexScalingAlpha
     !%Type float 

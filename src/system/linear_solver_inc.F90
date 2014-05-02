@@ -24,11 +24,11 @@
 subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(in)    :: hm
-  type(grid_t),          target, intent(inout) :: gr
+  type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
   integer,                       intent(in)    :: ik
-  R_TYPE,                        intent(inout) :: x(:,:)   !< x(gr%mesh%np, d%dim)
+  R_TYPE,                        intent(inout) :: x(:,:)   !< x(gr%mesh%np_part, d%dim)
   R_TYPE,                        intent(in)    :: y(:,:)   !< y(gr%mesh%np, d%dim)
   R_TYPE,                        intent(in)    :: shift
   FLOAT,                         intent(in)    :: tol
@@ -110,7 +110,7 @@ end subroutine X(linear_solver_solve_HXeY)
 subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(in)    :: hm
-  type(grid_t),          target, intent(inout) :: gr
+  type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ik
   type(batch_t),                 intent(inout) :: xb
@@ -147,7 +147,7 @@ end subroutine X(linear_solver_solve_HXeY_batch)
 subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
@@ -225,7 +225,7 @@ end subroutine X(linear_solver_cg)
 subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
@@ -361,7 +361,7 @@ end subroutine X(linear_solver_bicgstab)
 subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
@@ -448,11 +448,11 @@ end subroutine X(linear_solver_multigrid)
 !> This routine applies the operator hx = [H (+ Q) + shift] x
 subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !<  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   !<  x(gr%mesh%np_part, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:,:)  !< Hx(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: shift
 
@@ -478,7 +478,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   do jst = 1, st%nst
     alpha_j = lr_alpha_j(st, jst, ik)
     if(alpha_j == M_ZERO) cycle
-      
+    
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
       call lalg_axpy(gr%mesh%np, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
@@ -493,7 +493,7 @@ end subroutine X(linear_solver_operator)
 ! ---------------------------------------------------------
 subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik
   R_TYPE,                intent(in)    :: shift(:)
@@ -629,7 +629,7 @@ end subroutine X(linear_solver_preconditioner)
 subroutine X(linear_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t),            intent(in)    :: hm
-  type(grid_t),                   intent(inout) :: gr
+  type(grid_t),                   intent(in)    :: gr
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
   integer,                        intent(in)    :: ik
@@ -683,7 +683,7 @@ end subroutine X(linear_solver_sos)
 subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t),   intent(in)    :: hm
-  type(grid_t),          intent(inout) :: gr
+  type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik
   type(batch_t),         intent(inout) :: xb

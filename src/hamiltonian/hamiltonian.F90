@@ -1145,7 +1145,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
     type(hamiltonian_t),      intent(inout) :: this
-    type(grid_t),             intent(inout) :: gr
+    type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
     FLOAT,          optional, intent(in)    :: time

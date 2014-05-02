@@ -25,6 +25,7 @@ module eigensolver_m
   use derivatives_m
   use eigen_arpack_m
   use eigen_cg_m
+  use eigen_feast_m
   use eigen_lobpcg_m
   use eigen_rmmdiis_m
   use energy_calc_m
@@ -82,6 +83,8 @@ module eigensolver_m
 
     type(subspace_t) :: sdiag
 
+    type(feast_t) :: feast !< Contains data used by FEAST solver (at least a linear solver)
+
     integer :: rmmdiis_minimization_iter
 
     logical :: save_mem
@@ -96,7 +99,8 @@ module eigensolver_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12
+       RS_ARPACK  = 12,         &
+       RS_FEAST   = 13
 
 contains
 
@@ -127,7 +131,7 @@ contains
     if(st%cmplxscl%nlocalizedstates == 0) then
       limitvalue = -M_ONE ! all states will be above limitvalue
     else
-      limitvalue = buf(st%cmplxscl%nlocalizedstates) + CNST(1e-4)
+      limitvalue = min(buf(st%cmplxscl%nlocalizedstates) * CNST(1.01), st%cmplxscl%localizationthreshold)
     end if
     
     do ist=1, st%nst
@@ -138,20 +142,34 @@ contains
       end if
     end do
     
-    write(message(1), *) 'Ordering states'
+    write(message(1), *) 'Partial norm'
     call messages_info(1)
     do ist=1, st%nst
-      write(message(1), *) 'norm', ist, boundary_norms(ist)
+      write(message(1), *) ist, boundary_norms(ist)
       call messages_info(1)
     end do
+    write(message(1), *) 'state Re(eps) Im(eps) bnorm^2 score'
+    call messages_info(1)
     do ist=1, st%nst
-      write(message(1), *) 'score', ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
+      write(message(1), '(i4,2x,f11.6,f11.6,4x,f9.4,2x,f9.4)') ist, st%zeigenval%Re(ist, 1), st%zeigenval%Im(ist, 1), &
+        abs(boundary_norms(ist)), score(ist)
+      !'(i4,1x,2f7.3)') ist, st%zeigenval%Re(ist), st%zeigenval%Im(ist)
+      !write(message(1), *) ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
       call messages_info(1)
     end do
 
     call states_sort_complex(gr%mesh, st, eigens%diff, score)
 
     call identify_continuum_states(gr%mesh, st, boundary_norms) ! XXX This is just to get correct ordering again
+    write(message(1), *) 'and again: Score / abs.part.norm'
+    call messages_info(1)
+    do ist=1, st%nst
+      write(message(1), '(i4,2x,f11.6,f11.6,4x,f9.4,2x)') ist, st%zeigenval%Re(ist, 1), st%zeigenval%Im(ist, 1), &
+        abs(boundary_norms(ist))
+      !write(message(1), ist, 
+      write(message(1), *) ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
+      call messages_info(1)
+    end do
 
     SAFE_DEALLOCATE_A(boundary_norms)
     SAFE_DEALLOCATE_A(buf)
@@ -290,6 +308,9 @@ contains
     !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
+    !%Option feast 13
+    !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST
+    !% package.
     !%End
 
     if(st%parallel_in_states) then
@@ -396,6 +417,9 @@ contains
       default_iter = 500  ! empirical value based upon experience
       default_tol = M_ZERO ! default is machine precision   
 #endif 
+    case(RS_FEAST)
+      call messages_experimental("FEAST eigensolver")
+      call feast_init(eigens%feast, gr, st%nst)
 
     case default
       call input_error('Eigensolver')
@@ -457,7 +481,9 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec = 0
 
-    call subspace_init(eigens%sdiag, st, no_sd = eigens%es_type == RS_ARPACK)
+    ! FEAST: subspace diagonalization or not?  I guess not.
+    ! But perhaps something could be gained by changing this.
+    call subspace_init(eigens%sdiag, st, no_sd = (eigens%es_type == RS_ARPACK).or.(eigens%es_type == RS_FEAST))
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -495,6 +521,10 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)
+
+    case(RS_FEAST)
+      call feast_end(eigens%feast)
+    
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -573,16 +603,16 @@ contains
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
           end if
-#if defined(HAVE_ARPACK)
         case(RS_ARPACK)
           ! We don`t have any tests of this presently and would not like
           ! to guarantee that it works right now
           call messages_not_implemented('ARPACK solver for Hermitian problems')
-          !call deigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, &
-          !  eigens%converged(ik), ik, eigens%diff(:,ik)) 
-#endif 
+        case(RS_FEAST)
+          ! same as for ARPACK
+          call messages_not_implemented('FEAST solver for Hermitian problems')
         end select
 
+        ! FEAST: subspace diag or not?
         if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
@@ -614,9 +644,11 @@ contains
           end if
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK)
-          call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
+          call zeigensolver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
             eigens%converged(ik), ik, eigens%diff(:,ik))
 #endif 
+        case(RS_FEAST)
+          call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
         if(eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK) then

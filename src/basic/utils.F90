@@ -270,6 +270,9 @@ contains
 #ifdef HAVE_ETSF_IO
     get_optional_libraries = trim(get_optional_libraries)//' etsf_io'
 #endif
+#ifdef HAVE_FEAST
+    get_optional_libraries = trim(get_optional_libraries)//' feast'
+#endif
 #ifdef HAVE_GDLIB
     get_optional_libraries = trim(get_optional_libraries)//' gdlib'
 #endif

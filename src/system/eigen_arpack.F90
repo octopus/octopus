@@ -48,10 +48,10 @@ module eigen_arpack_m
   implicit none
 
   private
-  public ::                     &
-    eigen_arpack_t,             &
-    deigen_solver_arpack,       &
-    zeigen_solver_arpack,       &
+  public ::                    &
+    eigen_arpack_t,            &
+    deigensolver_arpack,       &
+    zeigensolver_arpack,       &
     arpack_init
 
   type eigen_arpack_t
