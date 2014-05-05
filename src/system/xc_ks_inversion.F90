@@ -34,7 +34,6 @@ module xc_ks_inversion_m
   use mesh_function_m 
   use mesh_m 
   use messages_m 
-  use mix_m 
   use multicomm_m
   use parser_m 
   use poisson_m 
