@@ -19,33 +19,17 @@
 
 module eigen_feast_m
 
-
   use batch_m
-  use batch_ops_m ! dont know if necessary
-  use mesh_batch_m ! dont know if necessary
-  !use comm_m
   use datasets_m ! parse block and such
   use global_m
   use grid_m
   use hamiltonian_m
-  !use io_m
-  !use lalg_basic_m
-  !use lalg_adv_m
-  !use loct_m
-  !use math_m
-  !use mesh_m
-  !use mesh_batch_m
-  !use mesh_function_m
   use linear_solver_m
   use math_m ! some linear solvers are in math for some reason
   use messages_m
-  !use mpi_m
-  !use mpi_lib_m
   use parser_m
   use profiling_m
   use states_m
-  !use states_calc_m
-  !use varinfo_m
   
   implicit none
   
@@ -182,7 +166,7 @@ contains
 
     PUSH_SUB(zeigensolver_feast)
 
-! Let's just compile an empty subroutine if FEAST is not there.  If it isn`t, we`ll raise an error
+! Let`s just compile an empty subroutine if FEAST is not there.  If it isn`t, we`ll raise an error
 #ifdef HAVE_FEAST
 
     np = gr%mesh%np
@@ -315,7 +299,7 @@ contains
       ! case 20 does not occur with symmetric matrices  
       !case(20) !! factorize (zeB-A)^T (needed if transpose of fact cannot be reused) 
       
-      ! case 21 doesn't occur either with symmetric matrices
+      ! case 21 doesn`t occur either with symmetric matrices
       !case(21) !!solve the linear system (ZeB-A)x=work2(1:np,1:M0) result in to work2
       !
 
@@ -341,6 +325,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! FIXME: use messages_info to produce something sensible in parallel.
     print *,'FEAST OUTPUT INFO',info
     if (info==0) then
       print *,'*************************************************'
