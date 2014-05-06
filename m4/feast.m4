@@ -40,6 +40,8 @@ dnl if test $acx_feast_ok = no; then
 dnl   AC_SACRIFICE([GOAT])
 dnl fi
 
+LIBS="$acx_feast_save_LIBS"
+
 if test x"$acx_feast_ok" = xyes; then
   AC_DEFINE(HAVE_FEAST,1,[Defined if you have the FEAST library.])
   $1
