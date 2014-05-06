@@ -21,9 +21,8 @@ dnl how the h would acx_feast be anything other than 'no' at this point?
   esac
 fi
 
-dnl Backup LIBS and (or not) FCFLAGS.  Apparently not
+dnl Backup LIBS
 acx_feast_save_LIBS="$LIBS"
-dnl acx_feast_save_FCFLAGS="$FCFLAGS"
 
 dnl The tests
 AC_MSG_CHECKING([for FEAST])
@@ -44,11 +43,9 @@ LIBS="$acx_feast_save_LIBS"
 
 if test x"$acx_feast_ok" = xyes; then
   AC_DEFINE(HAVE_FEAST,1,[Defined if you have the FEAST library.])
-  $1
 else
   AC_MSG_WARN([Could not find FEAST library.
       	      *** Will compile without FEAST support])
-  $2
 fi
 
 ])
