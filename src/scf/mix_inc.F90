@@ -35,7 +35,7 @@ subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
   
   ASSERT(iter >= 1)
   
-  select case (smix%type_of_mixing)
+  select case (smix%scheme)
   case (MIX_LINEAR)
     call X(mixing_linear)(smix%alpha, smix%d1, smix%d2, smix%d3, vin, vout, vnew)
     
@@ -80,7 +80,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
     end function dotp
   end interface
 
-  integer :: ipos, iter_used, i, j, d1, d2, d3
+  integer :: ipos, i, j, d1, d2, d3
   R_TYPE :: gamma
   R_TYPE, allocatable :: f(:, :, :)
 
@@ -96,6 +96,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   if(iter > 1) then
     ! Store df and dv from current iteration
     ipos = mod(smix%last_ipos, smix%ns) + 1
+    smix%ns_stored = min(smix%ns, smix%ns_stored + 1)
     
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%X(dv)(:, :, :, ipos))
@@ -127,12 +128,11 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   smix%X(f_old)  (1:d1, 1:d2, 1:d3) = f  (1:d1, 1:d2, 1:d3)
   
   ! extrapolate new vector
-  iter_used = min(iter - 1, smix%ns)
-  call X(broyden_extrapolation)(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
+  call X(broyden_extrapolation)(smix%alpha, d1, d2, d3, vin, vnew, smix%ns_stored, f, &
        smix%X(df), smix%X(dv), dotp)
   
   SAFE_DEALLOCATE_A(f)
-  
+
   POP_SUB(X(mixing_broyden))
 end subroutine X(mixing_broyden)
 
@@ -208,6 +208,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
     do j = 1, iter_used
       gamma = gamma + beta(j, i)*w(j)*work(j)
     end do
+
     vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - w(i)*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
         dv(1:d1, 1:d2, 1:d3, i))
   end do
@@ -237,7 +238,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   end interface
   
   integer :: d1, d2, d3
-  integer :: ipos, iter_used
+  integer :: ipos
   R_TYPE, allocatable :: f(:, :, :)
     
   PUSH_SUB(X(mixing_grpulay))
@@ -248,7 +249,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   
   SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
-  
+
   ! we only extrapolate a new vector every two iterations
   select case (mod(iter, 2))
   case (1)
@@ -277,15 +278,15 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
     call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%X(vin_old)(:, :, :), smix%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
-    
+    smix%ns_stored = min(smix%ns_stored + 1, smix%ns + 1)
+
     ! extrapolate new vector
-    iter_used = min(iter/2, smix%ns + 1)
-    call X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, &
-         smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
-         smix%X(dv)(1:d1, 1:d2, 1:d3, 1:iter_used), dotp)
+    call X(pulay_extrapolation)(d2, d3, vin, vout, vnew, smix%ns_stored, f, &
+         smix%X(df)(1:d1, 1:d2, 1:d3, 1:smix%ns_stored), &
+         smix%X(dv)(1:d1, 1:d2, 1:d3, 1:smix%ns_stored), dotp)
 
   end select
-  
+
   SAFE_DEALLOCATE_A(f)
   
   POP_SUB(X(mixing_grpulay))

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2014 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -21,14 +21,16 @@
 
 noinst_LIBRARIES = libscf.a
 
-libscf_a_SOURCES = \
-	lcao.F90 \
-        rdmft.F90 \
- 	scf.F90 \
+libscf_a_SOURCES =       \
+	mix.F90          \
+	lcao.F90         \
+        rdmft.F90        \
+        scf.F90          \
 	ground_state.F90 \
 	ob_lippmann_schwinger.F90
 
-noinst_HEADERS = \
+noinst_HEADERS =     \
+	mix_inc.F90  \
 	lcao_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -36,10 +38,10 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libscf_a_SOURCES)
 
-subspace.o: subspace.F90 subspace_inc.F90
+mix.o : mix.F90 mix_inc.F90
 lcao.o: lcao.F90 lcao_inc.F90
 rdmft.o: rdmft.F90 
-scf.o: scf.F90 lcao.o ob_lippmann_schwinger.o
+scf.o: scf.F90 mix.o lcao.o ob_lippmann_schwinger.o
 ground_state.o: ground_state.F90 scf.o rdmft.o lcao.o 
 ob_lippmann_schwinger.o: ob_lippmann_schwinger.F90
 

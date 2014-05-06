@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2014 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -37,7 +37,6 @@ libmath_a_SOURCES =                      \
 	metis_f.c                        \
 	lalg_adv.F90                     \
 	lapack.F90                       \
-	mix.F90                          \
 	oct_gsl_f.c                      \
 	minimizer_low.c                  \
 	ode_solver.F90                   \
@@ -68,7 +67,6 @@ noinst_HEADERS =                   \
 	lalg_adv_lapack_inc.F90          \
 	lalg_adv_scalapack_inc.F90       \
 	math_inc.F90                     \
-	mix_inc.F90                      \
 	ode_solver_inc.F90               \
 	root_solver_inc.F90              \
 	solvers_inc.F90                  \
@@ -102,7 +100,6 @@ loct_math.o : loct_math.F90
 math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o blas.o
 metis.o : metis.F90
 metis_f.o : metis_f.c
-mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
 oct_gsl_f.o : oct_gsl_f.c
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
 permutations.o : permutations.F90 math.o

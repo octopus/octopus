@@ -61,7 +61,7 @@ subroutine X(sternheimer_solve)(                           &
   mesh => sys%gr%mesh
   st => sys%st
 
-  call mix_clear(this%mixer, func_type = R_TYPE_VAL)
+  call mix_clear(this%mixer)
 
   call mesh_init_mesh_aux(sys%gr%mesh)
 
