@@ -20,6 +20,7 @@
 #include "global.h"
 
 program oct_local_multipoles
+  use atom_m
   use basins_m
   use box_m
   use box_union_m
@@ -30,6 +31,7 @@ program oct_local_multipoles
   use io_m
   use io_binary_m
   use io_function_m
+  use index_m
   use loct_m
   use mesh_m
   use mesh_function_m
@@ -47,11 +49,19 @@ program oct_local_multipoles
 
   implicit none
   
-  type(system_t)    :: sys
-  type(simul_box_t) :: sb
-  integer, parameter   :: BADER = 512
-  integer, allocatable :: dshape(:)
-  FLOAT                :: BaderThreshold
+  type local_domain_t
+    integer                         :: nd
+    type(box_union_t), allocatable  :: domain(:)
+    character(len=15), allocatable  :: lab(:) 
+    integer, allocatable            :: dshape(:)
+    logical, allocatable            :: inside(:,:)
+  end type local_domain_t
+
+  type(system_t)        :: sys
+  type(simul_box_t)     :: sb
+  type(local_domain_t)  :: local
+  integer, parameter    :: BADER = 512
+  FLOAT                 :: BaderThreshold
 
 
   ! Initialize stuff
@@ -87,17 +97,15 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine local_domains()
-    type(box_union_t), allocatable :: domain(:)
     integer                        :: err, id, nd, lmax, iter, l_start, l_end, l_step, last_slash
     integer                        :: length
     FLOAT                          :: default_dt, dt
     FLOAT, allocatable             :: read_ff(:)
     character(64)                  :: filename, folder, folder_default, aux, base_folder
-    character(len=15), allocatable :: lab(:)
     logical                        :: iterate
 
     PUSH_SUB(local_domains)
-
+    
     call io_mkdir('local.multipoles')
     
     message(1) = 'Info: Creating local domains'
@@ -190,6 +198,13 @@ contains
     message(2) = ''
     call messages_info(2)
     
+    !call local_domains_read(local%domain, local%nd, local%lab)
+    call local_init()
+
+    ! Starting loop over selected densities.
+    if ( any( local%dshape(:) == BADER )) then
+      call messages_experimental('Bader Volumes')
+    end if
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
@@ -201,19 +216,20 @@ contains
         write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
         call messages_fatal(1)
       end if
-      call local_domains_read(domain, nd, lab)
+      ! Look for the mesh points inside local domains
+      if(iter == l_start) then
+        call local_inside_domain(local, read_ff, .true.)
+      else
+        call local_inside_domain(local, read_ff, .false.)
+      end if
 
-      call calc_local_multipoles(nd, domain, lab, lmax, read_ff, iter, dt) 
-      SAFE_DEALLOCATE_A(lab)
-      do id = 1, nd
-        call box_union_end(domain(id))
-      end do
-      SAFE_DEALLOCATE_A(domain)
-      SAFE_DEALLOCATE_A(dshape)
+      call calc_local_multipoles(local, lmax, read_ff, iter, dt) 
+
       SAFE_DEALLOCATE_A(read_ff)
-
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
+
+    call local_end()
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
     call messages_info(2)
@@ -221,18 +237,18 @@ contains
   end subroutine local_domains
 
   ! ---------------------------------------------------------
-  !> Reads the information (from the input file) about a local_t variable, initializing
-  !! part of it (it has to be completed later with "local_init").
+  !> Initialize local_domain_t variable, allocating variable 
+  !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_domains_read(domain, ndomain, lab)
-    type(box_union_t), allocatable, intent(out) :: domain(:)
-    integer,                        intent(out) :: ndomain
-    character(len=15), allocatable, intent(out) :: lab(:)
+  subroutine local_init()
+    !type(box_union_t), allocatable, intent(out) :: domain(:)
+    !integer,                        intent(out) :: ndomain
+    !character(len=15), allocatable, intent(out) :: lab(:)
 
-    integer           :: id
+    integer           :: id, ndomain
     type(block_t)     :: blk
 
-    PUSH_SUB(local_domains_read)
+    PUSH_SUB(local_init)
 
     !%Variable LocalDomain
     !%Type block
@@ -242,46 +258,73 @@ contains
     !% selecting a type shape. The domain box will be constructed using the given parameters. 
     !% A local domain could be construct by addition of several box centered on the ions.
     !% The grid points inside this box will belong to the local domain. 
-    !% <tt>
-    !% %LocalDomains
-    !% 'Label' | Shape | rsize  %< | Shape dependencies >%
+    !% 
+    !% The format of this block is the following: 
+    !% 'Label' | Shape | %< | Shape dependencies >%
+    !%  The first field is the label of the domain. 
     !% Label = string with the name of the new local domain.
-    !% Shape = SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM
-    !% Shape dependencies:
-    !% case(SPHERE):         | rsize | %<dim origin coordinates>
-    !% case(CYLINDER):       | rsize | xsize | %<origin coordinates>
-    !% case(PARALLELEPIPED): | %<lsize> | %<origin coordinates>
-    !% case(MINIMUM):        | 'center_list' 
+    !% The second is the shape type of the box used to define the domain.
+    !% Shape = SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BADER
+    !% Some types may need some parameters given in the remaining fields of the row.
+    !% (the valid options are detailed below). 
+    !%
+    !% <tt>%LocalDomains
+    !% <br>case(SPHERE):         | rsize | %<dim origin coordinates>
+    !% <br>case(CYLINDER):       | rsize | xsize | %<origin coordinates>
+    !% <br>case(PARALLELEPIPED): | %<lsize> | %<origin coordinates>
+    !% <br>case(MINIMUM):        | rsize | 'center_list' 
+    !% <br>case(BADER):          | 'center_list' 
+    !% <br>%</tt>
+    !%
     !% rsize < Radius in input length units
     !% xsize < the length of the cylinder in the x-direction 
     !% origin coordinates < in input length units separated by | . where is the box centered.
     !% lsize <  half of the length of the parallelepiped in each direction.
     !% center_list < string containing the list of atoms in xyz file for each domain in the form "2,16-23"
-    !% </tt>
     !% 
     !%End
 
     ! First, find out if there is a LocalDomains block.
-    ndomain = 0
+    local%nd = 0
     if(parse_block(datasets_check('LocalDomains'), blk) == 0) then
-      ndomain = parse_block_n(blk)
+      local%nd = parse_block_n(blk)
     end if
-    SAFE_ALLOCATE(domain(1:ndomain))
-    SAFE_ALLOCATE(dshape(1:ndomain))
-    SAFE_ALLOCATE(lab(1:ndomain))
+    SAFE_ALLOCATE(local%domain(1:local%nd))
+    SAFE_ALLOCATE(local%dshape(1:local%nd))
+    SAFE_ALLOCATE(local%lab(1:local%nd))
+    SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
 
-    block: do id = 1, ndomain
-      call parse_block_string(blk, id-1, 0, lab(id))
-      call read_from_domain_block(blk, id-1, domain(id), dshape(id))
+    block: do id = 1, local%nd
+      call parse_block_string(blk, id-1, 0, local%lab(id))
+      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id))
     end do block
     message(1) = ''
     call messages_info(1)
 
-    POP_SUB(local_domains_read)
-  end subroutine local_domains_read
+    POP_SUB(local_init)
+  end subroutine local_init
 
   ! ---------------------------------------------------------
-  subroutine read_from_domain_block(blk, row, dom, shape)
+  !> Ending local_domain_t variable, allocating variable 
+  !! and reading parameters from input file. 
+  ! ---------------------------------------------------------
+  subroutine local_end()
+    integer id
+
+    PUSH_SUB(local_end)
+      do id = 1, local%nd
+        call box_union_end(local%domain(id))
+      end do
+      SAFE_DEALLOCATE_A(local%lab)
+      SAFE_DEALLOCATE_A(local%domain)
+      SAFE_DEALLOCATE_A(local%dshape)
+      SAFE_DEALLOCATE_A(local%inside)
+
+    POP_SUB(local_end)
+  end subroutine local_end
+
+  ! ---------------------------------------------------------
+  subroutine local_read_from_block(blk, row, dom, shape)
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
     type(box_union_t), intent(inout)     :: dom
@@ -292,7 +335,7 @@ contains
     FLOAT             :: lgst, val, rsize, xsize
     FLOAT             :: center(MAX_DIM), lsize(MAX_DIM)
    
-    PUSH_SUB(read_from_domain_block)
+    PUSH_SUB(local_read_from_block)
 
     ! Initializing variables in dom
     shape = 1
@@ -373,9 +416,9 @@ contains
       end select
     call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
 
-    POP_SUB(read_from_domain_block)
+    POP_SUB(local_read_from_block)
 
-  end subroutine read_from_domain_block
+  end subroutine local_read_from_block
 
   !!---------------------------------------------------------------------------^
   subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
@@ -468,72 +511,47 @@ contains
   ! ---------------------------------------------------------
   !> Computes the local multipoles and writes them to a file. 
   ! ---------------------------------------------------------
-  subroutine calc_local_multipoles(nd, dom, lab, lmax, ff, iter, dt)
-    integer,                intent(in) :: nd
-    type(box_union_t),      intent(in) :: dom(:)
-    character(len=15),      intent(in) :: lab(:)
-    integer,                intent(in) :: lmax
-    FLOAT,                  intent(in) :: ff(:)
-    integer,                intent(in) :: iter
-    FLOAT,                  intent(in) :: dt   
+  subroutine local_inside_domain(lcl, ff, update)
+    type(local_domain_t),   intent(inout) :: lcl
+    FLOAT,                  intent(in)    :: ff(:)
+    logical,                intent(in)    :: update
+    
+    integer             :: id, ip, ix, iunit
+    type(basins_t)      :: basins
+    FLOAT, allocatable  :: ff2(:,:)
+    logical             :: extra_write
+    character(len=64)   :: filename
+    
+    PUSH_SUB(local_inside_domain)
 
-    FLOAT, allocatable   :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
-    integer              :: id, ip, iunit, nspin
-    FLOAT, allocatable   :: ff2(:,:)
-    logical, allocatable :: inside(:,:)
-    type(basins_t)       :: basins
-    character(len=64)    :: filename
-    logical              :: extra_write
-
-    PUSH_SUB(calc_local_multipoles)
-
-    SAFE_ALLOCATE(multipoles(1:(lmax + 1)**2, nd)); multipoles(:,:) = M_ZERO
-
-    ! TODO: For instance spin are not included and just work with real densities.
-
-    nspin = sys%st%d%nspin
-    if ( any( dshape(:) == BADER )) then
-      call messages_experimental('Bader Volumes')
-      SAFE_ALLOCATE(inside(1:sys%gr%mesh%np, nd))
+    if (any(lcl%dshape(:) == BADER)) then
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
+      call add_dens_to_ion_x(ff2,sys%geo)
       call basins_init(basins, sys%gr%mesh)
+      call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-
-      
       call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
-!!$      ! TODO: Make this part optional.    
       if (extra_write) then
         filename = 'basinsmap'
         iunit = io_open(file=trim(filename), action='write')
         do ip = 1, sys%gr%mesh%np
-          write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,id)),id=1,3), &
-               basins%map(ip)
+          write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,ix)),ix=1,3), &
+             basins%map(ip)
         end do
         call io_close(iunit)
       end if
-
-      call bader_union_inside(basins, nd, dom, lab, inside) 
-      call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles, inside)
-      call local_center_of_mass(nd, dom, sys%geo, dcenter)
-      call local_geometry_dipole(nd, dom, sys%geo, ion_dipole)
+      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%inside) 
       SAFE_DEALLOCATE_A(ff2)
-      SAFE_DEALLOCATE_A(inside)
     else
-      call dmf_local_multipoles(sys%gr%mesh, nd, dom, ff, lmax, multipoles)
-      call local_center_of_mass(nd, dom, sys%geo, dcenter)
-      call local_geometry_dipole(nd, dom, sys%geo, ion_dipole)
-    end if  
-    do id = 1, nd
-      multipoles(2:sys%space%dim+1, id) = -ion_dipole(1:sys%space%dim, id)/nspin - multipoles(2:sys%space%dim+1, id)
-      call wrt_local_multipoles(multipoles(:,id), dcenter(:,id), lmax, sys%st%d%nspin, lab(id), iter, dt, &
-                                 local_geometry_charge(dom(id), sys%geo))
-    end do
-    SAFE_DEALLOCATE_A(dcenter)
-    SAFE_DEALLOCATE_A(ion_dipole)
-    SAFE_DEALLOCATE_A(multipoles)
-
-    POP_SUB(calc_local_multipoles)
-  end subroutine calc_local_multipoles
+      do id = 1, lcl%nd
+        if (update .and. lcl%dshape(id) /= BADER) then
+          call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
+        end if 
+      end do
+    end if
+    
+    POP_SUB(local_inside_domain)
+  end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
   subroutine bader_union_inside(basins, nd, dom, lab, inside)
@@ -556,7 +574,7 @@ contains
     inside = .false.
 
     do id = 1, nd
-      if( dshape(id) /= BADER ) then
+      if( local%dshape(id) /= BADER ) then
         call box_union_inside_vec(dom(id), sys%gr%mesh%np, sys%gr%mesh%x, inside(:,id))
       else
         nb = box_union_get_nboxes(dom(id))
@@ -609,6 +627,7 @@ contains
     POP_SUB(bader_union_inside)
 
   end subroutine bader_union_inside
+
   ! ---------------------------------------------------------
   subroutine local_center_of_mass(nd, dom, geo, center)
     integer,           intent(in)  :: nd 
@@ -639,6 +658,61 @@ contains
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
+
+  ! ---------------------------------------------------------
+  subroutine add_dens_to_ion_x(ff, geo)
+    FLOAT,              intent(inout)   :: ff(:,:)
+    type(geometry_t),   intent(in)      :: geo
+
+    integer :: ia, ix, rankmin
+    FLOAT   :: dmin
+
+    PUSH_SUB(add_dens_to_ion_x)
+
+    do ia = 1, geo%natoms
+      ix = mesh_nearest_point(sys%gr%mesh, geo%atom(ia)%x, dmin, rankmin)
+      ff(ix,1) = ff(ix,1) + species_z(geo%atom(ia)%spec)
+    end do
+
+    POP_SUB(add_dens_to_ion_x)
+  end subroutine add_dens_to_ion_x
+
+  ! ---------------------------------------------------------
+  ! TODO: Move all these remaining subroutines to local_write module
+  ! ---------------------------------------------------------
+  !> Computes the local multipoles and writes them to a file. 
+  ! ---------------------------------------------------------
+  subroutine calc_local_multipoles(lcl, lmax, ff, iter, dt)
+    type(local_domain_t),   intent(in)  :: lcl 
+    integer,                intent(in)  :: lmax
+    FLOAT,                  intent(in)  :: ff(:)
+    integer,                intent(in)  :: iter
+    FLOAT,                  intent(in)  :: dt   
+
+    FLOAT, allocatable   :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
+    integer              :: id, ip, iunit, nspin
+
+    PUSH_SUB(calc_local_multipoles)
+
+    SAFE_ALLOCATE(multipoles(1:(lmax + 1)**2, lcl%nd)); multipoles(:,:) = M_ZERO
+
+    ! TODO: For instance spin are not included and just work with real densities.
+
+    nspin = sys%st%d%nspin
+    call dmf_local_multipoles(sys%gr%mesh, lcl%nd, lcl%domain, ff, lmax, multipoles, lcl%inside)
+    call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, dcenter)
+    call local_geometry_dipole(lcl%nd, lcl%domain, sys%geo, ion_dipole)
+    do id = 1, lcl%nd
+      multipoles(2:sys%space%dim+1, id) = -ion_dipole(1:sys%space%dim, id)/nspin - multipoles(2:sys%space%dim+1, id)
+      call wrt_local_multipoles(multipoles(:,id), dcenter(:,id), lmax, sys%st%d%nspin, lcl%lab(id), iter, dt, &
+                                 local_geometry_charge(lcl%domain(id), sys%geo))
+    end do
+    SAFE_DEALLOCATE_A(dcenter)
+    SAFE_DEALLOCATE_A(ion_dipole)
+    SAFE_DEALLOCATE_A(multipoles)
+
+    POP_SUB(calc_local_multipoles)
+  end subroutine calc_local_multipoles
 
   ! ---------------------------------------------------------
   subroutine local_geometry_dipole(nd, dom, geo, dipole)
