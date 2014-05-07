@@ -89,9 +89,9 @@ contains
 
   subroutine poisson_libisf_init(this, mesh, cube, soft_coulb_param)
     type(poisson_libisf_t), intent(out)   :: this
-    type(mesh_t),        intent(inout) :: mesh
-    type(cube_t),        intent(inout) :: cube
-    FLOAT, optional,     intent(in)    :: soft_coulb_param
+    type(mesh_t),           intent(inout) :: mesh
+    type(cube_t),           intent(inout) :: cube
+    FLOAT, optional,        intent(in)    :: soft_coulb_param
 
 #ifdef HAVE_LIBISF
     logical data_is_parallel
@@ -113,6 +113,7 @@ contains
     !% If "yes", data is parallelized. The Z axis of the input (rho) vector
     !% is split among the MPI processes.
     !% If "no", entire input and output vector is saved in all the MPI processes.
+    !% If K-points parallelization is used, "no" must be selected
     !%End
     call parse_logical('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then

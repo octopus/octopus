@@ -133,16 +133,16 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, all_nodes_comm, label, theta, qq)
+  subroutine poisson_init(this, der, geo, mc, label, theta, qq)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(geometry_t),            intent(in)  :: geo
-    integer,                     intent(in)  :: all_nodes_comm
+    type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
 
-    logical :: need_cube
+    logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
     FLOAT :: fft_alpha
     character*60 :: str
@@ -460,6 +460,24 @@ contains
       need_cube = .true.
     end if
 
+    if (this%method == POISSON_LIBISF .and. multicomm_have_slaves(mc)) then
+      message(1) = 'Task parallelization is not implemented with '
+      message(2) = 'the new ISF method'
+      call messages_fatal(2)
+    end if
+    
+    call parse_logical('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
+    write(*,*) "PoissonSolverISFParallelData", isf_data_is_parallel
+    if (this%method == POISSON_LIBISF &
+         .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) &
+         .and. isf_data_is_parallel ) then
+      message(1) = 'K points parallelization is not implemented with '
+      message(2) = 'the new ISF method with partitioned data.'
+      message(3) = 'Try setting PoissonSolverISFParallelData = no'
+      call messages_fatal(2)
+    end if
+      
+
     if (this%method == POISSON_FFT) then
 
       need_cube = .true.
@@ -533,7 +551,7 @@ contains
       end if
     end if
 
-    call poisson_kernel_init(this, geo, all_nodes_comm)
+    call poisson_kernel_init(this, geo, mc%master_comm)
 
     POP_SUB(poisson_init)
   end subroutine poisson_init

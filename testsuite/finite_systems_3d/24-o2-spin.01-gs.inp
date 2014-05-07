@@ -15,3 +15,4 @@ Spacing = 0.55
 Radius = 6
 
 ParallelizationStrategy = par_kpoints
+#For future reference: PoissonSolverISFParallelData = no
