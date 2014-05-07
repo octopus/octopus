@@ -95,7 +95,6 @@ contains
     REAL_DOUBLE :: energy
 
     real (8), allocatable :: mass(:)
-    real (8) :: au_mass
     integer :: iatom, imass
     
     PUSH_SUB(geom_opt_run)
@@ -137,19 +136,19 @@ contains
         real(g_opt%toldr, 8), g_opt%max_iter, &
         calc_point_ng, write_iter_info_ng, energy, ierr)
     case(MINMETHOD_FIRE)
-      au_mass = CNST(5.485799110e-4)
-      SAFE_ALLOCATE(mass(1:g_opt%size))
 
+      SAFE_ALLOCATE(mass(1:g_opt%size))
       imass = 1
       do iatom = 1, sys%geo%natoms
         if(g_opt%fixed_atom == iatom) cycle
-        mass(imass:imass + 2) = species_weight(sys%geo%atom(iatom)%spec)*au_mass
+        mass(imass:imass + 2) = species_weight(sys%geo%atom(iatom)%spec)
         imass = imass + 3
       end do
 
       call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8),&
         g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass)
       SAFE_DEALLOCATE_A(mass)
+
     case default
       call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
         real(g_opt%line_tol, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
@@ -188,6 +187,7 @@ contains
       integer :: iter
       character*100 :: filename
       FLOAT :: default_toldr
+      real(8) :: default_step
 
       PUSH_SUB(geom_opt_run.init_)
 
@@ -301,10 +301,17 @@ contains
       !%Type float
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Initial step for the geometry optimizer. The default is 0.5.
+      !% Initial step for the geometry optimizer. The default is 0.5,
+      !% except for the FIRE minimizer, which sets a default value of 50.0,
+      !% and correspond to the initial time-step.
       !% WARNING: in some weird units.
       !%End
-      call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step)
+      if(g_opt%method /= MINMETHOD_FIRE ) then
+        default_step = M_HALF
+      else
+        default_step = CNST(50.0)
+      endif
+      call parse_float(datasets_check('GOStep'), default_step, g_opt%step)
 
       !%Variable GOLineTol
       !%Type float

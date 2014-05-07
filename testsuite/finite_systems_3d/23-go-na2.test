@@ -20,3 +20,10 @@ match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ;  0.00258
 match ; Force    [2] ; GREP(static/info, 'Forces on the ions', 50, 3) ; -0.002584
 match ; Geometry [1] ; LINE(min.xyz, 3, 50) ; -2.884259
 match ; Geometry [2] ; LINE(min.xyz, 4, 50) ;  2.615741
+
+Input      : 23-go-na2.03-fire.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.41788010
+match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ;  0.000239
+match ; Force    [2] ; GREP(static/info, 'Forces on the ions', 50, 3) ; -0.000239
+match ; Geometry [1] ; LINE(min.xyz, 3, 50) ; -2.776819
+match ; Geometry [2] ; LINE(min.xyz, 4, 50) ;  2.776819
