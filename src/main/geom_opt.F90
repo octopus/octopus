@@ -304,7 +304,7 @@ contains
       !%Description
       !% Initial step for the geometry optimizer. The default is 0.5,
       !% except for the FIRE minimizer, which sets a default value of 50.0,
-      !% and correspond to the initial time-step.
+      !% and corresponds to the initial time-step.
       !% WARNING: in some weird units.
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then

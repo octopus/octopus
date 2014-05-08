@@ -32,7 +32,6 @@ program oct_local_multipoles
   use io_m
   use io_binary_m
   use io_function_m
-  use index_m
   use kick_m
   use loct_m
   use local_write_m
@@ -323,18 +322,18 @@ contains
   ! ---------------------------------------------------------
   subroutine local_end(local)
     type(local_domain_t), intent(inout) :: local
-    integer id
+    integer :: id
 
     PUSH_SUB(local_end)
-      do id = 1, local%nd
-        call box_union_end(local%domain(id))
-      end do
-      !call local_write_end(local%writ)
-      SAFE_DEALLOCATE_A(local%lab)
-      SAFE_DEALLOCATE_A(local%domain)
-      SAFE_DEALLOCATE_A(local%dshape)
-      SAFE_DEALLOCATE_A(local%inside)
-      SAFE_DEALLOCATE_A(local%dcm)
+    do id = 1, local%nd
+      call box_union_end(local%domain(id))
+    end do
+    !call local_write_end(local%writ)
+    SAFE_DEALLOCATE_A(local%lab)
+    SAFE_DEALLOCATE_A(local%domain)
+    SAFE_DEALLOCATE_A(local%dshape)
+    SAFE_DEALLOCATE_A(local%inside)
+    SAFE_DEALLOCATE_A(local%dcm)
 
     POP_SUB(local_end)
   end subroutine local_end
@@ -452,6 +451,7 @@ contains
     type(box_t), allocatable :: boxes(:)
 
     PUSH_SUB(local_domains_init)
+
     SAFE_ALLOCATE(boxes(1:nb))
     bsize(:) = M_ZERO
     ibox = 1
@@ -590,6 +590,7 @@ contains
     character(len=64) :: filename
 
     PUSH_SUB(bader_union_inside)
+
     SAFE_ALLOCATE(xi(1:sys%space%dim))
     inside = .false.
 
@@ -702,7 +703,6 @@ contains
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
-!
 
 end program oct_local_multipoles
 

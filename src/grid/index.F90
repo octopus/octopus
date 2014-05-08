@@ -23,16 +23,17 @@
 module index_m
   use global_m
   use hypercube_m
+  use messages_m
   use simul_box_m
 
   implicit none
 
   private
-  public ::                   &
-       index_t,               &
-       index_from_coords,     &
-       index_from_coords_vec, &
-       index_to_coords
+  public ::                &
+    index_t,               &
+    index_from_coords,     &
+    index_from_coords_vec, &
+    index_to_coords
 
   type index_t
     type(hypercube_t)          :: hypercube
@@ -57,6 +58,8 @@ contains
 
     integer :: ix2(MAX_DIM), idir
 
+    PUSH_SUB(index_from_coords)
+
     forall (idir = 1:idx%dim) ix2(idir) = ix(idir)
     forall (idir = idx%dim + 1:MAX_DIM) ix2(idir) = 0
 
@@ -66,6 +69,7 @@ contains
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
     
+    PUSH_SUB(index_from_coords)
   end function index_from_coords
 
   subroutine index_from_coords_vec(idx, npoints, ix, index)
@@ -76,6 +80,7 @@ contains
 
     integer :: ix2(MAX_DIM), idir, ip
 
+    PUSH_SUB(index_from_coords_vec)
     ix2 = 0
 
     if(.not. idx%is_hypercube) then
@@ -89,6 +94,7 @@ contains
       end do
     end if
     
+    POP_SUB(index_from_coords_vec)
   end subroutine index_from_coords_vec
 
   !> Given a _global_ point index, this function returns the set of
