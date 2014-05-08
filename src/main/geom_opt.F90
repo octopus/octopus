@@ -258,6 +258,7 @@ contains
       !% for completeness, since it is free.
       !%Option fire 8
       !% (Experimental) The FIRE algorithm.
+      !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P.Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
