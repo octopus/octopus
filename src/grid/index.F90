@@ -69,7 +69,7 @@ contains
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
     
-    PUSH_SUB(index_from_coords)
+    POP_SUB(index_from_coords)
   end function index_from_coords
 
   subroutine index_from_coords_vec(idx, npoints, ix, index)
