@@ -188,7 +188,7 @@ contains
     !%Default 0.01
     !%Section Utilities::oct-local_multipoles
     !%Description
-    !% This variable set the threshold for the basins calculations. Recommended values: 
+    !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% Recommended values: 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
     call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
@@ -208,7 +208,7 @@ contains
 
     ! Starting loop over selected densities.
     if ( any( local%dshape(:) == BADER )) then
-      call messages_experimental('Bader Volumes')
+      call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
     ! TODO: use new module local_write_m
