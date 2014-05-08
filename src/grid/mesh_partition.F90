@@ -214,7 +214,7 @@ contains
     ! Iterate over number of vertices.
     do iv = 1, lsize(ipart)
       ! Get coordinates of point iv (vertex iv).
-      call index_to_coords(mesh%idx, mesh%sb%dim, istart(ipart)-1 + iv, ix)
+      call index_to_coords(mesh%idx, istart(ipart)-1 + iv, ix)
 
       ! Set entry in index table.
       xadj(iv) = ne
@@ -229,7 +229,7 @@ contains
         if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
+          inb = index_from_coords(mesh%idx, jx)
           if(inb /= 0 .and. inb <= nv_global) then
             ! Store a new edge and increment edge counter.
             adjncy(ne) = inb
@@ -446,12 +446,12 @@ contains
       ii = mesh%np_global + istart - 1 + is
 
       !get the coordinates of the point
-      call index_to_coords(mesh%idx, mesh%sb%dim, ii, ix)
+      call index_to_coords(mesh%idx, ii, ix)
 
       do jj = 1, stencil%size
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
         if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
-        ip = index_from_coords(mesh%idx, mesh%sb%dim, jx)
+        ip = index_from_coords(mesh%idx, jx)
         if (ip > 0 .and. ip <= mesh%np_global) neighbours_index((is-1)*stencil%size + jj) = ip
       end do
 
@@ -689,13 +689,13 @@ contains
         if(ipart /= point_to_part(ip)) cycle
 
         INCR(nlocal(ipart), 1)
-        call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
+        call index_to_coords(mesh%idx, ip, ipcoords)
         
         do istencil = 1, stencil%size
           jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)
         end do
         
-        call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
+        call index_from_coords_vec(mesh%idx, stencil%size, jpcoords, jp)
         
         do istencil = 1, stencil%size
           if(stencil%center == istencil) cycle

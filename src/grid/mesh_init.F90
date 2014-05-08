@@ -79,7 +79,6 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   mesh%sb => sb     ! keep an internal pointer
-  mesh%idx%sb => sb
   mesh%spacing = spacing ! this number can change in the following
   mesh%use_curvilinear = cv%method /= CURV_METHOD_UNIFORM
   mesh%cv => cv
@@ -87,6 +86,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   ! multiresolution requires the curvilinear coordinates machinery
   mesh%use_curvilinear = mesh%use_curvilinear .or. sb%mr_flag
 
+  mesh%idx%dim = sb%dim
   mesh%idx%enlarge = enlarge
 
   if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
@@ -203,9 +203,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   call profiling_in(mesh_init_prof)
 
   ! enlarge mesh for boundary points
+  mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
   mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
-  if(mesh%idx%sb%box_shape == HYPERCUBE) then
+  if(mesh%idx%is_hypercube) then
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
     mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
@@ -473,7 +474,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:MAX_DIM))
   end if
   
-  if(mesh%idx%sb%box_shape /= HYPERCUBE) then
+  if(.not. mesh%idx%is_hypercube) then
     call create_x_lxyz()
   else if(.not. mesh%parallel_in_domains) then
     do ip = 1, mesh%np_part_global
@@ -915,11 +916,11 @@ contains
 
       do ip = 1, mesh%np_global
         ipart = mesh%vp%part_vec(ip)
-        call index_to_coords(mesh%idx, mesh%sb%dim, ip, idx)
+        call index_to_coords(mesh%idx, ip, idx)
         do jj = 1, stencil%size
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-            jpart = mesh%vp%part_vec(index_from_coords(mesh%idx, mesh%sb%dim, jx))
+            jpart = mesh%vp%part_vec(index_from_coords(mesh%idx, jx))
             if(ipart /= jpart ) nb(ipart, jpart) = .true.
           end if
         end do
@@ -1053,7 +1054,7 @@ contains
       ! Do the inner points.
       do ip = 1, min(np, mesh%np)
         kk = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        call index_to_coords(mesh%idx, sb%dim, kk, jj)
+        call index_to_coords(mesh%idx, kk, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
         mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
@@ -1062,7 +1063,7 @@ contains
         ! Do the ghost points.
         do ip = 1, mesh%vp%np_ghost
           kk = mesh%vp%ghost(mesh%vp%xghost + ip - 1)
-          call index_to_coords(mesh%idx, sb%dim, kk, jj)
+          call index_to_coords(mesh%idx, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip + mesh%np) = &
             mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
@@ -1070,7 +1071,7 @@ contains
         ! Do the boundary points.
         do ip = 1, mesh%vp%np_bndry
           kk = mesh%vp%bndry(mesh%vp%xbndry + ip - 1)
-          call index_to_coords(mesh%idx, sb%dim, kk, jj)
+          call index_to_coords(mesh%idx, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &
             mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) &
@@ -1187,7 +1188,7 @@ contains
       else ! no multiresolution
 
         do ip = 1, np
-          call index_to_coords(mesh%idx, sb%dim, ip, jj)
+          call index_to_coords(mesh%idx, ip, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
         end do

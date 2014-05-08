@@ -335,7 +335,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     ! each processor needs the full map of points for send and recv
     do ip = 1, gr%mesh%np_global
       ! get present position
-      call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+      call index_to_coords(gr%mesh%idx, ip, ix)
   
       ! invert coordinates of ipart1 and ipart2
       ixp = ix
@@ -346,7 +346,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
           ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
       
       ! get position of exchanged point
-      ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+      ipp = index_from_coords(gr%mesh%idx, ixp)
       ASSERT (ipp <= gr%mesh%np_global)
       forward_map_exchange(ip) = ipp
     end do ! ip
@@ -425,7 +425,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
 
     do ip = 1, gr%mesh%np_global
       ! get present position
-      call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+      call index_to_coords(gr%mesh%idx, ip, ix)
       ! initialize coordinates for all particles
       ixp = ix
       ! permute the particles labeled spin up 
@@ -436,7 +436,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
         ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb) ! part1 to 2
       end do
       ! get position of exchanged point
-      forward_map_exchange(ip) = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+      forward_map_exchange(ip) = index_from_coords(gr%mesh%idx, ixp)
     end do ! ip
   
     if (gr%mesh%parallel_in_domains) then

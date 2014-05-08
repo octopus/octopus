@@ -830,7 +830,7 @@ contains
       SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
 
       do counter = 1, der%mesh%np
-        call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
+        call  index_to_coords(der%mesh%idx,counter,conversion)
         conversion(1)=conversion(1)+nx_half
         conversion(2)=conversion(2)+ny_half
         conversion(3)=conversion(3)+nz_half
@@ -842,7 +842,7 @@ contains
 
       do counter = 1, der%mesh%np
 
-        call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
+        call  index_to_coords(der%mesh%idx,counter,conversion)
 
         conversion(1) = conversion(1) + nx_half
         conversion(2) = conversion(2) + ny_half

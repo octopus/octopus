@@ -336,10 +336,11 @@ contains
 
     PUSH_SUB(multigrid_mesh_half)
 
-    mesh_out%sb              => mesh_in%sb
-    mesh_out%idx%sb          => mesh_in%idx%sb
-    mesh_out%use_curvilinear =  mesh_in%use_curvilinear
-    mesh_out%cv              => mesh_in%cv
+    mesh_out%sb               => mesh_in%sb
+    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
+    mesh_out%idx%dim          =  mesh_in%idx%dim
+    mesh_out%use_curvilinear  =  mesh_in%use_curvilinear
+    mesh_out%cv               => mesh_in%cv
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
@@ -363,7 +364,8 @@ contains
     PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
-    mesh_out%idx%sb         => mesh_in%idx%sb
+    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
+    mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
     mesh_out%cv             => mesh_in%cv
 

@@ -36,7 +36,8 @@ module index_m
 
   type index_t
     type(hypercube_t)          :: hypercube
-    type(simul_box_t), pointer :: sb
+    logical                    :: is_hypercube     !< true if the box shape is an hypercube
+    integer                    :: dim              !< the dimension
     integer                    :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
     integer                    :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
     integer, pointer           :: lxyz(:,:)        !< return x, y and z for each point
@@ -50,43 +51,41 @@ contains
   !> This function takes care of the boundary conditions for a given
   !! vector of integer coordinates it returns the true _global_ index
   !! of the point.
-  integer function index_from_coords(idx, dim, ix) result(index)
-    type(index_t),      intent(in)    :: idx
-    integer,            intent(in)    :: dim
-    integer,            intent(in)    :: ix(:)
+  integer function index_from_coords(idx, ix) result(index)
+    type(index_t), intent(in)    :: idx
+    integer,       intent(in)    :: ix(:)
 
     integer :: ix2(MAX_DIM), idir
 
-    forall (idir = 1:dim) ix2(idir) = ix(idir)
-    forall (idir = dim + 1:MAX_DIM) ix2(idir) = 0
+    forall (idir = 1:idx%dim) ix2(idir) = ix(idir)
+    forall (idir = idx%dim + 1:MAX_DIM) ix2(idir) = 0
 
-    if(idx%sb%box_shape /= HYPERCUBE) then
+    if(.not. idx%is_hypercube) then
       index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
     else
-      call hypercube_x_to_i(idx%hypercube, dim, idx%nr, idx%enlarge(1), ix, index)
+      call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
     
   end function index_from_coords
 
-  subroutine index_from_coords_vec(idx, dim, npoints, ix, index)
-    type(index_t),      intent(in)    :: idx
-    integer,            intent(in)    :: dim
-    integer,            intent(in)    :: npoints
-    integer,            intent(in)    :: ix(:, :)
-    integer,            intent(out)   :: index(:)
+  subroutine index_from_coords_vec(idx, npoints, ix, index)
+    type(index_t), intent(in)    :: idx
+    integer,       intent(in)    :: npoints
+    integer,       intent(in)    :: ix(:, :)
+    integer,       intent(out)   :: index(:)
 
     integer :: ix2(MAX_DIM), idir, ip
 
     ix2 = 0
 
-    if(idx%sb%box_shape /= HYPERCUBE) then
+    if(.not. idx%is_hypercube) then
       do ip = 1, npoints
-        forall (idir = 1:dim) ix2(idir) = ix(idir, ip)
+        forall (idir = 1:idx%dim) ix2(idir) = ix(idir, ip)
         index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       end do
     else
       do ip = 1, npoints
-        call hypercube_x_to_i(idx%hypercube, dim, idx%nr, idx%enlarge(1), ix, index(ip))
+        call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index(ip))
       end do
     end if
     
@@ -94,35 +93,33 @@ contains
 
   !> Given a _global_ point index, this function returns the set of
   !! integer coordinates of the point.
-  pure subroutine index_to_coords(idx, dim, ip, ix)
-    type(index_t),      intent(in)    :: idx
-    integer,            intent(in)    :: dim
-    integer,            intent(in)    :: ip
-    integer,            intent(out)   :: ix(:)
+  pure subroutine index_to_coords(idx, ip, ix)
+    type(index_t), intent(in)    :: idx
+    integer,       intent(in)    :: ip
+    integer,       intent(out)   :: ix(:)
 
     integer :: idir 
 
     ! We set all ix to zero first (otherwise the non-existent dimensions would be 
     ! undefined on exit).
     ix = 0
-    if(idx%sb%box_shape /= HYPERCUBE) then
-      forall (idir = 1:dim) ix(idir) = idx%lxyz(ip, idir)
+    if(.not. idx%is_hypercube) then
+      forall (idir = 1:idx%dim) ix(idir) = idx%lxyz(ip, idir)
     else
-      call hypercube_i_to_x(idx%hypercube, dim, idx%nr, idx%enlarge(1), ip, ix)
+      call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
     end if
   end subroutine index_to_coords
 
   !> This function returns .true. if the coordinates are inside the
   !! inner cube (without the enlargement).
-  logical pure function coords_in_inner_cube(idx, dim, ix) result(inside)
-    type(index_t),      intent(in)    :: idx
-    integer,            intent(in)    :: dim
-    integer,            intent(in)    :: ix(:)
+  logical pure function coords_in_inner_cube(idx, ix) result(inside)
+    type(index_t), intent(in)    :: idx
+    integer,       intent(in)    :: ix(:)
     
     integer :: idir
 
     inside = .true.
-    do idir = 1, dim
+    do idir = 1, idx%dim
       inside = inside &
            .and. (ix(idir) > idx%nr(1, idir) + idx%enlarge(idir)) &
            .and. (ix(idir) < idx%nr(2, idir) - idx%enlarge(idir))

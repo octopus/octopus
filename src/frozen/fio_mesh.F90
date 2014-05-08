@@ -16,6 +16,9 @@ module fio_mesh_m
   use mesh_cube_map_m, only: mesh_cube_map_init
   !use mesh_init_m,     only: mesh_get_vol_pp
 
+  use simul_box_m, only:      &
+    HYPERCUBE
+
   use mesh_m, only:           &
     mesh_init_from_file,      &
     mesh_lxyz_init_from_file, &
@@ -66,7 +69,8 @@ contains
       call io_close(iunit)
       this%np=this%np_global
       this%np_part=this%np_part_global
-      this%idx%sb=>sb
+      this%idx%is_hypercube = sb%box_shape == HYPERCUBE
+      this%idx%dim = sb%dim
       SAFE_ALLOCATE(this%idx%lxyz(this%np_part_global,MAX_DIM))
       i11=this%idx%nr(1,1)
       i21=this%idx%nr(2,1)

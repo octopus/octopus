@@ -768,7 +768,7 @@ contains
             ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
             nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
             do counter = 1, der%mesh%np
-              call index_to_coords(der%mesh%idx, der%mesh%sb%dim, counter, conversion)
+              call index_to_coords(der%mesh%idx, counter, conversion)
               conversion(1) = conversion(1) + nx_half
               conversion(2) = conversion(2) + ny_half
               conversion(3) = conversion(3) + nz_half

@@ -336,11 +336,11 @@ contains
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ip = ip + 1
       ! Get coordinates of current point.
-      call index_to_coords(idx, dim, vp%local(gip), p1)
+      call index_to_coords(idx, vp%local(gip), p1)
       ! For all points in stencil.
       do jj = 1, stencil%size
         ! Get point number of possible ghost point.
-        index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
+        index = index_from_coords(idx, p1(:) + stencil%points(:, jj))
         ASSERT(index /= 0)
         ! Global index can be either in the mesh or in the boundary.
         ! Different treatment is needed for each case.
@@ -367,12 +367,12 @@ contains
 
       vp%send_count(ipart) = vp%send_count(ipart) + 1
       ! Get coordinates of current point.
-      call index_to_coords(idx, dim, vp%local(gip), p1)
+      call index_to_coords(idx, vp%local(gip), p1)
 
       ! For all points in stencil.
       do jj = 1, stencil%size
         ! Get point number of possible ghost point.
-        index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
+        index = index_from_coords(idx, p1(:) + stencil%points(:, jj))
         ASSERT(index /= 0)
         ! Global index can be either in the mesh or in the boundary.
         ! Different treatment is needed for each case.
@@ -859,7 +859,7 @@ contains
     ! no PUSH_SUB, called too often
     jx = ix
     jx(dim_pad) = jx(dim_pad) + pad
-    global_point = index_from_coords(idx, 3, jx)
+    global_point = index_from_coords(idx, jx)
     
     if (mpi_world%size == 1) then 
       local_point = global_point

@@ -94,7 +94,7 @@ contains
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
+      call index_to_coords(mesh%idx, ip, ixyz)
       ixyz = ixyz + cube%center
 
       do ii = 0, nn - 1
@@ -110,7 +110,7 @@ contains
     SAFE_ALLOCATE(global_index(1:mesh%np))
     do ip = 1, mesh%np
       global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-      call index_to_coords(mesh%idx, mesh%sb%dim, global_index(ip), ixyz)
+      call index_to_coords(mesh%idx, global_index(ip), ixyz)
       ixyz = ixyz + cube%center
       cube_part_local(ip) = cube_point_to_process(ixyz, part)
     end do
@@ -133,7 +133,7 @@ contains
     end do
 
     do ip = 1, this%m2c_nrec
-      call index_to_coords(mesh%idx, mesh%sb%dim, cf_order(ip), ixyz)
+      call index_to_coords(mesh%idx, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
 
       if (.not. cube_global2local(cube, ixyz, lxyz)) then
@@ -158,7 +158,7 @@ contains
     ipos = 0
     do ip = 1, mesh%np_global
 
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
+      call index_to_coords(mesh%idx, ip, ixyz)
       ixyz = ixyz + cube%center
       if (cube_point_to_process(ixyz, part) == cube%mpi_grp%rank + 1) then
         ipos = ipos + 1
@@ -178,7 +178,7 @@ contains
     SAFE_ALLOCATE(this%c2m_cf_order(1:this%c2m_nsend, 1:3))
     SAFE_ALLOCATE(this%c2m_mf_order(1:this%c2m_nrec))
      do ip = 1, this%c2m_nsend
-      call index_to_coords(mesh%idx, mesh%sb%dim, cf_order(ip), ixyz)
+      call index_to_coords(mesh%idx, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
 
       if (.not. cube_global2local(cube, ixyz, lxyz)) then

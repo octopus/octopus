@@ -634,7 +634,7 @@ contains
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do ip = 1, np_max
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixvect)
+      call index_to_coords(mesh%idx, ip, ixvect)
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
         xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -678,9 +678,9 @@ contains
 ! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
         ixvect_test = 1
         ixvect_test(jdim) = ix
-        ip = index_from_coords(mesh%idx, mesh%sb%dim, ixvect_test)
+        ip = index_from_coords(mesh%idx, ixvect_test)
         if(ip /= 0) then 
-          call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixvect_test)
+          call index_to_coords(mesh%idx, ip, ixvect_test)
           if(ixvect_test(jdim) == 0) exit
         end if
       end do
@@ -696,7 +696,7 @@ contains
 
         ixvect(d2) = iy
         ixvect(d3) = iz
-        ip = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
+        ip = index_from_coords(mesh%idx, ixvect)
 
         if(ip <= mesh%np_global .and. ip > 0) then
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))

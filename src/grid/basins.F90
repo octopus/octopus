@@ -165,9 +165,9 @@ contains
       point = 0
       if(mesh%parallel_in_domains) then
         ! When running in parallel, get global number of point i.
-        call index_to_coords(mesh%idx, mesh%sb%dim, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
+        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
       else
-        call index_to_coords(mesh%idx, mesh%sb%dim, ii, point)
+        call index_to_coords(mesh%idx, ii, point)
       end if
 
       f_max   = f(ii)
@@ -182,7 +182,7 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = index_from_coords(mesh%idx, mesh%sb%dim, point2)
+            index = index_from_coords(mesh%idx, point2)
 
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle

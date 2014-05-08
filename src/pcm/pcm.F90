@@ -554,7 +554,7 @@ contains
    point_0 = NINT(coord_0/mesh%spacing)
    
    write(nearest_idx_unit,*) vert_idx(1)
-   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, mesh%sb%dim, point_0)
+   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
 
    sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
    sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
@@ -567,34 +567,34 @@ contains
 
   !POINT P2
    point_f(2) = point_f(2) + sign_y
-   vert_idx(2) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(2) = index_from_coords(mesh%idx, point_f)
 
   !POINT P3
    point_f(3) = point_f(3) + sign_z
-   vert_idx(3) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(3) = index_from_coords(mesh%idx, point_f)
 
   !POINT P4
    point_f(2) = point_f(2) - sign_y
-   vert_idx(4) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(4) = index_from_coords(mesh%idx, point_f)
 
   !REAR CUBE PLANE
    point_f = point_0 
 
   !POINT P5
    point_f(1) = point_f(1) + sign_x
-   vert_idx(5) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(5) = index_from_coords(mesh%idx, point_f)
 
   !POINT P6
    point_f(2) = point_f(2) + sign_y
-   vert_idx(6) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(6) = index_from_coords(mesh%idx, point_f)
 
   !POINT P7
    point_f(3) = point_f(3) + sign_z
-   vert_idx(7) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(7) = index_from_coords(mesh%idx, point_f)
 
   !POINT P8
    point_f(2) = point_f(2) - sign_y
-   vert_idx(8) = index_from_coords(mesh%idx, mesh%sb%dim, point_f)
+   vert_idx(8) = index_from_coords(mesh%idx, point_f)
 
    write(cc,'(I3)') ia
 

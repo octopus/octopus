@@ -439,6 +439,7 @@ contains
     mesh%idx%nr = 0
     mesh%idx%ll = 0
     mesh%idx%enlarge = 0
+    mesh%idx%dim = mesh%sb%dim
     read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(1, idir), idir = 1,mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(2, idir), idir = 1,mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
@@ -649,7 +650,7 @@ contains
     end if
 
     if (.not. is_lead_) then
-      if(mesh%idx%sb%box_shape == HYPERCUBE) call hypercube_end(mesh%idx%hypercube)
+      if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
     end if
 
     SAFE_DEALLOCATE_P(mesh%resolution)
@@ -742,7 +743,7 @@ contains
     if (present(force)) force_ = force
       
     if(mesh%parallel_in_domains .or. force_) then
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+      call index_to_coords(mesh%idx, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs

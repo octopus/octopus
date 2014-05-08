@@ -399,19 +399,19 @@ contains
         if(mesh%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          call index_to_coords(mesh%idx, mesh%sb%dim, &
+          call index_to_coords(mesh%idx, &
             mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
         else
-          call index_to_coords(mesh%idx, mesh%sb%dim, ii, p1)
+          call index_to_coords(mesh%idx, ii, p1)
         end if
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
           if(mesh%sb%mr_flag) then
-            st1(jj) = index_from_coords(mesh%idx, mesh%sb%dim, &
+            st1(jj) = index_from_coords(mesh%idx, &
                  p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else
-            st1(jj) = index_from_coords(mesh%idx, mesh%sb%dim, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+            st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
 #ifdef HAVE_MPI
           if(mesh%parallel_in_domains) then

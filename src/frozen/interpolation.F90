@@ -243,7 +243,7 @@ contains
     call curvilinear_x2chi(this%mesh%sb, this%mesh%cv, xp, chi)
     ix(1:dm)=nint(chi(1:dm)/this%mesh%spacing(1:dm))
     ix(dm+1:MAX_DIM)=0
-    n=index_from_coords(this%mesh%idx, dm, ix)
+    n=index_from_coords(this%mesh%idx, ix)
     POP_SUB(interpolation_nearest_index)
     return
   end function interpolation_nearest_index
