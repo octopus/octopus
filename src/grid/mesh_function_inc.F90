@@ -694,18 +694,17 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
 end subroutine X(mf_multipoles)
 
 
-subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole, inside2)
+subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole, inside)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: n_domains
   type(box_union_t), intent(in)  :: domains(:)
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
-  logical, optional, intent(in)  :: inside2(:,:)
+  logical,           intent(in)  :: inside(:,:)
 
   integer :: idom, idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
-  logical, allocatable :: inside(:,:)
   R_TYPE, allocatable :: ff2(:)
 
   PUSH_SUB(X(mf_local_multipoles))
@@ -713,13 +712,10 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   SAFE_ALLOCATE(ff2(1:mesh%np))
-  SAFE_ALLOCATE(inside(1:mesh%np, n_domains))
-  if(present(inside2)) inside = inside2
 
   ff2(1:mesh%np) = ff(1:mesh%np)
 
   do idom = 1, n_domains
-    if(.not. present(inside2))call box_union_inside_vec(domains(idom), mesh%np, mesh%x, inside(:,idom))
     ll = 0
     do ip = 1, mesh%np
       if(inside(ip,idom)) ll = ll + 1
@@ -752,7 +748,6 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole
       end do
     end do
   end if
-  SAFE_DEALLOCATE_A(inside)
   SAFE_DEALLOCATE_A(ff2)
 
   POP_SUB(X(mf_local_multipoles))

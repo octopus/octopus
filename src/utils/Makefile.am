@@ -33,7 +33,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spe
 		 oct-liquid \
 		 oct-photoelectron_spectrum \
 		 oct-convert \
-                 oct-local_multipoles
+     oct-local_multipoles
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -177,7 +177,9 @@ oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
-oct_local_multipoles_SOURCES = local_multipoles.F90
+oct_local_multipoles_SOURCES = local_multipoles.F90 \
+                                local_write.F90 
+                               
 oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
@@ -213,3 +215,5 @@ dielectric_function.o : dielectric_function.F90
 liquid.o : liquid.F90
 photoelectron_spectrum.o : photoelectron_spectrum.F90
 convert.o : convert.F90
+local_write.o : local_write.F90
+local_multipoles.o : local_multipoles.F90 local_write.o

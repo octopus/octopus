@@ -28,11 +28,14 @@ program oct_local_multipoles
   use command_line_m
   use geometry_m
   use global_m
+  use hamiltonian_m
   use io_m
   use io_binary_m
   use io_function_m
   use index_m
+  use kick_m
   use loct_m
+  use local_write_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -55,11 +58,12 @@ program oct_local_multipoles
     character(len=15), allocatable  :: lab(:) 
     integer, allocatable            :: dshape(:)
     logical, allocatable            :: inside(:,:)
+    FLOAT, allocatable              :: dcm(:,:)         !< store the center of mass of each domain on the real space.
+    type(local_write_t)             :: writ       
   end type local_domain_t
 
   type(system_t)        :: sys
   type(simul_box_t)     :: sb
-  type(local_domain_t)  :: local
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
 
@@ -97,12 +101,14 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine local_domains()
+    type(local_domain_t)           :: local
     integer                        :: err, id, nd, lmax, iter, l_start, l_end, l_step, last_slash
     integer                        :: length
     FLOAT                          :: default_dt, dt
-    FLOAT, allocatable             :: read_ff(:)
     character(64)                  :: filename, folder, folder_default, aux, base_folder
     logical                        :: iterate
+    type(local_write_t)            :: local_writ
+    type(kick_t)                   :: kick
 
     PUSH_SUB(local_domains)
     
@@ -199,37 +205,41 @@ contains
     call messages_info(2)
     
     !call local_domains_read(local%domain, local%nd, local%lab)
-    call local_init()
+    call local_init(local)
 
     ! Starting loop over selected densities.
     if ( any( local%dshape(:) == BADER )) then
       call messages_experimental('Bader Volumes')
     end if
+
+    ! TODO: use new module local_write_m
+    call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
+    call local_write_init(local%writ, local%nd, local%domain, local%lab, local%inside, 0, dt)
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
         write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
       end if
-      SAFE_ALLOCATE(read_ff(1:sys%gr%mesh%np)); read_ff(:) = M_ZERO
-      call drestart_read_function(trim(base_folder) // trim(folder), trim(filename), sys%gr%mesh, read_ff, err)
+      call drestart_read_function(trim(base_folder) // trim(folder), trim(filename), sys%gr%mesh, sys%st%rho(:,1), err)
       if (err /= 0 ) then
         write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
         call messages_fatal(1)
       end if
       ! Look for the mesh points inside local domains
       if(iter == l_start) then
-        call local_inside_domain(local, read_ff, .true.)
+        call local_inside_domain(local, sys%st%rho(:,1), .true.)
       else
-        call local_inside_domain(local, read_ff, .false.)
+        call local_inside_domain(local, sys%st%rho(:,1), .false.)
       end if
 
-      call calc_local_multipoles(local, lmax, read_ff, iter, dt) 
-
-      SAFE_DEALLOCATE_A(read_ff)
+      ! TODO: use new module local_write_m
+      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
+                              sys%gr, sys%st, sys%geo, kick, iter, dt)
+      !call calc_local_multipoles(local, lmax, sys%st%rho(:,1), iter, dt) 
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
-    call local_end()
+    call local_end(local)
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
     call messages_info(2)
@@ -240,7 +250,8 @@ contains
   !> Initialize local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_init()
+  subroutine local_init(local)
+    type(local_domain_t), intent(inout) :: local
     !type(box_union_t), allocatable, intent(out) :: domain(:)
     !integer,                        intent(out) :: ndomain
     !character(len=15), allocatable, intent(out) :: lab(:)
@@ -289,10 +300,12 @@ contains
     if(parse_block(datasets_check('LocalDomains'), blk) == 0) then
       local%nd = parse_block_n(blk)
     end if
+
     SAFE_ALLOCATE(local%domain(1:local%nd))
     SAFE_ALLOCATE(local%dshape(1:local%nd))
     SAFE_ALLOCATE(local%lab(1:local%nd))
     SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
+    SAFE_ALLOCATE(local%dcm(1:sys%space%dim, 1:local%nd))
 
     block: do id = 1, local%nd
       call parse_block_string(blk, id-1, 0, local%lab(id))
@@ -308,17 +321,20 @@ contains
   !> Ending local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_end()
+  subroutine local_end(local)
+    type(local_domain_t), intent(inout) :: local
     integer id
 
     PUSH_SUB(local_end)
       do id = 1, local%nd
         call box_union_end(local%domain(id))
       end do
+      !call local_write_end(local%writ)
       SAFE_DEALLOCATE_A(local%lab)
       SAFE_DEALLOCATE_A(local%domain)
       SAFE_DEALLOCATE_A(local%dshape)
       SAFE_DEALLOCATE_A(local%inside)
+      SAFE_DEALLOCATE_A(local%dcm)
 
     POP_SUB(local_end)
   end subroutine local_end
@@ -509,8 +525,6 @@ contains
   end subroutine local_domains_init
 
   ! ---------------------------------------------------------
-  !> Computes the local multipoles and writes them to a file. 
-  ! ---------------------------------------------------------
   subroutine local_inside_domain(lcl, ff, update)
     type(local_domain_t),   intent(inout) :: lcl
     FLOAT,                  intent(in)    :: ff(:)
@@ -521,16 +535,19 @@ contains
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
     character(len=64)   :: filename
+    integer             :: rankmin, color
+    FLOAT               :: dmin
     
     PUSH_SUB(local_inside_domain)
 
     if (any(lcl%dshape(:) == BADER)) then
-      SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np,1) = ff(:)
+      SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np_part,1) = ff(1:sys%gr%mesh%np_part)
       call add_dens_to_ion_x(ff2,sys%geo)
       call basins_init(basins, sys%gr%mesh)
       call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
       call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
+      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
       if (extra_write) then
         filename = 'basinsmap'
         iunit = io_open(file=trim(filename), action='write')
@@ -540,25 +557,28 @@ contains
         end do
         call io_close(iunit)
       end if
-      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%inside) 
+      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
       SAFE_DEALLOCATE_A(ff2)
     else
       do id = 1, lcl%nd
         if (update .and. lcl%dshape(id) /= BADER) then
           call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
+          call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
         end if 
       end do
     end if
     
     POP_SUB(local_inside_domain)
+
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(basins, nd, dom, lab, inside)
+  subroutine bader_union_inside(basins, nd, dom, lab, dsh, inside)
     type(basins_t),    intent(in)  :: basins
     integer,           intent(in)  :: nd 
     type(box_union_t), intent(in)  :: dom(:)
     character(len=15), intent(in)  :: lab(:)
+    integer,           intent(in)  :: dsh(:)
     logical,           intent(out) :: inside(:,:)
 
     integer           :: ib, id, ip, ix, nb, rankmin
@@ -574,7 +594,7 @@ contains
     inside = .false.
 
     do id = 1, nd
-      if( local%dshape(id) /= BADER ) then
+      if( dsh(id) /= BADER ) then
         call box_union_inside_vec(dom(id), sys%gr%mesh%np, sys%gr%mesh%x, inside(:,id))
       else
         nb = box_union_get_nboxes(dom(id))
@@ -629,18 +649,42 @@ contains
   end subroutine bader_union_inside
 
   ! ---------------------------------------------------------
+  subroutine add_dens_to_ion_x(ff, geo)
+    FLOAT,              intent(inout)   :: ff(:,:)
+    type(geometry_t),   intent(inout)       :: geo
+
+    integer :: ia, ix, rankmin, index
+    integer :: n_spec_def, iunit, ispec, read_data
+    character(len=256) :: fname
+    character(len=15)  :: lab
+    integer :: xx, yy, zz, xmax, ymax, zmax
+    FLOAT   :: dmin, alpha, beta
+    integer :: point(MAX_DIM), point2(MAX_DIM)
+
+    PUSH_SUB(add_dens_to_ion_x)
+
+    xmax = 1; ymax = 1; zmax = 1
+    do ia = 1, geo%natoms
+      ix = mesh_nearest_point(sys%gr%mesh, geo%atom(ia)%x, dmin, rankmin)
+      ff(ix,1) = ff(ix,1) + species_z(geo%atom(ia)%spec)
+    end do
+
+    POP_SUB(add_dens_to_ion_x)
+  end subroutine add_dens_to_ion_x
+
+  ! ---------------------------------------------------------
   subroutine local_center_of_mass(nd, dom, geo, center)
     integer,           intent(in)  :: nd 
     type(box_union_t), intent(in)  :: dom(:)
     type(geometry_t),  intent(in)  :: geo
-    FLOAT,allocatable, intent(out) :: center(:,:)
+    FLOAT,             intent(out) :: center(:,:)
 
     integer            :: ia, id
     FLOAT, allocatable :: sumw(:)
 
     PUSH_SUB(local_center_of_mass)
 
-    SAFE_ALLOCATE(center(1:sys%space%dim, nd)); center(:,:) = M_ZERO
+    center(:,:) = M_ZERO
     SAFE_ALLOCATE(sumw(1:nd)); sumw(:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
@@ -658,252 +702,7 @@ contains
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
-
-  ! ---------------------------------------------------------
-  subroutine add_dens_to_ion_x(ff, geo)
-    FLOAT,              intent(inout)   :: ff(:,:)
-    type(geometry_t),   intent(in)      :: geo
-
-    integer :: ia, ix, rankmin
-    FLOAT   :: dmin
-
-    PUSH_SUB(add_dens_to_ion_x)
-
-    do ia = 1, geo%natoms
-      ix = mesh_nearest_point(sys%gr%mesh, geo%atom(ia)%x, dmin, rankmin)
-      ff(ix,1) = ff(ix,1) + species_z(geo%atom(ia)%spec)
-    end do
-
-    POP_SUB(add_dens_to_ion_x)
-  end subroutine add_dens_to_ion_x
-
-  ! ---------------------------------------------------------
-  ! TODO: Move all these remaining subroutines to local_write module
-  ! ---------------------------------------------------------
-  !> Computes the local multipoles and writes them to a file. 
-  ! ---------------------------------------------------------
-  subroutine calc_local_multipoles(lcl, lmax, ff, iter, dt)
-    type(local_domain_t),   intent(in)  :: lcl 
-    integer,                intent(in)  :: lmax
-    FLOAT,                  intent(in)  :: ff(:)
-    integer,                intent(in)  :: iter
-    FLOAT,                  intent(in)  :: dt   
-
-    FLOAT, allocatable   :: multipoles(:,:), ion_dipole(:,:), dcenter(:,:)
-    integer              :: id, ip, iunit, nspin
-
-    PUSH_SUB(calc_local_multipoles)
-
-    SAFE_ALLOCATE(multipoles(1:(lmax + 1)**2, lcl%nd)); multipoles(:,:) = M_ZERO
-
-    ! TODO: For instance spin are not included and just work with real densities.
-
-    nspin = sys%st%d%nspin
-    call dmf_local_multipoles(sys%gr%mesh, lcl%nd, lcl%domain, ff, lmax, multipoles, lcl%inside)
-    call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, dcenter)
-    call local_geometry_dipole(lcl%nd, lcl%domain, sys%geo, ion_dipole)
-    do id = 1, lcl%nd
-      multipoles(2:sys%space%dim+1, id) = -ion_dipole(1:sys%space%dim, id)/nspin - multipoles(2:sys%space%dim+1, id)
-      call wrt_local_multipoles(multipoles(:,id), dcenter(:,id), lmax, sys%st%d%nspin, lcl%lab(id), iter, dt, &
-                                 local_geometry_charge(lcl%domain(id), sys%geo))
-    end do
-    SAFE_DEALLOCATE_A(dcenter)
-    SAFE_DEALLOCATE_A(ion_dipole)
-    SAFE_DEALLOCATE_A(multipoles)
-
-    POP_SUB(calc_local_multipoles)
-  end subroutine calc_local_multipoles
-
-  ! ---------------------------------------------------------
-  subroutine local_geometry_dipole(nd, dom, geo, dipole)
-    integer,           intent(in)  :: nd 
-    type(box_union_t), intent(in)  :: dom(:)
-    type(geometry_t),  intent(in)  :: geo
-    FLOAT,allocatable, intent(out) :: dipole(:,:)
-
-    integer :: ia, id
-
-    PUSH_SUB(local_geometry_dipole)
-
-    SAFE_ALLOCATE(dipole(1:sys%space%dim, nd))
-    dipole(:,:) = M_ZERO
-    do ia = 1, geo%natoms
-      do  id = 1, nd
-        if (box_union_inside(dom(id), geo%atom(ia)%x)) then
-          dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) + &
-          species_zval(geo%atom(ia)%spec)*(geo%atom(ia)%x(1:geo%space%dim))
-        end if
-      end do
-    end do
-    dipole = P_PROTON_CHARGE*dipole
-
-    POP_SUB(local_geometry_dipole)
-  end subroutine local_geometry_dipole
-
-  ! ---------------------------------------------------------
-  FLOAT function local_geometry_charge(dom, geo) result(charge)
-    type(box_union_t), intent(in)  :: dom
-    type(geometry_t),  intent(in)  :: geo
-
-    integer :: ia
-
-    PUSH_SUB(local_geometry_charge)
-
-    charge = M_ZERO
-    do ia = 1, geo%natoms
-      if (box_union_inside(dom, geo%atom(ia)%x)) then
-        charge = charge + species_zval(geo%atom(ia)%spec)
-      end if
-    end do
-
-    POP_SUB(local_geometry_charge)
-  end function local_geometry_charge
-
-  ! ---------------------------------------------------------
-  subroutine wrt_local_multipoles(multipoles, center, lmax, nspin, label, iter, dt, loc_charge)
-    FLOAT,         intent(in) :: multipoles(:)
-    FLOAT,         intent(in) :: center(:)
-    integer,       intent(in) :: lmax
-    integer,       intent(in) :: nspin
-    character(15), intent(in) :: label
-    integer,       intent(in) :: iter
-    FLOAT,         intent(in) :: dt   
-    FLOAT,         intent(in) :: loc_charge
-   
-    integer             :: add_lm, ll, mm, out_multipoles
-    character(len=64)   :: filename
-    character(len=21)   :: aux
-    logical             :: file_exists
-    
-    PUSH_SUB(wrt_local_multipoles)
-
-    write(filename,'(a,a,a)')'local.multipoles/',trim(label),'.multipoles'
-    inquire(file=filename, exist=file_exists)
-    if (file_exists) then 
-      out_multipoles = io_open(file=trim(filename), action='write', position='append', status='old')
-    else
-      out_multipoles = io_open(file=trim(filename), action='write', status='new')
-      call write_multipoles_header(out_multipoles,nspin,lmax,center)
-    end if
-    write(aux,'(I10)') iter
-    write(out_multipoles,'(a10)', advance='no')aux
-    write(aux,'(es21.12)') iter*(units_from_atomic(units_inp%time, dt))
-    write(out_multipoles,'(a)', advance='no')aux
-    add_lm = 1
-    do ll = 0, lmax
-      do mm = -ll, ll
-        write(aux,'(es21.12)')units_from_atomic(units_out%length**ll, multipoles(add_lm))
-        write(out_multipoles,'(a)', advance='no')aux
-        add_lm = add_lm + 1
-      end do
-    end do
-    write(out_multipoles,'(es21.12)')loc_charge
-    
-    if(iand(sys%outp%how, C_OUTPUT_HOW_BILD) /= 0 .AND. sys%space%dim == 3)then
-      call out_bld_multipoles(multipoles(2:sys%space%dim+1), center, label, iter)
-    else
-      message(1) = "Output format not available."
-      call messages_warning(1)
-    end if  
-    
-    call io_close(out_multipoles)
-
-    POP_SUB(wrt_local_multipoles)
-  end subroutine wrt_local_multipoles
-
-  ! ---------------------------------------------------------
-  subroutine out_bld_multipoles(multipoles, center, label, iter)
-    FLOAT,         intent(in) :: multipoles(:)
-    FLOAT,         intent(in) :: center(:)
-    character(15), intent(in) :: label
-    integer,       intent(in) :: iter
-   
-    integer             :: ll, out_bld
-    character(len=80)   :: filename, folder
-    FLOAT               :: dipolearrow(3,2)
-
-    PUSH_SUB(out_bld_multipoles)
-    
-    write(folder,'(a,a)')'local.multipoles/',trim(label)
-    call io_mkdir(folder)
-    write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
-    out_bld = io_open(file=trim(filename), action='write')
-
-    write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
-                        trim(label), ' domain and iteration number: ',iter
-    write(out_bld,'(a)')''
-    write(out_bld,'(a)')'.color red'
-    write(out_bld,'(a,3(f12.6,2x),a)')'.sphere ',(units_from_atomic(units_out%length,center(ll)), ll= 1, 3),' 0.2' 
-    do ll = 1, 3
-      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll))
-      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll))
-    end do
-    write(out_bld,'(a,6(f12.6,2x),a)')'.arrow ',(dipolearrow(ll,1), ll= 1, 3), &
-                                     (dipolearrow(ll,2), ll= 1, 3), ' 0.1 0.5 0.90'
-    call io_close(out_bld)
-
-    POP_SUB(out_bld_multipoles)
-  end subroutine out_bld_multipoles
-
-  ! ---------------------------------------------------------
-  !> Write header of multipoles files
-  ! ---------------------------------------------------------
-  subroutine write_multipoles_header(iunit, nspin, lmax, center)
-    integer,           intent(in)    :: iunit
-    integer,           intent(in)    :: nspin
-    integer,           intent(in)    :: lmax
-    FLOAT,             intent(in)    :: center(:)
-
-    integer        :: is, ll, mm
-    character(21)  :: aux
-
-    PUSH_SUB(write_multipoles_header)
-    
-    write(iunit, '(a)', advance='no')'#'
-    call messages_print_stress(iunit)
-      write(iunit, '(a)', advance='no')'# Center of mass: ('
-    do ll = 1, sys%space%dim-1
-      write(iunit, '(f21.12,a2)', advance='no') units_from_atomic(units_out%length,center(ll)),' ,'
-    enddo
-      write(iunit, '(f21.12,a2)', advance='yes') units_from_atomic(units_out%length,center(sys%space%dim)),' )'
-    write(aux,'(a)')"# Iter";write(iunit,'(a20)',advance='no')aux
-    write(aux,'(a)')"t";write(iunit,'(a12)',advance='no')aux
-    do is=1,nspin
-      write(aux,'(a19,i1,a1)')"Electronic charges(",is,")";write(iunit,'(a)',advance='no')aux; write(iunit,'(a6)',advance='no')" "
-      write(aux,'(a4,i1,a1)')"<x>(",is,")";write(iunit,'(a)',advance='no')aux
-      write(aux,'(a4,i1,a1)')"<y>(",is,")";write(iunit,'(a)',advance='no')aux
-      write(aux,'(a4,i1,a1)')"<z>(",is,")";write(iunit,'(a)',advance='no')aux
-      write(aux,'(a12,i1,a1)')"Ion charges(",is,")";write(iunit,'(a)',advance='no')aux; write(iunit,'(a6)',advance='no')" "
-    end do
-    write(iunit,'(a)',advance='yes')""
-    write(aux,'(a)')"#[Iter n.]";write(iunit,'(a16)',advance='no')aux
-    write(aux,'(a)')'[' // trim(units_abbrev(units_out%time)) // ']';write(iunit,'(a)',advance='no')aux
-      do is = 1, nspin
-        do ll = 0, lmax
-          do mm = -ll, ll
-            select case(ll)
-            case(0)
-              write(aux,'(a)') 'Electrons';write(iunit,'(a)', advance='no') aux; write(iunit,'(a2)',advance='no')" "
-            case(1)
-              write(aux,'(a)') '[' // trim(units_abbrev(units_out%length)) // ']'
-              write(iunit,'(a)', advance='no') aux
-            case default
-              write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", ll
-              write(aux,'(a)')'[' // trim(aux) // ']'
-              write(iunit,'(a)', advance='no') aux
-            end select
-          end do
-        end do
-      end do
-    write(aux,'(a)') 'Electrons';write(iunit,'(a)', advance='no') aux; write(iunit,'(a2)',advance='no')" "
-    write(iunit,'(a)')""
-    write(iunit, '(a)', advance='no')'#'
-    call messages_print_stress(iunit)
-
-  POP_SUB(write_multipoles_header)
-   
-  end subroutine write_multipoles_header
-  ! ---------------------------------------------------------
+!
 
 end program oct_local_multipoles
 
