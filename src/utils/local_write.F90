@@ -100,10 +100,12 @@ contains
 
     PUSH_SUB(local_write_init)
 
+    ! FIXME: if and when these routines are called from a normal run, the Section can be Output.
+
     !%Variable LocalOutput
     !%Type flag
     !%Default multipoles 
-    !%Section Local Domains ::Local Output
+    !%Section Utilities::oct-local_multipoles
     !%Description
     !% Defines what should be output during the local domains 
     !% simulation. Many of the options can increase the computational
@@ -118,7 +120,7 @@ contains
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
     !%Option local_v 128
-    !% If set, <tt>octopus</tt> outputs the different components of the coulomb potential
+    !% If set, <tt>octopus</tt> outputs the different components of the Coulomb potential
     !% to the file <tt>td.general/energy</tt>. Will be zero except for every <tt>TDEnergyUpdateIter</tt> iterations.
     !%End
 
@@ -135,7 +137,7 @@ contains
     !%Variable LocalOutputHow
     !%Type flag
     !%Default 0
-    !%Section LocalDomains
+    !%Section Utilities::oct-local_multipoles
     !%Description
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% It can take the same values as OutputHow flag.
@@ -148,7 +150,7 @@ contains
     !%Variable LocalMultipoleLmax
     !%Type integer
     !%Default 1
-    !%Section Time-Dependent::Local Output
+    !%Section Utilities::oct-local_multipoles
     !%Description
     !% Maximum electric multipole of the density output to the file <tt>local.multipoles/<>domain%<>.multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
