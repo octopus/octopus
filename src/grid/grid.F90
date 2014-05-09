@@ -27,8 +27,8 @@ module grid_m
   use double_grid_m
   use geometry_m
   use global_m
-  use ob_interface_m
-  use ob_grid_m
+  use index_m
+  use io_m
   use mesh_m
   use mesh_init_m
   use messages_m
@@ -36,6 +36,8 @@ module grid_m
   use multicomm_m
   use multigrid_m
   use nl_operator_m
+  use ob_interface_m
+  use ob_grid_m
   use parser_m
   use profiling_m
   use space_m
@@ -55,6 +57,7 @@ module grid_m
     grid_init_stage_2,     &
     grid_end,              &
     grid_write_info,       &
+    grid_dump,             &
     grid_create_multigrid, &
     grid_create_largergrid
 
@@ -470,6 +473,33 @@ contains
 
     POP_SUB(grid_create_largergrid)
   end subroutine grid_create_largergrid
+
+
+  !-------------------------------------------------------------------
+  subroutine grid_dump(gr, dir, ierr)
+    type(grid_t),     intent(in)  :: gr
+    character(len=*), intent(in)  :: dir
+    integer,          intent(out) :: ierr
+
+    integer :: iunit
+
+    PUSH_SUB(grid_dump)
+
+    iunit = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
+    write(iunit,'(a)') '# This file contains the necessary information to generate the'
+    write(iunit,'(a)') '# mesh with which the functions in this directory were calculated,'
+    write(iunit,'(a)') '# except for the geometry of the system.'
+
+    call simul_box_dump(gr%sb, iunit)
+    call mesh_dump(gr%mesh, iunit)
+    call io_close(iunit)
+
+    call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
+
+    call index_dump_lxyz(gr%mesh%idx, gr%mesh%np_part_global, dir, ierr)
+
+    POP_SUB(grid_dump)
+  end subroutine grid_dump
 
 end module grid_m
 

@@ -316,19 +316,7 @@ contains
         '| k-points | k-weights | filename | ik | ist | idim'
       write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
 
-      iunit_mesh = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
-      write(iunit_mesh,'(a)') '# This file contains the necessary information to generate the'
-      write(iunit_mesh,'(a)') '# mesh with which the functions in this directory were calculated,'
-      write(iunit_mesh,'(a)') '# except for the geometry of the system.'
-
-      call simul_box_dump(gr%sb, iunit_mesh)
-      call mesh_dump(gr%mesh, iunit_mesh)
-      call io_close(iunit_mesh)
-
-      call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
-
-      ! write the lxyz array
-      call index_dump_lxyz(gr%mesh%idx, gr%mesh%np_part_global, dir, ierr)
+      call grid_dump(gr, dir, ierr)
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
