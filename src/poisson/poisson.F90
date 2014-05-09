@@ -143,7 +143,7 @@ contains
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
 
     logical :: need_cube, isf_data_is_parallel
-    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
+    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
     FLOAT :: fft_alpha
     character*60 :: str
 
@@ -203,7 +203,7 @@ contains
     !% for the Poisson kernel is selected so the proper boundary
     !% conditions are imposed according to the periodicity of the
     !% system. This can be overridden by the <tt>PoissonFFTKernel</tt>
-    !% variable.
+    !% variable. To choose the FFT library use <tt>FFTLibrary</tt>
     !%Option cg 5
     !% Conjugate gradients (only for finite systems).
     !%Option cg_corrected 6
@@ -217,7 +217,11 @@ contains
     !%Option libisf 10
     !% (Experimental) Meant to be exactly the same as Interpolating
     !% Scaling Functions Poisson solver, but using an external
-    !% library, taken from BigDFT 1.6.0
+    !% library, taken from BigDFT 1.7.0. Work with K points only using
+    !% <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
+    !% found in http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures
+    !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only
+    !% Tested with the version bigdft-1.7-dev.28
     !%End
 
     default_solver = POISSON_FFT
@@ -278,6 +282,9 @@ contains
       this%kernel = POISSON_FFT_KERNEL_NONE
     else
 
+      ! Documentation in cube.F90
+      call parse_integer('FFTLibrary', FFTLIB_FFTW, fft_library)
+      
       !%Variable PoissonFFTKernel
       !%Type integer
       !%Section Hamiltonian::Poisson
@@ -465,19 +472,24 @@ contains
       message(2) = 'the new ISF method'
       call messages_fatal(2)
     end if
-    
-    call parse_logical('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
-    write(*,*) "PoissonSolverISFParallelData", isf_data_is_parallel
-    if (this%method == POISSON_LIBISF &
-         .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) &
-         .and. isf_data_is_parallel ) then
-      message(1) = 'K points parallelization is not implemented with '
-      message(2) = 'the new ISF method with partitioned data.'
-      message(3) = 'Try setting PoissonSolverISFParallelData = no'
-      call messages_fatal(2)
-    end if
-      
 
+    if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
+      ! Documentation in poisson_libisf.F90
+      call parse_logical('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
+      if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
+        message(1) = 'K points parallelization is not implemented with '
+        message(2) = 'the new ISF method with partitioned data.'
+        message(3) = 'Try setting PoissonSolverISFParallelData = no'
+        call messages_fatal(3)
+      end if
+      if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
+        message(1) = 'K points parallelization is not implemented with PFFT library,'
+        message(2) = 'choose FFTW. Otherwise, set PoissonSolver to isf or libisf '
+        message(3) = '(only together with PoissonSolverISFParallelData = no)'
+        call messages_fatal(3)
+      end if
+    end if
+    
     if (this%method == POISSON_FFT) then
 
       need_cube = .true.
@@ -501,6 +513,16 @@ contains
         call messages_fatal(2)
       end if
 
+      if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
+        message(1) = 'PFFT library has only been implemented for 3D systems.'
+        message(2) = 'Feel free to contribute and implement it!'
+        call messages_fatal(2)
+      end if
+      if (der%mesh%sb%periodic_dim /= 0 .and. fft_library == FFTLIB_PFFT) then
+        message(1) = 'PFFT library has only been implemented for non periodic systems.'
+        message(2) = 'Feel free to contribute and implement it!'
+        call messages_fatal(2)
+      end if
 
       select case (der%mesh%sb%dim)
 
