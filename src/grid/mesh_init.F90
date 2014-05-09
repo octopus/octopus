@@ -87,6 +87,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   mesh%use_curvilinear = mesh%use_curvilinear .or. sb%mr_flag
 
   mesh%idx%dim = sb%dim
+  mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%enlarge = enlarge
 
   if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
@@ -166,6 +167,7 @@ subroutine mesh_read_lead(ob_grid, mesh)
     nr = mm%idx%nr
     SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+    mm%idx%is_hypercube = mesh%idx%is_hypercube
     call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
   end do
 
@@ -203,7 +205,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   call profiling_in(mesh_init_prof)
 
   ! enlarge mesh for boundary points
-  mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
   mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
   if(mesh%idx%is_hypercube) then
