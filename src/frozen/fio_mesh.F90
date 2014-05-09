@@ -20,10 +20,12 @@ module fio_mesh_m
     HYPERCUBE
 
   use mesh_m, only:           &
-    mesh_init_from_file,      &
-    mesh_lxyz_init_from_file, &
+    mesh_load,                &
     mesh_read_fingerprint,    &
     mesh_x_global
+
+  use index_m, only: &
+    index_load_lxyz
 
   use mesh_m, only:           &
     fio_mesh_t   =>mesh_t,    &

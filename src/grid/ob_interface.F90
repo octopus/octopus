@@ -24,6 +24,7 @@
 module ob_interface_m
   use derivatives_m
   use global_m
+  use index_m
   use lalg_basic_m
   use math_m
   use mesh_m
@@ -151,7 +152,7 @@ contains
     ! we are 1 point too far in every direction, so go back
     to(:)   = from(:) + dir*(ll(:) - 1)
 
-    call mesh_subset_indices(der%mesh, from, to, intf%index)
+    call index_subset_indices(der%mesh%idx, from, to, intf%index)
 
     ! Extract begin and end point numbers of interface region.
     intf%index_range(1) = minval(intf%index(:))

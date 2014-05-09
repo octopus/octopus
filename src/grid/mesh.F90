@@ -46,27 +46,26 @@ module mesh_m
   implicit none
   
   private
-  public ::                    &
-    mesh_t,                    &
-    mesh_plane_t,              &
-    mesh_line_t,               &
-    mesh_init_from_file,       &
-    mesh_lxyz_init_from_file,  &
-    mesh_dump,                 &
-    mesh_end,                  &
-    mesh_double_box,           &
-    mesh_inborder,             &
-    mesh_r,                    &
-    mesh_gcutoff,              &
-    mesh_write_info,           &
-    mesh_nearest_point,        &
-    mesh_subset_indices,       &
-    mesh_periodic_point,       &
-    mesh_global_memory,        &
-    mesh_local_memory,         &
-    mesh_x_global,             &
-    mesh_write_fingerprint,    &
-    mesh_read_fingerprint,     &
+  public ::                        &
+    mesh_t,                        &
+    mesh_plane_t,                  &
+    mesh_line_t,                   &
+    mesh_dump,                     &
+    mesh_load,                     &
+    mesh_check_dump_compatibility, &
+    mesh_end,                      &
+    mesh_double_box,               &
+    mesh_inborder,                 &
+    mesh_r,                        &
+    mesh_gcutoff,                  &
+    mesh_write_info,               &
+    mesh_nearest_point,            &
+    mesh_periodic_point,           &
+    mesh_global_memory,            &
+    mesh_local_memory,             &
+    mesh_x_global,                 &
+    mesh_write_fingerprint,        &
+    mesh_read_fingerprint,         &
     mesh_compact_boundaries
 
   !> Describes mesh distribution to nodes.
@@ -418,7 +417,7 @@ contains
   
   ! -------------------------------------------------------------- 
   !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_init_from_file(mesh, iunit)
+  subroutine mesh_load(mesh, iunit)
     type(mesh_t), intent(inout) :: mesh
     integer,      intent(in)    :: iunit
 
@@ -426,7 +425,7 @@ contains
     character(len=100) :: line
     integer :: idir
 
-    PUSH_SUB(mesh_init_from_file)
+    PUSH_SUB(mesh_load)
 
     ! Find (and throw away) the dump tag.
     do
@@ -453,8 +452,8 @@ contains
     nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, mesh%vol_pp, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
-    POP_SUB(mesh_init_from_file)
-  end subroutine mesh_init_from_file
+    POP_SUB(mesh_load)
+  end subroutine mesh_load
 
 
   ! --------------------------------------------------------------
@@ -528,108 +527,74 @@ contains
 
   end subroutine mesh_read_fingerprint
 
-  ! --------------------------------------------------------------
-  !> Fill the lxyz and lxyz_inv arrays from a file
-  subroutine mesh_lxyz_init_from_file(mesh, filename)
-    type(mesh_t),     intent(inout) :: mesh
-    character(len=*), intent(in) :: filename
+  ! ---------------------------------------------------------
+  subroutine mesh_check_dump_compatibility(dir, mesh, grid_changed, grid_reordered, map)
+    character(len=*),     intent(in)  :: dir    
+    type(mesh_t),         intent(in)  :: mesh
+    logical,              intent(out) :: grid_changed
+    logical,              intent(out) :: grid_reordered
+    integer, pointer,     intent(out) :: map(:)
 
-    integer :: ip, idir, ix(MAX_DIM), ierr
+    integer :: ip, read_np_part, read_np, read_ierr, xx(MAX_DIM)
+    integer, allocatable :: read_lxyz(:,:)
+    
+    PUSH_SUB(mesh_check_dump_compatibility)
 
-    PUSH_SUB(mesh_lxyz_init_from_file)
+    ! now read the mesh information
+    call mesh_read_fingerprint(mesh, trim(dir)//'/grid', read_np_part, read_np)
 
-    ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
+    ! For the moment we continue reading if we receive -1 so we can
+    ! read old restart files that do not have a fingerprint file.
+    ! if (read_np < 0) ierr = -1
 
-    ! FIXME 4D
-    ASSERT(mesh%sb%box_shape /= HYPERCUBE)
+    if (read_np > 0 .and. mesh%sb%box_shape /= HYPERCUBE) then
 
-    call io_binary_read(trim(filename)//'.obf', mesh%np_part*mesh%sb%dim, mesh%idx%lxyz, ierr)
+      grid_changed = .true.
 
-    if(ierr > 0) then
-      message(1) = "Failed to read file "//trim(filename)//'.obf'
-      call messages_fatal(1)
-    end if
+      ! perhaps only the order of the points changed, this can only
+      ! happen if the number of points is the same and no points maps
+      ! to zero (this is checked below)
+      grid_reordered = (read_np == mesh%np_global)
 
-    do ip = 1, mesh%np_part
-      forall (idir = 1:mesh%sb%dim) ix(idir) = mesh%idx%lxyz(ip, idir)
-      forall (idir = mesh%sb%dim + 1:MAX_DIM) ix(idir) = 0
-      mesh%idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
-    end do
+      ! the grid is different, so we read the coordinates.
+      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
+      ASSERT(associated(mesh%idx%lxyz))
+      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, read_ierr)
 
-    POP_SUB(mesh_lxyz_init_from_file)
-  end subroutine mesh_lxyz_init_from_file
+      ! and generate the map
+      SAFE_ALLOCATE(map(1:read_np))
 
-
-  ! --------------------------------------------------------------
-  !> Extracts the point numbers of a rectangular subset spanned
-  !! by the two corner points from and to.
-  subroutine mesh_subset_indices(mesh, from, to, indices)
-    type(mesh_t), intent(in)  :: mesh
-    integer,      intent(in)  :: from(MAX_DIM)
-    integer,      intent(in)  :: to(MAX_DIM)
-    integer,      intent(out) :: indices(:)
-
-    integer :: lb(MAX_DIM) !< Lower bound of indices.
-    integer :: ub(MAX_DIM) !< Upper bound of indices.
-
-    integer :: ix, iy, iz, ii
-
-    PUSH_SUB(mesh_subset_indices)
-
-    ! In debug mode, check for valid indices in from, to first.
-    if(in_debug_mode) then
-      if(.not.index_valid(mesh, from).or..not.index_valid(mesh, to)) then
-        message(1) = 'Failed assertion:'
-        message(2) = 'mesh.mesh_subset_indices has been passed points outside the box:'
-        message(3) = ''
-        write(message (4), '(a, i6, a, i6, a, i6, a)') &
-          '  from = (', from(1), ', ', from(2), ', ', from(3), ')'
-        write(message(5), '(a, i6, a, i6, a, i6, a)') & 
-          '  to   = (', to(1), ', ', to(2), ', ', to(3), ')'
-        call messages_fatal(5)
-      end if
-    end if
-
-    lb = min(from, to)
-    ub = max(from, to)
-
-    ii = 1
-    do ix = lb(1), ub(1)
-      do iy = lb(2), ub(2)
-        do iz = lb(3), ub(3)
-          indices(ii) = mesh%idx%lxyz_inv(ix, iy, iz)
-          ii         = ii + 1
-        end do
+      do ip = 1, read_np
+        xx = 0
+        xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
+        if(any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
+          any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
+          map(ip) = 0
+          grid_reordered = .false.
+        else
+          map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+          if(map(ip) > mesh%np_global) map(ip) = 0
+        end if
       end do
-    end do
 
-    POP_SUB(mesh_subset_indices)
-  end subroutine mesh_subset_indices
+      SAFE_DEALLOCATE_A(read_lxyz)
 
-
-  ! --------------------------------------------------------------
-  !> Checks if the (x, y, z) indices of point are valid, i.e.
-  !! inside the dimensions of the simulation box.
-  logical function index_valid(mesh, point)
-    type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: point(MAX_DIM)
-
-    integer :: idir
-    logical :: valid
-
-    PUSH_SUB(index_valid)
-
-    valid = .true.
-    do idir = 1, mesh%sb%dim
-      if(point(idir)  <  mesh%idx%nr(1, idir) .or. point(idir) > mesh%idx%nr(2, idir)) then
-        valid = .false.
+      if(grid_reordered) then
+        message(1) = 'Octopus is attempting to restart from a mesh with a different order of points.'
+      else
+        message(1) = 'Octopus is attempting to restart from a different mesh.'
       end if
-    end do
 
-    index_valid = valid
+      call messages_warning(1)
 
-    POP_SUB(index_valid)
-  end function index_valid
+    else
+      grid_changed = .false.
+      grid_reordered = .false.
+      nullify(map)
+    end if
+
+    POP_SUB(mesh_check_dump_compatibility)
+  end subroutine mesh_check_dump_compatibility
 
 
   ! --------------------------------------------------------------

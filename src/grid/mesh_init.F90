@@ -160,13 +160,13 @@ subroutine mesh_read_lead(ob_grid, mesh)
     mm%cv => mesh%cv
     mm%parallel_in_domains = mesh%parallel_in_domains
     iunit = io_open(trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
-    call mesh_init_from_file(mm, iunit)
+    call mesh_load(mm, iunit)
     call io_close(iunit)
     ! Read the lxyz maps.
     nr = mm%idx%nr
     SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
+    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
   end do
 
   POP_SUB(mesh_read_lead)

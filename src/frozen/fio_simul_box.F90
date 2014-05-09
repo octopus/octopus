@@ -13,9 +13,9 @@ module fio_simul_box_m
   use kpoints_m,    only: kpoints_init
   use symmetries_m, only: symmetries_init
 
-  use simul_box_m, only:      &
-    HYPERCUBE,                &
-    simul_box_init_from_file, &
+  use simul_box_m, only:  &
+    HYPERCUBE,            &
+    simul_box_load,       &
     simul_box_lookup_init
 
   use simul_box_m, only:                  &
@@ -51,7 +51,7 @@ contains
     if(ierr/=JSON_OK)dir="./"//trim(tmpdir)//GS_DIR
     iunit=io_open(trim(dir)//"mesh", action="read", status="old")
     if(iunit>0)then
-      call simul_box_init_from_file(this, iunit)
+      call simul_box_load(this, iunit)
       call io_close(iunit)
       ASSERT(this%box_shape/=HYPERCUBE)
       this%complex_boundaries=.false.

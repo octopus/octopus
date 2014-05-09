@@ -53,8 +53,8 @@ module simul_box_m
     simul_box_init,             &
     simul_box_lookup_init,      &
     simul_box_interp_init,      &
-    simul_box_init_from_file,   &
-    simul_box_write_to_file,    &
+    simul_box_dump,             &
+    simul_box_load,             &
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
@@ -1222,13 +1222,13 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_write_to_file(sb, iunit)
+  subroutine simul_box_dump(sb, iunit)
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
     integer :: idir
 
-    PUSH_SUB(simul_box_write_to_file)
+    PUSH_SUB(simul_box_dump)
 
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
@@ -1266,12 +1266,12 @@ contains
         sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
-    POP_SUB(simul_box_write_to_file)
-  end subroutine simul_box_write_to_file
+    POP_SUB(simul_box_dump)
+  end subroutine simul_box_dump
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_init_from_file(sb, iunit)
+  subroutine simul_box_load(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit
 
@@ -1280,7 +1280,7 @@ contains
     integer            :: idim, il, ierr
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
-    PUSH_SUB(simul_box_init_from_file)
+    PUSH_SUB(simul_box_load)
 
     ! Find (and throw away) the dump tag.
     do
@@ -1347,8 +1347,8 @@ contains
 
     call iopar_read(mpi_world, iunit, line, ierr)
 
-    POP_SUB(simul_box_init_from_file)
-  end subroutine simul_box_init_from_file
+    POP_SUB(simul_box_load)
+  end subroutine simul_box_load
 
 
   ! --------------------------------------------------------------
@@ -1457,7 +1457,7 @@ contains
 
     do il = 1, NLEADS
       iunit = io_open(trim(dir(il))//'/'//GS_DIR//'mesh', action = 'read', is_tmp = .true., grp = mpi_world)
-      call simul_box_init_from_file(lead_sb(il), iunit)
+      call simul_box_load(lead_sb(il), iunit)
       call io_close(iunit)
 
       ! Check whether

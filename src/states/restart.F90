@@ -26,6 +26,7 @@ module restart_m
   use geometry_m
   use global_m
   use grid_m
+  use index_m
   use io_m
   use io_binary_m
   use io_function_m
@@ -320,17 +321,14 @@ contains
       write(iunit_mesh,'(a)') '# mesh with which the functions in this directory were calculated,'
       write(iunit_mesh,'(a)') '# except for the geometry of the system.'
 
-      call simul_box_write_to_file(gr%sb, iunit_mesh)
+      call simul_box_dump(gr%sb, iunit_mesh)
       call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
 
       call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
 
       ! write the lxyz array
-      if(gr%mesh%sb%box_shape /= HYPERCUBE) then
-        ASSERT(associated(gr%mesh%idx%lxyz))
-        call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%sb%dim, gr%mesh%idx%lxyz, ierr)
-      end if
+      call index_dump_lxyz(gr%mesh%idx, gr%mesh%np_part_global, dir, ierr)
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
@@ -662,7 +660,7 @@ contains
       endif
     endif
 
-    call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
+    call mesh_check_dump_compatibility(dir, gr%mesh, grid_changed, grid_reordered, map)
     if(grid_changed .and. .not. grid_reordered .and. exact_) ierr = -1
 
     if(ierr /= 0) then
@@ -978,75 +976,6 @@ contains
 
   end subroutine restart_read
 
-  ! ---------------------------------------------------------
-  subroutine restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
-    character(len=*),     intent(in)  :: dir    
-    type(grid_t),         intent(in)  :: gr
-    logical,              intent(out) :: grid_changed
-    logical,              intent(out) :: grid_reordered
-    integer, pointer,     intent(out) :: map(:)
-
-    integer :: ip, read_np_part, read_np, read_ierr, xx(MAX_DIM)
-    integer, allocatable :: read_lxyz(:,:)
-    
-    PUSH_SUB(restart_read_lxyz)
-
-    ! now read the mesh information
-    call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
-
-    ! For the moment we continue reading if we receive -1 so we can
-    ! read old restart files that do not have a fingerprint file.
-    ! if (read_np < 0) ierr = -1
-
-    if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
-
-      grid_changed = .true.
-
-      ! perhaps only the order of the points changed, this can only
-      ! happen if the number of points is the same and no points maps
-      ! to zero (this is checked below)
-      grid_reordered = (read_np == gr%mesh%np_global)
-
-      ! the grid is different, so we read the coordinates.
-      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
-      ASSERT(associated(gr%mesh%idx%lxyz))
-      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
-
-      ! and generate the map
-      SAFE_ALLOCATE(map(1:read_np))
-
-      do ip = 1, read_np
-        xx = 0
-        xx(1:gr%mesh%sb%dim) = read_lxyz(ip, 1:gr%mesh%sb%dim)
-        if(any(xx(1:gr%mesh%sb%dim) < gr%mesh%idx%nr(1, 1:gr%mesh%sb%dim)) .or. &
-          any(xx(1:gr%mesh%sb%dim) > gr%mesh%idx%nr(2, 1:gr%mesh%sb%dim))) then
-          map(ip) = 0
-          grid_reordered = .false.
-        else
-          map(ip) = gr%mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
-          if(map(ip) > gr%mesh%np_global) map(ip) = 0
-        end if
-      end do
-
-      SAFE_DEALLOCATE_A(read_lxyz)
-
-      if(grid_reordered) then
-        message(1) = 'Octopus is attempting to restart from mesh with a different order of points.'
-      else
-        message(1) = 'Octopus is attempting to restart from a different mesh.'
-      end if
-
-      call messages_warning(1)
-
-    else
-      grid_changed = .false.
-      grid_reordered = .false.
-      nullify(map)
-    end if
-
-    POP_SUB(restart_read_lxyz)
-
-  end subroutine restart_read_lxyz
 
   ! ---------------------------------------------------------
   !> returns in ierr:
@@ -1071,7 +1000,7 @@ contains
     write(message(1), '(a,i5)') 'Info: Loading restart density.'
     call messages_info(1)
 
-    call restart_read_lxyz(dir, gr, grid_changed, grid_reordered, map)
+    call mesh_check_dump_compatibility(dir, gr%mesh, grid_changed, grid_reordered, map)
 
     ierr = 0
 
