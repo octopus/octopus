@@ -33,7 +33,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8)  :: cg0, e0, res
-  integer  :: p, iter, maxter, idim, ip
+  integer  :: ist, iter, maxter, idim, ip
   R_TYPE   :: sb(3)
 
   PUSH_SUB(X(eigensolver_cg2))
@@ -63,18 +63,18 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
 
-  eigenfunction_loop : do p = converged + 1, st%nst
+  eigenfunction_loop : do ist = converged + 1, st%nst
 
-    call states_get_state(st, gr%mesh, p, ik, psi)
+    call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(p > 1) call X(states_orthogonalize_single)(st, gr%mesh, p - 1, ik, psi, normalize = .true.)
+    if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, p, ik)
+    call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
+    st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
@@ -95,7 +95,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       end do
 
       ! Orthogonalize to lowest eigenvalues (already calculated)
-      if(p > 1) call X(states_orthogonalize_single)(st, gr%mesh, p - 1, ik, g, normalize = .false.)
+      if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false.)
 
       if(iter /= 1) then
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
@@ -117,12 +117,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       end if
 
       if( abs(gg) < M_EPSILON ) then
-        if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
-        st%eigenval(p, ik) = es(1)
+        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
+        st%eigenval(ist, ik) = es(1)
         res = sqrt(abs(gg))
 
         if(in_debug_mode) then
-          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
+          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
+               ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
           call messages_info(1)
         end if
 
@@ -152,7 +153,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, p, ik)
+      call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, ist, ik)
 
       ! Line minimization.
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
@@ -171,14 +172,14 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
 
       a0 = M_TWO * a0 / cg0
       b0 = b0/cg0**2
-      e0 = st%eigenval(p, ik)
+      e0 = st%eigenval(ist, ik)
       theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
       es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
       es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
 
       ! Choose the minimum solutions.
       if (R_REAL(es(2)) < R_REAL(es(1))) theta = theta + M_PI/M_TWO
-      st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
+      st%eigenval(ist, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
 
       ! Upgrade psi...
       a0 = cos(theta)
@@ -191,31 +192,32 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
-      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), psi)
+      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
 
       if(in_debug_mode) then
-        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
+             ' iter ', iter, ' res ', res, " max ", maxter
         call messages_info(1)
       end if
 
       ! Test convergence.
       if(res < tol) then
-        if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
+        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         exit iter_loop
       end if
 
     end do iter_loop
 
-    call states_set_state(st, gr%mesh, p, ik, psi)
+    call states_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
 
     if(present(diff)) then
-      diff(p) = res
+      diff(ist) = res
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik - 1) +  p, st%nst*st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
     end if
 
   end do eigenfunction_loop

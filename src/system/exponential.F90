@@ -221,8 +221,8 @@ contains
     integer, optional,   intent(inout) :: order
     FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
-    FLOAT, optional,     intent(in)    :: Imtime   ! Imaginary part of the time - needed for cmplxscl%time
-    FLOAT, optional,     intent(in)    :: Imdeltat ! also needed for cmplxscl%time
+    FLOAT,   optional,   intent(in)    :: Imtime   !< Imaginary part of the time - needed for cmplxscl\%time
+    FLOAT,   optional,   intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
 
     CMPLX   :: timestep
     logical :: apply_magnus
@@ -602,7 +602,7 @@ contains
   
 
     if (te%exp_method == EXP_TAYLOR) then 
-      call taylor_series_batch
+      call taylor_series_batch()
     else
       
       do ii = 1, psib%nst
