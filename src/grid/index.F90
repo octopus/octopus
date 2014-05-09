@@ -58,7 +58,7 @@ contains
 
     integer :: ix2(MAX_DIM), idir
 
-    PUSH_SUB(index_from_coords)
+    ! No PUSH SUB, called too often
 
     forall (idir = 1:idx%dim) ix2(idir) = ix(idir)
     forall (idir = idx%dim + 1:MAX_DIM) ix2(idir) = 0
@@ -69,7 +69,6 @@ contains
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
     
-    POP_SUB(index_from_coords)
   end function index_from_coords
 
   subroutine index_from_coords_vec(idx, npoints, ix, index)
