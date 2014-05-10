@@ -172,7 +172,7 @@ contains
 
     call io_close(iunit)
 
-    PUSH_SUB(index_dump)
+    POP_SUB(index_dump)
   end subroutine index_dump
 
 
