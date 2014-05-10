@@ -44,28 +44,20 @@ contains
     type(json_object_t),   intent(in)  :: config
     !
     character(len=MAX_PATH_LEN)  :: dir
-    integer                      :: ierr, iunit, order
+    integer                      :: ierr, order
     !
     PUSH_SUB(fio_simul_box_init)
     call json_get(config, "dir", dir, ierr)
     if(ierr/=JSON_OK)dir="./"//trim(tmpdir)//GS_DIR
-    iunit=io_open(trim(dir)//"mesh", action="read", status="old")
-    if(iunit>0)then
-      call simul_box_load(this, iunit)
-      call io_close(iunit)
-      ASSERT(this%box_shape/=HYPERCUBE)
-      this%complex_boundaries=.false.
-      call simul_box_lookup_init(this, geo)
-      ASSERT(.not.this%mr_flag)
-      nullify(this%hr_area%radius, this%hr_area%interp%posi, this%hr_area%interp%ww)
-      ASSERT(this%periodic_dim==0)
-      call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice, this%lsize)
-      call kpoints_init(this%kpoints, this%symm, this%dim, this%rlattice, this%klattice, .true.)
-    else
-      message(1)="Could not open the simulation box info file: '"//trim(dir)//"mesh'"
-      write(unit=message(2), fmt="(a,i3)") "I/O Error: ", iunit
-      call messages_fatal(2)
-    end if
+    call simul_box_load(this, dir, "mesh")
+    ASSERT(this%box_shape/=HYPERCUBE)
+    this%complex_boundaries=.false.
+    call simul_box_lookup_init(this, geo)
+    ASSERT(.not.this%mr_flag)
+    nullify(this%hr_area%radius, this%hr_area%interp%posi, this%hr_area%interp%ww)
+    ASSERT(this%periodic_dim==0)
+    call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice, this%lsize)
+    call kpoints_init(this%kpoints, this%symm, this%dim, this%rlattice, this%klattice, .true.)
     POP_SUB(fio_simul_box_init)
     return
   end subroutine fio_simul_box_init
