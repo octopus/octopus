@@ -148,7 +148,7 @@ subroutine mesh_read_lead(ob_grid, mesh)
   type(ob_grid_t), target, intent(in)    :: ob_grid
   type(mesh_t),    target, intent(in)    :: mesh
 
-  integer :: il, iunit
+  integer :: il
 
   type(mesh_t), pointer :: mm
   integer :: nr(1:2, 1:MAX_DIM)
@@ -160,14 +160,11 @@ subroutine mesh_read_lead(ob_grid, mesh)
     mm%sb => mesh%sb
     mm%cv => mesh%cv
     mm%parallel_in_domains = mesh%parallel_in_domains
-    iunit = io_open(trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
-    call mesh_load(mm, iunit)
-    call io_close(iunit)
+    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh')
     ! Read the lxyz maps.
     nr = mm%idx%nr
     SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    mm%idx%is_hypercube = mesh%idx%is_hypercube
     call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
   end do
 

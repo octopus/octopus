@@ -1222,13 +1222,16 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_dump(sb, iunit)
+  subroutine simul_box_dump(sb, dir, filename)
     type(simul_box_t), intent(in) :: sb
-    integer,           intent(in) :: iunit
+    character(len=*),  intent(in) :: dir
+    character(len=*),  intent(in) :: filename
 
-    integer :: idir
+    integer :: iunit, idir
 
     PUSH_SUB(simul_box_dump)
+
+    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
 
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
@@ -1266,21 +1269,26 @@ contains
         sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
+    call io_close(iunit)
+
     POP_SUB(simul_box_dump)
   end subroutine simul_box_dump
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_load(sb, iunit)
+  subroutine simul_box_load(sb, dir, filename)
     type(simul_box_t), intent(inout) :: sb
-    integer,           intent(in)    :: iunit
+    character(len=*),  intent(in)    :: dir
+    character(len=*),  intent(in)    :: filename
 
+    integer            :: iunit, idim, il, ierr
     character(len=20)  :: str
     character(len=300) :: line
-    integer            :: idim, il, ierr
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
     PUSH_SUB(simul_box_load)
+
+    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
 
     ! Find (and throw away) the dump tag.
     do
@@ -1346,6 +1354,8 @@ contains
     call simul_box_build_lattice(sb, rlattice_primitive)
 
     call iopar_read(mpi_world, iunit, line, ierr)
+
+    call io_close(iunit)
 
     POP_SUB(simul_box_load)
   end subroutine simul_box_load
@@ -1451,14 +1461,12 @@ contains
     type(simul_box_t), intent(inout) :: lead_sb(:)
     character(len=*),  intent(in)    :: dir(:)
 
-    integer :: iunit, il
+    integer :: il
 
     PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
-      iunit = io_open(trim(dir(il))//'/'//GS_DIR//'mesh', action = 'read', is_tmp = .true., grp = mpi_world)
-      call simul_box_load(lead_sb(il), iunit)
-      call io_close(iunit)
+      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh')
 
       ! Check whether
       ! * simulation box is a parallelepiped,

@@ -487,12 +487,13 @@ contains
 
     iunit = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
     write(iunit,'(a)') '# This file contains the necessary information to generate the'
-    write(iunit,'(a)') '# mesh with which the functions in this directory were calculated,'
+    write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
     write(iunit,'(a)') '# except for the geometry of the system.'
-
-    call simul_box_dump(gr%sb, iunit)
-    call mesh_dump(gr%mesh, iunit)
     call io_close(iunit)
+
+    call simul_box_dump(gr%sb, dir, "mesh")
+    call mesh_dump(gr%mesh, dir, "mesh")
+
 
     call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
 

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2014 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 !! $Id$
 
 #include "global.h"
-#define MIN_DIM 3
 
 module index_m
   use global_m
   use hypercube_m
+  use io_m
   use io_binary_m
   use messages_m
   use simul_box_m
@@ -35,6 +35,8 @@ module index_m
     index_from_coords,     &
     index_from_coords_vec, &
     index_to_coords,       &
+    index_dump,            &
+    index_load,            &
     index_dump_lxyz,       &
     index_load_lxyz,       &
     index_subset_indices
@@ -50,6 +52,9 @@ module index_m
     integer           :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)        :: checksum
   end type index_t
+
+
+  character(len=18), parameter :: dump_tag = '*** index_dump ***'
 
 contains
 
@@ -121,6 +126,7 @@ contains
     end if
   end subroutine index_to_coords
 
+
   !> This function returns .true. if the coordinates are inside the
   !! inner cube (without the enlargement).
   logical pure function coords_in_inner_cube(idx, ix) result(inside)
@@ -139,6 +145,77 @@ contains
   end function coords_in_inner_cube
 
 
+  ! --------------------------------------------------------------
+  subroutine index_dump(idx, dir, filename)
+    type(index_t),    intent(in)    :: idx 
+    character(len=*), intent(in) :: dir
+    character(len=*), intent(in) :: filename
+
+    integer :: iunit, idir
+
+    PUSH_SUB(index_dump)
+
+    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
+
+    write(iunit, '(a)') dump_tag
+    write(iunit, '(a20,l)')   'is_hypercube=       ', idx%is_hypercube
+    write(iunit, '(a20,i21)') 'dim=                ', idx%dim
+    if (.not. idx%is_hypercube) then
+      write(iunit, '(a20,7i8)') 'nr(1, :)=           ', (idx%nr(1, idir), idir = 1, idx%dim)
+      write(iunit, '(a20,7i8)') 'nr(2, :)=           ', (idx%nr(2, idir), idir = 1, idx%dim)
+      write(iunit, '(a20,7i8)') 'l(:)=               ', idx%ll(1:idx%dim)
+      write(iunit, '(a20,7i8)') 'enlarge(:)=         ', idx%enlarge(1:idx%dim)
+      ! The next two lines should always come last
+      write(iunit, '(a20,i21)') 'algorithm=          ', 1
+      write(iunit, '(a20,i21)') 'checksum=           ', idx%checksum
+    end if
+
+    call io_close(iunit)
+
+    PUSH_SUB(index_dump)
+  end subroutine index_dump
+
+
+  ! --------------------------------------------------------------
+  subroutine index_load(idx, dir, filename)
+    type(index_t),    intent(inout) :: idx
+    character(len=*), intent(in)    :: dir
+    character(len=*), intent(in)    :: filename
+
+    integer :: iunit, idir
+    character(len=100) :: line
+    character(len=20)  :: str
+
+    PUSH_SUB(index_load)
+
+    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
+
+    ! Find (and throw away) the dump tag.
+    do
+      read(iunit, '(a)') line
+      if(trim(line) == dump_tag) exit
+    end do
+
+    idx%nr = 0
+    idx%ll = 0
+    idx%enlarge = 0
+
+    read(iunit, '(a20,l)')   str, idx%is_hypercube
+    read(iunit, '(a20,i21)') str, idx%dim
+    if (.not. idx%is_hypercube) then
+      read(iunit, '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
+      read(iunit, '(a20,7i8)')  str, (idx%nr(2, idir), idir = 1,idx%dim)
+      read(iunit, '(a20,7i8)')  str, idx%ll(1:idx%dim)
+      read(iunit, '(a20,7i8)')  str, idx%enlarge(1:idx%dim)
+    end if
+
+    call io_close(iunit)
+
+    POP_SUB(index_load)
+  end subroutine index_load
+
+
+  ! --------------------------------------------------------------
   subroutine index_dump_lxyz(idx, np, dir, ierr)
     type(index_t),    intent(in)  :: idx
     integer,          intent(in)  :: np

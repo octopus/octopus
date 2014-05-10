@@ -393,39 +393,45 @@ contains
   
   
   ! -------------------------------------------------------------- 
-  subroutine mesh_dump(mesh, iunit)
-    type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: iunit
+  subroutine mesh_dump(mesh, dir, filename)
+    type(mesh_t),     intent(in) :: mesh
+    character(len=*), intent(in) :: dir
+    character(len=*), intent(in) :: filename
     
-    integer :: idir
+    integer :: iunit
 
     PUSH_SUB(mesh_dump)
-    
-    write(iunit, '(a)')         dump_tag
-    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', (mesh%idx%nr(1, idir), idir = 1, mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', (mesh%idx%nr(2, idir), idir = 1, mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%idx%ll(1:mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%idx%enlarge(1:mesh%sb%dim)
+
+    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
+
+    write(iunit, '(a)') dump_tag
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
     write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+
+    call io_close(iunit)
     
+    call index_dump(mesh%idx, dir, filename)
+
     POP_SUB(mesh_dump)
   end subroutine mesh_dump
   
   
   ! -------------------------------------------------------------- 
   !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(mesh, iunit)
-    type(mesh_t), intent(inout) :: mesh
-    integer,      intent(in)    :: iunit
+  subroutine mesh_load(mesh, dir, filename)
+    type(mesh_t),     intent(inout) :: mesh
+    character(len=*), intent(in)    :: dir
+    character(len=*), intent(in)    :: filename
 
+    integer :: iunit
     character(len=20)  :: str
     character(len=100) :: line
-    integer :: idir
 
     PUSH_SUB(mesh_load)
+
+    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
 
     ! Find (and throw away) the dump tag.
     do
@@ -435,22 +441,16 @@ contains
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
-    mesh%idx%nr = 0
-    mesh%idx%ll = 0
-    mesh%idx%enlarge = 0
-    mesh%idx%dim = mesh%sb%dim
-    read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(1, idir), idir = 1,mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(2, idir), idir = 1,mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
-    ! ll should not be read but computed:
-    mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
-    read(iunit, '(a20,7i8)')  str, mesh%idx%enlarge(1:mesh%sb%dim)
     read(iunit, '(a20,1i10)') str, mesh%np
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x, mesh%vol_pp, mesh%resolution)
+    nullify(mesh%x, mesh%vol_pp, mesh%resolution)
     mesh%parallel_in_domains = .false.
+
+    call io_close(iunit)
+
+    call index_load(mesh%idx, dir, filename)
 
     POP_SUB(mesh_load)
   end subroutine mesh_load
@@ -479,12 +479,12 @@ contains
     POP_SUB(mesh_write_fingerprint)
   end subroutine mesh_write_fingerprint
 
+
   ! -----------------------------------------------------------------------
   !> This function reads the fingerprint of a mesh written in
   !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored. If the
   !! fingerprint cannot be read, it returns -1.
-
   subroutine mesh_read_fingerprint(mesh, filename, read_np_part, read_np)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: filename
