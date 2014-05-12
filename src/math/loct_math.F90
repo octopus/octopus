@@ -62,7 +62,7 @@ module loct_math_m
       interface
         subroutine f(x, fx)
           implicit none
-          real(8), intent(inout) :: x
+          real(8), intent(in)    :: x
           real(8), intent(inout) :: fx
         end subroutine f
       end interface

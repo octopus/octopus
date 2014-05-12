@@ -92,7 +92,7 @@
         x_ = x
         do j = 1, n
           index_ = j
-          call oct_numerical_derivative(x(j), dx, dfn(j), abserr(j), opt_control_function_forward)
+          call loct_numerical_derivative(x(j), dx, dfn(j), abserr(j), opt_control_function_forward)
         end do
 
         write(message(1), '(70(''#''))')

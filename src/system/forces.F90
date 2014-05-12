@@ -40,6 +40,7 @@ module forces_m
   use lalg_basic_m
   use lasers_m
   use linear_response_m
+  use loct_math_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -171,10 +172,10 @@ contains
         do iatom = 1, geo%natoms
           do i = 1, gr%sb%dim
             do j = 1, gr%sb%dim
-              call oct_numerical_derivative(geo%atom(iatom)%x(j), dq, gq, abserr, gofq)
+              call loct_numerical_derivative(geo%atom(iatom)%x(j), dq, gq, abserr, gofq)
               f(iatom, i) = f(iatom, i) - M_TWO * psi%occ(ist, ik) * q(iatom, j) * gq
             end do
-            call oct_numerical_derivative(geo%atom(iatom)%x(i), dq, fq, abserr, fofq)
+            call loct_numerical_derivative(geo%atom(iatom)%x(i), dq, fq, abserr, fofq)
             f(iatom, i) = f(iatom, i) + M_TWO * fq
           end do
         end do
