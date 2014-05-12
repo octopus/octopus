@@ -719,7 +719,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
   FLOAT, allocatable :: ddl_rho(:,:), kxc(:,:,:,:)
-  FLOAT, target, allocatable :: lr_fxc(:,:,:)
+  FLOAT, allocatable :: lr_fxc(:,:,:)
   R_TYPE, allocatable :: lr_hmat1(:,:,:)
   CMPLX, allocatable :: zdl_rho(:,:)
   FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set

@@ -61,12 +61,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static_pol_run(sys, hm, fromScratch)
-    type(system_t), target, intent(inout) :: sys
+    type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
-    type(scf_t)             :: scfv
-
+    type(scf_t) :: scfv
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
     FLOAT :: e_field, e_field_saved
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
@@ -496,8 +495,8 @@ contains
 
     !-------------------------------------------------------------
     subroutine output_cycle_()
-      integer iatom
-      type(unit_t) fn_unit
+      integer :: iatom
+      type(unit_t) :: fn_unit
       
       PUSH_SUB(output_cycle_)
 
@@ -611,7 +610,7 @@ contains
       FLOAT :: alpha(MAX_DIM, MAX_DIM)
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
-      type(unit_t) fn_unit
+      type(unit_t) :: fn_unit
       FLOAT :: freq_factor(3)
 
       PUSH_SUB(output_end_)
@@ -629,14 +628,14 @@ contains
             fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-              sys%gr%mesh, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
+              sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           endif
   
           if(iand(sys%outp%what, C_OUTPUT_pol_density) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-              sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
+              sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           endif
         end do
       endif

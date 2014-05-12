@@ -605,7 +605,7 @@ contains
     type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho_spin(:, :)
-    FLOAT, target, allocatable :: fxc_spin(:,:,:)
+    FLOAT, allocatable :: fxc_spin(:,:,:)
     character(len=100) :: restart_filename
 
     PUSH_SUB(casida_work)
