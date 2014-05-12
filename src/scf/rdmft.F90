@@ -57,15 +57,12 @@ module rdmft_m
        scf_orb,                  &
        scf_rdmft
 
-
   type rdm_t
     type(states_t) :: psi
     integer  :: max_iter, iter
     FLOAT    :: mu, occsum, qtot, scale_f, step, toler, conv_ener
     FLOAT, allocatable   :: eone(:), hartree(:,:), exchange(:,:), evalues(:)   
   end type rdm_t
-  
-  type(rdm_t), save :: rdm
   
 contains
    

@@ -158,7 +158,7 @@ contains
     iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
 
     write(iunit, '(a)') dump_tag
-    write(iunit, '(a20,l)')   'is_hypercube=       ', idx%is_hypercube
+    write(iunit, '(a20,l1)')  'is_hypercube=       ', idx%is_hypercube
     write(iunit, '(a20,i21)') 'dim=                ', idx%dim
     if (.not. idx%is_hypercube) then
       write(iunit, '(a20,7i8)') 'nr(1, :)=           ', (idx%nr(1, idir), idir = 1, idx%dim)
@@ -200,7 +200,7 @@ contains
     idx%ll = 0
     idx%enlarge = 0
 
-    read(iunit, '(a20,l)')   str, idx%is_hypercube
+    read(iunit, '(a20,l1)')  str, idx%is_hypercube
     read(iunit, '(a20,i21)') str, idx%dim
     if (.not. idx%is_hypercube) then
       read(iunit, '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
