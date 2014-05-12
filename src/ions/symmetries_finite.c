@@ -1775,9 +1775,9 @@ void FC_FUNC_(symmetries_finite_get_group_name,SYMMETRIES_FINITE_GET_GROUP_NAME)
 }
 
 void FC_FUNC_(symmetries_finite_get_group_elements,SYMMETRIES_FINITE_GET_GROUP_ELEMENTS)
-     (const int * point_group,  STR_F_TYPE name STR_ARG1){
+     (const int * point_group,  STR_F_TYPE elements STR_ARG1){
 
-  TO_F_STR1(PointGroups[*point_group].symmetry_code, name);
+  TO_F_STR1(PointGroups[*point_group].symmetry_code, elements);
 }
 
 void FC_FUNC_(symmetries_finite_end,SYMMETRIES_FINITE_END)(){  

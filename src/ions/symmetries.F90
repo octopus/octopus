@@ -55,6 +55,30 @@ module symmetries_m
 
   real(8), parameter :: symprec = CNST(1e-5)
 
+  !> NOTE: unfortunately, these routines use global variables shared among them
+  interface
+    subroutine symmetries_finite_init(natoms, types, positions, verbosity, point_group)
+      integer, intent(in)  :: natoms
+      integer, intent(in)  :: types !< (natoms)
+      real*8,  intent(in)  :: positions !< (3, natoms)
+      integer, intent(in)  :: verbosity
+      integer, intent(out) :: point_group
+    end subroutine symmetries_finite_init
+
+    subroutine symmetries_finite_get_group_name(point_group, name)
+      integer,          intent(in)  :: point_group
+      character(len=*), intent(out) :: name
+    end subroutine symmetries_finite_get_group_name
+
+    subroutine symmetries_finite_get_group_elements(point_group, elements)
+      integer,          intent(in)  :: point_group
+      character(len=*), intent(out) :: elements
+    end subroutine symmetries_finite_get_group_elements
+
+    subroutine symmetries_finite_end()
+    end subroutine symmetries_finite_end
+  end interface
+
 contains
   
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, lsize)
