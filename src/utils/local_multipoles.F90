@@ -111,8 +111,6 @@ contains
 
     PUSH_SUB(local_domains)
     
-    call io_mkdir('local.multipoles')
-    
     message(1) = 'Info: Creating local domains'
     message(2) = ''
     call messages_info(2)
