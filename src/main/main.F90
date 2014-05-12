@@ -87,18 +87,20 @@ program octopus
   !% Calculation of the electromagnetic response: electric
   !% polarizabilities and hyperpolarizabilities and magnetic
   !% susceptibilities (experimental for periodic systems).
+  !% Sternheimer variables may be prefixed with "EM".
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT; for finite systems only.
   !%Option td_transport 10
   !% Time-dependent quantum transport (experimental).
   !%Option vdw 11
-  !% Calculate van der Waals coefficients.
+  !% Calculate van der Waals coefficients. Sternheimer variables may be prefixed with "VdW".
   !%Option vib_modes 12
-  !% Calculation of the vibrational modes.
+  !% Calculation of the vibrational modes. Sternheimer variables may be prefixed with "VM".
   !%Option one_shot 14
   !% Obsolete. Use <tt>gs</tt> with <tt>MaximumIter = 0</tt> instead.
   !%Option kdotp 15
   !% Calculation of effective masses by <i>k.p</i> perturbation theory (experimental).
+  !% Sternheimer variables may be prefixed with "KdotP".
   !%Option gcm 16
   !% Generator-Coordinates Method calculation (experimental).
   !% Ref. K. Capelle, <i>J. Chem. Phys.</i> <b>119</b>, 1285 (2003).

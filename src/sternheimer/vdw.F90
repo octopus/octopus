@@ -85,7 +85,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, hm, "Pol", .true.)
+    call sternheimer_init(sh, sys, hm, "VdW", wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write')
