@@ -43,7 +43,7 @@ module box_union_m
   type box_union_t
     private
     
-    !! TODO: make this a linked list, so that boxes can be added and removed efficiently on-the-fly
+    !> TODO: make this a linked list, so that boxes can be added and removed efficiently on-the-fly
     integer              :: n_boxes
     type(box_t), pointer :: boxes(:)
   end type box_union_t
@@ -119,7 +119,6 @@ contains
     FLOAT,              intent(in)  :: point(:)
 
     integer :: ibox
-    logical :: inside2
 
     ! no push_sub because this function is called very frequently
 

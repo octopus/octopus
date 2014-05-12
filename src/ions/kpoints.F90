@@ -398,7 +398,7 @@ contains
     logical function read_user_kpoints()
       type(block_t) :: blk
       logical :: reduced
-      integer :: ik, idir, factor
+      integer :: ik, idir
 
       PUSH_SUB(kpoints_init.read_user_kpoints)
 

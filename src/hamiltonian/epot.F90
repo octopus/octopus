@@ -1215,7 +1215,6 @@ contains
     integer                              :: iatom, jatom
     FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
     FLOAT                                :: temp
-    FLOAT                                :: time1
     FLOAT :: rr, dd, zi, zj
     FLOAT :: sicn, chargeion, sqrtalphapi,sicn2
 
@@ -1265,7 +1264,6 @@ contains
       count_atoms=jatom
       calc_gate_energy=1
       call epot_local_potential(ep, gr%der, gr%dgrid, geo, jatom, v2)
-      write(68,*) "time1,", time1
 
       do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
