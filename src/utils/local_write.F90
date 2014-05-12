@@ -85,22 +85,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_init(writ, nd, domain, lab, inside, iter, dt)
-    type(local_write_t), target, intent(out)   :: writ
-    integer,                  intent(in)    :: nd 
-    type(box_union_t),        intent(in)    :: domain(:)
-    character(len=15),        intent(in)    :: lab(:)
-    logical,                  intent(in)    :: inside(:,:)
-    integer,                  intent(in)    :: iter
-    FLOAT,                    intent(in)    :: dt
+    type(local_write_t), intent(out)   :: writ
+    integer,             intent(in)    :: nd 
+    type(box_union_t),   intent(in)    :: domain(:)
+    character(len=15),   intent(in)    :: lab(:)
+    logical,             intent(in)    :: inside(:,:)
+    integer,             intent(in)    :: iter
+    FLOAT,               intent(in)    :: dt
 
-    FLOAT :: rmin
-    integer :: ierr, first, id, ist, jj, flags, iout, default
-    type(block_t) :: blk
-    character(len=100) :: filename
+    integer :: first, id, flags, iout, default
 
     PUSH_SUB(local_write_init)
 
     ! FIXME: if and when these routines are called from a normal run, the Section can be Output.
+    ! but then it will need to be in a different folder, since src/util is not linked by the other folders.
 
     !%Variable LocalOutput
     !%Type flag
@@ -204,7 +202,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_end(writ)
-    type(local_write_t), target, intent(inout)   :: writ
+    type(local_write_t), intent(inout) :: writ
     
     integer :: i
     PUSH_SUB(local_write_end)
@@ -217,11 +215,11 @@ contains
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, geo, kick, iter, dt)
     type(local_write_t),    intent(inout) :: writ
-    integer,                  intent(in)    :: nd 
-    type(box_union_t),        intent(in)    :: domain(:)
-    character(len=15),        intent(in)    :: lab(:)
-    logical,                  intent(in)    :: inside(:,:)
-    FLOAT  ,                  intent(in)    :: center(:,:)
+    integer,                intent(in)    :: nd 
+    type(box_union_t),      intent(in)    :: domain(:)
+    character(len=15),      intent(in)    :: lab(:)
+    logical,                intent(in)    :: inside(:,:)
+    FLOAT  ,                intent(in)    :: center(:,:)
     type(grid_t),           intent(inout) :: gr
     type(states_t),         intent(inout) :: st
     type(geometry_t),       intent(inout) :: geo
