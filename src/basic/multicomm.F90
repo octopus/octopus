@@ -577,16 +577,12 @@ contains
         call MPI_Comm_rank(mc%master_comm, mc%master_comm_rank, mpi_err)
 
         ! The "lines" of the Cartesian grid.
+        ! Initialize all the communicators, even if they are not parallelized
         do i_strategy = 1, mc%n_index
-          if(multicomm_strategy_is_parallel(mc, i_strategy)) then
             dim_mask             = .false.
             dim_mask(i_strategy) = .true.
             call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
             call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
-          else
-            mc%group_comm(i_strategy) = MPI_COMM_NULL
-            mc%who_am_i(i_strategy)   = 0
-          end if
         end do
 
         ! The domain-state "planes" of the grid (the ones with periodic dimensions).
