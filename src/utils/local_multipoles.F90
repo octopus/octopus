@@ -626,7 +626,7 @@ contains
       do ip = 1, sys%gr%mesh%np
         do id = 1, nd
           if(ip == 1)then
-            write(filename,'(a,a,a)')'local.multipoles/domain.',trim(lab(id)),'.xyz'
+            write(filename,'(a,a,a)')'local.general/domain.',trim(lab(id)),'.xyz'
             dunit(id) = io_open(file=trim(filename), action='write')
           end if
           if (inside(ip,id)) then
