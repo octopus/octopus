@@ -600,6 +600,23 @@ contains
             ks%frozen_hxc = .false.
           else
             scf%eigens%converged = 0
+            if(cmplxscl.and.hm%theory_level.eq.KOHN_SHAM_DFT.and.iter.eq.1) then
+              ! Since the LCAO initialization is not complex scaled,
+              ! what it produces is mostly garbage to us.
+              ! Better reset all the arrays and initialize as if
+              ! independent particles, since that part is correctly scaled.
+              !
+              ! Of course this would be better done by *not* doing the
+              ! initialization in the first place, but let`s not be
+              ! overly ambitious just yet.
+              hm%vhxc = M_ZERO
+              hm%Imvhxc = M_ZERO
+              hm%vxc = M_ZERO
+              hm%Imvxc = M_ZERO
+              hm%vhartree = M_ZERO
+              hm%Imvhartree = M_ZERO
+              call hamiltonian_update(hm, gr%mesh)
+            end if
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
           endif
         end if
