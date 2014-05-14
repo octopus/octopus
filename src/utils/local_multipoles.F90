@@ -101,7 +101,7 @@ contains
   !! calls the proper function.
   subroutine local_domains()
     type(local_domain_t)           :: local
-    integer                        :: err, id, nd, lmax, iter, l_start, l_end, l_step, last_slash
+    integer                        :: err, id, nd, iter, l_start, l_end, l_step, last_slash
     integer                        :: length
     FLOAT                          :: default_dt, dt
     character(64)                  :: filename, folder, folder_default, aux, base_folder
@@ -172,15 +172,6 @@ contains
       end if
     end if
 
-    !%Variable LocalMultipoleLmax 
-    !%Type integer
-    !%Default 1
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% This variable means the maximum electric multipole of the density output.
-    !%End
-    call parse_integer(datasets_check('LocalMultipoleLmax'), 1, lmax)
-
     !%Variable LocalBaderThreshold
     !%Type float
     !%Default 0.01
@@ -232,7 +223,6 @@ contains
       ! TODO: use new module local_write_m
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
                               sys%gr, sys%st, sys%geo, kick, iter, dt)
-      !call calc_local_multipoles(local, lmax, sys%st%rho(:,1), iter, dt) 
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
