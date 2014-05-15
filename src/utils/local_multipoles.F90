@@ -101,12 +101,11 @@ contains
   !! calls the proper function.
   subroutine local_domains()
     type(local_domain_t)           :: local
-    integer                        :: err, id, nd, iter, l_start, l_end, l_step, last_slash
+    integer                        :: err, iter, l_start, l_end, l_step, last_slash
     integer                        :: length
     FLOAT                          :: default_dt, dt
     character(64)                  :: filename, folder, folder_default, aux, base_folder
     logical                        :: iterate
-    type(local_write_t)            :: local_writ
     type(kick_t)                   :: kick
 
     PUSH_SUB(local_domains)
@@ -202,7 +201,7 @@ contains
 
     ! TODO: use new module local_write_m
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%domain, local%lab, local%inside, 0, dt)
+    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
@@ -243,7 +242,7 @@ contains
     !integer,                        intent(out) :: ndomain
     !character(len=15), allocatable, intent(out) :: lab(:)
 
-    integer           :: id, ndomain
+    integer           :: id
     type(block_t)     :: blk
 
     PUSH_SUB(local_init)
@@ -523,8 +522,6 @@ contains
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
     character(len=64)   :: filename
-    integer             :: rankmin, color
-    FLOAT               :: dmin
     
     PUSH_SUB(local_inside_domain)
 
@@ -640,19 +637,13 @@ contains
   ! ---------------------------------------------------------
   subroutine add_dens_to_ion_x(ff, geo)
     FLOAT,              intent(inout)   :: ff(:,:)
-    type(geometry_t),   intent(inout)       :: geo
+    type(geometry_t),   intent(inout)   :: geo
 
-    integer :: ia, ix, rankmin, index
-    integer :: n_spec_def, iunit, ispec, read_data
-    character(len=256) :: fname
-    character(len=15)  :: lab
-    integer :: xx, yy, zz, xmax, ymax, zmax
-    FLOAT   :: dmin, alpha, beta
-    integer :: point(MAX_DIM), point2(MAX_DIM)
+    integer :: ia, ix, rankmin
+    FLOAT   :: dmin
 
     PUSH_SUB(add_dens_to_ion_x)
 
-    xmax = 1; ymax = 1; zmax = 1
     do ia = 1, geo%natoms
       ix = mesh_nearest_point(sys%gr%mesh, geo%atom(ia)%x, dmin, rankmin)
       ff(ix,1) = ff(ix,1) + species_z(geo%atom(ia)%spec)

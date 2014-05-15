@@ -84,12 +84,10 @@ module local_write_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine local_write_init(writ, nd, domain, lab, inside, iter, dt)
+  subroutine local_write_init(writ, nd, lab, iter, dt)
     type(local_write_t), intent(out)   :: writ
     integer,             intent(in)    :: nd 
-    type(box_union_t),   intent(in)    :: domain(:)
     character(len=15),   intent(in)    :: lab(:)
-    logical,             intent(in)    :: inside(:,:)
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
@@ -175,7 +173,7 @@ contains
         if(writ%out(LOCAL_OUT_MULTIPOLES)%write) then 
           call io_mkdir('local.general/multipoles')
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES)%handle(id), &
-          first, units_from_atomic(units_out%time, dt), &
+            first, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
         end if
 

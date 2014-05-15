@@ -112,7 +112,6 @@ contains
     integer :: ia
     integer :: itess
     integer :: jtess
-    integer :: cav_unit
     integer :: cav_unit_test
     integer :: pcmmat_unit
     integer :: iunit
@@ -403,7 +402,6 @@ contains
     FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
 
     integer :: ia
-    integer :: ib
 
     FLOAT :: C_00
     FLOAT :: C_10
