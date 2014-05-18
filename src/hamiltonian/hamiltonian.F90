@@ -961,7 +961,7 @@ contains
     FLOAT, optional,     intent(in)    :: Imtime
 
     integer :: ispin, ip, idir, iatom, ilaser
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_phases
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(:,:)
 
@@ -1068,11 +1068,17 @@ contains
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
-      ! now regenerate the phases for the pseudopotentials
-      do iatom = 1, this%ep%natoms
-        call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
-          vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
-      end do
+      if(simul_box_is_periodic(mesh%sb)) then
+
+        call profiling_in(prof_phases, 'UPDATE_PHASES')
+        ! now regenerate the phases for the pseudopotentials
+        do iatom = 1, this%ep%natoms
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+            vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+        end do
+        call profiling_out(prof_phases)
+
+      end if
 
       if(associated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%phase)) then
