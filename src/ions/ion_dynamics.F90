@@ -76,6 +76,7 @@ module ion_dynamics_m
   type ion_dynamics_t
     private
     logical          :: move_ions
+    logical          :: constant_velocity
     integer          :: thermostat
     FLOAT            :: dt
     FLOAT            :: current_temperature
@@ -125,7 +126,22 @@ contains
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     nullify(this%oldforce)
-    
+
+    !%Variable IonsConstantVelocity
+    !%Type logical
+    !%Default no
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% (Experimental) If this variable is set to yes, the ions will
+    !% move with a constant velocity given by the initial
+    !% conditions. They will not be affected by any forces. The
+    !% default is no.
+    !%End
+    call parse_logical(datasets_check('IonsConstantVelocity'), .false., this%constant_velocity)
+    call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
+
+    if(this%constant_velocity) call messages_experimental('IonsConstantVelocity')
+
     if(ion_dynamics_ions_move(this)) then 
       SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
     end if
@@ -151,6 +167,11 @@ contains
     
     if(this%thermostat /= THERMO_NONE) then
       
+      if(this%constant_velocity) then
+        call messages_write('You cannot use a Thermostat and IonsConstantVelocity at the same time.')
+        call messages_fatal()
+      end if
+
       call messages_experimental('Thermostat')
 
       !%Variable TemperatureFunction
@@ -373,11 +394,19 @@ contains
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
 
-        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
-          + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
-          M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
+        if(.not. this%constant_velocity) then
 
-        this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
+          geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
+            + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
+            M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
+          
+          this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
+          
+        else
+
+          geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + dt*geo%atom(iatom)%v(1:geo%space%dim)
+          
+        end if
 
       end do
 
@@ -458,6 +487,7 @@ contains
     FLOAT   :: scal
 
     if(.not. ion_dynamics_ions_move(this)) return
+    if(this%constant_velocity) return
 
     PUSH_SUB(ion_dynamics_propagate_vel)
     
@@ -465,6 +495,7 @@ contains
 
     if(this%thermostat /= THERMO_NH) then
       ! velocity verlet
+      
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
         
@@ -473,7 +504,7 @@ contains
           geo%atom(iatom)%f(1:geo%space%dim))
         
       end do
-
+      
     else
       ! the nose-hoover integration
       do iatom = 1, geo%natoms
