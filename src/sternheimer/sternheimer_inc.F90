@@ -253,7 +253,7 @@ subroutine X(sternheimer_solve)(                           &
       else
         sigma_alt = 2
       endif
-      call X(restart_write_lr_rho)(lr(sigma_alt), sys%gr, st%d%nspin, restart_dir, rho_tag)
+      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart_dir, rho_tag)
     endif
 
     do sigma = 1, nsigma 
@@ -262,7 +262,7 @@ subroutine X(sternheimer_solve)(                           &
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
       write(dirname,'(2a)') trim(restart_dir), trim(wfs_tag_sigma(wfs_tag, sigma_alt))
-      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      call states_dump(trim(tmpdir)//dirname, st, sys%gr, err, iter = iter, lr = lr(sigma))
     end do
 
     if (.not. states_conv) then

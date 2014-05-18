@@ -57,7 +57,6 @@ module states_io_m
     states_write_tpa,                 &
     states_write_bands,               &
     states_write_fermi_energy,        &
-    states_dump,                      &
     states_init_self_energy,          &
     states_write_proj_lead_wf,        &
     states_read_proj_lead_wf
@@ -735,21 +734,6 @@ contains
     POP_SUB(states_write_fermi_energy)
   end subroutine states_write_fermi_energy
 
-  ! ---------------------------------------------------------
-
-  !> Note: this file is currently unused.
-  subroutine states_dump(st, iunit)
-    type(states_t), intent(in) :: st
-     integer,       intent(in) :: iunit
-
-     PUSH_SUB(states_dump)
-     
-     write(iunit, '(a20,1i10)')  'nst=                ', st%nst
-     write(iunit, '(a20,1i10)')  'dim=                ', st%d%dim
-     write(iunit, '(a20,1i10)')  'nik=                ', st%d%nik
-
-     POP_SUB(states_dump)
-  end subroutine states_dump
 
   ! ---------------------------------------------------------
   !> initialize the self-energy of the leads

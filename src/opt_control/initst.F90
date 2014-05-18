@@ -33,6 +33,7 @@ module initst_m
   use restart_m
   use states_m
   use states_calc_m
+  use states_restart_m
   use string_m
   use system_m
   use v_ks_m
@@ -100,7 +101,7 @@ contains
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, psi, sys%gr, ierr, exact = .true.)
+      call states_load(trim(restart_dir)//GS_DIR, psi, sys%gr, ierr, exact = .true.)
 
     case(oct_is_excited)  
       message(1) = 'Using an excited state as the starting state for an '
@@ -128,7 +129,7 @@ contains
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)
-          call restart_look_and_read(tmp_st, sys%gr)
+          call states_look_and_read(tmp_st, sys%gr)
           SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, psi%nst

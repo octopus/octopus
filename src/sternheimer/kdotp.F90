@@ -48,6 +48,7 @@ module kdotp_m
   use states_m
   use states_calc_m
   use states_dim_m
+  use states_restart_m
   use sternheimer_m
   use string_m
   use system_m
@@ -110,7 +111,7 @@ contains
     endif
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
+    call states_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
 
     pdim = sys%gr%sb%periodic_dim
 
@@ -187,7 +188,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
           
         if(ierr /= 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
@@ -198,7 +199,7 @@ contains
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
           
             if(ierr /= 0) then
               message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"

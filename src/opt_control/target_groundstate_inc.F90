@@ -30,7 +30,7 @@
 
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
-    call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+    call states_load(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
 
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt

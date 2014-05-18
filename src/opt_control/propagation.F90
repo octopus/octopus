@@ -46,6 +46,7 @@ module propagation_m
   use restart_m
   use species_m
   use states_m
+  use states_restart_m
   use system_m
   use td_m
   use propagator_m
@@ -970,7 +971,7 @@ contains
      if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), stored_st, gr, ierr, verbose=.false.)
+       call states_load(trim(filename), stored_st, gr, ierr, verbose=.false.)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
@@ -1007,7 +1008,7 @@ contains
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), psi, gr, ierr, verbose=.false.)
+       call states_load(trim(filename), psi, gr, ierr, verbose=.false.)
      end if
     end do
 
@@ -1031,7 +1032,7 @@ contains
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j)  ==  iter) then
         write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-        call restart_write(io_workpath(filename), psi, gr, ierr, iter)
+        call states_dump(io_workpath(filename), psi, gr, ierr, iter)
       end if
     end do
 

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2014 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ module scf_m
   use states_calc_m
   use states_dim_m
   use states_io_m
+  use states_restart_m
   use types_m
   use unit_m
   use unit_system_m
@@ -120,10 +121,10 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(in)    :: hm
-    FLOAT, optional,     intent(in)    :: conv_force
+    FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
-    integer :: mixdefault
+    integer :: mixdefault, ierr
 
     PUSH_SUB(scf_init)
 
@@ -420,7 +421,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done)
+  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, from_scratch)
     type(scf_t),          intent(inout) :: scf !< self consistent cycle
     type(multicomm_t),    intent(in)    :: mc
     type(grid_t),         intent(inout) :: gr !< grid
@@ -432,10 +433,11 @@ contains
     logical, optional,    intent(in)    :: gs_run
     integer, optional,    intent(in)    :: verbosity 
     integer, optional,    intent(out)   :: iters_done
+    logical, optional,    intent(in)    :: from_scratch
 
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
-
+    integer :: ierr
     integer :: iter, is, idim, iatom, nspin, err, iberry, idir
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -445,7 +447,7 @@ contains
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
     FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
     character(len=8) :: dirname
-    logical :: finish, gs_run_, berry_conv, cmplxscl
+    logical :: finish, gs_run_, berry_conv, cmplxscl, from_scratch_
     integer :: verbosity_
 
     PUSH_SUB(scf_run)
@@ -487,8 +489,21 @@ contains
 
     nspin = st%d%nspin
 
-    if(.not. cmplxscl) then
-      
+    from_scratch_ = optional_default(from_scratch, .true.)
+    ! For now we will always skip this step
+    if (.not. from_scratch_ .and. .false.) then
+      call states_load_rho(trim(restart_dir)//GS_DIR, st, gr, ierr)
+
+      select case (scf%mix_field)
+      case (MIXDENS)
+        call mix_load(trim(restart_dir)//GS_DIR, scf%smix, gr%fine%mesh, ierr)
+        call v_ks_calc(ks, hm, st, geo)
+      case (MIXPOT)
+        !TODO
+      end select
+    end if
+
+    if(.not. cmplxscl) then      
       SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
       SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
 
@@ -718,7 +733,7 @@ contains
         call mesh_init_mesh_aux(gr%fine%mesh)
         ! mix input and output densities and compute new potential
         if(.not. cmplxscl) then
-        call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
+          call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
           st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         else
           call zmixing(scf%smix, iter, zrhoin, zrhoout, zrhonew, zmf_dotp_aux)
@@ -746,15 +761,31 @@ contains
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
 
-      if(gs_run_) then 
+      if (gs_run_) then 
         ! save restart information
-        if(finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
-          .or. iter == scf%max_iter .or. scf%forced_finish) then
-          call restart_write(trim(tmpdir) // GS_DIR, st, gr, err, iter=iter)
+        if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
+          .or. iter == scf%max_iter .or. scf%forced_finish) .and. write_restart()) then
+
+          call restart_dump_start()
+          call states_dump(trim(tmpdir)//GS_DIR, st, gr, err, iter=iter) 
           if(err /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
             call messages_fatal(1)
           end if
+
+          call states_dump_rho(trim(tmpdir)//GS_DIR, st, gr, err, iter=iter)
+
+          select case (scf%mix_field)
+          case (MIXDENS)
+            call mix_dump(trim(tmpdir)//GS_DIR, scf%smix, gr%fine%mesh)
+            if(err /= 0) then
+              message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
+              call messages_fatal(1)
+            end if
+          case (MIXPOT)
+            !TODO
+          end select
+          call restart_dump_finish()
         end if
       end if
 

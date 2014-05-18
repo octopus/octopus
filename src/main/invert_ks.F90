@@ -35,6 +35,7 @@ module invert_ks_m
   use profiling_m 
   use restart_m
   use states_m 
+  use states_restart_m
   use system_m 
   use unit_m 
   use unit_system_m 
@@ -140,7 +141,7 @@ contains
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
     ! save files in restart format
-    call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call states_dump(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)

@@ -78,7 +78,7 @@
         if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
           call states_copy(tmp_st, tg%st)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
-          call restart_look_and_read(tmp_st, gr)
+          call states_look_and_read(tmp_st, gr)
           SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, tg%st%nst

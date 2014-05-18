@@ -35,6 +35,7 @@ module gcm_m
   use states_m
   use states_dim_m
   use states_calc_m
+  use states_restart_m
   use excited_states_m
   use restart_m
   use poisson_m
@@ -121,7 +122,7 @@ contains
     call messages_print_stress(stdout, 'Reading Slater determinants. ')
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
-      call restart_read (trim(slatdetnames(i)), phi(i), gr, ierr)
+      call states_load (trim(slatdetnames(i)), phi(i), gr, ierr)
     end do
     call messages_print_stress(stdout)
 

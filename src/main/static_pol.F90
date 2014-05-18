@@ -45,6 +45,7 @@ module static_pol_m
   use simul_box_m
   use species_m
   use states_m
+  use states_restart_m
   use system_m
   use unit_m
   use unit_system_m
@@ -83,7 +84,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
+    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
@@ -240,7 +241,7 @@ contains
         fromScratch_local = fromScratch
 
         if(.not. fromScratch) then
-          call restart_read(trim(dir_name), sys%st, sys%gr, ierr)
+          call states_load(trim(dir_name), sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
         endif
@@ -275,7 +276,7 @@ contains
         call output_cycle_()
 
         if(write_restart_densities) then
-          call restart_write(trim(dir_name), sys%st, sys%gr, ierr)
+          call states_dump(trim(dir_name), sys%st, sys%gr, ierr)
           if(ierr /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
             call messages_fatal(1)
@@ -317,7 +318,7 @@ contains
       fromScratch_local = fromScratch
 
       if(.not. fromScratch) then
-        call restart_read(trim(dir_name), sys%st, sys%gr, ierr)
+        call states_load(trim(dir_name), sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
       endif
@@ -357,7 +358,7 @@ contains
       end if
 
       if(write_restart_densities) then
-        call restart_write(trim(dir_name), sys%st, sys%gr, ierr)
+        call states_dump(trim(dir_name), sys%st, sys%gr, ierr)
         if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
           call messages_fatal(1)

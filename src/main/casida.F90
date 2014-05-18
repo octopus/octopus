@@ -37,6 +37,7 @@ module casida_m
   use kpoints_m
   use lalg_adv_m
   use loct_m
+  use linear_response_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -52,6 +53,7 @@ module casida_m
   use simul_box_m
   use states_m
   use states_dim_m
+  use states_restart_m
   use sternheimer_m
   use system_m
   use unit_m
@@ -191,7 +193,7 @@ contains
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
-    call restart_look_and_read(sys%st, sys%gr, exact = .true.)
+    call states_look_and_read(sys%st, sys%gr, exact = .true.)
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst

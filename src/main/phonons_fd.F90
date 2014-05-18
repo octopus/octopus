@@ -39,6 +39,7 @@ module phonons_fd_m
   use restart_m
   use scf_m
   use states_m
+  use states_restart_m
   use system_m
   use unit_m
   use unit_system_m
@@ -66,7 +67,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
+    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'

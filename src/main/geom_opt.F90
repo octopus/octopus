@@ -43,6 +43,7 @@ module geom_opt_m
   use species_pot_m
   use states_m
   use states_calc_m
+  use states_restart_m
   use system_m
   use unit_m
   use unit_system_m
@@ -104,7 +105,7 @@ contains
 
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
+      call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
       if(ierr /= 0) then
         message(1) = "Could not load wavefunctions: Starting from scratch."
         call messages_warning(1)

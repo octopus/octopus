@@ -38,6 +38,7 @@ module unocc_m
   use states_m
   use states_io_m
   use states_dim_m
+  use states_restart_m
   use system_m
   use v_ks_m
   use xc_m
@@ -100,11 +101,11 @@ contains
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
-    call restart_read_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
+    call states_load_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
 
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
@@ -217,7 +218,7 @@ contains
       
       ! write restart information.
       if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
-        call restart_write(trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr, iter=iter)
+        call states_dump(trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr, iter=iter)
         if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
           call messages_fatal(1)

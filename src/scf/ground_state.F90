@@ -41,6 +41,7 @@ module ground_state_m
   use states_m
   use states_calc_m
   use states_io_m
+  use states_restart_m
   use system_m
   use v_ks_m
   use varinfo_m
@@ -93,7 +94,7 @@ contains
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%st%open_boundaries) then
-      call read_free_states(sys%st, sys%gr)
+      call states_read_free_states(sys%st, sys%gr)
       ! allocate self_energy and calculate
       call states_init_self_energy(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)
     end if
@@ -101,7 +102,7 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = (sys%ks%theory_level == RDMFT))
+      call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = (sys%ks%theory_level == RDMFT))
 
       if(ierr /= 0) then
         call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")
@@ -146,7 +147,7 @@ contains
       call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
       call rdmft_end(rdm)
     else
-      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
+      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, from_scratch=fromScratch)
     endif    
 
     call scf_end(scfv)

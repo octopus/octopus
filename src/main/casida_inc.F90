@@ -769,7 +769,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
       
-      call X(restart_read_lr_rho)(X(dl_rho), sys%gr, st%d%nspin, &
+      call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, &
         VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
       
       if(ierr /= 0) then

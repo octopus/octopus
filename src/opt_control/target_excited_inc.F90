@@ -52,7 +52,7 @@
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
 
-    call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+    call states_load(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
     call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
 
     POP_SUB(target_init_excited)

@@ -120,66 +120,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 end subroutine X(restart_read_function)
 
 
-! ---------------------------------------------------------
-subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
-  type(lr_t),        intent(in)    :: lr
-  type(grid_t),      intent(in)    :: gr
-  integer,           intent(in)    :: nspin
-  character(len=*),  intent(in)    :: restart_dir
-  character(len=*),  intent(in)    :: rho_tag
-
-  character(len=100) :: fname
-  integer :: is, ierr
-
-  PUSH_SUB(X(restart_write_lr_rho))
-
-  call block_signals()
-  do is = 1, nspin
-    write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_function)(trim(tmpdir)//trim(RESTART_DIR), fname, gr%mesh, lr%X(dl_rho)(:, is), ierr)
-  end do
-  call unblock_signals()
-
-  POP_SUB(X(restart_write_lr_rho))
-end subroutine X(restart_write_lr_rho)
-
-
-! ---------------------------------------------------------
-subroutine X(restart_read_lr_rho)(dl_rho, gr, nspin, restart_subdir, rho_tag, ierr)
-  R_TYPE,            intent(inout) :: dl_rho(:,:) !< (gr%mesh%np, nspin)
-  type(grid_t),      intent(in)    :: gr
-  integer,           intent(in)    :: nspin
-  character(len=*),  intent(in)    :: restart_subdir
-  character(len=*),  intent(in)    :: rho_tag
-  integer,           intent(out)   :: ierr
-
-  character(len=80) :: fname
-  integer :: is, s_ierr
-
-  PUSH_SUB(X(restart_read_lr_rho))
-
-  ASSERT(ubound(dl_rho, 1) >= gr%mesh%np)
-  ASSERT(ubound(dl_rho, 2) >= nspin)
-
-  ierr = 0
-  do is = 1, nspin
-    write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%mesh,&
-      dl_rho(:, is), s_ierr)
-    if( s_ierr /=0 ) ierr = s_ierr
-  end do
-
-  if( ierr == 0 ) then 
-    write(message(1),'(a)') 'Loaded restart density '//trim(rho_tag)
-  else
-    write(message(1),'(a)') 'Could not load restart '//trim(rho_tag)
-  end if
-  call messages_info(1)
-
-  POP_SUB(X(restart_read_lr_rho))
-end subroutine X(restart_read_lr_rho)
-
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

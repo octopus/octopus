@@ -82,7 +82,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib)
         imat = vibrations_get_index(vib, iatom, idir)
         
         dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
-        call restart_read(trim(dirname), st, gr, ierr, lr = lrtmp)
+        call states_load(trim(dirname), st, gr, ierr, lr = lrtmp)
 
         if(ierr /= 0) then
           message(1) = "Failed to load response wavefunctions from '"//dirname//"'"
@@ -103,7 +103,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib)
       end do
     end do
         
-    call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
+    call states_dump(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
       st, gr, ierr, lr = lr)
 
   end do

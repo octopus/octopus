@@ -51,6 +51,7 @@ module phonons_lr_m
   use species_m
   use states_m
   use states_dim_m
+  use states_restart_m
   use sternheimer_m
   use string_m
   use system_m
@@ -146,7 +147,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_look_and_read(st, gr, exact = .true.)
+    call states_look_and_read(st, gr, exact = .true.)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
@@ -160,7 +161,7 @@ contains
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
 
         if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
@@ -221,7 +222,7 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1)), &
+        call states_load(trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1)), &
           st, gr, ierr, lr = lr(1))
       end if
       

@@ -281,6 +281,64 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
 end subroutine X(lr_swap_sigma)
 
 
+! ---------------------------------------------------------
+subroutine X(lr_dump_rho)(lr, mesh, nspin, dir, rho_tag)
+  type(lr_t),        intent(in) :: lr
+  type(mesh_t),      intent(in) :: mesh
+  integer,           intent(in) :: nspin
+  character(len=*),  intent(in) :: dir
+  character(len=*),  intent(in) :: rho_tag
+
+  character(len=100) :: fname
+  integer :: is, ierr
+
+  PUSH_SUB(X(lr_dump_rho))
+
+  call block_signals()
+  do is = 1, nspin
+    write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
+    call X(restart_write_function)(trim(dir), fname, mesh, lr%X(dl_rho)(:, is), ierr)
+  end do
+  call unblock_signals()
+
+  POP_SUB(X(lr_dump_rho))
+end subroutine X(lr_dump_rho)
+
+
+! ---------------------------------------------------------
+subroutine X(lr_load_rho)(dl_rho, mesh, nspin, dir, rho_tag, ierr)
+  R_TYPE,            intent(inout) :: dl_rho(:,:) !< (mesh%np, nspin)
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: nspin
+  character(len=*),  intent(in)    :: dir
+  character(len=*),  intent(in)    :: rho_tag
+  integer,           intent(out)   :: ierr
+
+  character(len=80) :: fname
+  integer :: is, s_ierr
+
+  PUSH_SUB(X(lr_load_rho))
+
+  ASSERT(ubound(dl_rho, 1) >= mesh%np)
+  ASSERT(ubound(dl_rho, 2) >= nspin)
+
+  ierr = 0
+  do is = 1, nspin
+    write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
+    call X(restart_read_function)(trim(dir), fname, mesh, dl_rho(:, is), s_ierr)
+    if( s_ierr /=0 ) ierr = s_ierr
+  end do
+
+  if( ierr == 0 ) then 
+    write(message(1),'(a)') 'Loaded restart density '//trim(rho_tag)
+  else
+    write(message(1),'(a)') 'Could not load restart '//trim(rho_tag)
+  end if
+  call messages_info(1)
+
+  POP_SUB(X(lr_load_rho))
+end subroutine X(lr_load_rho)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

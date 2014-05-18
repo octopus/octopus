@@ -45,8 +45,8 @@ module mix_m
     mix_init,                   &
     mix_clear,                  &
     mix_end,                    &
-    mix_restart_write,          &
-    mix_restart_read,           &
+    mix_dump,                   &
+    mix_load,                   &
     dmixing,                    &
     zmixing
 
@@ -268,24 +268,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mix_restart_write(smix, mesh, specify_dir)
-    type(mix_t),                intent(in) :: smix
-    type(mesh_t),               intent(in) :: mesh
-    character(len=*), optional, intent(in) :: specify_dir
+  subroutine mix_dump(dir, smix, mesh)
+    character(len=*), intent(in) :: dir
+    type(mix_t),      intent(in) :: smix
+    type(mesh_t),     intent(in) :: mesh
 
     integer :: ierr, iunit
     integer :: id2, id3, id4
-    character(len=80) :: dir, filename
+    character(len=80) :: filename
 
-    PUSH_SUB(mix_restart_write)
+    PUSH_SUB(mix_dump)
 
     ! functions to be written need to be compatible with the mesh
     ASSERT(mesh%np == smix%d1)
-
-    dir = trim(optional_default(specify_dir, trim(restart_dir)//"mixing"))
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(dir, is_tmp=.true.)
-    end if
 
     ! First we write some information about the mixing
     if (mpi_grp_is_root(mpi_world)) then
@@ -378,34 +373,40 @@ contains
 
     end if
 
-    POP_SUB(mix_restart_write)
-  end subroutine mix_restart_write
+    POP_SUB(mix_dump)
+  end subroutine mix_dump
 
 
   !---------------------------------------------------------
   ! Error codes:
   !  -1  - type of mixing is not the same.
   !  -2  - dimensions of the arrays are not consistent
+  !  -3  - no mixing file found
   !  > 0 - unable to read ierr functions
-  subroutine mix_restart_read(smix, mesh, ierr, specify_dir)
-    type(mix_t),                intent(inout) :: smix
-    type(mesh_t),               intent(in)    :: mesh
-    integer,                    intent(out)   :: ierr
-    character(len=*), optional, intent(in)    :: specify_dir
+  subroutine mix_load(dir, smix, mesh, ierr)
+    character(len=*), intent(in)    :: dir
+    type(mix_t),      intent(inout) :: smix
+    type(mesh_t),     intent(in)    :: mesh
+    integer,          intent(out)   :: ierr
 
     integer :: iunit, err
     integer :: scheme, d1, d2, d3, d4, last_ipos
     integer :: id2, id3, id4, ipos
     character(len=11)  :: str
-    character(len=80) :: dir, filename
+    character(len=80) :: filename
 
-    PUSH_SUB(mix_restart_read)
-
-    dir = trim(optional_default(specify_dir, trim(restart_dir)//"mixing"))
+    PUSH_SUB(mix_load)
 
     ! First we read some information about the mixing
     if (mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir)//'/mixing', action='read', is_tmp=.true.)
+      iunit = io_open(trim(dir)//'/mixing', action='read', status='old', die=.false., is_tmp=.true.)
+      if (iunit < 0) then
+        write(message(1), '(3a)') 'Unsuccessful read of file"', trim(dir), '/mixing"'
+        call messages_warning(1)
+        ierr = -3
+        POP_SUB(mix_load)
+        return
+      end if
 
       read(iunit, '(a11,i1)')  str, scheme
       read(iunit, '(a11,i10)') str, d1
@@ -422,7 +423,7 @@ contains
       message(1) = "The mixing scheme from the restart data is not the same as the one used in the current calculation."
       call messages_warning(1)
       ierr = -1
-      POP_SUB(mix_restart_read)
+      POP_SUB(mix_load)
       return
     end if
 
@@ -432,7 +433,7 @@ contains
       message(2) = "are not the same as the ones used in this calculation."
       call messages_warning(2)
       ierr = -2
-      POP_SUB(mix_restart_read)
+      POP_SUB(mix_load)
       return
     end if
 
@@ -457,7 +458,6 @@ contains
               call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
             end if
             if(err /= 0) then
-              write(*,*) err
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call messages_warning(1)
               ierr = ierr + 1
@@ -470,7 +470,6 @@ contains
               call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if(err /= 0) then
-              write(*,*) err
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call messages_warning(1)
               ierr = ierr + 1
@@ -512,8 +511,8 @@ contains
       call mix_clear(smix)
     end if
 
-    POP_SUB(mix_restart_read)
-  end subroutine mix_restart_read
+    POP_SUB(mix_load)
+  end subroutine mix_load
 
 
 #include "undef.F90"

@@ -59,6 +59,7 @@ module td_m
   use states_calc_m
   use states_dim_m
   use states_io_m
+  use states_restart_m
   use system_m
   use propagator_m
   use td_write_m
@@ -324,7 +325,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
-          call restart_read(trim(restart_dir)//'td', st, gr, ierr, iter=iter)
+          call states_load(trim(restart_dir)//'td', st, gr, ierr, iter=iter)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -359,7 +360,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if(.not.fromscratch) then
-        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
+        call states_load(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
         if(ierr /= 0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)
@@ -368,7 +369,7 @@ contains
           td%iter = 0
         end if
         ! extract the interface wave function
-        if(st%open_boundaries) call restart_get_ob_intf(st, gr)
+        if(st%open_boundaries) call states_get_ob_intf(st, gr)
       end if
 
       if(td%iter >= td%max_iter) then
@@ -395,8 +396,6 @@ contains
             else
               call dio_function_input(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             end if
-            ! If we do not succeed, try netcdf
-            if(ierr > 0) call dio_function_input(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             if(ierr > 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call messages_fatal(1)
@@ -411,20 +410,20 @@ contains
 
       if(fromScratch) then
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true., label = ": gs")
+          call states_load(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true., label = ": gs")
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)
           end if
           ! extract the interface wave function
-          if(st%open_boundaries) call restart_get_ob_intf(st, gr)
+          if(st%open_boundaries) call states_get_ob_intf(st, gr)
         end if
 
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
         if(parse_isdef(datasets_check('UserDefinedStates')) /= 0) then
-          call restart_read_user_def_orbitals(gr%mesh, st)
+          call states_read_user_def_orbitals(gr%mesh, st)
         end if
         
 
@@ -456,7 +455,7 @@ contains
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
-            call restart_look_and_read(stin, gr)
+            call states_look_and_read(stin, gr)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
@@ -688,7 +687,7 @@ contains
       PUSH_SUB(td_run.td_save_restart)
 
       ! first write resume file
-      call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
+      call states_dump(trim(tmpdir)//'td', st, gr, ierr, iter)
       if(ierr /= 0) then
         message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
         call messages_fatal(1)

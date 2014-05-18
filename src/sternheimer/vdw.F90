@@ -45,6 +45,7 @@ module vdw_m
   use restart_m
   use simul_box_m
   use states_m
+  use states_restart_m
   use sternheimer_m
   use string_m
   use system_m
@@ -215,7 +216,7 @@ contains
       end if
 
       ! we always need complex response
-      call restart_look_and_read(sys%st, sys%gr, is_complex = .true., exact = .true.)
+      call states_look_and_read(sys%st, sys%gr, is_complex = .true., exact = .true.)
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -229,7 +230,7 @@ contains
         ! load wavefunctions
         if(.not.fromScratch) then
           write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
-          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir,1))
+          call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir,1))
           
           if(ierr /= 0) then
             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname

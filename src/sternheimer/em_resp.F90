@@ -51,6 +51,7 @@ module em_resp_m
   use species_m
   use states_m
   use states_dim_m
+  use states_restart_m
   use sternheimer_m
   use string_m
   use system_m
@@ -140,7 +141,7 @@ contains
     endif
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
+    call states_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -174,7 +175,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         ! 1 is the sigma index which is used in em_resp
-        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
 
         if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"

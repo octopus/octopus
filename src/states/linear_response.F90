@@ -32,6 +32,7 @@ module linear_response_m
   use messages_m
   use io_function_m
   use profiling_m
+  use restart_m
   use smear_m
   use states_m
   use states_calc_m
@@ -57,7 +58,11 @@ module linear_response_m
        lr_dealloc,        &
        lr_is_allocated,   &
        dlr_swap_sigma,    &
-       zlr_swap_sigma
+       zlr_swap_sigma,    &
+       dlr_dump_rho,      &
+       zlr_dump_rho,      &
+       dlr_load_rho,      &
+       zlr_load_rho
 
 
   type lr_t
