@@ -83,14 +83,14 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
 
-  !Pointer-shortcut for xcs%functl
-  !It helps to remember that for xcs%functl(:,:)
+  !Pointer-shortcut for xcs%functional
+  !It helps to remember that for xcs%functional(:,:)
   ! (1,:) => exchange,    (2,:) => correlation
   ! (:,1) => unpolarized, (:,2) => polarized
   if(ispin == UNPOLARIZED) then
-    functl => xcs%functl(:, 1)
+    functl => xcs%functional(:, 1)
   else
-    functl => xcs%functl(:, 2)
+    functl => xcs%functional(:, 2)
   end if
 
   ! is there anything to do ?
@@ -245,7 +245,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
-          call XC_F90(lda_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
+          call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
           
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           l_vsigma = M_ZERO
@@ -254,10 +254,10 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
           
           if(functl(ixc)%id == XC_GGA_X_LB) then
             call mesh_r(der%mesh, ip, rr)
-            call XC_F90(gga_lb_modified)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+            call XC_F90(gga_lb_modified)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
               rr, unp_dedd(1))
           else
-            call XC_F90(gga_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+            call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
               unp_dedd(1), l_vsigma(1,1))
           end if
         end select
@@ -1638,14 +1638,14 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   zex = M_ZERO
   zec = M_ZERO
 
-  !Pointer-shortcut for xcs%functl
-  !It helps to remember that for xcs%functl(:,:)
+  !Pointer-shortcut for xcs%functional
+  !It helps to remember that for xcs%functional(:,:)
   ! (1,:) => exchange,    (2,:) => correlation
   ! (:,1) => unpolarized, (:,2) => polarized
   if(ispin == UNPOLARIZED) then
-    functl => xcs%functl(:, 1)
+    functl => xcs%functional(:, 1)
   else
-    functl => xcs%functl(:, 2)
+    functl => xcs%functional(:, 2)
   end if
   
   if(functl(1)%id == XC_LDA_XC_CMPLX) then

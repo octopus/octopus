@@ -67,10 +67,10 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     end if
     ! get lxc
     functl_loop: do ixc = 1, 2
-      if(xcs%functl(ixc, 1)%family /= XC_FAMILY_OEP) cycle
+      if(xcs%functional(ixc, 1)%family /= XC_FAMILY_OEP) cycle
 
       eig = M_ZERO
-      select case(xcs%functl(ixc,1)%id)
+      select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
           call X(oep_x) (gr%der, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)

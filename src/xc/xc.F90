@@ -65,7 +65,7 @@ module xc_m
   type xc_t
     integer :: family                   !< the families present
     integer :: kernel_family
-    type(xc_functl_t) :: functl(2,2)    !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
+    type(xc_functl_t) :: functional(2,2)    !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
                                         !< (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
@@ -108,7 +108,7 @@ contains
     call messages_info(1, iunit)
 
     do ifunc = FUNC_X, FUNC_C
-      call xc_functl_write_info(xcs%functl(ifunc, 1), iunit)
+      call xc_functl_write_info(xcs%functional(ifunc, 1), iunit)
     end do
     
     if(xcs%exx_coef /= M_ZERO) then
@@ -143,16 +143,16 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functl(FUNC_X, isp),  x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functl(FUNC_C, isp),  c_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_X, isp),  x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_C, isp),  c_id, ndim, nel, isp)
 
       call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), xk_id, ndim, nel, isp)
       call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), ck_id, ndim, nel, isp)
 
     end do
 
-    xcs%family = ior(xcs%family, xcs%functl(FUNC_X,1)%family)
-    xcs%family = ior(xcs%family, xcs%functl(FUNC_C,1)%family)
+    xcs%family = ior(xcs%family, xcs%functional(FUNC_X,1)%family)
+    xcs%family = ior(xcs%family, xcs%functional(FUNC_C,1)%family)
 
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_X,1)%family)
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
@@ -160,11 +160,11 @@ contains
     ! Take care of hybrid functionals (they appear in the correlation functional)
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
-      .or.(xcs%functl(FUNC_X,1)%id == XC_OEP_X) &
-      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
-      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
+      .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
+      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
+      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
     if(ll) then
-      if((xcs%functl(FUNC_X,1)%id /= 0).and.(xcs%functl(FUNC_X,1)%id /= XC_OEP_X)) then
+      if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
         call messages_fatal(2)
@@ -174,17 +174,17 @@ contains
         call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
-        call XC_F90(hyb_exx_coef)(xcs%functl(FUNC_C,1)%conf, xcs%exx_coef)
+      if(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
+         iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
+        call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
         xcs%exx_coef = M_ONE
       end if
 
       ! reset certain variables
-      xcs%functl(FUNC_X,1)%family = XC_FAMILY_OEP
-      xcs%functl(FUNC_X,1)%id     = XC_OEP_X
+      xcs%functional(FUNC_X,1)%family = XC_FAMILY_OEP
+      xcs%functional(FUNC_X,1)%id     = XC_OEP_X
       xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
@@ -380,8 +380,8 @@ contains
     PUSH_SUB(xc_end)
 
     do isp = 1, 2
-      call xc_functl_end(xcs%functl(FUNC_X, isp))
-      call xc_functl_end(xcs%functl(FUNC_C, isp))
+      call xc_functl_end(xcs%functional(FUNC_X, isp))
+      call xc_functl_end(xcs%functional(FUNC_C, isp))
       call xc_functl_end(xcs%kernel(FUNC_X, isp))
       call xc_functl_end(xcs%kernel(FUNC_C, isp))
     end do
@@ -397,7 +397,7 @@ contains
     PUSH_SUB(xc_is_orbital_dependent)
 
     xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
-      iand(xcs%functl(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
+      iand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
       iand(xcs%family, XC_FAMILY_MGGA) /= 0
 
     POP_SUB(xc_is_orbital_dependent)
