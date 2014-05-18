@@ -11,3 +11,6 @@ Spacing = 0.4
 StatesBlockSize = 2
 
 TestRepetitions = 1
+
+TestMaxBlockSize = 32
+
