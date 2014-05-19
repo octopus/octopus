@@ -564,9 +564,12 @@ sub run_match_new {
   }
 
   # extract numeric string (including possibility of NaN)
-  $value =~ /([0-9\-+.eEdDnNaA]+)/;
-  $value = $1;
-  chomp $value;
+  if($value =~ /([0-9\-+.eEdDnNaA]+)/) {
+      $value = $1;
+      chomp $value;
+  } else {
+      $value = "";
+  }
 
   if(length($value) == 0) {
       print STDERR "Match command returned nothing: $pre_command\n";
