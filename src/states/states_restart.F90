@@ -308,7 +308,7 @@ contains
     integer            :: ik, ist, idim, il
     CMPLX, allocatable :: zpsi(:)
 
-    PUSH_SUB(restart_get_ob_intf)
+    PUSH_SUB(states_get_ob_intf)
 
     write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
     call messages_info(1)
