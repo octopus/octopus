@@ -34,7 +34,6 @@ program oct_local_multipoles
   use io_function_m
   use kick_m
   use loct_m
-  use local_write_m
   use mesh_m
   use mesh_function_m
   use messages_m
@@ -58,7 +57,7 @@ program oct_local_multipoles
     integer, allocatable            :: dshape(:)
     logical, allocatable            :: inside(:,:)
     FLOAT, allocatable              :: dcm(:,:)         !< store the center of mass of each domain on the real space.
-    type(local_write_t)             :: writ       
+!    type(local_write_t)             :: writ       
   end type local_domain_t
 
   type(system_t)        :: sys
@@ -201,7 +200,7 @@ contains
 
     ! TODO: use new module local_write_m
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+!    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
@@ -220,8 +219,8 @@ contains
       end if
 
       ! TODO: use new module local_write_m
-      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-                              sys%gr, sys%st, sys%geo, kick, iter, dt)
+!      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
+!                              sys%gr, sys%st, sys%geo, kick, iter, dt)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
