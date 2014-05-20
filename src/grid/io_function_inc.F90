@@ -1112,7 +1112,7 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
  
   subroutine out_openscad()
-    integer :: ip, ii, jp, jj, kk, ntriangles, ll
+    integer :: ip, ii, jp, jj, kk, ll
     type(openscad_file_t) :: cad_file
     type(polyhedron_t) :: poly
     FLOAT, parameter :: isosurface_value = CNST(0.21)
@@ -1238,7 +1238,6 @@ contains
 
       call polyhedron_init(poly)
 
-      ntriangles = 0
       ll = 1
       do
         if(triangles(ll, cubeindex) == -1) exit

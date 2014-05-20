@@ -258,7 +258,7 @@ contains
 
     integer :: i, j, iatom, idir
     FLOAT :: x(MAX_DIM), time
-    FLOAT, allocatable :: force(:, :), total_force(:)
+    FLOAT, allocatable :: force(:, :)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -348,6 +348,8 @@ contains
     FLOAT, allocatable :: total_force(:)
     integer :: iatom
 
+    PUSH_SUB(forces_set_total_to_zero)
+
     SAFE_ALLOCATE(total_force(1:geo%space%dim))
 
     total_force(1:geo%space%dim) = CNST(0.0)
@@ -360,7 +362,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(total_force)
-
+    POP_SUB(forces_set_total_to_zero)
   end subroutine forces_set_total_to_zero
 
 #include "undef.F90"

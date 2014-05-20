@@ -204,10 +204,10 @@ contains
   !! the indices given in args (args could come from an argsort)
   subroutine reorder_states_by_args(st, mesh, args, ik)
 
-    type(states_t),       intent(inout) :: st
-    type(mesh_t),         intent(in)    :: mesh
-    integer, allocatable, intent(in)    :: args(:)
-    integer,              intent(in)    :: ik
+    type(states_t), intent(inout) :: st
+    type(mesh_t),   intent(in)    :: mesh
+    integer,        intent(in)    :: args(:)
+    integer,        intent(in)    :: ik
 
     integer :: ist, jst, kst
     CMPLX,   allocatable :: buf(:,:),buf1(:,:)
