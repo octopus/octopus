@@ -61,7 +61,7 @@ module local_write_m
   
   type local_write_prop_t
     private
-    type(c_ptr), allocatable :: handle(:)
+    type(c_ptr), pointer :: handle(:)
     logical :: write = .false.
   end type local_write_prop_t
 
@@ -151,6 +151,9 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>local.multipoles/<>domain%<>.multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
+
+    ! FIXME: this is not the right name of the variable!!
+
     call parse_integer(datasets_check('LDMultipoleLmax'), 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LocalMultipoleLmax."
@@ -205,7 +208,7 @@ contains
     integer :: i
     PUSH_SUB(local_write_end)
     do i = 1, LOCAL_OUT_MAX
-      SAFE_DEALLOCATE_A(writ%out(i)%handle)
+      SAFE_DEALLOCATE_P(writ%out(i)%handle)
     end do
     POP_SUB(local_write_end)
   end subroutine local_write_end
