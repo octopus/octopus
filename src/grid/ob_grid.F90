@@ -184,6 +184,15 @@ contains
       ob_grid%lead(:)%td_bias             = '0'
       ob_grid%transport_mode      = .true.
 
+      ! Corresponding meshes have to be initialized, mainly because of MPI IO
+      ! Probably this is not the best place.
+
+      ! These must be initialized for vec_gather, vec_scatter to work
+      ! as copy operations when running without domain parallelization.
+      ! And, also for MPI IO
+      ob_grid%lead(:)%mesh%vp%npart = 1
+      ob_grid%lead(:)%mesh%vp%xlocal = 1
+
       ! now read the rest of the block
       nrows = parse_block_n(blk)
       do nr = 0, nrows - 1
