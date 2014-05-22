@@ -61,26 +61,17 @@ module local_write_m
   
   type local_write_prop_t
     private
-    type(c_ptr), pointer :: handle(:)
+    type(c_ptr) :: handle
     logical :: write = .false.
   end type local_write_prop_t
 
   type local_write_t
     private
-    type(local_write_prop_t) :: out(LOCAL_OUT_MAX)
+    type(local_write_prop_t),allocatable :: out(:,:)
     integer                  :: how              !< how to output
     integer                  :: lmax             !< maximum multipole moment to output
   end type local_write_t
 
-!  type local_domain_t
-!    integer                         :: nd
-!    type(box_union_t), allocatable  :: domain(:)
-!    character(len=15), allocatable  :: lab(:)
-!    integer, allocatable            :: dshape(:)
-!    logical, allocatable            :: inside(:,:)
-!    type(local_write_t)             :: writ
-!  end type local_domain_t
-                            
 contains
 
   ! ---------------------------------------------------------
@@ -126,8 +117,9 @@ contains
 
     if(.not.varinfo_valid_option('LocalOutput', flags, is_flag = .true.)) call input_error('LocalOutput')
 
+    SAFE_ALLOCATE(writ%out(LOCAL_OUT_MAX, nd))
     do iout = 1, LOCAL_OUT_MAX
-      writ%out(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)
+      writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do
 
     !%Variable LocalOutputHow
@@ -143,7 +135,7 @@ contains
       call input_error('LocalOutputHow')
     end if
 
-    !%Variable LocalMultipoleLmax
+    !%Variable LDMultipoleLmax
     !%Type integer
     !%Default 1
     !%Section Utilities::oct-local_multipoles
@@ -152,15 +144,12 @@ contains
     !% during a time-dependent simulation. Must be non-negative.
     !%End
 
-    ! FIXME: this is not the right name of the variable!!
-
     call parse_integer(datasets_check('LDMultipoleLmax'), 1, writ%lmax)
     if (writ%lmax < 0) then
-      write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LocalMultipoleLmax."
-      message(2) = '(Must be LocalMultipoleLmax >= 0 )'
+      write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LDMultipoleLmax."
+      message(2) = '(Must be LDMultipoleLmax >= 0 )'
       call messages_fatal(2)
     end if
-    call messages_obsolete_variable('LocalDipoleLmax', 'LocalMultipoleLmax')
 
     if (iter == 0) then
       first = 0
@@ -171,16 +160,15 @@ contains
     call io_mkdir('local.general')
 
     if(mpi_grp_is_root(mpi_world)) then
-      SAFE_ALLOCATE(writ%out(LOCAL_OUT_MULTIPOLES)%handle(nd))
       do id = 1, nd
-        if(writ%out(LOCAL_OUT_MULTIPOLES)%write) then 
+        if(writ%out(LOCAL_OUT_MULTIPOLES, id)%write) then 
           call io_mkdir('local.general/multipoles')
-          call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES)%handle(id), &
+          call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
             first, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
         end if
 
-        if(writ%out(LOCAL_OUT_POTENTIAL)%write) then
+        if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
           message(1) = 'Potential output is still not implemented'
           call messages_warning(1)
           !call io_mkdir('local.general/potential')
@@ -188,7 +176,7 @@ contains
           !units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"/trim(lab(id))/".potential")))
         end if
 
-        if(writ%out(LOCAL_OUT_DENSITY)%write) then
+        if(writ%out(LOCAL_OUT_DENSITY,id)%write) then
           message(1) = 'Density output is still not implemented'
           call messages_warning(1)
           !call io_mkdir('local.general/densities')
@@ -207,9 +195,7 @@ contains
     
     integer :: i
     PUSH_SUB(local_write_end)
-    do i = 1, LOCAL_OUT_MAX
-      SAFE_DEALLOCATE_P(writ%out(i)%handle)
-    end do
+    SAFE_DEALLOCATE_A(writ%out)
     POP_SUB(local_write_end)
   end subroutine local_write_end
 
@@ -234,11 +220,11 @@ contains
     PUSH_SUB(local_write_iter)
     call profiling_in(prof, "LOCAL_WRITE_ITER")
 
-    if(writ%out(LOCAL_OUT_MULTIPOLES)%write) &
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES)%handle, nd, domain, lab, inside, center, & 
+    if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) &
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES,:), nd, domain, lab, inside, center, & 
                                         gr, geo, st, writ%lmax, kick, iter, writ%how)
         do id = 1, nd
-          call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES)%handle(id))
+          call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES, id)%handle)
         end do
 
     !if(writ%out(LOCAL_OUT_DENSITY)%write) &
@@ -254,7 +240,7 @@ contains
   ! ---------------------------------------------------------
   subroutine local_write_multipole(out_multip, nd, domain, lab, inside, center, & 
                                 gr, geo, st, lmax, kick, iter, how)
-    type(c_ptr),          intent(inout) :: out_multip(:)
+    type(local_write_prop_t),      intent(inout) :: out_multip(:)
     integer,                  intent(in)    :: nd 
     type(box_union_t),        intent(in)    :: domain(:)
     character(len=15),        intent(in)    :: lab(:)
@@ -281,89 +267,89 @@ contains
 
     if(mpi_grp_is_root(mpi_world).and.iter == 0) then
       do id = 1, nd   
-        call local_write_print_header_init(out_multip(id))
+        call local_write_print_header_init(out_multip(id)%handle)
   
         write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
-        call write_iter_string(out_multip(id), aux)
-        call write_iter_nl(out_multip(id))
+        call write_iter_string(out_multip(id)%handle, aux)
+        call write_iter_nl(out_multip(id)%handle)
   
         write(aux, '(a15,i2)')      '# lmax         ', lmax
-        call write_iter_string(out_multip(id), aux)
-        call write_iter_nl(out_multip(id))
+        call write_iter_string(out_multip(id)%handle, aux)
+        call write_iter_nl(out_multip(id)%handle)
 
-        call kick_write(kick, out = out_multip(id))
+        call kick_write(kick, out = out_multip(id)%handle)
 
-        call write_iter_header_start(out_multip(id))
+        call write_iter_header_start(out_multip(id)%handle)
 
         do is = 1, st%d%nspin
-          write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip(id), aux)
+          write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
           if(lmax>0) then
-            write(aux, '(a3,a1,i1,a1)') '<x>', '(', is,')'; call write_iter_header(out_multip(id), aux)
-            if(cmplxscl) call write_iter_header(out_multip(id), ' ')   
-            write(aux, '(a3,a1,i1,a1)') '<y>', '(', is,')'; call write_iter_header(out_multip(id), aux)
-            if(cmplxscl) call write_iter_header(out_multip(id), ' ')   
-            write(aux, '(a3,a1,i1,a1)') '<z>', '(', is,')'; call write_iter_header(out_multip(id), aux)
-            if(cmplxscl) call write_iter_header(out_multip(id), ' ')   
+            write(aux, '(a3,a1,i1,a1)') '<x>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
+            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
+            write(aux, '(a3,a1,i1,a1)') '<y>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
+            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
+            write(aux, '(a3,a1,i1,a1)') '<z>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
+            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
           end if
           do ll = 2, lmax
             do mm = -ll, ll
               write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', ll, ', m=', mm, ' (', is,')'
-              call write_iter_header(out_multip(id), aux)
+              call write_iter_header(out_multip(id)%handle, aux)
             end do
           end do
         end do
-        call write_iter_nl(out_multip(id))
+        call write_iter_nl(out_multip(id)%handle)
 
         ! units
-        call write_iter_string(out_multip(id), '#[Iter n.]')
-        call write_iter_header(out_multip(id), '[' // trim(units_abbrev(units_out%time)) // ']')
+        call write_iter_string(out_multip(id)%handle, '#[Iter n.]')
+        call write_iter_header(out_multip(id)%handle, '[' // trim(units_abbrev(units_out%time)) // ']')
 
         do is = 1, st%d%nspin
           do ll = 0, lmax
             do mm = -ll, ll
               select case(ll)
               case(0)
-                call write_iter_header(out_multip(id), 'Electrons')
+                call write_iter_header(out_multip(id)%handle, 'Electrons')
               case(1)
-                call write_iter_header(out_multip(id), '[' // trim(units_abbrev(units_out%length)) // ']')
-                if(cmplxscl) call write_iter_header(out_multip(id), ' ')   
+                call write_iter_header(out_multip(id)%handle, '[' // trim(units_abbrev(units_out%length)) // ']')
+                if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
               case default
                 write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", ll
-                call write_iter_header(out_multip(id), '[' // trim(aux) // ']')
-                if(cmplxscl) call write_iter_header(out_multip(id), ' ')   
+                call write_iter_header(out_multip(id)%handle, '[' // trim(aux) // ']')
+                if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
               end select
             end do
           end do
         end do
-        call write_iter_nl(out_multip(id))
+        call write_iter_nl(out_multip(id)%handle)
 
         ! complex quantities
         if(cmplxscl) then
-          call write_iter_string(out_multip(id), '#       _         ')
-          call write_iter_header(out_multip(id), ' ')
+          call write_iter_string(out_multip(id)%handle, '#       _         ')
+          call write_iter_header(out_multip(id)%handle, ' ')
 
           do is = 1, st%d%nspin
             do ll = 0, lmax
               do mm = -ll, ll
                 select case(ll)
                 case(0)
-                  call write_iter_header(out_multip(id), ' ')
+                  call write_iter_header(out_multip(id)%handle, ' ')
                 case(1)
-                  call write_iter_header(out_multip(id), 'Re')
-                  call write_iter_header(out_multip(id), 'Im')   
+                  call write_iter_header(out_multip(id)%handle, 'Re')
+                  call write_iter_header(out_multip(id)%handle, 'Im')   
                 case default
-                  call write_iter_header(out_multip(id), 'Re')
-                  call write_iter_header(out_multip(id), 'Im')   
+                  call write_iter_header(out_multip(id)%handle, 'Re')
+                  call write_iter_header(out_multip(id)%handle, 'Im')   
                 end select
               end do
             end do
           end do
-          call write_iter_nl(out_multip(id))
+          call write_iter_nl(out_multip(id)%handle)
 
         end if
       
-        call local_write_print_header_end(out_multip(id))
-        call write_iter_flush(out_multip(id))
+        call local_write_print_header_end(out_multip(id)%handle)
+        call write_iter_flush(out_multip(id)%handle)
       end do
     end if
 
@@ -400,7 +386,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       do id = 1, nd
-        call write_iter_start(out_multip(id))
+        call write_iter_start(out_multip(id)%handle)
         do is = 1, st%d%nspin
           add_lm = 1
           do ll = 0, lmax
@@ -409,18 +395,19 @@ contains
                 message(1) = 'Local Multipoles is still not implemented for complex densities'
                 call messages_fatal(1)
                 !FIXME: to deal with complex rho
-                !call write_iter_double(out_multip(id), units_from_atomic(units_out%length**ll,&
+                !call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll,&
                 !  real(zmultipole(add_lm, is), REAL_PRECISION)), 1)
-                !call write_iter_double(out_multip(id), units_from_atomic(units_out%length**ll,&
+                !call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll,&
                 !  aimag(zmultipole(add_lm, is))), 1)
               else
-                call write_iter_double(out_multip(id), units_from_atomic(units_out%length**ll, multipole(add_lm, is, id)), 1)
+                call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll, &
+                                        multipole(add_lm, is, id)), 1)
               end if
             add_lm = add_lm + 1
             end do
           end do
         end do
-        call write_iter_nl(out_multip(id))
+        call write_iter_nl(out_multip(id)%handle)
       end do
     end if
 

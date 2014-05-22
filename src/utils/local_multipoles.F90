@@ -37,6 +37,7 @@ program oct_local_multipoles
   use mesh_m
   use mesh_function_m
   use messages_m
+  use local_write_m
   use parser_m
   use profiling_m
   use restart_m
@@ -57,7 +58,7 @@ program oct_local_multipoles
     integer, allocatable            :: dshape(:)
     logical, allocatable            :: inside(:,:)
     FLOAT, allocatable              :: dcm(:,:)         !< store the center of mass of each domain on the real space.
-!    type(local_write_t)             :: writ       
+    type(local_write_t)             :: writ       
   end type local_domain_t
 
   type(system_t)        :: sys
@@ -104,7 +105,7 @@ contains
     integer                        :: length
     FLOAT                          :: default_dt, dt
     character(64)                  :: filename, folder, folder_default, aux, base_folder
-    logical                        :: iterate
+    logical                        :: iterate, ldupdate
     type(kick_t)                   :: kick
 
     PUSH_SUB(local_domains)
@@ -180,6 +181,15 @@ contains
     !%End
     call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
 
+    !%Variable LDUpdate
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% Controls if the calculation of the local domains is desired at each iteration.
+    !%End
+    call parse_logical(datasets_check('LDUpdate'), .false., ldupdate)
+
     ! Documentation in convert.F90
     call parse_logical(datasets_check('ConvertIterateFolder'), .false., iterate)
     call parse_integer(datasets_check('ConvertStart'), iter, l_start)
@@ -190,7 +200,6 @@ contains
     message(2) = ''
     call messages_info(2)
     
-    !call local_domains_read(local%domain, local%nd, local%lab)
     call local_init(local)
 
     ! Starting loop over selected densities.
@@ -198,9 +207,8 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    ! TODO: use new module local_write_m
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-!    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
@@ -215,12 +223,11 @@ contains
       if(iter == l_start) then
         call local_inside_domain(local, sys%st%rho(:,1), .true.)
       else
-        call local_inside_domain(local, sys%st%rho(:,1), .false.)
+        call local_inside_domain(local, sys%st%rho(:,1), ldupdate)
       end if
 
-      ! TODO: use new module local_write_m
-!      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-!                              sys%gr, sys%st, sys%geo, kick, iter, dt)
+      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
+                              sys%gr, sys%st, sys%geo, kick, iter, dt)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
@@ -237,9 +244,6 @@ contains
   ! ---------------------------------------------------------
   subroutine local_init(local)
     type(local_domain_t), intent(inout) :: local
-    !type(box_union_t), allocatable, intent(out) :: domain(:)
-    !integer,                        intent(out) :: ndomain
-    !character(len=15), allocatable, intent(out) :: lab(:)
 
     integer           :: id
     type(block_t)     :: blk
@@ -314,7 +318,7 @@ contains
     do id = 1, local%nd
       call box_union_end(local%domain(id))
     end do
-    !call local_write_end(local%writ)
+    call local_write_end(local%writ)
     SAFE_DEALLOCATE_A(local%lab)
     SAFE_DEALLOCATE_A(local%domain)
     SAFE_DEALLOCATE_A(local%dshape)
@@ -464,8 +468,7 @@ contains
         do ia = 1, sys%geo%natoms
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
-           ! bsize(:) = species_def_rsize(sys%geo%atom(ia)%spec)
-            bsize(:) = units_from_atomic(units_inp%length**(-1), 0.5 )
+            bsize(:) = species_def_rsize(sys%geo%atom(ia)%spec)
             call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
             ibox = ibox + 1
           end if
@@ -524,33 +527,33 @@ contains
     
     PUSH_SUB(local_inside_domain)
 
-    if (any(lcl%dshape(:) == BADER)) then
-      SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np_part,1) = ff(1:sys%gr%mesh%np_part)
-      call add_dens_to_ion_x(ff2,sys%geo)
-      call basins_init(basins, sys%gr%mesh)
-      call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
-      call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
-      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
-      if (extra_write) then
-        filename = 'basinsmap'
-        iunit = io_open(file=trim(filename), action='write')
-        do ip = 1, sys%gr%mesh%np
-          write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,ix)),ix=1,3), &
+    if (update) then
+      if (any(lcl%dshape(:) == BADER)) then
+        SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np_part,1) = ff(1:sys%gr%mesh%np_part)
+        call add_dens_to_ion_x(ff2,sys%geo)
+        call basins_init(basins, sys%gr%mesh)
+        call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
+        call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
+        call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
+        call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
+        if (extra_write) then
+          filename = 'basinsmap'
+          iunit = io_open(file=trim(filename), action='write')
+          do ip = 1, sys%gr%mesh%np
+            write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,ix)),ix=1,3), &
              basins%map(ip)
-        end do
-        call io_close(iunit)
-      end if
-      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
-      SAFE_DEALLOCATE_A(ff2)
-    else
-      do id = 1, lcl%nd
-        if (update .and. lcl%dshape(id) /= BADER) then
+          end do
+          call io_close(iunit)
+        end if
+        call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+        SAFE_DEALLOCATE_A(ff2)
+      else
+        do id = 1, lcl%nd
           call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
-          call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
-        end if 
-      end do
-    end if
+        end do
+        call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+      end if
+    end if 
     
     POP_SUB(local_inside_domain)
 
