@@ -243,7 +243,8 @@ contains
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
       call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
     else
-      call mesh_init_stage_3(gr%mesh)
+      call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
+      call mesh_init_stage_3(gr%mesh, mpi_grp=grp)
     end if
 
     call nl_operator_global_init()

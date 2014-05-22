@@ -464,7 +464,9 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.
-  if(present(mpi_grp)) mesh%parallel_in_domains = .true.
+  if(present(mpi_grp)) then
+    if (mpi_grp%size > 1) mesh%parallel_in_domains = .true.
+  end if
 
 
   if(.not. mesh%parallel_in_domains) then
@@ -486,7 +488,11 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     call do_partition()
   else
 #ifdef HAVE_MPI
-    call mpi_grp_init(mesh%mpi_grp, MPI_COMM_WORLD)
+    if (present(mpi_grp)) then
+      mesh%mpi_grp = mpi_grp 
+    else
+      call mpi_grp_init(mesh%mpi_grp, MPI_COMM_WORLD)
+    end if
 #else
     call mpi_grp_init(mesh%mpi_grp, -1)
 #endif
