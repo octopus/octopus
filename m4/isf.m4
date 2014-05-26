@@ -85,12 +85,12 @@ dnl Generic ISF library
 if test $acx_isf_ok = no; then
   AC_MSG_CHECKING([for isf library with -lPSolver-1])
   if test "$LIBS_ISF" = ""; then
-    LIBS="-lPSolver-1 -lwrappers -lflib -labinit $LIBS_LAPACK $LIBS_BLAS $LIBS $acx_isf_save_LIB"
-    AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; LIBS_ISF="-lPSolver-1 -lwrappers -lflib -labinit "], [])
+    LIBS="-lPSolver-1 -lwrappers -lflib -labinit -lrt $LIBS_LAPACK $LIBS_BLAS $LIBS $acx_isf_save_LIB"
+    AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; LIBS_ISF="-lPSolver-1 -lwrappers -lflib -labinit -lrt"], [])
   else
-    LIBS="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit $LIBS_LAPACK $LIBS_BLAS $acx_isf_save_LIB"
+    LIBS="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit -lrt $LIBS_LAPACK $LIBS_BLAS $acx_isf_save_LIB"
     AC_LINK_IFELSE($testprogram, [acx_isf_ok=yes; 
-                                  LIBS_ISF="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit "], [])  
+                                  LIBS_ISF="$LIBS_ISF -lPSolver-1 -lwrappers -lflib -labinit -lrt "], [])  
   fi
   if test $acx_isf_ok = no; then
     AC_MSG_RESULT([$acx_isf_ok])
@@ -114,7 +114,5 @@ fi
 
 AC_SUBST(LIBS_ISF)
 AC_SUBST(FCFLAGS_ISF)
-LIBS="$acx_isf_save_LIBS $LIBS_ISF"
-FCFLAGS="$acx_isf_save_FCFLAGS $FCFLAGS_ISF"
 
 ])dnl ACX_ISF
