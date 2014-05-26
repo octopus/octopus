@@ -114,5 +114,7 @@ fi
 
 AC_SUBST(LIBS_ISF)
 AC_SUBST(FCFLAGS_ISF)
+LIBS="$acx_isf_save_LIBS"
+FCFLAGS="$acx_isf_save_FCFLAGS"
 
 ])dnl ACX_ISF
