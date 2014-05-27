@@ -74,7 +74,7 @@ module loct_math_m
   !> Special functions
   interface loct_gamma
     function oct_gamma(x)
-     implicit none
+      implicit none
       real(8) :: oct_gamma
       real(8), intent(in) :: x
     end function oct_gamma
@@ -83,7 +83,7 @@ module loct_math_m
 
   interface loct_incomplete_gamma
     function oct_incomplete_gamma(a, x)
-     implicit none
+      implicit none
       real(8) :: oct_incomplete_gamma
       real(8), intent(in) :: a, x
     end function oct_incomplete_gamma
@@ -92,7 +92,7 @@ module loct_math_m
 
   interface loct_hypergeometric
     function oct_hypergeometric(a, b, x)
-     implicit none
+      implicit none
       real(8) :: oct_hypergeometric
       real(8), intent(in) :: a, b, x
     end function oct_hypergeometric
@@ -101,7 +101,7 @@ module loct_math_m
 
   interface loct_bessel
     function oct_bessel(n, x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel
       integer, intent(in) :: n
       real(8), intent(in) :: x
@@ -111,7 +111,7 @@ module loct_math_m
 
   interface loct_bessel_in
     function oct_bessel_in(n, x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel_in
       integer, intent(in) :: n
       real(8), intent(in) :: x
@@ -121,7 +121,7 @@ module loct_math_m
 
   interface loct_sph_bessel
     function oct_sph_bessel(l, x)
-     implicit none
+      implicit none
       real(8) :: oct_sph_bessel
       integer, intent(in) :: l
       real(8), intent(in) :: x
@@ -131,7 +131,7 @@ module loct_math_m
 
   interface loct_bessel_j0
     function oct_bessel_j0(x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel_j0
       real(8), intent(in) :: x
     end function oct_bessel_j0
@@ -140,7 +140,7 @@ module loct_math_m
 
   interface loct_bessel_j1
     function oct_bessel_j1(x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel_j1
       real(8), intent(in) :: x
     end function oct_bessel_j1
@@ -149,7 +149,7 @@ module loct_math_m
 
   interface loct_bessel_k0
     function oct_bessel_k0(x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel_k0
       real(8), intent(in) :: x
     end function oct_bessel_k0
@@ -158,7 +158,7 @@ module loct_math_m
 
   interface loct_bessel_k1
     function oct_bessel_k1(x)
-     implicit none
+      implicit none
       real(8) :: oct_bessel_k1
       real(8), intent(in) :: x
     end function oct_bessel_k1
@@ -167,7 +167,7 @@ module loct_math_m
 
   interface loct_asinh
     function oct_asinh(x)
-     implicit none
+      implicit none
       real(8) :: oct_asinh
       real(8), intent(in) :: x
     end function oct_asinh
@@ -176,7 +176,7 @@ module loct_math_m
 
   interface loct_erf
     function oct_erf(x)
-     implicit none
+      implicit none
       real(8) :: oct_erf
       real(8), intent(in) :: x
     end function oct_erf
@@ -185,7 +185,7 @@ module loct_math_m
 
   interface loct_erfc
     function oct_erfc(x)
-     implicit none
+      implicit none
       real(8) oct_erfc
       real(8), intent(in) :: x
     end function oct_erfc
@@ -194,7 +194,7 @@ module loct_math_m
 
   interface loct_legendre_sphplm
     function oct_legendre_sphplm(l, m, x)
-     implicit none
+      implicit none
       real(8) :: oct_legendre_sphplm
       integer, intent(in) :: l, m
       real(8), intent(in) :: x
@@ -204,7 +204,7 @@ module loct_math_m
 
   interface loct_sine_integral
     function oct_sine_integral(x)
-     implicit none
+      implicit none
       real(8) :: oct_sine_integral
       real(8), intent(in) :: x
     end function oct_sine_integral
