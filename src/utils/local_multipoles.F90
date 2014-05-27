@@ -107,6 +107,7 @@ contains
     character(64)                  :: filename, folder, folder_default, aux, base_folder
     logical                        :: iterate, ldupdate
     type(kick_t)                   :: kick
+    type(restart_t)                :: restart 
 
     PUSH_SUB(local_domains)
     
@@ -214,11 +215,15 @@ contains
       if (iterate) then
         write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
       end if
-      call drestart_read_function(trim(base_folder) // trim(folder), trim(filename), sys%gr%mesh, sys%st%rho(:,1), err)
+      call restart_init(restart, RESTART_TYPE_LOAD, folder, sys%gr%mesh%mpi_grp, & 
+                      mesh=sys%gr%mesh, sb=sys%gr%sb, basedir=base_folder) 
+      call drestart_read_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
         write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
         call messages_fatal(1)
       end if
+      call restart_end(restart) 
+
       ! Look for the mesh points inside local domains
       if(iter == l_start) then
         call local_inside_domain(local, sys%st%rho(:,1), .true.)
