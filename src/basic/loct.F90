@@ -36,6 +36,7 @@ module loct_m
     loct_stat,               &
     loct_rm,                 &
     loct_rm_status_files,    &
+    loct_dir_exists,         &
     loct_number_of_lines,    &
     loct_getenv,             &
     loct_isinstringlist,     &
@@ -111,11 +112,12 @@ module loct_m
   end interface loct_mkdir
 
   interface loct_stat
-    subroutine oct_stat(ierr, name, mod_time)
+    subroutine oct_stat(ierr, name, mod_time, is_dir)
       implicit none
       integer,          intent(out) :: ierr
       character(len=*), intent(in)  :: name
       character(len=*), intent(out) :: mod_time
+      integer,          intent(out) :: is_dir
     end subroutine oct_stat
   end interface loct_stat
 
@@ -255,6 +257,21 @@ contains
     call loct_rm('exec/'//trim(current_label)//'oct-status-aborted')
 
   end subroutine loct_rm_status_files
+
+
+  logical function loct_dir_exists(dirname) result(exists)
+    character(len=*), intent(in) :: dirname
+
+    interface oct_dir_exists
+      integer function oct_dir_exists(dirname)
+        implicit none
+        character(len=*), intent(in)    :: dirname
+      end function oct_dir_exists
+    end interface oct_dir_exists
+
+    exists = oct_dir_exists(dirname) /= 0
+
+  end function loct_dir_exists
 
 end module loct_m
 

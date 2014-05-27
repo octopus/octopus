@@ -115,6 +115,29 @@ void FC_FUNC_(oct_stat, OCT_STAT)
   /* otherwise, do not do this since 'mod_time_c' points at static data of asctime */
 }
 
+int FC_FUNC_(oct_dir_exists, OCT_DIR_EXISTS)
+     (STR_F_TYPE name STR_ARG1)
+{
+  int ierr;
+  char *name_c;
+  struct stat statbuf;
+
+  TO_C_STR1(name, name_c);
+  ierr = stat(name_c, &statbuf);
+  free(name_c);
+
+  if(ierr == 0)
+  {
+    printf("ierr = %i\n", S_ISDIR(statbuf.st_mode));
+    return S_ISDIR(statbuf.st_mode);
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+
 void FC_FUNC_(oct_rm, OCT_RM)
      (STR_F_TYPE name STR_ARG1)
 {

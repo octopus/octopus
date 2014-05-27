@@ -238,11 +238,10 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    inquire(file=trim(restart%pwd), exist=dir_exists)
+    dir_exists = loct_dir_exists(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
       call io_mkdir(trim(restart%pwd), is_tmp=.true., parents=.true.)
     end if
-
 
     select case (restart%type)
     case (RESTART_TYPE_DUMP)
