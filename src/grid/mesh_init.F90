@@ -839,7 +839,7 @@ contains
     !%Default "restart/partition"
     !%Section Execution::Parallelization
     !%Description
-    !% Directory from where <tt>Octopus</tt> can read or write the mesh partition.
+    !% Directory where <tt>Octopus</tt> can read or write the mesh partition.
     !%End
     call parse_string(datasets_check('MeshPartitionDir'), "restart/partition", partition_dir)
 
@@ -850,8 +850,8 @@ contains
     !%Default true
     !%Section Execution::Parallelization
     !%Description
-    !% If set to yes (the default) <tt>Octopus</tt> will try to use the mesh
-    !% partition from a previous run if available in directory <tt>MeshPartitionDir</tt>.
+    !% If set to yes (the default), <tt>Octopus</tt> will try to use the mesh
+    !% partition from a previous run, if available, in directory <tt>MeshPartitionDir</tt>.
     !%End
     call parse_logical(datasets_check('MeshPartitionRead'), .true., read_partition)
 
@@ -866,14 +866,14 @@ contains
       !%Default mesh mpi_grp size
       !%Section Execution::Parallelization
       !%Description
-      !% Gives the possibility to change the partition nodes
-      !% Afterward, it crashes
+      !% Gives the possibility to change the partition nodes.
+      !% Afterward, it crashes.
       !%End
       call parse_integer(datasets_check('MeshPartitionVirtualSize'), mesh%mpi_grp%size, vsize)
       
       if (vsize /= mesh%mpi_grp%size) then
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
-        write(message(2),'(a)') "The execution will crash"
+        write(message(2),'(a)') "The execution will crash."
         call messages_warning(2)
         has_virtual_partition = .true.
       else 
@@ -897,8 +897,8 @@ contains
       !%Default true
       !%Section Execution::Parallelization
       !%Description
-      !% If set to yes (the default) <tt>Octopus</tt> will write the mesh
-      !% partition of the current run if to directory <tt>MeshPartitionDir</tt>.
+      !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
+      !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
       !%End
       call parse_logical(datasets_check('MeshPartitionWrite'), .true., write_partition)
 

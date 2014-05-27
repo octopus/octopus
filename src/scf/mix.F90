@@ -383,7 +383,7 @@ contains
     ! First we read some information about the mixing
     iunit = restart_open(restart, 'mixing')
     if (iunit < 0) then
-      write(message(1), '(3a)') 'Unsuccessful read of file"mixing".'
+      write(message(1), '(3a)') 'Unsuccessful read of file "mixing".'
       call messages_warning(1)
       ierr = -3
       POP_SUB(mix_load)

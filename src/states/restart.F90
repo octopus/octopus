@@ -133,7 +133,7 @@ contains
                                                         !! or for loading (type = RESTART_TYPE_LOAD)?
     character(len=*),            intent(in)  :: dirname !< Directory where restart information is going to be loaded 
                                                         !! from or dumped to.
-    type(mpi_grp_t),             intent(in)  :: mpi_grp !> The mpi group in charge of handling this restart.
+    type(mpi_grp_t),             intent(in)  :: mpi_grp !< The mpi group in charge of handling this restart.
     type(mesh_t),      optional, intent(in)  :: mesh    !< If present, depending on the type of restart, the mesh 
                                                         !! information is either dumped or the mesh compatibility is checked.
     type(simul_box_t), optional, intent(in)  :: sb      !< If present and type = RESTART_TYPE_DUMP, the simulation box 
@@ -304,8 +304,8 @@ contains
       if (.not. dir_exists) then
         restart%skip = .true.
 
-        message(1) = "Info: Could not find '"//trim(restart%pwd)//"' directory for restart."
-        message(2) = "Info: No restart information will be read."
+        message(1) = "Could not find '"//trim(restart%pwd)//"' directory for restart."
+        message(2) = "No restart information will be read."
         call messages_warning(2)
 
       else
@@ -521,6 +521,7 @@ contains
 
     case default
       message(1) = "Error in restart_open: illegal restart type"
+      call messages_fatal(1)
     end select
 
     if (present(status)) status_ = status
@@ -547,7 +548,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Returns true if the restart information should not be 
+  !> Returns true if the restart information should neither be
   !! read nor written. This might happen because the user
   !! chose not to write any restart information, or because
   !! the restart information is not available for reading.

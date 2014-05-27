@@ -521,11 +521,11 @@ contains
         end if
 
       else
-        ! We have an hypercube: we will assume everythin is OK...
+        ! We have a hypercube: we will assume everything is OK...
         read_np_part = 0
         read_np = 0
         
-        message(1) = "Simulation box is an hypercube: unable to check mesh compatibility."
+        message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
         call messages_warning(1)
       end if
       call io_close(iunit)
