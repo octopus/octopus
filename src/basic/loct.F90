@@ -112,12 +112,11 @@ module loct_m
   end interface loct_mkdir
 
   interface loct_stat
-    subroutine oct_stat(ierr, name, mod_time, is_dir)
+    subroutine oct_stat(ierr, name, mod_time)
       implicit none
       integer,          intent(out) :: ierr
       character(len=*), intent(in)  :: name
       character(len=*), intent(out) :: mod_time
-      integer,          intent(out) :: is_dir
     end subroutine oct_stat
   end interface loct_stat
 
