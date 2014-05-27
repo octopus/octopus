@@ -76,15 +76,19 @@ contains
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
-    character(len=80) :: fname, dir_name
+    character(len=80) :: fname
     character :: sign_char
+    type(restart_t) :: restart_gs, restart_load, restart_dump
 
     PUSH_SUB(static_pol_run)
 
     call init_()
 
     ! load wavefunctions
-    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
+    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+    call states_load(restart_gs, sys%st, sys%gr, ierr)
+    call restart_end(restart_gs)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
@@ -96,8 +100,6 @@ contains
     call messages_info(1)
     call system_h_setup (sys, hm, calc_eigenval = .false.) ! we read them from restart
 
-    call io_mkdir(trim(tmpdir)//EM_RESP_FD_DIR) ! restart
-
     ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1:2))
     dipole = M_ZERO
@@ -107,8 +109,12 @@ contains
     diagonal_done = .false.
     field_written = .false.
 
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, EM_RESP_FD_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+
     if(.not. fromScratch) then
-      iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='read', status='old', die=.false.)
+      call restart_init(restart_load, RESTART_TYPE_LOAD, EM_RESP_FD_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+
+      iunit = restart_open(restart_load, RESTART_FILE)
 
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.
@@ -129,7 +135,7 @@ contains
         read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
         diagonal_done = (ios  ==  0)
 
-        call io_close(iunit)
+        call restart_close(restart_load, iunit)
       end if
 
       ! if saved dipoles used a different e_field, we cannot use them
@@ -158,12 +164,12 @@ contains
     endif
 
     if(i_start  ==  1) then
+      ! open new file, erase old data, write e_field
+      iunit = restart_open(restart_dump, RESTART_FILE, status='replace')
       if(mpi_grp_is_root(mpi_world)) then
-        ! open new file, erase old data, write e_field
-        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
         write(iunit, fmt='(e20.12)') e_field
-        call io_close(iunit)
       end if
+      call restart_close(restart_dump, iunit)
       center_written = .false.
     end if
 
@@ -204,11 +210,11 @@ contains
     end do
 
     ! Writes the dipole to file
+    iunit = restart_open(restart_dump, RESTART_FILE, position='append')
     if(mpi_grp_is_root(mpi_world) .and. .not. center_written) then 
-      iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
       write(iunit, fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
-      call io_close(iunit)
     end if
+    call restart_close(restart_dump, iunit)
 
     if(mpi_grp_is_root(mpi_world)) then
       call geometry_dipole(sys%geo, ionic_dipole)
@@ -235,15 +241,14 @@ contains
           sign_char = '-'
         endif
 
-        write(dir_name,'(a)') trim(tmpdir)//EM_RESP_FD_DIR//"field_"//index2axis(ii)//sign_char
-        call io_mkdir(trim(dir_name))
-
         fromScratch_local = fromScratch
 
         if(.not. fromScratch) then
-          call states_load(trim(dir_name), sys%st, sys%gr, ierr)
+          call restart_cd(restart_load, dirname="field_"//index2axis(ii)//sign_char)
+          call states_load(restart_load, sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
+          call restart_cd(restart_load)
         endif
 
         if(fromScratch_local) then
@@ -276,21 +281,20 @@ contains
         call output_cycle_()
 
         if(write_restart_densities) then
-          call states_dump(trim(dir_name), sys%st, sys%gr, ierr)
+          call states_dump(restart_dump, sys%st, sys%gr, ierr)
           if(ierr /= 0) then
-            message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
+            message(1) = 'Unsuccessful write of restart'
             call messages_fatal(1)
           end if
         endif
-
       end do
 
       ! Writes the dipole to file
-      if(mpi_grp_is_root(mpi_world)) then 
-        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
+      iunit = restart_open(restart_dump, RESTART_FILE, position='append')
+      if(mpi_grp_is_root(mpi_world)) then
         write(iunit, fmt='(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
-        call io_close(iunit)
       end if
+      call restart_close(restart_dump, iunit)
     end do
     
     if(.not. diagonal_done .and. calc_diagonal) then
@@ -312,15 +316,14 @@ contains
         sign_char = '-'
       endif
 
-      write(dir_name,'(a)') trim(tmpdir)//EM_RESP_FD_DIR//"field_yz+"
-      call io_mkdir(trim(dir_name))
-
       fromScratch_local = fromScratch
 
       if(.not. fromScratch) then
-        call states_load(trim(dir_name), sys%st, sys%gr, ierr)
+        call restart_cd(restart_load, dirname="field_yz+")
+        call states_load(restart_load, sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
+        call restart_cd(restart_load)
       endif
 
       if(fromScratch_local) then
@@ -351,22 +354,25 @@ contains
       endif
   
       ! Writes the dipole to file
+      iunit = restart_open(restart_dump, RESTART_FILE, position='append')
       if(mpi_grp_is_root(mpi_world)) then 
-        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
         write(iunit, fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
-        call io_close(iunit)
       end if
+      call restart_close(restart_dump, iunit)
 
       if(write_restart_densities) then
-        call states_dump(trim(dir_name), sys%st, sys%gr, ierr)
+        call restart_cd(restart_dump, dirname="field_yz+")
+        call states_dump(restart_dump, sys%st, sys%gr, ierr)
+        call restart_cd(restart_dump)
         if(ierr /= 0) then
-          message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
+          message(1) = 'Unsuccessful write of field_yz+'
           call messages_fatal(1)
         end if
       endif
 
     endif
 
+    if(.not. fromScratch) call restart_end(restart_load)
     call scf_end(scfv)
     call output_end_()
     call Born_charges_end(Born_charges)

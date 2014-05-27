@@ -67,6 +67,7 @@ contains
     type(states_t)    :: tmp_st 
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     CMPLX, allocatable :: rotation_matrix(:, :)
+    type(restart_t) :: restart
 
     type(states_t), pointer :: psi
 
@@ -101,7 +102,9 @@ contains
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call states_load(trim(restart_dir)//GS_DIR, psi, sys%gr, ierr, exact = .true.)
+      call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, psi%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+      call states_load(restart, psi, sys%gr, ierr)
+      call restart_end(restart)
 
     case(oct_is_excited)  
       message(1) = 'Using an excited state as the starting state for an '
@@ -129,7 +132,10 @@ contains
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)
-          call states_look_and_read(tmp_st, sys%gr)
+          call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, tmp_st%dom_st_kpt_mpi_grp, &
+                            mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+          call states_look_and_read(restart, tmp_st, sys%gr)
+          call restart_end(restart)
           SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, psi%nst

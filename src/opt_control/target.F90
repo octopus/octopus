@@ -192,6 +192,7 @@ contains
     type(epot_t),     intent(inout) :: ep
 
     type(states_t), pointer :: stin
+    type(restart_t) :: restart
 
     PUSH_SUB(target_init)
 
@@ -255,21 +256,22 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
+    call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, tg%st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_init_groundstate(gr, tg, td)
+      call target_init_groundstate(gr, tg, td, restart)
     case(oct_tg_excited)
       call messages_experimental('OCTTargetOperator = oct_tg_excited')
-      call target_init_excited(gr, tg, td)
+      call target_init_excited(gr, tg, td, restart)
     case(oct_tg_exclude_state)
-      call target_init_exclude(gr, tg, td)
+      call target_init_exclude(gr, tg, td, restart)
     case(oct_tg_gstransformation)
-      call target_init_gstransformation(gr, tg, td)
+      call target_init_gstransformation(gr, tg, td, restart)
     case(oct_tg_userdefined) 
       call target_init_userdefined(gr, tg, td)
     case(oct_tg_jdensity)
-      call target_init_density(gr, tg, stin, td)
+      call target_init_density(gr, tg, stin, td, restart)
     case(oct_tg_local)
       call target_init_local(gr, tg, td)
     case(oct_tg_td_local)
@@ -291,6 +293,8 @@ contains
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
     end select
+
+    call restart_end(restart)
 
     nullify(stin)
     POP_SUB(target_init)

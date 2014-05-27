@@ -526,20 +526,17 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
     call comm_allreduce(cas%mpi_grp%comm, matrix)
   end if
 
+  ! output the restart file
+  iunit = restart_open(cas%restart_dump, restart_file, position='append')
   if(mpi_grp_is_root(mpi_world)) then
-    ! output the restart file
-    iunit = io_open(trim(restart_file), action='write', &
-      position='append', is_tmp=.true.)
-
     do ia = 1, cas%n_pairs
       do jb = ia, cas%n_pairs
-        if(.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
+        if (.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
           call X(write_K_term)(cas, matrix(ia, jb), iunit, ia, jb)
-      enddo
-    enddo
-
-    call io_close(iunit)
-  endif
+      end do
+    end do
+  end if
+  call restart_close(cas%restart_dump, iunit)
   SAFE_DEALLOCATE_A(is_saved)
 
   POP_SUB(X(casida_get_matrix))
@@ -644,10 +641,8 @@ contains
     matrix = M_ZERO
 
     ! if fromScratch, we already deleted the restart files
+    iunit = restart_open(cas%restart_load, restart_file)
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(restart_file), action='read', &
-        status='old', die=.false., is_tmp=.true.)
-
       if( iunit > 0) then
         do
           read(iunit, fmt=*, iostat=err) ii, aa, ik, jj, bb, jk, val
@@ -673,12 +668,12 @@ contains
           endif
         end do
 
-        call io_close(iunit)
       else if(.not. cas%fromScratch) then
         message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
         call messages_warning(1)
       endif
     endif
+    call restart_close(cas%restart_load, iunit)
 
     ! if no file found, root has no new information to offer the others
 #ifdef HAVE_MPI
@@ -724,6 +719,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   CMPLX, allocatable :: zdl_rho(:,:)
   FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
   character(len=100) :: restart_filename
+  type(restart_t) :: restart_vib
 
   PUSH_SUB(X(casida_forces))
   
@@ -766,11 +762,13 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
+  call restart_init(restart_vib, RESTART_TYPE_LOAD, VIB_MODES_DIR, mpi_world, sys%gr%mesh, sys%gr%sb)
+
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
       
       call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, &
-        VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
+        restart_vib, phn_rho_tag(iatom, idir), ierr)
       
       if(ierr /= 0) then
         message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
@@ -797,7 +795,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
           lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * ddl_rho(ip, :))
         end forall
         
-        write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
+        write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
         call X(casida_get_matrix)(cas, hm, st, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
@@ -813,6 +811,8 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
       enddo
     enddo
   enddo
+
+  call restart_end(restart_vib)
   
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_DEALLOCATE_A(kxc)
@@ -866,10 +866,9 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   num_saved = 0
 
   ! if fromScratch, we already deleted the restart files
+  write(restart_filename,'(a,i6.6,a,i1)') 'lr_hmat1_', iatom, '_', idir
+  iunit = restart_open(cas%restart_load, restart_filename)
   if(mpi_grp_is_root(mpi_world)) then
-    write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
-    iunit = io_open(restart_filename, action = 'read', status = 'old', die = .false., is_tmp = .true.)
-
     if(iunit > 0) then
       do
         read(iunit, fmt=*, iostat=err) ii, aa, ik, val
@@ -895,12 +894,12 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
       enddo
       write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_filename)
 
-      call io_close(iunit)
     else if(.not. cas%fromScratch) then
       message(1) = "Could not find restart file '" // trim(restart_filename) // "'. Starting from scratch."
       call messages_warning(1)
     endif
   endif
+  call restart_close(cas%restart_load, iunit)
 
 #ifdef HAVE_MPI
     call MPI_Bcast(is_saved(1, 1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)
@@ -935,18 +934,18 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
 
   SAFE_DEALLOCATE_A(hvar)
   call pert_end(ionic_pert)
-  
-  if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(restart_filename, action = 'write', position = 'append', is_tmp = .true.)
+
+  iunit = restart_open(cas%restart_dump, restart_filename, position = 'append')
+  if (mpi_grp_is_root(mpi_world)) then
     do ik = 1, cas%nik
       do ist = 1, cas%nst
         do jst = ist, cas%nst
           if(.not. is_saved(ist, jst, ik)) write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
-        enddo
-      enddo
-    enddo
-    call io_close(iunit)
-  endif
+        end do
+      end do
+    end do
+  end if
+  call restart_close(cas%restart_dump, iunit)
 
   SAFE_DEALLOCATE_A(is_saved)
 

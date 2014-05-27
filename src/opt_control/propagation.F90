@@ -68,7 +68,7 @@ module propagation_m
             oct_prop_init,        &
             oct_prop_check,       &
             oct_prop_end,         &
-            oct_prop_output
+            oct_prop_dump
 
 
   type oct_prop_t
@@ -77,6 +77,8 @@ module propagation_m
     integer, pointer :: iter(:)
     integer :: niter
     character(len=100) :: dirname
+    type(restart_t) :: restart_load
+    type(restart_t) :: restart_dump
   end type oct_prop_t
 
 
@@ -131,7 +133,7 @@ contains
     type(controlfunction_t),    intent(in)     :: par
     type(target_t),             intent(inout)  :: tg
     type(opt_control_state_t),  intent(inout)  :: qcpsi
-    type(oct_prop_t), optional, intent(in)     :: prop
+    type(oct_prop_t), optional, intent(inout)  :: prop
     logical, optional,          intent(in)     :: write_iter
 
     integer :: ii, istep
@@ -159,8 +161,8 @@ contains
     call opt_control_get_classical(sys%geo, qcpsi)
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
-        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, hm, sys%geo, ion_dynamics_ions_move(td%ions), &
+           gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
       call td_write_data(write_handler, gr, psi, hm, sys%ks, sys%outp, sys%geo, 0)
     end if
 
@@ -201,7 +203,7 @@ contains
 
     call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
-    if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
+    if(present(prop)) call oct_prop_dump(prop, 0, psi, gr)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
@@ -211,7 +213,7 @@ contains
 
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
-      if(present(prop)) call oct_prop_output(prop, istep, psi, gr)
+      if(present(prop)) call oct_prop_dump(prop, istep, psi, gr)
 
       ! update
       call v_ks_calc(sys%ks, hm, psi, sys%geo, time = istep*td%dt)
@@ -258,11 +260,11 @@ contains
   !! external fields specified in Hamiltonian h.
   !! ---------------------------------------------------------
   subroutine propagate_backward(sys, hm, td, qcpsi, prop)
-    type(system_t),          intent(inout) :: sys
-    type(hamiltonian_t),     intent(inout) :: hm
-    type(td_t),              intent(inout) :: td
+    type(system_t),            intent(inout) :: sys
+    type(hamiltonian_t),       intent(inout) :: hm
+    type(td_t),                intent(inout) :: td
     type(opt_control_state_t), intent(inout) :: qcpsi
-    type(oct_prop_t),        intent(in)    :: prop
+    type(oct_prop_t),          intent(inout) :: prop
 
     integer :: istep
     type(grid_t),  pointer :: gr
@@ -283,13 +285,13 @@ contains
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    call oct_prop_output(prop, td%max_iter, psi, gr)
+    call oct_prop_dump(prop, td%max_iter, psi, gr)
     
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep-1, td%ions, sys%geo)
-      call oct_prop_output(prop, istep - 1, psi, gr)
+      call oct_prop_dump(prop, istep - 1, psi, gr)
       call v_ks_calc(sys%ks, hm, psi, sys%geo)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
@@ -314,15 +316,15 @@ contains
   !! "new" control functions.
   !! --------------------------------------------------------
   subroutine fwd_step(sys, td, hm, tg, par, par_chi, qcpsi, prop_chi, prop_psi)
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: tg
-    type(controlfunction_t), intent(inout)        :: par
-    type(controlfunction_t), intent(in)           :: par_chi
-    type(opt_control_state_t), intent(inout)      :: qcpsi
-    type(oct_prop_t), intent(in)                  :: prop_chi
-    type(oct_prop_t), intent(in)                  :: prop_psi
+    type(system_t),            intent(inout) :: sys
+    type(td_t),                intent(inout) :: td
+    type(hamiltonian_t),       intent(inout) :: hm
+    type(target_t),            intent(inout) :: tg
+    type(controlfunction_t),   intent(inout) :: par
+    type(controlfunction_t),   intent(in)    :: par_chi
+    type(opt_control_state_t), intent(inout) :: qcpsi
+    type(oct_prop_t),          intent(inout) :: prop_chi
+    type(oct_prop_t),          intent(inout) :: prop_psi
 
     integer :: i
     logical :: aux_fwd_propagation
@@ -371,8 +373,8 @@ contains
       call propagator_run_zero_iter(hm, gr, tr_psi2)
     end if
 
-    call oct_prop_output(prop_psi, 0, psi, gr)
-    call oct_prop_read_state(prop_chi, chi, gr, 0)
+    call oct_prop_dump(prop_psi, 0, psi, gr)
+    call oct_prop_load_state(prop_chi, chi, gr, 0)
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -387,7 +389,7 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
-      call oct_prop_output(prop_psi, i, psi, gr)
+      call oct_prop_dump(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
     call update_field(td%max_iter+1, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -422,15 +424,15 @@ contains
   !! |chi> --> U[par_chi](0, T)|chi>
   !! --------------------------------------------------------
   subroutine bwd_step(sys, td, hm, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: tg
-    type(controlfunction_t), intent(in)           :: par
-    type(controlfunction_t), intent(inout)        :: par_chi
-    type(opt_control_state_t), intent(inout)      :: qcchi
-    type(oct_prop_t), intent(in)                  :: prop_chi
-    type(oct_prop_t), intent(in)                  :: prop_psi
+    type(system_t),            intent(inout) :: sys
+    type(td_t),                intent(inout) :: td
+    type(hamiltonian_t),       intent(inout) :: hm
+    type(target_t),            intent(inout) :: tg
+    type(controlfunction_t),   intent(in)    :: par
+    type(controlfunction_t),   intent(inout) :: par_chi
+    type(opt_control_state_t), intent(inout) :: qcchi
+    type(oct_prop_t),          intent(inout) :: prop_chi
+    type(oct_prop_t),          intent(inout) :: prop_psi
 
     integer :: i
     type(grid_t), pointer :: gr
@@ -456,7 +458,7 @@ contains
     call propagator_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
-    call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
+    call oct_prop_load_state(prop_psi, psi, gr, td%max_iter)
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -465,14 +467,14 @@ contains
     call propagator_run_zero_iter(hm, gr, tr_chi)
 
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_dump(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
-      call oct_prop_output(prop_chi, i-1, chi, gr)
+      call oct_prop_dump(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
@@ -507,15 +509,15 @@ contains
   !! par_chi = par_chi[|psi>, |chi>]
   !! --------------------------------------------------------
   subroutine bwd_step_2(sys, td, hm, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: tg
-    type(controlfunction_t), intent(in)           :: par
-    type(controlfunction_t), intent(inout)        :: par_chi
+    type(system_t),                    intent(inout) :: sys
+    type(td_t),                        intent(inout) :: td
+    type(hamiltonian_t),               intent(inout) :: hm
+    type(target_t),                    intent(inout) :: tg
+    type(controlfunction_t),           intent(in)    :: par
+    type(controlfunction_t),           intent(inout) :: par_chi
     type(opt_control_state_t), target, intent(inout) :: qcchi
-    type(oct_prop_t), intent(in)                  :: prop_chi
-    type(oct_prop_t), intent(in)                  :: prop_psi
+    type(oct_prop_t),                  intent(inout) :: prop_chi
+    type(oct_prop_t),                  intent(inout) :: prop_psi
 
     integer :: i
     logical :: freeze
@@ -548,7 +550,7 @@ contains
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, qcchi)
     psi => opt_control_point_qs(qcpsi)
-    call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
+    call oct_prop_load_state(prop_psi, psi, gr, td%max_iter)
 
     SAFE_ALLOCATE(vhxc(1:gr%mesh%np, 1:hm%d%nspin))
 
@@ -558,7 +560,7 @@ contains
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_dump(prop_chi, td%max_iter, chi, gr)
 
     call states_copy(st_ref, psi)
 
@@ -620,7 +622,7 @@ contains
       end if
 
       hm%vhxc(:, :) = vhxc(:, :)
-      call oct_prop_output(prop_chi, i-1, chi, gr)
+      call oct_prop_dump(prop_chi, i-1, chi, gr)
 
       if( (mod(i, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter-i, td%max_iter)
     end do
@@ -913,9 +915,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_init(prop, dirname)
+  subroutine oct_prop_init(prop, dirname, gr)
     type(oct_prop_t), intent(inout) :: prop
     character(len=*), intent(in)    :: dirname
+    type(grid_t),     intent(in)    :: gr
 
     integer :: j
 
@@ -925,6 +928,12 @@ contains
     call io_mkdir(trim(prop%dirname))
     prop%niter = niter_
     prop%number_checkpoints = number_checkpoints_
+
+    ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
+    ! so they need to use the same path.
+    call restart_init(prop%restart_dump, RESTART_TYPE_DUMP, OCT_DIR//trim(dirname), gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(prop%restart_load, RESTART_TYPE_LOAD, "", gr%mesh%mpi_grp, mesh=gr%mesh, &
+                      sb=gr%sb, basedir=restart_dir(prop%restart_dump))
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
@@ -944,6 +953,9 @@ contains
 
     PUSH_SUB(oct_prop_end)
 
+    call restart_end(prop%restart_load)
+    call restart_end(prop%restart_dump)
+
     SAFE_DEALLOCATE_P(prop%iter)
     ! This routine should maybe delete the files?
 
@@ -954,13 +966,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_prop_check(prop, psi, gr, iter)
-    type(oct_prop_t),  intent(in)    :: prop
+    type(oct_prop_t),  intent(inout) :: prop
     type(states_t),    intent(inout) :: psi
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: iter
 
     type(states_t) :: stored_st
-    character(len=100) :: filename
+    character(len=4) :: dirname
     integer :: j, ierr
     CMPLX :: overlap, prev_overlap
     FLOAT, parameter :: WARNING_THRESHOLD = CNST(1.0e-2)
@@ -970,8 +982,10 @@ contains
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
-       write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call states_load(trim(filename), stored_st, gr, ierr, verbose=.false.)
+       write(dirname,'(i4.4)') j
+       call restart_cd(prop%restart_load, dirname=dirname)
+       call states_load(prop%restart_load, stored_st, gr, ierr, verbose=.false.)
+       call restart_cd(prop%restart_load)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
@@ -994,50 +1008,54 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_read_state(prop, psi, gr, iter)
-    type(oct_prop_t),  intent(in)    :: prop
+  subroutine oct_prop_load_state(prop, psi, gr, iter)
+    type(oct_prop_t),  intent(inout) :: prop
     type(states_t),    intent(inout) :: psi
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: iter
 
-    character(len=100) :: filename
+    character(len=4) :: dirname
     integer :: j, ierr
 
-    PUSH_SUB(oct_prop_read_state)
+    PUSH_SUB(oct_prop_load_state)
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
-       write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call states_load(trim(filename), psi, gr, ierr, verbose=.false.)
+       write(dirname,'(i4.4)') j
+       call restart_cd(prop%restart_load, dirname=dirname)
+       call states_load(prop%restart_load, psi, gr, ierr, verbose=.false.)
+       call restart_cd(prop%restart_load)
      end if
     end do
 
-    POP_SUB(oct_prop_read_state)
-  end subroutine oct_prop_read_state
+    POP_SUB(oct_prop_load_state)
+  end subroutine oct_prop_load_state
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_output(prop, iter, psi, gr)
-    type(oct_prop_t), intent(in)    :: prop
+  subroutine oct_prop_dump(prop, iter, psi, gr)
+    type(oct_prop_t), intent(inout) :: prop
     integer,          intent(in)    :: iter
     type(states_t),   intent(inout) :: psi
     type(grid_t),     intent(inout) :: gr
 
     integer :: j, ierr
-    character(len=100) :: filename
+    character(len=4) :: dirname
 
-    PUSH_SUB(oct_prop_output)
+    PUSH_SUB(oct_prop_dump)
 
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j)  ==  iter) then
-        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-        call states_dump(io_workpath(filename), psi, gr, ierr, iter)
+        write(dirname,'(i4.4)') j
+        call restart_cd(prop%restart_dump, dirname=dirname)
+        call states_dump(prop%restart_dump, psi, gr, ierr, iter)
+        call restart_cd(prop%restart_dump)
       end if
     end do
 
-    POP_SUB(oct_prop_output)
-  end subroutine oct_prop_output
+    POP_SUB(oct_prop_dump)
+  end subroutine oct_prop_dump
   ! ---------------------------------------------------------
 
 

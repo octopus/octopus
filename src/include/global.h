@@ -153,6 +153,7 @@
 
 ! The code directories should be defined here, and not hard coded in the Fortran files.
 #define GS_DIR "gs/"
+#define TD_DIR "td/"
 #define STATIC_DIR "static/"
 #define EM_RESP_DIR "em_resp/"
 #define EM_RESP_FD_DIR "em_resp_fd/"

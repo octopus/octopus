@@ -93,7 +93,8 @@ module casida_m
     logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
     logical           :: calc_forces_scf       !< calculate excited-state forces with SCF forces
     logical           :: herm_conj      !< use Hermitian conjugate of matrix
-    character(len=80) :: restart_dir
+    type(restart_t)   :: restart_load
+    type(restart_t)   :: restart_dump
     
     logical, pointer  :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer           :: n_pairs        !< number of pairs to take into account
@@ -176,6 +177,7 @@ contains
     character(len=100) :: restart_filename
     type(profile_t), save :: prof
     logical :: is_frac_occ
+    type(restart_t) :: restart_gs
 
     PUSH_SUB(casida_run)
     call profiling_in(prof, 'CASIDA')
@@ -193,7 +195,10 @@ contains
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
-    call states_look_and_read(sys%st, sys%gr, exact = .true.)
+    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+    call states_look_and_read(restart_gs, sys%st, sys%gr)
+    call restart_end(restart_gs)
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
@@ -394,26 +399,24 @@ contains
     ! Initialize structure
     call casida_type_init(cas, sys)
 
-    cas%restart_dir = trim(tmpdir)//'casida'
     cas%fromScratch = fromScratch
-    call io_mkdir(trim(cas%restart_dir))
 
     if(cas%fromScratch) then ! remove old restart files
       if(cas%triplet) then
-        call loct_rm(trim(cas%restart_dir)//'/kernel_triplet')
+        call restart_rm(cas%restart_dump, 'kernel_triplet')
       else
-        call loct_rm(trim(cas%restart_dir)//'/kernel')
+        call restart_rm(cas%restart_dump, 'kernel')
       endif
 
       if(cas%calc_forces) then
         do iatom = 1, sys%geo%natoms
           do idir = 1, cas%sb_dim
-            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
+            write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
-            call loct_rm(trim(restart_filename))
+            call restart_rm(cas%restart_dump, restart_filename)
 
-            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
-            call loct_rm(trim(restart_filename))
+            write(restart_filename,'(a,i6.6,a,i1)') 'lr_hmat1_', iatom, '_', idir
+            call restart_rm(cas%restart_dump, restart_filename)
           enddo
         enddo
       endif
@@ -549,6 +552,9 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
+    call restart_init(cas%restart_dump, RESTART_TYPE_DUMP, CASIDA_DIR, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(cas%restart_load, RESTART_TYPE_LOAD, CASIDA_DIR, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
+
     POP_SUB(casida_type_init)
   end subroutine casida_type_init
 
@@ -590,6 +596,9 @@ contains
       endif
       SAFE_DEALLOCATE_P(cas%forces)
     endif
+
+    call restart_end(cas%restart_dump)
+    call restart_end(cas%restart_load)
 
     POP_SUB(casida_type_end)
   end subroutine casida_type_end
@@ -660,7 +669,7 @@ contains
       endif
     end if
 
-    restart_filename = trim(cas%restart_dir)//'/kernel'
+    restart_filename = 'kernel'
     if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
     select case(cas%type)

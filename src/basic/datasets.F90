@@ -37,7 +37,7 @@ module datasets_m
   integer,           public              :: current_dataset
   integer,           public              :: no_datasets
   character(len=32), public              :: current_label
-  character(len=32), public              :: tmpdir, inputdir, outputdir
+  character(len=32), public              :: outputdir
 
 contains
 

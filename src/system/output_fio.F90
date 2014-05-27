@@ -6,7 +6,7 @@ module output_fio_m
   use messages_m
   use profiling_m
 
-  use datasets_m,    only: tmpdir
+  use restart_m
   use epot_m,        only: epot_t
   use geometry_m,    only: geometry_t, geometry_create_data_object
   use grid_m,        only: grid_t
@@ -33,8 +33,10 @@ contains
     type(simul_box_t),   intent(in)  :: this
     type(json_object_t), intent(out) :: config
     !
+    !This routine is not compatible anymore with the current restart machinery and should be rewritten.
+    !I am thus commenting some lines that prevent compilation.
     call json_init(config)
-    call json_set(config, "dir", "../"//trim(tmpdir)//GS_DIR)
+    !call json_set(config, "dir", "../"//trim(restart_loaddir)//GS_DIR)
     return
   end subroutine fio_simul_box_create_config
 
@@ -43,8 +45,10 @@ contains
     type(mesh_t),        intent(in)  :: this
     type(json_object_t), intent(out) :: config
     !
+    !This routine is not compatible anymore with the current restart machinery and should be rewritten.
+    !I am thus commenting some lines that prevent compilation.
     call json_init(config)
-    call json_set(config, "dir", "../"//trim(tmpdir)//GS_DIR)
+    !call json_set(config, "dir", "../"//trim(restart_loaddir)//GS_DIR)
     call json_set(config, "spacing", this%spacing)
     return
   end subroutine fio_mesh_create_config

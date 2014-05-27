@@ -99,8 +99,9 @@ contains
     logical                 :: calc_eff_mass, calc_2nd_order, complex_response
 
     integer              :: idir, idir2, ierr, pdim, ispin
-    character(len=100)   :: dirname, str_tmp
+    character(len=100)   :: str_tmp
     real(8)              :: errornorm
+    type(restart_t)      :: restart_load, restart_dump, restart_gs
 
     PUSH_SUB(kdotp_lr_run)
 
@@ -111,7 +112,10 @@ contains
     endif
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call states_look_and_read(sys%st, sys%gr, is_complex = complex_response, exact = .true.)
+    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+    call states_look_and_read(restart_gs, sys%st, sys%gr, is_complex = complex_response)
+    call restart_end(restart_gs)
 
     pdim = sys%gr%sb%periodic_dim
 
@@ -136,6 +140,13 @@ contains
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     endif
 
+    ! Start restart. Note: we are going to use the same directory to read and write.
+    ! Therefore, restart_dump must be initialized first to make sure the directory
+    ! exists when we initialize restart_load.
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, KDOTP_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_load, RESTART_TYPE_LOAD, "", sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb, basedir=restart_dir(restart_dump))
+
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
@@ -158,7 +169,6 @@ contains
     endif
 
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(trim(tmpdir)//KDOTP_DIR, is_tmp=.true.) ! restart
       call io_mkdir(KDOTP_DIR) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     endif
@@ -187,22 +197,24 @@ contains
       ! load wavefunctions
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
-        write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, 1))
+        call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        call restart_cd(restart_load)
           
         if(ierr /= 0) then
-          message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+          message(1) = "Could not load response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
           call messages_warning(1)
         end if
 
         if(calc_2nd_order) then
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
-            write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-            call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, 1))
+            call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            call restart_cd(restart_load)
           
             if(ierr /= 0) then
-              message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+              message(1) = "Could not load response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
               call messages_warning(1)
             end if
           enddo
@@ -224,13 +236,13 @@ contains
 
       if(states_are_real(sys%st)) then
         call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
-          M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
+          M_ZERO, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
           call dkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       else
         call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
-          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
+          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
           call zkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
@@ -267,12 +279,12 @@ contains
           if(states_are_real(sys%st)) then
             call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, kdotp_vars%perturbation, &
-              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
             call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, kdotp_vars%perturbation, &
-              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           endif
 
@@ -310,6 +322,8 @@ contains
       endif
     end do
 
+    call restart_end(restart_load)
+    call restart_end(restart_dump)
     call sternheimer_end(sh)
     call pert_end(kdotp_vars%perturbation)
     SAFE_DEALLOCATE_P(kdotp_vars%lr)

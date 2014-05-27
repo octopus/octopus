@@ -551,7 +551,7 @@ contains
     PUSH_SUB(output_all)
 
     if(outp%what /= 0) then
-      message(1) = "Writing output to " // trim(dir)
+      message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
     endif
 

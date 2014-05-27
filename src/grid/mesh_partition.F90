@@ -566,9 +566,10 @@ contains
   end subroutine mesh_partition_from_parent
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_write(mesh, vsize)
-    type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(in)    :: vsize
+  subroutine mesh_partition_write(dirname, mesh, vsize)
+    character(len=*), intent(in) :: dirname
+    type(mesh_t),     intent(in) :: mesh
+    integer,          intent(in) :: vsize
     
     character(len=6) :: numstring
 
@@ -577,24 +578,24 @@ contains
     write(numstring, '(i6.6)') vsize
     if(mpi_grp_is_root(mpi_world)) then
 
-      call io_mkdir('restart', is_tmp = .true.)
-      call io_mkdir('restart/partition', is_tmp = .true.)
-      call mesh_write_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring))
+      call io_mkdir(trim(dirname), is_tmp = .true., parents=.true.)
+      call mesh_write_fingerprint(mesh, trim(dirname)//'/grid_'//trim(numstring))
     end if
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-    call partition_write(mesh%inner_partition, 'restart/partition/inner_partition_'//trim(numstring)//'.obf')
-    call partition_write(mesh%bndry_partition, 'restart/partition/bndry_partition_'//trim(numstring)//'.obf')
+    call partition_write(mesh%inner_partition, trim(dirname)//'/inner_partition_'//trim(numstring)//'.obf')
+    call partition_write(mesh%bndry_partition, trim(dirname)//'/bndry_partition_'//trim(numstring)//'.obf')
 
     POP_SUB(mesh_partition_write)
   end subroutine mesh_partition_write
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_read(mesh, ierr)
-    type(mesh_t),    intent(inout) :: mesh
-    integer,         intent(out)   :: ierr
+  subroutine mesh_partition_read(dirname, mesh, ierr)
+    character(len=*), intent(in)    :: dirname
+    type(mesh_t),     intent(inout) :: mesh
+    integer,          intent(out)   :: ierr
     
     character(len=6) :: numstring
     integer :: read_np_part
@@ -607,7 +608,7 @@ contains
     ! Read mesh fingerprint
     write(numstring, '(i6.6)') mesh%mpi_grp%size
     if(mpi_grp_is_root(mesh%mpi_grp)) then
-      call mesh_read_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring), read_np_part, ierr)
+      call mesh_read_fingerprint(mesh, trim(dirname)//'/grid_'//trim(numstring), read_np_part, ierr)
     end if
 #ifdef HAVE_MPI
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
@@ -615,20 +616,20 @@ contains
 
     ! If fingerprint is OK then we read the inner partition
     if (ierr == 0) then
-      call partition_read(mesh%inner_partition, 'restart/partition/inner_partition_'//trim(numstring)//'.obf', ierr)
+      call partition_read(mesh%inner_partition, trim(dirname)//'/inner_partition_'//trim(numstring)//'.obf', ierr)
     end if
 
     ! If inner partition is OK then we read the boundary partition
     if (ierr == 0) then
-      call partition_read(mesh%bndry_partition, 'restart/partition/bndry_partition_'//trim(numstring)//'.obf', ierr)
+      call partition_read(mesh%bndry_partition, trim(dirname)//'/bndry_partition_'//trim(numstring)//'.obf', ierr)
     end if
 
     ! Tell the user if we found a compatible mesh partition
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       if(ierr == 0) then
-        message(1) = "Info: Found a compatible mesh partition."
+        message(1) = "Info: Found a compatible mesh partition in '"//trim(dirname)//"'."
       else
-        message(1) = "Info: Could not find a compatible mesh partition."
+        message(1) = "Info: Could not find a compatible mesh partition in '"//trim(dirname)//"'."
       end if
       call messages_info(1)
     end if

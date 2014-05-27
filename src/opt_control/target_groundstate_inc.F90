@@ -20,17 +20,20 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_groundstate(gr, tg, td)
+  subroutine target_init_groundstate(gr, tg, td, restart)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
+    type(restart_t),  intent(inout) :: restart
 
     integer :: ierr
+
     PUSH_SUB(target_init_groundstate)
 
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
-    call states_load(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+
+    call states_load(restart, tg%st, gr, ierr)
 
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt

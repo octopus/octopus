@@ -166,17 +166,6 @@ contains
       call delete_debug_trace()
     endif
 
-    !%Variable TmpDir
-    !%Default "restart/"
-    !%Type string
-    !%Section Execution::IO
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores binary information
-    !% such as the wavefunctions.
-    !%End
-    call parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
-    call io_mkdir(tmpdir, is_tmp=.true.)
-
     ! create static directory
     call io_mkdir(STATIC_DIR, is_tmp=.false.)
 
@@ -315,21 +304,38 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine io_mkdir(fname, is_tmp)
+  subroutine io_mkdir(fname, is_tmp, parents)
     character(len=*),  intent(in) :: fname
     logical, optional, intent(in) :: is_tmp
+    logical, optional, intent(in) :: parents
 
-    logical :: is_tmp_
+    logical :: is_tmp_, parents_
+    integer :: last_slash, pos, length
 
     PUSH_SUB(io_mkdir)
 
     is_tmp_ = .false.
-    if(present(is_tmp)) is_tmp_ = is_tmp
+    if (present(is_tmp)) is_tmp_ = is_tmp
 
-    call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
+    parents_ = .false.
+    if (present(parents)) parents_ = parents
+
+    if (.not. parents_) then
+      call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
+    else
+      last_slash = max(index(fname, "/", .true.), len_trim(fname))
+      pos = 1
+      length = index(fname, '/') - 1
+      do while (pos < last_slash)
+        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), is_tmp_)))
+        pos = pos + length + 1
+        length = index(fname(pos:), "/") - 1
+        if (length < 1) length = len_trim(fname(pos:))
+      end do
+
+    end if
 
     POP_SUB(io_mkdir)
-
   end subroutine io_mkdir
 
 

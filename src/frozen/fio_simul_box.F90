@@ -6,7 +6,7 @@ module fio_simul_box_m
   use messages_m
   use profiling_m
 
-  use datasets_m,   only: tmpdir
+  use restart_m
   use io_m,         only: io_open, io_close
   use json_m,       only: JSON_OK, json_object_t, json_get
   use kinds_m,      only: wp
@@ -46,9 +46,11 @@ contains
     character(len=MAX_PATH_LEN)  :: dir
     integer                      :: ierr, order
     !
+    !This routine is not compatible anymore with the current restart machinery and should be rewritten.
+    !I am thus commenting some lines that prevent compilation.
     PUSH_SUB(fio_simul_box_init)
     call json_get(config, "dir", dir, ierr)
-    if(ierr/=JSON_OK)dir="./"//trim(tmpdir)//GS_DIR
+    !if(ierr/=JSON_OK)dir="./"//trim(restart_loaddir)//GS_DIR
     call simul_box_load(this, dir, "mesh")
     ASSERT(this%box_shape/=HYPERCUBE)
     this%complex_boundaries=.false.

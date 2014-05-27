@@ -20,30 +20,29 @@
 #include "global.h"
 
 module gcm_m
-  use global_m
   use datasets_m
   use density_m
   use energy_calc_m
-  use messages_m
-  use parser_m
-  use unit_m
-  use unit_system_m
+  use excited_states_m
+  use global_m
   use grid_m
-  use system_m
   use hamiltonian_m
   use hamiltonian_base_m
-  use states_m
-  use states_dim_m
-  use states_calc_m
-  use states_restart_m
-  use excited_states_m
-  use restart_m
-  use poisson_m
-  use profiling_m
-  use mesh_function_m
   use lalg_adv_m
   use lalg_basic_m
-
+  use mesh_function_m
+  use messages_m
+  use parser_m
+  use poisson_m
+  use profiling_m
+  use restart_m
+  use states_m
+  use states_calc_m
+  use states_dim_m
+  use states_restart_m
+  use system_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -73,6 +72,7 @@ contains
     character(len=100), allocatable :: slatdetnames(:)
     FLOAT :: uh, kij, gamma, ex
     integer :: ierr, i, ndeterminants, j, k, n
+    type(restart_t) :: restart
 
     PUSH_SUB(gcm_run)
 
@@ -122,7 +122,10 @@ contains
     call messages_print_stress(stdout, 'Reading Slater determinants. ')
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
-      call states_load (trim(slatdetnames(i)), phi(i), gr, ierr)
+      call restart_init(restart, RESTART_TYPE_LOAD, slatdetnames(i), phi(i)%dom_st_kpt_mpi_grp, &
+                        mesh=gr%mesh, sb=gr%sb)
+      call states_load(restart, phi(i), gr, ierr)
+      call restart_end(restart)
     end do
     call messages_print_stress(stdout)
 

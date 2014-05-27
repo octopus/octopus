@@ -25,6 +25,7 @@ module index_m
   use io_m
   use io_binary_m
   use messages_m
+  use mpi_m
   use simul_box_m
 
   implicit none
@@ -155,22 +156,27 @@ contains
 
     PUSH_SUB(index_dump)
 
-    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
+    !Only root writes to the file
+    if (mpi_grp_is_root(mpi_world)) then
 
-    write(iunit, '(a)') dump_tag
-    write(iunit, '(a20,l1)')  'is_hypercube=       ', idx%is_hypercube
-    write(iunit, '(a20,i21)') 'dim=                ', idx%dim
-    if (.not. idx%is_hypercube) then
-      write(iunit, '(a20,7i8)') 'nr(1, :)=           ', (idx%nr(1, idir), idir = 1, idx%dim)
-      write(iunit, '(a20,7i8)') 'nr(2, :)=           ', (idx%nr(2, idir), idir = 1, idx%dim)
-      write(iunit, '(a20,7i8)') 'l(:)=               ', idx%ll(1:idx%dim)
-      write(iunit, '(a20,7i8)') 'enlarge(:)=         ', idx%enlarge(1:idx%dim)
-      ! The next two lines should always come last
-      write(iunit, '(a20,i21)') 'algorithm=          ', 1
-      write(iunit, '(a20,i21)') 'checksum=           ', idx%checksum
+      iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", is_tmp=.true.)
+
+      write(iunit, '(a)') dump_tag
+      write(iunit, '(a20,l1)')  'is_hypercube=       ', idx%is_hypercube
+      write(iunit, '(a20,i21)') 'dim=                ', idx%dim
+      if (.not. idx%is_hypercube) then
+        write(iunit, '(a20,7i8)') 'nr(1, :)=           ', (idx%nr(1, idir), idir = 1, idx%dim)
+        write(iunit, '(a20,7i8)') 'nr(2, :)=           ', (idx%nr(2, idir), idir = 1, idx%dim)
+        write(iunit, '(a20,7i8)') 'l(:)=               ', idx%ll(1:idx%dim)
+        write(iunit, '(a20,7i8)') 'enlarge(:)=         ', idx%enlarge(1:idx%dim)
+        ! The next two lines should always come last
+        write(iunit, '(a20,i21)') 'algorithm=          ', 1
+        write(iunit, '(a20,i21)') 'checksum=           ', idx%checksum
+      end if
+
+      call io_close(iunit)
+
     end if
-
-    call io_close(iunit)
 
     POP_SUB(index_dump)
   end subroutine index_dump
@@ -188,7 +194,7 @@ contains
 
     PUSH_SUB(index_load)
 
-    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)
 
     ! Find (and throw away) the dump tag.
     do

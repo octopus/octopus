@@ -43,7 +43,6 @@ module run_m
   use gcm_m
   use profiling_m
   use pulpo_m
-  use restart_m
   use static_pol_m
   use system_m
   use td_m
@@ -250,7 +249,6 @@ contains
         message(1) = "      done."
         call messages_info(1)
       end if
-      call restart_init()
     end if
 
     POP_SUB(run_init)

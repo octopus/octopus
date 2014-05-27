@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module PES_m
+module pes_m
   use datasets_m
   use geometry_m
   use global_m
@@ -33,6 +33,7 @@ module PES_m
   use pes_mask_m
   use pes_rc_m
   use profiling_m
+  use restart_m
   use simul_box_m
   use states_m
   use varinfo_m
@@ -48,17 +49,17 @@ module PES_m
     pes_init_write,                     &
     pes_calc,                           &
     pes_output,                         &
-    pes_restart_read,                   &
-    pes_restart_write
+    pes_load,                           &
+    pes_dump
 
-  type PES_t
+  type pes_t
     logical :: calc_rc
-    type(PES_rc_t) :: rc
+    type(pes_rc_t) :: rc
 
     logical :: calc_mask
-    type(PES_mask_t) :: mask
+    type(pes_mask_t) :: mask
     
-  end type PES_t
+  end type pes_t
 
   integer, parameter ::     &
     PHOTOELECTRON_NONE = 0, &
@@ -69,25 +70,25 @@ contains
 
   ! ---------------------------------------------------------
   !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine PES_rc_nullify(this)
+  subroutine pes_rc_nullify(this)
     type(pes_rc_t), intent(out) :: this
     !
-    PUSH_SUB(PES_rc_nullify)
+    PUSH_SUB(pes_rc_nullify)
     !this%npoints  = 0
     this%points    =>null()
     this%filenames =>null()
     this%wf        =>null()
     this%rankmin   =>null()
-    POP_SUB(PES_rc_nullify)
+    POP_SUB(pes_rc_nullify)
     return
-  end subroutine PES_rc_nullify
+  end subroutine pes_rc_nullify
 
   ! ---------------------------------------------------------
   !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine PES_mask_nullify(this)
+  subroutine pes_mask_nullify(this)
     type(pes_mask_t), intent(out) :: this
     !
-    PUSH_SUB(PES_mask_nullify)
+    PUSH_SUB(pes_mask_nullify)
     this%k=>null()
     !this%ll=0
     !this%np=0
@@ -117,26 +118,26 @@ contains
     !call nfft_nullify(this%nfft)
 #endif
     !call tdpsf_nullify(this%psf)
-    POP_SUB(PES_mask_nullify)
+    POP_SUB(pes_mask_nullify)
     return
-  end subroutine PES_mask_nullify
+  end subroutine pes_mask_nullify
 
   ! ---------------------------------------------------------
   !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine PES_nullify(this)
+  subroutine pes_nullify(this)
     type(pes_t), intent(out) :: this
     !
-    PUSH_SUB(PES_nullify)
+    PUSH_SUB(pes_nullify)
     !this%calc_rc=.false.
-    call PES_rc_nullify(this%rc)
+    call pes_rc_nullify(this%rc)
     !this%calc_mask=.false.
-    call PES_mask_nullify(this%mask)
-    POP_SUB(PES_nullify)
+    call pes_mask_nullify(this%mask)
+    POP_SUB(pes_nullify)
     return
-  end subroutine PES_nullify
+  end subroutine pes_nullify
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
+  subroutine pes_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
     type(mesh_t),        intent(inout) :: mesh
     type(simul_box_t),   intent(in)    :: sb
@@ -149,9 +150,9 @@ contains
     character(len=50)    :: str
     integer :: photoelectron_flags
 
-    PUSH_SUB(PES_init)
+    PUSH_SUB(pes_init)
     
-    call PES_nullify(pes)
+    call pes_nullify(pes)
 
     call messages_obsolete_variable('CalcPES_rc', 'PhotoElectronSpectrum')
     call messages_obsolete_variable('CalcPES_mask', 'PhotoElectronSpectrum')
@@ -192,8 +193,8 @@ contains
     end if 
 
     
-    if(pes%calc_rc) call PES_rc_init(pes%rc, mesh, st, save_iter)
-    if(pes%calc_mask) call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
+    if(pes%calc_rc) call pes_rc_init(pes%rc, mesh, st, save_iter)
+    if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
 
 
     !Footer Photoelectron info
@@ -201,44 +202,44 @@ contains
       call messages_print_stress(stdout)
     end if 
 
-    POP_SUB(PES_init)
-  end subroutine PES_init
+    POP_SUB(pes_init)
+  end subroutine pes_init
 
 
   ! ---------------------------------------------------------
-  subroutine PES_end(pes)
-    type(PES_t), intent(inout) :: pes
+  subroutine pes_end(pes)
+    type(pes_t), intent(inout) :: pes
 
-    PUSH_SUB(PES_end)
+    PUSH_SUB(pes_end)
 
-    if(pes%calc_rc)   call PES_rc_end  (pes%rc)
-    if(pes%calc_mask) call PES_mask_end(pes%mask)
+    if(pes%calc_rc)   call pes_rc_end  (pes%rc)
+    if(pes%calc_mask) call pes_mask_end(pes%mask)
 
-    POP_SUB(PES_end)
-  end subroutine PES_end
+    POP_SUB(pes_end)
+  end subroutine pes_end
 
 
   ! ---------------------------------------------------------
-  subroutine PES_calc(pes, mesh, st, ii, dt, iter)
-    type(PES_t),         intent(inout) :: pes
+  subroutine pes_calc(pes, mesh, st, ii, dt, iter)
+    type(pes_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: ii
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
-    PUSH_SUB(PES_calc)
+    PUSH_SUB(pes_calc)
 
-    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, mesh, ii)
-    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, iter)
+    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii)
+    if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
 
-    POP_SUB(PES_calc)
-  end subroutine PES_calc
+    POP_SUB(pes_calc)
+  end subroutine pes_calc
 
 
   ! ---------------------------------------------------------
-  subroutine PES_output(pes, mesh, st, iter, outp, dt, gr, geo)
-    type(PES_t),      intent(inout) :: pes
+  subroutine pes_output(pes, mesh, st, iter, outp, dt, gr, geo)
+    type(pes_t),      intent(inout) :: pes
     type(mesh_t),     intent(in)    :: mesh
     type(states_t),   intent(in)    :: st
     integer,          intent(in)    :: iter
@@ -247,66 +248,83 @@ contains
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(in)    :: geo
 
-
-
-    PUSH_SUB(PES_output)
+    PUSH_SUB(pes_output)
     
     if(mpi_grp_is_root(mpi_world)) then
-      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, outp%output_interval, dt)
+      if(pes%calc_rc) call pes_rc_output(pes%rc, st, iter, outp%output_interval, dt)
     endif
 
-    if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st,outp, "td.general/PESM",gr, geo,iter)
+    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
-
-    POP_SUB(PES_output)
-  end subroutine PES_output
-
-  ! ---------------------------------------------------------
-  subroutine PES_restart_write(pes, st)
-    type(PES_t),    intent(in) :: pes
-    type(states_t), intent(in) :: st
-
-    PUSH_SUB(PES_restart_write)
-
-    if(pes%calc_mask) call PES_mask_restart_write (pes%mask, st)
-
-    POP_SUB(PES_restart_write)
-  end subroutine PES_restart_write
-
-  ! ---------------------------------------------------------
-  subroutine PES_restart_read(pes, st)
-    type(PES_t),    intent(inout) :: pes
-    type(states_t), intent(inout) :: st
-
-    PUSH_SUB(PES_restart_read)
-
-    if(pes%calc_mask) call PES_mask_restart_read (pes%mask, st)
-
-    POP_SUB(PES_restart_read)
-  end subroutine PES_restart_read
+    POP_SUB(pes_output)
+  end subroutine pes_output
 
 
   ! ---------------------------------------------------------
-  subroutine PES_init_write(pes, mesh, st)
-    type(PES_t),    intent(in)  :: pes
+  subroutine pes_dump(restart, pes, st)
+    type(restart_t), intent(in) :: restart
+    type(pes_t),     intent(in) :: pes
+    type(states_t),  intent(in) :: st
+
+    PUSH_SUB(pes_dump)
+
+    if (.not. restart_skip(restart) .and. pes%calc_mask) then
+      message(1) = "Info: Writing PES mask."
+      call messages_info(1)
+
+      call pes_mask_dump(restart, pes%mask, st)
+
+      message(1) = "Info: Finished writing PES mask."
+      call messages_info(1)
+    end if
+
+    POP_SUB(pes_dump)
+  end subroutine pes_dump
+
+
+  ! ---------------------------------------------------------
+  subroutine pes_load(restart, pes, st)
+    type(restart_t), intent(in)    :: restart
+    type(pes_t),     intent(inout) :: pes
+    type(states_t),  intent(inout) :: st
+
+    PUSH_SUB(pes_load)
+
+    if (.not. restart_skip(restart) .and. pes%calc_mask) then
+      message(1) = "Info: Reading PES mask."
+      call messages_info(1)
+
+      call pes_mask_load(restart, pes%mask, st)
+
+      message(1) = "Info: Finished reading PES mask."
+      call messages_info(1)
+    end if
+
+    POP_SUB(pes_load)
+  end subroutine pes_load
+
+
+  ! ---------------------------------------------------------
+  subroutine pes_init_write(pes, mesh, st)
+    type(pes_t),    intent(in)  :: pes
     type(mesh_t),   intent(in)  :: mesh
     type(states_t), intent(in)  :: st
 
 
-    PUSH_SUB(PES_init_write)
+    PUSH_SUB(pes_init_write)
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      if(pes%calc_rc)   call PES_rc_init_write (pes%rc, mesh, st)
+      if(pes%calc_rc)   call pes_rc_init_write (pes%rc, mesh, st)
 
     endif
 
-    POP_SUB(PES_init_write)
-  end subroutine PES_init_write
+    POP_SUB(pes_init_write)
+  end subroutine pes_init_write
 
 
 
-end module PES_m
+end module pes_m
 
 
 !! Local Variables:

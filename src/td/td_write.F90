@@ -151,6 +151,7 @@ contains
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
+    type(restart_t) :: restart_gs
 
     PUSH_SUB(td_write_init)
 
@@ -276,18 +277,19 @@ contains
     ! This variable is documented in scf/scf.F90
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
 
-    if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
-      if(st%parallel_in_states) then
+    if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write) then
+      if (st%parallel_in_states) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
         call messages_fatal(1)
-      endif
+      end if
 
       call states_copy(writ%gs_st, st, exclude = .true.)
 
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
+      call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
+      call states_look(restart_gs, gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
 
       ! do this only when not calculating populations, since all states are needed then
       if(.not. writ%out(OUT_POPULATIONS)%write) then
@@ -322,11 +324,13 @@ contains
       end if
       call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       writ%gs_st%node(:)  = 0
-      call states_load(trim(restart_dir)//'gs', writ%gs_st, gr, ierr, label = ': gs for TDOutput')
-      if(ierr /= 0 .and.ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
-        message(1) = "Could not load "//trim(restart_dir)//"gs"
+      call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
+      if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
+        message(1) = "Could not load restart information."
         call messages_fatal(1)
       end if
+
+      call restart_end(restart_gs)
     end if
 
     ! Build the excited states...

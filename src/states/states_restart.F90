@@ -67,25 +67,21 @@ module states_restart_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_look_and_read(st, gr, is_complex, specify_dir, exact)
+  subroutine states_look_and_read(restart, st, gr, is_complex)
+    type(restart_t),            intent(inout) :: restart
     type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     logical,          optional, intent(in)    :: is_complex
-    character(len=*), optional, intent(in)    :: specify_dir
-    logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions
 
     integer :: kpoints, dim, nst, ierr
-    character(len=80) :: dir
     FLOAT, pointer :: new_occ(:,:)
 
     PUSH_SUB(states_look_and_read)
 
-    dir = trim(optional_default(specify_dir, restart_dir))
-
     !check how many wfs we have
-    call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
+    call states_look(restart, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr /= 0) then
-      message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
+      message(1) = 'Could not read wavefunctions.'
       call messages_fatal(1)
     end if
 
@@ -124,15 +120,15 @@ contains
     st%eigenval = M_HUGE
 
     ! load wavefunctions
-    call states_load(trim(dir)//GS_DIR, st, gr, ierr, exact=exact)
+    call states_load(restart, st, gr, ierr)
 
     POP_SUB(states_look_and_read)
   end subroutine states_look_and_read
 
 
   ! ---------------------------------------------------------
-  subroutine states_dump(dir, st, gr, ierr, iter, lr, st_start_writing)
-    character(len=*),     intent(in)    :: dir
+  subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing)
+    type(restart_t),      intent(in)    :: restart
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -151,14 +147,17 @@ contains
 
     PUSH_SUB(states_dump)
 
+    if(restart_skip(restart)) then
+      ierr = 0
+      POP_SUB(states_dump)
+      return
+    end if
+
     cmplxscl = .false.
     if(associated(st%zeigenval%Im)) cmplxscl = .true.
 
-    if(.not. write_restart()) then
-      ierr = 0
-      POP_SUB(restart_write)
-      return
-    end if
+    message(1) = "Info: Writing states."
+    call messages_info(1)
 
     call profiling_in(prof_write, "RESTART_WRITE")
 
@@ -170,19 +169,17 @@ contains
 
     ierr = 0
 
-    call block_signals()
-
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(dir, is_tmp=.true.)
-    end if
+    call restart_block_signals()
 
 #ifdef HAVE_MPI
     !we need a barrier to wait for the directory to be created, only if we are in parallel
     if(st%dom_st_kpt_mpi_grp%comm > 0) call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
 
+    iunit = restart_open(restart, 'wfns')
+    iunit2 = restart_open(restart, 'occs')
+    iunit_states = restart_open(restart, 'states')
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
-      iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
       write(iunit,'(a)') '#     #k-point            #st            #dim    filename'
       if(states_are_real(st)) then
         write(iunit,'(a)') '%Real_Wavefunctions'
@@ -190,20 +187,15 @@ contains
         write(iunit,'(a)') '%Complex_Wavefunctions'
       endif
 
-      iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
       write(iunit2,'(2a)') '# occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] ', &
         '| k-points | k-weights | filename | ik | ist | idim'
       write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
 
-      call grid_dump(gr, dir, ierr)
-
-      iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       write(iunit_states, '(a20,1i10)')  'nst=                ', st%nst
       write(iunit_states, '(a20,1i10)')  'dim=                ', st%d%dim
       write(iunit_states, '(a20,1i10)')  'nik=                ', st%d%nik
-      call io_close(iunit_states)
-
     end if
+    call restart_close(restart, iunit_states)
 
     if(states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
@@ -250,22 +242,22 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  call drestart_write_function(dir, filename, gr%mesh, dpsi, err)
+                  call drestart_write_function(restart, filename, gr%mesh, dpsi, err)
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  call zrestart_write_function(dir, filename, gr%mesh, zpsi, err)
+                  call zrestart_write_function(restart, filename, gr%mesh, zpsi, err)
                   if(st%have_left_states) then!cmplxscl
                     call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
-                    call zrestart_write_function(dir, filename1, gr%mesh, zpsi, err)
+                    call zrestart_write_function(restart, filename1, gr%mesh, zpsi, err)
                   end if
                 end if
                 if(err == 0) ierr = ierr + 1
               end if
             else
               if (states_are_real(st)) then
-                call drestart_write_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
+                call drestart_write_function(restart, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
               else
-                call zrestart_write_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
+                call zrestart_write_function(restart, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
               end if
               if(err == 0) ierr = ierr + 1
             end if
@@ -287,11 +279,14 @@ contains
       write(iunit,'(a)') '%'
       write(iunit2, '(a)') '%'
       if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
-      call io_close(iunit)
-      call io_close(iunit2)
     end if
+    call restart_close(restart, iunit)
+    call restart_close(restart, iunit2)
 
-    call unblock_signals()
+    message(1) = "Info: Finished writing states."
+    call messages_info(1)
+
+    call restart_unblock_signals()
 
     call profiling_out(prof_write)
     POP_SUB(states_dump)
@@ -346,14 +341,13 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(dir, st, gr, ierr, iter, lr, exact, lowest_missing, read_left, label, verbose)
-    character(len=*),           intent(in)    :: dir
+  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose)
+    type(restart_t),            intent(inout) :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
     integer,          optional, intent(out)   :: iter
     type(lr_t),       optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
-    logical,          optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
     character(len=*), optional, intent(in)    :: label
@@ -366,17 +360,22 @@ contains
     logical, allocatable :: filled(:, :, :)
     character(len=256)   :: line, label_, mod_time, occ_filename
     character(len=50)    :: str
-    integer, pointer     :: map(:)
 
     FLOAT                :: my_occ, flt, imev
-    logical              :: read_occ, lr_allocated, grid_changed, grid_reordered, verbose_
-    logical              :: exact_, integral_occs, cmplxscl, read_left_
+    logical              :: read_occ, lr_allocated, verbose_
+    logical              :: integral_occs, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
 
     PUSH_SUB(states_load)
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(states_load)
+      return
+    end if
 
     call profiling_in(prof_read, "RESTART_READ")
 
@@ -389,7 +388,6 @@ contains
     if(read_left_) then
        ASSERT(st%have_left_states)
     end if
-    exact_ = optional_default(exact, .false.)
 
     if(present(label)) then
       label_ = trim(label)
@@ -401,7 +399,7 @@ contains
       endif
     endif
 
-    message(1) = 'Info: Loading restart information'
+    message(1) = 'Info: Reading states'
     if(len(trim(label_)) > 0) then
       message(1) = trim(message(1)) // trim(label_)
     endif
@@ -447,40 +445,35 @@ contains
     if(present(iter)) iter = 0
 
     ! open files to read
-    states_file  = io_open(trim(dir)//'/states', action='read', &
-      status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+    states_file  = restart_open(restart, 'states')
     if(states_file < 0) ierr = -1
 
-    wfns_file  = io_open(trim(dir)//'/wfns', action='read', &
-      status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+    wfns_file  = restart_open(restart, 'wfns')
     if(wfns_file < 0) ierr = -1
 
-    occ_filename = trim(dir)//'/occs'
-    occ_file = io_open(trim(occ_filename), action='read', &
-      status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+    occ_file = restart_open(restart, 'occs')
     if(occ_file < 0) then
       ierr = -1
-    else
-      call loct_stat(ierr_stat, trim(occ_filename), mod_time)
-      ! I have no idea why this could happen, but seems wise to check it.
-      if(ierr_stat /= 0) then
-        write(message(1),'(a)') 'Cannot open restart file "occs" (from C).'
-        call messages_warning(1)
-      else
-        message(1) = "Restart info was written at " // trim(mod_time)
-        if(verbose_) call messages_info(1)
-      endif
+! Disabling the following section of code until a better and more robust way
+! to check the time stamp of the restart information is implemented
+!    else
+!      occ_filename = trim(dir)//'/occs'
+!      call loct_stat(ierr_stat, trim(occ_filename), mod_time)
+!      ! I have no idea why this could happen, but seems wise to check it.
+!      if(ierr_stat /= 0) then
+!        write(message(1),'(a)') 'Cannot open restart file "occs" (from C).'
+!        call messages_warning(1)
+!      else
+!        message(1) = "Restart info was written at " // trim(mod_time)
+!        if(verbose_) call messages_info(1)
+!      endif
     endif
 
-    call mesh_check_dump_compatibility(dir, gr%mesh, grid_changed, grid_reordered, map)
-    if(grid_changed .and. .not. grid_reordered .and. exact_) ierr = -1
-
     if(ierr /= 0) then
-      if(states_file > 0) call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
-      if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
-      if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
-      if(exact_) call restart_fail()
-      write(message(1),'(a)') 'Could not load restart information.'
+      if(states_file > 0) call restart_close(restart, states_file)
+      if(wfns_file > 0) call restart_close(restart, wfns_file)
+      if(occ_file > 0) call restart_close(restart, occ_file)
+      write(message(1),'(a)') 'Could not load states information.'
       call messages_info(1)
       call messages_print_stress(stdout)
       call profiling_out(prof_read)
@@ -514,15 +507,14 @@ contains
       ierr = -1
     endif
     ! FIXME: we could restart anyway if we can check that existing k-points are used correctly
-    call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
+    call restart_close(restart, states_file)
 
     if(ierr /= 0) then
-      if(exact_) call restart_fail()
-      if(states_file > 0) call io_close(states_file, grp = st%dom_st_kpt_mpi_grp)
-      if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
-      if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
+      if(states_file > 0) call restart_close(restart, states_file)
+      if(wfns_file > 0) call restart_close(restart, wfns_file)
+      if(occ_file > 0) call restart_close(restart, occ_file)
       call profiling_out(prof_read)
-      POP_SUB(restart_read)
+      POP_SUB(states_load)
       return
     end if
 
@@ -546,7 +538,7 @@ contains
     if(states_are_real(st)) then
       read(line, '(a)') str
       if(str(2:8) == 'Complex') then
-        message(1) = "Cannot restart real calculation from complex wavefunctions."
+        message(1) = "Cannot read real states from complex wavefunctions."
         call messages_fatal(1)
       elseif(str(2:5) /= 'Real') then 
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
@@ -624,19 +616,10 @@ contains
           endif
 
           if (states_are_real(st)) then
-            if (.not. grid_changed) then
-              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
-            else
-              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi, err, map)
-            end if
+            call drestart_read_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
           else
-            if (.not. grid_changed) then
-              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
-              if(read_left_) call zrestart_read_function(dir, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
-            else
-              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err, map)
-              if(read_left_) call zrestart_read_function(dir, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err, map) 
-            end if
+            call zrestart_read_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+            if(read_left_) call zrestart_read_function(restart, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
           end if
 
           if(states_are_real(st)) then
@@ -682,7 +665,7 @@ contains
     SAFE_DEALLOCATE_A(zpsiL)
 
     if(mpi_grp_is_root(mpi_world) .and. verbose_) then
-      write(stdout, '(1x)')
+      call messages_new_line()
     end if
 
     if(present(iter)) then
@@ -703,23 +686,23 @@ contains
     if(ierr == 0) then
       ierr = -1 ! no files read
       if(.not. present(lr)) then
-        write(str, '(a,i5)') 'Loading restart information.'
+        write(str, '(a,i5)') 'Reading states.'
       else
-        write(str, '(a,i5)') 'Loading restart information for linear response.'
+        write(str, '(a,i5)') 'Reading states for linear response.'
       end if
       call messages_print_stress(stdout, trim(str))
-      write(message(1),'(a)') 'No files could be read. No restart information can be used.'
+      write(message(1),'(a)') 'No files could be read. No states restart information can be used.'
       call messages_info(1)
       call messages_print_stress(stdout)
     else if(ierr == st%nst * st%d%nik * st%d%dim) then
       ierr = 0
-      write(message(1), '(a)') 'Info: Restart loading done.'
+      write(message(1), '(a)') 'Info: States reading done.'
       if(verbose_) call messages_info(1)
     else
       if(.not. present(lr)) then
-        write(str, '(a,i5)') 'Loading restart information.'
+        write(str, '(a,i5)') 'Reading states.'
       else
-        write(str, '(a,i5)') 'Loading restart information for linear response.'
+        write(str, '(a,i5)') 'Reading states information for linear response.'
       end if
       call messages_print_stress(stdout, trim(str))
       write(message(1),'(a,i6,a,i6,a)') 'Only ', ierr,' files out of ', &
@@ -727,13 +710,11 @@ contains
       call messages_info(1)
       call messages_print_stress(stdout)
 
-      if(ierr /= 0 .and. exact_) call restart_fail()
     end if
 
     SAFE_DEALLOCATE_A(filled)
-    SAFE_DEALLOCATE_P(map)
-    call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
-    call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
+    call restart_close(restart, wfns_file)
+    call restart_close(restart, occ_file)
 
     call profiling_out(prof_read)
     POP_SUB(states_load)
@@ -776,21 +757,21 @@ contains
 
     ! ---------------------------------------------------------
 
-    subroutine restart_fail()
-      PUSH_SUB(states_load.restart_fail)
+    subroutine load_fail()
+      PUSH_SUB(states_load.load_fail)
 
-      message(1) = "Could not read orbitals from '"//trim(dir)
+      message(1) = "Could not read orbitals from restart directory"
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)
 
-      POP_SUB(states_load.restart_fail)
-    end subroutine restart_fail
+      POP_SUB(states_load.load_fail)
+    end subroutine load_fail
 
   end subroutine states_load
 
 
-  subroutine states_dump_rho(dir, st, gr, ierr, iter)
-    character(len=*),     intent(in)    :: dir
+  subroutine states_dump_rho(restart, st, gr, ierr, iter)
+    type(restart_t),      intent(in)    :: restart
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -803,9 +784,18 @@ contains
 
     PUSH_SUB(states_dump_rho)
 
+    if (restart_skip(restart)) then
+      ierr = 0
+      POP_SUB(states_dump_rho)
+      return
+    end if
+
+    message(1) = "Info: Writing densities."
+    call messages_info(1)
+
     !write the densities
+    iunit = restart_open(restart, 'density')
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
-      iunit = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
       write(iunit,'(a)') '#     #spin    #nspin    filename'
       write(iunit,'(a)') '%densities'
     end if
@@ -821,9 +811,9 @@ contains
 
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
-        write(unit=filename, fmt='(a)') 'density'
+        write(filename, fmt='(a)') 'density'
       else
-        write(unit=filename, fmt='(a,i1)') 'density-sp', isp
+        write(filename, fmt='(a,i1)') 'density-sp', isp
       endif
       if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
         write(iunit, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
@@ -832,16 +822,16 @@ contains
         if(st%cmplxscl%space) then
           zrho_fine(:) = st%zrho%Re(:,isp) + M_zI*st%zrho%Im(:,isp)
           call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
-          call zrestart_write_function(dir, filename, gr%mesh, zrho, err)
+          call zrestart_write_function(restart, filename, gr%mesh, zrho, err)
         else
           call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
-          call drestart_write_function(dir, filename, gr%mesh, rho, err)
+          call drestart_write_function(restart, filename, gr%mesh, rho, err)
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_write_function(dir, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+          call zrestart_write_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
         else
-          call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+          call drestart_write_function(restart, filename, gr%mesh, st%rho(:,isp), err)
         end if
       end if
       if(err==0) ierr = ierr + 1
@@ -855,11 +845,14 @@ contains
     end if
     if(ierr==st%d%nspin) ierr=0 ! All OK
 
-    if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+    if (mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       write(iunit,'(a)') '%'
       if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
-      call io_close(iunit)
-    endif
+    end if
+    call restart_close(restart, iunit)
+
+    message(1) = "Info: Writing densities done."
+    call messages_info(1)
 
     POP_SUB(states_dump_rho)
   end subroutine states_dump_rho
@@ -870,25 +863,27 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all density components
   !! >0 => could only read ierr density components
-  subroutine states_load_rho(dir, st, gr, ierr)
-    character(len=*),     intent(in)    :: dir
-    type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(in)    :: gr
-    integer,              intent(out)   :: ierr
+  subroutine states_load_rho(restart, st, gr, ierr)
+    type(restart_t), intent(in)    :: restart
+    type(states_t),  intent(inout) :: st
+    type(grid_t),    intent(in)    :: gr
+    integer,         intent(out)   :: ierr
 
     integer              :: err, isp
     character(len=12)    :: filename
     FLOAT, allocatable   :: rho_coarse(:)
     CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
-    logical              :: grid_changed, grid_reordered
-    integer, pointer     :: map(:)
 
     PUSH_SUB(states_load_rho)
 
-    write(message(1), '(a,i5)') 'Info: Loading restart density.'
-    call messages_info(1)
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(states_load_rho)
+      return
+    end if
 
-    call mesh_check_dump_compatibility(dir, gr%mesh, grid_changed, grid_reordered, map)
+    message(1) = 'Info: Reading densities.'
+    call messages_info(1)
 
     ierr = 0
 
@@ -909,57 +904,39 @@ contains
     end if
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
-        write(unit=filename, fmt='(a)') 'density'
+        write(filename, fmt='(a)') 'density'
       else
-        write(unit=filename, fmt='(a,i1)') 'density-sp', isp
+        write(filename, fmt='(a,i1)') 'density-sp', isp
       endif
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
 !      end if
       if(gr%have_fine_mesh)then
         if(st%cmplxscl%space) then
-          if(.not. grid_changed) then
-            call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err)
-          else
-            call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err, map)
-          endif
+          call zrestart_read_function(restart, filename, gr%mesh, zrho_coarse, err)
           call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          if(.not. grid_changed) then
-            call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err)
-          else
-            call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err, map)
-          endif
+          call drestart_read_function(restart, filename, gr%mesh, rho_coarse, err)
           call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
         end if
       else
         if(st%cmplxscl%space) then
-          if(.not. grid_changed) then
-            call zrestart_read_function(dir, filename, gr%mesh, zrho, err)
-          else
-            call zrestart_read_function(dir, filename, gr%mesh, zrho, err, map)
-          endif
+          call zrestart_read_function(restart, filename, gr%mesh, zrho, err)
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          if(.not. grid_changed) then
-            call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err)
-          else
-            call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err, map)
-          endif
+          call drestart_read_function(restart, filename, gr%mesh, st%rho(:,isp), err)
         end if  
       end if
       if(err == 0) then
         ierr = ierr + 1
       else
-        message(1) = "Could not read density from file '" // trim(dir) // trim(filename) // ".obf'"
+        message(1) = "Could not read density from file '" // trim(filename) // ".obf'"
         call messages_warning(1)
       endif
     end do
-
-    SAFE_DEALLOCATE_P(map)
 
     if(gr%have_fine_mesh)then
       if(st%cmplxscl%space) then
@@ -972,9 +949,8 @@ contains
       SAFE_DEALLOCATE_A(zrho)
     endif
 
-    if(mpi_grp_is_root(mpi_world)) then
-      write(stdout, '(1x)')
-    end if
+    message(1) = "Info: Finished reading densities."
+    call messages_info(1)
 
     if(ierr == 0) ierr = -1 ! no files read
     if(ierr==st%d%nspin) ierr=0 ! All OK
@@ -987,13 +963,14 @@ contains
   !> When doing an open-boundary calculation Octopus needs the
   !! unscattered states in order to solve the Lippmann-Schwinger
   !! equation to obtain extended eigenstates.
-  subroutine states_read_free_states(st, gr)
+  subroutine states_read_free_states(restart, st, gr)
+    type(restart_t),      intent(inout) :: restart
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(inout) :: gr
 
     integer                    :: ik, ist, idim, counter, err, wfns, occs, il
     integer                    :: np, ip, idir
-    character(len=256)         :: line, fname, filename, restart_dir, chars
+    character(len=256)         :: line, fname, filename, chars
     character                  :: char
     FLOAT                      :: occ, eval, imeval, kpoint(1:MAX_DIM), w_k
     type(simul_box_t), pointer :: sb
@@ -1013,16 +990,15 @@ contains
 
     np = m_lead%np
     SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
-    restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'// GS_DIR
 
-    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
+    wfns = restart_open(restart, 'wfns')
     if(wfns  <  0) then
-      message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
+      message(1) = 'Could not read from file "wfns".'
       call messages_fatal(1)
     end if
-    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_grp)
+    occs = restart_open(restart, 'occs')
     if(occs  <  0) then
-      message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
+      message(1) = 'Could not read from file "occs".'
       call messages_fatal(1)
     end if
 
@@ -1066,7 +1042,7 @@ contains
       ! if not in the corresponding node cycle
       if(ik < st%d%kpt%start .or. ik > st%d%kpt%end .or. ist < st%st_start .or. ist > st%st_end) cycle
 
-      call zrestart_read_function(trim(restart_dir), fname, m_lead, tmp(:, idim), err)
+      call zrestart_read_function(restart, fname, m_lead, tmp(:, idim), err)
 
       call lead_dens_accum()
 
@@ -1110,11 +1086,11 @@ contains
 
     end do ! Loop over all free states.
 
-    call io_close(wfns)
-    call io_close(occs)
+    call restart_close(restart, wfns)
+    call restart_close(restart, occs)
     SAFE_DEALLOCATE_A(tmp)
 
-    message(1) = "Info: Successfully initialized free states from '"//trim(restart_dir)//"'"
+    message(1) = "Info: Successfully initialized free states"
     write(message(2),'(a,i3,a)') 'Info:', counter, ' wave functions read by program.'
     call messages_info(2)
 

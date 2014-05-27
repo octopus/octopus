@@ -93,7 +93,7 @@ module td_m
     integer              :: iter           !< the actual iteration
     logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
 
-    type(PES_t)          :: PESv
+    type(pes_t)          :: pesv
 
     FLOAT                :: mu
     integer              :: dynamics
@@ -128,6 +128,7 @@ contains
     real(8)                   :: etime
     type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
+    type(restart_t)           :: restart_load, restart_dump
 
     PUSH_SUB(td_run)
 
@@ -198,16 +199,19 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, TD_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
+      ! We will use TD_DIR as temporary storage during the time propagation
+      call restart_init(restart_load, RESTART_TYPE_DUMP, "", st%dom_st_kpt_mpi_grp, &
+                        basedir=restart_dir(restart_dump), mesh=gr%mesh, sb=gr%sb)
+    end if
+
     call messages_print_stress(stdout, "Time-Dependent Simulation")
     call print_header()
 
-    if(td%PESv%calc_rc .or. td%PESv%calc_mask) then
-       if (fromScratch) then
-          call PES_init_write(td%PESv,gr%mesh,st)
-       else
-          call PES_restart_read(td%PESv, st)
-       endif
-    endif
+    if(td%pesv%calc_rc .or. td%pesv%calc_mask .and. fromScratch) then
+      call pes_init_write(td%pesv,gr%mesh,st)
+    end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
@@ -245,8 +249,8 @@ contains
       end select
 
       !Photoelectron stuff 
-      if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
-        call PES_calc(td%PESv, gr%mesh, st, mod(iter, sys%outp%output_interval), td%dt, iter)
+      if(td%pesv%calc_rc .or. td%pesv%calc_mask ) &
+        call pes_calc(td%pesv, gr%mesh, st, mod(iter, sys%outp%output_interval), td%dt, iter)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
@@ -262,7 +266,9 @@ contains
     end do propagation
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_unpack(st)
-
+    
+    call restart_end(restart_dump)
+    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
     call td_write_end(write_handler)
     call end_()
 
@@ -318,14 +324,14 @@ contains
 
       if(mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_save_restart(iter)
-        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
-        call PES_restart_write(td%PESv, st)
-        if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
+        call td_dump(iter)
+        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
+        call pes_dump(restart_dump, td%pesv, st)
+        if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
-          call states_load(trim(restart_dir)//'td', st, gr, ierr, iter=iter)
+          call states_load(restart_load, st, gr, ierr, iter=iter)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -342,6 +348,7 @@ contains
       call states_deallocate_wfns(st)
       call ion_dynamics_end(td%ions)
       call td_end(td)
+      if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
 
       POP_SUB(td_run.end_)
     end subroutine end_
@@ -356,61 +363,69 @@ contains
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:)
       logical :: freeze_hxc
+      type(restart_t) :: restart
 
       PUSH_SUB(td_run.init_wfs)
 
-      if(.not.fromscratch) then
-        call states_load(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
-        if(ierr /= 0) then
-          message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
-          call messages_warning(1)
+      if (.not. fromscratch) then
+        call restart_init(restart, RESTART_TYPE_LOAD, TD_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
 
+        call states_load(restart, st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
+        if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
+          message(1) = "Could not load restart information: Starting from scratch"
+          call messages_warning(1)
+
+        else
+          ! extract the interface wave function
+          if(st%open_boundaries) call states_get_ob_intf(st, gr)
+
+          ! read potential from previous interactions
+          if(cmplxscl) then
+            SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
+          end if
+        
+          do i = 1, 2
+            do is = 1, st%d%nspin
+              write(filename,'(a,i2.2,i3.3)') 'vprev_', i, is
+              if(cmplxscl) then
+                call zrestart_read_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
+                td%tr%v_old(1:gr%mesh%np, is, i)   =  real(zv_old(1:gr%mesh%np))
+                td%tr%Imv_old(1:gr%mesh%np, is, i) = aimag(zv_old(1:gr%mesh%np))
+              else
+                call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)             
+              end if
+              if(ierr > 0) then
+                write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
+                call messages_fatal(1)
+              end if
+            end do
+          end do
+          if(cmplxscl) then
+            SAFE_DEALLOCATE_A(zv_old)
+          end if
         end if
-        ! extract the interface wave function
-        if(st%open_boundaries) call states_get_ob_intf(st, gr)
+
+        if(td%pesv%calc_rc .or. td%pesv%calc_mask) then
+          call pes_load(restart, td%pesv, st)
+        end if
+
+        call restart_end(restart)
       end if
 
-      if(td%iter >= td%max_iter) then
+      if (td%iter >= td%max_iter) then
         message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
         call messages_info(1)
         POP_SUB(td_run.init_wfs)
         return
-      endif
-
-      if(.not. fromscratch) then
-        ! read potential from previous interactions
-        
-        if(cmplxscl) then
-          SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
-        end if
-        
-        do i = 1, 2
-          do is = 1, st%d%nspin
-            write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-            if(cmplxscl) then
-              call zio_function_input(trim(filename)//'.obf', gr%mesh, zv_old(1:gr%mesh%np), ierr)
-              td%tr%v_old(1:gr%mesh%np, is, i)   =  real(zv_old(1:gr%mesh%np))
-              td%tr%Imv_old(1:gr%mesh%np, is, i) = aimag(zv_old(1:gr%mesh%np))
-            else
-              call dio_function_input(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
-            end if
-            if(ierr > 0) then
-              write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-              call messages_fatal(1)
-            end if
-          end do
-        end do
-        if(cmplxscl) then
-          SAFE_DEALLOCATE_A(zv_old)
-        end if
-
       end if
 
-      if(fromScratch) then
+      if (fromScratch) then
+        call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
+
         if(.not. st%only_userdef_istates) then
-          call states_load(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true., label = ": gs")
+          call states_load(restart, st, gr, ierr, label = ": gs")
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)
@@ -455,7 +470,7 @@ contains
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
-            call states_look_and_read(stin, gr)
+            call states_look_and_read(restart, stin, gr)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
@@ -478,6 +493,7 @@ contains
           end if
         end if
 
+        call restart_end(restart)
       end if
 
 
@@ -675,21 +691,21 @@ contains
     end subroutine td_read_gauge_field
 
     ! ---------------------------------------------------------
-    subroutine td_save_restart(iter)
+    subroutine td_dump(iter)
       integer, intent(in) :: iter
 
       integer :: ii, is, ierr
       character(len=256) :: filename
       CMPLX, allocatable :: zv_old(:)
 
-      if(.not. write_restart()) return
+      if(restart_skip(restart_dump)) return
 
-      PUSH_SUB(td_run.td_save_restart)
+      PUSH_SUB(td_run.td_dump)
 
       ! first write resume file
-      call states_dump(trim(tmpdir)//'td', st, gr, ierr, iter)
+      call states_dump(restart_dump, st, gr, ierr, iter)
       if(ierr /= 0) then
-        message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
+        message(1) = 'Unsuccessful write of restart information'
         call messages_fatal(1)
       end if
       
@@ -703,13 +719,9 @@ contains
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
           if(cmplxscl) then
             zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
-            call zio_function_output(restart_format, trim(tmpdir)//"td", &
-              filename, gr%mesh, zv_old, unit_one, ierr, &
-              is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+            call zrestart_write_function(restart_dump, filename, gr%mesh, zv_old, ierr)
           else
-            call dio_function_output(restart_format, trim(tmpdir)//"td", &
-              filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
-              is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+            call drestart_write_function(restart_dump, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), ierr)
           end if
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
@@ -723,10 +735,9 @@ contains
       if(cmplxscl) then
         SAFE_DEALLOCATE_A(zv_old)
       end if
-      
 
-      POP_SUB(td_run.td_save_restart)
-    end subroutine td_save_restart
+      POP_SUB(td_run.td_dump)
+    end subroutine td_dump
 
   end subroutine td_run
 

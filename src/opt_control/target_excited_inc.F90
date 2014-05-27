@@ -20,12 +20,14 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_excited(gr, tg, td)
+  subroutine target_init_excited(gr, tg, td, restart)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
+    type(restart_t),  intent(inout) :: restart
 
     integer :: ierr, ip
+
     PUSH_SUB(target_init_excited)
 
     message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
@@ -34,7 +36,7 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, tg%st%nst, ierr)
+    call states_look(restart, tg%st%dom_st_kpt_mpi_grp, ip, ip, tg%st%nst, ierr)
     tg%st%st_start = 1
     tg%st%st_end   = tg%st%nst
 
@@ -52,7 +54,8 @@
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
 
-    call states_load(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+    call states_load(restart, tg%st, gr, ierr)
+
     call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
 
     POP_SUB(target_init_excited)

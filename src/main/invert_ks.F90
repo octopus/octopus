@@ -57,6 +57,7 @@ contains
     integer :: err
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
+    type(restart_t) :: restart
       
     PUSH_SUB(invert_ks_run)
 
@@ -141,7 +142,10 @@ contains
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
     ! save files in restart format
-    call states_dump(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call restart_init(restart, RESTART_TYPE_DUMP, GS_DIR, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
+                      sys%gr%mesh, sys%gr%sb)
+    call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call restart_end(restart)
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)

@@ -22,7 +22,7 @@
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
   this, sys, hm, lr, nsigma, omega, perturbation,       &
-  restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
+  restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
@@ -30,7 +30,7 @@ subroutine X(sternheimer_solve)(                           &
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
   type(pert_t),           intent(in)    :: perturbation
-  character(len=*),       intent(in)    :: restart_dir
+  type(restart_t),        intent(inout) :: restart
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
@@ -51,7 +51,6 @@ subroutine X(sternheimer_solve)(                           &
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
   integer :: total_iter, idim, ip, ispin
-  character(len=100) :: dirname
 
   PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
@@ -253,7 +252,7 @@ subroutine X(sternheimer_solve)(                           &
       else
         sigma_alt = 2
       endif
-      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart_dir, rho_tag)
+      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag)
     endif
 
     do sigma = 1, nsigma 
@@ -261,8 +260,9 @@ subroutine X(sternheimer_solve)(                           &
       sigma_alt = sigma
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
-      write(dirname,'(2a)') trim(restart_dir), trim(wfs_tag_sigma(wfs_tag, sigma_alt))
-      call states_dump(trim(tmpdir)//dirname, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      call restart_cd(restart, dirname=wfs_tag_sigma(wfs_tag, sigma_alt))
+      call states_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      call restart_cd(restart)
     end do
 
     if (.not. states_conv) then
@@ -538,7 +538,7 @@ end subroutine X(sternheimer_set_inhomog)
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
      sh1, sh2, sh_2ndorder, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
-     lr_2ndorder, pert_2ndorder, restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
+     lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
      give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
@@ -554,7 +554,7 @@ subroutine X(sternheimer_solve_order2)( &
   type(pert_t),           intent(in)    :: pert2
   type(lr_t),             intent(inout) :: lr_2ndorder(:)
   type(pert_t),           intent(in)    :: pert_2ndorder
-  character(len=*),       intent(in)    :: restart_dir
+  type(restart_t),        intent(inout) :: restart
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
@@ -651,7 +651,7 @@ subroutine X(sternheimer_solve_order2)( &
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
   call X(sternheimer_solve)(sh_2ndorder, sys, hm, lr_2ndorder, nsigma, &
-    omega1 + omega2, pert_2ndorder, restart_dir, rho_tag, wfs_tag, &
+    omega1 + omega2, pert_2ndorder, restart, rho_tag, wfs_tag, &
     have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
   

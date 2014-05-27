@@ -402,7 +402,7 @@ contains
 
     PUSH_SUB(mesh_dump)
 
-    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", is_tmp=.true.)
 
     write(iunit, '(a)') dump_tag
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
@@ -411,7 +411,7 @@ contains
     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
 
     call io_close(iunit)
-    
+
     call index_dump(mesh%idx, dir, filename)
 
     POP_SUB(mesh_dump)
@@ -431,7 +431,7 @@ contains
 
     PUSH_SUB(mesh_load)
 
-    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
 
     ! Find (and throw away) the dump tag.
     do
@@ -465,16 +465,15 @@ contains
 
     PUSH_SUB(mesh_write_fingerprint)
 
+    iunit = io_open(trim(filename), action='write', is_tmp=.true.)
+    write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
     if(mesh%sb%box_shape /= HYPERCUBE) then
-
-      iunit = io_open(trim(filename), action='write', is_tmp=.true.)
       write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
       write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
       write(iunit, '(a20,i21)')  'algorithm=          ', 1
       write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
-      call io_close(iunit)
-
     end if
+    call io_close(iunit)
 
     POP_SUB(mesh_write_fingerprint)
   end subroutine mesh_write_fingerprint
@@ -492,7 +491,7 @@ contains
     integer,          intent(out) :: read_np
 
     character(len=20)  :: str
-    integer :: iunit, algorithm
+    integer :: iunit, box_shape, algorithm
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
@@ -502,95 +501,105 @@ contains
     if(iunit < 0) then
       read_np_part = -1
       read_np = -1
+
     else
+      read(iunit, '(a20,i21)')  str, box_shape
+      if (box_shape /= HYPERCUBE) then
+        read(iunit, '(a20,i21)')  str, read_np_part
+        read(iunit, '(a20,i21)')  str, read_np
+        read(iunit, '(a20,i21)')  str, algorithm
+        read(iunit, '(a20,i21)')  str, checksum
 
-      read(iunit, '(a20,i21)')  str, read_np_part
-      read(iunit, '(a20,i21)')  str, read_np
-      read(iunit, '(a20,i21)')  str, algorithm
-      read(iunit, '(a20,i21)')  str, checksum
+        ASSERT(read_np_part >= read_np)
       
-      call io_close(iunit)
+        if (read_np_part == mesh%np_part_global &
+             .and. read_np == mesh%np_global &
+             .and. algorithm == 1 &
+             .and. checksum == mesh%idx%checksum) then
+          read_np_part = 0
+          read_np = 0
+        end if
 
-      ASSERT(read_np_part >= read_np)
-      
-      if(read_np_part == mesh%np_part_global &
-        .and. read_np == mesh%np_global &
-        .and. algorithm == 1 &
-        .and. checksum == mesh%idx%checksum) then
+      else
+        ! We have an hypercube: we will assume everythin is OK...
         read_np_part = 0
         read_np = 0
+        
+        message(1) = "Simulation box is an hypercube: unable to check mesh compatibility."
+        call messages_warning(1)
       end if
+      call io_close(iunit)
 
-    endif
+    end if
 
     POP_SUB(mesh_read_fingerprint)
-
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(dir, mesh, grid_changed, grid_reordered, map)
+  subroutine mesh_check_dump_compatibility(dir, mesh, grid_changed, grid_reordered, map, ierr)
     character(len=*),     intent(in)  :: dir    
     type(mesh_t),         intent(in)  :: mesh
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
     integer, pointer,     intent(out) :: map(:)
+    integer,              intent(out) :: ierr
 
     integer :: ip, read_np_part, read_np, read_ierr, xx(MAX_DIM)
     integer, allocatable :: read_lxyz(:,:)
     
     PUSH_SUB(mesh_check_dump_compatibility)
 
-    ! now read the mesh information
+    nullify(map)
+    grid_changed = .false.
+    grid_reordered = .false.
+    ierr = 0
+
+    ! Read the mesh fingerprint
     call mesh_read_fingerprint(mesh, trim(dir)//'/grid', read_np_part, read_np)
 
-    ! For the moment we continue reading if we receive -1 so we can
-    ! read old restart files that do not have a fingerprint file.
-    ! if (read_np < 0) ierr = -1
+    if (read_np < 0) then
+      ierr = -1
+    else if (read_np > 0) then
 
-    if (read_np > 0 .and. mesh%sb%box_shape /= HYPERCUBE) then
+      if (.not. associated(mesh%sb)) then
+        ! We can only check the compatibility of two meshes that have different fingerprints if we also
+        ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
+        ierr = 1
+      else if (mesh%sb%box_shape /= HYPERCUBE) then
 
-      grid_changed = .true.
+        grid_changed = .true.
 
-      ! perhaps only the order of the points changed, this can only
-      ! happen if the number of points is the same and no points maps
-      ! to zero (this is checked below)
-      grid_reordered = (read_np == mesh%np_global)
+        ! perhaps only the order of the points changed, this can only
+        ! happen if the number of points is the same and no points maps
+        ! to zero (this is checked below)
+        grid_reordered = (read_np == mesh%np_global)
 
-      ! the grid is different, so we read the coordinates.
-      SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
-      ASSERT(associated(mesh%idx%lxyz))
-      call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, read_ierr)
+        ! the grid is different, so we read the coordinates.
+        SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
+        ASSERT(associated(mesh%idx%lxyz))
+        call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, read_ierr)
+        if (read_ierr == 0) then
+          ! generate the map
+          SAFE_ALLOCATE(map(1:read_np))
 
-      ! and generate the map
-      SAFE_ALLOCATE(map(1:read_np))
-
-      do ip = 1, read_np
-        xx = 0
-        xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
-        if(any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
-          any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
-          map(ip) = 0
-          grid_reordered = .false.
+          do ip = 1, read_np
+            xx = 0
+            xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
+            if(any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
+                 any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
+              map(ip) = 0
+              grid_reordered = .false.
+            else
+              map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+              if(map(ip) > mesh%np_global) map(ip) = 0
+            end if
+          end do
         else
-          map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
-          if(map(ip) > mesh%np_global) map(ip) = 0
+          ierr = 2
         end if
-      end do
 
-      SAFE_DEALLOCATE_A(read_lxyz)
-
-      if(grid_reordered) then
-        message(1) = 'Octopus is attempting to restart from a mesh with a different order of points.'
-      else
-        message(1) = 'Octopus is attempting to restart from a different mesh.'
+        SAFE_DEALLOCATE_A(read_lxyz)
       end if
-
-      call messages_warning(1)
-
-    else
-      grid_changed = .false.
-      grid_reordered = .false.
-      nullify(map)
     end if
 
     POP_SUB(mesh_check_dump_compatibility)

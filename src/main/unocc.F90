@@ -65,6 +65,7 @@ contains
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=50) :: str
+    type(restart_t) :: restart_load, restart_dump
 
     PUSH_SUB(unocc_run)
 
@@ -101,16 +102,21 @@ contains
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
-    call states_load_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
+    call restart_init(restart_load, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb)
+
+    call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
 
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-      
+    call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
       call messages_info(1)
-    endif
+    end if
+
+    call restart_end(restart_load)
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       xc_is_orbital_dependent(sys%ks%xc))
@@ -126,7 +132,7 @@ contains
       ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
       do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
         if(any(lowest_missing(1:sys%st%d%dim, ik) <= occ_states(ik))) then
-          message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
+          message(1) = "Not all the occupied KS orbitals could be read."
           message(2) = "Please run a ground-state calculation first!"
           call messages_fatal(2)
         end if
@@ -140,7 +146,7 @@ contains
     end if
 
     if(ierr /= 0) then
-      message(1) = "Info: Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
+      message(1) = "Info: Could not load all wavefunctions."
       call messages_info(1)
     end if
 
@@ -178,6 +184,10 @@ contains
     SAFE_DEALLOCATE_A(lowest_missing)
 
     if(showoccstates) showstart = 1
+
+    ! Restart dump should be initialized after restart_load, as the mesh might have changed
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
@@ -218,15 +228,17 @@ contains
       
       ! write restart information.
       if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
-        call states_dump(trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr, iter=iter)
+        call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
         if(ierr /= 0) then
-          message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
+          message(1) = "Unsuccessful write of states restart."
           call messages_fatal(1)
         end if
       end if
 
       if(converged .or. forced_finish) exit
     end do
+
+    call restart_end(restart_dump)
 
     if(any(eigens%converged(:) < occ_states(:))) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'

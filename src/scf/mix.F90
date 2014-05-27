@@ -268,10 +268,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mix_dump(dir, smix, mesh)
-    character(len=*), intent(in) :: dir
-    type(mix_t),      intent(in) :: smix
-    type(mesh_t),     intent(in) :: mesh
+  subroutine mix_dump(restart, smix, mesh)
+    type(restart_t), intent(in) :: restart
+    type(mix_t),     intent(in) :: smix
+    type(mesh_t),    intent(in) :: mesh
 
     integer :: ierr, iunit
     integer :: id2, id3, id4
@@ -283,18 +283,16 @@ contains
     ASSERT(mesh%np == smix%d1)
 
     ! First we write some information about the mixing
+    iunit = restart_open(restart, 'mixing')
     if (mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir)//'/mixing', action='write', is_tmp=.true.)
-
       write(iunit, '(a11,i1)')  'scheme=    ', smix%scheme
       write(iunit, '(a11,i10)') 'd1=        ', smix%d1
       write(iunit, '(a11,i10)') 'd2=        ', smix%d2
       write(iunit, '(a11,i10)') 'd3=        ', smix%d3
       write(iunit, '(a11,i10)') 'd4=        ', smix%ns_stored
       write(iunit, '(a11,i10)') 'last_ipos= ', smix%last_ipos
-
-      call io_close(iunit)
     end if
+    call restart_close(restart, iunit)
 
     ! Now we write the different functions. 
     ! These are not needed when using linear mixing, so we will make sure we skip this step in that case.
@@ -305,13 +303,9 @@ contains
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call dio_function_output(restart_format, trim(dir), &
-                   filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), unit_one, ierr, &
-                   is_tmp = .true., grp = mesh%mpi_grp)
+              call drestart_write_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), ierr)
             else
-              call zio_function_output(restart_format, trim(dir), &
-                   filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), unit_one, ierr, &
-                   is_tmp = .true., grp = mesh%mpi_grp)
+              call zrestart_write_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), ierr)
             end if
             if(ierr /= 0) then
               write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
@@ -321,13 +315,9 @@ contains
           
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call dio_function_output(restart_format, trim(dir), &
-                   filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), unit_one, ierr, &
-                   is_tmp = .true., grp = mesh%mpi_grp)
+              call drestart_write_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), ierr)
             else
-              call zio_function_output(restart_format, trim(dir), &
-                   filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), unit_one, ierr, &
-                   is_tmp = .true., grp = mesh%mpi_grp)
+              call zrestart_write_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), ierr)
             end if
             if(ierr /= 0) then
               write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
@@ -339,13 +329,9 @@ contains
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-            call dio_function_output(restart_format, trim(dir), &
-                 filename, mesh, smix%df_old(1:mesh%np, id2, id3), unit_one, ierr, &
-                 is_tmp = .true., grp = mesh%mpi_grp)
-          else
-            call zio_function_output(restart_format, trim(dir), &
-                 filename, mesh, smix%zf_old(1:mesh%np, id2, id3), unit_one, ierr, &
-                 is_tmp = .true., grp = mesh%mpi_grp)
+              call drestart_write_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), ierr)
+            else
+              call zrestart_write_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), ierr)
           end if
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
@@ -355,13 +341,9 @@ contains
 
           write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-            call dio_function_output(restart_format, trim(dir), &
-                 filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), unit_one, ierr, &
-                 is_tmp = .true., grp = mesh%mpi_grp)
-          else
-            call zio_function_output(restart_format, trim(dir), &
-                 filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), unit_one, ierr, &
-                 is_tmp = .true., grp = mesh%mpi_grp)
+              call drestart_write_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), ierr)
+            else
+              call zrestart_write_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), ierr)
           end if
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
@@ -383,40 +365,45 @@ contains
   !  -2  - dimensions of the arrays are not consistent
   !  -3  - no mixing file found
   !  > 0 - unable to read ierr functions
-  subroutine mix_load(dir, smix, mesh, ierr)
-    character(len=*), intent(in)    :: dir
-    type(mix_t),      intent(inout) :: smix
-    type(mesh_t),     intent(in)    :: mesh
-    integer,          intent(out)   :: ierr
+  subroutine mix_load(restart, smix, mesh, ierr)
+    type(restart_t), intent(in)    :: restart
+    type(mix_t),     intent(inout) :: smix
+    type(mesh_t),    intent(in)    :: mesh
+    integer,         intent(out)   :: ierr
 
     integer :: iunit, err
     integer :: scheme, d1, d2, d3, d4, last_ipos
     integer :: id2, id3, id4, ipos
     character(len=11)  :: str
-    character(len=80) :: filename
+    character(len=80)  :: filename
+    character(len=256) :: line
 
     PUSH_SUB(mix_load)
 
     ! First we read some information about the mixing
-    if (mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir)//'/mixing', action='read', status='old', die=.false., is_tmp=.true.)
-      if (iunit < 0) then
-        write(message(1), '(3a)') 'Unsuccessful read of file"', trim(dir), '/mixing"'
-        call messages_warning(1)
-        ierr = -3
-        POP_SUB(mix_load)
-        return
-      end if
-
-      read(iunit, '(a11,i1)')  str, scheme
-      read(iunit, '(a11,i10)') str, d1
-      read(iunit, '(a11,i10)') str, d2
-      read(iunit, '(a11,i10)') str, d3
-      read(iunit, '(a11,i10)') str, d4
-      read(iunit, '(a11,i10)') str, last_ipos
-
-      call io_close(iunit)
+    iunit = restart_open(restart, 'mixing')
+    if (iunit < 0) then
+      write(message(1), '(3a)') 'Unsuccessful read of file"mixing".'
+      call messages_warning(1)
+      ierr = -3
+      POP_SUB(mix_load)
+      return
     end if
+
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, scheme
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, d1
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, d2
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, d3
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, d4
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, last_ipos
+
+    call restart_close(restart, iunit)
 
     ! We can only use the restart information if the mixing scheme remained the same
     if (scheme /= smix%scheme) then
@@ -453,9 +440,9 @@ contains
 
             write(filename,'(a3,i2.2,i2.2,i2.2,a4)') 'df_', id2, id3, ipos, ".obf"
             if (smix%func_type == TYPE_FLOAT) then
-              call dio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+              call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
             else
-              call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+              call zrestart_read_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
             end if
             if(err /= 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
@@ -465,9 +452,9 @@ contains
           
             write(filename,'(a3,i2.2,i2.2,i2.2,a4)') 'dv_', id2, id3, ipos, ".obf"
             if (smix%func_type == TYPE_FLOAT) then
-              call dio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+              call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
             else
-              call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+              call zrestart_read_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if(err /= 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
@@ -480,9 +467,9 @@ contains
 
           write(filename,'(a6,i2.2,i2.2,a4)') 'f_old_', id2, id3, ".obf"
           if (smix%func_type == TYPE_FLOAT) then
-            call dio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
+            call drestart_read_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
           else
-            call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
+            call zrestart_read_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
           end if
           if(err /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
@@ -492,9 +479,9 @@ contains
 
           write(filename,'(a8,i2.2,i2.2,a4)') 'vin_old_', id2, id3, ".obf"
           if (smix%func_type == TYPE_FLOAT) then
-            call dio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+            call drestart_read_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
           else
-            call zio_function_input(trim(dir)//'/'//trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
+            call zrestart_read_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
           end if
           if(err /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'

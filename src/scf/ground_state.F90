@@ -76,6 +76,7 @@ contains
 
     type(scf_t)  :: scfv
     type(rdm_t)  :: rdm
+    type(restart_t) :: restart_load, restart_dump, restart_ob
     integer      :: ierr
 
     PUSH_SUB(ground_state_run)
@@ -94,18 +95,24 @@ contains
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%st%open_boundaries) then
-      call states_read_free_states(sys%st, sys%gr)
+      call restart_init(restart_ob, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
+                        sb=sys%gr%ob_grid%lead(LEFT)%sb, basedir=sys%gr%ob_grid%lead(LEFT)%info%restart_dir)
+      call states_read_free_states(restart_ob, sys%st, sys%gr)
+      call restart_end(restart_ob)
+
       ! allocate self_energy and calculate
-      call states_init_self_energy(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)
+      call states_init_self_energy(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)     
     end if
 
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = (sys%ks%theory_level == RDMFT))
+      call restart_init(restart_load, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb, exact = (sys%ks%theory_level == RDMFT))
+      call states_load(restart_load, sys%st, sys%gr, ierr)
 
       if(ierr /= 0) then
-        call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")
+        call messages_write("Could not load wavefunctions")
         call messages_new_line()
         call messages_write("Starting from scratch!")
         call messages_warning()
@@ -131,6 +138,8 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, GS_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+
     ! run self-consistency
     if (states_are_real(sys%st)) then
       call messages_write('Info: SCF using real wavefunctions.')
@@ -147,10 +156,17 @@ contains
       call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
       call rdmft_end(rdm)
     else
-      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, from_scratch=fromScratch)
-    endif    
+      if(.not. fromScratch) then
+        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
+                     restart_load=restart_load, restart_dump=restart_dump)
+        call restart_end(restart_load)
+      else
+        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
+      end if
+    endif
 
     call scf_end(scfv)
+    call restart_end(restart_dump)
 
     if(sys%st%d%pack_states) call states_unpack(sys%st)
 

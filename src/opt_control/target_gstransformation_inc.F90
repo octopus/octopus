@@ -20,15 +20,17 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, tg, td)
+  subroutine target_init_gstransformation(gr, tg, td, restart)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
+    type(restart_t),  intent(inout) :: restart
 
     type(block_t)       :: blk
     integer :: ist, jst
     CMPLX, allocatable  :: rotation_matrix(:, :)
     type(states_t)      :: tmp_st
+
     PUSH_SUB(target_init_gstransformation)
 
     message(1) =  'Info: Using Superposition of States for TargetOperator'
@@ -53,7 +55,8 @@
       if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
         call states_copy(tmp_st, tg%st)
         call states_deallocate_wfns(tmp_st)
-        call states_look_and_read(tmp_st, gr)
+        call states_look_and_read(restart, tmp_st, gr)
+
         SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
         rotation_matrix = M_z0
         do ist = 1, tg%st%nst

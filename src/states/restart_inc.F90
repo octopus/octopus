@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2014 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,8 +20,8 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(dir, filename, mesh, ff, ierr)
-  character(len=*), intent(in)  :: dir
+subroutine X(restart_write_function)(restart, filename, mesh, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
   character(len=*), intent(in)  :: filename
   type(mesh_t),     intent(in)  :: mesh
   R_TYPE,           intent(in)  :: ff(:)
@@ -28,8 +29,16 @@ subroutine X(restart_write_function)(dir, filename, mesh, ff, ierr)
 
   PUSH_SUB(X(restart_write_function))
 
-  call X(io_function_output)(restart_format, trim(dir), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_DUMP)
+
+  call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
+
+  if (ierr /= 0) then
+    message(1) = "Could not write data to file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
 
   POP_SUB(X(restart_write_function))
 end subroutine X(restart_write_function)
@@ -38,13 +47,12 @@ end subroutine X(restart_write_function)
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
-subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
-  character(len=*), intent(in)    :: dir
+subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
+  type(restart_t),  intent(in)    :: restart
   character(len=*), intent(in)    :: filename
   type(mesh_t),     intent(in)    :: mesh
   R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
-  integer, optional, intent(in)   :: map(:)
 
   integer :: ip, np, offset
   R_TYPE, pointer :: read_ff(:)
@@ -53,21 +61,25 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   type(profile_t), save :: prof_comm
 
   PUSH_SUB(X(restart_read_function))
-  
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_LOAD)  
+
   nullify(read_ff)
 
-  if(present(map) .and. mesh%parallel_in_domains) then 
+  if (associated(restart%map) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(io_function_input) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
+    call X(io_function_input) (trim(restart%pwd)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, &
+                               is_tmp=.true., map = restart%map)
 
     POP_SUB(X(restart_read_function))
     return
   end if
 
-  if(present(map)) then
-    call io_binary_get_info(trim(dir)//'/'//trim(filename)//'.obf', np, ierr)
+  if (associated(restart%map)) then
+    call io_binary_get_info(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, ierr)
 
-    if(ierr /= 0) then
+    if (ierr /= 0) then
       POP_SUB(X(restart_read_function))
       return
     end if
@@ -92,9 +104,10 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 #ifdef HAVE_MPI2
   ! Ensure that xlocal has a proper value
   ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
-  call io_binary_read_parallel(trim(dir)//'/'//trim(filename)//'.obf', mesh%mpi_grp%comm, mesh%vp%xlocal, np, read_ff, ierr)
+  call io_binary_read_parallel(trim(restart%pwd)//'/'//trim(filename)//'.obf', mesh%mpi_grp%comm, mesh%vp%xlocal, &
+                               np, read_ff, ierr)
 #else
-  call io_binary_read(trim(dir)//'/'//trim(filename)//'.obf', np, read_ff, ierr, offset = offset)
+  call io_binary_read(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, read_ff, ierr, offset = offset)
 #endif
   call profiling_count_transfers(np, read_ff(1))
   call profiling_out(prof_io)
@@ -113,13 +126,18 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     call profiling_out(prof_comm)
   end if
 
-  if(present(map)) then
+  if (associated(restart%map)) then
     ff(1:mesh%np_global) = M_ZERO
-    do ip = 1, min(np, ubound(map, dim = 1))
-      if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
+    do ip = 1, min(np, ubound(restart%map, dim = 1))
+      if (restart%map(ip) > 0) ff(restart%map(ip)) = read_ff(ip)
     end do
     
     SAFE_DEALLOCATE_P(read_ff)
+  end if
+
+  if (ierr /= 0) then
+    message(1) = "Could not read data from file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
   end if
 
   POP_SUB(X(restart_read_function))

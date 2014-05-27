@@ -19,13 +19,13 @@
 ! ---------------------------------------------------------
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
-subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
+subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   type(states_t),   intent(in) :: st
   type(grid_t),     intent(in) :: gr
   type(geometry_t), intent(in) :: geo
   character(len=*), intent(in) :: dir
   type(output_t),   intent(in) :: outp
-  type(PES_mask_t), intent(in) :: mask
+  type(pes_mask_t), intent(in) :: mask
 
   integer :: ik, ist, idim, is, ierr
   character(len=80) :: fname
@@ -39,7 +39,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   type(batch_t)        :: psib
   type(density_calc_t) :: dens_calc
 
-  PUSH_SUB(PES_mask_output_states)
+  PUSH_SUB(pes_mask_output_states)
   
   mesh= gr%mesh
 
@@ -60,9 +60,9 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
 
         cf%zRs=M_z0
 
-        call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
+        call pes_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
 
-        call PES_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
+        call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
         if (mask%mode /= PES_MASK_MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
@@ -129,8 +129,8 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   call zcube_function_free_RS(mask%cube, cf)
 
 
-  POP_SUB(PES_mask_output_states)
-end subroutine PES_mask_output_states
+  POP_SUB(pes_mask_output_states)
+end subroutine pes_mask_output_states
 
 ! ---------------------------------------------------------
 !
@@ -139,28 +139,28 @@ end subroutine PES_mask_output_states
 !!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
 !!\f]
 ! ---------------------------------------------------------
-subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
-  type(PES_mask_t), intent(in)  :: mask
+subroutine pes_mask_create_full_map(mask, st, pesK, wfAk)
+  type(pes_mask_t), intent(in)  :: mask
   type(states_t),   intent(in)  :: st
-  FLOAT, target,    intent(out) :: PESK(:,:,:)
+  FLOAT, target,    intent(out) :: pesK(:,:,:)
   CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
 
   integer :: ist, ik, kx, ky, kz, idim
   FLOAT   :: scale
-  FLOAT, pointer :: PESKloc(:,:,:)
+  FLOAT, pointer :: pesKloc(:,:,:)
 
 ! #ifdef HAVE_MPI
 !   type(profile_t), save :: reduce_prof
 ! #endif
 
-  PUSH_SUB(PES_mask_create_full_map)
+  PUSH_SUB(pes_mask_create_full_map)
 
-  PESK = M_ZERO
+  pesK = M_ZERO
   if (mask%cube%parallel_in_domains) then
-    SAFE_ALLOCATE(PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
-    PESKloc = M_ZERO
+    SAFE_ALLOCATE(pesKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+    pesKloc = M_ZERO
   else 
-    PESKloc => PESK
+    pesKloc => pesK
   end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -171,10 +171,10 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
           do kz = 1, mask%ll(3)
 
             if(present(wfAk))then
-              PESKloc(kx, ky, kz) = PESKloc(kx, ky, kz) + st%occ(ist, ik) * &
+              pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * &
                 sum(abs(mask%k(kx, ky, kz, :, ist, ik) + wfAk(kx,ky,kz,:, ist, ik)  )**2)
             else
-              PESKloc(kx, ky, kz) = PESKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
+              pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
             end if
             
           end do
@@ -186,45 +186,45 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-!     call profiling_in(reduce_prof, "PES_DENSITY_REDUCE")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, PESKloc)
+!     call profiling_in(reduce_prof, "pes_DENSITY_REDUCE")
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
 !     call profiling_out(reduce_prof)
   end if  
 
   
   if (mask%cube%parallel_in_domains) then
 
-    call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+    call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
     
 !     if(mask%pw_map_how .eq. PW_MAP_PFFT) then
-!       call dcube_function_allgather(mask%cube, PESK, PESKloc, & 
+!       call dcube_function_allgather(mask%cube, pesK, pesKloc, & 
 !                                     order = (/2,3,1/))
 ! 
 !     else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
 !       
 !       
-! !       PESK(mask%fs_istart(1):mask%fs_istart(1)+mask%ll(1)-1, &
+! !       pesK(mask%fs_istart(1):mask%fs_istart(1)+mask%ll(1)-1, &
 ! !            mask%fs_istart(2):mask%fs_istart(2)+mask%ll(2)-1, &
 ! !            mask%fs_istart(3):mask%fs_istart(3)+mask%ll(3)-1) = &
-! !         PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
+! !         pesKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
 ! !       
 ! !       write(file, '(i3.3)') mpi_world%rank
 ! !       file = "fullmap_"//trim(file)
 ! !       print *,"write file: ",file
-! !       call PES_mask_dump_full_mapM(PESK, file, mask%Lk)
+! !       call pes_mask_dump_full_mapM(pesK, file, mask%Lk)
 ! 
 ! 
 !       
-!       call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+!       call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
 ! !                                     order = (/1,3,2/))
 ! !     else
-! !       call dcube_function_allgather(mask%cube, PESK, PESKloc)
+! !       call dcube_function_allgather(mask%cube, pesK, pesKloc)
 !       
 !     end if
     
-!     call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+!     call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
 
-    SAFE_DEALLOCATE_P(PESKloc) 
+    SAFE_DEALLOCATE_P(pesKloc) 
   end if
 
   ! This is needed in order to normalize the Fourier integral 
@@ -232,20 +232,20 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   do idim=1, mask%mesh%sb%dim
     scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
   end do
-  PESK = PESK *scale 
+  pesK = pesK *scale 
 
-  POP_SUB(PES_mask_create_full_map)
-end subroutine PES_mask_create_full_map
+  POP_SUB(pes_mask_create_full_map)
+end subroutine pes_mask_create_full_map
 
 ! --------------------------------------------------------
 !
 !>  Qshep interpolation helper function initialization.
-!!  Generates the linearized version of PESK (cube_f) and the associated
+!!  Generates the linearized version of pesK (cube_f) and the associated
 !!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
-subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
-  FLOAT,          intent(in)    :: PESK(:,:,:)
+subroutine pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+  FLOAT,          intent(in)    :: pesK(:,:,:)
   FLOAT,          intent(in)    :: Lk(:)
   integer,        intent(in)    :: dim
   FLOAT, pointer, intent(inout) :: cube_f(:)
@@ -255,7 +255,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   FLOAT   :: KK(3)
   FLOAT, allocatable ::  kx(:),ky(:),kz(:)
 
-  PUSH_SUB(PES_mask_interpolator_init)
+  PUSH_SUB(pes_mask_interpolator_init)
 
 
   call messages_write("Initializing Qshep interpolator... ")
@@ -263,7 +263,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
 
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
   
   
@@ -295,7 +295,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
       do iz = 1, ll(3)
         KK(3) = Lk(iz)
 
-        cube_f(ii) =  PESK(ix,iy,iz)
+        cube_f(ii) =  pesK(ix,iy,iz)
 
         kx(ii) = KK(1)
         ky(ii) = KK(2)
@@ -324,30 +324,30 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   call messages_info()
   
 
-  POP_SUB(PES_mask_interpolator_init)
-end subroutine PES_mask_interpolator_init
+  POP_SUB(pes_mask_interpolator_init)
+end subroutine pes_mask_interpolator_init
 
 ! ---------------------------------------------------------
 !>  Destroy the interpolation objects
 ! ---------------------------------------------------------
-subroutine PES_mask_interpolator_end(cube_f, interp)
+subroutine pes_mask_interpolator_end(cube_f, interp)
   FLOAT, pointer, intent(inout) :: cube_f(:)
   type(qshep_t),  intent(inout) :: interp
 
-  PUSH_SUB(PES_mask_interpolator_end)
+  PUSH_SUB(pes_mask_interpolator_end)
   
   call kill_qshep(interp)
   
   SAFE_DEALLOCATE_P(cube_f)
   
-  POP_SUB(PES_mask_interpolator_end)
-end subroutine PES_mask_interpolator_end
+  POP_SUB(pes_mask_interpolator_end)
+end subroutine pes_mask_interpolator_end
 
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_full_mapM(pesK, file, Lk)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
 
@@ -362,7 +362,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
   FLOAT :: dk(3)  
 #endif
 
-  PUSH_SUB(PES_mask_dump_full_mapM)
+  PUSH_SUB(pes_mask_output_full_mapM)
   
 #if defined(HAVE_NETCDF)  
 
@@ -370,7 +370,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
   
   ll = 1
   do ii = 1, 3
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
 
   sb%dim = sb_dim
@@ -379,7 +379,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
   call cube_init(cube, ll, sb)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
-  cf%dRS = PESK
+  cf%dRS = pesK
 
   dk= abs(Lk(2)-Lk(1))
 
@@ -398,7 +398,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
 #endif
   
 
-  POP_SUB(PES_mask_dump_full_mapM)
+  POP_SUB(pes_mask_output_full_mapM)
   
 contains  
 
@@ -412,14 +412,14 @@ contains
     FLOAT ::  KK(3)
     integer :: ll(3)
 
-    PUSH_SUB(PES_mask_dump_full_mapM.out_ascii)
+    PUSH_SUB(pes_mask_output_full_mapM.out_ascii)
 
     iunit = io_open(file, action='write')
 
 
     ll = 1
     do ii = 1, 3
-      ll(ii) = size(PESK,ii) 
+      ll(ii) = size(pesK,ii) 
     end do
 
     do ix = 1, ll(1)
@@ -433,7 +433,7 @@ contains
                     units_from_atomic(sqrt(units_out%energy), KK(1)),&
                     units_from_atomic(sqrt(units_out%energy), KK(2)),&
                     units_from_atomic(sqrt(units_out%energy), KK(3)),&
-                    PESK(ix,iy,iz) 
+                    pesK(ix,iy,iz) 
  
           end do  
         end do      
@@ -441,16 +441,16 @@ contains
 
       call io_close(iunit)
   
-      POP_SUB(PES_mask_dump_full_mapM.out_ascii)
+      POP_SUB(pes_mask_output_full_mapM.out_ascii)
   end subroutine out_ascii
   
-end subroutine PES_mask_dump_full_mapM
+end subroutine pes_mask_output_full_mapM
 
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrate)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
   integer,          intent(in) :: dim
@@ -472,16 +472,16 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
-  PUSH_SUB(PES_mask_dump_full_mapM_cut)
+  PUSH_SUB(pes_mask_output_full_mapM_cut)
   
   iunit = io_open(file, action='write')
 
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK, ii) 
+    ll(ii) = size(pesK, ii) 
   end do
 
-  ASSERT(size(PESK, 1) == size(Lk,1))
+  ASSERT(size(pesK, 1) == size(Lk,1))
 
   SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
   SAFE_ALLOCATE(Lk_(1:size(Lk,1), 1:3))
@@ -504,13 +504,13 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
 
         select case (dir)
           case (1)
-            temp = PESK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
+            temp = pesK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
     
           case (2)
-            temp = PESK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
+            temp = pesK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
       
           case (3)
-            temp = PESK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
+            temp = pesK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
     
         end select
         
@@ -537,7 +537,7 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
       print *,rotation(3,:)
     end if
 
-    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
     do ix = 1, ll(1)
      do iy = 1, ll(2)
@@ -630,12 +630,12 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   SAFE_DEALLOCATE_A(idx) 
   SAFE_DEALLOCATE_A(Lk_) 
   
-  POP_SUB(PES_mask_dump_full_mapM_cut)
-end subroutine PES_mask_dump_full_mapM_cut
+  POP_SUB(pes_mask_output_full_mapM_cut)
+end subroutine pes_mask_output_full_mapM_cut
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: Lk(:)
   integer,          intent(in) :: dim
@@ -661,9 +661,9 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT :: eGrid(3), thGrid(3), phiBounds(2)
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "PESMask_ar_polar")
+  call profiling_in(prof, "pesMask_ar_polar")
 
-  PUSH_SUB(PES_mask_dump_ar_polar_M)
+  PUSH_SUB(pes_mask_output_ar_polar_M)
 
   ! we do the calculation assuming the polarization along the x-axis 
   vref = M_ZERO
@@ -674,7 +674,7 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
 
   step= Estep
@@ -697,7 +697,7 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
   else
 
-    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -732,7 +732,7 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
     end select
 
-    call PES_mask_interpolator_end(cube_f, interp)
+    call pes_mask_interpolator_end(cube_f, interp)
 
   end if
 
@@ -748,20 +748,20 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   phiBounds(1) = M_ZERO
   phiBounds(2) = M_TWO * M_PI
 
-  call  PES_mask_write_2D_map(file, pesM, 2, thGrid, eGrid, dir, phiBounds)
+  call  pes_mask_write_2D_map(file, pesM, 2, thGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
-  POP_SUB(PES_mask_dump_ar_polar_M)
+  POP_SUB(pes_mask_output_ar_polar_M)
 
   call profiling_out(prof)
 
-end subroutine PES_mask_dump_ar_polar_M
+end subroutine pes_mask_output_ar_polar_M
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: Lk(:)
   integer,          intent(in) :: dim
@@ -788,7 +788,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
   call profiling_in(prof, "PESMask_ar_plane")
 
-  PUSH_SUB(PES_mask_dump_ar_plane_M)
+  PUSH_SUB(pes_mask_output_ar_plane_M)
 
   ! we do the calculation assuming the polarization along the x-axis 
   vref = M_ZERO
@@ -799,7 +799,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
   
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
 
   step= Estep
@@ -823,7 +823,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
   else
 
-    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -873,7 +873,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
     end select
 
-    call PES_mask_interpolator_end(cube_f, interp)
+    call pes_mask_interpolator_end(cube_f, interp)
 
   end if
 
@@ -885,19 +885,19 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
   phiBounds(1) = M_ZERO
   phiBounds(2) = M_TWO * M_PI
   
-  call PES_mask_write_2D_map(file, pesM, 1, eGrid, eGrid, dir, phiBounds)
+  call pes_mask_write_2D_map(file, pesM, 1, eGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
-  POP_SUB(PES_mask_dump_ar_plane_M)
+  POP_SUB(pes_mask_output_ar_plane_M)
 
   call profiling_out(prof)
 
-end subroutine PES_mask_dump_ar_plane_M
+end subroutine pes_mask_output_ar_plane_M
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax, Estep)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Emax, Estep)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: Lk(:)
   integer,          intent(in) :: dim
@@ -926,7 +926,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
 
   call profiling_in(prof, "PESMask_ar_spherical_cut")
 
-  PUSH_SUB(PES_mask_dump_ar_spherical_cut_M)
+  PUSH_SUB(pes_mask_output_ar_spherical_cut_M)
 
   ! by default the polarization is along the z-axis 
   vref = M_ZERO
@@ -937,7 +937,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
   
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
 
   step= Estep
@@ -960,7 +960,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
 
   else
 
-    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -995,7 +995,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
 
     end select
 
-    call PES_mask_interpolator_end(cube_f, interp)
+    call pes_mask_interpolator_end(cube_f, interp)
 
   end if
 
@@ -1011,15 +1011,15 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
   eBounds(1) = Emin
   eBounds(2) = Emax
 
-  call  PES_mask_write_2D_map(file, pesM, 4, phGrid, thGrid, dir, eBounds)
+  call  pes_mask_write_2D_map(file, pesM, 4, phGrid, thGrid, dir, eBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
-  POP_SUB(PES_mask_dump_ar_spherical_cut_M)
+  POP_SUB(pes_mask_output_ar_spherical_cut_M)
 
   call profiling_out(prof)
 
-end subroutine PES_mask_dump_ar_spherical_cut_M
+end subroutine pes_mask_output_ar_spherical_cut_M
 
 
 ! ========================================================================
@@ -1032,7 +1032,7 @@ end subroutine PES_mask_dump_ar_spherical_cut_M
 !!  - 4 Spherical cut
 !
 ! ========================================================================
-subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
+subroutine pes_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: pesM(:,:)
   integer,          intent(in) :: mode
@@ -1043,7 +1043,7 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
 
   integer :: nx,ny, iunit, ix,iy
 
-  PUSH_SUB(PES_mask_write_2D_map)
+  PUSH_SUB(pes_mask_write_2D_map)
 
   nx = size(pesM,1)
   ny = size(pesM,2)
@@ -1166,15 +1166,15 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   call io_close(iunit)
 
 
-  POP_SUB(PES_mask_write_2D_map)
-end subroutine PES_mask_write_2D_map
+  POP_SUB(pes_mask_write_2D_map)
+end subroutine pes_mask_write_2D_map
 
 
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpolate)
-  FLOAT,            intent(in) :: PESK(:,:,:)
+subroutine pes_mask_output_power_totalM(pesK, file, Lk, dim, Emax, Estep, interpolate)
+  FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: Lk(:)
   integer,          intent(in) :: dim
@@ -1197,11 +1197,11 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   integer :: Ntheta, Nphi, ith, iph
   integer :: ll(3)
 
-  PUSH_SUB(PES_mask_dump_power_totalM)
+  PUSH_SUB(pes_mask_output_power_totalM)
 
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(pesK,ii) 
   end do
 
   step= Estep
@@ -1237,7 +1237,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
 
             if(ii <= nn) then
 
-              pes(ii) = pes(ii)+PESK(ix,iy,iz)
+              pes(ii) = pes(ii)+pesK(ix,iy,iz)
               npoints(ii) = npoints(ii) + M_ONE
 
             end if
@@ -1261,7 +1261,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
     ! Interpolate the output
   else
 
-    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1301,29 +1301,29 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
 
     end select
 
-    call PES_mask_interpolator_end(cube_f, interp)
+    call pes_mask_interpolator_end(cube_f, interp)
 
   end if
 
 
   if (interpolate) then 
-    call PES_mask_write_power_total(file, step, pes)
+    call pes_mask_write_power_total(file, step, pes)
   else 
-    call PES_mask_write_power_total(file, step, pes, npoints)
+    call pes_mask_write_power_total(file, step, pes, npoints)
   end if
 
   SAFE_DEALLOCATE_A(pes)
   SAFE_DEALLOCATE_A(npoints)
 
-  POP_SUB(PES_mask_dump_power_totalM)
+  POP_SUB(pes_mask_output_power_totalM)
 
 
-end subroutine PES_mask_dump_power_totalM
+end subroutine pes_mask_output_power_totalM
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
-  type(PES_mask_t), intent(in) :: mask
+subroutine pes_mask_output_power_total(mask, st, file, wfAk)
+  type(pes_mask_t), intent(in) :: mask
   type(states_t),   intent(in) :: st
   character(len=*), intent(in) :: file
   CMPLX, optional,  intent(in) :: wfAk(:,:,:,:,:,:)
@@ -1343,9 +1343,9 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
 
 
   type(profile_t), save :: prof
-  call profiling_in(prof, "PESMASK_dump")
+  call profiling_in(prof, "PESMASK_output")
 
-  PUSH_SUB(PES_mask_dump_power_total)
+  PUSH_SUB(pes_mask_output_power_total)
 
 
   step = mask%energyStep
@@ -1548,24 +1548,24 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
   end do
   
   if (mask%interpolate_out) then 
-    call PES_mask_write_power_total(file, step, pes)
+    call pes_mask_write_power_total(file, step, pes)
   else 
-    call PES_mask_write_power_total(file, step, pes, npoints)
+    call pes_mask_write_power_total(file, step, pes, npoints)
   end if
   
   
   SAFE_DEALLOCATE_A(pes)
   SAFE_DEALLOCATE_A(npoints)
   
-  POP_SUB(PES_mask_dump_power_total)
+  POP_SUB(pes_mask_output_power_total)
   
   call profiling_out(prof)
   
-end subroutine PES_mask_dump_power_total
+end subroutine pes_mask_output_power_total
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_write_power_total(file, step, pes, npoints)
+subroutine pes_mask_write_power_total(file, step, pes, npoints)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: step
   FLOAT,            intent(in) :: pes(:)
@@ -1573,7 +1573,7 @@ subroutine PES_mask_write_power_total(file, step, pes, npoints)
 
   integer :: nn, iunit, ii
 
-  PUSH_SUB(PES_mask_write_power_total)
+  PUSH_SUB(pes_mask_write_power_total)
 
   nn = size(pes,1)
 
@@ -1601,8 +1601,8 @@ subroutine PES_mask_write_power_total(file, step, pes, npoints)
   call io_close(iunit)
 
 
-  POP_SUB(PES_mask_write_power_total)
-end subroutine PES_mask_write_power_total
+  POP_SUB(pes_mask_write_power_total)
+end subroutine pes_mask_write_power_total
 
 
   
@@ -1612,8 +1612,8 @@ end subroutine PES_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
-  type(PES_mask_t),  intent(in)    :: mask
+subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
+  type(pes_mask_t),  intent(in)    :: mask
   type(mesh_t),      intent(in)    :: mesh
   type(states_t),    intent(in)    :: st
   character(len=*),  intent(in)    :: file
@@ -1623,7 +1623,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   integer,           intent(in)    :: iter
 
   CMPLX, allocatable :: wfAk(:,:,:,:,:,:) 
-  FLOAT :: PESK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
+  FLOAT :: pesK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
   integer :: ist, ik, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
   character(len=256) :: dir
@@ -1631,20 +1631,20 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
   type(profile_t), save :: prof
 
-  PUSH_SUB(PES_mask_output)
+  PUSH_SUB(pes_mask_output)
   call profiling_in(prof, "PESMASK_out")
   
-  !Dump info for easy post-process
-  if(mpi_grp_is_root(mpi_world)) call PES_mask_write_info(mask, tmpdir)
+  !Output info for easy post-process
+  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general")
  
 
   !Photoelectron wavefunction and density in real space
   if(iand(outp%what, C_OUTPUT_PES_WFS) /= 0  .or.  iand(outp%what, C_OUTPUT_PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
-    call  PES_mask_output_states(st, gr, geo, dir, outp, mask)
+    call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
-  !Dump the output in the td.00iter directories
+  !Write the output in the td.00iter directories
   dir = file 
   if(iand(outp%what, C_OUTPUT_PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
@@ -1666,9 +1666,9 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist =  st%st_start, st%st_end
         do idim = 1, st%d%dim
-          call PES_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
+          call pes_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
           cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
-          call PES_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
+          call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
           wfAk(:,:,:,idim, ist, ik) = cf1%Fs
         end do
       end do
@@ -1679,27 +1679,27 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   end if 
 
   !Create the full momentum-resolved PES matrix
-  PESK = M_ZERO
+  pesK = M_ZERO
   if(mask%add_psia) then 
-    call PES_mask_create_full_map(mask, st, PESK, wfAk)
+    call pes_mask_create_full_map(mask, st, pesK, wfAk)
   else 
-    call PES_mask_create_full_map(mask, st, PESK)
+    call pes_mask_create_full_map(mask, st, pesK)
   end if
   
   if(mpi_grp_is_root(mpi_world)) then ! only root node writes the output
-    ! Dump the full matrix in binary format for subsequent post-processing 
+    ! Output the full matrix in binary format for subsequent post-processing 
     write(fn, '(a,a)') trim(dir), '_map.obf'
-    call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), PESK, ierr)
+    call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
 
-    ! Dump the k resolved PES on plane kz=0
+    ! Output the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
     pol = (/M_ZERO, M_ZERO, M_ONE/)
-    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, &
+    call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, &
                                      dir = 3, integrate = INTEGRATE_NONE )
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
-    call PES_mask_dump_power_totalM(PESK,fn, mask%Lk, mask%mesh%sb%dim, mask%energyMax, mask%energyStep, mask%interpolate_out)
+    call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%mesh%sb%dim, mask%energyMax, mask%energyStep, mask%interpolate_out)
 
   end if
 
@@ -1708,13 +1708,13 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   end if
   call profiling_out(prof)
   
-  POP_SUB(PES_mask_output)
-end subroutine PES_mask_output
+  POP_SUB(pes_mask_output)
+end subroutine pes_mask_output
 
 ! ---------------------------------------------------------
-!> Read PES info.
+!> Read pes info.
 ! ---------------------------------------------------------
-subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
+subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   character(len=*), intent(in)  :: dir
   integer,          intent(out) :: dim  
   FLOAT,            intent(out) :: Emax
@@ -1729,10 +1729,10 @@ subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   integer :: iunit,ii
 
 
-  PUSH_SUB(PES_mask_read_info)
+  PUSH_SUB(pes_mask_read_info)
 
 
-  filename = trim(dir)//'td/pes'
+  filename = trim(dir)//'pes'
   iunit = io_open(filename, action='read', status='old', is_tmp = .true.)
 
   SAFE_ALLOCATE(RR(1:2))
@@ -1756,24 +1756,24 @@ subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
 
   call io_close(iunit)       
 
-  POP_SUB(PES_mask_read_info)
-end subroutine PES_mask_read_info
+  POP_SUB(pes_mask_read_info)
+end subroutine pes_mask_read_info
 
 
 ! ---------------------------------------------------------
-!> Dump PES info
+!> Output pes info
 ! ---------------------------------------------------------
-subroutine PES_mask_write_info(mask, dir)
-  type(PES_mask_t), intent(in) :: mask
+subroutine pes_mask_write_info(mask, dir)
+  type(pes_mask_t), intent(in) :: mask
   character(len=*), intent(in) :: dir
 
   character(len=256) :: filename
 
   integer :: iunit,ii
 
-  PUSH_SUB(PES_mask_write_info)
+  PUSH_SUB(pes_mask_write_info)
 
-  filename = trim(dir)//'td/pes'
+  filename = trim(dir)//'/pes'
 
   iunit = io_open(filename, action='write', is_tmp = .true.)
 
@@ -1792,115 +1792,36 @@ subroutine PES_mask_write_info(mask, dir)
 
   call io_close(iunit)       
 
-  POP_SUB(PES_mask_write_info)
-end subroutine PES_mask_write_info
-
-
-! ---------------------------------------------------------
-subroutine PES_mask_write_orbital(mask, filename, wf)
-  type(PES_mask_t),  intent(in) :: mask
-  character(len=80), intent(in) :: filename
-  CMPLX,             intent(in) :: wf(:,:,:)
-
-  integer :: ll(3), np, ierr
-  CMPLX, allocatable :: gwf(:,:,:)
-
-
-  PUSH_SUB(PES_mask_write_orbital)
-
-
-  ll(1:3) = mask%fs_n_global(1:3)
-  np = ll(1)*ll(2)*ll(3) 
-  ierr = 0 
-  
-  if (mask%cube%parallel_in_domains) then
-    SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
-!     call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
-    call zcube_function_allgather(mask%cube, gwf, wf, gatherfs = .true.)
-
-!     if(mask%pw_map_how .eq. PW_MAP_PFFT) then
-!       call zcube_function_allgather(mask%cube, gwf, wf, & 
-!                                     order = (/2,3,1/))
-! 
-!     else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
-! !       call zcube_function_allgather(mask%cube, gwf, wf, & 
-! !                                     order = (/2,3,1/))
-!     end if
-    if(mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
-      call io_binary_write(filename, np, gwf(:,:,:), ierr)
-    end if
-    SAFE_DEALLOCATE_A(gwf)
-  else
-    call io_binary_write(filename, np, wf(:,:,:), ierr)    
-  end if
-
-  
-  if(ierr > 0) then
-    message(1) = "Failed to write file "//trim(filename)
-    call messages_fatal(1)
-  end if
-
-
-
-  POP_SUB(PES_mask_write_orbital)  
-end subroutine PES_mask_write_orbital
-
-
-! ---------------------------------------------------------
-subroutine PES_mask_read_orbital(mask, filename, wf)
-  type(PES_mask_t),  intent(in)  :: mask
-  character(len=80), intent(in)  :: filename
-  CMPLX,             intent(out) :: wf(:,:,:)
-
-  integer :: ll(3), np, ierr
-  CMPLX, allocatable :: gwf(:,:,:)
-
-
-  PUSH_SUB(PES_mask_read_orbital)
-
-
-  ll(1:3) = mask%fs_n_global(1:3)
-  np = ll(1)*ll(2)*ll(3) 
-  ierr = 0 
-  
-  if (mask%cube%parallel_in_domains) then
-    SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
-    !misses cube_function_allscatter
-
-    SAFE_DEALLOCATE_A(gwf)
-  else
-    call io_binary_read(filename, np, wf(:,:,:), ierr)    
-  end if
-
-  
-  if(ierr > 0) then
-    message(1) = "Failed to read file "//trim(filename)
-    call messages_fatal(1)
-  end if
-
-
-
-  POP_SUB(PES_mask_read_orbital)  
-end subroutine PES_mask_read_orbital
-
+  POP_SUB(pes_mask_write_info)
+end subroutine pes_mask_write_info
 
 
 ! ---------------------------------------------------------
 !
 ! ---------------------------------------------------------
-subroutine PES_mask_restart_write(mask, st)
-  type(PES_mask_t), intent(in) :: mask
+subroutine pes_mask_dump(restart, mask, st)
+  type(restart_t),  intent(in) :: restart
+  type(pes_mask_t), intent(in) :: mask
   type(states_t),   intent(in) :: st
 
-  character(len=80) :: filename, dir ,path
-  integer :: itot, ik, ist, idim 
-  type(profile_t), save :: prof  
+  character(len=80) :: filename, path
+  integer :: itot, ik, ist, idim
+  integer :: ll(3), np, ierr, iunit
+  CMPLX, pointer :: gwf(:,:,:)
+  type(profile_t), save :: prof
    
-  PUSH_SUB(PES_mask_restart_write)
-  call profiling_in(prof, "PESMASK_restw")
+  PUSH_SUB(pes_mask_dump)
+  call profiling_in(prof, "PESMASK_dump")
 
-  dir = trim(restart_dir)//'td/'
+  iunit = restart_open(restart, 'pes_mask')
+  if(mpi_grp_is_root(mpi_world)) then
+    write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)
+    write(iunit, '(a10,2x,es19.12)') 'Mask R2', mask%mask_r(2)
+  end if
+  call restart_close(restart, iunit)
 
+  ll(1:3) = mask%fs_n_global(1:3)
+  np = ll(1)*ll(2)*ll(3) 
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -1910,48 +1831,76 @@ subroutine PES_mask_restart_write(mask, st)
 
         write(filename,'(i10.10)') itot
 
-               
-        path = trim(dir)//'pes_'//trim(filename)//'.obf'
-        
-        call PES_mask_write_orbital(mask, path, mask%k(:,:,:, idim, ist, ik))
+        !FIXME: the following should not use io_binary_write directly. Instead, the
+        !task of writing the function to the file should be done by the restart module.
+
+        path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
+
+        if (mask%cube%parallel_in_domains) then
+          SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
+          !call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
+          call zcube_function_allgather(mask%cube, gwf, mask%k(:,:,:, idim, ist, ik), gatherfs = .true.)
+          
+          !if(mask%pw_map_how .eq. PW_MAP_PFFT) then
+          !  call zcube_function_allgather(mask%cube, gwf, wf, order = (/2,3,1/))
+          ! 
+          !else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
+          !  call zcube_function_allgather(mask%cube, gwf, wf, order = (/2,3,1/))
+          !                                      
+          !end if
+        else
+          gwf => mask%k(:,:,:, idim, ist, ik)
+        end if
+
+        if(mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
+          call io_binary_write(path, np, gwf(:,:,:), ierr)
+          if(ierr /= 0) then
+            message(1) = "Failed to write file "//trim(path)
+            call messages_fatal(1)
+          end if
+        end if
+
+        if (mask%cube%parallel_in_domains) then
+          SAFE_DEALLOCATE_P(gwf)
+        end if
 
       end do
     end do
   end do
 
   call profiling_out(prof)
-  POP_SUB(PES_mask_restart_write)
-end subroutine PES_mask_restart_write
+  POP_SUB(pes_mask_dump)
+end subroutine pes_mask_dump
 
 ! ---------------------------------------------------------
-subroutine PES_mask_restart_read(mask, st)
-  type(PES_mask_t), intent(inout) :: mask
+subroutine pes_mask_load(restart, mask, st)
+  type(restart_t),  intent(in)    :: restart
+  type(pes_mask_t), intent(inout) :: mask
   type(states_t),   intent(inout) :: st
 
-  character(len=80) :: filename, dir ,path
-
-  integer :: itot, ik, ist, idim , np, ierr,idummy
+  character(len=80) :: filename, path
+  integer :: itot, ik, ist, idim , np, ierr, iunit
   integer :: ll(3)
-  FLOAT   :: fdummy
-  FLOAT, pointer :: afdummy(:),RR(:)
+  character(len=128) :: line
+  character(len=7) :: dummy
+  FLOAT, allocatable :: rr(:)
 
-
-  PUSH_SUB(PES_mask_restart_read)
-
+  PUSH_SUB(pes_mask_load)
 
   ll(1:3) = mask%ll(1:3)
   np =ll(1)*ll(2)*ll(3) 
-
-
-  dir = trim(restart_dir)//'td/'
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
+
         write(filename,'(i10.10)') itot
-        
-        path=trim(dir)//'pes_'//trim(filename)//'.obf'
+
+        !FIXME: the following should not use io_binary_read directly. Instead, the
+        !task of reading the function to the file should be done by the restart module.
+       
+        path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
         
         call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
         if(ierr > 0) then
@@ -1959,32 +1908,40 @@ subroutine PES_mask_restart_read(mask, st)
          call messages_fatal(1)
         end if
 
-
       end do
     end do
   end do
 
-  call PES_mask_read_info(tmpdir, idummy,fdummy,fdummy,idummy,afdummy,RR)
-  if(RR(1) /= mask%mask_R(1) .or. RR(2) /= mask%mask_R(2)) then
+  SAFE_ALLOCATE(rr(1:2))
+  iunit = restart_open(restart, 'pes_mask')
+  if (iunit < 0) then
+    message(1) = 'Could not read from file "pes_mask".'
+    call messages_fatal(1)
+  end if
+  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, line, ierr)
+  read(line,'(a10,2x,es19.12)') dummy, rr(1)
+  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, line, ierr)
+  read(line,'(a10,2x,es19.12)') dummy, rr(2)
+  call restart_close(restart, iunit)
+
+  if(rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
     message(1)="PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
     message(2)="I will restart mapping from the previous context."
     call messages_warning(2)
-    call PES_mask_restart_map(mask, st, RR)
+    call pes_mask_restart_map(mask, st, rr)
   endif 
  
-  SAFE_DEALLOCATE_P(afdummy)
-  SAFE_DEALLOCATE_P(RR)
+  SAFE_DEALLOCATE_A(rr)
 
-  POP_SUB(PES_mask_restart_read)
-end subroutine PES_mask_restart_read
+  POP_SUB(pes_mask_load)
+end subroutine pes_mask_load
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_restart_map(mask, st, RR)
-  type(PES_mask_t), intent(inout) :: mask
+subroutine pes_mask_restart_map(mask, st, RR)
+  type(pes_mask_t), intent(inout) :: mask
   type(states_t),   intent(inout) :: st
   FLOAT,            intent(in)    :: RR(2)
-
 
   integer :: itot, ik, ist, idim, np
   integer :: ll(3)
@@ -1992,9 +1949,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
   FLOAT, allocatable :: M_old(:,:,:)
   type(cube_function_t):: cf1,cf2
 
-
-
-  PUSH_SUB(PES_mask_restart_map)
+  PUSH_SUB(pes_mask_restart_map)
 
 
   ll(1:3) = mask%ll(1:3)
@@ -2008,20 +1963,20 @@ subroutine PES_mask_restart_map(mask, st, RR)
   call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
 
 
-  call PES_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
+  call pes_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
   
   itot = 1
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
-        call PES_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
-        call PES_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf2)
+        call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
+        call pes_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
         cf1%zRs = cf2%zRs* mask%cM%zRs !modify the orbital in A
-        call PES_mask_cube_to_mesh(mask, cf1, st%zpsi(:, idim, ist, ik))
+        call pes_mask_cube_to_mesh(mask, cf1, st%zpsi(:, idim, ist, ik))
         cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
-        call PES_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
+        call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do
     end do
@@ -2032,8 +1987,8 @@ subroutine PES_mask_restart_map(mask, st, RR)
   call  cube_function_free_FS(mask%cube, cf1)
   call zcube_function_free_RS(mask%cube, cf2)
 
-  POP_SUB(PES_mask_restart_map)
-end subroutine PES_mask_restart_map
+  POP_SUB(pes_mask_restart_map)
+end subroutine pes_mask_restart_map
 
 !! Local Variables:
 !! mode: f90

@@ -421,7 +421,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, from_scratch)
+  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
     type(scf_t),          intent(inout) :: scf !< self consistent cycle
     type(multicomm_t),    intent(in)    :: mc
     type(grid_t),         intent(inout) :: gr !< grid
@@ -433,7 +433,8 @@ contains
     logical, optional,    intent(in)    :: gs_run
     integer, optional,    intent(in)    :: verbosity 
     integer, optional,    intent(out)   :: iters_done
-    logical, optional,    intent(in)    :: from_scratch
+    type(restart_t), optional, intent(in) :: restart_load
+    type(restart_t), optional, intent(in) :: restart_dump
 
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
@@ -447,7 +448,7 @@ contains
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
     FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
     character(len=8) :: dirname
-    logical :: finish, gs_run_, berry_conv, cmplxscl, from_scratch_
+    logical :: finish, gs_run_, berry_conv, cmplxscl
     integer :: verbosity_
 
     PUSH_SUB(scf_run)
@@ -489,14 +490,12 @@ contains
 
     nspin = st%d%nspin
 
-    from_scratch_ = optional_default(from_scratch, .true.)
-    ! For now we will always skip this step
-    if (.not. from_scratch_ .and. .false.) then
-      call states_load_rho(trim(restart_dir)//GS_DIR, st, gr, ierr)
+    if (present(restart_load) .and. .false.) then
+      call states_load_rho(restart_load, st, gr, ierr)
 
       select case (scf%mix_field)
       case (MIXDENS)
-        call mix_load(trim(restart_dir)//GS_DIR, scf%smix, gr%fine%mesh, ierr)
+        call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
         call v_ks_calc(ks, hm, st, geo)
       case (MIXPOT)
         !TODO
@@ -761,31 +760,29 @@ contains
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
 
-      if (gs_run_) then 
+      if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
-          .or. iter == scf%max_iter .or. scf%forced_finish) .and. write_restart()) then
+          .or. iter == scf%max_iter .or. scf%forced_finish)) then
 
-          call restart_dump_start()
-          call states_dump(trim(tmpdir)//GS_DIR, st, gr, err, iter=iter) 
+          call states_dump(restart_dump, st, gr, err, iter=iter) 
           if(err /= 0) then
-            message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
+            message(1) = 'Unsuccessful write of restart'
             call messages_fatal(1)
           end if
 
-          call states_dump_rho(trim(tmpdir)//GS_DIR, st, gr, err, iter=iter)
+          call states_dump_rho(restart_dump, st, gr, err, iter=iter)
 
           select case (scf%mix_field)
           case (MIXDENS)
-            call mix_dump(trim(tmpdir)//GS_DIR, scf%smix, gr%fine%mesh)
+            call mix_dump(restart_dump, scf%smix, gr%fine%mesh)
             if(err /= 0) then
-              message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
+              message(1) = 'Unsuccessful write of restart'
               call messages_fatal(1)
             end if
           case (MIXPOT)
             !TODO
           end select
-          call restart_dump_finish()
         end if
       end if
 

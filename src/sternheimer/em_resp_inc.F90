@@ -21,7 +21,13 @@ subroutine X(run_sternheimer)()
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
+  call restart_init(restart_dump, RESTART_TYPE_DUMP, EM_RESP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                    mesh=sys%gr%mesh, sb=sys%gr%sb)
+
   if(.not. fromscratch) then
+
+    call restart_init(restart_load, RESTART_TYPE_LOAD, EM_RESP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     ! try to load wavefunctions, if first frequency; otherwise will already be initialized
     if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
@@ -40,25 +46,27 @@ subroutine X(run_sternheimer)()
             sigma_alt = swap_sigma(sigma)
           
           str_tmp = em_wfs_tag(idir, ifactor)
-          write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-          call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-          
+          call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, sigma))
+          call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+          call restart_cd(restart_load)
+
           if(ierr /= 0) then
             message(1) = "Initializing to zero, could not load response wavefunctions from '" &
-              //trim(tmpdir)//trim(dirname_restart)//"'"
+              //trim(wfs_tag_sigma(str_tmp, sigma))//"'"
             call messages_warning(1)
           end if
           
           if(em_vars%calc_hyperpol .and. use_kdotp) then
             do idir2 = 1, gr%sb%periodic_dim
-              str_tmp = em_wfs_tag(idir, ifactor, idir2)
-              write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-              call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, &
+              str_tmp = em_wfs_tag(idir, ifactor, idir2)              
+              call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, sigma))
+              call states_load(restart_load, sys%st, sys%gr, ierr, &
                 lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
+              call restart_cd(restart_load)
               
               if(ierr /= 0) then
                 message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &
-                  //trim(tmpdir)//trim(dirname_restart)//"'"
+                  //trim(wfs_tag_sigma(str_tmp, sigma))//"'"
                 call messages_warning(1)
               end if
             enddo
@@ -76,7 +84,7 @@ subroutine X(run_sternheimer)()
     
     !search for the density of the closest frequency, including negative
     closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
-    call loct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
+    call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
     sigma_alt = 1
     if(closest_omega * frequency < M_ZERO) opp_freq = .true.
     if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
@@ -84,7 +92,7 @@ subroutine X(run_sternheimer)()
     !attempt to read 
     if(ierr == 0) then 
       call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
-        EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
+        restart_load, em_rho_tag(closest_omega, idir), ierr)
       
       if(ierr == 0 .and. &
         abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
@@ -100,6 +108,7 @@ subroutine X(run_sternheimer)()
       em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho))
     end if
     
+    call restart_end(restart_load)
   end if ! .not. fromscratch
   
   call pert_setup_dir(em_vars%perturbation, idir)
@@ -116,7 +125,7 @@ subroutine X(run_sternheimer)()
   endif
   
   call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-    R_TOPREC(frequency_eta), em_vars%perturbation, EM_RESP_DIR, &
+    R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
     em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
     em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
   
@@ -134,6 +143,9 @@ subroutine X(run_sternheimer)()
   if(em_vars%calc_hyperpol .and. use_kdotp) then
     call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
+    call restart_init(restart_kdotp, RESTART_TYPE_LOAD, KDOTP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                       mesh=sys%gr%mesh, sb=sys%gr%sb)
+
     do idir2 = 1, gr%sb%periodic_dim
       write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
       call messages_info(1)
@@ -144,20 +156,20 @@ subroutine X(run_sternheimer)()
 
       ! load wavefunctions
       str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
-      write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
       ! 1 is the sigma index which is used in em_resp
-      call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
-          
+      call restart_cd(restart_kdotp, dirname=wfs_tag_sigma(str_tmp, 1))
+      call states_load(restart_kdotp, sys%st, sys%gr, ierr, lr=kdotp_lr2)
+      call restart_cd(restart_kdotp)
       if(ierr /= 0) then
-        message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
+        message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
         message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
         call messages_fatal(2)
       end if
-
+          
       call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
         kdotp_lr(idir2, 1:1), nsigma_eff, R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), &
         em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
-        pert2_none, EM_RESP_DIR, &
+        pert2_none, restart_dump, &
         "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
         give_pert1psi2 = kdotp_lr2%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
       
@@ -167,10 +179,14 @@ subroutine X(run_sternheimer)()
       endif
       
       em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
-    enddo
+    end do
     write(message(1), '(a)') ''
     call messages_info(1)
-  endif
+
+    call restart_end(restart_kdotp)
+  end if
+
+  call restart_end(restart_dump)
 
   POP_SUB(em_resp_run.X(run_sternheimer))
 end subroutine X(run_sternheimer)

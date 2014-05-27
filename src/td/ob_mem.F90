@@ -79,6 +79,7 @@ contains
     type(mpi_grp_t),     intent(in)    :: mpi_grp
 
     integer :: il, np, saved_iter, ii, ij
+    type(restart_t) :: restart_load, restart_dump
 
     PUSH_SUB(ob_mem_init)
 
@@ -146,10 +147,18 @@ contains
       call messages_fatal(2)
     end if
 
+    ! Initialize restart stuff
+    ! (Note that during the calculation the same directory will be used for reading and writing.
+    !  Also, because the information is mesh independent, we do not care about consistency of
+    !  the data.)
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, "open_boundaries", mpi_grp)
+    call restart_init(restart_load, RESTART_TYPE_LOAD, "", mpi_grp, basedir=restart_dir(restart_dump))
+
+
     do il = 1, NLEADS
       np = intf(il)%np_intf
       ! Try to read the coefficients from file
-      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
+      call read_coeffs(restart_load, saved_iter, ob, hm, intf(il), &
                        op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
 
       if (saved_iter  <  max_iter) then ! Calculate missing coefficients.
@@ -201,7 +210,7 @@ contains
             trim(lead_name(il))//' lead.'
           call messages_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
-            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intf(il),     &
+            call write_coeffs(restart_dump, ob, hm, intf(il),     &
               op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
           end if
         end if
@@ -219,6 +228,9 @@ contains
       end if
 
     end do
+
+    call restart_end(restart_load)
+    call restart_end(restart_dump)
 
     POP_SUB(ob_mem_init)
   end subroutine ob_mem_init
@@ -627,8 +639,8 @@ contains
   !> Write memory coefficients to file.
   !! FIXME: this routine writes compiler- and/or system-dependent binary files.
   !! It should be changed to a platform-independent format.
-  subroutine write_coeffs(dir, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
-    character(len=*),    intent(in)    :: dir
+  subroutine write_coeffs(restart, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
+    type(restart_t),     intent(in)    :: restart
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
     type(interface_t),   intent(in)    :: intf
@@ -643,13 +655,11 @@ contains
 
     PUSH_SUB(write_coeffs)
 
-    call io_mkdir(dir, is_tmp=.true.)
-    iunit = io_open(trim(dir)//trim(lead_name(intf%il)), &
-                    action='write', form='unformatted', is_tmp=.true.)
+    iunit = restart_open(restart, trim(lead_name(intf%il)), form='unformatted')
     if(iunit < 0) then
       message(1) = 'Cannot write memory coefficients to file.'
       call messages_warning(1)
-      call io_close(iunit)
+      call restart_close(restart, iunit)
       POP_SUB(write_coeffs)
       return
     end if
@@ -683,7 +693,7 @@ contains
       end do
     end select
 
-    call io_close(iunit)
+    call restart_close(restart, iunit)
 
     POP_SUB(write_coeffs)
   end subroutine write_coeffs
@@ -693,8 +703,8 @@ contains
   !> Read memory coefficients from file.
   !! FIXME: this routine reads compiler- and/or system-dependent binary files.
   !! It should be chanegd to a platform-independent format.
-  subroutine read_coeffs(dir, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
-    character(len=*),    intent(in)    :: dir
+  subroutine read_coeffs(restart, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
+    type(restart_t),     intent(in)    :: restart
     integer,             intent(out)   :: s_iter       !< Number of saved coefficients.
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
@@ -718,9 +728,9 @@ contains
     il = intf%il
 
     ! Try to open file.
-    iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
-      status='old', die=.false., is_tmp=.true., form='unformatted')
+    iunit = restart_open(restart, trim(lead_name(il)), form='unformatted')
     if(iunit  <  0) then ! no file found
+      call restart_close(restart, iunit)
       POP_SUB(read_coeffs)
       return
     end if
@@ -774,7 +784,7 @@ contains
     end if
     if (ierr /= 0) s_iter = 0
 
-    call io_close(iunit)
+    call restart_close(restart, iunit)
 
     SAFE_DEALLOCATE_A(s_vks)
 

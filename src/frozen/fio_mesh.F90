@@ -6,7 +6,7 @@ module fio_mesh_m
   use messages_m
   use profiling_m
 
-  use datasets_m,      only: tmpdir
+  use restart_m
   use curvilinear_m,   only: CURV_METHOD_UNIFORM, curvilinear_t
   use checksum_interface_m
   use io_binary_m,     only: io_binary_read
@@ -56,10 +56,12 @@ contains
     integer                     :: i, ia, ib, iunit, ierr
     integer                     :: i11, i21, i12, i22, i13, i23
     !
+    !This routine is not compatible anymore with the current restart machinery and should be rewritten.
+    !I am thus commenting some lines that prevent compilation.
     PUSH_SUB(fio_mesh_init)
     ASSERT(.not.sb%mr_flag)
     call json_get(config, "dir", dir, ierr)
-    if(ierr/=JSON_OK)dir="./"//trim(tmpdir)//GS_DIR
+    !if(ierr/=JSON_OK)dir="./"//trim(restart_loaddir)//GS_DIR
     iunit=io_open(trim(dir)//"mesh", action="read", status="old")
     if(iunit>0)then
       this%sb=>sb

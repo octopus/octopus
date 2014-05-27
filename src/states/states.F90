@@ -57,6 +57,7 @@ module states_m
   use opencl_m
   use parser_m
   use profiling_m
+  use restart_m
   use simul_box_m
   use smear_m
   use states_group_m
@@ -318,6 +319,7 @@ contains
     FLOAT :: excess_charge
     integer :: nempty, ierr, il, ntot, default, nthreads
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
+    type(restart_t) :: ob_restart
     character(len=256)   :: restart_dir
 
     PUSH_SUB(states_init)
@@ -437,14 +439,16 @@ contains
       SAFE_ALLOCATE(ob_st(1:NLEADS))
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
-        restart_dir = trim(trim(gr%ob_grid%lead(il)%info%restart_dir)//'/'// GS_DIR)
+        restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)
+        call restart_init(ob_restart, RESTART_TYPE_LOAD, GS_DIR, mpi_world, basedir=restart_dir)
         ! first get nst and kpoints of all states
-        call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
+        call states_look(ob_restart, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr /= 0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
-          message(2) = 'from '//restart_dir//'.'
+          message(2) = 'from '//trim(restart_dir)//'.'
           call messages_fatal(2)
         end if
+        call restart_end(ob_restart)
       end do
       if(NLEADS > 1) then
         if(ob_k(LEFT) /= ob_k(RIGHT).or. &
@@ -685,15 +689,16 @@ contains
       integer            :: occs, ist, ik, idim, idir, err
       FLOAT              :: flt, eigenval, imeigenval, occ, kweights
       character          :: char
-      character(len=256) :: restart_dir, line, chars
+      character(len=256) :: line, chars
 
       PUSH_SUB(states_init.read_ob_eigenval_and_occ)
 
-      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'//GS_DIR
+      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)
+      call restart_init(ob_restart, RESTART_TYPE_LOAD, GS_DIR, mpi_world, basedir=restart_dir)
 
-      occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
+      occs = restart_open(ob_restart, 'occs')
       if(occs  <  0) then
-        message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
+        message(1) = 'Could not read "occs" from left lead.'
         call messages_fatal(1)
       end if
 
@@ -733,23 +738,25 @@ contains
         end if
       end do
 
-      call io_close(occs)
+      call restart_close(ob_restart, occs)
+
+      call restart_end(ob_restart)
 
       POP_SUB(states_init.read_ob_eigenval_and_occ)
     end subroutine read_ob_eigenval_and_occ
   end subroutine states_init
 
   ! ---------------------------------------------------------
-  !> Reads the files 'wfns' and 'occs' stored in directory "dir", and finds out
+  !> Reads the files 'wfns' and 'occs' stored in the restart directory, and finds out
   !! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr)
-    character(len=*),  intent(in)  :: dir
-    type(mpi_grp_t),   intent(in)  :: mpi_grp
-    integer,           intent(out) :: kpoints
-    integer,           intent(out) :: dim
-    integer,           intent(out) :: nst
-    integer,           intent(out) :: ierr
+  subroutine states_look(restart, mpi_grp, kpoints, dim, nst, ierr)
+    type(restart_t), intent(inout) :: restart
+    type(mpi_grp_t), intent(in)    :: mpi_grp
+    integer,         intent(out)   :: kpoints
+    integer,         intent(out)   :: dim
+    integer,         intent(out)   :: nst
+    integer,         intent(out)   :: ierr
 
     character(len=256) :: line
     character(len=12)  :: filename
@@ -760,7 +767,7 @@ contains
     PUSH_SUB(states_look)
 
     ierr = 0
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
+    iunit = restart_open(restart, 'wfns')
 
     if(iunit < 0) then
       ierr = -1
@@ -768,7 +775,7 @@ contains
       return
     end if
 
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
+    iunit2 = restart_open(restart, 'occs')
 
     if(iunit2 < 0) then
       call io_close(iunit, grp = mpi_grp)
@@ -799,8 +806,8 @@ contains
       if(ist>nst)      nst     = ist
     end do
 
-    call io_close(iunit, grp = mpi_grp)
-    call io_close(iunit2, grp = mpi_grp)
+    call restart_close(restart, iunit)
+    call restart_close(restart, iunit2)
 
     POP_SUB(states_look)
   end subroutine states_look

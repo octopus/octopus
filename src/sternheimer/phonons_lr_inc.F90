@@ -57,15 +57,16 @@ end subroutine X(phonons_lr_infrared)
 
 ! ---------------------------------------------------------
 !> calculate the wavefunction associated with each normal mode
-subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib)
+subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_dump)
   type(lr_t),         intent(inout) :: lr
   type(states_t),     intent(inout) :: st !< not changed, just because of restart_read intent
   type(grid_t),       intent(in)    :: gr
   type(vibrations_t), intent(in)    :: vib
+  type(restart_t),    intent(inout) :: restart_load
+  type(restart_t),    intent(inout) :: restart_dump
 
   type(lr_t) :: lrtmp
   integer :: ik, ist, idim, inm, iatom, imat, ierr, idir
-  character(len=80) :: dirname
 
   PUSH_SUB(X(phonons_lr_wavefunctions))
 
@@ -80,12 +81,13 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib)
       do idir = 1, vib%ndim
 
         imat = vibrations_get_index(vib, iatom, idir)
-        
-        dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
-        call states_load(trim(dirname), st, gr, ierr, lr = lrtmp)
+
+        call restart_cd(restart_load, dirname=wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
+        call states_load(restart_load, st, gr, ierr, lr = lrtmp)
+        call restart_cd(restart_load)
 
         if(ierr /= 0) then
-          message(1) = "Failed to load response wavefunctions from '"//dirname//"'"
+          message(1) = "Failed to load response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'"
           call messages_fatal(1)
         end if
             
@@ -102,9 +104,10 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib)
 
       end do
     end do
-        
-    call states_dump(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
-      st, gr, ierr, lr = lr)
+
+    call restart_cd(restart_dump, dirname=phn_nm_wfs_tag(inm))
+    call states_dump(restart_dump, st, gr, ierr, lr = lr)
+    call restart_cd(restart_dump)
 
   end do
 

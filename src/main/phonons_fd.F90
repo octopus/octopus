@@ -61,13 +61,17 @@ contains
 
     type(vibrations_t) :: vib
     integer :: ierr
+    type(restart_t) :: restart_gs
 
     PUSH_SUB(phonons_run)
 
     call init_()
 
     ! load wavefunctions
-    call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
+    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+    call states_load(restart_gs, sys%st, sys%gr, ierr)
+    call restart_end(restart_gs)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'

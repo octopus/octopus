@@ -78,6 +78,8 @@ contains
     FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
     FLOAT, parameter :: omega0 = CNST(0.3)
 
+    type(restart_t) :: restart_dump
+
     PUSH_SUB(vdw_run)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
@@ -175,6 +177,8 @@ contains
       character(len=80) :: dirname
       FLOAT :: iomega, domega, pol
 
+      type(restart_t) :: restart_load, restart_gs
+
       PUSH_SUB(vdw_run.init_)
 
       ! make some space for static polarizability
@@ -216,7 +220,10 @@ contains
       end if
 
       ! we always need complex response
-      call states_look_and_read(sys%st, sys%gr, is_complex = .true., exact = .true.)
+      call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR,  sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+      call states_look_and_read(restart_gs, sys%st, sys%gr, is_complex = .true.)
+      call restart_end(restart_gs)
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -226,23 +233,33 @@ contains
       do dir = 1, ndir
         call lr_init(lr(dir,1))
         call lr_allocate(lr(dir,1), sys%st, sys%gr%mesh)
-
-        ! load wavefunctions
-        if(.not.fromScratch) then
-          write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
-          call states_load(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir,1))
-          
-          if(ierr /= 0) then
-            message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname
-            call messages_warning(1)
-          end if
-        end if
       end do
 
+      ! load wavefunctions
+      if (.not. fromScratch) then
+        call restart_init(restart_load, RESTART_TYPE_LOAD, VDW_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                          mesh=sys%gr%mesh, sb=sys%gr%sb)
+
+        do dir = 1, ndir
+          write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
+          call restart_cd(restart_load, dirname=dirname)
+          call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))
+          
+          if(ierr /= 0) then
+            message(1) = "Could not load response wavefunctions from '"//trim(dirname)
+            call messages_warning(1)
+          end if
+        end do
+
+        call restart_end(restart_load)
+      end if
+
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir(trim(tmpdir)//VDW_DIR, is_tmp=.true.) ! restart
         call io_mkdir(VDW_DIR)               ! output data
       endif
+
+      call restart_init(restart_dump, RESTART_TYPE_DUMP, VDW_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_
@@ -259,6 +276,8 @@ contains
       do dir = 1, ndir
         call lr_dealloc(lr(dir, 1))
       end do
+
+      call restart_end(restart_dump)
 
       POP_SUB(vdw_run.end_)
     end subroutine end_
@@ -281,7 +300,7 @@ contains
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &
-             VDW_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+             restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)

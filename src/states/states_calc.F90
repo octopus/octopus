@@ -61,6 +61,7 @@ module states_calc_m
   use pblas_m
   use physics_op_m
   use profiling_m
+  use restart_m
   use scalapack_m
   use simul_box_m
   use smear_m
@@ -306,9 +307,10 @@ contains
   end subroutine states_sort_complex
 
   ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(sb, st)
+  subroutine states_degeneracy_matrix(sb, st, restart)
     type(simul_box_t), intent(in) :: sb
     type(states_t),    intent(in) :: st
+    type(restart_t),   intent(in) :: restart ! GS_DIR
 
     integer :: idir, is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
@@ -376,11 +378,9 @@ contains
       end do
     end do
 
+    ! write matrix to restart directory
+    iunit = restart_open(restart, 'degeneracy_matrix')
     if(mpi_grp_is_root(mpi_world)) then
-
-      ! write matrix to "restart/gs" directory
-      iunit = io_open(trim(tmpdir)//GS_DIR//'degeneracy_matrix', action='write', is_tmp = .true.)
-
       write(iunit, '(a)', advance='no') '# index  '
       do idir = 1, sb%dim
         write(iunit, '(2a)', advance='no') 'k', index2axis(idir)
@@ -401,20 +401,19 @@ contains
           write(iunit, '(i3)') degeneracy_matrix(is, js)
         enddo
       end do
+    end if
+    call restart_close(restart, iunit)
 
-      call io_close(iunit)
-
-      ! write index vectors to "restart/gs" directory
-      iunit = io_open(trim(tmpdir)//GS_DIR//'index_vectors', action='write', is_tmp = .true.)    
-
+    ! write index vectors to restart directory
+    iunit = restart_open(restart, 'index_vectors')    
+    if(mpi_grp_is_root(mpi_world)) then
       write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
 
       do is = 1, st%nst*st%d%nik
         write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
       end do
-
-      call io_close(iunit)
     end if
+    call restart_close(restart, iunit)
 
     SAFE_DEALLOCATE_A(eigenval_sorted)
     SAFE_DEALLOCATE_A(sindex)

@@ -13,7 +13,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-## 02110-1301, USA.
+## 02110-130, USA.
 ##
 ## $Id$
 
@@ -29,8 +29,8 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/pcm    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
-	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
 	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
 	@F90_MODULE_FLAG@$(top_builddir)/src/xc      	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/system   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/hamiltonian \
@@ -66,8 +66,8 @@ octopus_LIBS = \
 	$(top_builddir)/src/system/libsystem.a           \
 	$(top_builddir)/src/hamiltonian/libhamiltonian.a \
 	$(top_builddir)/src/xc/libxc.a                   \
-	$(top_builddir)/src/states/libstates.a           \
 	$(top_builddir)/src/frozen/libfrozen.a           \
+	$(top_builddir)/src/states/libstates.a           \
 	$(top_builddir)/src/poisson/libpoisson.a         \
 	$(top_builddir)/src/grid/libgrid.a               \
 	$(top_builddir)/src/pcm/libpcm.a                 \

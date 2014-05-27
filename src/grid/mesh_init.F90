@@ -826,25 +826,37 @@ contains
     logical              :: use_topo, reorder, partition_print
     integer              :: ierr
 
-    logical :: from_scratch, has_virtual_partition = .false.
+    logical :: read_partition, write_partition, has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
+    character(len=80) :: partition_dir
 
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
     mesh%mpi_grp = mpi_grp
 
-    !%Variable MeshPartitionFromScratch
-    !%Type logical
-    !%Default false
+    !%Variable MeshPartitionDir
+    !%Type string
+    !%Default "restart/partition"
     !%Section Execution::Parallelization
     !%Description
-    !% If set to no (the default) Octopus will try to use the mesh
-    !% partition from a previous run if available.
+    !% Directory from where <tt>Octopus</tt> can read or write the mesh partition.
     !%End
-    call parse_logical(datasets_check('MeshPartitionFromScratch'), .false., from_scratch)
+    call parse_string(datasets_check('MeshPartitionDir'), "restart/partition", partition_dir)
+
+    call messages_obsolete_variable('MeshPartitionFromScratch', 'MeshPartitionRead')
+
+    !%Variable MeshPartitionRead
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% If set to yes (the default) <tt>Octopus</tt> will try to use the mesh
+    !% partition from a previous run if available in directory <tt>MeshPartitionDir</tt>.
+    !%End
+    call parse_logical(datasets_check('MeshPartitionRead'), .true., read_partition)
 
     ierr = -1
-    if(.not. from_scratch) call mesh_partition_read(mesh, ierr)
+    if(read_partition) call mesh_partition_read(partition_dir, mesh, ierr)
 
 
     if(ierr /= 0) then
@@ -879,7 +891,18 @@ contains
       call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
-      call mesh_partition_write(mesh, vsize)
+
+      !%Variable MeshPartitionRead
+      !%Type logical
+      !%Default true
+      !%Section Execution::Parallelization
+      !%Description
+      !% If set to yes (the default) <tt>Octopus</tt> will write the mesh
+      !% partition of the current run if to directory <tt>MeshPartitionDir</tt>.
+      !%End
+      call parse_logical(datasets_check('MeshPartitionWrite'), .true., write_partition)
+
+      if (write_partition) call mesh_partition_write(partition_dir, mesh, vsize)
     end if
 
     !At the moment we still need the global partition. This will be removed in near future.

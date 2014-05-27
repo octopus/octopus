@@ -75,6 +75,7 @@ module geom_opt_m
     integer                      :: dim
     integer                      :: size
     integer                      :: fixed_atom
+    type(restart_t)              :: restart_dump
   end type geom_opt_t
 
   type(geom_opt_t), save :: g_opt
@@ -97,7 +98,8 @@ contains
 
     real (8), allocatable :: mass(:)
     integer :: iatom, imass
-    
+    type(restart_t) :: restart_load
+
     PUSH_SUB(geom_opt_run)
 
     call init_()
@@ -105,7 +107,10 @@ contains
 
     ! load wavefunctions
     if(.not. fromscratch) then
-      call states_load(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
+      call restart_init(restart_load, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
+      call states_load(restart_load, sys%st, sys%gr, ierr)
+      call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Could not load wavefunctions: Starting from scratch."
         call messages_warning(1)
@@ -377,6 +382,9 @@ contains
         endif
       enddo
 
+      call restart_init(g_opt%restart_dump, RESTART_TYPE_DUMP, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
+
       POP_SUB(geom_opt_run.init_)
     end subroutine init_
 
@@ -386,6 +394,8 @@ contains
       PUSH_SUB(geom_opt_run.end_)
 
       call states_deallocate_wfns(sys%st)
+
+      call restart_end(g_opt%restart_dump)
 
       nullify(g_opt%mesh)
       nullify(g_opt%geo)
@@ -430,7 +440,7 @@ contains
 
     ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
-      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
+      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
     if(getgrad  ==  1) call to_grad(g_opt, df)

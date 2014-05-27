@@ -89,9 +89,10 @@ contains
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit_restart, ierr, start_mode
     CMPLX, allocatable :: force_deriv(:,:)
-    character(len=80) :: dirname_restart, str_tmp
+    character(len=80) :: str_tmp
     type(Born_charges_t) :: born
     logical :: normal_mode_wfs, do_infrared, symmetrize
+    type(restart_t) :: restart_load, restart_dump, restart_kdotp, restart_gs
 
     PUSH_SUB(phonons_lr_run)
 
@@ -147,28 +148,33 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call states_look_and_read(st, gr, exact = .true.)
+    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
+    call states_look_and_read(restart_gs, st, gr)
+    call restart_end(restart_gs)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
+      call restart_init(restart_kdotp, RESTART_TYPE_LOAD, KDOTP_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
 
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
-        write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call states_load(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        call restart_cd(restart_kdotp, dirname=wfs_tag_sigma(str_tmp, 1))
+        call states_load(restart_kdotp, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        call restart_cd(restart_kdotp)
 
         if(ierr /= 0) then
-          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
+          message(1) = "Could not load kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
           message(2) = "Previous kdotp calculation required."
           call messages_fatal(2)
         end if
       end do
+      call restart_end(restart_kdotp)
     endif
 
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -202,7 +208,15 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call phonons_read_saved(fromScratch, vib, start_mode)
+    call restart_init(restart_dump, RESTART_TYPE_DUMP, VIB_MODES_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(restart_load, RESTART_TYPE_LOAD, VIB_MODES_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+
+    if (fromScratch) then
+      start_mode = 1
+      call restart_rm(restart_dump, 'restart')
+    else
+      call phonons_load(restart_load, fromScratch, vib, start_mode)
+    end if
 
     do imat = 1, start_mode - 1
       call vibrations_out_dyn_matrix_row(vib, imat)
@@ -222,8 +236,9 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call states_load(trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1)), &
-          st, gr, ierr, lr = lr(1))
+        call restart_cd(restart_load, dirname=wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
+        call states_load(restart_load, st, gr, ierr, lr = lr(1))
+        call restart_cd(restart_load)
       end if
       
       call pert_setup_atom(ionic_pert, iatom)
@@ -231,10 +246,10 @@ contains
       
       if(states_are_real(st)) then
         call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
-          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
         call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
-          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       endif
       
       if(states_are_real(st)) then
@@ -265,12 +280,12 @@ contains
         endif
       endif
 
+      iunit_restart = restart_open(restart_dump, 'restart', position='append')
+      ! open and close makes sure output is not buffered
       if(mpi_grp_is_root(mpi_world)) then
-        ! open and close makes sure output is not buffered
-        iunit_restart = io_open(trim(restart_dir)//VIB_MODES_DIR//'restart', action='write', position='append', is_tmp=.true.)
         write(iunit_restart, *) imat, vib%dyn_matrix(:, imat), (vib%infrared(imat, idir), idir = 1, ndim)
-        call io_close(iunit_restart)
       endif
+      call restart_close(restart_dump, iunit_restart)
 
       message(1) = ""
       call messages_info(1)
@@ -300,9 +315,9 @@ contains
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
       if(states_are_real(st)) then
-        call dphonons_lr_wavefunctions(lr(1), st, gr, vib)
+        call dphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
       else
-        call zphonons_lr_wavefunctions(lr(1), st, gr, vib)
+        call zphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
       endif
     endif
 
@@ -318,6 +333,8 @@ contains
         call lr_dealloc(kdotp_lr(idir))
       enddo
     endif
+    call restart_end(restart_load)
+    call restart_end(restart_dump)
 
     POP_SUB(phonons_lr_run)
 
@@ -516,7 +533,8 @@ contains
   end subroutine axsf_mode_output
 
   ! ---------------------------------------------------------
-  subroutine phonons_read_saved(fromScratch, vib, start_mode)
+  subroutine phonons_load(restart, fromScratch, vib, start_mode)
+    type(restart_t),    intent(in)    :: restart
     logical,            intent(in)    :: fromScratch
     type(vibrations_t), intent(inout) :: vib
     integer,            intent(out)   :: start_mode
@@ -524,17 +542,11 @@ contains
     integer :: iunit, ierr, imode, number
     FLOAT, allocatable :: dyn_row(:)
     FLOAT :: infrared(MAX_DIM)
-    character(len=256) :: restart_file
 
-    PUSH_SUB(phonons_read_saved)
+    PUSH_SUB(phonons_load)
 
-    start_mode = 1
-    restart_file = trim(restart_dir)//VIB_MODES_DIR//'restart'
-    if(fromScratch) then
-      call loct_rm(trim(restart_file))
-    else if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(restart_file), action='read', &
-        status='old', die=.false., is_tmp=.true.)
+    iunit = restart_open(restart, 'restart')
+    if(mpi_grp_is_root(mpi_world)) then
 
       if(iunit > 0) then
         SAFE_ALLOCATE(dyn_row(1:vib%num_modes))
@@ -556,19 +568,21 @@ contains
         call messages_info(1)
 
         SAFE_DEALLOCATE_A(dyn_row)
-        call io_close(iunit)
       else
-        message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
+        start_mode = 1
+
+        message(1) = "Could not find restart file 'restart'. Starting from scratch."
         call messages_warning(1)
       endif
     endif
+    call restart_close(restart, iunit)
 
 #ifdef HAVE_MPI
     call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
 #endif
 
-    POP_SUB(phonons_read_saved)
-  end subroutine phonons_read_saved
+    POP_SUB(phonons_load)
+  end subroutine phonons_load
 
 #include "complex.F90"
 #include "phonons_lr_inc.F90"

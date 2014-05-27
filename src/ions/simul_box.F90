@@ -1231,45 +1231,49 @@ contains
 
     PUSH_SUB(simul_box_dump)
 
-    iunit = io_open(trim(dir)//trim(filename), action='write', position="append", is_tmp=.true.)
+    if (mpi_grp_is_root(mpi_world)) then
 
-    write(iunit, '(a)')             dump_tag
-    write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
-    write(iunit, '(a20,i4)')        'dim=                ', sb%dim
-    write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
-    write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
-    select case(sb%box_shape)
-    case(SPHERE, MINIMUM)
-      write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
-      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-    case(CYLINDER)
-      write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
-      write(iunit, '(a20,e22.14)')   'xlength=            ', sb%xsize
-      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-    case(PARALLELEPIPED)
-      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-    case(BOX_USDEF)
-      write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-      write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
-    end select
-    write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
-    write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
-    if(sb%mr_flag) then
-      write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
-      write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
-      do idir = 1, sb%hr_area%num_radii
-        write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
-      end do
+      iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", is_tmp=.true.)
+
+      write(iunit, '(a)')             dump_tag
+      write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
+      write(iunit, '(a20,i4)')        'dim=                ', sb%dim
+      write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
+      write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
+      select case(sb%box_shape)
+      case(SPHERE, MINIMUM)
+        write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
+        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+      case(CYLINDER)
+        write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
+        write(iunit, '(a20,e22.14)')   'xlength=            ', sb%xsize
+        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+      case(PARALLELEPIPED)
+        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+      case(BOX_USDEF)
+        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+        write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
+      end select
+      write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
+      write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
+      if(sb%mr_flag) then
+        write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
+        write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
+        do idir = 1, sb%hr_area%num_radii
+          write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
+        end do
+        do idir = 1, sb%dim
+          write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
+        end do
+      end if
       do idir = 1, sb%dim
-        write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
+        write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
+             sb%rlattice_primitive(1:sb%dim, idir)
       end do
-    end if
-    do idir = 1, sb%dim
-      write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
-        sb%rlattice_primitive(1:sb%dim, idir)
-    end do
 
-    call io_close(iunit)
+      call io_close(iunit)
+
+    end if
 
     POP_SUB(simul_box_dump)
   end subroutine simul_box_dump
@@ -1288,7 +1292,7 @@ contains
 
     PUSH_SUB(simul_box_load)
 
-    iunit = io_open(trim(dir)//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)
 
     ! Find (and throw away) the dump tag.
     do
