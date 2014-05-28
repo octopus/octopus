@@ -730,7 +730,6 @@ contains
     ! Try to open file.
     iunit = restart_open(restart, trim(lead_name(il)), form='unformatted')
     if(iunit  <  0) then ! no file found
-      call restart_close(restart, iunit)
       POP_SUB(read_coeffs)
       return
     end if
