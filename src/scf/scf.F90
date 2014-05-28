@@ -775,9 +775,9 @@ contains
 
           select case (scf%mix_field)
           case (MIXDENS)
-            call mix_dump(restart_dump, scf%smix, gr%fine%mesh)
+            call mix_dump(restart_dump, scf%smix, gr%fine%mesh, err)
             if(err /= 0) then
-              message(1) = 'Unsuccessful write of restart'
+              message(1) = 'Unsuccessful write of mixing'
               call messages_fatal(1)
             end if
           case (MIXPOT)

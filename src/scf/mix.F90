@@ -268,12 +268,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mix_dump(restart, smix, mesh)
-    type(restart_t), intent(in) :: restart
-    type(mix_t),     intent(in) :: smix
-    type(mesh_t),    intent(in) :: mesh
+  subroutine mix_dump(restart, smix, mesh, ierr)
+    type(restart_t), intent(in)  :: restart
+    type(mix_t),     intent(in)  :: smix
+    type(mesh_t),    intent(in)  :: mesh
+    integer,         intent(out) :: ierr
 
-    integer :: ierr, iunit
+    integer :: iunit
     integer :: id2, id3, id4
     character(len=80) :: filename
 
