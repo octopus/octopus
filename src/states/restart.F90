@@ -261,8 +261,8 @@ contains
               message(2) = "restart information written with a different mesh."
               call messages_fatal(2)
             end if
+            close(iunit)
           end if
-          close(iunit)
         end if
 
         ! Dump the grid information. The main parameters of the grid should not change
@@ -290,12 +290,13 @@ contains
         ! dump to a given directory at the same time.
         if (mpi_grp_is_root(restart%mpi_grp)) then
           iunit = io_open(trim(restart%pwd)//'/dumping', action='write', status='new', die=.false., is_tmp=.true.)
-          if (iunit < 0) then
+          if (iunit > 0) then
+            call io_close(iunit)
+          else
             message(1) = "Internal error: directory '"//trim(restart%pwd)//"' already been used"
             message(2) = "for restart dumping."
             call messages_fatal(2)
           end if
-          call io_close(iunit)
         end if
 
       end if
@@ -316,12 +317,14 @@ contains
         ! load from a given directory at the same time.
         if(mpi_grp_is_root(restart%mpi_grp)) then
           iunit = io_open(trim(restart%pwd)//'/loading', action='write', status='new', die=.false., is_tmp=.true.)
-          if (iunit < 0) then
+          if (iunit > 0) then
+            call io_close(iunit)
+          else
             message(1) = "Internal error: directory '"//trim(restart%pwd)//"' already been used for"
             message(2) = "restart loading."
             call messages_fatal(2)
           end if
-          call io_close(iunit)
+
         end if
 
         if (present(mesh)) then
