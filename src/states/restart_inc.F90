@@ -32,7 +32,8 @@ subroutine X(restart_write_function)(restart, filename, mesh, ff, ierr)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
-  call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
+  call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
+                             is_tmp=.true., grp=restart%mpi_grp)
   ! all restart files are in atomic units
 
   if (ierr /= 0) then

@@ -128,7 +128,6 @@ int FC_FUNC_(oct_dir_exists, OCT_DIR_EXISTS)
 
   if(ierr == 0)
   {
-    printf("ierr = %i\n", S_ISDIR(statbuf.st_mode));
     return S_ISDIR(statbuf.st_mode);
   }
   else
