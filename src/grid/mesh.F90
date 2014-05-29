@@ -638,6 +638,9 @@ contains
       call vec_end(mesh%vp)
 #endif
     end if
+    
+    call partition_end(mesh%inner_partition)
+    call partition_end(mesh%bndry_partition)
 
     POP_SUB(mesh_end)
   end subroutine mesh_end
