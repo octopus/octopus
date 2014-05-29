@@ -154,6 +154,13 @@ void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 	w->iter++;
 }
 
+void FC_FUNC_(write_iter_set, WRITE_ITER_SET)
+     (void **v, const fint *i)
+{
+        write_iter *w=*v;
+	w->iter = *i;
+}
+
 void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 		 (void **v, const double *d, const fint *no)
 {

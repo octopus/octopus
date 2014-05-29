@@ -514,14 +514,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt, iter)
-    type(td_write_t),    intent(inout) :: writ
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(inout) :: geo
-    type(kick_t),        intent(in)    :: kick
-    FLOAT,               intent(in)    :: dt
-    integer,             intent(in)    :: iter
+    type(td_write_t),    intent(inout) :: writ !< Write object
+    type(grid_t),        intent(inout) :: gr   !< The grid
+    type(states_t),      intent(inout) :: st   !< State object
+    type(hamiltonian_t), intent(inout) :: hm   !< Hamiltonian object
+    type(geometry_t),    intent(inout) :: geo  !< Geometry object
+    type(kick_t),        intent(in)    :: kick !< The kick
+    FLOAT,               intent(in)    :: dt   !< Delta T, time interval
+    integer,             intent(in)    :: iter !< Iteration number
 
     type(profile_t), save :: prof
 
@@ -822,14 +822,15 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> Subroutine to write multipoles to the corresponding file
   subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
-    type(c_ptr),        intent(inout) :: out_multip
-    type(grid_t),       intent(in) :: gr
-    type(geometry_t),   intent(in) :: geo
-    type(states_t),     intent(in) :: st
+    type(c_ptr),        intent(inout) :: out_multip !< C pointer
+    type(grid_t),       intent(in) :: gr   !< The grid
+    type(geometry_t),   intent(in) :: geo  !< Geometry object
+    type(states_t),     intent(in) :: st   !< State object
     integer,            intent(in) :: lmax
-    type(kick_t),       intent(in) :: kick
-    integer,            intent(in) :: iter
+    type(kick_t),       intent(in) :: kick !< Kick object
+    integer,            intent(in) :: iter !< Iteration number
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
