@@ -636,12 +636,11 @@ contains
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       call vec_end(mesh%vp)
+      call partition_end(mesh%inner_partition)
+      call partition_end(mesh%bndry_partition)
 #endif
     end if
     
-    call partition_end(mesh%inner_partition)
-    call partition_end(mesh%bndry_partition)
-
     POP_SUB(mesh_end)
   end subroutine mesh_end
 
