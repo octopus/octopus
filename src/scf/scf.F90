@@ -490,16 +490,21 @@ contains
 
     nspin = st%d%nspin
 
-    if (present(restart_load) .and. .false.) then
-      call states_load_rho(restart_load, st, gr, ierr)
+    if (present(restart_load)) then
+      if (restart_has_flag(restart_load, RESTART_RHO)) then
+        ! Load density and used it to recalculated the KS potential.
+        call states_load_rho(restart_load, st, gr, ierr)
+        if (scf%mix_field == MIXDENS) call v_ks_calc(ks, hm, st, geo)
+      end if
 
-      select case (scf%mix_field)
-      case (MIXDENS)
-        call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
-        call v_ks_calc(ks, hm, st, geo)
-      case (MIXPOT)
-        !TODO
-      end select
+      if (restart_has_flag(restart_load, RESTART_MIX)) then
+        select case (scf%mix_field)
+        case (MIXDENS)
+          call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
+        case (MIXPOT)
+          !TODO
+        end select
+      end if
     end if
 
     if(.not. cmplxscl) then      

@@ -280,6 +280,12 @@ contains
 
     PUSH_SUB(mix_dump)
 
+    if (restart_skip(restart)) then
+      ierr = 0
+      POP_SUB(mix_dump)
+      return
+    end if
+
     ! functions to be written need to be compatible with the mesh
     ASSERT(mesh%np == smix%d1)
 
@@ -381,6 +387,12 @@ contains
 
     PUSH_SUB(mix_load)
 
+    if (restart_skip(restart)) then
+      ierr = -3
+      POP_SUB(mix_load)
+      return
+    end if
+
     ! First we read some information about the mixing
     iunit = restart_open(restart, 'mixing')
     if (iunit < 0) then
@@ -439,7 +451,7 @@ contains
           if (d4 > 0) ipos = mod(last_ipos, d4) + 1
           do id4 = 1, smix%ns_stored
 
-            write(filename,'(a3,i2.2,i2.2,i2.2,a4)') 'df_', id2, id3, ipos, ".obf"
+            write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, ipos
             if (smix%func_type == TYPE_FLOAT) then
               call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
             else
@@ -451,7 +463,7 @@ contains
               ierr = ierr + 1
             end if
           
-            write(filename,'(a3,i2.2,i2.2,i2.2,a4)') 'dv_', id2, id3, ipos, ".obf"
+            write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, ipos
             if (smix%func_type == TYPE_FLOAT) then
               call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
             else
@@ -466,7 +478,7 @@ contains
             ipos = mod(ipos, d4) + 1
           end do
 
-          write(filename,'(a6,i2.2,i2.2,a4)') 'f_old_', id2, id3, ".obf"
+          write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
             call drestart_read_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
           else
@@ -478,7 +490,7 @@ contains
             ierr = ierr + 1
           end if
 
-          write(filename,'(a8,i2.2,i2.2,a4)') 'vin_old_', id2, id3, ".obf"
+          write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
             call drestart_read_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
           else

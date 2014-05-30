@@ -56,6 +56,7 @@ module restart_m
     restart_block_signals,   &
     restart_unblock_signals, &
     restart_skip,            &
+    restart_has_flag,        &
     drestart_write_function, &
     zrestart_write_function, &
     drestart_read_function,  &
@@ -214,10 +215,11 @@ contains
     !% in subsequent calculations. The most common example is the ground-state states
     !% that are used to start a time-dependent calculation. This variable allows to control
     !% where this information is written to or read from. The format of this block is the following:
-    !% for each line, the first column indicates the type of data, while the second column indicates
-    !% the path to the directory should be used to read and write that restart information.
-    !% For example, if you are running a time-dependent calculation, you can indicate where <tt>Octopus</tt>
-    !% can find the ground-state information in the following way:
+    !% for each line, the first column indicates the type of data, the second column indicates
+    !% the path to the directory that should be used to read and write that restart information, and the
+    !% third column, which is optional, allows one to set some flags to modify the way how the data
+    !% is read or written. For example, if you are running a time-dependent calculation, you can 
+    !% indicate where <tt>Octopus</tt> can find the ground-state information in the following way:
     !%
     !% <tt>%RestartOptions
     !% <br>&nbsp;&nbsp;restart_gs | "gs_restart"
@@ -241,50 +243,89 @@ contains
     !%
     !% By default, the name of the "restart_all" directory is set to "restart".
     !% 
+    !% Some <tt>CalculationMode</tt> also take into account specific flags set in the third column of the <tt>RestartOptions</tt>
+    !% block. These are used to determine if some specific part of the restart data is to be taken into account
+    !% or not when reading the restart information. For example, when restarting a ground-state calculation, one can
+    !% set the <tt>restart_rho</tt> flags, so that the density used is not built from the saved wavefunctions, but is
+    !% instead read from the restart directory. In this case, the block should look like this:
+    !% 
+    !% <tt>%RestartOptions
+    !% <br>&nbsp;&nbsp;restart_gs | "restart" | restart_rho
+    !% <br>%</tt>
+    !%
+    !% A list of available flags is given bellow, but note that the code might ignore some of them, which will happen if they
+    !% are not available for that particular calculation, or might assume they some of them always present, which will happen
+    !% in case they are mandatory.
+    !% 
     !% Finally, note that the all the restart information of a given data type is always stored in a subdirectory of the
     !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
     !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
     !% all the data types. The name of these subdirectories in indicated in the description of the data types bellow.
     !%
-    !% Currently, the available restart data types are the following:
+    !% Currently, the available restart data types and flags are the following:
     !%Option restart_all 0
+    !% (data type)
     !% Option to globally change the path of all the restart information.
     !%Option restart_gs  1
+    !% (data type) 
     !% The data resulting from a ground-state calculation.
     !% This information is stored under the "gs" subdirectory.
     !%Option restart_unocc 2
+    !% (data type) 
     !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground-state and 
     !% can be used as such, so it is stored under the same subdirectory as the one of restart_gs.
     !%Option restart_td 3
+    !% (data type) 
     !% The data resulting from a real-time time-dependet calculation. 
     !% This information is stored under the "td" subdirectory.
     !%Option restart_em_resp 4
+    !% (data type) 
     !% The data resulting from the calculation of the electromagnetic response using the Sternheimer approach. 
     !% This information is stored under the "em_resp" subdirectory.
     !%Option restart_em_resp_fd 5
+    !% (data type) 
     !% The data resulting from the calculation of the electromagnetic response using finite-diferences. 
     !% This information is stored under the "em_resp_fd" subdirectory.
     !%Option restart_kdotp 6
+    !% (data type) 
     !% The data resulting from the calculation of effective masses by k.p perturbation theory.
     !% This information is stored under the "kdotp" subdirectory.
     !%Option restart_vib_modes 7
+    !% (data type) 
     !% The data resulting from the calculation of  vibrational modes.
     !% This information is stored under the "vib_modes" subdirectory.
     !%Option restart_vdw 8
+    !% (data type) 
     !% The data resulting from the calculation of van der Waals coefficients.
     !% This information is stored under the "vdw" subdirectory.
     !%Option restart_casida 9
+    !% (data type) 
     !% The data resulting from a Casida calculation.
     !% This information is stored under the "casida" subdirectory.
     !%Option restart_oct 10
+    !% (data type) 
     !% The data for optimal control calculations.
     !% This information is stored under the "opt-control" subdirectory.
     !%Option restart_ob 11
+    !% (data type) 
     !% The data for open boundaries.
     !% This information is stored under the "open_boundaries" subdirectory.
     !%Option restart_proj 12
+    !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
     !% This information should be a ground-state, so the "gs" subdirectory is used.
+    !%Option restart_states 1
+    !% (flag)
+    !% Read the electronic states. (not yet implemented)
+    !%Option restart_rho 2
+    !% (flag)
+    !% Read the electronic density.
+    !%Option restart_vks 4
+    !% (flag)
+    !% Read the Kohn-Sham potential. (not yet implemented)
+    !%Option restart_mix 8
+    !% (flag)
+    !% Read the SCF mixing information.
     !%End
     set = .false.
     if(parse_block(datasets_check('RestartOptions'), blk) == 0) then
@@ -706,6 +747,17 @@ contains
     restart_skip = restart%skip
 
   end function restart_skip
+
+
+  ! ---------------------------------------------------------
+  !> Returns true if...
+  logical pure function restart_has_flag(restart, flag)
+    type(restart_t), intent(in) :: restart
+    integer,         intent(in) :: flag
+
+    restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
+
+  end function restart_has_flag
 
 
 #include "undef.F90"
