@@ -288,7 +288,7 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
+      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
       call states_look(restart_gs, gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
 
       ! do this only when not calculating populations, since all states are needed then

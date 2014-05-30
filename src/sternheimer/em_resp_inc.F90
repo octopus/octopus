@@ -21,12 +21,12 @@ subroutine X(run_sternheimer)()
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
-  call restart_init(restart_dump, RESTART_TYPE_DUMP, EM_RESP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+  call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                     mesh=sys%gr%mesh, sb=sys%gr%sb)
 
   if(.not. fromscratch) then
 
-    call restart_init(restart_load, RESTART_TYPE_LOAD, EM_RESP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     ! try to load wavefunctions, if first frequency; otherwise will already be initialized
@@ -143,7 +143,7 @@ subroutine X(run_sternheimer)()
   if(em_vars%calc_hyperpol .and. use_kdotp) then
     call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
-    call restart_init(restart_kdotp, RESTART_TYPE_LOAD, KDOTP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                        mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     do idir2 = 1, gr%sb%periodic_dim
@@ -157,9 +157,9 @@ subroutine X(run_sternheimer)()
       ! load wavefunctions
       str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
       ! 1 is the sigma index which is used in em_resp
-      call restart_cd(restart_kdotp, dirname=wfs_tag_sigma(str_tmp, 1))
-      call states_load(restart_kdotp, sys%st, sys%gr, ierr, lr=kdotp_lr2)
-      call restart_cd(restart_kdotp)
+      call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
+      call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
+      call restart_cd(kdotp_restart)
       if(ierr /= 0) then
         message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
         message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
@@ -183,7 +183,7 @@ subroutine X(run_sternheimer)()
     write(message(1), '(a)') ''
     call messages_info(1)
 
-    call restart_end(restart_kdotp)
+    call restart_end(kdotp_restart)
   end if
 
   call restart_end(restart_dump)

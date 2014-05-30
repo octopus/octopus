@@ -43,6 +43,7 @@ module run_m
   use gcm_m
   use profiling_m
   use pulpo_m
+  use restart_m
   use static_pol_m
   use system_m
   use td_m
@@ -231,6 +232,8 @@ contains
     call calc_mode_init()
 
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
+      call restart_module_init()
+
       ! initialize FFTs
       call fft_all_init()
 

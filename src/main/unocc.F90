@@ -60,7 +60,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
-    logical :: converged, forced_finish, showoccstates, is_orbital_dependent
+    logical :: from_scratch, converged, forced_finish, showoccstates, is_orbital_dependent
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
@@ -102,15 +102,32 @@ contains
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
-    call restart_init(restart_load, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, sb=sys%gr%sb)
-
-    call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
-
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+    from_scratch = fromScratch
 
+    if (.not. fromScratch) then
+      call restart_init(restart_load, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
+
+      call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+
+      if (ierr /= 0) then
+        message(1) = "Unable to load states. Calculation is going to start from scratch."
+        call messages_warning(1)
+
+        from_scratch = .true.
+        call restart_end(restart_load)
+      end if
+    end if
+
+    if (from_scratch) then
+      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
+      call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+    end if
+
+    call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
       call messages_info(1)
@@ -186,7 +203,7 @@ contains
     if(showoccstates) showstart = 1
 
     ! Restart dump should be initialized after restart_load, as the mesh might have changed
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     message(1) = "Info: Starting calculation of unoccupied states."

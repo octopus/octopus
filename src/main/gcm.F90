@@ -122,8 +122,8 @@ contains
     call messages_print_stress(stdout, 'Reading Slater determinants. ')
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
-      call restart_init(restart, RESTART_TYPE_LOAD, slatdetnames(i), phi(i)%dom_st_kpt_mpi_grp, &
-                        mesh=gr%mesh, sb=gr%sb)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, phi(i)%dom_st_kpt_mpi_grp, &
+                        mesh=gr%mesh, sb=gr%sb, dir=trim(slatdetnames(i))//"/"//GS_DIR)
       call states_load(restart, phi(i), gr, ierr)
       call restart_end(restart)
     end do

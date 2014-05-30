@@ -101,7 +101,7 @@ contains
     integer              :: idir, idir2, ierr, pdim, ispin
     character(len=100)   :: str_tmp
     real(8)              :: errornorm
-    type(restart_t)      :: restart_load, restart_dump, restart_gs
+    type(restart_t)      :: restart_load, restart_dump
 
     PUSH_SUB(kdotp_lr_run)
 
@@ -112,10 +112,10 @@ contains
     endif
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(restart_gs, sys%st, sys%gr, is_complex = complex_response)
-    call restart_end(restart_gs)
+    call states_look_and_read(restart_load, sys%st, sys%gr, is_complex = complex_response)
+    call restart_end(restart_load)
 
     pdim = sys%gr%sb%periodic_dim
 
@@ -143,9 +143,8 @@ contains
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, KDOTP_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
-    call restart_init(restart_load, RESTART_TYPE_LOAD, "", sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, sb=sys%gr%sb, basedir=restart_dir(restart_dump))
+    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'

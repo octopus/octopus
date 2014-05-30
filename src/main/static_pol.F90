@@ -78,17 +78,17 @@ contains
     logical :: diagonal_done, center_written, fromScratch_local, field_written
     character(len=80) :: fname
     character :: sign_char
-    type(restart_t) :: restart_gs, restart_load, restart_dump
+    type(restart_t) :: gs_restart, restart_load, restart_dump
 
     PUSH_SUB(static_pol_run)
 
     call init_()
 
     ! load wavefunctions
-    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_load(restart_gs, sys%st, sys%gr, ierr)
-    call restart_end(restart_gs)
+    call states_load(gs_restart, sys%st, sys%gr, ierr)
+    call restart_end(gs_restart)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
@@ -109,10 +109,11 @@ contains
     diagonal_done = .false.
     field_written = .false.
 
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, EM_RESP_FD_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     if(.not. fromScratch) then
-      call restart_init(restart_load, RESTART_TYPE_LOAD, EM_RESP_FD_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+      call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       iunit = restart_open(restart_load, RESTART_FILE)
 

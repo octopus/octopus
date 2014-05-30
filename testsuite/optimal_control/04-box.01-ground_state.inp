@@ -15,7 +15,9 @@ gs              | unocc
 
 ExperimentalFeatures = yes
 
-excited_states_RestartDir = "ground_state_restart"
+%excited_states_RestartOptions
+ restart_gs | "ground_state_restart"
+%
 
 Dimensions = 1
 fromScratch = yes

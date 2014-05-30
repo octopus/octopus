@@ -199,11 +199,11 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, TD_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
-      ! We will use TD_DIR as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TYPE_DUMP, "", st%dom_st_kpt_mpi_grp, &
-                        basedir=restart_dir(restart_dump), mesh=gr%mesh, sb=gr%sb)
+      ! We will also use the TD restart directory as temporary storage during the time propagation
+      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, &
+                        mesh=gr%mesh, sb=gr%sb)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -368,7 +368,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if (.not. fromscratch) then
-        call restart_init(restart, RESTART_TYPE_LOAD, TD_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
 
         call states_load(restart, st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
         if(ierr /= 0) then
@@ -422,7 +422,7 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
           call states_load(restart, st, gr, ierr, label = ": gs")

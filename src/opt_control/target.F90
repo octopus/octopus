@@ -256,7 +256,7 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, tg%st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tg%st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
 
     select case(tg%type)
     case(oct_tg_groundstate)

@@ -102,7 +102,8 @@ contains
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, psi%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
+                         mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
       call states_load(restart, psi, sys%gr, ierr)
       call restart_end(restart)
 
@@ -132,7 +133,7 @@ contains
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)
-          call restart_init(restart, RESTART_TYPE_LOAD, GS_DIR, tmp_st%dom_st_kpt_mpi_grp, &
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tmp_st%dom_st_kpt_mpi_grp, &
                             mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
           call states_look_and_read(restart, tmp_st, sys%gr)
           call restart_end(restart)

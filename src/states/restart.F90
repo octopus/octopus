@@ -44,6 +44,7 @@ module restart_m
   public ::                  &
     restart_t,               &
     clean_stop,              &
+    restart_module_init,     &
     restart_init,            &
     restart_end,             &
     restart_dir,             &
@@ -55,8 +56,6 @@ module restart_m
     restart_block_signals,   &
     restart_unblock_signals, &
     restart_skip,            &
-    RESTART_TYPE_DUMP,       &
-    RESTART_TYPE_LOAD,       &
     drestart_write_function, &
     zrestart_write_function, &
     drestart_read_function,  &
@@ -64,19 +63,55 @@ module restart_m
 
   type restart_t
     private
-    integer           :: type    !< Restart type: RESTART_TYPE_DUMP or RESTART_TYPE_LOAD
-    logical           :: skip    !< If set to .true., no restart information should be loaded or dumped.
-    integer           :: format  !< Format used to store the restart information.
-    character(len=80) :: dir     !< Directory where the restart information is stored.
-    character(len=80) :: pwd     !< The current directory where the restart information is being loaded from or dumped to.
-                                 !! It can be either dir or a subdirectory of dir.
-    type(mpi_grp_t)   :: mpi_grp !< Some operations require an mpi group to be used.
+    integer           :: data_type !< Type of information that the restart is supposed to read/write (GS, TD, etc)
+    integer           :: type      !< Restart type: RESTART_TYPE_DUMP or RESTART_TYPE_LOAD
+    logical           :: skip      !< If set to .true., no restart information should be loaded or dumped.
+    integer           :: format    !< Format used to store the restart information.
+    character(len=80) :: dir       !< Directory where the restart information is stored.
+    character(len=80) :: pwd       !< The current directory where the restart information is being loaded from or dumped to.
+                                   !! It can be either dir or a subdirectory of dir.
+    type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
 
-    integer, pointer  :: map(:)  !< Map between the points of the stored mesh and the mesh used in the current calculations.
+    integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
   end type restart_t
 
-  integer, parameter :: RESTART_TYPE_DUMP = 1, &
-                        RESTART_TYPE_LOAD = 2
+
+  type restart_data_t
+    private
+    character(len=20) :: tag
+    character(len=80) :: basedir
+    character(len=80) :: dir
+    integer :: flags
+  end type restart_data_t
+
+
+  integer, parameter, public :: RESTART_TYPE_DUMP = 1, &
+                                RESTART_TYPE_LOAD = 2
+
+  integer, parameter, public :: RESTART_UNDEFINED  = -1,  &
+                                RESTART_ALL        =  0,  &                                
+                                RESTART_GS         =  1,  &
+                                RESTART_UNOCC      =  2,  &
+                                RESTART_TD         =  3,  &
+                                RESTART_EM_RESP    =  4,  &
+                                RESTART_EM_RESP_FD =  5,  &
+                                RESTART_KDOTP      =  6,  &
+                                RESTART_VIB_MODES  =  7,  &
+                                RESTART_VDW        =  8,  &
+                                RESTART_CASIDA     =  9,  &
+                                RESTART_OCT        =  10, &
+                                RESTART_OB         =  11, &
+                                RESTART_PROJ       =  12
+
+  integer, parameter :: RESTART_N_DATA_TYPES = 12
+
+  integer, parameter, public :: RESTART_STATES = 1, &
+                                RESTART_RHO    = 2, &
+                                RESTART_VKS    = 4, &
+                                RESTART_MIX    = 8
+
+  type(restart_data_t) :: info(RESTART_N_DATA_TYPES)
+
 
  !> from signals.c
   interface restart_block_signals
@@ -126,29 +161,187 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine restart_module_init()
+
+    logical :: set(RESTART_N_DATA_TYPES)
+    integer :: iline, n_cols, data_type
+    character(len=80) :: default_basedir
+    type(block_t) :: blk
+
+    PUSH_SUB(restart_module_init)
+
+    ! Each data type should a tag
+    info(RESTART_GS)%tag = "Ground-state"
+    info(RESTART_UNOCC)%tag = "Unoccupied states"
+    info(RESTART_TD)%tag = "Time-dependent"
+    info(RESTART_EM_RESP)%tag = "EM Resp."
+    info(RESTART_EM_RESP_FD)%tag = "EM Resp. FD"
+    info(RESTART_KDOTP)%tag = "KdotP"
+    info(RESTART_VIB_MODES)%tag = "Vib. Modes"
+    info(RESTART_VDW)%tag = "VdW"
+    info(RESTART_CASIDA)%tag = "Casida"
+    info(RESTART_OCT)%tag = "Optimal Control"
+    info(RESTART_OB)%tag = "Open Boundaries"
+    info(RESTART_PROJ)%tag = "GS for TDOutput"
+
+    ! Default flags and directories (flags not yet used)
+    info(:)%basedir = trim(current_label)//'restart'
+    info(:)%flags = 0
+
+    info(RESTART_GS)%dir = GS_DIR
+    info(RESTART_UNOCC)%dir = GS_DIR
+    info(RESTART_TD)%dir = TD_DIR
+    info(RESTART_EM_RESP)%dir = EM_RESP_DIR
+    info(RESTART_EM_RESP_FD)%dir = EM_RESP_FD_DIR
+    info(RESTART_KDOTP)%dir = KDOTP_DIR
+    info(RESTART_VIB_MODES)%dir = VIB_MODES_DIR
+    info(RESTART_VDW)%dir = VDW_DIR
+    info(RESTART_CASIDA)%dir = CASIDA_DIR
+    info(RESTART_OCT)%dir = OCT_DIR
+    info(RESTART_OB)%dir = "open_boundaries"
+    info(RESTART_PROJ)%dir = GS_DIR
+
+    ! Read input
+    call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
+    call messages_obsolete_variable('TmpDir', 'RestartOptions')
+    call messages_obsolete_variable('RestartDir', 'RestartOptions')
+
+    !%Variable RestartOptions
+    !%Type block
+    !%Section Execution::IO
+    !%Description
+    !% <tt>Octopus</tt> usually stores binary information, such as the wavefunctions, to be used
+    !% in subsequent calculations. The most common example is the ground-state states
+    !% that are used to start a time-dependent calculation. This variable allows to control
+    !% where this information is written to or read from. The format of this block is the following:
+    !% for each line, the first column indicates the type of data, while the second column indicates
+    !% the path to the directory should be used to read and write that restart information.
+    !% For example, if you are running a time-dependent calculation, you can indicate where <tt>Octopus</tt>
+    !% can find the ground-state information in the following way:
+    !%
+    !% <tt>%RestartOptions
+    !% <br>&nbsp;&nbsp;restart_gs | "gs_restart"
+    !% <br>&nbsp;&nbsp;restart_td | "td_restart"
+    !% <br>%</tt>
+    !%
+    !% The second line of the above example also tells <tt>Octopus</tt> that the time-dependent restart data
+    !% should be read from and written to the "td_restart" directory.
+    !%
+    !% In case you want to change the path of all the restart directories, you can use the <tt>restart_all</tt> option.
+    !% When using the <tt>restart_all</tt> option, it is still possible to have a different restart directory for specific
+    !% data types. For example, when including the following block in your input file:
+    !%
+    !% <tt>%RestartOptions
+    !% <br>&nbsp;&nbsp;restart_all | "my_restart"
+    !% <br>&nbsp;&nbsp;restart_td&nbsp;  | "td_restart"
+    !% <br>%</tt>
+    !%
+    !% the time-dependent restart information will be stored in the "td_restart" directory, while all the remaining 
+    !% restart information will be stored in the "my_restart" directory.
+    !%
+    !% By default, the name of the "restart_all" directory is set to "restart".
+    !% 
+    !% Finally, note that the all the restart information of a given data type is always stored in a subdirectory of the
+    !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
+    !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
+    !% all the data types. The name of these subdirectories in indicated in the description of the data types bellow.
+    !%
+    !% Currently, the available restart data types are the following:
+    !%Option restart_all 0
+    !% Option to globally change the path of all the restart information.
+    !%Option restart_gs  1
+    !% The data resulting from a ground-state calculation.
+    !% This information is stored under the "gs" subdirectory.
+    !%Option restart_unocc 2
+    !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground-state and 
+    !% can be used as such, so it is stored under the same subdirectory as the one of restart_gs.
+    !%Option restart_td 3
+    !% The data resulting from a real-time time-dependet calculation. 
+    !% This information is stored under the "td" subdirectory.
+    !%Option restart_em_resp 4
+    !% The data resulting from the calculation of the electromagnetic response using the Sternheimer approach. 
+    !% This information is stored under the "em_resp" subdirectory.
+    !%Option restart_em_resp_fd 5
+    !% The data resulting from the calculation of the electromagnetic response using finite-diferences. 
+    !% This information is stored under the "em_resp_fd" subdirectory.
+    !%Option restart_kdotp 6
+    !% The data resulting from the calculation of effective masses by k.p perturbation theory.
+    !% This information is stored under the "kdotp" subdirectory.
+    !%Option restart_vib_modes 7
+    !% The data resulting from the calculation of  vibrational modes.
+    !% This information is stored under the "vib_modes" subdirectory.
+    !%Option restart_vdw 8
+    !% The data resulting from the calculation of van der Waals coefficients.
+    !% This information is stored under the "vdw" subdirectory.
+    !%Option restart_casida 9
+    !% The data resulting from a Casida calculation.
+    !% This information is stored under the "casida" subdirectory.
+    !%Option restart_oct 10
+    !% The data for optimal control calculations.
+    !% This information is stored under the "opt-control" subdirectory.
+    !%Option restart_ob 11
+    !% The data for open boundaries.
+    !% This information is stored under the "open_boundaries" subdirectory.
+    !%Option restart_proj 12
+    !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
+    !% This information should be a ground-state, so the "gs" subdirectory is used.
+    !%End
+    set = .false.
+    if(parse_block(datasets_check('RestartOptions'), blk) == 0) then
+
+      default_basedir = trim(current_label)//'restart'
+
+      do iline = 1, parse_block_n(blk)
+        n_cols = parse_block_cols(blk,iline-1)
+
+        call parse_block_integer(blk, iline-1, 0, data_type)
+        if (data_type < 0 .or. data_type > RESTART_N_DATA_TYPES) call input_error('RestartOptions')
+        if (data_type == 0) then
+          call parse_block_string(blk, iline-1, 1, default_basedir)
+        else
+          set(data_type) = .true.
+          call parse_block_string(blk, iline-1, 1, info(data_type)%basedir)
+
+          if (n_cols > 2) call parse_block_integer(blk, iline-1, 2, info(data_type)%flags)
+        end if
+
+      end do
+      call parse_block_end(blk)
+
+      where (.not. set)
+        info(:)%basedir = default_basedir
+      end where
+    end if
+
+    POP_SUB(restart_module_init)
+  end subroutine restart_module_init
+
+
+  ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, type, dirname, mpi_grp, mesh, sb, basedir, exact)
-    type(restart_t),             intent(out) :: restart !< Restart information.
-    integer,                     intent(in)  :: type    !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
-                                                        !! or for loading (type = RESTART_TYPE_LOAD)?
-    character(len=*),            intent(in)  :: dirname !< Directory where restart information is going to be loaded 
-                                                        !! from or dumped to.
-    type(mpi_grp_t),             intent(in)  :: mpi_grp !< The mpi group in charge of handling this restart.
-    type(mesh_t),      optional, intent(in)  :: mesh    !< If present, depending on the type of restart, the mesh 
-                                                        !! information is either dumped or the mesh compatibility is checked.
-    type(simul_box_t), optional, intent(in)  :: sb      !< If present and type = RESTART_TYPE_DUMP, the simulation box 
-                                                        !! information will be dumped.
-    character(len=*),  optional, intent(in)  :: basedir !< Parent directory of dirname. If not present, it is obtained from 
-                                                        !! the input file.
-    logical,           optional, intent(in)  :: exact   !< If loading the restart information, should the mesh be 
-                                                        !! exactly the same or not?
+  subroutine restart_init(restart, data_type, type, mpi_grp, mesh, sb, dir, exact)
+    type(restart_t),             intent(out) :: restart   !< Restart information.
+    integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
+    integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
+                                                          !! or for loading (type = RESTART_TYPE_LOAD)?
+    type(mpi_grp_t),             intent(in)  :: mpi_grp   !< The mpi group in charge of handling this restart.
+    type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
+                                                          !! information is either dumped or the mesh compatibility is checked.
+    type(simul_box_t), optional, intent(in)  :: sb        !< If present and type = RESTART_TYPE_DUMP, the simulation box 
+                                                          !! information will be dumped.
+    character(len=*),  optional, intent(in)  :: dir       !< Directory where to find the restart data. It is mandatory if 
+                                                          !! data_type=RESTART_UNDEFINED and is ignored in all the other cases.
+    logical,           optional, intent(in)  :: exact     !< If loading the restart information, should the mesh be 
+                                                          !! exactly the same or not?
 
     logical :: grid_changed, grid_reordered, restart_write, dir_exists
     integer :: ierr, iunit
-    character(len=80) :: basedir_, dirname_
+    character(len=20) :: tag
+    character(len=80) :: basedir, dirname
 
     PUSH_SUB(restart_init)
 
+    ! Sanity checks
     if (present(exact) .and. .not. present(mesh)) then
       message(1) = "Error in restart_init: the 'exact' optional argument requires a mesh."
       call messages_fatal(1)
@@ -159,34 +352,22 @@ contains
     nullify(restart%map)
     restart%mpi_grp = mpi_grp
     restart%format = io_function_fill_how("Binary")
+    if (data_type < RESTART_UNDEFINED .and. data_type > RESTART_N_DATA_TYPES) then
+      message(1) = "Illegal data_type in restart_init"
+      call messages_fatal(1)
+    end if
+    restart%data_type = data_type
 
     select case (restart%type)
     case (RESTART_TYPE_DUMP)
-
-      if (.not. present(basedir)) then
-        !%Variable TmpDir
-        !%Default "restart/"
-        !%Type string
-        !%Section Execution::IO
-        !%Description
-        !% The name of the directory where <tt>Octopus</tt> stores binary information
-        !% such as the wavefunctions.
-        !%End
-        call parse_string('TmpDir', trim(current_label)//'restart', basedir_)
-
-        call messages_obsolete_variable('RestartFileFormat', 'RestartWrite')
-
-      else
-        basedir_ = basedir
-      end if
-
       !%Variable RestartWrite
       !%Type logical
       !%Default true
       !%Section Execution::IO
       !%Description
       !% If this variable is set to no, restart information is not
-      !% written. The default is yes.
+      !% written. The default is yes. Note that some run modes will ignore this
+      !% option and write some restart information anyway.
       !%End
 
       call parse_logical(datasets_check('RestartWrite'), .true., restart_write)
@@ -196,45 +377,39 @@ contains
         message(1) = 'Restart information will not be written.'
         call messages_warning(1)
       end if
-
+        
     case (RESTART_TYPE_LOAD)
       ! We should never skip anything when loading the restart information
       restart%skip = .false.
-
-      if (.not. present(basedir)) then
-        !%Variable RestartDir
-        !%Type string
-        !%Default ''
-        !%Section Execution::IO
-        !%Description
-        !% When <tt>Octopus</tt> reads restart files, e.g. when running a time-propagation
-        !% after a ground-state calculation, these files will be read from
-        !% <tt>&lt;RestartDir&gt/</tt>. Usually, <tt>RestartDir</tt> is
-        !% <tt>TmpDir</tt> but in a transport calculation, the output of
-        !% a periodic dataset is required to calculate the extended ground state.
-        !%End
-        call parse_string(datasets_check('RestartDir'),  trim(current_label)//'restart', basedir_)
-      else
-        basedir_ = basedir
-      end if
-
+      
     case default
       message(1) = "Unknown restart type in restart_init"
       call messages_fatal(1)
     end select
 
-    ! Remove any trailing "/" from the paths (all the routines from this module should add the trailing "/" when needed)
-    if (index(basedir_, '/', .true.) == len_trim(basedir_)) then
-      basedir_ = basedir_(1:len_trim(basedir_)-1)
-    end if
-    if (index(dirname, '/', .true.) == len_trim(dirname)) then
-      dirname_ = dirname(1:len_trim(dirname)-1)
+
+    ! If the restart data type is not defined, the directories should be set explicitly
+    if (restart%data_type == RESTART_UNDEFINED) then
+      ASSERT(present(dir))
+      basedir = dir
+      dirname = ""
     else
-      dirname_ = dirname
+      basedir = info(restart%data_type)%basedir
+      if (index(basedir, '/', .true.) /= len_trim(basedir)) then
+        basedir = trim(basedir)//"/"
+      end if
+      dirname = info(restart%data_type)%dir
     end if
 
-    ! Set final paths
-    restart%dir = trim(basedir_)//"/"//trim(dirname_)
+    ! Set final path
+    restart%dir = trim(basedir)//trim(dirname)
+
+    ! Remove any trailing "/" from the path (all the routines from this module should add the trailing "/" when needed)
+    if (index(restart%dir, '/', .true.) == len_trim(restart%dir)) then
+      restart%dir = restart%dir(1:len_trim(restart%dir)-1)
+    end if
+
+    ! Set initial path to the working directory
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
@@ -243,27 +418,17 @@ contains
       call io_mkdir(trim(restart%pwd), is_tmp=.true., parents=.true.)
     end if
 
+    if (restart%data_type == RESTART_UNDEFINED) then
+      tag = "some "
+    else
+      tag = info(data_type)%tag
+    end if
+
     select case (restart%type)
     case (RESTART_TYPE_DUMP)
       if (.not. restart%skip) then
-        message(1) = "Info: Restart information will be written to '"//trim(restart%pwd)//"'."
+        message(1) = "Info: "//trim(tag)//" restart information will be written to '"//trim(restart%pwd)//"'."
         call messages_info(1)
-
-        if (present(mesh)) then
-          ! Maybe the restart directory is also being used to load restart information. In that case, the
-          ! mesh must be exactly the same. If not, stop the code, as this might result in inconsistent
-          ! restart data.
-          iunit = io_open(trim(restart%pwd)//'/loading', action='read', status='old', die=.false., is_tmp=.true.)
-          if (iunit > 0) then
-            call mesh_check_dump_compatibility(restart%pwd, mesh, grid_changed, grid_reordered, restart%map, ierr)
-            if (ierr >= 0 .and. (grid_changed .or. grid_reordered)) then
-              message(1) = "Internal error: trying to write to a directory with previous"
-              message(2) = "restart information written with a different mesh."
-              call messages_fatal(2)
-            end if
-            close(iunit)
-          end if
-        end if
 
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
@@ -285,20 +450,7 @@ contains
             call simul_box_dump(sb, restart%pwd, "mesh")
           end if
         end if
-
-        ! Mark the directory as been used for dumping. Note that only one restart instance can 
-        ! dump to a given directory at the same time.
-        if (mpi_grp_is_root(restart%mpi_grp)) then
-          iunit = io_open(trim(restart%pwd)//'/dumping', action='write', status='new', die=.false., is_tmp=.true.)
-          if (iunit > 0) then
-            call io_close(iunit)
-          else
-            message(1) = "Internal error: directory '"//trim(restart%pwd)//"' already been used"
-            message(2) = "for restart dumping."
-            call messages_fatal(2)
-          end if
-        end if
-
+        
       end if
 
     case (RESTART_TYPE_LOAD)
@@ -310,22 +462,8 @@ contains
         call messages_warning(2)
 
       else
-        message(1) = "Info: Restart information will be read from '"//trim(restart%pwd)//"'."
+        message(1) = "Info: "//trim(tag)//" restart information will be read from '"//trim(restart%pwd)//"'."
         call messages_info(1)
-
-        ! Mark the directory as been used for loading. Note that only one restart instance can 
-        ! load from a given directory at the same time.
-        if(mpi_grp_is_root(restart%mpi_grp)) then
-          iunit = io_open(trim(restart%pwd)//'/loading', action='write', status='new', die=.false., is_tmp=.true.)
-          if (iunit > 0) then
-            call io_close(iunit)
-          else
-            message(1) = "Internal error: directory '"//trim(restart%pwd)//"' already been used for"
-            message(2) = "restart loading."
-            call messages_fatal(2)
-          end if
-
-        end if
 
         if (present(mesh)) then
           call mesh_check_dump_compatibility(restart%pwd, mesh, grid_changed, grid_reordered, restart%map, ierr)
@@ -398,6 +536,7 @@ contains
     end if
 
     restart%type = 0
+    restart%data_type = 0
     restart%skip = .true.
     SAFE_DEALLOCATE_P(restart%map)
 
@@ -426,9 +565,9 @@ contains
 
   ! ---------------------------------------------------------
   !> If "dirname" is present, change the restart directory to
-  !! dirname, where "dirname" is a subdirectory of the current 
+  !! dirname, where "dirname" is a subdirectory of the base
   !! restart directory. If "dirname" is not present, change back
-  !! to the initial directory.
+  !! to the base directory.
   subroutine restart_cd(restart, dirname)
     type(restart_t),            intent(inout) :: restart
     character(len=*), optional, intent(in)    :: dirname
@@ -438,9 +577,15 @@ contains
     ASSERT(.not. restart%skip)
 
     if (present(dirname)) then
-      if (restart%type == RESTART_TYPE_DUMP) then
+      select case (restart%type)
+      case (RESTART_TYPE_DUMP)
         call restart_mkdir(restart, dirname)
-      end if
+      case (RESTART_TYPE_LOAD)
+        if (.not. loct_dir_exists(trim(restart%dir)//"/"//trim(dirname))) then
+          message(1) = "Could not open restart directory '"//trim(restart%dir)//"/"//trim(dirname)//"'."
+          call messages_fatal(1)
+        end if
+      end select
 
       if (index(dirname, '/', .true.) == len_trim(dirname)) then
         restart%pwd = trim(restart%dir)//"/"//dirname(1:len_trim(dirname)-1)

@@ -177,7 +177,7 @@ contains
       character(len=80) :: dirname
       FLOAT :: iomega, domega, pol
 
-      type(restart_t) :: restart_load, restart_gs
+      type(restart_t) :: restart_load, gs_restart
 
       PUSH_SUB(vdw_run.init_)
 
@@ -220,10 +220,10 @@ contains
       end if
 
       ! we always need complex response
-      call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR,  sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-      call states_look_and_read(restart_gs, sys%st, sys%gr, is_complex = .true.)
-      call restart_end(restart_gs)
+      call states_look_and_read(gs_restart, sys%st, sys%gr, is_complex = .true.)
+      call restart_end(gs_restart)
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -237,7 +237,7 @@ contains
 
       ! load wavefunctions
       if (.not. fromScratch) then
-        call restart_init(restart_load, RESTART_TYPE_LOAD, VDW_DIR, sys%st%dom_st_kpt_mpi_grp, &
+        call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                           mesh=sys%gr%mesh, sb=sys%gr%sb)
 
         do dir = 1, ndir
@@ -258,7 +258,7 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       endif
 
-      call restart_init(restart_dump, RESTART_TYPE_DUMP, VDW_DIR, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       POP_SUB(vdw_run.init_)

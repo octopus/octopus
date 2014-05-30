@@ -3,7 +3,10 @@ Dimensions = 1
 fromScratch = yes
 
 CalculationMode = opt_control
-RestartDir = "ground_state_restart"
+
+%RestartOptions
+ restart_gs | "ground_state_restart"
+%
 ExperimentalFeatures = yes
 
 

@@ -762,7 +762,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
-  call restart_init(restart_vib, RESTART_TYPE_LOAD, VIB_MODES_DIR, mpi_world, sys%gr%mesh, sys%gr%sb)
+  call restart_init(restart_vib, RESTART_VIB_MODES, RESTART_TYPE_LOAD, mpi_world, sys%gr%mesh, sys%gr%sb)
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim

@@ -11,7 +11,10 @@ PeriodicDimensions = 1
   "gs_" | "unocc_"
 %
 
-unocc_RestartDir = "gs_restart"
+unocc_FromScratch = yes
+%unocc_RestartOptions
+ restart_gs | "gs_restart"
+%
 
 %Species
   "Na"  | 23.0 | spec_ps_psf | 11 | 2 | 2

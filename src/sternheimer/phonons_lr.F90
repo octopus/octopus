@@ -92,7 +92,7 @@ contains
     character(len=80) :: str_tmp
     type(Born_charges_t) :: born
     logical :: normal_mode_wfs, do_infrared, symmetrize
-    type(restart_t) :: restart_load, restart_dump, restart_kdotp, restart_gs
+    type(restart_t) :: restart_load, restart_dump, kdotp_restart, gs_restart
 
     PUSH_SUB(phonons_lr_run)
 
@@ -148,25 +148,25 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
-    call states_look_and_read(restart_gs, st, gr)
-    call restart_end(restart_gs)
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
+    call states_look_and_read(gs_restart, st, gr)
+    call restart_end(gs_restart)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(restart_kdotp, RESTART_TYPE_LOAD, KDOTP_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
 
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
-        call restart_cd(restart_kdotp, dirname=wfs_tag_sigma(str_tmp, 1))
-        call states_load(restart_kdotp, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
-        call restart_cd(restart_kdotp)
+        call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
+        call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        call restart_cd(kdotp_restart)
 
         if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
@@ -174,7 +174,7 @@ contains
           call messages_fatal(2)
         end if
       end do
-      call restart_end(restart_kdotp)
+      call restart_end(kdotp_restart)
     endif
 
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -208,8 +208,8 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, VIB_MODES_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
-    call restart_init(restart_load, RESTART_TYPE_LOAD, VIB_MODES_DIR, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
 
     if (fromScratch) then
       start_mode = 1

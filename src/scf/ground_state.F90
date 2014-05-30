@@ -95,8 +95,9 @@ contains
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%st%open_boundaries) then
-      call restart_init(restart_ob, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
-                        sb=sys%gr%ob_grid%lead(LEFT)%sb, basedir=sys%gr%ob_grid%lead(LEFT)%info%restart_dir)
+      call restart_init(restart_ob, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+                        mesh=sys%gr%ob_grid%lead(LEFT)%mesh, sb=sys%gr%ob_grid%lead(LEFT)%sb, &
+                        dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR)
       call states_read_free_states(restart_ob, sys%st, sys%gr)
       call restart_end(restart_ob)
 
@@ -107,7 +108,7 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb, exact = (sys%ks%theory_level == RDMFT))
       call states_load(restart_load, sys%st, sys%gr, ierr)
 
@@ -138,7 +139,7 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, GS_DIR, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then

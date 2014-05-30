@@ -151,8 +151,8 @@ contains
     ! (Note that during the calculation the same directory will be used for reading and writing.
     !  Also, because the information is mesh independent, we do not care about consistency of
     !  the data.)
-    call restart_init(restart_dump, RESTART_TYPE_DUMP, "open_boundaries", mpi_grp)
-    call restart_init(restart_load, RESTART_TYPE_LOAD, "", mpi_grp, basedir=restart_dir(restart_dump))
+    call restart_init(restart_dump, RESTART_OB, RESTART_TYPE_DUMP, mpi_grp)
+    call restart_init(restart_load, RESTART_OB, RESTART_TYPE_LOAD, mpi_grp)
 
 
     do il = 1, NLEADS
@@ -209,10 +209,8 @@ contains
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
           call messages_info(2)
-          if(mpi_grp_is_root(mpi_grp)) then
-            call write_coeffs(restart_dump, ob, hm, intf(il),     &
-              op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
-          end if
+          call write_coeffs(restart_dump, ob, hm, intf(il),     &
+              op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order, mpi_grp)
         end if
       else
         message(1) = 'Info: Successfully loaded memory coefficients from '// &
@@ -639,7 +637,7 @@ contains
   !> Write memory coefficients to file.
   !! FIXME: this routine writes compiler- and/or system-dependent binary files.
   !! It should be changed to a platform-independent format.
-  subroutine write_coeffs(restart, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
+  subroutine write_coeffs(restart, ob, hm, intf, dim, iter, spacing, delta, op_n, order, mpi_grp)
     type(restart_t),     intent(in)    :: restart
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
@@ -650,6 +648,7 @@ contains
     FLOAT,               intent(in)    :: delta           !< Timestep.
     integer,             intent(in)    :: op_n            !< Number of operator points.
     integer,             intent(in)    :: order           !< Discretization order.
+    type(mpi_grp_t),     intent(in)    :: mpi_grp
 
     integer :: ntime, ip, iunit, np
 
@@ -659,39 +658,40 @@ contains
     if(iunit < 0) then
       message(1) = 'Cannot write memory coefficients to file.'
       call messages_warning(1)
-      call restart_close(restart, iunit)
       POP_SUB(write_coeffs)
       return
     end if
 
-    np = intf%np_intf
+    if (mpi_grp_is_root(mpi_grp)) then
+      np = intf%np_intf
 
-    ! Write numerical parameters.
-    write(iunit) dim
-    write(iunit) iter
-    write(iunit) np
-    write(iunit) spacing
-    write(iunit) delta
-    write(iunit) op_n
-    write(iunit) ob%mem_type
-    write(iunit) intf%reducible
-    write(iunit) hm%lead(intf%il)%vks(1:np, 1)
+      ! Write numerical parameters.
+      write(iunit) dim
+      write(iunit) iter
+      write(iunit) np
+      write(iunit) spacing
+      write(iunit) delta
+      write(iunit) op_n
+      write(iunit) ob%mem_type
+      write(iunit) intf%reducible
+      write(iunit) hm%lead(intf%il)%vks(1:np, 1)
 
-    ! Write matrices.
-    select case(ob%mem_type)
-    case(SAVE_CPU_TIME)
-      do ntime = 0, iter
-        do ip = 1, np
-          write(iunit) ob%lead(intf%il)%q(ip:np, ip, ntime)
+      ! Write matrices.
+      select case(ob%mem_type)
+      case(SAVE_CPU_TIME)
+        do ntime = 0, iter
+          do ip = 1, np
+            write(iunit) ob%lead(intf%il)%q(ip:np, ip, ntime)
+          end do
         end do
-      end do
-    case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-      ASSERT(dim == 2)
-      write(iunit) ob%lead(intf%il)%q_s(:, :, 1)
-      do ntime = 0, iter
-        write(iunit) ob%lead(intf%il)%q_sp(1:np*order, ntime)
-      end do
-    end select
+      case(SAVE_RAM_USAGE) ! FIXME: only 2D.
+        ASSERT(dim == 2)
+        write(iunit) ob%lead(intf%il)%q_s(:, :, 1)
+        do ntime = 0, iter
+          write(iunit) ob%lead(intf%il)%q_sp(1:np*order, ntime)
+        end do
+      end select
+    end if
 
     call restart_close(restart, iunit)
 
@@ -727,8 +727,11 @@ contains
     np = intf%np_intf
     il = intf%il
 
-    ! Try to open file.
-    iunit = restart_open(restart, trim(lead_name(il)), form='unformatted')
+    ! Try to open file
+    ! FIXME: Here we should use restart_open, but since all the mpi processes need to read the data,
+    ! we would need to use iopar_read, which we cannot, because the data is unformatted.
+    iunit = io_open(trim(restart_dir(restart))//"/"//trim(lead_name(il)), action='read', &
+      status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit  <  0) then ! no file found
       POP_SUB(read_coeffs)
       return
@@ -783,7 +786,7 @@ contains
     end if
     if (ierr /= 0) s_iter = 0
 
-    call restart_close(restart, iunit)
+    call io_close(iunit)
 
     SAFE_DEALLOCATE_A(s_vks)
 

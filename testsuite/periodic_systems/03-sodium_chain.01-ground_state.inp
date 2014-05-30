@@ -12,7 +12,9 @@ PeriodicDimensions = 1
 %
 
 gs_FromScratch = yes
-unocc_RestartDir = "gs_restart"
+%unocc_RestartOptions
+ restart_gs | "gs_restart"
+%
 
 %Species
   "Na"  | 23.0 | spec_ps_psf | 11 | 2 | 2

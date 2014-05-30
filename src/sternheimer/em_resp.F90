@@ -123,7 +123,7 @@ contains
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
     CMPLX :: frequency_eta
-    type(restart_t) :: restart_gs, restart_load, restart_dump, restart_kdotp
+    type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
 
     PUSH_SUB(em_resp_run)
 
@@ -142,10 +142,10 @@ contains
     endif
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(restart_gs, sys%st, sys%gr, is_complex = complex_response)
-    call restart_end(restart_gs)
+    call states_look_and_read(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+    call restart_end(gs_restart)
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -171,7 +171,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(restart_kdotp, RESTART_TYPE_LOAD, KDOTP_DIR, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       do idir = 1, gr%sb%periodic_dim
@@ -181,9 +181,9 @@ contains
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
-        call restart_cd(restart_kdotp, dirname=wfs_tag_sigma(str_tmp, 1))
-        call states_load(restart_kdotp, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
-        call restart_cd(restart_kdotp)
+        call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
+        call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        call restart_cd(kdotp_restart)
 
         if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
@@ -192,7 +192,7 @@ contains
         end if
       end do
 
-      call restart_end(restart_kdotp)
+      call restart_end(kdotp_restart)
     endif
 
     em_vars%nfactor = 1

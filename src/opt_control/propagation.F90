@@ -924,16 +924,14 @@ contains
 
     PUSH_SUB(oct_prop_init)
 
-    prop%dirname = OCT_DIR//trim(dirname)
-    call io_mkdir(trim(prop%dirname))
+    prop%dirname = dirname
     prop%niter = niter_
     prop%number_checkpoints = number_checkpoints_
 
     ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
     ! so they need to use the same path.
-    call restart_init(prop%restart_dump, RESTART_TYPE_DUMP, OCT_DIR//trim(dirname), gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
-    call restart_init(prop%restart_load, RESTART_TYPE_LOAD, "", gr%mesh%mpi_grp, mesh=gr%mesh, &
-                      sb=gr%sb, basedir=restart_dir(prop%restart_dump))
+    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
+    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
@@ -972,7 +970,7 @@ contains
     integer,           intent(in)    :: iter
 
     type(states_t) :: stored_st
-    character(len=4) :: dirname
+    character(len=80) :: dirname
     integer :: j, ierr
     CMPLX :: overlap, prev_overlap
     FLOAT, parameter :: WARNING_THRESHOLD = CNST(1.0e-2)
@@ -982,7 +980,7 @@ contains
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
-       write(dirname,'(i4.4)') j
+       write(dirname,'(a, i4.4)') trim(prop%dirname), j
        call restart_cd(prop%restart_load, dirname=dirname)
        call states_load(prop%restart_load, stored_st, gr, ierr, verbose=.false.)
        call restart_cd(prop%restart_load)
@@ -1014,14 +1012,14 @@ contains
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: iter
 
-    character(len=4) :: dirname
+    character(len=80) :: dirname
     integer :: j, ierr
 
     PUSH_SUB(oct_prop_load_state)
 
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j)  ==  iter) then
-       write(dirname,'(i4.4)') j
+       write(dirname,'(a, i4.4)') trim(prop%dirname), j
        call restart_cd(prop%restart_load, dirname=dirname)
        call states_load(prop%restart_load, psi, gr, ierr, verbose=.false.)
        call restart_cd(prop%restart_load)
@@ -1041,13 +1039,13 @@ contains
     type(grid_t),     intent(inout) :: gr
 
     integer :: j, ierr
-    character(len=4) :: dirname
+    character(len=80) :: dirname
 
     PUSH_SUB(oct_prop_dump)
 
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j)  ==  iter) then
-        write(dirname,'(i4.4)') j
+        write(dirname,'(a,i4.4)') trim(prop%dirname), j
         call restart_cd(prop%restart_dump, dirname=dirname)
         call states_dump(prop%restart_dump, psi, gr, ierr, iter)
         call restart_cd(prop%restart_dump)

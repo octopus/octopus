@@ -142,7 +142,7 @@ contains
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
     ! save files in restart format
-    call restart_init(restart, RESTART_TYPE_DUMP, GS_DIR, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
                       sys%gr%mesh, sys%gr%sb)
     call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     call restart_end(restart)

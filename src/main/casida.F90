@@ -177,7 +177,7 @@ contains
     character(len=100) :: restart_filename
     type(profile_t), save :: prof
     logical :: is_frac_occ
-    type(restart_t) :: restart_gs
+    type(restart_t) :: gs_restart
 
     PUSH_SUB(casida_run)
     call profiling_in(prof, 'CASIDA')
@@ -195,10 +195,10 @@ contains
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
-    call restart_init(restart_gs, RESTART_TYPE_LOAD, GS_DIR, sys%st%dom_st_kpt_mpi_grp, &
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(restart_gs, sys%st, sys%gr)
-    call restart_end(restart_gs)
+    call states_look_and_read(gs_restart, sys%st, sys%gr)
+    call restart_end(gs_restart)
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
@@ -552,8 +552,8 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    call restart_init(cas%restart_dump, RESTART_TYPE_DUMP, CASIDA_DIR, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
-    call restart_init(cas%restart_load, RESTART_TYPE_LOAD, CASIDA_DIR, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     POP_SUB(casida_type_init)
   end subroutine casida_type_init

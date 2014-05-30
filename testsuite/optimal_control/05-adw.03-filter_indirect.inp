@@ -5,7 +5,9 @@ CalculationMode = opt_control
 
 ExperimentalFeatures = yes
 
-RestartDir = "excited_states_restart"
+%RestartOptions
+ restart_gs | "excited_states_restart"
+%
 
 Dimensions = 1
 fromScratch = yes
