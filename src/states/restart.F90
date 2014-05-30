@@ -171,7 +171,7 @@ contains
 
     PUSH_SUB(restart_module_init)
 
-    ! Each data type should a tag
+    ! Each data type should have a tag
     info(RESTART_GS)%tag = "Ground-state"
     info(RESTART_UNOCC)%tag = "Unoccupied states"
     info(RESTART_TD)%tag = "Time-dependent"
@@ -243,7 +243,7 @@ contains
     !%
     !% By default, the name of the "restart_all" directory is set to "restart".
     !% 
-    !% Some <tt>CalculationMode</tt> also take into account specific flags set in the third column of the <tt>RestartOptions</tt>
+    !% Some <tt>CalculationMode</tt>s also take into account specific flags set in the third column of the <tt>RestartOptions</tt>
     !% block. These are used to determine if some specific part of the restart data is to be taken into account
     !% or not when reading the restart information. For example, when restarting a ground-state calculation, one can
     !% set the <tt>restart_rho</tt> flags, so that the density used is not built from the saved wavefunctions, but is
@@ -253,14 +253,14 @@ contains
     !% <br>&nbsp;&nbsp;restart_gs | "restart" | restart_rho
     !% <br>%</tt>
     !%
-    !% A list of available flags is given bellow, but note that the code might ignore some of them, which will happen if they
-    !% are not available for that particular calculation, or might assume they some of them always present, which will happen
+    !% A list of available flags is given below, but note that the code might ignore some of them, which will happen if they
+    !% are not available for that particular calculation, or might assume some of them always present, which will happen
     !% in case they are mandatory.
     !% 
     !% Finally, note that the all the restart information of a given data type is always stored in a subdirectory of the
     !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
     !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
-    !% all the data types. The name of these subdirectories in indicated in the description of the data types bellow.
+    !% all the data types. The name of these subdirectories is indicated in the description of the data types below.
     !%
     !% Currently, the available restart data types and flags are the following:
     !%Option restart_all 0
@@ -272,11 +272,11 @@ contains
     !% This information is stored under the "gs" subdirectory.
     !%Option restart_unocc 2
     !% (data type) 
-    !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground-state and 
+    !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground state and 
     !% can be used as such, so it is stored under the same subdirectory as the one of restart_gs.
     !%Option restart_td 3
     !% (data type) 
-    !% The data resulting from a real-time time-dependet calculation. 
+    !% The data resulting from a real-time time-dependent calculation. 
     !% This information is stored under the "td" subdirectory.
     !%Option restart_em_resp 4
     !% (data type) 
@@ -292,7 +292,7 @@ contains
     !% This information is stored under the "kdotp" subdirectory.
     !%Option restart_vib_modes 7
     !% (data type) 
-    !% The data resulting from the calculation of  vibrational modes.
+    !% The data resulting from the calculation of vibrational modes.
     !% This information is stored under the "vib_modes" subdirectory.
     !%Option restart_vdw 8
     !% (data type) 
@@ -313,7 +313,7 @@ contains
     !%Option restart_proj 12
     !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
-    !% This information should be a ground-state, so the "gs" subdirectory is used.
+    !% This information should be a ground state, so the "gs" subdirectory is used.
     !%Option restart_states 1
     !% (flag)
     !% Read the electronic states. (not yet implemented)

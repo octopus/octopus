@@ -382,7 +382,7 @@ contains
     !% magnetization density in spheres centered around each atom.
     !% This variable controls the radius of the spheres.
     !% The default is half the minimum distance between two atoms
-    !% in the input coordinates.
+    !% in the input coordinates, or 100 a.u. if there is only one atom.
     !%End
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
       units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)

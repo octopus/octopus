@@ -273,6 +273,7 @@ contains
     end if
 
     rmin = geometry_min_distance(geo)
+    if(geo%natoms == 1) rmin = CNST(100.0)
 
     ! This variable is documented in scf/scf.F90
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
