@@ -157,14 +157,14 @@ contains
 
     !%Variable SPARSKITRelTolerance
     !%Type float
-    !%Default 1e-5
+    !%Default 1e-8
     !%Section Math::SPARSKIT
     !%Description
     !% Some SPARSKIT solvers use a relative tolerance as a stopping criterion 
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_float(datasets_check('SPARSKITRelTolerance'), CNST(1e-5), sk%rel_tolerance)
+    call parse_float(datasets_check('SPARSKITRelTolerance'), CNST(1e-8), sk%rel_tolerance)
     
     !%Variable SPARSKITAbsTolerance
     !%Type float
@@ -246,8 +246,8 @@ contains
     ! A call to the solver with ipar(1) == 0 will initialize the iterative solver.
     sk%ipar(1) = 0
 
-    ! Stopping criteria; use convergence test scheme 1
-    sk%ipar(3) = 1
+    ! Stopping criteria; use convergence test scheme 2
+    sk%ipar(3) = 2
 
     sk%ipar(4) = workspace_size
     sk%ipar(5) = sk%krylov_size
