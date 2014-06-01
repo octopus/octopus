@@ -18,6 +18,9 @@
 !! $Id: propagator_cn_inc.F90 $
 
     subroutine td_runge_kutta4()
+#ifndef HAVE_SPARSKIT
+      ASSERT(.false.)
+#else
       logical :: converged
       integer :: np_part, np, iter, idim, ip, ist, ik, j, kp1, kp2, st1, st2, nspin
       FLOAT :: dres
@@ -257,4 +260,5 @@
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
       POP_SUB(propagator_dt.td_runge_kutta4)
+#endif
     end subroutine td_runge_kutta4
