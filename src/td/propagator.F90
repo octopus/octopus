@@ -27,6 +27,7 @@ module propagator_m
   use cl
 #endif
   use cmplxscl_m
+  use comm_m
   use cube_function_m
   use datasets_m
   use density_m
@@ -89,9 +90,8 @@ module propagator_m
     PROP_MAGNUS                  = 7,  &
     PROP_CRANK_NICOLSON_SRC_MEM  = 8,  &
     PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
-    PROP_CAETRS                  = 12
-
-  FLOAT :: scf_threshold = CNST(1.0e-3)
+    PROP_CAETRS                  = 12, &
+    PROP_RUNGE_KUTTA4            = 13
 
   type propagator_t
     integer             :: method           !< Which evolution method to use.
@@ -108,14 +108,18 @@ module propagator_m
     type(sparskit_solver_t), pointer, private :: tdsk
     integer             :: tdsk_size
 #endif
+    FLOAT              :: scf_threshold
   end type propagator_t
 
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
   type(propagator_t),      pointer, private :: tr_p
+  type(states_t),          pointer, private :: st_p
   integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
   type(states_t),          private :: st_op
   FLOAT,                   private :: t_op, dt_op
+  FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
+  logical :: move_ions_op
 
 contains
 
@@ -159,6 +163,12 @@ contains
       tro%tdsk_size = tri%tdsk_size
       call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
 #endif
+#ifdef HAVE_SPARSKIT
+    case(PROP_RUNGE_KUTTA4)
+      SAFE_ALLOCATE(tro%tdsk)
+      tro%tdsk_size = tri%tdsk_size
+      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
+#endif
     end select
 
     call loct_pointer_copy(tro%v_old, tri%v_old)
@@ -166,6 +176,7 @@ contains
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
+    tro%scf_threshold = tri%scf_threshold
     POP_SUB(propagator_copy)
   end subroutine propagator_copy
   ! ---------------------------------------------------------
@@ -293,6 +304,8 @@ contains
     !% calculations.
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
+    !%Option runge_kutta4 13
+    !% WARNING: EXPERIMENTAL. Implicit Gauss-Legendre 4th order Runge-Kutta.
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
@@ -320,6 +333,19 @@ contains
     case(PROP_CRANK_NICOLSON)
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
       call mesh_init_mesh_aux(gr%mesh)
+    case(PROP_RUNGE_KUTTA4)
+#ifdef HAVE_SPARSKIT
+      ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
+      call mesh_init_mesh_aux(gr%mesh)
+      tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
+      SAFE_ALLOCATE(tr%tdsk)
+      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, is_complex = .true.)
+#else
+      message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
+      message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
+      message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
+      call messages_fatal(3)
+#endif
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux
@@ -349,6 +375,7 @@ contains
          tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
          tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
          tr%method /= PROP_CRANK_NICOLSON .and. &
+         tr%method /= PROP_RUNGE_KUTTA4 .and. &
          tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call messages_fatal(1)
@@ -391,6 +418,22 @@ contains
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
     if(tr%scf_propagation_steps < 0) call input_error('TDStepsWithSelfConsistency')
 
+    !%Variable TDSCFThreshold
+    !%Type float
+    !%Default 1.0e-3
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Since the KS propagator is non-linear, each propagation stepp
+    !% should be performed self-consistently.  In practice, for most
+    !% purposes this is not necessary, except perhaps in the first
+    !% iterations. This variable holds the number of propagation steps
+    !% for which the propagation is done self-consistently. 
+    !%
+    !% The self consistency has to be measured against some accuracy 
+    !% threshold. This variable controls the value of that threshold.
+    !%End
+    call parse_float(datasets_check('TDSCFThreshold'), CNST(1.0e-3), tr%scf_threshold)
+
     POP_SUB(propagator_init)
   end subroutine propagator_init
   ! ---------------------------------------------------------
@@ -405,7 +448,7 @@ contains
 
     tr%scf_propagation_steps = huge(1)
     if(present(threshold)) then
-      scf_threshold = threshold
+      tr%scf_threshold = threshold
     end if
 
     POP_SUB(propagator_set_scf_prop)
@@ -441,6 +484,10 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       SAFE_DEALLOCATE_P(tr%vmagnus)
+    case(PROP_RUNGE_KUTTA4)
+#ifdef HAVE_SPARSKIT
+      call sparskit_solver_end(tr%tdsk)
+#endif
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call sparskit_solver_end(tr%tdsk)
@@ -518,7 +565,7 @@ contains
     end if
 
     self_consistent = .false.
-    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS .and. tr%method /= PROP_RUNGE_KUTTA4) then
       if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
         self_consistent = .true.
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -564,6 +611,7 @@ contains
     case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
     case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
     case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
+    case(PROP_RUNGE_KUTTA4);             call td_runge_kutta4()
     case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
     case(PROP_MAGNUS);                   call td_magnus()
     case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
@@ -591,7 +639,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(dtmp)
 
-      if(d_max > scf_threshold) then
+      if(d_max > tr%scf_threshold) then
 
         ! We do a maximum of 10 iterations. If it still not converged, probably the propagation
         ! will not be good anyways.
@@ -615,6 +663,7 @@ contains
           case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
           case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
           case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
+          case(PROP_RUNGE_KUTTA4);             call td_runge_kutta4()
           case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
           case(PROP_MAGNUS);                   call td_magnus()
           case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
@@ -637,7 +686,7 @@ contains
           end do
           SAFE_DEALLOCATE_A(dtmp)
 
-          if(d_max < scf_threshold) exit
+          if(d_max < tr%scf_threshold) exit
         end do
         
       end if
@@ -1094,13 +1143,16 @@ contains
     end subroutine exponential_midpoint
 
 
+#include "propagator_rk_inc.F90"
+
+
     ! ---------------------------------------------------------
     !> Crank-Nicolson propagator
     subroutine td_crank_nicolson(use_sparskit)
       logical, intent(in) :: use_sparskit
 
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
-      integer :: ik, ist, idim, ip, isize, np_part, np, iter
+      integer :: ik, ist, idim, ip, np_part, np, iter
       FLOAT :: dres
       FLOAT :: cgtol = CNST(1.0e-12)
       logical :: converged
@@ -1117,7 +1169,6 @@ contains
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
-      isize = np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
 
       ! define pointer and variables for usage in td_zop, td_zopt routines
       grid_p    => gr
@@ -1458,7 +1509,6 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
-
     POP_SUB(td_zopt)
   end subroutine td_zopt
   ! ---------------------------------------------------------
@@ -1554,6 +1604,195 @@ contains
     POP_SUB(propagator_dt_bo)
   end subroutine propagator_dt_bo
 
+
+  ! ---------------------------------------------------------
+  !> operators for Crank-Nicolson scheme
+  subroutine td_rk4op(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    FLOAT :: a(2, 2), c(2)
+    integer :: np_part, np
+
+    PUSH_SUB(td_rk4op)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+
+    a(1, 1) = M_FOURTH
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(2, 2) = M_FOURTH
+
+    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
+    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+
+    zpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
+                             a(1, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    hm_p%vhxc = vhxc2_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = k
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
+                             a(2, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    POP_SUB(td_rk4op)
+  end subroutine td_rk4op
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> Transpose of H (called e.g. by bi-conjugate gradient solver)
+  subroutine td_rk4opt(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    FLOAT :: a(2, 2), c(2)
+    integer :: np_part, np
+    CMPLX, allocatable :: k1(:, :, :, :), k2(:, :, :, :), h1k1(:, :, :, :), h1k2(:, :, :, :), &
+                          h2k1(:, :, :, :), h2k2(:, :, :, :)
+
+    PUSH_SUB(td_rk4opt)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+
+    a(1, 1) = M_FOURTH
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(2, 2) = M_FOURTH
+
+    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
+    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+
+    zpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
+                             a(1, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    hm_p%vhxc = vhxc2_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = k
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
+                             a(2, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    POP_SUB(td_rk4opt)
+  end subroutine td_rk4opt
+  ! ---------------------------------------------------------
 
 #include "propagator_qoct_inc.F90"
 

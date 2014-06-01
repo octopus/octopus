@@ -21,7 +21,7 @@
 subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   type(sparskit_solver_t), intent(inout) :: sk
   R_TYPE, intent(in)  :: rhs(:)
-  R_TYPE, intent(out) :: sol(:)
+  R_TYPE, intent(inout) :: sol(:)
 
 #ifdef R_TREAL
   interface
@@ -106,6 +106,8 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       message(2) = '( SPARSKITSolver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
       call messages_fatal(2)
     end select
+    !write(*, *) 'ITER = ', iter, sk%fpar(5)
+
     
     ! Evaluate reverse communication protocol
     select case(sk%ipar(1))
@@ -134,6 +136,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       call messages_not_implemented('Sparskit preconditioning')
     case(0)
       ! successful exit of solver
+      !write(*, *) 'ITER = ', iter, sk%fpar(5)
       exit solver_iter
     case(-1)
 !      message(1) = 'Maximum iteration number "SPARSKITMaxIter" exceeded.'
