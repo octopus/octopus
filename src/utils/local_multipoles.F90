@@ -34,10 +34,10 @@ program oct_local_multipoles
   use io_function_m
   use kick_m
   use loct_m
+  use local_write_m
   use mesh_m
   use mesh_function_m
   use messages_m
-  use local_write_m
   use parser_m
   use profiling_m
   use restart_m
@@ -102,10 +102,12 @@ contains
   subroutine local_domains()
     type(local_domain_t)           :: local
     integer                        :: err, iter, l_start, l_end, l_step, last_slash
+    integer                        :: ia, n_spec_def, read_data, iunit, ispec
     integer                        :: length
     FLOAT                          :: default_dt, dt
-    character(64)                  :: filename, folder, folder_default, aux, base_folder
-    logical                        :: iterate, ldupdate
+    character(len=64)              :: filename, folder, folder_default, aux, base_folder, radiifile
+    character(len=15)              :: lab
+    logical                        :: iterate, ldupdate, ldoverwrite
     type(kick_t)                   :: kick
     type(restart_t)                :: restart 
 
@@ -117,13 +119,13 @@ contains
 
     write(folder_default,'(a)')'restart/gs/'
 
-    !%Variable GlobalDensityFolder
+    !%Variable LDFolder
     !%Type string
     !%Section Utilities::oct-local_multipoles
     !%Description
-    !% The folder name where the input files are.
+    !% The folder name where the density used as input file is.
     !%End
-    call parse_string(datasets_check('GlobalDensityFolder'), folder_default, folder)
+    call parse_string(datasets_check('LDFolder'), folder_default, folder)
 
     ! Check if the folder is finished by an /
     if (index(folder, '/', .true.) /= len_trim(folder)) then
@@ -137,9 +139,11 @@ contains
       base_folder = folder(1:last_slash)
       folder = folder(last_slash+1:len_trim(folder))
     end if
+    if (trim(base_folder) == "") base_folder = "./"
     
     aux = folder(1:3)
     if (aux == 'td.') then
+      write(*,*) "WE ARE INSIDE", "base_folder:", trim(base_folder), " folder:", trim(folder)
       aux = trim(folder(4:len_trim(folder)-1))
       read(aux,'(I10.0)')iter
       default_dt = M_ZERO
@@ -154,7 +158,7 @@ contains
       dt = M_ZERO
     end if
 
-    !%Variable GlobalDensityFilename
+    !%Variable LDFilename
     !%Type string
     !%Default 'density'
     !%Section Utilities::oct-local_multipoles
@@ -162,7 +166,7 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_string(datasets_check('GlobalDensityFilename'), 'density', filename)
+    call parse_string(datasets_check('LDFilename'), 'density', filename)
     if ( filename == " " ) filename = ""
     ! Delete the extension if present
     length = len_trim(filename)
@@ -172,7 +176,7 @@ contains
       end if
     end if
 
-    !%Variable LocalBaderThreshold
+    !%Variable LDBaderThreshold
     !%Type float
     !%Default 0.01
     !%Section Utilities::oct-local_multipoles
@@ -180,7 +184,7 @@ contains
     !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% Recommended values: 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
-    call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
+    call parse_float(datasets_check('LDBaderThreshold'), CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -191,11 +195,59 @@ contains
     !%End
     call parse_logical(datasets_check('LDUpdate'), .false., ldupdate)
 
-    ! Documentation in convert.F90
-    call parse_logical(datasets_check('ConvertIterateFolder'), .false., iterate)
-    call parse_integer(datasets_check('ConvertStart'), iter, l_start)
-    call parse_integer(datasets_check('ConvertEnd'), iter, l_end)
-    call parse_integer(datasets_check('ConvertStep'), 1, l_step)
+    !%Variable LDOverWrite                                                                                             
+    !%Type logical                                                                                                     
+    !%Default true                                                                                                     
+    !%Section Utilities::oct-local_multipoles                                                                          
+    !%Description                                                                                                      
+    !% Controls to over-write existing files.                                                                          
+    !%End                                                                                                              
+    call parse_logical(datasets_check('LDOverWrite'), .true., ldoverwrite)                       
+
+    !%Variable LDRadiiFile
+    !%Type string
+    !%Default 'default'
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% Full path for the radii file. If set, def_rsize will be reset to the new values. 
+    !% This file should have the same format as share/PP/default.
+    !%End
+    call parse_string(datasets_check('LDRadiiFile'), 'default', radiifile)
+
+    if(trim(radiifile) /= "default") then
+      n_spec_def = max(0, loct_number_of_lines(radiifile))
+      if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
+     
+      ! get parameters from file
+      do ia = 1, sys%geo%nspecies
+        read_data = 0
+        iunit = io_open(radiifile, action='read', status='old', die=.false., is_tmp=.true.)
+        if(iunit > 0) then
+          if(ia == 1) then
+            write(message(1),'(a,a)')'Redefining def_rsize from file:', trim(radiifile)
+            call messages_info(1)
+          end if
+          read(iunit,*)
+          default_file: do ispec = 1, n_spec_def
+            read(iunit,*) lab
+            if(trim(lab) == trim(species_label(sys%geo%species(ia)))) then
+              call read_from_default_file(iunit, read_data, sys%geo%species(ia))
+              exit default_file
+            end if
+          end do default_file
+          call io_close(iunit)
+        else 
+          write(message(1),'(a,a)')' Octopus could not open then file:',trim(radiifile)
+          call messages_warning(1)
+        end if
+      end do
+    end if
+
+    ! Documentation in convert.F90. Variable names changed to avoid conflict with convert utility.
+    call parse_logical(datasets_check('LDIterateFolder'), .false., iterate)
+    call parse_integer(datasets_check('LDStart'), iter, l_start)
+    call parse_integer(datasets_check('LDEnd'), iter, l_end)
+    call parse_integer(datasets_check('LDStep'), 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
@@ -209,7 +261,7 @@ contains
     end if
 
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+    call local_write_init(local%writ, local%nd, local%lab, iter, dt)
     call loct_progress_bar(-1, l_end-l_start) 
     do iter = l_start, l_end, l_step
       if (iterate) then
@@ -231,8 +283,9 @@ contains
         call local_inside_domain(local, sys%st%rho(:,1), ldupdate)
       end if
 
+      write(*,*)'Iteration: ',iter
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-                              sys%gr, sys%st, sys%geo, kick, iter, dt)
+                              sys%gr, sys%st, sys%geo, kick, iter, dt, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
@@ -537,9 +590,9 @@ contains
         SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np_part,1) = ff(1:sys%gr%mesh%np_part)
         call add_dens_to_ion_x(ff2,sys%geo)
         call basins_init(basins, sys%gr%mesh)
-        call parse_float(datasets_check('LocalBaderThreshold'), CNST(0.01), BaderThreshold)
+        call parse_float(datasets_check('LDBaderThreshold'), CNST(0.01), BaderThreshold)
         call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-        call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
+        call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
         call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
         if (extra_write) then
           filename = 'basinsmap'
@@ -605,7 +658,7 @@ contains
       end if
     end do
 
-    !%Variable LocalMultipolesExtraWrite
+    !%Variable LDExtraWrite
     !%Type logical
     !%Default false
     !%Section Utilities::oct-local_multipoles
@@ -613,7 +666,7 @@ contains
     !% Writes additional information to files, when computing local multipoles. For 
     !% example, it writes coordinates of each local domain.
     !%End
-    call parse_logical(datasets_check('LocalMultipolesExtraWrite'), .false., extra_write)
+    call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
 
     if (extra_write) then
       SAFE_ALLOCATE(dunit(1:nd))

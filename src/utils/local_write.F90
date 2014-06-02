@@ -83,13 +83,14 @@ contains
     FLOAT,               intent(in)    :: dt
 
     integer :: first, id, flags, iout, default
+    logical :: ldoverwrite
 
     PUSH_SUB(local_write_init)
 
     ! FIXME: if and when these routines are called from a normal run, the Section can be Output.
     ! but then it will need to be in a different folder, since src/util is not linked by the other folders.
 
-    !%Variable LocalOutput
+    !%Variable LDOutput
     !%Type flag
     !%Default multipoles 
     !%Section Utilities::oct-local_multipoles
@@ -113,16 +114,16 @@ contains
 
     default = 2**(LOCAL_OUT_MULTIPOLES - 1) 
 
-    call parse_integer(datasets_check('LocalOutput'), default, flags)
+    call parse_integer(datasets_check('LDOutput'), default, flags)
 
-    if(.not.varinfo_valid_option('LocalOutput', flags, is_flag = .true.)) call input_error('LocalOutput')
+    if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call input_error('LDOutput')
 
     SAFE_ALLOCATE(writ%out(LOCAL_OUT_MAX, nd))
     do iout = 1, LOCAL_OUT_MAX
       writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do
 
-    !%Variable LocalOutputHow
+    !%Variable LDOutputHow
     !%Type flag
     !%Default 0
     !%Section Utilities::oct-local_multipoles
@@ -130,9 +131,9 @@ contains
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% It can take the same values as OutputHow flag.
     !%End
-    call parse_integer(datasets_check('LocalOutputHow'), 0, writ%how)
+    call parse_integer(datasets_check('LDOutputHow'), 0, writ%how)
     if(.not.varinfo_valid_option('OutputHow', writ%how, is_flag=.true.)) then
-      call input_error('LocalOutputHow')
+      call input_error('LDOutputHow')
     end if
 
     !%Variable LDMultipoleLmax
@@ -151,12 +152,6 @@ contains
       call messages_fatal(2)
     end if
 
-    if (iter == 0) then
-      first = 0
-    else
-      first = iter + 1
-    end if
-
     call io_mkdir('local.general')
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -164,7 +159,7 @@ contains
         if(writ%out(LOCAL_OUT_MULTIPOLES, id)%write) then 
           call io_mkdir('local.general/multipoles')
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
-            first, units_from_atomic(units_out%time, dt), &
+            iter, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
         end if
 
@@ -200,7 +195,8 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, geo, kick, iter, dt)
+  subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, & 
+                              geo, kick, iter, dt, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     integer,                intent(in)    :: nd 
     type(box_union_t),      intent(in)    :: domain(:)
@@ -213,19 +209,25 @@ contains
     type(kick_t),           intent(inout) :: kick
     integer,                intent(in)    :: iter
     FLOAT,                  intent(in)    :: dt
+    integer,                intent(in)    :: l_start
+    logical,                intent(in)    :: ldoverwrite
 
     type(profile_t), save :: prof
     integer :: id
+    logical :: start
 
     PUSH_SUB(local_write_iter)
     call profiling_in(prof, "LOCAL_WRITE_ITER")
 
-    if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) &
+    if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) then
+      if(.not.ldoverwrite)then
+      end if
       call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES,:), nd, domain, lab, inside, center, & 
-                                        gr, geo, st, writ%lmax, kick, iter, writ%how)
-        do id = 1, nd
-          call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES, id)%handle)
-        end do
+                        gr, geo, st, writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
+      do id = 1, nd
+        call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES, id)%handle)
+      end do
+    end if
 
     !if(writ%out(LOCAL_OUT_DENSITY)%write) &
     !  call local_write_density(writ%out(LOCAL_OUT_DENSITY)%handle, hm, iter, geo%kinetic_energy)
@@ -239,7 +241,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_multipole(out_multip, nd, domain, lab, inside, center, & 
-                                gr, geo, st, lmax, kick, iter, how)
+                                gr, geo, st, lmax, kick, iter, l_start, start, how)
     type(local_write_prop_t),      intent(inout) :: out_multip(:)
     integer,                  intent(in)    :: nd 
     type(box_union_t),        intent(in)    :: domain(:)
@@ -252,6 +254,8 @@ contains
     integer,              intent(in) :: lmax
     type(kick_t),         intent(in) :: kick
     integer,              intent(in) :: iter
+    integer,              intent(in) :: l_start
+    logical,              intent(in) :: start
     integer,              intent(in) :: how
 
     integer :: id, is, ll, mm, add_lm
@@ -265,7 +269,7 @@ contains
     cmplxscl = .false.
     if(st%cmplxscl%space) cmplxscl = .true.
 
-    if(mpi_grp_is_root(mpi_world).and.iter == 0) then
+    if(mpi_grp_is_root(mpi_world).and. iter == l_start .and. start) then
       do id = 1, nd   
         call local_write_print_header_init(out_multip(id)%handle)
   
@@ -386,6 +390,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       do id = 1, nd
+        call write_iter_set(out_multip(id)%handle, iter)
         call write_iter_start(out_multip(id)%handle)
         do is = 1, st%d%nspin
           add_lm = 1

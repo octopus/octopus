@@ -43,6 +43,7 @@ module species_m
 
   private
   public ::                        &
+    read_from_default_file,        &
     species_t,                     &
     species_set_label,             &
     species_set_type,              &
