@@ -130,6 +130,14 @@
         do ik = kp1, kp2
           do ist = st1, st2
             call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, t_op)
+            if(hamiltonian_inh_term(hm)) then
+              SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+              do idim = 1, st%d%dim
+                call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+                forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
+              SAFE_DEALLOCATE_A(inhpsi)
+            end if
           end do
         end do
         rhs1 = - M_zI * dt * rhs1
@@ -156,6 +164,14 @@
         do ik = kp1, kp2
           do ist = st1, st2
             call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik, t_op)
+            if(hamiltonian_inh_term(hm)) then
+              SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+              do idim = 1, st%d%dim
+                call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+               forall(ip = 1:gr%mesh%np) rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
+              SAFE_DEALLOCATE_A(inhpsi)
+            end if
           end do
         end do
         rhs2 = -M_zI * dt * rhs2
