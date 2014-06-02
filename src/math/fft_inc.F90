@@ -16,7 +16,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: fftw3.F90 8581 2011-11-17 15:47:34Z micael $
+!! $Id$
 
 
 ! ---------------------------------------------------------

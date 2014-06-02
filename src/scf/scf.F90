@@ -501,6 +501,14 @@ contains
         select case (scf%mix_field)
         case (MIXDENS)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
+          if (ierr /= 0) then
+            write(message(1),'(a)')  "  -1  - type of mixing is not the same."
+            write(message(2),'(a)')  "  -2  - dimensions of the arrays are not consistent"
+            write(message(3),'(a)')  "  -3  - no mixing file found"
+            write(message(4),'(a)')  "  > 0 - unable to read ierr functions"
+            write(message(5),'(a,i6)') "Error code: ", ierr
+            call messages_fatal(5)
+          end if
         case (MIXPOT)
           !TODO
         end select

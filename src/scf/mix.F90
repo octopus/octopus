@@ -293,7 +293,8 @@ contains
     iunit = restart_open(restart, 'mixing')
     if (mpi_grp_is_root(mpi_world)) then
       write(iunit, '(a11,i1)')  'scheme=    ', smix%scheme
-      write(iunit, '(a11,i10)') 'd1=        ', smix%d1
+      ! Number of global mesh points have to be written, not only smix%d1
+      write(iunit, '(a11,i10)') 'd1=        ', mesh%np_global 
       write(iunit, '(a11,i10)') 'd2=        ', smix%d2
       write(iunit, '(a11,i10)') 'd3=        ', smix%d3
       write(iunit, '(a11,i10)') 'd4=        ', smix%ns_stored
@@ -428,7 +429,7 @@ contains
     end if
 
     ! Check the dimensions of the arrays to be read
-    if (mesh%np /= smix%d1 .or. d1 /= smix%d1 .or. d2 /= smix%d2 .or. d3 /= smix%d3 ) then
+    if (mesh%np_global /= d1 .or. mesh%np /= smix%d1 .or. d2 /= smix%d2 .or. d3 /= smix%d3 ) then
       message(1) = "The dimensions of the arrays from the mixing restart data"
       message(2) = "are not the same as the ones used in this calculation."
       call messages_warning(2)
