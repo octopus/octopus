@@ -78,6 +78,7 @@ module mesh_function_m
   public :: mesh_aux
   logical, public :: sp_parallel
   integer, public :: sp_np, sp_dim, sp_st1, sp_st2, sp_kp1, sp_kp2, sp_comm
+  integer, public :: sp_distdot_mode
   !
 
   interface mf_surface_integral
@@ -161,35 +162,53 @@ REAL_DOUBLE function distdot(n, x, ix, y, iy)
   ASSERT(ix == 1)
   ASSERT(iy == 1)
 
-  if(n/2 == mesh_aux%np .or. n/2 == mesh_aux%np_part) then
+  select case(sp_distdot_mode)
+  case(1)
     distdot = dmf_dotp_aux(x(1:n/2), y(1:n/2)) + dmf_dotp_aux(x(n/2+1:n), y(n/2+1:n))
-    return
-  end if
 
-  distdot = M_ZERO
-  j = 1
-  k = n/2+1
-  do ik = sp_kp1, sp_kp2
-    do ist = sp_st1, sp_st2
-      do idim = 1, sp_dim
-        distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
-        distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
-        j = j + sp_np
-        k = k + sp_np
+  case(2)
+    distdot = M_ZERO
+    j = 1
+    k = n/2+1
+    do ik = sp_kp1, sp_kp2
+      do ist = sp_st1, sp_st2
+        do idim = 1, sp_dim
+          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+          j = j + sp_np
+          k = k + sp_np
+        end do
       end do
     end do
-  end do
-  do ik = sp_kp1, sp_kp2
-    do ist = sp_st1, sp_st2
-      do idim = 1, sp_dim
-        distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
-        distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
-        j = j + sp_np
-        k = k + sp_np
+    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+
+  case(3)
+    distdot = M_ZERO
+    j = 1
+    k = n/2+1
+    do ik = sp_kp1, sp_kp2
+      do ist = sp_st1, sp_st2
+        do idim = 1, sp_dim
+          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+          j = j + sp_np
+          k = k + sp_np
+        end do
       end do
     end do
-  end do
-  if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+    do ik = sp_kp1, sp_kp2
+      do ist = sp_st1, sp_st2
+        do idim = 1, sp_dim
+          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+          j = j + sp_np
+          k = k + sp_np
+        end do
+      end do
+    end do
+    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+
+  end select
 
 end function distdot
 
