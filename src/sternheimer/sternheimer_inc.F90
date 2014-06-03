@@ -295,7 +295,7 @@ subroutine X(sternheimer_solve)(                           &
       call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhotmp(:, ispin, 1))
     end do
 
-    call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
+    call X(mixing)(this%mixer, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
 
     abs_dens = M_ZERO
 
