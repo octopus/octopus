@@ -292,21 +292,6 @@ contains
       end do
     end do
 
-    if(geometry_atoms_are_too_close(geo, .true.)) then
-      ! complain
-      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
-      write(message(2), '(a)') "Please review your input files and the output geometry."
-      ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir(STATIC_DIR)
-      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
-      call messages_fatal(2)
-    else if(geometry_atoms_are_too_close(geo, .false.)) then
-      write(message(1), '(a)') "Some atoms with special representations sit very close to each other."
-      write(message(2), '(a)') "If these represent physical atoms, this is probably an error."
-      write(message(3), '(a)') "Please review your input files and the output geometry in this case."
-      call messages_warning(3)
-    end if
-
     ! find out if we need non-local core corrections
     geo%nlcc = .false.
     geo%nlpp = .false.
@@ -671,6 +656,7 @@ contains
 
   ! ---------------------------------------------------------
   !> This function returns .true. if two atoms are too close.
+  !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
   logical function geometry_atoms_are_too_close(geo, atomic_species_only) result(too_close)
     type(geometry_t), intent(in) :: geo
     logical,          intent(in) :: atomic_species_only
@@ -712,7 +698,7 @@ contains
     POP_SUB(geometry_dipole)
   end subroutine geometry_dipole
 
-
+  !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
   ! ---------------------------------------------------------
   FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
     type(geometry_t),  intent(in) :: geo
@@ -733,6 +719,7 @@ contains
       call atom_get_species(geo%atom(i), species)
       if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
       do j = i + 1, geo%natoms
+        call atom_get_species(geo%atom(i), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
         r = atom_distance(geo%atom(i), geo%atom(j))
         if(r < rmin) then

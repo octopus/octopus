@@ -51,7 +51,7 @@ xyz_adjust.o : xyz_adjust.F90 geometry.o
 kpoints.o : geometry.o symmetries.o
 box.o : box.F90
 box_union.o : box_union.F90 box.o
-simul_box.o : simul_box.F90 geometry.o kpoints.o symmetries.o
+simul_box.o : simul_box.F90 geometry.o kpoints.o symmetries.o atom.o
 solids.o: solids.F90 simul_box.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o read_coords.o
