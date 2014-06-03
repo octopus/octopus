@@ -745,10 +745,10 @@ contains
         call mesh_init_mesh_aux(gr%fine%mesh)
         ! mix input and output densities and compute new potential
         if(.not. cmplxscl) then
-          call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
+          call dmixing(scf%smix, rhoin, rhoout, rhonew, dmf_dotp_aux)
           st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         else
-          call zmixing(scf%smix, iter, zrhoin, zrhoout, zrhonew, zmf_dotp_aux)
+          call zmixing(scf%smix, zrhoin, zrhoout, zrhonew, zmf_dotp_aux)
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
@@ -758,10 +758,10 @@ contains
         !set the pointer for dmf_dotp_aux
         call mesh_init_mesh_aux(gr%mesh)
         ! mix input and output potentials
-        call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
+        call dmixing(scf%smix, vin, vout, vnew, dmf_dotp_aux)
         hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
         if(cmplxscl) then
-          call dmixing(scf%smix, iter, Imvin, Imvout, Imvnew, dmf_dotp_aux)
+          call dmixing(scf%smix, Imvin, Imvout, Imvnew, dmf_dotp_aux)
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
         call hamiltonian_update(hm, gr%mesh)

@@ -61,10 +61,11 @@ module mix_m
 
     FLOAT :: alpha              !< the mixing coefficient (in linear mixing: vnew = (1-alpha)*vin + alpha*vout)
 
+    integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
+                                !< include the iterations done in previous calculations.
 
     type(type_t) :: func_type   !< type of the functions to be mixed
     integer :: ns               !< number of steps used to extrapolate the new vector
-    integer :: ns_stored        !< number of steps that are actually stored at the moment
 
     integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
 
@@ -154,8 +155,11 @@ contains
     if (smix%scheme == MIX_GRPULAY .or. smix%scheme == MIX_BROYDEN) then
       call parse_integer(datasets_check(trim(prefix)//'MixNumberSteps'), 3, smix%ns)
       if(smix%ns <= 1) call input_error('MixNumberSteps')
+    else
+      smix%ns = 0
     end if
 
+    smix%iter = 0
 
     nullify(smix%ddf)
     nullify(smix%ddv)
@@ -171,12 +175,10 @@ contains
     smix%d2 = d2
     smix%d3 = d3
     select case (smix%scheme)
-    case (MIX_LINEAR)
-      smix%d4 = 0
+    case (MIX_LINEAR, MIX_BROYDEN)
+      smix%d4 = smix%ns
     case (MIX_GRPULAY)
       smix%d4 = smix%ns + 1
-    case (MIX_BROYDEN)
-      smix%d4 = smix%ns
     end select
 
     if (smix%scheme /= MIX_LINEAR) then
@@ -219,7 +221,7 @@ contains
       end if
     end if
 
-    smix%ns_stored = 0
+    smix%iter = 0
     smix%last_ipos = 0
 
     POP_SUB(mix_clear)
@@ -294,10 +296,12 @@ contains
     if (mpi_grp_is_root(mpi_world)) then
       write(iunit, '(a11,i1)')  'scheme=    ', smix%scheme
       ! Number of global mesh points have to be written, not only smix%d1
-      write(iunit, '(a11,i10)') 'd1=        ', mesh%np_global 
+      write(iunit, '(a11,i10)') 'd1=        ', mesh%np_global
       write(iunit, '(a11,i10)') 'd2=        ', smix%d2
       write(iunit, '(a11,i10)') 'd3=        ', smix%d3
-      write(iunit, '(a11,i10)') 'd4=        ', smix%ns_stored
+      write(iunit, '(a11,i10)') 'd4=        ', smix%d4
+      write(iunit, '(a11,i10)') 'iter=      ', smix%iter
+      write(iunit, '(a11,i10)') 'ns=        ', smix%ns
       write(iunit, '(a11,i10)') 'last_ipos= ', smix%last_ipos
     end if
     call restart_close(restart, iunit)
@@ -307,7 +311,7 @@ contains
     if (smix%scheme /= MIX_LINEAR) then
       do id2 = 1, smix%d2
         do id3 = 1, smix%d3
-          do id4 = 1, smix%ns_stored
+          do id4 = 1, smix%d4
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
@@ -380,8 +384,8 @@ contains
     integer,         intent(out)   :: ierr
 
     integer :: iunit, err
-    integer :: scheme, d1, d2, d3, d4, last_ipos
-    integer :: id2, id3, id4, ipos
+    integer :: scheme, d1, d2, d3, d4, ns
+    integer :: id2, id3, id4
     character(len=11)  :: str
     character(len=80)  :: filename
     character(len=256) :: line
@@ -415,12 +419,16 @@ contains
     call iopar_read(mesh%mpi_grp, iunit, line, err)
     read(line, *) str, d4
     call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, last_ipos
+    read(line, *) str, smix%iter
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, ns
+    call iopar_read(mesh%mpi_grp, iunit, line, err)
+    read(line, *) str, smix%last_ipos
 
     call restart_close(restart, iunit)
 
-    ! We can only use the restart information if the mixing scheme remained the same
-    if (scheme /= smix%scheme) then
+    ! We can only use the restart information if the mixing scheme and the number of steps used remained the same
+    if (scheme /= smix%scheme .or. ns /= smix%ns) then
       message(1) = "The mixing scheme from the restart data is not the same as the one used in the current calculation."
       call messages_warning(1)
       ierr = -1
@@ -443,16 +451,11 @@ contains
     ! Note that we may have more or less functions than the ones needed (d4 /= smix%d4)
     ierr = 0
     if (smix%scheme /= MIX_LINEAR) then
-      smix%ns_stored = min(d4, smix%d4)
-      smix%last_ipos = smix%ns_stored
-
       do id2 = 1, smix%d2
         do id3 = 1, smix%d3
+          do id4 = 1, smix%d4
 
-          if (d4 > 0) ipos = mod(last_ipos, d4) + 1
-          do id4 = 1, smix%ns_stored
-
-            write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, ipos
+            write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
               call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
             else
@@ -464,7 +467,7 @@ contains
               ierr = ierr + 1
             end if
           
-            write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, ipos
+            write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
               call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
             else
@@ -476,7 +479,6 @@ contains
               ierr = ierr + 1
             end if
 
-            ipos = mod(ipos, d4) + 1
           end do
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
