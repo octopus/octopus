@@ -341,7 +341,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose)
+  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose, kpts_dont_matter)
     type(restart_t),            intent(inout) :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
@@ -352,6 +352,8 @@ contains
     logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
+    logical,          optional, intent(in)    :: kpts_dont_matter !< don`t check k-points match with current calculation
+      !! for td transport; they have been set to zero in simul_box_init, and won`t match regardless due to box size
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: iread, nread, ierr_stat
@@ -361,13 +363,14 @@ contains
     character(len=256)   :: line, label_, mod_time, occ_filename
     character(len=50)    :: str
 
-    FLOAT                :: my_occ, flt, imev
+    FLOAT                :: my_occ, imev
     logical              :: read_occ, lr_allocated, verbose_
     logical              :: integral_occs, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
+    FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
 
     PUSH_SUB(states_load)
 
@@ -564,11 +567,34 @@ contains
         cycle
       end if
 
+      if(ist >= st%st_start .and. ist <= st%st_end .and. &
+        st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
+
+        restart_file(idim, ist, ik) = trim(filename)
+        restart_file_present(idim, ist, ik) = .true.
+      end if
+
       call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] | k-points | k-weights | filename | ik | ist | idim
 
-        read(line, *) my_occ, char, st%eigenval(ist, ik), char, imev, char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        read(line, *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
+          (read_kpoint(idir), char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        kpoint(1:gr%sb%dim) = &
+          kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+        ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
+        if((.not. optional_default(kpts_dont_matter, .false.)) .and. &
+          any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
+          ! write only once for each k-point so as not to be too verbose
+          if(ist == 1) then
+            write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
+            write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
+            write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
+            call messages_warning(3)
+          endif
+          restart_file_present(idim, ist, ik) = .false.
+        endif
+
         if(cmplxscl) st%zeigenval%Im(ist, ik) = imev
 
         if(read_occ) then
@@ -576,13 +602,6 @@ contains
           integral_occs = integral_occs .and. &
             abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
         endif
-      end if
-
-      if(ist >= st%st_start .and. ist <= st%st_end .and. &
-        st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
-
-        restart_file(idim, ist, ik) = trim(filename)
-        restart_file_present(idim, ist, ik) = .true.
       end if
     end do
 

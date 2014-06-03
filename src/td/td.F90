@@ -425,7 +425,7 @@ contains
         call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          call states_load(restart, st, gr, ierr, label = ": gs")
+          call states_load(restart, st, gr, ierr, label = ": gs", kpts_dont_matter = st%open_boundaries)
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)
