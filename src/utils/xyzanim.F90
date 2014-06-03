@@ -37,6 +37,7 @@ program xyzanim
 
   character(len=256) :: coords_file, comment
   integer :: ierr, sampling, i, coords_unit, iter, j, record_length
+  logical :: multifiles
   FLOAT :: time
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
@@ -71,6 +72,17 @@ program xyzanim
     call messages_fatal(1)
   end if
 
+  !%Variable AnimationMultiFiles
+  !%Type logical
+  !%Default false
+  !%Section Utilities::oct-xyz-anim
+  !%Description
+  !% Set multiple files writing. The animation will be writteng in a different 
+  !% files constructed using
+  !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
+  !%End
+  call parse_logical(datasets_check('AnimationMultiFiles'), .false., multifiles)
+
   call space_init(space)
   call geometry_init(geo, space)
   call simul_box_init(sb, geo, space)
@@ -85,10 +97,21 @@ program xyzanim
   do while(ierr == 0)
     read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
       ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
+      do i = 1, geo%natoms
+        do j = 1, geo%space%dim
+          geo%atom(i)%x(j)=units_to_atomic(units_inp%length, geo%atom(i)%x(j))
+        end do
+      end do
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
-      call io_mkdir('td.general')
-      call geometry_write_xyz(geo, 'td.general/movie', append = .true., comment = trim(comment))
+      if(.not.multifiles)then
+        call io_mkdir('td.general')
+        call geometry_write_xyz(geo, 'td.general/movie', append = .true., comment = trim(comment))
+      else
+        call io_mkdir('td.general/movie/')
+        write(coords_file,'(i7.7)')iter
+        call geometry_write_xyz(geo,'td.general/movie/geo-'//trim(coords_file), append = .false.)
+      end if
     end if
   end do
 
