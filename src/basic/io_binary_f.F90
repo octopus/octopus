@@ -1092,8 +1092,10 @@ contains
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
     if (number_type /= type) then
-      write(message(1),'(a,i2,a,i2)') "Found type = ", number_type, " instead of ", type
-      call messages_warning(1)
+      if (in_debug_mode) then
+        write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", type
+        call messages_info(1)
+      end if
       SAFE_ALLOCATE(read_ff(1:np))
       call dread_parallel(fname, comm, xlocal, np, read_ff, ierr)
       ff = read_ff
