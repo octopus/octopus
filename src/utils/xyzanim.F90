@@ -77,9 +77,7 @@ program xyzanim
   !%Default false
   !%Section Utilities::oct-xyz-anim
   !%Description
-  !% Set multiple files writing. The animation will be writteng in a different 
-  !% files constructed using
-  !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
+  !% If true, each iteration written will be in a separate file.
   !%End
   call parse_logical(datasets_check('AnimationMultiFiles'), .false., multifiles)
 
