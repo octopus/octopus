@@ -1660,7 +1660,7 @@ contains
       call messages_fatal(1)
     endif
 
-    PUSH_SUB(simul_box_check_atoms_are_too_close)
+    POP_SUB(simul_box_check_atoms_are_too_close)
   end subroutine simul_box_check_atoms_are_too_close
 
   ! ---------------------------------------------------------
