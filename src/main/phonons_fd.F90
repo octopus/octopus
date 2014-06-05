@@ -166,6 +166,7 @@ contains
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
+        call scf_mix_clear(scf)
         call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
@@ -181,6 +182,7 @@ contains
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
+        call scf_mix_clear(scf)
         call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
