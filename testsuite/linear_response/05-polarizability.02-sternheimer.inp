@@ -10,3 +10,6 @@ ExtraStates = 3
   "Na" | -1.54 | 0 | 0
   "Na" |  1.54 | 0 | 0
 %
+
+Output = pol_density
+OutputHow = xcrysden
