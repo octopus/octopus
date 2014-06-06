@@ -510,14 +510,20 @@ contains
           call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
         if (ierr /= 0) then
-          write(message(1),'(a)')  "  -1  - type of mixing is not the same."
-          write(message(2),'(a)')  "  -2  - dimensions of the arrays are not consistent"
-          write(message(3),'(a)')  "  -3  - no mixing file found"
-          write(message(4),'(a)')  "  > 0 - unable to read ierr functions"
-          write(message(5),'(a,i6)') "Error code: ", ierr
-          call messages_fatal(5)
+          write(message(1),'(a)') "Failed to read mixing: "
+          if(ierr == -1) then
+            write(message(1),'(a)') trim(message(1)) // "type of mixing is not the same."
+          else if(ierr == -2) then
+            write(message(1),'(a)') trim(message(1)) // "dimensions of the arrays are not consistent."
+          else if(ierr == -3) then
+            write(message(1),'(a)') trim(message(1)) // "no mixing file found."
+          else if(ierr > 0) then
+            write(message(1),'(a,i6,a)') trim(message(1)) // "unable to read ", ierr, "functions."
+          else
+            write(message(1),'(a,i6)') trim(message(1)) // "unknown error code ", ierr
+          endif
+          call messages_fatal(1)
         end if
-
       end if
     end if
 
