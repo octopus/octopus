@@ -643,7 +643,7 @@ contains
     ! if fromScratch, we already deleted the restart files
     iunit = restart_open(cas%restart_load, restart_file)
     if(mpi_grp_is_root(mpi_world)) then
-      if( iunit > 0) then
+      if (iunit > 0) then
         do
           read(iunit, fmt=*, iostat=err) ii, aa, ik, jj, bb, jk, val
           if(err /= 0) exit
@@ -673,7 +673,7 @@ contains
         call messages_warning(1)
       endif
     endif
-    call restart_close(cas%restart_load, iunit)
+    if (iunit > 0) call restart_close(cas%restart_load, iunit)
 
     ! if no file found, root has no new information to offer the others
 #ifdef HAVE_MPI
@@ -899,7 +899,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
       call messages_warning(1)
     endif
   endif
-  call restart_close(cas%restart_load, iunit)
+  if (iunit > 0) call restart_close(cas%restart_load, iunit)
 
 #ifdef HAVE_MPI
     call MPI_Bcast(is_saved(1, 1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)

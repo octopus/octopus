@@ -575,7 +575,7 @@ contains
         call messages_warning(1)
       endif
     endif
-    call restart_close(restart, iunit)
+    if (iunit > 0) call restart_close(restart, iunit)
 
 #ifdef HAVE_MPI
     call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
