@@ -41,10 +41,13 @@ dist_share_DATA = \
 	03-magnetic.06-td-spinors.inp                  \
 	05-output.test                                 \
 	05-output.01-gs.inp                            \
-	06-restart.01-ground_state.inp                 \
-	06-restart.02-restart_ground_state.inp         \
-	06-restart.03-td_calc.inp                      \
-	06-restart.04-restart_td_calc.inp              \
+	06-restart.01-gs_mixrho.inp                    \
+	06-restart.02-restart_gs_mixrho.inp            \
+	06-restart.03-gs_mixvhxc.inp                   \
+	06-restart.04-restart_gs_mixvhxc.inp           \
+	06-restart.05-restart_gs.inp                   \
+	06-restart.06-td_calc.inp                      \
+	06-restart.07-restart_td_calc.inp              \
 	06-restart.test                                \
 	07-spin_orbit_coupling.01-hgh.inp              \
 	07-spin_orbit_coupling.02-rkb.inp              \

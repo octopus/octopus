@@ -1,0 +1,22 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 06-restart.01-ground_state.inp 7532 2011-03-03 06:42:10Z dstrubbe $
+
+CalculationMode = gs
+fromScratch = no
+Radius = 7.0
+Spacing = 0.5
+%Coordinates
+  "Na" | 0 | 0 | 0
+%
+SpinComponents = spin_polarized
+%Occupations
+0.0
+1.0
+%
+ConvAbsDens = 1e-6
+
+MaximumIter = 3
+MixField = potential
+%RestartOptions
+ restart_gs | "restart" | restart_vhxc + restart_mix
+%

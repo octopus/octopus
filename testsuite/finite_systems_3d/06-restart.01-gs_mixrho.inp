@@ -14,3 +14,5 @@ SpinComponents = spin_polarized
 1.0
 %
 ConvAbsDens = 1e-6
+
+MaximumIter = 3
