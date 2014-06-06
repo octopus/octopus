@@ -6,7 +6,11 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
-Precision : 1.0e-6
+# Note: the first 4 runs should _not_ reach full SCF convergence, otherwise
+# all the final results will be identical whether or not the restart of the 
+# density, vhxc, and mixing is working properly.
+
+Precision : 2.0e-6
 # First start a ground state calculation that uses the mixing of the density
 Input: 06-restart.01-gs_mixrho.inp
 match ; Eigenvalue [up] ; GREP(static/info, '1   up', 13) ; -0.013820
