@@ -108,7 +108,7 @@ module restart_m
 
   integer, parameter, public :: RESTART_STATES = 1, &
                                 RESTART_RHO    = 2, &
-                                RESTART_VKS    = 4, &
+                                RESTART_VHXC   = 4, &
                                 RESTART_MIX    = 8
 
   type(restart_data_t) :: info(RESTART_N_DATA_TYPES)
@@ -320,9 +320,9 @@ contains
     !%Option restart_rho 2
     !% (flag)
     !% Read the electronic density.
-    !%Option restart_vks 4
+    !%Option restart_vhxc 4
     !% (flag)
-    !% Read the Kohn-Sham potential. (not yet implemented)
+    !% Read the Hartree and XC potentials.
     !%Option restart_mix 8
     !% (flag)
     !% Read the SCF mixing information.

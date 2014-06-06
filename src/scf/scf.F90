@@ -494,24 +494,30 @@ contains
       if (restart_has_flag(restart_load, RESTART_RHO)) then
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
-        if (scf%mix_field == MIXDENS) call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo)
+      end if
+
+      if (restart_has_flag(restart_load, RESTART_VHXC)) then
+        call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
+        call hamiltonian_update(hm, gr%mesh)
       end if
 
       if (restart_has_flag(restart_load, RESTART_MIX)) then
         select case (scf%mix_field)
         case (MIXDENS)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
-          if (ierr /= 0) then
-            write(message(1),'(a)')  "  -1  - type of mixing is not the same."
-            write(message(2),'(a)')  "  -2  - dimensions of the arrays are not consistent"
-            write(message(3),'(a)')  "  -3  - no mixing file found"
-            write(message(4),'(a)')  "  > 0 - unable to read ierr functions"
-            write(message(5),'(a,i6)') "Error code: ", ierr
-            call messages_fatal(5)
-          end if
         case (MIXPOT)
-          !TODO
+          call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
+        if (ierr /= 0) then
+          write(message(1),'(a)')  "  -1  - type of mixing is not the same."
+          write(message(2),'(a)')  "  -2  - dimensions of the arrays are not consistent"
+          write(message(3),'(a)')  "  -3  - no mixing file found"
+          write(message(4),'(a)')  "  > 0 - unable to read ierr functions"
+          write(message(5),'(a,i6)') "Error code: ", ierr
+          call messages_fatal(5)
+        end if
+
       end if
     end if
 
@@ -794,7 +800,17 @@ contains
               call messages_fatal(1)
             end if
           case (MIXPOT)
-            !TODO
+            call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, err)
+            if(err /= 0) then
+              message(1) = 'Unsuccessful write of Vhxc'
+              call messages_fatal(1)
+            end if
+
+            call mix_dump(restart_dump, scf%smix, gr%mesh, err)
+            if(err /= 0) then
+              message(1) = 'Unsuccessful write of mixing'
+              call messages_fatal(1)
+            end if
           end select
         end if
       end if
