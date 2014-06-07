@@ -95,6 +95,7 @@ module hamiltonian_m
     hamiltonian_set_inh,             &
     hamiltonian_remove_inh,          &
     hamiltonian_oct_exchange,        &
+    hamiltonian_prepare_oct_exchange,&
     hamiltonian_set_oct_exchange,    &
     hamiltonian_remove_oct_exchange, &
     hamiltonian_adjoint,             &
@@ -176,6 +177,8 @@ module hamiltonian_m
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
     FLOAT, pointer :: oct_fxc(:, :, :)
+    FLOAT, pointer :: oct_pot(:, :)
+    FLOAT, pointer :: oct_rho(:, :)
 
     CMPLX, pointer :: phase(:, :)
     type(opencl_mem_t) :: buff_phase
@@ -881,11 +884,12 @@ contains
   end function hamiltonian_oct_exchange
 
 
+
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(hm, st, gr, xc)
+  subroutine hamiltonian_set_oct_exchange(hm, st, mesh, xc)
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
-    type(grid_t),        intent(in)    :: gr
+    type(mesh_t),        intent(in)    :: mesh
     type(xc_t),          intent(in)    :: xc
 
     integer :: np, nspin
@@ -897,15 +901,75 @@ contains
 
     hm%oct_st => st
     hm%oct_exchange = .true.
-    np = gr%mesh%np
+    np = mesh%np
     nspin = hm%oct_st%d%nspin
 
     SAFE_ALLOCATE(hm%oct_fxc(1:np, 1:nspin, 1:nspin))
+    SAFE_ALLOCATE(hm%oct_pot(1:np, 1:nspin))
+    SAFE_ALLOCATE(hm%oct_rho(1:np, 1:nspin))
+
     hm%oct_fxc = M_ZERO
-    call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
+    hm%oct_pot = M_ZERO
+    hm%oct_rho = M_ZERO
 
     POP_SUB(hamiltonian_set_oct_exchange)
   end subroutine hamiltonian_set_oct_exchange
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_prepare_oct_exchange(hm, mesh, psi, xc)
+    type(hamiltonian_t), intent(inout) :: hm
+    type(mesh_t),        intent(in)    :: mesh
+    CMPLX,               intent(in)    :: psi(:, :, :, :)
+    type(xc_t),          intent(in)    :: xc
+
+    integer :: np, nspin, jst, ip, ik
+    CMPLX, allocatable :: psi2(:, :)
+
+    PUSH_SUB(hamiltonian_prepare_oct_exchange)
+
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:hm%d%dim))
+
+    select case(hm%d%ispin)
+    case(UNPOLARIZED)
+      ASSERT(hm%d%nik  ==  1)
+
+      hm%oct_pot = M_ZERO
+      hm%oct_rho = M_ZERO
+      do jst = 1, hm%oct_st%nst
+        call states_get_state(hm%oct_st, mesh, jst, 1, psi2)
+        forall (ip = 1:mesh%np)
+          hm%oct_rho(ip, 1) = hm%oct_rho(ip, 1) + hm%oct_st%occ(jst, 1)*aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, 1))
+        end forall
+      end do
+      call dpoisson_solve(psolver, hm%oct_pot(:, 1), hm%oct_rho(:, 1), all_nodes = .false.)
+
+    case(SPIN_POLARIZED)
+      ASSERT(hm%d%nik  ==  2)
+
+      hm%oct_pot = M_ZERO
+      hm%oct_rho = M_ZERO
+      do ik = 1, 2
+        do jst = 1, hm%oct_st%nst
+          call states_get_state(hm%oct_st, mesh, jst, ik, psi2)
+          forall (ip = 1:mesh%np)
+            hm%oct_rho(ip, ik) = hm%oct_rho(ip, ik) + hm%oct_st%occ(jst, ik) * aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, ik))
+          end forall
+        end do
+      end do
+
+      do ik = 1, 2
+        call dpoisson_solve(psolver, hm%oct_pot(:, ik), hm%oct_rho(:, ik), all_nodes = .false.)
+      end do
+
+    end select
+
+    hm%oct_fxc = M_ZERO
+    call xc_get_fxc(xc, mesh, hm%oct_st%rho, hm%oct_st%d%ispin, hm%oct_fxc)
+
+    SAFE_DEALLOCATE_A(psi2)
+    POP_SUB(hamiltonian_prepare_oct_exchange)
+  end subroutine hamiltonian_prepare_oct_exchange
 
 
   ! ---------------------------------------------------------
@@ -917,6 +981,8 @@ contains
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
     SAFE_DEALLOCATE_P(hm%oct_fxc)
+    SAFE_DEALLOCATE_P(hm%oct_pot)
+    SAFE_DEALLOCATE_P(hm%oct_rho)
 
     POP_SUB(hamiltonian_remove_oct_exchange)
   end subroutine hamiltonian_remove_oct_exchange

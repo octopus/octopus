@@ -41,6 +41,7 @@ module exponential_m
   use states_calc_m
   use types_m
   use varinfo_m
+  use xc_m
 
   implicit none
 
@@ -708,10 +709,11 @@ contains
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
   !! Hamiltonian hm.
-  subroutine exponential_apply_all(te, der, hm, st, deltat, t, order)
+  subroutine exponential_apply_all(te, der, hm, xc, st, deltat, t, order)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(inout) :: der
     type(hamiltonian_t), intent(inout) :: hm
+    type(xc_t),          intent(in)    :: xc
     type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(inout) :: order
@@ -733,9 +735,9 @@ contains
       zfact = zfact * deltat / i
       
       if (i == 1) then
-        call zhamiltonian_apply_all(hm, der, st, hst1, t)
+        call zhamiltonian_apply_all(hm, xc, der, st, hst1, t)
       else
-        call zhamiltonian_apply_all(hm, der, st1, hst1, t)
+        call zhamiltonian_apply_all(hm, xc, der, st1, hst1, t)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -771,9 +773,9 @@ contains
         zfact = zfact * deltat / (i+1)
       
         if (i == 1) then
-          call zhamiltonian_apply_all(hm, der, hm%inh_st, hst1, t)
+          call zhamiltonian_apply_all(hm, xc, der, hm%inh_st, hst1, t)
         else
-          call zhamiltonian_apply_all(hm, der, st1, hst1, t)
+          call zhamiltonian_apply_all(hm, xc, der, st1, hst1, t)
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end

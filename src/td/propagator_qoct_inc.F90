@@ -20,8 +20,9 @@
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, gr, st, tr, t, dt, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, xc, gr, st, tr, t, dt, ions, geo)
     type(hamiltonian_t), intent(inout) :: hm
+    type(xc_t),          intent(in)    :: xc
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     type(propagator_t),  intent(inout) :: tr
@@ -45,7 +46,7 @@
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
-    call exponential_apply_all(tr%te, gr%der, hm, st, dt, t - dt/M_TWO)
+    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt, t - dt/M_TWO)
 
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)

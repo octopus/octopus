@@ -62,6 +62,7 @@ module propagator_m
   use types_m
   use v_ks_m
   use varinfo_m
+  use xc_m
 
   implicit none
 
@@ -651,7 +652,7 @@ contains
     case(PROP_MAGNUS);                   call td_magnus()
     case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt, ions, geo)
+      call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     end select
 
     if(present(scsteps)) scsteps = 1
@@ -704,7 +705,7 @@ contains
           case(PROP_MAGNUS);                   call td_magnus()
           case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
           case(PROP_QOCT_TDDFT_PROPAGATOR)
-            call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt, ions, geo)
+            call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
           end select
 
           if(.not. cmplxscl) then
