@@ -58,6 +58,7 @@
       dt_op = dt
       t_op  = time - dt/M_TWO
       dim_op = st%d%dim
+      xc_p      => ks%xc
 
       SAFE_ALLOCATE(k2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
       SAFE_ALLOCATE(oldk2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
@@ -74,11 +75,19 @@
         end do
       end do
 
+      if(hamiltonian_oct_exchange(hm)) call hamiltonian_prepare_oct_exchange(hm, gr%mesh, zphi, ks%xc)
       call hamiltonian_update(hm, gr%mesh, time = time-dt)
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
           call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, time -dt)
+        end do
+      end do
+      do ik = kp1, kp2
+        do ist = st1, st2
+          if(hamiltonian_oct_exchange(hm)) then
+            call zoct_exchange_operator(hm, gr%der, rhs1(:, :, ist, ik), ist, ik)
+          end if
         end do
       end do
       rhs1 = zphi - M_zI * M_HALF * dt * rhs1
@@ -89,13 +98,15 @@
         oldk2 = k2
 
         ! Set the Hamiltonian at the final time of the propagation
-        do ik = kp1, kp2
-          do ist = st1, st2
-            call states_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
+        if(.not.hamiltonian_oct_exchange(hm_p)) then
+          do ik = kp1, kp2
+            do ist = st1, st2
+              call states_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
+            end do
           end do
-        end do
-        call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
+          call density_calc(st, gr, st%rho)
+          call v_ks_calc(ks, hm, st, geo)
+        end if
         if(ion_dynamics_ions_move(ions)) then
           call ion_dynamics_save_state(ions, geo, ions_state)
           call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)

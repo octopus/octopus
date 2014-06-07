@@ -117,6 +117,7 @@ module propagator_m
   type(hamiltonian_t),     pointer, private :: hm_p
   type(propagator_t),      pointer, private :: tr_p
   type(states_t),          pointer, private :: st_p
+  type(xc_t),              pointer, private :: xc_p
   integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
   type(states_t),          private :: st_op
   FLOAT,                   private :: t_op, dt_op
@@ -563,7 +564,7 @@ contains
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, ions, geo, gauge_force, scsteps, update_energy)
-    type(v_ks_t),                    intent(inout) :: ks
+    type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -1843,6 +1844,7 @@ contains
     integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
     CMPLX, allocatable :: zpsi(:, :)
     CMPLX, allocatable :: opzpsi(:, :)
+    CMPLX, allocatable :: zpsi_(:, :, :, :)
 
     PUSH_SUB(td_rk2op)
 
@@ -1856,6 +1858,7 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
     SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
 
     zpsi = M_z0
     opzpsi = M_z0
@@ -1863,6 +1866,21 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      zpsi_ = M_z0
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+        end do
+      end do
+      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+    end if
 
     j = 1
     do ik = kp1, kp2
@@ -1882,6 +1900,27 @@ contains
       end do
     end do
 
+    if(hamiltonian_oct_exchange(hm_p)) then
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+          opzpsi = M_z0
+          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+
+          do idim = 1, dim
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yim(jj:jj+np-1) = yim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            jj = jj + np
+          end do
+        end do
+      end do
+    end if
+
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(opzpsi)
     PUSH_SUB(td_rk2op)
@@ -1900,6 +1939,7 @@ contains
     integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
     CMPLX, allocatable :: zpsi(:, :)
     CMPLX, allocatable :: opzpsi(:, :)
+    CMPLX, allocatable :: zpsi_(:, :, :, :)
 
     PUSH_SUB(td_rk2opt)
 
@@ -1913,6 +1953,7 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
     SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
 
     zpsi = M_z0
     opzpsi = M_z0
@@ -1920,6 +1961,21 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      zpsi_ = M_z0
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+        end do
+      end do
+      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+    end if    
 
     j = 1
     do ik = kp1, kp2
@@ -1938,6 +1994,27 @@ contains
         end do
       end do
     end do
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+          opzpsi = M_z0
+          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+
+          do idim = 1, dim
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yim(jj:jj+np-1) = yim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            jj = jj + np
+          end do
+        end do
+      end do
+    end if
 
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(opzpsi)

@@ -112,7 +112,8 @@ module hamiltonian_m
     zhamiltonian_dervexternal,       &
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
-    hamiltonian_load_vhxc
+    hamiltonian_load_vhxc,           &
+    zoct_exchange_operator
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
