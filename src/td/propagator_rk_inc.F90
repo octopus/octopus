@@ -22,12 +22,13 @@
 #ifndef HAVE_SPARSKIT
       ASSERT(.false.)
 #else
-      integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, idim, j
+      integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, idim, j, ip
       integer :: i
       FLOAT :: dres
       CMPLX, allocatable :: zphi(:, :, :, :)
       CMPLX, allocatable :: zpsi(:), rhs(:)
       CMPLX, allocatable :: k2(:, :, :, :), oldk2(:, :, :, :), rhs1(:, :, :, :)
+      CMPLX, allocatable :: inhpsi(:)
       type(ion_state_t) :: ions_state
 
       PUSH_SUB(propagator_dt.td_runge_kutta2)
@@ -81,6 +82,14 @@
       do ik = kp1, kp2
         do ist = st1, st2
           call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, time -dt)
+          if(hamiltonian_inh_term(hm)) then
+            SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+            do idim = 1, st%d%dim
+              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+            end do
+            SAFE_DEALLOCATE_A(inhpsi)
+          end if
         end do
       end do
       do ik = kp1, kp2
@@ -90,6 +99,7 @@
           end if
         end do
       end do
+
       rhs1 = zphi - M_zI * M_HALF * dt * rhs1
       k2 = zphi
 
