@@ -76,7 +76,7 @@ contains
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
-    character(len=80) :: fname
+    character(len=80) :: fname, dir_name
     character :: sign_char
     type(restart_t) :: gs_restart, restart_load, restart_dump
 
@@ -109,10 +109,11 @@ contains
     diagonal_done = .false.
     field_written = .false.
 
-    call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_dump, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
+      mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     if(.not. fromScratch) then
-      call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(restart_load, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       iunit = restart_open(restart_load, RESTART_FILE)
@@ -242,10 +243,11 @@ contains
           sign_char = '-'
         endif
 
+        write(dir_name,'(a)') "field_"//index2axis(ii)//sign_char
         fromScratch_local = fromScratch
 
         if(.not. fromScratch) then
-          call restart_cd(restart_load, dirname="field_"//index2axis(ii)//sign_char)
+          call restart_cd(restart_load, dirname=trim(dir_name))
           call states_load(restart_load, sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
@@ -282,7 +284,9 @@ contains
         call output_cycle_()
 
         if(write_restart_densities) then
+          call restart_cd(restart_dump, dirname=trim(dir_name))
           call states_dump(restart_dump, sys%st, sys%gr, ierr)
+          call restart_cd(restart_dump)
           if(ierr /= 0) then
             message(1) = 'Unsuccessful write of restart.'
             call messages_fatal(1)
