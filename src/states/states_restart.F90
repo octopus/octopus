@@ -360,7 +360,7 @@ contains
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
-    character(len=256)   :: line, label_, mod_time, occ_filename
+    character(len=256)   :: lines(3), label_, mod_time, occ_filename
     character(len=50)    :: str
 
     FLOAT                :: my_occ, imev
@@ -474,8 +474,8 @@ contains
 
     if(ierr /= 0) then
       if(states_file > 0) call restart_close(restart, states_file)
-      if(wfns_file > 0) call restart_close(restart, wfns_file)
-      if(occ_file > 0) call restart_close(restart, occ_file)
+      if(wfns_file   > 0) call restart_close(restart, wfns_file)
+      if(occ_file    > 0) call restart_close(restart, occ_file)
       write(message(1),'(a)') 'Could not load states information.'
       call messages_info(1)
       call messages_print_stress(stdout)
@@ -488,9 +488,9 @@ contains
     ! nst=                         2
     ! dim=                         1
     ! nik=                         2
-    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
-    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
-    read(line, *) str, idim
+    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, lines, 3, err)
+    read(lines(2), *) str, idim
+    read(lines(3), *) str, ik
     if(idim == 2 .and. st%d%dim == 1) then
       write(message(1),'(a)') 'Incompatible restart information: saved calculation is spinors, this one is not.'
       call messages_warning(1)
@@ -501,8 +501,6 @@ contains
       call messages_warning(1)
       ierr = -1
     endif
-    call iopar_read(st%dom_st_kpt_mpi_grp, states_file, line, err)
-    read(line, *) str, ik
     if(ik /= st%d%nik) then
       write(message(1),'(a)') 'Incompatible restart information: wrong number of k-points.'
       write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, '; Read ', ik
@@ -514,8 +512,8 @@ contains
 
     if(ierr /= 0) then
       if(states_file > 0) call restart_close(restart, states_file)
-      if(wfns_file > 0) call restart_close(restart, wfns_file)
-      if(occ_file > 0) call restart_close(restart, occ_file)
+      if(wfns_file   > 0) call restart_close(restart, wfns_file)
+      if(occ_file    > 0) call restart_close(restart, occ_file)
       call profiling_out(prof_read)
       POP_SUB(states_load)
       return
@@ -535,11 +533,10 @@ contains
     restart_file_present = .false.
 
     ! Skip two lines.
-    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
-    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
+    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, lines, 2, err)
 
     if(states_are_real(st)) then
-      read(line, '(a)') str
+      read(lines(2), '(a)') str
       if(str(2:8) == 'Complex') then
         message(1) = "Cannot read real states from complex wavefunctions."
         call messages_fatal(1)
@@ -550,20 +547,19 @@ contains
     endif
     ! complex can be restarted from real, so there is no problem.
 
-    call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
-    call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
+    call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, lines, 2, err)
 
     do
-      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, int)
-      read(line, '(a)') char
+      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, lines, 1, int)
+      read(lines(1), '(a)') char
       if(int /= 0 .or. char == '%') exit
 
       call iopar_backspace(st%dom_st_kpt_mpi_grp, wfns_file)
 
-      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
-      read(line, *) ik, char, ist, char, idim, char, filename
+      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, lines, 1, err)
+      read(lines(1), *) ik, char, ist, char, idim, char, filename
       if(index_is_wrong()) then
-        call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
+        call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, lines, 1, err)
         cycle
       end if
 
@@ -574,11 +570,11 @@ contains
         restart_file_present(idim, ist, ik) = .true.
       end if
 
-      call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
+      call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, lines, 1, err)
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] | k-points | k-weights | filename | ik | ist | idim
 
-        read(line, *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
+        read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
           (read_kpoint(idir), char, idir = 1, gr%sb%dim), st%d%kweights(ik)
         kpoint(1:gr%sb%dim) = &
           kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
@@ -688,8 +684,8 @@ contains
     end if
 
     if(present(iter)) then
-      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
-      read(line, *) filename, filename, iter
+      call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, lines, 1, err)
+      read(lines(1), *) filename, filename, iter
     end if
 
 #if defined(HAVE_MPI)
@@ -989,7 +985,7 @@ contains
 
     integer                    :: ik, ist, idim, counter, err, wfns, occs, il
     integer                    :: np, ip, idir
-    character(len=256)         :: line, fname, filename, chars
+    character(len=256)         :: lines(2), fname, filename, chars
     character                  :: char
     FLOAT                      :: occ, eval, imeval, kpoint(1:MAX_DIM), w_k
     type(simul_box_t), pointer :: sb
@@ -1022,11 +1018,8 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(mpi_grp, wfns, line, err)
-    call iopar_read(mpi_grp, wfns, line, err)
-
-    call iopar_read(mpi_grp, occs, line, err)
-    call iopar_read(mpi_grp, occs, line, err)
+    call iopar_read(mpi_grp, wfns, lines, 2, err)
+    call iopar_read(mpi_grp, occs, lines, 2, err)
 
     counter  = 0 ! reset counter
     st%d%kweights(:) = M_ZERO
@@ -1036,20 +1029,20 @@ contains
     do
       ! Check for end of file. Check only one of the two files assuming
       ! they are written correctly, i.e. of same length.
-      call iopar_read(mpi_grp, wfns, line, err)
-      read(line, '(a)') char
+      call iopar_read(mpi_grp, wfns, lines, 1, err)
+      read(lines(1), '(a)') char
       if(char  ==  '%') then
         exit
       end if
 
       call iopar_backspace(mpi_grp, wfns)
 
-      call iopar_read(mpi_grp, wfns, line, err)
-      read(line, *) ik, char, ist, char, idim, char, fname
+      call iopar_read(mpi_grp, wfns, lines, 1, err)
+      read(lines(1), *) ik, char, ist, char, idim, char, fname
 
-      call iopar_read(mpi_grp, occs, line, err)
+      call iopar_read(mpi_grp, occs, lines, 1, err)
       !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-      read(line, *) occ, char, eval, char, imeval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
+      read(lines(1), *) occ, char, eval, char, imeval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
       ! we need the kpoints from the periodic run for the scattering states

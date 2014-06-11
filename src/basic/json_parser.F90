@@ -127,14 +127,14 @@ contains
     type(json_parser_t), intent(inout) :: parser
     integer,             intent(out)   :: iostat
     !
-    character(len=LINE_LEN) :: buff
+    character(len=LINE_LEN) :: buff(1)
     !
     PUSH_SUB(json_parser_readline)
-    call iopar_read(mpi_world, parser%unit, buff, iostat)
+    call iopar_read(mpi_world, parser%unit, buff, 1, iostat)
     parser%ierr=iostat
     if(iostat==0)then
       call json_end(parser%buff)
-      call json_init(parser%buff, trim(buff))
+      call json_init(parser%buff, trim(buff(1)))
       parser%line=parser%line+1
       parser%bpos=1
     end if

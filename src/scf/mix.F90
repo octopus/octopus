@@ -388,7 +388,7 @@ contains
     integer :: id2, id3, id4
     character(len=11)  :: str
     character(len=80)  :: filename
-    character(len=256) :: line
+    character(len=256) :: lines(8)
 
     PUSH_SUB(mix_load)
 
@@ -408,22 +408,15 @@ contains
       return
     end if
 
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, scheme
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, d1
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, d2
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, d3
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, d4
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, smix%iter
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, ns
-    call iopar_read(mesh%mpi_grp, iunit, line, err)
-    read(line, *) str, smix%last_ipos
+    call iopar_read(mesh%mpi_grp, iunit, lines, 8, err)
+    read(lines(1), *) str, scheme
+    read(lines(2), *) str, d1
+    read(lines(3), *) str, d2
+    read(lines(4), *) str, d3
+    read(lines(5), *) str, d4
+    read(lines(6), *) str, smix%iter
+    read(lines(7), *) str, ns
+    read(lines(8), *) str, smix%last_ipos
 
     call restart_close(restart, iunit)
 

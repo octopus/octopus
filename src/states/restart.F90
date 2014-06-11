@@ -488,7 +488,7 @@ contains
           end if
 
           if (present(sb)) then
-            call simul_box_dump(sb, restart%pwd, "mesh")
+            call simul_box_dump(sb, restart%pwd, "mesh", restart%mpi_grp)
           end if
         end if
         

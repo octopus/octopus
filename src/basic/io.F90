@@ -47,6 +47,7 @@ module io_m
     io_debug_on_the_fly, &
     iopar_read,          &
     iopar_backspace,     &
+    iopar_find_line,     &
     io_skip_header,      &
     io_file_exists
 
@@ -639,22 +640,30 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine iopar_read(grp, iunit, line, ierr)
+  subroutine iopar_read(grp, iunit, lines, n_lines, ierr)
     type(mpi_grp_t),  intent(in)  :: grp
     integer,          intent(in)  :: iunit
-    character(len=*), intent(out) :: line
+    character(len=*), intent(out) :: lines(:)
+    integer,          intent(in)  :: n_lines
     integer,          intent(out) :: ierr
+
+    integer :: il
 
     PUSH_SUB(iopar_read)
 
+    ASSERT(n_lines <= size(lines))
+
     if(mpi_grp_is_root(grp)) then
-      read(iunit, '(a)', iostat=ierr) line
+      do il = 1, n_lines
+        read(iunit, '(a)', iostat=ierr) lines(il)
+        if (ierr /= 0) exit
+      end do
     end if
 
 #if defined(HAVE_MPI)
     if(grp%size > 1) then
       call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
-      call MPI_Bcast(line, len(line), MPI_CHARACTER, 0, grp%comm, mpi_err)
+      call MPI_Bcast(lines(1), len(lines(1))*n_lines, MPI_CHARACTER, 0, grp%comm, mpi_err)
       ! MPI_Bcast is not a synchronization point, this can cause
       ! problems when iopar_read is called several times (in a loop,
       ! for example). So we add a barrier to make sure the calls are properly synchronized.
@@ -664,7 +673,6 @@ contains
 
     POP_SUB(iopar_read)
   end subroutine iopar_read
-
 
   ! ---------------------------------------------------------
   subroutine iopar_backspace(grp, iunit)
@@ -680,6 +688,38 @@ contains
     POP_SUB(iopar_backspace)
 
   end subroutine iopar_backspace
+
+
+  ! ---------------------------------------------------------
+  subroutine iopar_find_line(grp, iunit, line, ierr)
+    type(mpi_grp_t),  intent(in)  :: grp
+    integer,          intent(in)  :: iunit
+    character(len=*), intent(in)  :: line
+    integer,          intent(out) :: ierr
+
+    character(len=80) :: read_line
+
+    PUSH_SUB(io_find_line)
+
+    if(mpi_grp_is_root(grp)) then
+      rewind(iunit)
+      do
+        read(iunit, '(a)', iostat=ierr) read_line
+        if (ierr /= 0 .or. trim(line)  ==  trim(read_line)) exit
+      end do
+    end if
+
+#if defined(HAVE_MPI)
+    if(grp%size > 1) then
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
+      ! MPI_Bcast is not a synchronization point, so we add a barrier 
+      ! to make sure the calls are properly synchronized.
+      call MPI_Barrier(grp%comm, mpi_err)
+    end if
+#endif
+
+    POP_SUB(io_find_line)
+  end subroutine iopar_find_line
 
 
   ! ---------------------------------------------------------

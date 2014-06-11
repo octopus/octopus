@@ -1881,7 +1881,7 @@ subroutine pes_mask_load(restart, mask, st)
   character(len=80) :: filename, path
   integer :: itot, ik, ist, idim , np, ierr, iunit
   integer :: ll(3)
-  character(len=128) :: line
+  character(len=128) :: lines(2)
   character(len=7) :: dummy
   FLOAT, allocatable :: rr(:)
 
@@ -1918,10 +1918,9 @@ subroutine pes_mask_load(restart, mask, st)
     message(1) = 'Could not read from file "pes_mask".'
     call messages_fatal(1)
   end if
-  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, line, ierr)
-  read(line,'(a10,2x,es19.12)') dummy, rr(1)
-  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, line, ierr)
-  read(line,'(a10,2x,es19.12)') dummy, rr(2)
+  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, lines, 2, ierr)
+  read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
+  read(lines(2),'(a10,2x,es19.12)') dummy, rr(2)
   call restart_close(restart, iunit)
 
   if(rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then

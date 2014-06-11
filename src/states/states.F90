@@ -686,10 +686,11 @@ contains
   contains
 
     subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, ist, ik, idim, idir, err
+      integer            :: occs, iline, ist, ik, idim, idir, err
       FLOAT              :: flt, eigenval, imeigenval, occ, kweights
       character          :: char
-      character(len=256) :: line, chars
+      character(len=256) :: chars
+      character(len=256), allocatable :: lines(:)
 
       PUSH_SUB(states_init.read_ob_eigenval_and_occ)
 
@@ -702,22 +703,15 @@ contains
         call messages_fatal(1)
       end if
 
-      ! Skip two lines.
-      call iopar_read(mpi_world, occs, line, err)
-      call iopar_read(mpi_world, occs, line, err)
+      SAFE_ALLOCATE(lines(3 + st%ob_nst*st%ob_d%nik))
 
-      do
-        ! Check for end of file.
-        call iopar_read(mpi_world, occs, line, err)
+      call iopar_read(mpi_world, occs, lines, 3 + st%ob_nst*st%ob_d%nik, err)
 
-        read(line, '(a)') char
-        if(char  ==  '%') exit
-        call iopar_backspace(mpi_world, occs)
+      do iline = 3, 2 + st%ob_nst*st%ob_d%nik
 
         ! Extract eigenvalue.
-        call iopar_read(mpi_world, occs, line, err)
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(line, *) occ, char, eigenval, char, imeigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
+        read(lines(iline), *) occ, char, eigenval, char, imeigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
            char, chars, char, ik, char, ist, char, idim
 
         if(st%d%ispin  ==  SPIN_POLARIZED) then
@@ -737,6 +731,8 @@ contains
           st%ob_d%kweights(ik)    = kweights
         end if
       end do
+
+      SAFE_DEALLOCATE_A(lines)
 
       call restart_close(ob_restart, occs)
 
@@ -758,7 +754,7 @@ contains
     integer,         intent(out)   :: nst
     integer,         intent(out)   :: ierr
 
-    character(len=256) :: line
+    character(len=256) :: lines(3)
     character(len=20)   :: char
     integer :: iunit, err
 
@@ -773,12 +769,10 @@ contains
       return
     end if
 
-    call iopar_read(mpi_grp, iunit, line, err)
-    read(line, *) char, nst
-    call iopar_read(mpi_grp, iunit, line, err)
-    read(line, *) char, dim
-    call iopar_read(mpi_grp, iunit, line, err)
-    read(line, *) char, nik
+    call iopar_read(mpi_grp, iunit, lines, 3, err)
+    read(lines(1), *) char, nst
+    read(lines(2), *) char, dim
+    read(lines(3), *) char, nik
 
     call restart_close(restart, iunit)
 

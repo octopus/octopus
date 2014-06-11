@@ -51,7 +51,7 @@ contains
     PUSH_SUB(fio_simul_box_init)
     call json_get(config, "dir", dir, ierr)
     !if(ierr/=JSON_OK)dir="./"//trim(restart_loaddir)//GS_DIR
-    call simul_box_load(this, dir, "mesh")
+!    call simul_box_load(this, dir, "mesh")
     ASSERT(this%box_shape/=HYPERCUBE)
     this%complex_boundaries=.false.
     call simul_box_lookup_init(this, geo)

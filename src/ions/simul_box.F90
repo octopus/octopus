@@ -1225,16 +1225,17 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_dump(sb, dir, filename)
+  subroutine simul_box_dump(sb, dir, filename, mpi_grp)
     type(simul_box_t), intent(in) :: sb
     character(len=*),  intent(in) :: dir
     character(len=*),  intent(in) :: filename
+    type(mpi_grp_t),   intent(in) :: mpi_grp
 
     integer :: iunit, idir
 
     PUSH_SUB(simul_box_dump)
 
-    if (mpi_grp_is_root(mpi_world)) then
+    if (mpi_grp_is_root(mpi_grp)) then
 
       iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", is_tmp=.true.)
 
@@ -1283,84 +1284,85 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_load(sb, dir, filename)
+  subroutine simul_box_load(sb, dir, filename, mpi_grp)
     type(simul_box_t), intent(inout) :: sb
     character(len=*),  intent(in)    :: dir
     character(len=*),  intent(in)    :: filename
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
 
     integer            :: iunit, idim, il, ierr
     character(len=20)  :: str
-    character(len=300) :: line
+    character(len=100), allocatable :: lines(:)
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
     PUSH_SUB(simul_box_load)
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)  
 
-    ! Find (and throw away) the dump tag.
-    do
-      call iopar_read(mpi_world, iunit, line, ierr)
-      if(trim(line)  ==  dump_tag) exit
-    end do
+    ! Find the dump tag.
+    call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to find simulation box dump tag in '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    end if
 
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%box_shape
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%dim
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%periodic_dim
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%transport_dim
+    SAFE_ALLOCATE(lines(4))
 
-    select case(sb%box_shape)
+    call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+    read(lines(1), *) str, sb%box_shape
+    read(lines(2), *) str, sb%dim
+    read(lines(3), *) str, sb%periodic_dim
+    read(lines(4), *) str, sb%transport_dim
+
+    select case (sb%box_shape)
     case(SPHERE, MINIMUM)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%rsize
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:sb%dim)       
+      call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+      read(lines(1), *) str, sb%rsize
+      read(lines(2), *) str, sb%lsize(1:sb%dim)
     case(CYLINDER)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%rsize
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%xsize
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:sb%dim)
+      call iopar_read(mpi_grp, iunit, lines, 3, ierr)
+      read(lines(1), *) str, sb%rsize
+      read(lines(2), *) str, sb%xsize
+      read(lines(3), *) str, sb%lsize(1:sb%dim)
     case(PARALLELEPIPED)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:sb%dim)
+      call iopar_read(mpi_grp, iunit, lines, 1, ierr)
+      read(lines(1), *) str, sb%lsize(1:sb%dim)
     case(BOX_USDEF)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:sb%dim)
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%user_def
+      call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+      read(lines(1), *) str, sb%lsize(1:sb%dim)
+      read(lines(2), *) str, sb%user_def
     end select
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%box_offset(1:sb%dim)
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line,*) str, sb%mr_flag
+
+    call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+    read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
+    read(lines(2),'(a20,l7)') str, sb%mr_flag
+    SAFE_DEALLOCATE_A(lines)
+
     if(sb%mr_flag) then
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line,*) str, sb%hr_area%num_areas
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line,*) str, sb%hr_area%num_radii
+      SAFE_ALLOCATE(lines(2))
+      call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+      read(lines(1),*) str, sb%hr_area%num_areas
+      read(lines(2),*) str, sb%hr_area%num_radii
       SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
       do il = 1, sb%hr_area%num_radii
-        call iopar_read(mpi_world, iunit, line, ierr)
-        read(line,*) str, sb%hr_area%radius(il)
+        call iopar_read(mpi_grp, iunit, lines, 1, ierr)
+        read(lines(1),*) str, sb%hr_area%radius(il)
       end do
       do idim = 1, sb%dim
-        call iopar_read(mpi_world, iunit, line, ierr)
-        read(line, *) str, sb%hr_area%center(idim)
+        call iopar_read(mpi_grp, iunit, lines, 1, ierr)
+        read(lines(1), *) str, sb%hr_area%center(idim)
       end do
+      SAFE_DEALLOCATE_A(lines)
     end if
+
+    SAFE_ALLOCATE(lines(sb%dim))
+    call iopar_read(mpi_grp, iunit, lines, sb%dim, ierr)
     do idim = 1, sb%dim
-      call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, rlattice_primitive(1:sb%dim, idim)
+      read(lines(idim), *) str, rlattice_primitive(1:sb%dim, idim)
     end do
+    SAFE_DEALLOCATE_A(lines)
 
     call simul_box_build_lattice(sb, rlattice_primitive)
-
-    call iopar_read(mpi_world, iunit, line, ierr)
 
     call io_close(iunit)
 
@@ -1473,7 +1475,7 @@ contains
     PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
-      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh')
+      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world)
 
       ! Check whether
       ! * simulation box is a parallelepiped,
