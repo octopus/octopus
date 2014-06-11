@@ -454,7 +454,7 @@ contains
 #ifdef HAVE_LIBISF
         call messages_experimental('LIBISF Poisson solver')
 #else
-        message(1)="LIBISF was requiered, but not compiled"!
+        message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
         call messages_fatal(1)
 #endif
       end if
