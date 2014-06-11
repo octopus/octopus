@@ -747,27 +747,25 @@ contains
   end subroutine states_init
 
   ! ---------------------------------------------------------
-  !> Reads the files 'wfns' and 'occs' stored in the restart directory, and finds out
-  !! the kpoints, dim, and nst contained in it.
+  !> Reads the 'states' file in the restart directory, and finds out
+  !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(restart, mpi_grp, kpoints, dim, nst, ierr)
+  subroutine states_look(restart, mpi_grp, nik, dim, nst, ierr)
     type(restart_t), intent(inout) :: restart
     type(mpi_grp_t), intent(in)    :: mpi_grp
-    integer,         intent(out)   :: kpoints
+    integer,         intent(out)   :: nik
     integer,         intent(out)   :: dim
     integer,         intent(out)   :: nst
     integer,         intent(out)   :: ierr
 
     character(len=256) :: line
-    character(len=12)  :: filename
-    character(len=1)   :: char
-    integer :: iunit, iunit2, err, i, ist, idim, ik
-    FLOAT :: occ, eigenval
+    character(len=20)   :: char
+    integer :: iunit, err
 
     PUSH_SUB(states_look)
 
     ierr = 0
-    iunit = restart_open(restart, 'wfns')
+    iunit = restart_open(restart, 'states')
 
     if(iunit < 0) then
       ierr = -1
@@ -775,39 +773,14 @@ contains
       return
     end if
 
-    iunit2 = restart_open(restart, 'occs')
-
-    if(iunit2 < 0) then
-      call io_close(iunit, grp = mpi_grp)
-      ierr = -1
-      POP_SUB(states_look)
-      return
-    end if
-
-    ! Skip two lines.
     call iopar_read(mpi_grp, iunit, line, err)
+    read(line, *) char, nst
     call iopar_read(mpi_grp, iunit, line, err)
-    call iopar_read(mpi_grp, iunit2, line, err)
-    call iopar_read(mpi_grp, iunit2, line, err)
-
-    kpoints = 1
-    dim = 1
-    nst = 1
-
-    do
-      call iopar_read(mpi_grp, iunit, line, i)
-      read(line, '(a)') char
-      if(i /= 0.or.char=='%') exit
-      read(line, *) ik, char, ist, char, idim, char, filename
-      if(idim == 2)    dim     = 2
-      call iopar_read(mpi_grp, iunit2, line, err)
-      read(line, *) occ, char, eigenval
-      if(ik > kpoints) kpoints = ik
-      if(ist>nst)      nst     = ist
-    end do
+    read(line, *) char, dim
+    call iopar_read(mpi_grp, iunit, line, err)
+    read(line, *) char, nik
 
     call restart_close(restart, iunit)
-    call restart_close(restart, iunit2)
 
     POP_SUB(states_look)
   end subroutine states_look
