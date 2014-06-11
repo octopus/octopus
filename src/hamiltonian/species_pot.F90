@@ -399,7 +399,7 @@ contains
       call droot_solver_run(rs, func, x, conv, startval=startval)
 
       if(.not.conv) then
-        write(message(1),'(a)') 'Internal error in get_species_density.'
+        write(message(1),'(a)') 'Internal error in species_get_density.'
         call messages_fatal(1)
       end if
 
