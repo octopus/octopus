@@ -451,7 +451,12 @@ contains
       end if
 
       if (this%method == POISSON_LIBISF) then
+#ifdef HAVE_LIBISF
         call messages_experimental('LIBISF Poisson solver')
+#else
+        message(1)="LIBISF was requiered, but not compiled"!
+        call messages_fatal(1)
+#endif
       end if
     end select
 
