@@ -93,7 +93,7 @@ contains
         this%idx%lxyz_inv(this%idx%lxyz(i,1),this%idx%lxyz(i,2),this%idx%lxyz(i,3))=i
       end forall
       call checksum_calculate(1, this%np_part_global*this%sb%dim, this%idx%lxyz(1,1), this%idx%checksum)
-      call mesh_read_fingerprint(this, trim(dir)//"grid", ia, ib)
+!      call mesh_read_fingerprint(this, trim(dir)//"grid", ia, ib)
       ASSERT((ia==0).and.(ib==0))
       this%use_curvilinear=(cv%method/=CURV_METHOD_UNIFORM).or.sb%mr_flag
       nullify(this%resolution)

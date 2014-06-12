@@ -343,8 +343,10 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
+#if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
+#endif
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
@@ -526,7 +528,7 @@ contains
         !% when <tt>BoxShape = box_image</tt>. No default. Will search in current
         !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
-#if defined(HAVE_GDLIB)        
+#if defined(HAVE_GDLIB)
         call parse_string(datasets_check("BoxShapeImage"), "", sb%filename)
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
@@ -1225,122 +1227,144 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_dump(sb, dir, filename, mpi_grp)
-    type(simul_box_t), intent(in) :: sb
-    character(len=*),  intent(in) :: dir
-    character(len=*),  intent(in) :: filename
-    type(mpi_grp_t),   intent(in) :: mpi_grp
+  subroutine simul_box_dump(sb, dir, filename, mpi_grp, ierr)
+    type(simul_box_t), intent(in)  :: sb
+    character(len=*),  intent(in)  :: dir
+    character(len=*),  intent(in)  :: filename
+    type(mpi_grp_t),   intent(in)  :: mpi_grp
+    integer,           intent(out) :: ierr
 
     integer :: iunit, idir
 
     PUSH_SUB(simul_box_dump)
 
-    if (mpi_grp_is_root(mpi_grp)) then
+    ierr = 0
 
-      iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) ierr = -1
 
-      write(iunit, '(a)')             dump_tag
-      write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
-      write(iunit, '(a20,i4)')        'dim=                ', sb%dim
-      write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
-      write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
-      select case(sb%box_shape)
-      case(SPHERE, MINIMUM)
-        write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
-        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-      case(CYLINDER)
-        write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
-        write(iunit, '(a20,e22.14)')   'xlength=            ', sb%xsize
-        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-      case(PARALLELEPIPED)
-        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-      case(BOX_USDEF)
-        write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-        write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
-      end select
-      write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
-      write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
-      if(sb%mr_flag) then
-        write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
-        write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
-        do idir = 1, sb%hr_area%num_radii
-          write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
-        end do
+    if (ierr == 0) then
+      !Only root writes
+      if (mpi_grp_is_root(mpi_grp)) then
+        write(iunit, '(a)')             dump_tag
+        write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
+        write(iunit, '(a20,i4)')        'dim=                ', sb%dim
+        write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
+        write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
+        select case(sb%box_shape)
+        case(SPHERE, MINIMUM)
+          write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
+          write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+        case(CYLINDER)
+          write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
+          write(iunit, '(a20,e22.14)')   'xlength=            ', sb%xsize
+          write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+        case(PARALLELEPIPED)
+          write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+        case(BOX_USDEF)
+          write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
+          write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
+        end select
+        write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
+        write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
+        if(sb%mr_flag) then
+          write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
+          write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
+          do idir = 1, sb%hr_area%num_radii
+            write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
+          end do
+          do idir = 1, sb%dim
+            write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
+          end do
+        end if
         do idir = 1, sb%dim
-          write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
+          write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
+               sb%rlattice_primitive(1:sb%dim, idir)
         end do
+
       end if
-      do idir = 1, sb%dim
-        write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
-             sb%rlattice_primitive(1:sb%dim, idir)
-      end do
-
-      call io_close(iunit)
-
     end if
+
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(simul_box_dump)
   end subroutine simul_box_dump
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_load(sb, dir, filename, mpi_grp)
+  subroutine simul_box_load(sb, dir, filename, mpi_grp, ierr)
     type(simul_box_t), intent(inout) :: sb
     character(len=*),  intent(in)    :: dir
     character(len=*),  intent(in)    :: filename
     type(mpi_grp_t),   intent(in)    :: mpi_grp
+    integer,           intent(out)   :: ierr
 
-    integer            :: iunit, idim, il, ierr
+    integer            :: iunit, idim, il
     character(len=20)  :: str
     character(len=100), allocatable :: lines(:)
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
 
     PUSH_SUB(simul_box_load)
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)  
+    ierr = 0
+
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) ierr = -1
 
     ! Find the dump tag.
-    call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
-    if (ierr /= 0) then
-      message(1) = "Unable to find simulation box dump tag in '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
+    if (ierr == 0) then
+      call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
     end if
 
-    SAFE_ALLOCATE(lines(4))
+    if (ierr == 0) then
+      SAFE_ALLOCATE(lines(4))
+      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+    end if
 
-    call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-    read(lines(1), *) str, sb%box_shape
-    read(lines(2), *) str, sb%dim
-    read(lines(3), *) str, sb%periodic_dim
-    read(lines(4), *) str, sb%transport_dim
+    if (ierr == 0) then
+      read(lines(1), *) str, sb%box_shape
+      read(lines(2), *) str, sb%dim
+      read(lines(3), *) str, sb%periodic_dim
+      read(lines(4), *) str, sb%transport_dim
 
-    select case (sb%box_shape)
-    case(SPHERE, MINIMUM)
+      select case (sb%box_shape)
+      case(SPHERE, MINIMUM)
+        call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+        read(lines(1), *) str, sb%rsize
+        read(lines(2), *) str, sb%lsize(1:sb%dim)
+      case(CYLINDER)
+        call iopar_read(mpi_grp, iunit, lines, 3, ierr)
+        read(lines(1), *) str, sb%rsize
+        read(lines(2), *) str, sb%xsize
+        read(lines(3), *) str, sb%lsize(1:sb%dim)
+      case(PARALLELEPIPED)
+        call iopar_read(mpi_grp, iunit, lines, 1, ierr)
+        read(lines(1), *) str, sb%lsize(1:sb%dim)
+      case(BOX_USDEF)
+        call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+        read(lines(1), *) str, sb%lsize(1:sb%dim)
+        read(lines(2), *) str, sb%user_def
+      end select
+    end if
+
+    if (ierr == 0) then
       call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-      read(lines(1), *) str, sb%rsize
-      read(lines(2), *) str, sb%lsize(1:sb%dim)
-    case(CYLINDER)
-      call iopar_read(mpi_grp, iunit, lines, 3, ierr)
-      read(lines(1), *) str, sb%rsize
-      read(lines(2), *) str, sb%xsize
-      read(lines(3), *) str, sb%lsize(1:sb%dim)
-    case(PARALLELEPIPED)
-      call iopar_read(mpi_grp, iunit, lines, 1, ierr)
-      read(lines(1), *) str, sb%lsize(1:sb%dim)
-    case(BOX_USDEF)
-      call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-      read(lines(1), *) str, sb%lsize(1:sb%dim)
-      read(lines(2), *) str, sb%user_def
-    end select
+    end if
 
-    call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-    read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
-    read(lines(2),'(a20,l7)') str, sb%mr_flag
+    sb%mr_flag = .false.
+    if (ierr == 0) then
+      read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
+      read(lines(2),'(a20,l7)') str, sb%mr_flag
+    end if
+
     SAFE_DEALLOCATE_A(lines)
 
-    if(sb%mr_flag) then
+    if (ierr == 0 .and. sb%mr_flag) then
       SAFE_ALLOCATE(lines(2))
       call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+    end if
+
+    if (ierr == 0 .and. sb%mr_flag) then
       read(lines(1),*) str, sb%hr_area%num_areas
       read(lines(2),*) str, sb%hr_area%num_radii
       SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
@@ -1352,19 +1376,27 @@ contains
         call iopar_read(mpi_grp, iunit, lines, 1, ierr)
         read(lines(1), *) str, sb%hr_area%center(idim)
       end do
-      SAFE_DEALLOCATE_A(lines)
     end if
 
-    SAFE_ALLOCATE(lines(sb%dim))
-    call iopar_read(mpi_grp, iunit, lines, sb%dim, ierr)
-    do idim = 1, sb%dim
-      read(lines(idim), *) str, rlattice_primitive(1:sb%dim, idim)
-    end do
     SAFE_DEALLOCATE_A(lines)
 
-    call simul_box_build_lattice(sb, rlattice_primitive)
+    if (ierr == 0) then
+      SAFE_ALLOCATE(lines(sb%dim))
+      call iopar_read(mpi_grp, iunit, lines, sb%dim, ierr)
+    end if
 
-    call io_close(iunit)
+    if (ierr == 0) then
+      do idim = 1, sb%dim
+        read(lines(idim), *) str, rlattice_primitive(1:sb%dim, idim)
+      end do
+    end if
+    SAFE_DEALLOCATE_A(lines)
+
+    if (ierr == 0) then
+      call simul_box_build_lattice(sb, rlattice_primitive)
+    end if
+
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(simul_box_load)
   end subroutine simul_box_load
@@ -1470,12 +1502,16 @@ contains
     type(simul_box_t), intent(inout) :: lead_sb(:)
     character(len=*),  intent(in)    :: dir(:)
 
-    integer :: il
+    integer :: il, ierr
 
     PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
-      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world)
+      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to load simulation box from file: '"//trim(dir(il))//"/"//GS_DIR//"/mesh'."
+        call messages_fatal(1)
+      end if
 
       ! Check whether
       ! * simulation box is a parallelepiped,
@@ -1672,7 +1708,7 @@ contains
     logical, optional, intent(in) :: real_atoms_only
 
     integer :: iatom, jatom, idir
-    FLOAT   :: xx(MAX_DIM), rr
+    FLOAT   :: xx(MAX_DIM)
     logical :: real_atoms_only_
     type(species_t), pointer :: species
 

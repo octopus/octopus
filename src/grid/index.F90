@@ -147,20 +147,26 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_dump(idx, dir, filename)
-    type(index_t),    intent(in)    :: idx 
-    character(len=*), intent(in) :: dir
-    character(len=*), intent(in) :: filename
+  subroutine index_dump(idx, dir, filename, mpi_grp, ierr)
+    type(index_t),    intent(in)  :: idx 
+    character(len=*), intent(in)  :: dir
+    character(len=*), intent(in)  :: filename
+    type(mpi_grp_t),  intent(in)  :: mpi_grp
+    integer,          intent(out) :: ierr
 
     integer :: iunit, idir
 
     PUSH_SUB(index_dump)
 
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) then
+      ierr = -1
+      POP_SUB(index_dump)
+      return
+    end if
+
     !Only root writes to the file
-    if (mpi_grp_is_root(mpi_world)) then
-
-      iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", is_tmp=.true.)
-
+    if (mpi_grp_is_root(mpi_grp)) then
       write(iunit, '(a)') dump_tag
       write(iunit, '(a20,l1)')  'is_hypercube=       ', idx%is_hypercube
       write(iunit, '(a20,i21)') 'dim=                ', idx%dim
@@ -174,65 +180,89 @@ contains
         write(iunit, '(a20,i21)') 'checksum=           ', idx%checksum
       end if
 
-      call io_close(iunit)
-
     end if
+
+    call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(index_dump)
   end subroutine index_dump
 
 
   ! --------------------------------------------------------------
-  subroutine index_load(idx, dir, filename)
+  subroutine index_load(idx, dir, filename, mpi_grp, ierr)
     type(index_t),    intent(inout) :: idx
     character(len=*), intent(in)    :: dir
     character(len=*), intent(in)    :: filename
+    type(mpi_grp_t),  intent(in)    :: mpi_grp
+    integer,          intent(out)   :: ierr
 
     integer :: iunit, idir
-    character(len=100) :: line
+    character(len=100) :: lines(4)
     character(len=20)  :: str
 
     PUSH_SUB(index_load)
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true.)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) then
+      ierr = -1
+      POP_SUB(index_load)
+      return
+    end if
 
-    ! Find (and throw away) the dump tag.
-    do
-      read(iunit, '(a)') line
-      if(trim(line) == dump_tag) exit
-    end do
+    ! Find the dump tag.
+    call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
+    if (ierr /= 0) then
+      ierr = -2
+      POP_SUB(simul_box_load)
+      return
+    end if
 
     idx%nr = 0
     idx%ll = 0
     idx%enlarge = 0
 
-    read(iunit, '(a20,l1)')  str, idx%is_hypercube
-    read(iunit, '(a20,i21)') str, idx%dim
+    call iopar_read(mpi_grp, iunit, lines, 2, ierr)
+    read(lines(1), '(a20,l1)')  str, idx%is_hypercube
+    read(lines(2), '(a20,i21)') str, idx%dim
+
     if (.not. idx%is_hypercube) then
-      read(iunit, '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
-      read(iunit, '(a20,7i8)')  str, (idx%nr(2, idir), idir = 1,idx%dim)
-      read(iunit, '(a20,7i8)')  str, idx%ll(1:idx%dim)
-      read(iunit, '(a20,7i8)')  str, idx%enlarge(1:idx%dim)
+      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+      read(lines(1), '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
+      read(lines(2), '(a20,7i8)')  str, (idx%nr(2, idir), idir = 1,idx%dim)
+      read(lines(3), '(a20,7i8)')  str, idx%ll(1:idx%dim)
+      read(lines(4), '(a20,7i8)')  str, idx%enlarge(1:idx%dim)
     end if
 
-    call io_close(iunit)
+    call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(index_load)
   end subroutine index_load
 
 
   ! --------------------------------------------------------------
-  subroutine index_dump_lxyz(idx, np, dir, ierr)
+  subroutine index_dump_lxyz(idx, np, dir, mpi_grp, ierr)
     type(index_t),    intent(in)  :: idx
     integer,          intent(in)  :: np
     character(len=*), intent(in)  :: dir
+    type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: ierr
 
     PUSH_SUB(index_dump_lxyz)
 
-    if(.not. idx%is_hypercube) then
-      ASSERT(associated(idx%lxyz))
-      call io_binary_write(trim(dir)//'/lxyz.obf', np*idx%dim, idx%lxyz, ierr)
+    if (idx%is_hypercube) then
+      !Nothing to do
+      ierr = 0
+    else 
+      if (mpi_grp_is_root(mpi_grp)) then
+        ! lxyz is a global function and only root will write
+        ASSERT(associated(idx%lxyz))
+        call io_binary_write(trim(dir)//'/lxyz.obf', np*idx%dim, idx%lxyz, ierr)
+      end if
+
+#if defined(HAVE_MPI)
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+      call MPI_Barrier(mpi_grp%comm, mpi_err)
+#endif
     end if
 
     POP_SUB(index_dump_lxyz)
@@ -241,30 +271,48 @@ contains
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file
-  subroutine index_load_lxyz(idx, np, filename)
+  subroutine index_load_lxyz(idx, np, dir, mpi_grp, ierr)
     type(index_t),    intent(inout) :: idx
     integer,          intent(in)    :: np
-    character(len=*), intent(in)    :: filename
+    character(len=*), intent(in)    :: dir
+    type(mpi_grp_t),  intent(in)    :: mpi_grp
+    integer,          intent(out)   :: ierr
 
-    integer :: ip, idir, ix(MAX_DIM), ierr
+    integer :: ip, idir, ix(MAX_DIM)
 
     PUSH_SUB(index_load_lxyz)
 
-    ! FIXME 4D
-    ASSERT(.not. idx%is_hypercube)
+    if (idx%is_hypercube) then
+      !Nothing to do
+      ierr = 0
+    else
+      ASSERT(associated(idx%lxyz))
 
-    call io_binary_read(trim(filename)//'.obf', np*idx%dim, idx%lxyz, ierr)
+      if (mpi_grp_is_root(mpi_grp)) then
+        ! lxyz is a global function and only root will write
+        call io_binary_read(trim(dir)//"/lxyz.obf", np*idx%dim, idx%lxyz, ierr)
+        write(*,*) ierr
+      end if
 
-    if(ierr > 0) then
-      message(1) = "Failed to read file "//trim(filename)//'.obf'
-      call messages_fatal(1)
+#if defined(HAVE_MPI)
+      ! Broadcast the results and synchronize
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+      if (ierr == 0) then
+        call MPI_Bcast(idx%lxyz(1,1), np*idx%dim, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+      end if
+      call MPI_Barrier(mpi_grp%comm, mpi_err)
+#endif
+
+      ! Compute lxyz_inv from lxyz
+      if (ierr == 0) then
+        do ip = 1, np
+          forall (idir = 1:idx%dim) ix(idir) = idx%lxyz(ip, idir)
+          forall (idir = idx%dim + 1:MAX_DIM) ix(idir) = 0
+          idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
+        end do
+      end if
+
     end if
-
-    do ip = 1, np
-      forall (idir = 1:idx%dim) ix(idir) = idx%lxyz(ip, idir)
-      forall (idir = idx%dim + 1:MAX_DIM) ix(idir) = 0
-      idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
-    end do
 
     POP_SUB(index_load_lxyz)
   end subroutine index_load_lxyz

@@ -460,7 +460,7 @@ contains
     end if
 
     if (restart%data_type == RESTART_UNDEFINED) then
-      tag = "some "
+      tag = "Some "
     else
       tag = info(data_type)%tag
     end if
@@ -473,22 +473,39 @@ contains
 
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
-        if (mpi_grp_is_root(restart%mpi_grp)) then
-          if (present(mesh)) then
-            iunit = io_open(trim(restart%pwd)//'/mesh', action='write', is_tmp=.true.)
+        if (present(mesh)) then
+          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., is_tmp=.true., grp=mpi_grp)
+          if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
             write(iunit,'(a)') '# except for the geometry of the system.'
-            call io_close(iunit)
+          end if
+          call io_close(iunit, grp=mpi_grp)
+          
+          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to dump mesh information to directory '"//trim(restart%pwd)//"'."
+            call messages_fatal(1)
+          end if
 
-            call mesh_dump(mesh, restart%pwd, "mesh")
-            call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, ierr)
+          call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to dump index information to directory '"//trim(restart%pwd)//"'."
+            call messages_fatal(1)
+          end if
 
-            call mesh_write_fingerprint(mesh, trim(restart%pwd)//"/"//"grid")
+          call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to dump mesh fingerprint to directory '"//trim(restart%pwd)//"'."
+            call messages_fatal(1)
           end if
 
           if (present(sb)) then
-            call simul_box_dump(sb, restart%pwd, "mesh", restart%mpi_grp)
+            call simul_box_dump(sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
+            if (ierr /= 0) then
+              message(1) = "Unable to dump simulation box information to directory '"//trim(restart%pwd)//"'."
+              call messages_fatal(1)
+            end if
           end if
         end if
         
@@ -507,7 +524,8 @@ contains
         call messages_info(1)
 
         if (present(mesh)) then
-          call mesh_check_dump_compatibility(restart%pwd, mesh, grid_changed, grid_reordered, restart%map, ierr)
+          call mesh_check_dump_compatibility(mesh, restart%pwd, "grid", restart%mpi_grp, &
+            grid_changed, grid_reordered, restart%map, ierr)
 
           ! Check if an error occurred. If so, stop the calculation, because at the moment we really need a compatible mesh.
           if (ierr /= 0) then

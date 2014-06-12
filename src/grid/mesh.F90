@@ -393,26 +393,35 @@ contains
   
   
   ! -------------------------------------------------------------- 
-  subroutine mesh_dump(mesh, dir, filename)
-    type(mesh_t),     intent(in) :: mesh
-    character(len=*), intent(in) :: dir
-    character(len=*), intent(in) :: filename
+  subroutine mesh_dump(mesh, dir, filename, mpi_grp, ierr)
+    type(mesh_t),     intent(in)  :: mesh
+    character(len=*), intent(in)  :: dir
+    character(len=*), intent(in)  :: filename
+    type(mpi_grp_t),  intent(in)  :: mpi_grp
+    integer,          intent(out) :: ierr
     
     integer :: iunit
 
     PUSH_SUB(mesh_dump)
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", is_tmp=.true.)
+    ierr = 0
 
-    write(iunit, '(a)') dump_tag
-    write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
-    write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
-    write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
-    write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) ierr = -1
 
-    call io_close(iunit)
+    if (ierr == 0 .and. mpi_grp_is_root(mpi_grp)) then
+      write(iunit, '(a)') dump_tag
+      write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
+      write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
+      write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
+      write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+    end if
 
-    call index_dump(mesh%idx, dir, filename)
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
+
+    if (ierr == 0) then
+      call index_dump(mesh%idx, dir, filename, mpi_grp, ierr)
+    end if
 
     POP_SUB(mesh_dump)
   end subroutine mesh_dump
@@ -420,60 +429,84 @@ contains
   
   ! -------------------------------------------------------------- 
   !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(mesh, dir, filename)
+  subroutine mesh_load(mesh, dir, filename, mpi_grp, ierr)
     type(mesh_t),     intent(inout) :: mesh
     character(len=*), intent(in)    :: dir
     character(len=*), intent(in)    :: filename
+    type(mpi_grp_t),  intent(in)    :: mpi_grp
+    integer,          intent(out)   :: ierr
 
     integer :: iunit
     character(len=20)  :: str
-    character(len=100) :: line
+    character(len=100) :: lines(4)
 
     PUSH_SUB(mesh_load)
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., is_tmp=.true.)
-
-    ! Find (and throw away) the dump tag.
-    do
-      read(iunit, '(a)') line
-      if(trim(line) == dump_tag) exit
-    end do
-
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
-    read(iunit, '(a20,1i10)') str, mesh%np
-    read(iunit, '(a20,1i10)') str, mesh%np_part
-    read(iunit, '(a20,1i10)') str, mesh%np_global
-    read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%x, mesh%vol_pp, mesh%resolution)
-    mesh%parallel_in_domains = .false.
+    ierr = 0
 
-    call io_close(iunit)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., is_tmp=.true., grp=mpi_grp)
+    if (iunit < 0) ierr = -1
 
-    call index_load(mesh%idx, dir, filename)
+    if (ierr == 0) then
+      ! Find the dump tag.
+      call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
+    end if
+
+    if (ierr == 0) then
+      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+    end if
+
+    if (ierr == 0) then
+      read(lines(1), '(a20,1i10)') str, mesh%np
+      read(lines(2), '(a20,1i10)') str, mesh%np_part
+      read(lines(3), '(a20,1i10)') str, mesh%np_global
+      read(lines(4), '(a20,1i10)') str, mesh%np_part_global
+      nullify(mesh%x, mesh%vol_pp, mesh%resolution)
+      mesh%parallel_in_domains = .false.
+    end if
+
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
+
+    if (ierr == 0) then
+      call index_load(mesh%idx, dir, filename, mpi_grp, ierr)
+    end if
 
     POP_SUB(mesh_load)
   end subroutine mesh_load
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_write_fingerprint(mesh, filename)
-    type(mesh_t),     intent(in) :: mesh
-    character(len=*), intent(in) :: filename
+  subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, ierr)
+    type(mesh_t),     intent(in)  :: mesh
+    character(len=*), intent(in)  :: dir
+    character(len=*), intent(in)  :: filename
+    type(mpi_grp_t),  intent(in)  :: mpi_grp
+    integer,          intent(out) :: ierr
 
     integer :: iunit
 
     PUSH_SUB(mesh_write_fingerprint)
 
-    iunit = io_open(trim(filename), action='write', is_tmp=.true.)
-    write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
-    if(mesh%sb%box_shape /= HYPERCUBE) then
-      write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
-      write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
-      write(iunit, '(a20,i21)')  'algorithm=          ', 1
-      write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
+    ierr = 0
+
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', is_tmp=.true., die=.false., grp=mpi_grp)
+    if (iunit < 0) ierr = -1
+
+    if (ierr == 0) then
+      if (mpi_grp_is_root(mpi_grp)) then
+        write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
+        if(mesh%sb%box_shape /= HYPERCUBE) then
+          write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
+          write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
+          write(iunit, '(a20,i21)')  'algorithm=          ', 1
+          write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
+        end if
+      end if
     end if
-    call io_close(iunit)
+
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(mesh_write_fingerprint)
   end subroutine mesh_write_fingerprint
@@ -482,63 +515,78 @@ contains
   ! -----------------------------------------------------------------------
   !> This function reads the fingerprint of a mesh written in
   !! filename. If the meshes are equal (same fingerprint) return values
-  !! are 0, otherwise it returns the size of the mesh stored. If the
-  !! fingerprint cannot be read, it returns -1.
-  subroutine mesh_read_fingerprint(mesh, filename, read_np_part, read_np)
+  !! are 0, otherwise it returns the size of the mesh stored.
+  !! fingerprint cannot be read, it returns ierr /= 0.
+  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
     type(mesh_t),     intent(in)  :: mesh
+    character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
+    type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: read_np_part
     integer,          intent(out) :: read_np
+    integer,          intent(out) :: ierr
 
     character(len=20)  :: str
+    character(len=100) :: lines(4)
     integer :: iunit, box_shape, algorithm
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
 
-    iunit = io_open(trim(filename), action='read', status='old', die=.false., is_tmp = .true.)
+    ierr = 0
+    read_np_part = 0
+    read_np = 0
 
-    if(iunit < 0) then
-      read_np_part = -1
-      read_np = -1
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., is_tmp = .true., grp=mpi_grp)
+    if(iunit < 0) ierr = -1
 
-    else
-      read(iunit, '(a20,i21)')  str, box_shape
-      if (box_shape /= HYPERCUBE) then
-        read(iunit, '(a20,i21)')  str, read_np_part
-        read(iunit, '(a20,i21)')  str, read_np
-        read(iunit, '(a20,i21)')  str, algorithm
-        read(iunit, '(a20,i21)')  str, checksum
+    if (ierr == 0) then
+      call iopar_read(mpi_grp, iunit, lines, 1, ierr)
+    end if
 
-        ASSERT(read_np_part >= read_np)
+    if (ierr == 0) then
+      read(lines(1), '(a20,i21)')  str, box_shape
+    end if
+
+    if (ierr == 0 .and. box_shape == HYPERCUBE) then
+      ! We have a hypercube: we will assume everything is OK...
+      message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
+      call messages_warning(1)
+    end if
+
+    if (ierr == 0 .and. box_shape /= HYPERCUBE) then
+      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+    end if
+
+    if (ierr == 0 .and. box_shape /= HYPERCUBE) then
+      read(lines(1), '(a20,i21)')  str, read_np_part
+      read(lines(2), '(a20,i21)')  str, read_np
+      read(lines(3), '(a20,i21)')  str, algorithm
+      read(lines(4), '(a20,i21)')  str, checksum
+
+      ASSERT(read_np_part >= read_np)
       
-        if (read_np_part == mesh%np_part_global &
-             .and. read_np == mesh%np_global &
-             .and. algorithm == 1 &
-             .and. checksum == mesh%idx%checksum) then
-          read_np_part = 0
-          read_np = 0
-        end if
-
-      else
-        ! We have a hypercube: we will assume everything is OK...
+      if (read_np_part == mesh%np_part_global &
+           .and. read_np == mesh%np_global &
+           .and. algorithm == 1 &
+           .and. checksum == mesh%idx%checksum) then
         read_np_part = 0
         read_np = 0
-        
-        message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
-        call messages_warning(1)
       end if
-      call io_close(iunit)
 
     end if
+
+    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(mesh_read_fingerprint)
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(dir, mesh, grid_changed, grid_reordered, map, ierr)
-    character(len=*),     intent(in)  :: dir    
+  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, ierr)
     type(mesh_t),         intent(in)  :: mesh
+    character(len=*),     intent(in)  :: dir
+    character(len=*),     intent(in)  :: filename
+    type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
     integer, pointer,     intent(out) :: map(:)
@@ -552,14 +600,11 @@ contains
     nullify(map)
     grid_changed = .false.
     grid_reordered = .false.
-    ierr = 0
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, trim(dir)//'/grid', read_np_part, read_np)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
 
-    if (read_np < 0) then
-      ierr = -1
-    else if (read_np > 0) then
+    if (ierr == 0 .and. read_np > 0) then
 
       if (.not. associated(mesh%sb)) then
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
@@ -585,7 +630,7 @@ contains
           do ip = 1, read_np
             xx = 0
             xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
-            if(any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
+            if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
                  any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
               map(ip) = 0
               grid_reordered = .false.

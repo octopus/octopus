@@ -148,8 +148,7 @@ subroutine mesh_read_lead(ob_grid, mesh)
   type(ob_grid_t), target, intent(in)    :: ob_grid
   type(mesh_t),    target, intent(in)    :: mesh
 
-  integer :: il
-
+  integer :: il, ierr
   type(mesh_t), pointer :: mm
   integer :: nr(1:2, 1:MAX_DIM)
 
@@ -160,12 +159,21 @@ subroutine mesh_read_lead(ob_grid, mesh)
     mm%sb => mesh%sb
     mm%cv => mesh%cv
     mm%parallel_in_domains = mesh%parallel_in_domains
-    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh')
+    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh', mpi_world, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to load mesh from file '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"mesh'."
+      call messages_fatal(1)
+    end if
+
     ! Read the lxyz maps.
     nr = mm%idx%nr
     SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
+    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, mpi_world, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to load index map from directory '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR"'."
+      call messages_fatal(1)
+    end if
   end do
 
   POP_SUB(mesh_read_lead)
@@ -818,7 +826,7 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #ifdef HAVE_MPI
-    integer :: ii, jj, ipart, jpart, ip, ix, iy, iz
+    integer :: ii, jj, ipart, jpart, ip
     integer, allocatable :: gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
@@ -856,7 +864,7 @@ contains
     call parse_logical(datasets_check('MeshPartitionRead'), .true., read_partition)
 
     ierr = -1
-    if(read_partition) call mesh_partition_read(partition_dir, mesh, ierr)
+    if(read_partition) call mesh_partition_load(partition_dir, mesh, ierr)
 
 
     if(ierr /= 0) then
@@ -902,7 +910,14 @@ contains
       !%End
       call parse_logical(datasets_check('MeshPartitionWrite'), .true., write_partition)
 
-      if (write_partition) call mesh_partition_write(partition_dir, mesh, vsize)
+      if (mpi_grp_is_root(mesh%mpi_grp)) then
+        call io_mkdir(trim(partition_dir), is_tmp = .true., parents=.true.)
+      end if
+      if (write_partition) call mesh_partition_dump(partition_dir, mesh, vsize, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write partition to directory '"//trim(partition_dir)//"'."
+        call messages_warning(1)
+      end if
     end if
 
     !At the moment we still need the global partition. This will be removed in near future.

@@ -37,8 +37,8 @@ module partition_m
     partition_init,                 &
     partition_end,                  &
     partition_set,                  & 
-    partition_write,                &
-    partition_read,                 &
+    partition_dump,                 &
+    partition_load,                 &
     partition_get_local_size,       &
     partition_get_global,           &
     partition_get_partition_number, &
@@ -147,17 +147,18 @@ contains
   ! ---------------------------------------------------------
   !> Partition is written in parallel if MPI2 is available.
   !! Otherwise, is gathered in root and then written.
-  subroutine partition_write(partition, filename)
-    type(partition_t), intent(in) :: partition
-    character(len=*),  intent(in) :: filename
+  subroutine partition_dump(partition, filename, ierr)
+    type(partition_t), intent(in)  :: partition
+    character(len=*),  intent(in)  :: filename
+    integer,           intent(out) :: ierr
 
-    integer :: ipart, ierr
+    integer :: ipart
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
-    PUSH_SUB(partition_write)
+    PUSH_SUB(partition_dump)
 
-#ifdef HAVE_MPI2    
+#ifdef HAVE_MPI2
     ! Calculate displacements for writing
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(sdispls(1:partition%npart))
@@ -171,7 +172,7 @@ contains
     
     ! Write the header (root only) and wait
     ierr = 0
-    if (partition%mpi_grp%rank == 0) then
+    if (mpi_grp_is_root(partition%mpi_grp)) then
       call io_binary_write_header(filename, partition%np_global, partition%part(1), ierr)
     end if
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
@@ -201,13 +202,13 @@ contains
     SAFE_DEALLOCATE_A(part_global)
 #endif
 
-    POP_SUB(partition_write)
-  end subroutine partition_write
+    POP_SUB(partition_dump)
+  end subroutine partition_dump
 
   ! ---------------------------------------------------------
   !> Partition is read in parallel if MPI2 is available.
   !! Otherwise, is read by the root and then scattered
-  subroutine partition_read(partition, filename, ierr)
+  subroutine partition_load(partition, filename, ierr)
     type(partition_t), intent(inout) :: partition
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
@@ -216,7 +217,7 @@ contains
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
-    PUSH_SUB(partition_read)
+    PUSH_SUB(partition_load)
     
     ! This is a writing to avoid an optimization of gfortran with -O3
     write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)
@@ -266,8 +267,8 @@ contains
     SAFE_DEALLOCATE_A(scounts)
     SAFE_DEALLOCATE_A(sdispls)
     
-    POP_SUB(partition_read)
-  end subroutine partition_read
+    POP_SUB(partition_load)
+  end subroutine partition_load
 
   ! ---------------------------------------------------------
   subroutine partition_get_local_size(partition, istart, np_local)
