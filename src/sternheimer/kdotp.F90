@@ -138,7 +138,7 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(restart_load, sys%st, sys%gr, is_complex = complex_response)
+    call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
     call restart_end(restart_load)
 
     ! Start restart. Note: we are going to use the same directory to read and write.

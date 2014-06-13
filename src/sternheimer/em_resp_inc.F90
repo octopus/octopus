@@ -94,14 +94,21 @@ subroutine X(run_sternheimer)()
       call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
         restart_load, em_rho_tag(closest_omega, idir), ierr)
       
-      if(ierr == 0 .and. &
+      if (ierr == 0) then 
+        message(1) = "Loaded restart density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+      else
+        message(1) = "Could not load restart density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+      end if
+      call messages_info(1)
+
+      if (ierr == 0 .and. &
         abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
         ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
         exact_freq = .true.
       endif
     end if
     
-    if(ierr == 0 .and. em_vars%nsigma == 2) then 
+    if (ierr == 0 .and. em_vars%nsigma == 2) then 
       sigma_alt = 1
       if(opp_freq) sigma_alt = 2
       

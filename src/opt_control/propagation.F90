@@ -67,8 +67,7 @@ module propagation_m
             oct_prop_t,           &
             oct_prop_init,        &
             oct_prop_check,       &
-            oct_prop_end,         &
-            oct_prop_dump
+            oct_prop_end
 
 
   type oct_prop_t
@@ -136,7 +135,7 @@ contains
     type(oct_prop_t), optional, intent(inout)  :: prop
     logical, optional,          intent(in)     :: write_iter
 
-    integer :: ii, istep
+    integer :: ii, istep, ierr
     logical :: write_iter_ = .false.
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
@@ -203,7 +202,13 @@ contains
 
     call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
-    if(present(prop)) call oct_prop_dump(prop, 0, psi, gr)
+    if (present(prop)) then
+      call oct_prop_dump_states(prop, 0, psi, gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write OCT states restart."
+        call messages_warning(1)
+      end if
+    end if
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
@@ -213,7 +218,13 @@ contains
 
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
-      if(present(prop)) call oct_prop_dump(prop, istep, psi, gr)
+      if(present(prop)) then
+        call oct_prop_dump_states(prop, istep, psi, gr, ierr)
+        if (ierr /= 0) then
+          message(1) = "Unable to write OCT states restart."
+          call messages_warning(1)
+        end if
+      end if
 
       ! update
       call v_ks_calc(sys%ks, hm, psi, sys%geo, time = istep*td%dt)
@@ -266,7 +277,7 @@ contains
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(oct_prop_t),          intent(inout) :: prop
 
-    integer :: istep
+    integer :: istep, ierr
     type(grid_t),  pointer :: gr
     type(states_t), pointer :: psi
 
@@ -285,13 +296,23 @@ contains
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    call oct_prop_dump(prop, td%max_iter, psi, gr)
+    call oct_prop_dump_states(prop, td%max_iter, psi, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to write OCT states restart."
+      call messages_warning(1)
+    end if
     
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep-1, td%ions, sys%geo)
-      call oct_prop_dump(prop, istep - 1, psi, gr)
+
+      call oct_prop_dump_states(prop, istep - 1, psi, gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write OCT states restart."
+        call messages_warning(1)
+      end if
+
       call v_ks_calc(sys%ks, hm, psi, sys%geo)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
@@ -326,7 +347,7 @@ contains
     type(oct_prop_t),          intent(inout) :: prop_chi
     type(oct_prop_t),          intent(inout) :: prop_psi
 
-    integer :: i
+    integer :: i, ierr
     logical :: aux_fwd_propagation
     type(states_t) :: psi2
     type(opt_control_state_t) :: qcchi
@@ -373,8 +394,16 @@ contains
       call propagator_run_zero_iter(hm, gr, tr_psi2)
     end if
 
-    call oct_prop_dump(prop_psi, 0, psi, gr)
-    call oct_prop_load_state(prop_chi, chi, gr, 0)
+    call oct_prop_dump_states(prop_psi, 0, psi, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to write OCT states restart."
+      call messages_warning(1)
+    end if
+    call oct_prop_load_states(prop_chi, chi, gr, 0, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read OCT states restart."
+      call messages_fatal(1)
+    end if
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -389,7 +418,12 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
-      call oct_prop_dump(prop_psi, i, psi, gr)
+
+      call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write OCT states restart."
+        call messages_warning(1)
+      end if
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
     call update_field(td%max_iter+1, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -434,7 +468,7 @@ contains
     type(oct_prop_t),          intent(inout) :: prop_chi
     type(oct_prop_t),          intent(inout) :: prop_psi
 
-    integer :: i
+    integer :: i, ierr
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
@@ -458,7 +492,11 @@ contains
     call propagator_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
-    call oct_prop_load_state(prop_psi, psi, gr, td%max_iter)
+    call oct_prop_load_states(prop_psi, psi, gr, td%max_iter, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read OCT states restart."
+      call messages_fatal(1)
+    end if
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
@@ -467,14 +505,23 @@ contains
     call propagator_run_zero_iter(hm, gr, tr_chi)
 
     td%dt = -td%dt
-    call oct_prop_dump(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_dump_states(prop_chi, td%max_iter, chi, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to write OCT states restart."
+      call messages_warning(1)
+    end if
+
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
-      call oct_prop_dump(prop_chi, i-1, chi, gr)
+      call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write OCT states restart."
+        call messages_warning(1)
+      end if
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
@@ -519,7 +566,7 @@ contains
     type(oct_prop_t),                  intent(inout) :: prop_chi
     type(oct_prop_t),                  intent(inout) :: prop_psi
 
-    integer :: i
+    integer :: i, ierr
     logical :: freeze
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
@@ -550,7 +597,11 @@ contains
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, qcchi)
     psi => opt_control_point_qs(qcpsi)
-    call oct_prop_load_state(prop_psi, psi, gr, td%max_iter)
+    call oct_prop_load_states(prop_psi, psi, gr, td%max_iter, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read OCT states restart."
+      call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(vhxc(1:gr%mesh%np, 1:hm%d%nspin))
 
@@ -560,7 +611,11 @@ contains
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
-    call oct_prop_dump(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_dump_states(prop_chi, td%max_iter, chi, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to write OCT states restart."
+      call messages_warning(1)
+    end if
 
     call states_copy(st_ref, psi)
 
@@ -622,7 +677,11 @@ contains
       end if
 
       hm%vhxc(:, :) = vhxc(:, :)
-      call oct_prop_dump(prop_chi, i-1, chi, gr)
+      call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write OCT states restart."
+        call messages_warning(1)
+      end if
 
       if( (mod(i, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter-i, td%max_iter)
     end do
@@ -1006,54 +1065,105 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_load_state(prop, psi, gr, iter)
+  subroutine oct_prop_load_states(prop, psi, gr, iter, ierr)
     type(oct_prop_t),  intent(inout) :: prop
     type(states_t),    intent(inout) :: psi
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: iter
+    integer,           intent(out)   :: ierr
 
+    integer :: j, err
     character(len=80) :: dirname
-    integer :: j, ierr
 
-    PUSH_SUB(oct_prop_load_state)
+    PUSH_SUB(oct_prop_load_states)
+
+    ierr = 0
+
+    if (restart_skip(prop%restart_load)) then
+      ierr = -1
+      POP_SUB(oct_prop_load_states)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading OCT propagation states restart."
+      call messages_info(1)
+    end if
 
     do j = 1, prop%number_checkpoints + 2
-     if(prop%iter(j)  ==  iter) then
-       write(dirname,'(a, i4.4)') trim(prop%dirname), j
-       call restart_cd(prop%restart_load, dirname=dirname)
-       call states_load(prop%restart_load, psi, gr, ierr, verbose=.false.)
-       call restart_cd(prop%restart_load)
-     end if
+      if (prop%iter(j)  ==  iter) then
+        write(dirname,'(a, i4.4)') trim(prop%dirname), j
+        call restart_cd(prop%restart_load, dirname=dirname)
+
+        call states_load(prop%restart_load, psi, gr, err, verbose=.false.)
+        if (err /= 0) then
+          message(1) = "Unable to read states restart from '"//trim(dirname)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
+        end if
+
+        call restart_cd(prop%restart_load)
+      end if
     end do
 
-    POP_SUB(oct_prop_load_state)
-  end subroutine oct_prop_load_state
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading OCT propagation states restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(oct_prop_load_states)
+  end subroutine oct_prop_load_states
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_dump(prop, iter, psi, gr)
+  subroutine oct_prop_dump_states(prop, iter, psi, gr, ierr)
     type(oct_prop_t), intent(inout) :: prop
     integer,          intent(in)    :: iter
     type(states_t),   intent(inout) :: psi
     type(grid_t),     intent(inout) :: gr
+    integer,           intent(out)  :: ierr
 
-    integer :: j, ierr
+    integer :: j, err
     character(len=80) :: dirname
 
-    PUSH_SUB(oct_prop_dump)
+    PUSH_SUB(oct_prop_dump_states)
+
+    ierr = 0
+
+    if (restart_skip(prop%restart_dump)) then
+      POP_SUB(oct_prop_dump_states)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing OCT propagation states restart."
+      call messages_info(1)
+    end if
 
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j)  ==  iter) then
         write(dirname,'(a,i4.4)') trim(prop%dirname), j
         call restart_cd(prop%restart_dump, dirname=dirname)
-        call states_dump(prop%restart_dump, psi, gr, ierr, iter)
+        call states_dump(prop%restart_dump, psi, gr, err, iter)
+
+        if (err /= 0) then
+          message(1) = "Unable to write states restart to '"//trim(dirname)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
+        end if
+
         call restart_cd(prop%restart_dump)
       end if
     end do
 
-    POP_SUB(oct_prop_dump)
-  end subroutine oct_prop_dump
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing OCT propagation states restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(oct_prop_dump_states)
+  end subroutine oct_prop_dump_states
   ! ---------------------------------------------------------
 
 

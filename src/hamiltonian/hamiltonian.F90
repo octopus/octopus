@@ -1390,20 +1390,26 @@ contains
 
     PUSH_SUB(hamiltonian_dump_vhxc)
 
+    ierr = 0
     if (restart_skip(restart) .or. hm%theory_level == INDEPENDENT_PARTICLES) then
-      ierr = 0
       POP_SUB(hamiltonian_dump_vhxc)
       return
     end if
 
-    message(1) = "Info: Writing Vhxc."
-    call messages_info(1)
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing Vhxc restart."
+      call messages_info(1)
+    end if
 
     !write the different components of the Hartree+XC potential
     iunit = restart_open(restart, 'vhxc')
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(a)') '#     #spin    #nspin    filename'
-      write(iunit,'(a)') '%vhxc'
+    if (iunit > 0) then
+      if (mpi_grp_is_root(mpi_world)) then
+        write(iunit,'(a)') '#     #spin    #nspin    filename'
+        write(iunit,'(a)') '%vhxc'
+      end if
+    else
+      ierr = 1
     end if
 
     do isp = 1, hm%d%nspin
@@ -1412,7 +1418,7 @@ contains
       else
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       endif
-      if(mpi_grp_is_root(mpi_world)) then
+      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
         write(iunit, '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
       end if
 
@@ -1422,16 +1428,21 @@ contains
         call drestart_write_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
 
-      if (err == 0) ierr = ierr + 1
+      if (err /= 0) then
+        message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+        call messages_warning(1)
+        ierr = ierr + 1
+      end if
+
     end do
 
-    if (mpi_grp_is_root(mpi_world)) then
+    if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') '%'
     end if
 
     ! MGGAs have an extra term that also needs to be dumped
     if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
-      if(mpi_grp_is_root(mpi_world)) then
+      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
         write(iunit,'(a)') '#     #spin    #nspin    filename'
         write(iunit,'(a)') '%vtau'
       end if
@@ -1442,7 +1453,7 @@ contains
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         endif
-        if(mpi_grp_is_root(mpi_world)) then
+        if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
           write(iunit, '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
         end if
 
@@ -1451,33 +1462,32 @@ contains
         else
           call drestart_write_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
+        if (err /= 0) then
+          message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
+        end if
 
-        if (err == 0) ierr = ierr + 1
       end do
 
-      if (mpi_grp_is_root(mpi_world)) then
+      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
         write(iunit,'(a)') '%'
       end if
 
-      if (ierr == 2*hm%d%nspin) ierr = 0 ! All OK
-    else
-      if (ierr == hm%d%nspin) ierr = 0 ! All OK
     end if
 
-    call restart_close(restart, iunit)
+    if (iunit > 0) call restart_close(restart, iunit)
 
-    message(1) = "Info: Writing Vhxc done."
-    call messages_info(1)
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing Vhxc restart done."
+      call messages_info(1)
+    end if
 
     POP_SUB(hamiltonian_dump_vhxc)
   end subroutine hamiltonian_dump_vhxc
 
 
   ! ---------------------------------------------------------
-  !> returns in ierr:
-  !! <0 => Fatal error, or nothing read
-  !! =0 => read all density components
-  !! >0 => could only read ierr density components
   subroutine hamiltonian_load_vhxc(restart, hm, mesh, ierr)
     type(restart_t),     intent(in)    :: restart
     type(hamiltonian_t), intent(inout) :: hm
@@ -1490,16 +1500,18 @@ contains
 
     PUSH_SUB(hamiltonian_load_vhxc)
 
+    ierr = 0
+
     if (restart_skip(restart) .or. hm%theory_level == INDEPENDENT_PARTICLES) then
       ierr = -1
       POP_SUB(hamiltonian_load_vhxc)
       return
     end if
 
-    message(1) = 'Info: Reading Vhxc.'
-    call messages_info(1)
-
-    ierr = 0
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading Vhxc restart."
+      call messages_info(1)
+    end if
 
     if (hm%cmplxscl%space) then
       SAFE_ALLOCATE(zv(1:mesh%np))
@@ -1519,11 +1531,10 @@ contains
       else
         call drestart_read_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
-      if(err == 0) then
-        ierr = ierr + 1
-      else
-        message(1) = "Could not read vhxc from file '" // trim(filename) // ".obf'"
+      if (err /= 0) then
+        message(1) = "Unsuccessful read of '"//trim(filename)//"'."
         call messages_warning(1)
+        ierr = ierr + 1
       end if
     end do
 
@@ -1543,23 +1554,23 @@ contains
         else
           call drestart_read_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
-
-        if (err == 0) ierr = ierr + 1
+        if (err /= 0) then
+          message(1) = "Unsuccessful read of '"//trim(filename)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
+        end if
       end do
 
-      if (ierr == 2*hm%d%nspin) ierr = 0 ! All OK
-    else
-      if (ierr == hm%d%nspin) ierr=0 ! All OK
     end if
-
-    if(ierr == 0) ierr = -1 ! no files read
 
     if (hm%cmplxscl%space) then
       SAFE_DEALLOCATE_A(zv)
     end if
 
-    message(1) = "Info: Finished reading Vhxc."
-    call messages_info(1)
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading Vhxc restart done."
+      call messages_info(1)
+    end if
 
     POP_SUB(hamiltonian_load_vhxc)
   end subroutine hamiltonian_load_vhxc

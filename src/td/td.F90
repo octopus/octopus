@@ -325,8 +325,13 @@ contains
       if(mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
         call td_dump(iter)
-        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
-        call pes_dump(restart_dump, td%pesv, st)
+        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
+        call pes_dump(restart_dump, td%pesv, st, ierr)
+        if (ierr /= 0) then
+          message(1) = "Unable to write PES restart."
+          call messages_warning(1)
+        end if
+
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
@@ -396,7 +401,7 @@ contains
               else
                 call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)             
               end if
-              if(ierr > 0) then
+              if (ierr > 0) then
                 write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
                 call messages_fatal(1)
               end if
@@ -408,7 +413,12 @@ contains
         end if
 
         if(td%pesv%calc_rc .or. td%pesv%calc_mask) then
-          call pes_load(restart, td%pesv, st)
+          call pes_load(restart, td%pesv, st, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to read PES restart."
+            call messages_fatal(1)
+          end if
+
         end if
 
         call restart_end(restart)
@@ -470,7 +480,7 @@ contains
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
-            call states_look_and_read(restart, stin, gr)
+            call states_look_and_load(restart, stin, gr)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
@@ -704,9 +714,9 @@ contains
 
       ! first write resume file
       call states_dump(restart_dump, st, gr, ierr, iter)
-      if(ierr /= 0) then
-        message(1) = 'Unsuccessful write of restart information'
-        call messages_fatal(1)
+      if (ierr /= 0) then
+        message(1) = 'Unsuccessful write of states restart information'
+        call messages_warning(1)
       end if
       
       if(cmplxscl) then
@@ -727,7 +737,7 @@ contains
           ! for simplicity
           if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-            call messages_fatal(1)
+            call messages_warning(1)
           end if
         end do
       end do

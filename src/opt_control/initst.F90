@@ -135,7 +135,7 @@ contains
           call states_deallocate_wfns(tmp_st)
           call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tmp_st%dom_st_kpt_mpi_grp, &
                             mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-          call states_look_and_read(restart, tmp_st, sys%gr)
+          call states_look_and_load(restart, tmp_st, sys%gr)
           call restart_end(restart)
           SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0

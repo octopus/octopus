@@ -47,7 +47,7 @@
     call parse_string(datasets_check('OCTExcludedStates'), "1", tg%excluded_states_list)
     call states_deallocate_wfns(tg%st)
 
-    call states_look_and_read(restart, tg%st, gr)
+    call states_look_and_load(restart, tg%st, gr)
 
     POP_SUB(target_init_exclude)
   end subroutine target_init_exclude

@@ -149,7 +149,7 @@ contains
     ndim = gr%mesh%sb%dim
 
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb, exact=.true.)
-    call states_look_and_read(gs_restart, st, gr)
+    call states_look_and_load(gs_restart, st, gr)
     call restart_end(gs_restart)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)

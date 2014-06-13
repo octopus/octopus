@@ -144,7 +144,7 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+    call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
     call restart_end(gs_restart)
 
     if (states_are_real(sys%st)) then

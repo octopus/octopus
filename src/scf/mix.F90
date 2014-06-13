@@ -276,16 +276,21 @@ contains
     type(mesh_t),    intent(in)  :: mesh
     integer,         intent(out) :: ierr
 
-    integer :: iunit
-    integer :: id2, id3, id4
+    integer :: iunit, id2, id3, id4, err
     character(len=80) :: filename
 
     PUSH_SUB(mix_dump)
 
+    ierr = 0
+
     if (restart_skip(restart)) then
-      ierr = 0
       POP_SUB(mix_dump)
       return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing mixing restart."
+      call messages_info(1)
     end if
 
     ! functions to be written need to be compatible with the mesh
@@ -293,18 +298,22 @@ contains
 
     ! First we write some information about the mixing
     iunit = restart_open(restart, 'mixing')
-    if (mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a11,i1)')  'scheme=    ', smix%scheme
-      ! Number of global mesh points have to be written, not only smix%d1
-      write(iunit, '(a11,i10)') 'd1=        ', mesh%np_global
-      write(iunit, '(a11,i10)') 'd2=        ', smix%d2
-      write(iunit, '(a11,i10)') 'd3=        ', smix%d3
-      write(iunit, '(a11,i10)') 'd4=        ', smix%d4
-      write(iunit, '(a11,i10)') 'iter=      ', smix%iter
-      write(iunit, '(a11,i10)') 'ns=        ', smix%ns
-      write(iunit, '(a11,i10)') 'last_ipos= ', smix%last_ipos
+    if (iunit > 0) then
+      if ( mpi_grp_is_root(mpi_world)) then
+        write(iunit, '(a11,i1)')  'scheme=    ', smix%scheme
+        ! Number of global mesh points have to be written, not only smix%d1
+        write(iunit, '(a11,i10)') 'd1=        ', mesh%np_global
+        write(iunit, '(a11,i10)') 'd2=        ', smix%d2
+        write(iunit, '(a11,i10)') 'd3=        ', smix%d3
+        write(iunit, '(a11,i10)') 'd4=        ', smix%d4
+        write(iunit, '(a11,i10)') 'iter=      ', smix%iter
+        write(iunit, '(a11,i10)') 'ns=        ', smix%ns
+        write(iunit, '(a11,i10)') 'last_ipos= ', smix%last_ipos
+      end if
+      call restart_close(restart, iunit)
+    else
+      ierr = 1
     end if
-    call restart_close(restart, iunit)
 
     ! Now we write the different functions. 
     ! These are not needed when using linear mixing, so we will make sure we skip this step in that case.
@@ -315,56 +324,62 @@ contains
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), ierr)
+              call drestart_write_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), ierr)
+              call zrestart_write_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
             end if
-            if(ierr /= 0) then
-              write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-              call messages_fatal(1)
+            if (err /= 0) then
+              message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+              call messages_warning(1)
+              ierr = ierr + 1
             end if
 
-          
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), ierr)
+              call drestart_write_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), ierr)
+              call zrestart_write_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
             end if
-            if(ierr /= 0) then
-              write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-              call messages_fatal(1)
+            if (err /= 0) then
+              message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+              call messages_warning(1)
+              ierr = ierr + 1
             end if
-
+              
           end do
-
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), ierr)
-            else
-              call zrestart_write_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), ierr)
+            call drestart_write_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), err)
+          else
+            call zrestart_write_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), err)
           end if
-          if(ierr /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-            call messages_fatal(1)
+          if (err /= 0) then
+            message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+            call messages_warning(1)
+            ierr = ierr + 1
           end if
-
 
           write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), ierr)
-            else
-              call zrestart_write_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), ierr)
+            call drestart_write_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+          else
+            call zrestart_write_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
           end if
-          if(ierr /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-            call messages_fatal(1)
+          if (err /= 0) then
+            message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+            call messages_warning(1)
+            ierr = ierr + 1
           end if
           
         end do
       end do
+        
+    end if
 
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing mixing restart done."
+      call messages_info(1)
     end if
 
     POP_SUB(mix_dump)
@@ -372,11 +387,6 @@ contains
 
 
   !---------------------------------------------------------
-  ! Error codes:
-  !  -1  - type of mixing is not the same.
-  !  -2  - dimensions of the arrays are not consistent
-  !  -3  - no mixing file found
-  !  > 0 - unable to read ierr functions
   subroutine mix_load(restart, smix, mesh, ierr)
     type(restart_t), intent(in)    :: restart
     type(mix_t),     intent(inout) :: smix
@@ -392,119 +402,129 @@ contains
 
     PUSH_SUB(mix_load)
 
+    ierr = 0
+
     if (restart_skip(restart)) then
-      ierr = -3
-      POP_SUB(mix_load)
-      return
-    end if
-
-    ! First we read some information about the mixing
-    iunit = restart_open(restart, 'mixing')
-    if (iunit < 0) then
-      write(message(1), '(3a)') 'Unsuccessful read of file "mixing".'
-      call messages_warning(1)
-      ierr = -3
-      POP_SUB(mix_load)
-      return
-    end if
-
-    call iopar_read(mesh%mpi_grp, iunit, lines, 8, err)
-    read(lines(1), *) str, scheme
-    read(lines(2), *) str, d1
-    read(lines(3), *) str, d2
-    read(lines(4), *) str, d3
-    read(lines(5), *) str, d4
-    read(lines(6), *) str, smix%iter
-    read(lines(7), *) str, ns
-    read(lines(8), *) str, smix%last_ipos
-
-    call restart_close(restart, iunit)
-
-    ! We can only use the restart information if the mixing scheme and the number of steps used remained the same
-    if (scheme /= smix%scheme .or. ns /= smix%ns) then
-      message(1) = "The mixing scheme from the restart data is not the same as the one used in the current calculation."
-      call messages_warning(1)
       ierr = -1
       POP_SUB(mix_load)
       return
     end if
 
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading mixing restart."
+      call messages_info(1)
+    end if
+
+    ! First we read some information about the mixing
+    iunit = restart_open(restart, 'mixing')
+    if (iunit > 0) then
+      call iopar_read(mesh%mpi_grp, iunit, lines, 8, ierr)
+      if (ierr == 0) then
+        read(lines(1), *) str, scheme
+        read(lines(2), *) str, d1
+        read(lines(3), *) str, d2
+        read(lines(4), *) str, d3
+        read(lines(5), *) str, d4
+        read(lines(6), *) str, smix%iter
+        read(lines(7), *) str, ns
+        read(lines(8), *) str, smix%last_ipos
+      end if
+      call restart_close(restart, iunit)
+    else
+      ierr = 1
+    end if
+
+    ! We can only use the restart information if the mixing scheme and the number of steps used remained the same
+    if (ierr == 0) then
+      if (scheme /= smix%scheme .or. ns /= smix%ns) then
+        message(1) = "The mixing scheme from the restart data is not the same as the one used in the current calculation."
+        call messages_warning(1)
+        ierr = -1
+      end if
+    end if
+
     ! Check the dimensions of the arrays to be read
-    if (mesh%np_global /= d1 .or. mesh%np /= smix%d1 .or. d2 /= smix%d2 .or. d3 /= smix%d3 ) then
-      message(1) = "The dimensions of the arrays from the mixing restart data"
-      message(2) = "are not the same as the ones used in this calculation."
-      call messages_warning(2)
-      ierr = -2
-      POP_SUB(mix_load)
-      return
+    if (ierr == 0) then
+      if (mesh%np_global /= d1 .or. mesh%np /= smix%d1 .or. d2 /= smix%d2 .or. d3 /= smix%d3 ) then
+        message(1) = "The dimensions of the arrays from the mixing restart data"
+        message(2) = "are not the same as the ones used in this calculation."
+        call messages_warning(2)
+        ierr = -1
+      end if
     end if
 
 
     ! Now we read the different functions.
     ! Note that we may have more or less functions than the ones needed (d4 /= smix%d4)
-    ierr = 0
-    if (smix%scheme /= MIX_LINEAR) then
-      do id2 = 1, smix%d2
-        do id3 = 1, smix%d3
-          do id4 = 1, smix%d4
+    if (ierr == 0) then
+      if (smix%scheme /= MIX_LINEAR) then
+        do id2 = 1, smix%d2
+          do id3 = 1, smix%d3
+            do id4 = 1, smix%d4
 
-            write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
+              write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
+              if (smix%func_type == TYPE_FLOAT) then
+                call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+              else
+                call zrestart_read_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+              end if
+              if (err /= 0) then
+                message(1) = "Unsuccessful read of '"//trim(filename)//"'."
+                call messages_warning(1)
+                ierr = ierr + 1
+              end if
+          
+              write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
+              if (smix%func_type == TYPE_FLOAT) then
+                call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+              else
+                call zrestart_read_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+              end if
+              if (err /= 0) then
+                message(1) = "Unsuccessful read of '"//trim(filename)//"'."
+                call messages_warning(1)
+                ierr = ierr + 1
+              end if
+
+            end do
+
+            write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+              call drestart_read_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+              call zrestart_read_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
             end if
-            if(err /= 0) then
-              write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
+            if (err /= 0) then
+              message(1) = "Unsuccessful read of '"//trim(filename)//"'."
               call messages_warning(1)
               ierr = ierr + 1
             end if
-          
-            write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
+
+            write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+              call drestart_read_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+              call zrestart_read_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
             end if
-            if(err /= 0) then
-              write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
+            if (err /= 0) then
+              message(1) = "Unsuccessful read of '"//trim(filename)//"'."
               call messages_warning(1)
               ierr = ierr + 1
             end if
 
           end do
-
-          write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
-          if (smix%func_type == TYPE_FLOAT) then
-            call drestart_read_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
-          else
-            call zrestart_read_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
-          end if
-          if(err /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-            call messages_warning(1)
-            ierr = ierr + 1
-          end if
-
-          write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
-          if (smix%func_type == TYPE_FLOAT) then
-            call drestart_read_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
-          else
-            call zrestart_read_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
-          end if
-          if(err /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-            call messages_warning(1)
-            ierr = ierr + 1
-          end if
-
         end do
-      end do
+      end if
     end if
 
     if (ierr /= 0) then
       ! Something went wront, so make sure we start from scratch
       call mix_clear(smix)
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading mixing restart done."
+      call messages_info(1)
     end if
 
     POP_SUB(mix_load)

@@ -422,34 +422,32 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
-    type(scf_t),          intent(inout) :: scf !< self consistent cycle
-    type(multicomm_t),    intent(in)    :: mc
-    type(grid_t),         intent(inout) :: gr !< grid
-    type(geometry_t),     intent(inout) :: geo !< geometry
-    type(states_t),       intent(inout) :: st !< States
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
-    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    type(output_t),       intent(in)    :: outp
-    logical, optional,    intent(in)    :: gs_run
-    integer, optional,    intent(in)    :: verbosity 
-    integer, optional,    intent(out)   :: iters_done
-    type(restart_t), optional, intent(in) :: restart_load
-    type(restart_t), optional, intent(in) :: restart_dump
+    type(scf_t),               intent(inout) :: scf !< self consistent cycle
+    type(multicomm_t),         intent(in)    :: mc
+    type(grid_t),              intent(inout) :: gr !< grid
+    type(geometry_t),          intent(inout) :: geo !< geometry
+    type(states_t),            intent(inout) :: st !< States
+    type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),       intent(inout) :: hm !< Hamiltonian
+    type(output_t),            intent(in)    :: outp
+    logical,         optional, intent(in)    :: gs_run
+    integer,         optional, intent(in)    :: verbosity 
+    integer,         optional, intent(out)   :: iters_done
+    type(restart_t), optional, intent(in)    :: restart_load
+    type(restart_t), optional, intent(in)    :: restart_dump
 
-    type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
-    type(profile_t), save :: prof
-    integer :: ierr
-    integer :: iter, is, idim, iatom, nspin, err, iberry, idir
+    logical :: finish, gs_run_, berry_conv, cmplxscl
+    integer :: iter, is, idim, iatom, nspin, ierr, iberry, idir, verbosity_
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
+    character(len=8) :: dirname
+    type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
+    type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
     FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
-    character(len=8) :: dirname
-    logical :: finish, gs_run_, berry_conv, cmplxscl
-    integer :: verbosity_
 
     PUSH_SUB(scf_run)
 
@@ -494,12 +492,22 @@ contains
       if (restart_has_flag(restart_load, RESTART_RHO)) then
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
-        call v_ks_calc(ks, hm, st, geo)
+        if (ierr /= 0) then
+          message(1) = 'Unable to read density restart. Density will be calculated from states.'
+          call messages_warning(1)
+        else
+          call v_ks_calc(ks, hm, st, geo)
+        end if
       end if
 
       if (restart_has_flag(restart_load, RESTART_VHXC)) then
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
-        call hamiltonian_update(hm, gr%mesh)
+        if (ierr /= 0) then
+          message(1) = 'Unable to read Vhxc restart. Vhxc will be calculated from states.'
+          call messages_warning(1)
+        else
+          call hamiltonian_update(hm, gr%mesh)
+        end if
       end if
 
       if (restart_has_flag(restart_load, RESTART_MIX)) then
@@ -510,19 +518,8 @@ contains
           call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
         if (ierr /= 0) then
-          write(message(1),'(a)') "Failed to read mixing: "
-          if(ierr == -1) then
-            write(message(1),'(a)') trim(message(1)) // "type of mixing is not the same."
-          else if(ierr == -2) then
-            write(message(1),'(a)') trim(message(1)) // "dimensions of the arrays are not consistent."
-          else if(ierr == -3) then
-            write(message(1),'(a)') trim(message(1)) // "no mixing file found."
-          else if(ierr > 0) then
-            write(message(1),'(a,i6,a)') trim(message(1)) // "unable to read ", ierr, "functions."
-          else
-            write(message(1),'(a,i6)') trim(message(1)) // "unknown error code ", ierr
-          endif
-          call messages_fatal(1)
+          message(1) = "Unable to read mixing restart. Mixing will start from scratch."
+          call messages_warning(1)
         end if
       end if
     end if
@@ -790,32 +787,36 @@ contains
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish)) then
 
-          call states_dump(restart_dump, st, gr, err, iter=iter) 
-          if(err /= 0) then
-            message(1) = 'Unsuccessful write of restart'
-            call messages_fatal(1)
+          call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+          if (ierr /= 0) then
+            message(1) = 'Unsuccessful write of states restart'
+            call messages_warning(1)
           end if
 
-          call states_dump_rho(restart_dump, st, gr, err, iter=iter)
+          call states_dump_rho(restart_dump, st, gr, ierr, iter=iter)
+          if (ierr /= 0) then
+            message(1) = 'Unsuccessful write of density restart'
+            call messages_warning(1)
+          end if
 
           select case (scf%mix_field)
           case (MIXDENS)
-            call mix_dump(restart_dump, scf%smix, gr%fine%mesh, err)
-            if(err /= 0) then
-              message(1) = 'Unsuccessful write of mixing'
-              call messages_fatal(1)
+            call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
+            if (ierr /= 0) then
+              message(1) = 'Unsuccessful write of mixing restart'
+              call messages_warning(1)
             end if
           case (MIXPOT)
-            call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, err)
-            if(err /= 0) then
-              message(1) = 'Unsuccessful write of Vhxc'
-              call messages_fatal(1)
+            call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
+            if (ierr /= 0) then
+              message(1) = 'Unsuccessful write of Vhxc restart'
+              call messages_warning(1)
             end if
 
-            call mix_dump(restart_dump, scf%smix, gr%mesh, err)
-            if(err /= 0) then
-              message(1) = 'Unsuccessful write of mixing'
-              call messages_fatal(1)
+            call mix_dump(restart_dump, scf%smix, gr%mesh, ierr)
+            if (ierr /= 0) then
+              message(1) = 'Unsuccessful write of mixing restart'
+              call messages_warning(1)
             end if
           end select
         end if

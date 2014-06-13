@@ -261,20 +261,32 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_dump(restart, pes, st)
-    type(restart_t), intent(in) :: restart
-    type(pes_t),     intent(in) :: pes
-    type(states_t),  intent(in) :: st
+  subroutine pes_dump(restart, pes, st, ierr)
+    type(restart_t), intent(in)  :: restart
+    type(pes_t),     intent(in)  :: pes
+    type(states_t),  intent(in)  :: st
+    integer,         intent(out) :: ierr
 
     PUSH_SUB(pes_dump)
 
-    if (.not. restart_skip(restart) .and. pes%calc_mask) then
-      message(1) = "Info: Writing PES mask."
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      POP_SUB(pes_dump)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing PES restart."
       call messages_info(1)
+    end if
 
-      call pes_mask_dump(restart, pes%mask, st)
+    if (pes%calc_mask) then
+      call pes_mask_dump(restart, pes%mask, st, ierr)
+    end if
 
-      message(1) = "Info: Finished writing PES mask."
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing PES restart done."
       call messages_info(1)
     end if
 
@@ -283,20 +295,33 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_load(restart, pes, st)
+  subroutine pes_load(restart, pes, st, ierr)
     type(restart_t), intent(in)    :: restart
     type(pes_t),     intent(inout) :: pes
     type(states_t),  intent(inout) :: st
+    integer,         intent(out) :: ierr
 
     PUSH_SUB(pes_load)
 
-    if (.not. restart_skip(restart) .and. pes%calc_mask) then
-      message(1) = "Info: Reading PES mask."
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(pes_load)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading PES restart."
       call messages_info(1)
+    end if
 
-      call pes_mask_load(restart, pes%mask, st)
+    if (pes%calc_mask) then
+      call pes_mask_load(restart, pes%mask, st, ierr)
+    end if
 
-      message(1) = "Info: Finished reading PES mask."
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading PES restart done."
       call messages_info(1)
     end if
 

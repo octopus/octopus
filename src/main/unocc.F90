@@ -128,7 +128,7 @@ contains
     end if
 
     call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
-    if(ierr_rho /= 0) then
+    if (ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
       call messages_info(1)
     end if

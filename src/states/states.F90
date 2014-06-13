@@ -51,6 +51,7 @@ module states_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use multicomm_m
+  use ob_interface_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
@@ -119,7 +120,8 @@ module states_m
     cmplx_array2_t,                   &
     states_wfs_t,                     &
     states_count_pairs,               &
-    occupied_states
+    occupied_states,                  &
+    states_get_ob_intf
 
   !> cmplxscl: Left and Right eigenstates
   type states_wfs_t    
@@ -2880,6 +2882,49 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
+
+
+  ! ---------------------------------------------------------
+  !> Reads the interface regions of the wavefunctions
+  subroutine states_get_ob_intf(st, gr)
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(in)    :: gr
+
+    integer            :: ik, ist, idim, il
+    CMPLX, allocatable :: zpsi(:)
+
+    PUSH_SUB(states_get_ob_intf)
+
+    write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
+    call messages_info(1)
+
+    ! Sanity check.
+    do il = 1, NLEADS
+      ASSERT(associated(st%ob_lead(il)%intf_psi))
+      ASSERT(il <= 2) ! FIXME: wrong if non-transport calculation
+    end do
+
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+
+          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+
+          do il = 1, NLEADS
+            call get_intf_wf(gr%intf(il), zpsi, st%ob_lead(il)%intf_psi(:, idim, ist, ik))
+          end do
+
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+
+    POP_SUB(states_get_ob_intf)
+  end subroutine states_get_ob_intf
+
 
 #include "undef.F90"
 #include "real.F90"

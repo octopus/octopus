@@ -197,7 +197,7 @@ contains
 
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
-    call states_look_and_read(gs_restart, sys%st, sys%gr)
+    call states_look_and_load(gs_restart, sys%st, sys%gr)
     call restart_end(gs_restart)
 
     cas%el_per_state = sys%st%smear%el_per_state

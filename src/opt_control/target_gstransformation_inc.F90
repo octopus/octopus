@@ -55,7 +55,7 @@
       if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
         call states_copy(tmp_st, tg%st)
         call states_deallocate_wfns(tmp_st)
-        call states_look_and_read(restart, tmp_st, gr)
+        call states_look_and_load(restart, tmp_st, gr)
 
         SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
         rotation_matrix = M_z0

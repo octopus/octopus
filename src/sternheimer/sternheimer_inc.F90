@@ -39,7 +39,7 @@ subroutine X(sternheimer_solve)(                           &
   FLOAT :: tol
   FLOAT, allocatable :: dpsimod(:, :), residue(:, :)
   integer, allocatable :: conv_iters(:, :)
-  integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii
+  integer :: iter, sigma, sigma_alt, ik, ist, err, sst, est, ii, ierr
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :), rhs_full(:, :, :)
   R_TYPE, allocatable :: tmp(:)
@@ -252,8 +252,12 @@ subroutine X(sternheimer_solve)(                           &
       else
         sigma_alt = 2
       endif
-      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag)
-    endif
+      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to write density "//trim(rho_tag)
+        call messages_warning(1)
+      end if
+    end if
 
     do sigma = 1, nsigma 
       !save all frequencies as positive

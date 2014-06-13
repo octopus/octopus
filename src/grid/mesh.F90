@@ -400,28 +400,28 @@ contains
     type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: ierr
     
-    integer :: iunit
+    integer :: iunit, err
 
     PUSH_SUB(mesh_dump)
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit < 0) ierr = -1
-
-    if (ierr == 0 .and. mpi_grp_is_root(mpi_grp)) then
-      write(iunit, '(a)') dump_tag
-      write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
-      write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
-      write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
-      write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)    
+    if (iunit > 0) then
+      if (mpi_grp_is_root(mpi_grp)) then
+        write(iunit, '(a)') dump_tag
+        write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
+        write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
+        write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
+        write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+      end if
+      call io_close(iunit, grp=mpi_grp)
+    else
+      ierr = 1
     end if
 
-    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
-
-    if (ierr == 0) then
-      call index_dump(mesh%idx, dir, filename, mpi_grp, ierr)
-    end if
+    call index_dump(mesh%idx, dir, filename, mpi_grp, err)
+    ierr = ierr + err
 
     POP_SUB(mesh_dump)
   end subroutine mesh_dump
@@ -436,7 +436,7 @@ contains
     type(mpi_grp_t),  intent(in)    :: mpi_grp
     integer,          intent(out)   :: ierr
 
-    integer :: iunit
+    integer :: iunit, err
     character(len=20)  :: str
     character(len=100) :: lines(4)
 
@@ -447,31 +447,26 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit < 0) ierr = -1
-
-    if (ierr == 0) then
+    if (iunit > 0) then
       ! Find the dump tag.
       call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
+
+      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+      if (ierr == 0) then
+        read(lines(1), '(a20,1i10)') str, mesh%np
+        read(lines(2), '(a20,1i10)') str, mesh%np_part
+        read(lines(3), '(a20,1i10)') str, mesh%np_global
+        read(lines(4), '(a20,1i10)') str, mesh%np_part_global
+        nullify(mesh%x, mesh%vol_pp, mesh%resolution)
+        mesh%parallel_in_domains = .false.
+      end if
+      call io_close(iunit, grp=mpi_grp)
+    else
+      ierr = 1
     end if
 
-    if (ierr == 0) then
-      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-    end if
-
-    if (ierr == 0) then
-      read(lines(1), '(a20,1i10)') str, mesh%np
-      read(lines(2), '(a20,1i10)') str, mesh%np_part
-      read(lines(3), '(a20,1i10)') str, mesh%np_global
-      read(lines(4), '(a20,1i10)') str, mesh%np_part_global
-      nullify(mesh%x, mesh%vol_pp, mesh%resolution)
-      mesh%parallel_in_domains = .false.
-    end if
-
-    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
-
-    if (ierr == 0) then
-      call index_load(mesh%idx, dir, filename, mpi_grp, ierr)
-    end if
+    call index_load(mesh%idx, dir, filename, mpi_grp, err)
+    ierr = ierr + err
 
     POP_SUB(mesh_load)
   end subroutine mesh_load
@@ -492,9 +487,7 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='write', is_tmp=.true., die=.false., grp=mpi_grp)
-    if (iunit < 0) ierr = -1
-
-    if (ierr == 0) then
+    if (iunit > 0) then
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
         if(mesh%sb%box_shape /= HYPERCUBE) then
@@ -504,9 +497,10 @@ contains
           write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
         end if
       end if
+      call io_close(iunit, grp=mpi_grp)
+    else
+      ierr = 1
     end if
-
-    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
 
     POP_SUB(mesh_write_fingerprint)
   end subroutine mesh_write_fingerprint
@@ -534,49 +528,44 @@ contains
     PUSH_SUB(mesh_read_fingerprint)
 
     ierr = 0
+
     read_np_part = 0
     read_np = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., is_tmp = .true., grp=mpi_grp)
-    if(iunit < 0) ierr = -1
-
-    if (ierr == 0) then
+    if (iunit > 0) then
       call iopar_read(mpi_grp, iunit, lines, 1, ierr)
-    end if
-
-    if (ierr == 0) then
-      read(lines(1), '(a20,i21)')  str, box_shape
-    end if
-
-    if (ierr == 0 .and. box_shape == HYPERCUBE) then
-      ! We have a hypercube: we will assume everything is OK...
-      message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
-      call messages_warning(1)
-    end if
-
-    if (ierr == 0 .and. box_shape /= HYPERCUBE) then
-      call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-    end if
-
-    if (ierr == 0 .and. box_shape /= HYPERCUBE) then
-      read(lines(1), '(a20,i21)')  str, read_np_part
-      read(lines(2), '(a20,i21)')  str, read_np
-      read(lines(3), '(a20,i21)')  str, algorithm
-      read(lines(4), '(a20,i21)')  str, checksum
-
-      ASSERT(read_np_part >= read_np)
-      
-      if (read_np_part == mesh%np_part_global &
-           .and. read_np == mesh%np_global &
-           .and. algorithm == 1 &
-           .and. checksum == mesh%idx%checksum) then
-        read_np_part = 0
-        read_np = 0
+      if (ierr == 0) read(lines(1), '(a20,i21)')  str, box_shape
+      if (ierr == 0 .and. box_shape == HYPERCUBE) then
+        ! We have a hypercube: we will assume everything is OK...
+        message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
+        call messages_warning(1)
       end if
 
-    end if
+      if (ierr == 0 .and. box_shape /= HYPERCUBE) then
+        call iopar_read(mpi_grp, iunit, lines, 4, ierr)
+        if (ierr == 0) then
+          read(lines(1), '(a20,i21)')  str, read_np_part
+          read(lines(2), '(a20,i21)')  str, read_np
+          read(lines(3), '(a20,i21)')  str, algorithm
+          read(lines(4), '(a20,i21)')  str, checksum
 
-    if (iunit > 0) call io_close(iunit, grp=mpi_grp)
+          ASSERT(read_np_part >= read_np)
+      
+          if (read_np_part == mesh%np_part_global &
+               .and. read_np == mesh%np_global &
+               .and. algorithm == 1 &
+               .and. checksum == mesh%idx%checksum) then
+            read_np_part = 0
+            read_np = 0
+          end if
+        end if
+      end if
+
+      call io_close(iunit, grp=mpi_grp)
+    else
+      ierr = 1
+    end if
 
     POP_SUB(mesh_read_fingerprint)
   end subroutine mesh_read_fingerprint

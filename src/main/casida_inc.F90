@@ -768,8 +768,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
     do idir = 1, mesh%sb%dim
       
       call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, &
-        restart_vib, phn_rho_tag(iatom, idir), ierr)
-      
+        restart_vib, phn_rho_tag(iatom, idir), ierr)      
       if(ierr /= 0) then
         message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
         call messages_fatal(1)

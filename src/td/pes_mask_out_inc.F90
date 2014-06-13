@@ -1799,26 +1799,43 @@ end subroutine pes_mask_write_info
 ! ---------------------------------------------------------
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_dump(restart, mask, st)
-  type(restart_t),  intent(in) :: restart
-  type(pes_mask_t), intent(in) :: mask
-  type(states_t),   intent(in) :: st
+subroutine pes_mask_dump(restart, mask, st, ierr)
+  type(restart_t),  intent(in)  :: restart
+  type(pes_mask_t), intent(in)  :: mask
+  type(states_t),   intent(in)  :: st
+  integer,          intent(out) :: ierr
 
   character(len=80) :: filename, path
-  integer :: itot, ik, ist, idim
-  integer :: ll(3), np, ierr, iunit
+  integer :: itot, ik, ist, idim, ll(3), np, iunit, err
   CMPLX, pointer :: gwf(:,:,:)
   type(profile_t), save :: prof
    
   PUSH_SUB(pes_mask_dump)
+
+  ierr = 0
+
+  if (restart_skip(restart)) then
+    POP_SUB(pes_mask_dump)
+    return
+  end if
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Writing PES mask restart."
+    call messages_info(1)
+  end if
+
   call profiling_in(prof, "PESMASK_dump")
 
   iunit = restart_open(restart, 'pes_mask')
-  if(mpi_grp_is_root(mpi_world)) then
-    write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)
-    write(iunit, '(a10,2x,es19.12)') 'Mask R2', mask%mask_r(2)
+  if (iunit > 0) then
+    if (mpi_grp_is_root(mpi_world)) then
+      write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)
+      write(iunit, '(a10,2x,es19.12)') 'Mask R2', mask%mask_r(2)
+    end if
+    call restart_close(restart, iunit)
+  else
+    ierr = 1
   end if
-  call restart_close(restart, iunit)
 
   ll(1:3) = mask%fs_n_global(1:3)
   np = ll(1)*ll(2)*ll(3) 
@@ -1827,7 +1844,7 @@ subroutine pes_mask_dump(restart, mask, st)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
-        itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
+        itot = ist + (ik - 1)*st%nst +  (idim - 1)*st%nst*st%d%kpt%nglobal
 
         write(filename,'(i10.10)') itot
 
@@ -1852,11 +1869,12 @@ subroutine pes_mask_dump(restart, mask, st)
           gwf => mask%k(:,:,:, idim, ist, ik)
         end if
 
-        if(mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
-          call io_binary_write(path, np, gwf(:,:,:), ierr)
-          if(ierr /= 0) then
-            message(1) = "Failed to write file "//trim(path)
-            call messages_fatal(1)
+        if (mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
+          call io_binary_write(path, np, gwf(:,:,:), err)
+          if (err /= 0) then
+            message(1) = "Unsuccessful write of '"//trim(path)//"'."
+            call messages_warning(1)
+            ierr = ierr + 1
           end if
         end if
 
@@ -1868,24 +1886,58 @@ subroutine pes_mask_dump(restart, mask, st)
     end do
   end do
 
+  if (in_debug_mode) then
+    message(1) = "Debug: Writing PES mask restart done."
+    call messages_info(1)
+  end if
+
   call profiling_out(prof)
+
   POP_SUB(pes_mask_dump)
 end subroutine pes_mask_dump
 
 ! ---------------------------------------------------------
-subroutine pes_mask_load(restart, mask, st)
+subroutine pes_mask_load(restart, mask, st, ierr)
   type(restart_t),  intent(in)    :: restart
   type(pes_mask_t), intent(inout) :: mask
   type(states_t),   intent(inout) :: st
+  integer,          intent(out)   :: ierr
 
   character(len=80) :: filename, path
-  integer :: itot, ik, ist, idim , np, ierr, iunit
-  integer :: ll(3)
+  integer :: itot, ik, ist, idim , np, err, iunit, ll(3)
   character(len=128) :: lines(2)
   character(len=7) :: dummy
   FLOAT, allocatable :: rr(:)
 
   PUSH_SUB(pes_mask_load)
+
+  ierr = 0
+
+  if (restart_skip(restart)) then
+    ierr = -1
+    POP_SUB(pes_mask_load)
+    return
+  end if
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Reading PES mask restart."
+    call messages_info(1)
+  end if
+
+
+  SAFE_ALLOCATE(rr(1:2))
+  iunit = restart_open(restart, 'pes_mask')
+  if (iunit > 0) then
+    call iopar_read(st%dom_st_kpt_mpi_grp, iunit, lines, 2, ierr)
+    if (ierr == 0) then    
+      read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
+      read(lines(2),'(a10,2x,es19.12)') dummy, rr(2)
+    end if
+    call restart_close(restart, iunit)
+  else
+    ierr = 1
+  end if
+
 
   ll(1:3) = mask%ll(1:3)
   np =ll(1)*ll(2)*ll(3) 
@@ -1902,35 +1954,32 @@ subroutine pes_mask_load(restart, mask, st)
        
         path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
         
-        call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
-        if(ierr > 0) then
-          message(1) = "Failed to read file "//trim(path)
-         call messages_fatal(1)
+        call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), err)
+        if (err /= 0) then
+          message(1) = "Unsuccessful write of '"//trim(path)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
         end if
 
       end do
     end do
   end do
 
-  SAFE_ALLOCATE(rr(1:2))
-  iunit = restart_open(restart, 'pes_mask')
-  if (iunit < 0) then
-    message(1) = 'Could not read from file "pes_mask".'
-    call messages_fatal(1)
+  if (ierr == 0) then
+    if (rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
+      message(1) = "PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
+      message(2) = "I will restart mapping from the previous context."
+      call messages_warning(2)
+      call pes_mask_restart_map(mask, st, rr)
+    endif
   end if
-  call iopar_read(st%dom_st_kpt_mpi_grp, iunit, lines, 2, ierr)
-  read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
-  read(lines(2),'(a10,2x,es19.12)') dummy, rr(2)
-  call restart_close(restart, iunit)
 
-  if(rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
-    message(1)="PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
-    message(2)="I will restart mapping from the previous context."
-    call messages_warning(2)
-    call pes_mask_restart_map(mask, st, rr)
-  endif 
- 
   SAFE_DEALLOCATE_A(rr)
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Reading PES mask restart done."
+    call messages_info(1)
+  end if
 
   POP_SUB(pes_mask_load)
 end subroutine pes_mask_load

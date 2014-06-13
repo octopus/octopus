@@ -282,24 +282,40 @@ end subroutine X(lr_swap_sigma)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag)
-  type(lr_t),        intent(in) :: lr
-  type(mesh_t),      intent(in) :: mesh
-  integer,           intent(in) :: nspin
-  type(restart_t),   intent(in) :: restart
-  character(len=*),  intent(in) :: rho_tag
+subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
+  type(lr_t),        intent(in)  :: lr
+  type(mesh_t),      intent(in)  :: mesh
+  integer,           intent(in)  :: nspin
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: rho_tag
+  integer,           intent(out) :: ierr
 
   character(len=100) :: fname
-  integer :: is, ierr
+  integer :: is, s_ierr
 
   PUSH_SUB(X(lr_dump_rho))
 
-  call restart_block_signals()
+  ierr = 0
+  if (restart_skip(restart)) then
+    POP_SUB(X(lr_dump_rho))
+    return
+  end if
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Writing linear-response density restart."
+    call messages_info(1)
+  end if
+
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), ierr)
+    call X(restart_write_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), s_ierr)
+    if (s_ierr /= 0) ierr = ierr + 1
   end do
-  call restart_unblock_signals()
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Writing linear-response density restart done."
+    call messages_info(1)
+  end if
 
   POP_SUB(X(lr_dump_rho))
 end subroutine X(lr_dump_rho)
@@ -319,22 +335,32 @@ subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
 
   PUSH_SUB(X(lr_load_rho))
 
+  ierr = 0
+
+  if (restart_skip(restart)) then
+    POP_SUB(X(lr_load_rho))
+    ierr = -1
+    return
+  end if
+
+  if (in_debug_mode) then
+    message(1) = "Debug: Reading linear-response density restart."
+    call messages_info(1)
+  end if
+
   ASSERT(ubound(dl_rho, 1) >= mesh%np)
   ASSERT(ubound(dl_rho, 2) >= nspin)
 
-  ierr = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
     call X(restart_read_function)(restart, fname, mesh, dl_rho(:, is), s_ierr)
-    if( s_ierr /=0 ) ierr = s_ierr
+    if (s_ierr /= 0) ierr = ierr + 1
   end do
 
-  if( ierr == 0 ) then 
-    write(message(1),'(a)') 'Loaded restart density '//trim(rho_tag)
-  else
-    write(message(1),'(a)') 'Could not load restart '//trim(rho_tag)
+  if (in_debug_mode) then
+    message(1) = "Debug: Reading linear-response density restart done."
+    call messages_info(1)
   end if
-  call messages_info(1)
 
   POP_SUB(X(lr_load_rho))
 end subroutine X(lr_load_rho)
