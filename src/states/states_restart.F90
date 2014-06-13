@@ -157,7 +157,7 @@ contains
     if(associated(st%zeigenval%Im)) cmplxscl = .true.
 
     message(1) = "Info: Writing states."
-    call messages_info(1)
+    call print_date(trim(message(1))//' ')
 
     call profiling_in(prof_write, "RESTART_WRITE")
 
@@ -284,7 +284,7 @@ contains
     call restart_close(restart, iunit2)
 
     message(1) = "Info: Finished writing states."
-    call messages_info(1)
+    call print_date(trim(message(1))//' ')
 
     call restart_unblock_signals()
 
@@ -407,7 +407,7 @@ contains
       message(1) = trim(message(1)) // trim(label_)
     endif
     message(1) = trim(message(1)) // "."
-    if(verbose_) call messages_info(1)
+    if(verbose_) call print_date(trim(message(1))//' ')
 
     if(.not. present(lr)) then
       st%fromScratch = .false. ! obviously, we are using restart info
@@ -712,7 +712,7 @@ contains
     else if(ierr == st%nst * st%d%nik * st%d%dim) then
       ierr = 0
       write(message(1), '(a)') 'Info: States reading done.'
-      if(verbose_) call messages_info(1)
+      if(verbose_) call print_date(trim(message(1))//' ')
     else
       if(.not. present(lr)) then
         write(str, '(a,i5)') 'Reading states.'
