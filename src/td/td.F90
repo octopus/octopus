@@ -322,15 +322,15 @@ contains
         call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
-      if(mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
+      if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_dump(iter)
-        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
-        call pes_dump(restart_dump, td%pesv, st, ierr)
+        call td_dump(restart_dump, gr, st, td, iter, ierr)
         if (ierr /= 0) then
-          message(1) = "Unable to write PES restart."
+          message(1) = "Unsuccessful write of time-dependent restart."
           call messages_warning(1)
         end if
+
+        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
 
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
@@ -361,12 +361,11 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: i, is, ierr, ist, jst, freeze_orbitals
-      character(len=50) :: filename
+      integer :: ierr, ist, jst, freeze_orbitals
       FLOAT :: x
       type(block_t) :: blk
       type(states_t) :: stin
-      CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:)
+      CMPLX, allocatable :: rotation_matrix(:, :)
       logical :: freeze_hxc
       type(restart_t) :: restart
 
@@ -374,53 +373,13 @@ contains
 
       if (.not. fromscratch) then
         call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
-
-        call states_load(restart, st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
+        call td_load(restart, gr, st, td, ierr)
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
-          message(1) = "Could not load restart information: Starting from scratch"
+          message(1) = "Could not load td restart information: Starting from scratch"
           call messages_warning(1)
-
-        else
-          ! extract the interface wave function
-          if(st%open_boundaries) call states_get_ob_intf(st, gr)
-
-          ! read potential from previous interactions
-          if(cmplxscl) then
-            SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
-          end if
-        
-          do i = 1, 2
-            do is = 1, st%d%nspin
-              write(filename,'(a,i2.2,i3.3)') 'vprev_', i, is
-              if(cmplxscl) then
-                call zrestart_read_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
-                td%tr%v_old(1:gr%mesh%np, is, i)   =  real(zv_old(1:gr%mesh%np))
-                td%tr%Imv_old(1:gr%mesh%np, is, i) = aimag(zv_old(1:gr%mesh%np))
-              else
-                call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)             
-              end if
-              if (ierr > 0) then
-                write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-                call messages_fatal(1)
-              end if
-            end do
-          end do
-          if(cmplxscl) then
-            SAFE_DEALLOCATE_A(zv_old)
-          end if
         end if
-
-        if(td%pesv%calc_rc .or. td%pesv%calc_mask) then
-          call pes_load(restart, td%pesv, st, ierr)
-          if (ierr /= 0) then
-            message(1) = "Unable to read PES restart."
-            call messages_fatal(1)
-          end if
-
-        end if
-
         call restart_end(restart)
       end if
 
@@ -700,56 +659,161 @@ contains
       POP_SUB(td_run.td_read_gauge_field)
     end subroutine td_read_gauge_field
 
-    ! ---------------------------------------------------------
-    subroutine td_dump(iter)
-      integer, intent(in) :: iter
+  end subroutine td_run
 
-      integer :: ii, is, ierr
-      character(len=256) :: filename
-      CMPLX, allocatable :: zv_old(:)
 
-      if(restart_skip(restart_dump)) return
+  ! ---------------------------------------------------------
+  subroutine td_dump(restart, gr, st, td, iter, ierr)
+    type(restart_t), intent(in)  :: restart
+    type(grid_t),    intent(in)  :: gr
+    type(states_t),  intent(in)  :: st
+    type(td_t),      intent(in)  :: td
+    integer,         intent(in)  :: iter
+    integer,         intent(out) :: ierr
 
-      PUSH_SUB(td_run.td_dump)
+    logical :: cmplxscl
+    integer :: ii, is, err
+    character(len=256) :: filename
+    CMPLX, allocatable :: zv_old(:)
 
-      ! first write resume file
-      call states_dump(restart_dump, st, gr, ierr, iter)
-      if (ierr /= 0) then
-        message(1) = 'Unsuccessful write of states restart information'
+    PUSH_SUB(td_dump)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      POP_SUB(td_dump)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing td restart."
+      call messages_info(1)
+    end if
+
+    ! first write resume file
+    call states_dump(restart, st, gr, ierr, iter=iter)
+
+    cmplxscl = st%cmplxscl%space      
+    if (cmplxscl) then
+      SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
+    end if
+
+    ! write potential from previous interactions
+    do ii = 1, 2
+      do is = 1, st%d%nspin
+        write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
+        if (cmplxscl) then
+          zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
+          call zrestart_write_function(restart, filename, gr%mesh, zv_old, err)
+        else
+          call drestart_write_function(restart, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
+        end if
+        ! the unit is energy actually, but this only for restart, and can be kept in atomic units
+        ! for simplicity
+        if (err /= 0) then
+          ierr = ierr + 1
+          message(1) = "Unsuccessful write of '"//trim(filename)//"'."
+          call messages_warning(1)
+        end if
+      end do
+    end do
+
+    if (cmplxscl) then
+      SAFE_DEALLOCATE_A(zv_old)
+    end if
+
+    call pes_dump(restart, td%pesv, st, err)
+    if (err /= 0) ierr = ierr + 1
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing td restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(td_dump)
+  end subroutine td_dump
+
+  ! ---------------------------------------------------------
+  subroutine td_load(restart, gr, st, td, ierr)
+    type(restart_t), intent(in)    :: restart
+    type(grid_t),    intent(in)    :: gr
+    type(states_t),  intent(inout) :: st
+    type(td_t),      intent(inout) :: td
+    integer,         intent(out)   :: ierr
+
+    logical :: cmplxscl
+    integer :: ii, is, err
+    character(len=256) :: filename
+    CMPLX, allocatable :: zv_old(:)
+
+    PUSH_SUB(td_load)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(td_load)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading td restart."
+      call messages_info(1)
+    end if
+
+    ! Read states
+    call states_load(restart, st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
+
+    ! extract the interface wave function
+    if (ierr == 0 .and. st%open_boundaries) call states_get_ob_intf(st, gr)
+
+    ! read potential from previous interactions
+    cmplxscl = st%cmplxscl%space
+
+    if (cmplxscl) then
+      SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
+    end if
+        
+    do ii = 1, 2
+      do is = 1, st%d%nspin
+        write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
+        if(cmplxscl) then
+          call zrestart_read_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
+          td%tr%v_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
+          td%tr%Imv_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
+        else
+          call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
+        end if
+        if (err /= 0) then
+          ierr = ierr + 1
+          write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
+          call messages_fatal(1)
+        end if
+      end do
+    end do
+
+    if (cmplxscl) then
+      SAFE_DEALLOCATE_A(zv_old)
+    end if
+
+    ! read PES restart
+    if (td%pesv%calc_rc .or. td%pesv%calc_mask) then
+      call pes_load(restart, td%pesv, st, err)
+      if (err /= 0) then
+        ierr = ierr + 1
+        message(1) = "Unsuccessful read of PES restart."
         call messages_warning(1)
       end if
-      
-      if(cmplxscl) then
-        SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
-      end if
+    end if
 
-      ! write potential from previous interactions
-      do ii = 1, 2
-        do is = 1, st%d%nspin
-          write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
-          if(cmplxscl) then
-            zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
-            call zrestart_write_function(restart_dump, filename, gr%mesh, zv_old, ierr)
-          else
-            call drestart_write_function(restart_dump, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), ierr)
-          end if
-          ! the unit is energy actually, but this only for restart, and can be kept in atomic units
-          ! for simplicity
-          if(ierr /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-            call messages_warning(1)
-          end if
-        end do
-      end do
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading td restart done."
+      call messages_info(1)
+    end if
 
-      if(cmplxscl) then
-        SAFE_DEALLOCATE_A(zv_old)
-      end if
+    POP_SUB(td_load)
+  end subroutine td_load
 
-      POP_SUB(td_run.td_dump)
-    end subroutine td_dump
-
-  end subroutine td_run
 
 #include "td_init_inc.F90"
 

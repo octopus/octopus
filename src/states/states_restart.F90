@@ -319,7 +319,7 @@ contains
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
   subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose, kpts_dont_matter)
-    type(restart_t),            intent(inout) :: restart
+    type(restart_t),            intent(in)    :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
@@ -337,7 +337,7 @@ contains
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
-    character(len=256)   :: lines(3), label_, mod_time, occ_filename
+    character(len=256)   :: lines(3), label_
     character(len=50)    :: str
 
     FLOAT                :: my_occ, imev
