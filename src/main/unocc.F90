@@ -248,7 +248,7 @@ contains
         call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
         if(ierr /= 0) then
           message(1) = "Unsuccessful write of states restart."
-          call messages_fatal(1)
+          call messages_warning(1)
         end if
       end if
 

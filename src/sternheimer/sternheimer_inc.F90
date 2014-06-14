@@ -266,6 +266,10 @@ subroutine X(sternheimer_solve)(                           &
 
       call restart_cd(restart, dirname=wfs_tag_sigma(wfs_tag, sigma_alt))
       call states_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      if (err /= 0) then
+        message(1) = "Unsuccessful write of linear response states restart"
+        call messages_warning(1)
+      end if
       call restart_cd(restart)
     end do
 

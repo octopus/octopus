@@ -107,6 +107,10 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_du
 
     call restart_cd(restart_dump, dirname=phn_nm_wfs_tag(inm))
     call states_dump(restart_dump, st, gr, ierr, lr = lr)
+    if (ierr /= 0) then
+      message(1) = "Unsuccessful write of linear response states restart"
+      call messages_warning(1)
+    end if
     call restart_cd(restart_dump)
 
   end do

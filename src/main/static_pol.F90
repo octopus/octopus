@@ -288,8 +288,8 @@ contains
           call states_dump(restart_dump, sys%st, sys%gr, ierr)
           call restart_cd(restart_dump)
           if(ierr /= 0) then
-            message(1) = 'Unsuccessful write of restart.'
-            call messages_fatal(1)
+            message(1) = 'Unsuccessful write of states restart.'
+            call messages_warning(1)
           end if
         endif
       end do
@@ -370,8 +370,8 @@ contains
         call states_dump(restart_dump, sys%st, sys%gr, ierr)
         call restart_cd(restart_dump)
         if(ierr /= 0) then
-          message(1) = 'Unsuccessful write of restart.'
-          call messages_fatal(1)
+          message(1) = 'Unsuccessful write of states restart.'
+          call messages_warning(1)
         end if
       endif
 

@@ -145,6 +145,10 @@ contains
     call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
                       sys%gr%mesh, sys%gr%sb)
     call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    if (err /= 0) then
+      message(1) = "Unsuccessful write of states restart"
+      call messages_warning(1)
+    end if
     call restart_end(restart)
 
     SAFE_DEALLOCATE_A(target_rho)
