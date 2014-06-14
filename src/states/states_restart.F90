@@ -127,14 +127,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing)
-    type(restart_t),      intent(in)    :: restart
-    type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(in)    :: gr
-    integer,              intent(out)   :: ierr
-    integer,    optional, intent(in)    :: iter
+    type(restart_t),      intent(in)  :: restart
+    type(states_t),       intent(in)  :: st
+    type(grid_t),         intent(in)  :: gr
+    integer,              intent(out) :: ierr
+    integer,    optional, intent(in)  :: iter
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
-    type(lr_t), optional, intent(in)    :: lr
-    integer,    optional, intent(in)    :: st_start_writing
+    type(lr_t), optional, intent(in)  :: lr
+    integer,    optional, intent(in)  :: st_start_writing
 
     integer :: iunit_wfns, iunit_occs, iunit_states
     integer :: err, ik, idir, ist, idim, itot
