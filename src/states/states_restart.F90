@@ -978,7 +978,7 @@ contains
     type(mpi_grp_t)            :: mpi_grp
     integer                    :: start(1:3), end(1:3), start_lead(1:3), end_lead(1:3)
 
-    PUSH_SUB(states_read_free_states)
+    PUSH_SUB(states_load_free_states)
 
     ierr = 0
 
@@ -1115,7 +1115,7 @@ contains
     subroutine lead_dens_accum()
       integer :: il
 
-      PUSH_SUB(states_read_free_states.lead_dens_accum)
+      PUSH_SUB(states_load_free_states.lead_dens_accum)
       !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
@@ -1136,7 +1136,7 @@ contains
         end select
       end do
 
-      POP_SUB(states_read_free_states.lead_dens_accum)
+      POP_SUB(states_load_free_states.lead_dens_accum)
     end subroutine lead_dens_accum
   end subroutine states_load_free_states
 
