@@ -964,6 +964,13 @@ contains
 
         start_pos = int((st%qtot - charge_in_block)/(el_per_state*st%d%nik))
 
+        if(start_pos + ncols > st%nst) then
+          message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
+          write(message(2),'(a,i6,a)') "number ", start_pos, " but there are too many columns for the number of states."
+          write(message(3),'(a,i6,a)') "Solution: set ExtraStates = ", start_pos + ncols - st%nst
+          call messages_fatal(3)
+        end if
+
         do ik = 1, st%d%nik
           do ist = 1, start_pos
             st%occ(ist, ik) = el_per_state
