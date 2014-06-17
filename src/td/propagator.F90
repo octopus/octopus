@@ -1750,8 +1750,6 @@ contains
     CMPLX, allocatable :: opzpsi(:, :)
     FLOAT :: a(2, 2), c(2)
     integer :: np_part, np
-    CMPLX, allocatable :: k1(:, :, :, :), k2(:, :, :, :), h1k1(:, :, :, :), h1k2(:, :, :, :), &
-                          h2k1(:, :, :, :), h2k2(:, :, :, :)
 
     PUSH_SUB(td_rk4opt)
 

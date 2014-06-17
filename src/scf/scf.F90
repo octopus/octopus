@@ -124,7 +124,7 @@ contains
     FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
-    integer :: mixdefault, ierr
+    integer :: mixdefault
 
     PUSH_SUB(scf_init)
 
