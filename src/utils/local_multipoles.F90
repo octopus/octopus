@@ -317,12 +317,12 @@ contains
     !% A local domain could be construct by addition of several box centered on the ions.
     !% The grid points inside this box will belong to the local domain. 
     !% 
-    !% The format of this block is the following: 
-    !% 'Label' | Shape | %< | Shape dependencies >%
-    !%  The first field is the label of the domain. 
+    !% The format of this block is the following:<br>
+    !% <tt> 'Label' | Shape | %< | Shape dependencies >% </tt>
+    !% <br>The first field is the label of the domain. 
     !% Label = string with the name of the new local domain.
     !% The second is the shape type of the box used to define the domain.
-    !% Shape = SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BADER
+    !% Shape = SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BADER.
     !% Some types may need some parameters given in the remaining fields of the row.
     !% (the valid options are detailed below). 
     !%
@@ -333,13 +333,11 @@ contains
     !% <br>case(MINIMUM):        | rsize | 'center_list' 
     !% <br>case(BADER):          | 'center_list' 
     !% <br>%</tt>
-    !%
-    !% rsize < Radius in input length units
-    !% xsize < the length of the cylinder in the x-direction 
-    !% origin coordinates < in input length units separated by | . where is the box centered.
-    !% lsize <  half of the length of the parallelepiped in each direction.
-    !% center_list < string containing the list of atoms in xyz file for each domain in the form "2,16-23"
-    !% 
+    !% <br>rsize < Radius in input length units
+    !% <br>xsize < the length of the cylinder in the x-direction 
+    !% <br>origin coordinates < in input length units separated by | . where is the box centered.
+    !% <br>lsize <  half of the length of the parallelepiped in each direction.
+    !% <br>center_list < string containing the list of atoms in xyz file for each domain in the form "2,16-23"
     !%End
 
     ! First, find out if there is a LocalDomains block.
