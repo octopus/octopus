@@ -1385,12 +1385,14 @@ contains
     type(mesh_t),        intent(in)  :: mesh
     integer,             intent(out) :: ierr
 
-    integer :: iunit, err, isp
+    integer :: iunit, err, err2(2), isp
     character(len=12) :: filename
+    character(len=100) :: lines(2)
 
     PUSH_SUB(hamiltonian_dump_vhxc)
 
     ierr = 0
+
     if (restart_skip(restart) .or. hm%theory_level == INDEPENDENT_PARTICLES) then
       POP_SUB(hamiltonian_dump_vhxc)
       return
@@ -1403,80 +1405,72 @@ contains
 
     !write the different components of the Hartree+XC potential
     iunit = restart_open(restart, 'vhxc')
-    if (iunit > 0) then
-      if (mpi_grp_is_root(mpi_world)) then
-        write(iunit,'(a)') '#     #spin    #nspin    filename'
-        write(iunit,'(a)') '%vhxc'
-      end if
-    else
-      ierr = 1
-    end if
+    lines(1) = '#     #spin    #nspin    filename'
+    lines(2) = '%vhxc'
+    call restart_write(restart, iunit, lines, 2, err)
+    if (err /= 0) ierr = ierr + 1
 
+    err2 = 0
     do isp = 1, hm%d%nspin
       if (hm%d%nspin == 1) then
         write(filename, fmt='(a)') 'vhxc'
       else
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
-      endif
-      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
       end if
+      write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+      call restart_write(restart, iunit, lines, 1, err)
+      if (err /= 0) err2(1) = err2(1) + 1
 
       if (hm%cmplxscl%space) then
         call zrestart_write_function(restart, filename, mesh, hm%vhxc(:,isp) + M_zI*hm%imvhxc(:,isp), err)
       else
         call drestart_write_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
-
-      if (err /= 0) then
-        message(1) = "Unsuccessful write of '"//trim(filename)//"'."
-        call messages_warning(1)
-        ierr = ierr + 1
-      end if
+      if (err /= 0) err2(2) = err2(2) + 1
 
     end do
+    if (err2(1) /= 0) ierr = ierr + 2
+    if (err2(2) /= 0) ierr = ierr + 4
 
-    if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(a)') '%'
-    end if
+    lines(1) = '%'
+    call restart_write(restart, iunit, lines, 1, err)
+    if (err /= 0) ierr = ierr + 4
 
     ! MGGAs have an extra term that also needs to be dumped
     if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
-      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
-        write(iunit,'(a)') '#     #spin    #nspin    filename'
-        write(iunit,'(a)') '%vtau'
-      end if
+      lines(1) = '#     #spin    #nspin    filename'
+      lines(2) = '%vtay'
+      call restart_write(restart, iunit, lines, 2, err)
+      if (err /= 0) ierr = ierr + 8
 
+      err2 = 0
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         endif
-        if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
-          write(iunit, '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
-        end if
+        write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+        call restart_write(restart, iunit, lines, 1, err)
+        if (err /= 0) err2(1) = err2(1) + 16
 
         if (hm%cmplxscl%space) then
           call zrestart_write_function(restart, filename, mesh, hm%vtau(:,isp) + M_zI*hm%imvtau(:,isp), err)
         else
           call drestart_write_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
-        if (err /= 0) then
-          message(1) = "Unsuccessful write of '"//trim(filename)//"'."
-          call messages_warning(1)
-          ierr = ierr + 1
-        end if
+        if (err /= 0) err2(1) = err2(1) + 1
 
       end do
+      if (err2(1) /= 0) ierr = ierr + 32
+      if (err2(2) /= 0) ierr = ierr + 64
 
-      if (iunit > 0 .and. mpi_grp_is_root(mpi_world)) then
-        write(iunit,'(a)') '%'
-      end if
-
+      lines(1) = '%'
+      call restart_write(restart, iunit, lines, 1, err)
+      if (err /= 0) ierr = ierr + 128
     end if
 
-    if (iunit > 0) call restart_close(restart, iunit)
+    call restart_close(restart, iunit)
 
     if (in_debug_mode) then
       message(1) = "Debug: Writing Vhxc restart done."
@@ -1494,7 +1488,7 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(out)   :: ierr
 
-    integer :: err, isp
+    integer :: err, err2, isp
     character(len=12) :: filename
     CMPLX, allocatable :: zv(:)
 
@@ -1517,6 +1511,7 @@ contains
       SAFE_ALLOCATE(zv(1:mesh%np))
     end if
 
+    err2 = 0
     do isp = 1, hm%d%nspin
       if (hm%d%nspin==1) then
         write(filename, fmt='(a)') 'vhxc'
@@ -1531,14 +1526,13 @@ contains
       else
         call drestart_read_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
-      if (err /= 0) then
-        message(1) = "Unsuccessful read of '"//trim(filename)//"'."
-        call messages_warning(1)
-        ierr = ierr + 1
-      end if
+      if (err /= 0) err2 = err2 + 1
+
     end do
+    if (err2 /= 0) ierr = ierr + 1
 
     ! MGGAs have an extra term that also needs to be read
+    err2 = 0
     if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
@@ -1554,13 +1548,11 @@ contains
         else
           call drestart_read_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
-        if (err /= 0) then
-          message(1) = "Unsuccessful read of '"//trim(filename)//"'."
-          call messages_warning(1)
-          ierr = ierr + 1
-        end if
+        if (err /= 0) err2 = err2 + 1
+
       end do
 
+      if (err2 /= 0) ierr = ierr + 2
     end if
 
     if (hm%cmplxscl%space) then

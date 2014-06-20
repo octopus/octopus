@@ -52,6 +52,8 @@ module restart_m
     restart_mkdir,           &
     restart_rm,              &
     restart_open,            &
+    restart_write,           &
+    restart_read,            &
     restart_close,           &
     restart_block_signals,   &
     restart_unblock_signals, &
@@ -484,26 +486,26 @@ contains
           
           call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
           if (ierr /= 0) then
-            message(1) = "Unable to dump mesh information to directory '"//trim(restart%pwd)//"'."
+            message(1) = "Unable to write mesh information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)
           end if
 
           call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, ierr)
           if (ierr /= 0) then
-            message(1) = "Unable to dump index information to directory '"//trim(restart%pwd)//"'."
+            message(1) = "Unable to write index map to '"//trim(restart%pwd)//"'."
             call messages_fatal(1)
           end if
 
           call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, ierr)
           if (ierr /= 0) then
-            message(1) = "Unable to dump mesh fingerprint to directory '"//trim(restart%pwd)//"'."
+            message(1) = "Unable to write mesh fingerprint to '"//trim(restart%pwd)//"/grid'."
             call messages_fatal(1)
           end if
 
           if (present(sb)) then
             call simul_box_dump(sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
             if (ierr /= 0) then
-              message(1) = "Unable to dump simulation box information to directory '"//trim(restart%pwd)//"'."
+              message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
               call messages_fatal(1)
             end if
           end if
@@ -530,7 +532,7 @@ contains
           ! Check if an error occurred. If so, stop the calculation, because at the moment we really need a compatible mesh.
           if (ierr /= 0) then
             if (ierr == -1) then
-              message(1) = "Unable to check mesh compatibility: unable to open mesh fingerprint"
+              message(1) = "Unable to check mesh compatibility: unable to read mesh fingerprint"
               message(2) = "in '"//trim(restart%pwd)//"'."
             else if (ierr > 0) then
               message(1) = "Mesh from current calculation is not compatible with mesh found in"
@@ -736,8 +738,56 @@ contains
     restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
                            die=die, is_tmp=.true., position=position, form=form, grp=restart%mpi_grp)
 
+    if (restart_open < 0) then    
+      message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    end if
+
     POP_SUB(restart_open)
   end function restart_open
+
+
+  ! ---------------------------------------------------------
+  subroutine restart_write(restart, iunit, lines, nlines, ierr)
+    type(restart_t),  intent(in)  :: restart
+    integer,          intent(in)  :: iunit
+    character(len=*), intent(in)  :: lines(:)
+    integer,          intent(in)  :: nlines
+    integer,          intent(out) :: ierr
+
+    integer :: iline
+
+    PUSH_SUB(restart_write)
+
+    if (iunit > 0) then
+      ierr = 0
+      if (mpi_grp_is_root(restart%mpi_grp)) then
+        do iline = 1, nlines
+          write(iunit,"(a)") trim(lines(iline))
+        end do
+      end if
+    else
+      ierr = 1
+    end if
+
+    POP_SUB(restart_write)
+  end subroutine restart_write
+
+
+  ! ---------------------------------------------------------
+  subroutine restart_read(restart, iunit, lines, nlines, ierr)
+    type(restart_t),  intent(in)  :: restart
+    integer,          intent(in)  :: iunit
+    character(len=*), intent(out) :: lines(:)
+    integer,          intent(in)  :: nlines
+    integer,          intent(out) :: ierr
+
+    PUSH_SUB(restart_read)
+
+    call iopar_read(restart%mpi_grp, iunit, lines, nlines, ierr)
+
+    POP_SUB(restart_read)
+  end subroutine restart_read
 
 
   ! ---------------------------------------------------------
@@ -748,7 +798,7 @@ contains
 
     PUSH_SUB(restart_close)
 
-    call io_close(iunit, restart%mpi_grp)
+    if (iunit > 0) call io_close(iunit, restart%mpi_grp)
 
     POP_SUB(restart_close)
   end subroutine restart_close

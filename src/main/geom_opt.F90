@@ -112,7 +112,7 @@ contains
       call states_load(restart_load, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
-        message(1) = "Could not load wavefunctions: Starting from scratch."
+        message(1) = "Unable to read wavefunctions: Starting from scratch."
         call messages_warning(1)
         fromscratch = .true.
       end if

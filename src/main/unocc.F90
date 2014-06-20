@@ -113,7 +113,7 @@ contains
       call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
 
       if (ierr /= 0) then
-        message(1) = "Unable to load states. Calculation is going to start from scratch."
+        message(1) = "Unable to read wavefunctions: Calculation is going to start from scratch."
         call messages_warning(1)
 
         from_scratch = .true.
@@ -125,11 +125,15 @@ contains
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
       call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+      if (ierr < 0) then
+        message(1) = "Unable to read wavefunctions of occupied states."
+        call messages_fatal(1)
+      end if
     end if
 
     call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
     if (ierr_rho /= 0) then
-      message(1) = "Building density from wavefunctions."
+      message(1) = "Unable to read density: Building density from wavefunctions."
       call messages_info(1)
     end if
 
@@ -247,7 +251,7 @@ contains
       if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
         call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
         if(ierr /= 0) then
-          message(1) = "Unsuccessful write of states restart."
+          message(1) = "Unable to write states wavefunctions."
           call messages_warning(1)
         end if
       end if

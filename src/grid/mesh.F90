@@ -407,7 +407,11 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)    
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
         write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
@@ -416,12 +420,10 @@ contains
         write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
       end if
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     call index_dump(mesh%idx, dir, filename, mpi_grp, err)
-    ierr = ierr + err
+    if (err /= 0) ierr = ierr + 2
 
     POP_SUB(mesh_dump)
   end subroutine mesh_dump
@@ -447,26 +449,34 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit > 0) then
-      ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
-
-      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-      if (ierr == 0) then
-        read(lines(1), '(a20,1i10)') str, mesh%np
-        read(lines(2), '(a20,1i10)') str, mesh%np_part
-        read(lines(3), '(a20,1i10)') str, mesh%np_global
-        read(lines(4), '(a20,1i10)') str, mesh%np_part_global
-        nullify(mesh%x, mesh%vol_pp, mesh%resolution)
-        mesh%parallel_in_domains = .false.
-      end if
-      call io_close(iunit, grp=mpi_grp)
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
     else
-      ierr = 1
+      ! Find the dump tag.
+      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
+      if (err /= 0) ierr = ierr + 2
+
+      if (ierr == 0) then
+        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        if (err /= 0) then
+          ierr = ierr + 4
+        else
+          read(lines(1), '(a20,1i10)') str, mesh%np
+          read(lines(2), '(a20,1i10)') str, mesh%np_part
+          read(lines(3), '(a20,1i10)') str, mesh%np_global
+          read(lines(4), '(a20,1i10)') str, mesh%np_part_global
+          nullify(mesh%x, mesh%vol_pp, mesh%resolution)
+          mesh%parallel_in_domains = .false.
+        end if
+      end if
+
+      call io_close(iunit, grp=mpi_grp)
     end if
 
     call index_load(mesh%idx, dir, filename, mpi_grp, err)
-    ierr = ierr + err
+    if (err /= 0) ierr = ierr + 8
 
     POP_SUB(mesh_load)
   end subroutine mesh_load
@@ -487,7 +497,11 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='write', is_tmp=.true., die=.false., grp=mpi_grp)
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+      ierr = ierr + 1
+    else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
         if(mesh%sb%box_shape /= HYPERCUBE) then
@@ -498,8 +512,6 @@ contains
         end if
       end if
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     POP_SUB(mesh_write_fingerprint)
@@ -522,7 +534,7 @@ contains
 
     character(len=20)  :: str
     character(len=100) :: lines(4)
-    integer :: iunit, box_shape, algorithm
+    integer :: iunit, box_shape, algorithm, err
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
@@ -533,25 +545,36 @@ contains
     read_np = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., is_tmp = .true., grp=mpi_grp)
-    if (iunit > 0) then
-      call iopar_read(mpi_grp, iunit, lines, 1, ierr)
-      if (ierr == 0) read(lines(1), '(a20,i21)')  str, box_shape
-      if (ierr == 0 .and. box_shape == HYPERCUBE) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
+      box_shape = 0
+      call iopar_read(mpi_grp, iunit, lines, 1, err)
+      if (err /= 0) then
+        ierr = ierr + 2
+      else
+        read(lines(1), '(a20,i21)')  str, box_shape
+      end if
+
+      if (box_shape == HYPERCUBE) then
         ! We have a hypercube: we will assume everything is OK...
         message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
         call messages_warning(1)
-      end if
 
-      if (ierr == 0 .and. box_shape /= HYPERCUBE) then
-        call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-        if (ierr == 0) then
+      else
+        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        if (err /= 0) then
+          ierr = ierr + 4
+        else
           read(lines(1), '(a20,i21)')  str, read_np_part
           read(lines(2), '(a20,i21)')  str, read_np
           read(lines(3), '(a20,i21)')  str, algorithm
           read(lines(4), '(a20,i21)')  str, checksum
 
           ASSERT(read_np_part >= read_np)
-      
+            
           if (read_np_part == mesh%np_part_global &
                .and. read_np == mesh%np_global &
                .and. algorithm == 1 &
@@ -560,11 +583,10 @@ contains
             read_np = 0
           end if
         end if
+
       end if
 
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     POP_SUB(mesh_read_fingerprint)
@@ -581,24 +603,29 @@ contains
     integer, pointer,     intent(out) :: map(:)
     integer,              intent(out) :: ierr
 
-    integer :: ip, read_np_part, read_np, read_ierr, xx(MAX_DIM)
+    integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
     integer, allocatable :: read_lxyz(:,:)
     
     PUSH_SUB(mesh_check_dump_compatibility)
+
+    ierr = 0
 
     nullify(map)
     grid_changed = .false.
     grid_reordered = .false.
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, err)
+    if (err /= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to read mesh fingerprint from '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
 
-    if (ierr == 0 .and. read_np > 0) then
-
+    else if (read_np > 0) then
       if (.not. associated(mesh%sb)) then
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
         ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
-        ierr = 1
+        ierr = ierr + 2
       else if (mesh%sb%box_shape /= HYPERCUBE) then
 
         grid_changed = .true.
@@ -611,8 +638,12 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(associated(mesh%idx%lxyz))
-        call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, read_ierr)
-        if (read_ierr == 0) then
+        call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        if (err /= 0) then
+          ierr = ierr + 4
+          message(1) = "Unable to read index map from '"//trim(dir)//"'."
+          call messages_warning(1)
+        else
           ! generate the map
           SAFE_ALLOCATE(map(1:read_np))
 
@@ -628,8 +659,6 @@ contains
               if(map(ip) > mesh%np_global) map(ip) = 0
             end if
           end do
-        else
-          ierr = 2
         end if
 
         SAFE_DEALLOCATE_A(read_lxyz)

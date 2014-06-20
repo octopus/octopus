@@ -254,7 +254,7 @@ subroutine X(sternheimer_solve)(                           &
       endif
       call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag, ierr)
       if (ierr /= 0) then
-        message(1) = "Unable to write density "//trim(rho_tag)
+        message(1) = "Unable to write response density '"//trim(rho_tag)//"'."
         call messages_warning(1)
       end if
     end if
@@ -267,7 +267,7 @@ subroutine X(sternheimer_solve)(                           &
       call restart_cd(restart, dirname=wfs_tag_sigma(wfs_tag, sigma_alt))
       call states_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
       if (err /= 0) then
-        message(1) = "Unsuccessful write of linear response states restart"
+        message(1) = "Unable to write response wavefunctions."
         call messages_warning(1)
       end if
       call restart_cd(restart)

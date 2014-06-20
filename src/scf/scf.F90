@@ -493,7 +493,7 @@ contains
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
-          message(1) = 'Unable to read density restart. Density will be calculated from states.'
+          message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
           call v_ks_calc(ks, hm, st, geo)
@@ -503,7 +503,7 @@ contains
       if (restart_has_flag(restart_load, RESTART_VHXC)) then
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
-          message(1) = 'Unable to read Vhxc restart. Vhxc will be calculated from states.'
+          message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
           call hamiltonian_update(hm, gr%mesh)
@@ -518,7 +518,7 @@ contains
           call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
         if (ierr /= 0) then
-          message(1) = "Unable to read mixing restart. Mixing will start from scratch."
+          message(1) = "Unable to read mixing information. Mixing will start from scratch."
           call messages_warning(1)
         end if
       end if
@@ -789,13 +789,13 @@ contains
 
           call states_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then
-            message(1) = 'Unsuccessful write of states restart'
+            message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
 
           call states_dump_rho(restart_dump, st, gr, ierr, iter=iter)
           if (ierr /= 0) then
-            message(1) = 'Unsuccessful write of density restart'
+            message(1) = 'Unable to write density.'
             call messages_warning(1)
           end if
 
@@ -803,19 +803,19 @@ contains
           case (MIXDENS)
             call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
             if (ierr /= 0) then
-              message(1) = 'Unsuccessful write of mixing restart'
+              message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
             end if
           case (MIXPOT)
             call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
             if (ierr /= 0) then
-              message(1) = 'Unsuccessful write of Vhxc restart'
+              message(1) = 'Unable to write Vhxc.'
               call messages_warning(1)
             end if
 
             call mix_dump(restart_dump, scf%smix, gr%mesh, ierr)
             if (ierr /= 0) then
-              message(1) = 'Unsuccessful write of mixing restart'
+              message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
             end if
           end select

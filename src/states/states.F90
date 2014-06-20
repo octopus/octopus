@@ -444,9 +444,9 @@ contains
         restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR
         call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, dir=restart_dir)
         ! first get nst and kpoints of all states
-        call states_look(ob_restart, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
+        call states_look(ob_restart, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr /= 0) then
-          message(1) = 'Could not read the number of states of the periodic calculation'
+          message(1) = 'Could not read the states information of the periodic calculation'
           message(2) = 'from '//trim(restart_dir)//'.'
           call messages_fatal(2)
         end if
@@ -748,9 +748,8 @@ contains
   !> Reads the 'states' file in the restart directory, and finds out
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(restart, mpi_grp, nik, dim, nst, ierr)
+  subroutine states_look(restart, nik, dim, nst, ierr)
     type(restart_t), intent(inout) :: restart
-    type(mpi_grp_t), intent(in)    :: mpi_grp
     integer,         intent(out)   :: nik
     integer,         intent(out)   :: dim
     integer,         intent(out)   :: nst
@@ -758,24 +757,19 @@ contains
 
     character(len=256) :: lines(3)
     character(len=20)   :: char
-    integer :: iunit, err
+    integer :: iunit
 
     PUSH_SUB(states_look)
 
     ierr = 0
+
     iunit = restart_open(restart, 'states')
-
-    if(iunit < 0) then
-      ierr = -1
-      POP_SUB(states_look)
-      return
+    call restart_read(restart, iunit, lines, 3, ierr)
+    if (ierr == 0) then
+      read(lines(1), *) char, nst
+      read(lines(2), *) char, dim
+      read(lines(3), *) char, nik
     end if
-
-    call iopar_read(mpi_grp, iunit, lines, 3, err)
-    read(lines(1), *) char, nst
-    read(lines(2), *) char, dim
-    read(lines(3), *) char, nik
-
     call restart_close(restart, iunit)
 
     POP_SUB(states_look)

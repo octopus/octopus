@@ -87,7 +87,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_du
         call restart_cd(restart_load)
 
         if(ierr /= 0) then
-          message(1) = "Failed to load response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'"
+          message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_fatal(1)
         end if
             
@@ -108,7 +108,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_du
     call restart_cd(restart_dump, dirname=phn_nm_wfs_tag(inm))
     call states_dump(restart_dump, st, gr, ierr, lr = lr)
     if (ierr /= 0) then
-      message(1) = "Unsuccessful write of linear response states restart"
+      message(1) = "Unable to write response wavefunctions to '"//trim(phn_nm_wfs_tag(inm))//"'."
       call messages_warning(1)
     end if
     call restart_cd(restart_dump)

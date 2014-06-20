@@ -77,6 +77,7 @@ contains
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
     character(len=80) :: fname, dir_name
+    character(len=120) :: line(1)
     character :: sign_char
     type(restart_t) :: gs_restart, restart_load, restart_dump
 
@@ -88,6 +89,10 @@ contains
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
     call states_load(gs_restart, sys%st, sys%gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read wavefunctions."
+      call messages_fatal(1)
+    end if
     call restart_end(gs_restart)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
@@ -168,8 +173,11 @@ contains
     if(i_start  ==  1) then
       ! open new file, erase old data, write e_field
       iunit = restart_open(restart_dump, RESTART_FILE, status='replace')
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, fmt='(e20.12)') e_field
+      write(line(1), fmt='(e20.12)') e_field
+      call restart_write(restart_dump, iunit, line, 1, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unsuccessful write of electric field."
+        call messages_warning(1)
       end if
       call restart_close(restart_dump, iunit)
       center_written = .false.
@@ -212,11 +220,16 @@ contains
     end do
 
     ! Writes the dipole to file
-    iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-    if(mpi_grp_is_root(mpi_world) .and. .not. center_written) then 
-      write(iunit, fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+    if(.not. center_written) then 
+      iunit = restart_open(restart_dump, RESTART_FILE, position='append')
+      write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+      call restart_write(restart_dump, iunit, line, 1, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unsuccessful write of center dipole."
+        call messages_warning(1)
+      end if
+      call restart_close(restart_dump, iunit)
     end if
-    call restart_close(restart_dump, iunit)
 
     if(mpi_grp_is_root(mpi_world)) then
       call geometry_dipole(sys%geo, ionic_dipole)
@@ -288,7 +301,7 @@ contains
           call states_dump(restart_dump, sys%st, sys%gr, ierr)
           call restart_cd(restart_dump)
           if(ierr /= 0) then
-            message(1) = 'Unsuccessful write of states restart.'
+            message(1) = 'Unable to write of states wavefunctions.'
             call messages_warning(1)
           end if
         endif
@@ -296,8 +309,11 @@ contains
 
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, fmt='(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
+      write(line(1), '(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
+      call restart_write(restart_dump, iunit, line, 1, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unsuccessful write of dipole."
+        call messages_warning(1)
       end if
       call restart_close(restart_dump, iunit)
     end do
@@ -360,8 +376,11 @@ contains
   
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      if(mpi_grp_is_root(mpi_world)) then 
-        write(iunit, fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+      write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+      call restart_write(restart_dump, iunit, line, 1, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unsuccessful write of dipole."
+        call messages_warning(1)
       end if
       call restart_close(restart_dump, iunit)
 
@@ -370,7 +389,7 @@ contains
         call states_dump(restart_dump, sys%st, sys%gr, ierr)
         call restart_cd(restart_dump)
         if(ierr /= 0) then
-          message(1) = 'Unsuccessful write of states restart.'
+          message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
         end if
       endif

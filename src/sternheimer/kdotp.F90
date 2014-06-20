@@ -202,7 +202,7 @@ contains
         call restart_cd(restart_load)
           
         if(ierr /= 0) then
-          message(1) = "Could not load response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
+          message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
           call messages_warning(1)
         end if
 
@@ -214,7 +214,7 @@ contains
             call restart_cd(restart_load)
           
             if(ierr /= 0) then
-              message(1) = "Could not load response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
+              message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
               call messages_warning(1)
             end if
           enddo

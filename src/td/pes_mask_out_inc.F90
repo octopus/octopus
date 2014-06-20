@@ -1805,8 +1805,8 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
   type(states_t),   intent(in)  :: st
   integer,          intent(out) :: ierr
 
-  character(len=80) :: filename, path
-  integer :: itot, ik, ist, idim, ll(3), np, iunit, err
+  character(len=80) :: filename, path, lines(2)
+  integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2
   CMPLX, pointer :: gwf(:,:,:)
   type(profile_t), save :: prof
    
@@ -1827,19 +1827,16 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
   call profiling_in(prof, "PESMASK_dump")
 
   iunit = restart_open(restart, 'pes_mask')
-  if (iunit > 0) then
-    if (mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)
-      write(iunit, '(a10,2x,es19.12)') 'Mask R2', mask%mask_r(2)
-    end if
-    call restart_close(restart, iunit)
-  else
-    ierr = 1
-  end if
+  write(lines(1), '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)
+  write(lines(2), '(a10,2x,es19.12)') 'Mask R2', mask%mask_r(2)
+  call restart_write(restart, iunit, lines, 2, err)
+  if (err /= 0) ierr = ierr + 1
+  call restart_close(restart, iunit)
 
   ll(1:3) = mask%fs_n_global(1:3)
   np = ll(1)*ll(2)*ll(3) 
 
+  err2 = 0
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -1872,9 +1869,9 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
         if (mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
           call io_binary_write(path, np, gwf(:,:,:), err)
           if (err /= 0) then
-            message(1) = "Unsuccessful write of '"//trim(path)//"'."
+            err2 = err2 + 1
+            message(1) = "Unable to write PES mask restart data to '"//trim(path)//"'."
             call messages_warning(1)
-            ierr = ierr + 1
           end if
         end if
 
@@ -1885,6 +1882,7 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
       end do
     end do
   end do
+  if (err2 /= 0) ierr = ierr + 2
 
   if (in_debug_mode) then
     message(1) = "Debug: Writing PES mask restart done."
@@ -1904,7 +1902,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
   integer,          intent(out)   :: ierr
 
   character(len=80) :: filename, path
-  integer :: itot, ik, ist, idim , np, err, iunit, ll(3)
+  integer :: itot, ik, ist, idim , np, err, err2, iunit, ll(3)
   character(len=128) :: lines(2)
   character(len=7) :: dummy
   FLOAT, allocatable :: rr(:)
@@ -1927,21 +1925,20 @@ subroutine pes_mask_load(restart, mask, st, ierr)
 
   SAFE_ALLOCATE(rr(1:2))
   iunit = restart_open(restart, 'pes_mask')
-  if (iunit > 0) then
-    call iopar_read(st%dom_st_kpt_mpi_grp, iunit, lines, 2, ierr)
-    if (ierr == 0) then    
-      read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
-      read(lines(2),'(a10,2x,es19.12)') dummy, rr(2)
-    end if
-    call restart_close(restart, iunit)
+  call restart_read(restart, iunit, lines, 2, err)
+  if (err /= 0) then    
+    ierr = ierr + 1
   else
-    ierr = 1
+    read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
+    read(lines(2),'(a10,2x,es19.12)') dummy, rr(2)
   end if
+  call restart_close(restart, iunit)
 
 
   ll(1:3) = mask%ll(1:3)
   np =ll(1)*ll(2)*ll(3) 
 
+  err2 = 0
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -1956,14 +1953,15 @@ subroutine pes_mask_load(restart, mask, st, ierr)
         
         call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), err)
         if (err /= 0) then
-          message(1) = "Unsuccessful write of '"//trim(path)//"'."
+          err2 = err2 + 1
+          message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
           call messages_warning(1)
-          ierr = ierr + 1
         end if
 
       end do
     end do
   end do
+  if (err2 /= 0) ierr = ierr + 2
 
   if (ierr == 0) then
     if (rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
@@ -1971,7 +1969,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
       message(2) = "I will restart mapping from the previous context."
       call messages_warning(2)
       call pes_mask_restart_map(mask, st, rr)
-    endif
+    end if
   end if
 
   SAFE_DEALLOCATE_A(rr)

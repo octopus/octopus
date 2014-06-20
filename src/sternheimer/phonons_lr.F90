@@ -90,6 +90,7 @@ contains
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit_restart, ierr, start_mode
     CMPLX, allocatable :: force_deriv(:,:)
     character(len=80) :: str_tmp
+    character(len=300) :: line(1)
     type(Born_charges_t) :: born
     logical :: normal_mode_wfs, do_infrared, symmetrize
     type(restart_t) :: restart_load, restart_dump, kdotp_restart, gs_restart
@@ -169,7 +170,7 @@ contains
         call restart_cd(kdotp_restart)
 
         if(ierr /= 0) then
-          message(1) = "Could not load kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
+          message(1) = "Unable to read kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
           message(2) = "Previous kdotp calculation required."
           call messages_fatal(2)
         end if
@@ -238,6 +239,10 @@ contains
         call messages_info(1)
         call restart_cd(restart_load, dirname=wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
         call states_load(restart_load, st, gr, ierr, lr = lr(1))
+        if (ierr /= 0) then
+          message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
+          call messages_fatal(1)
+        end if
         call restart_cd(restart_load)
       end if
       
@@ -282,9 +287,12 @@ contains
 
       iunit_restart = restart_open(restart_dump, 'restart', position='append')
       ! open and close makes sure output is not buffered
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit_restart, *) imat, vib%dyn_matrix(:, imat), (vib%infrared(imat, idir), idir = 1, ndim)
-      endif
+      write(line(1), *) imat, vib%dyn_matrix(:, imat), (vib%infrared(imat, idir), idir = 1, ndim)
+      call restart_write(restart_dump, iunit_restart, line, 1, ierr)
+      if (ierr /= 0) then
+        message(1) = "Could not write restart information."
+        call messages_warning(1)
+      end if
       call restart_close(restart_dump, iunit_restart)
 
       message(1) = ""
@@ -542,40 +550,39 @@ contains
     integer :: iunit, ierr, imode, number
     FLOAT, allocatable :: dyn_row(:)
     FLOAT :: infrared(MAX_DIM)
+    character(len=120) :: line(1)
 
     PUSH_SUB(phonons_load)
 
     iunit = restart_open(restart, 'restart')
-    if(mpi_grp_is_root(mpi_world)) then
+    if (iunit > 0) then
+      SAFE_ALLOCATE(dyn_row(1:vib%num_modes))
 
-      if(iunit > 0) then
-        SAFE_ALLOCATE(dyn_row(1:vib%num_modes))
+      do imode = 1, vib%num_modes
+        call restart_read(restart, iunit, line, 1, ierr)
+        if(ierr /= 0) exit
+        read(line(1), fmt=*, iostat=ierr) number, dyn_row(:), infrared(1:vib%ndim)
+        if(number /= imode) then
+          write(message(1),'(a,i9,a,i9)') "Corruption of restart data: line ", imode, " is labeled as ", number
+          call messages_fatal(1)
+        endif
+        start_mode = imode + 1
+        vib%dyn_matrix(:, imode) = dyn_row(:)
+        vib%infrared(imode, 1:vib%ndim) = infrared(1:vib%ndim)
+      end do
 
-        do imode = 1, vib%num_modes
-          read(iunit, fmt=*, iostat=ierr) number, dyn_row(:), infrared(1:vib%ndim)
-          if(ierr /= 0) exit
-          if(number /= imode) then
-            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: line ", imode, " is labeled as ", number
-            call messages_fatal(1)
-          endif
-          start_mode = imode + 1
-          vib%dyn_matrix(:, imode) = dyn_row(:)
-          vib%infrared(imode, 1:vib%ndim) = infrared(1:vib%ndim)
-        end do
+      write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
+           start_mode - 1, ' modes out of ', vib%num_modes
+      call messages_info(1)
 
-        write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
-          start_mode - 1, ' modes out of ', vib%num_modes
-        call messages_info(1)
-
-        SAFE_DEALLOCATE_A(dyn_row)
-      else
-        start_mode = 1
-
-        message(1) = "Could not find restart file 'restart'. Starting from scratch."
-        call messages_warning(1)
-      endif
+      SAFE_DEALLOCATE_A(dyn_row)
+    else
+      start_mode = 1
+      
+      message(1) = "Could not find restart file 'restart'. Starting from scratch."
+      call messages_warning(1)
     endif
-    if (iunit > 0) call restart_close(restart, iunit)
+    call restart_close(restart, iunit)
 
 #ifdef HAVE_MPI
     call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)

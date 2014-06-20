@@ -1042,6 +1042,10 @@ contains
        write(dirname,'(a, i4.4)') trim(prop%dirname), j
        call restart_cd(prop%restart_load, dirname=dirname)
        call states_load(prop%restart_load, stored_st, gr, ierr, verbose=.false.)
+       if (ierr /= 0) then
+         message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
+         call messages_fatal(1)
+       end if
        call restart_cd(prop%restart_load)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
@@ -1061,58 +1065,6 @@ contains
     end do
     POP_SUB(oct_prop_check)
   end subroutine oct_prop_check
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine oct_prop_load_states(prop, psi, gr, iter, ierr)
-    type(oct_prop_t),  intent(inout) :: prop
-    type(states_t),    intent(inout) :: psi
-    type(grid_t),      intent(in)    :: gr
-    integer,           intent(in)    :: iter
-    integer,           intent(out)   :: ierr
-
-    integer :: j, err
-    character(len=80) :: dirname
-
-    PUSH_SUB(oct_prop_load_states)
-
-    ierr = 0
-
-    if (restart_skip(prop%restart_load)) then
-      ierr = -1
-      POP_SUB(oct_prop_load_states)
-      return
-    end if
-
-    if (in_debug_mode) then
-      message(1) = "Debug: Reading OCT propagation states restart."
-      call messages_info(1)
-    end if
-
-    do j = 1, prop%number_checkpoints + 2
-      if (prop%iter(j)  ==  iter) then
-        write(dirname,'(a, i4.4)') trim(prop%dirname), j
-        call restart_cd(prop%restart_load, dirname=dirname)
-
-        call states_load(prop%restart_load, psi, gr, err, verbose=.false.)
-        if (err /= 0) then
-          message(1) = "Unable to read states restart from '"//trim(dirname)//"'."
-          call messages_warning(1)
-          ierr = ierr + 1
-        end if
-
-        call restart_cd(prop%restart_load)
-      end if
-    end do
-
-    if (in_debug_mode) then
-      message(1) = "Debug: Reading OCT propagation states restart done."
-      call messages_info(1)
-    end if
-
-    POP_SUB(oct_prop_load_states)
-  end subroutine oct_prop_load_states
   ! ---------------------------------------------------------
 
 
@@ -1148,9 +1100,9 @@ contains
         call states_dump(prop%restart_dump, psi, gr, err, iter)
 
         if (err /= 0) then
-          message(1) = "Unable to write states restart to '"//trim(dirname)//"'."
+          message(1) = "Unable to write wavefunctions to '"//trim(dirname)//"'."
           call messages_warning(1)
-          ierr = ierr + 1
+          ierr = ierr + 2**j
         end if
 
         call restart_cd(prop%restart_dump)
@@ -1164,6 +1116,56 @@ contains
 
     POP_SUB(oct_prop_dump_states)
   end subroutine oct_prop_dump_states
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine oct_prop_load_states(prop, psi, gr, iter, ierr)
+    type(oct_prop_t),  intent(inout) :: prop
+    type(states_t),    intent(inout) :: psi
+    type(grid_t),      intent(in)    :: gr
+    integer,           intent(in)    :: iter
+    integer,           intent(out)   :: ierr
+
+    integer :: j, err
+    character(len=80) :: dirname
+
+    PUSH_SUB(oct_prop_load_states)
+
+    ierr = 0
+
+    if (restart_skip(prop%restart_load)) then
+      ierr = -1
+      POP_SUB(oct_prop_load_states)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading OCT propagation states restart."
+      call messages_info(1)
+    end if
+
+    do j = 1, prop%number_checkpoints + 2
+      if (prop%iter(j)  ==  iter) then
+        write(dirname,'(a, i4.4)') trim(prop%dirname), j
+        call restart_cd(prop%restart_load, dirname=dirname)
+        call states_load(prop%restart_load, psi, gr, err, verbose=.false.)
+        if (err /= 0) then
+          message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
+          call messages_warning(1)
+          ierr = ierr + 2**j
+        end if
+        call restart_cd(prop%restart_load)
+      end if
+    end do
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading OCT propagation states restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(oct_prop_load_states)
+  end subroutine oct_prop_load_states
   ! ---------------------------------------------------------
 
 

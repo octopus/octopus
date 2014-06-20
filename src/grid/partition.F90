@@ -152,11 +152,13 @@ contains
     character(len=*),  intent(in)  :: filename
     integer,           intent(out) :: ierr
 
-    integer :: ipart
+    integer :: ipart, err
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
     PUSH_SUB(partition_dump)
+
+    ierr = 0
 
 #ifdef HAVE_MPI2
     ! Calculate displacements for writing
@@ -171,17 +173,21 @@ contains
     end do
     
     ! Write the header (root only) and wait
-    ierr = 0
     if (mpi_grp_is_root(partition%mpi_grp)) then
-      call io_binary_write_header(filename, partition%np_global, partition%part(1), ierr)
+      call io_binary_write_header(filename, partition%np_global, partition%part(1), err)
+      if (err /= 0) ierr = ierr + 1
     end if
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
     
     ! Each process writes a portion of the partition
-    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-    call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
-         partition%np_local, partition%part, ierr)
-    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+    if (ierr == 0) then
+      call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+      call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+           partition%np_local, partition%part, err)
+      call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+      if (err /= 0) ierr = ierr + 2
+    end if
 
     SAFE_DEALLOCATE_A(scounts)
     SAFE_DEALLOCATE_A(sdispls)
@@ -196,9 +202,14 @@ contains
     
     !Only the root node writes
     if (partition%mpi_grp%rank == 0) then
-      call io_binary_write(filename, partition%np_global, part_global, ierr)
+      call io_binary_write(filename, partition%np_global, part_global, err)
+      if (err /= 0) ierr = ierr + 4
     end if
-    
+#ifdef HAVE_MPI
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
+#endif
+
     SAFE_DEALLOCATE_A(part_global)
 #endif
 
@@ -213,12 +224,14 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart
+    integer :: ipart, err
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
     PUSH_SUB(partition_load)
     
+    ierr = 0
+
     ! This is a writing to avoid an optimization of gfortran with -O3
     write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)
     call messages_info(1)
@@ -237,20 +250,23 @@ contains
 #ifdef HAVE_MPI2
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call io_binary_read_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
-         partition%np_local, partition%part, ierr)
+         partition%np_local, partition%part, err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
+    if (err /= 0) ierr = ierr + 1
 #else
      ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
       SAFE_ALLOCATE(part_global(1:partition%np_global))
-      call io_binary_read(filename, partition%np_global, part_global, ierr)
+      call io_binary_read(filename, partition%np_global, part_global, err)
+      if (err /= 0) ierr = ierr + 2
     else
       SAFE_ALLOCATE(part_global(1:1))
     end if
 #ifdef HAVE_MPI
-    ! All nodes need to know the result
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
+      ! All nodes need to know the result
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
 #endif
+
     ! If reading was successfull, then scatter the result
     if (ierr == 0) then
 #ifdef HAVE_MPI

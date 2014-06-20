@@ -326,7 +326,7 @@ contains
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
         call td_dump(restart_dump, gr, st, td, iter, ierr)
         if (ierr /= 0) then
-          message(1) = "Unsuccessful write of time-dependent restart."
+          message(1) = "Unable to write time-dependent restart information."
           call messages_warning(1)
         end if
 
@@ -337,6 +337,10 @@ contains
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
           call states_load(restart_load, st, gr, ierr, iter=iter)
+          if (ierr /= 0) then
+            message(1) = "Unable to load TD states."
+            call messages_fatal(1)
+          end if
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -377,7 +381,7 @@ contains
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
-          message(1) = "Could not load td restart information: Starting from scratch"
+          message(1) = "Unable to read time-dependent restart information: Starting from scratch"
           call messages_warning(1)
         end if
         call restart_end(restart)
@@ -395,8 +399,8 @@ contains
 
         if(.not. st%only_userdef_istates) then
           call states_load(restart, st, gr, ierr, label = ": gs", kpts_dont_matter = st%open_boundaries)
-          if(ierr /= 0) then
-            write(message(1), '(3a)') 'Unsuccessful read of states.'
+          if (ierr /= 0) then
+            message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
           end if
           ! extract the interface wave function
@@ -672,7 +676,7 @@ contains
     integer,         intent(out) :: ierr
 
     logical :: cmplxscl
-    integer :: ii, is, err
+    integer :: ii, is, err, err2
     character(len=256) :: filename
     CMPLX, allocatable :: zv_old(:)
 
@@ -691,7 +695,8 @@ contains
     end if
 
     ! first write resume file
-    call states_dump(restart, st, gr, ierr, iter=iter)
+    call states_dump(restart, st, gr, err, iter=iter)
+    if (err /= 0) ierr = ierr + 1
 
     cmplxscl = st%cmplxscl%space      
     if (cmplxscl) then
@@ -699,6 +704,7 @@ contains
     end if
 
     ! write potential from previous interactions
+    err2 = 0
     do ii = 1, 2
       do is = 1, st%d%nspin
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
@@ -710,20 +716,17 @@ contains
         end if
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity
-        if (err /= 0) then
-          ierr = ierr + 1
-          message(1) = "Unsuccessful write of '"//trim(filename)//"'."
-          call messages_warning(1)
-        end if
+        if (err /= 0) err2 = err2 + 1
       end do
     end do
+    if (err2 /= 0) ierr = ierr + 2
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)
     end if
 
     call pes_dump(restart, td%pesv, st, err)
-    if (err /= 0) ierr = ierr + 1
+    if (err /= 0) ierr = ierr + 4
 
     if (in_debug_mode) then
       message(1) = "Debug: Writing td restart done."
@@ -742,7 +745,7 @@ contains
     integer,         intent(out)   :: ierr
 
     logical :: cmplxscl
-    integer :: ii, is, err
+    integer :: ii, is, err, err2
     character(len=256) :: filename
     CMPLX, allocatable :: zv_old(:)
 
@@ -762,10 +765,13 @@ contains
     end if
 
     ! Read states
-    call states_load(restart, st, gr, ierr, iter=td%iter, read_left = st%have_left_states, label = ": td")
-
-    ! extract the interface wave function
-    if (ierr == 0 .and. st%open_boundaries) call states_get_ob_intf(st, gr)
+    call states_load(restart, st, gr, err, iter=td%iter, read_left = st%have_left_states, label = ": td")
+    if (err /= 0) then
+      ierr = ierr + 1
+    else if (st%open_boundaries) then
+      ! extract the interface wave function
+      call states_get_ob_intf(st, gr)
+    end if
 
     ! read potential from previous interactions
     cmplxscl = st%cmplxscl%space
@@ -773,7 +779,8 @@ contains
     if (cmplxscl) then
       SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
     end if
-        
+
+    err2 = 0
     do ii = 1, 2
       do is = 1, st%d%nspin
         write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
@@ -784,13 +791,10 @@ contains
         else
           call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
         end if
-        if (err /= 0) then
-          ierr = ierr + 1
-          write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
-          call messages_fatal(1)
-        end if
+        if (err /= 0) err2 = err2 + 1
       end do
     end do
+    if (err2 /= 0) ierr = ierr + 2
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)
@@ -799,11 +803,7 @@ contains
     ! read PES restart
     if (td%pesv%calc_rc .or. td%pesv%calc_mask) then
       call pes_load(restart, td%pesv, st, err)
-      if (err /= 0) then
-        ierr = ierr + 1
-        message(1) = "Unsuccessful read of PES restart."
-        call messages_warning(1)
-      end if
+      if (err /= 0) ierr = ierr + 4
     end if
 
     if (in_debug_mode) then

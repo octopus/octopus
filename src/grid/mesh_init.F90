@@ -161,7 +161,7 @@ subroutine mesh_read_lead(ob_grid, mesh)
     mm%parallel_in_domains = mesh%parallel_in_domains
     call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh', mpi_world, ierr)
     if (ierr /= 0) then
-      message(1) = "Unable to load mesh from file '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"mesh'."
+      message(1) = "Unable to read mesh from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"/mesh'."
       call messages_fatal(1)
     end if
 
@@ -171,7 +171,7 @@ subroutine mesh_read_lead(ob_grid, mesh)
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
     call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, mpi_world, ierr)
     if (ierr /= 0) then
-      message(1) = "Unable to load index map from directory '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR"'."
+      message(1) = "Unable to read index map from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"'."
       call messages_fatal(1)
     end if
   end do
@@ -864,7 +864,17 @@ contains
     call parse_logical(datasets_check('MeshPartitionRead'), .true., read_partition)
 
     ierr = -1
-    if(read_partition) call mesh_partition_load(partition_dir, mesh, ierr)
+    if (read_partition) then
+      call mesh_partition_load(partition_dir, mesh, ierr)
+      
+      ! Tell the user if we found a compatible mesh partition
+      if (ierr == 0) then
+        message(1) = "Info: Found a compatible mesh partition in '"//trim(partition_dir)//"'."
+      else
+        message(1) = "Info: Could not find a compatible mesh partition in '"//trim(partition_dir)//"'."
+      end if
+      call messages_info(1)
+    end if
 
 
     if(ierr /= 0) then
@@ -913,10 +923,12 @@ contains
       if (mpi_grp_is_root(mesh%mpi_grp)) then
         call io_mkdir(trim(partition_dir), is_tmp = .true., parents=.true.)
       end if
-      if (write_partition) call mesh_partition_dump(partition_dir, mesh, vsize, ierr)
-      if (ierr /= 0) then
-        message(1) = "Unable to write partition to directory '"//trim(partition_dir)//"'."
-        call messages_warning(1)
+      if (write_partition) then
+        call mesh_partition_dump(partition_dir, mesh, vsize, ierr)
+        if (ierr /= 0) then
+          message(1) = "Unable to write partition to '"//trim(partition_dir)//"'."
+          call messages_warning(1)
+        end if
       end if
     end if
 

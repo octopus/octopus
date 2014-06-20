@@ -246,7 +246,7 @@ contains
           call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))
           
           if(ierr /= 0) then
-            message(1) = "Could not load response wavefunctions from '"//trim(dirname)
+            message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
           end if
         end do

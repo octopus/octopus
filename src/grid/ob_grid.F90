@@ -339,24 +339,6 @@ contains
     POP_SUB(ob_grid_write_info)
   end subroutine ob_grid_write_info
 
-
-  !--------------------------------------------------------------
-  subroutine ob_grid_dump(ob_grid, iunit)
-    type(ob_grid_t), intent(inout) :: ob_grid
-    integer,           intent(in)  :: iunit
-
-    PUSH_SUB(ob_grid_dump)
-
-    if(ob_grid%open_boundaries) then
-      write(iunit, '(a20,2i4)') 'add_unit_cells=     ', ob_grid%lead(1:2)%info%ucells ! FIXME for NLEADS>2
-      write(iunit, '(a20,a32)') 'lead_restart_dir(L)=', ob_grid%lead(LEFT)%info%restart_dir
-      write(iunit, '(a20,a32)') 'lead_restart_dir(R)=', ob_grid%lead(RIGHT)%info%restart_dir
-    end if
-
-    POP_SUB(ob_grid_dump)
-  end subroutine ob_grid_dump
-
-
 end module ob_grid_m
 
 !! Local Variables:

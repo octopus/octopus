@@ -1241,7 +1241,11 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
       !Only root writes
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)')             dump_tag
@@ -1282,8 +1286,6 @@ contains
       end if
 
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = -1
     end if
 
     POP_SUB(simul_box_dump)
@@ -1298,7 +1300,7 @@ contains
     type(mpi_grp_t),   intent(in)    :: mpi_grp
     integer,           intent(out)   :: ierr
 
-    integer            :: iunit, idim, il
+    integer            :: iunit, idim, il, err
     character(len=20)  :: str
     character(len=100), allocatable :: lines(:)
     FLOAT              :: rlattice_primitive(1:MAX_DIM, 1:MAX_DIM)
@@ -1308,92 +1310,124 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
       ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
+      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
+      if (err /= 0) ierr = ierr + 2
 
       SAFE_ALLOCATE(lines(4))
-      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-
       if (ierr == 0) then
-        read(lines(1), *) str, sb%box_shape
-        read(lines(2), *) str, sb%dim
-        read(lines(3), *) str, sb%periodic_dim
-        read(lines(4), *) str, sb%transport_dim
+        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        if (err == 0) then
+          read(lines(1), *) str, sb%box_shape
+          read(lines(2), *) str, sb%dim
+          read(lines(3), *) str, sb%periodic_dim
+          read(lines(4), *) str, sb%transport_dim
+        else
+          ierr = ierr + 2**2
+        end if
 
         select case (sb%box_shape)
         case(SPHERE, MINIMUM)
-          call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-          if (ierr == 0) then
+          call iopar_read(mpi_grp, iunit, lines, 2, err)
+          if (err /= 0) then
+            ierr = ierr + 2**3
+          else
             read(lines(1), *) str, sb%rsize
             read(lines(2), *) str, sb%lsize(1:sb%dim)
           end if
         case(CYLINDER)
-          call iopar_read(mpi_grp, iunit, lines, 3, ierr)
-          if (ierr == 0) then
+          call iopar_read(mpi_grp, iunit, lines, 3, err)
+          if (err /= 0) then
+            ierr = ierr + 2**4
+          else
             read(lines(1), *) str, sb%rsize
             read(lines(2), *) str, sb%xsize
             read(lines(3), *) str, sb%lsize(1:sb%dim)
           end if
         case(PARALLELEPIPED)
-          call iopar_read(mpi_grp, iunit, lines, 1, ierr)
-          if (ierr == 0) then
+          call iopar_read(mpi_grp, iunit, lines, 1, err)
+          if (err /= 0) then
+            ierr = ierr + 2**5
+          else
             read(lines(1), *) str, sb%lsize(1:sb%dim)
           end if
         case(BOX_USDEF)
-          call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-          if (ierr == 0) then
+          call iopar_read(mpi_grp, iunit, lines, 2, err)
+          if (err /= 0) then
+            ierr = ierr + 2**6
+          else
             read(lines(1), *) str, sb%lsize(1:sb%dim)
             read(lines(2), *) str, sb%user_def
           end if
         end select
-      end if
  
-      sb%mr_flag = .false.     
-      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-      if (ierr == 0) then
-        read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
-        read(lines(2),'(a20,l7)') str, sb%mr_flag
-      end if
+        sb%mr_flag = .false.
+        call iopar_read(mpi_grp, iunit, lines, 2, err)
+        if (err /= 0) then
+          ierr = ierr + 2**7
+        else
+          read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
+          read(lines(2),'(a20,l7)') str, sb%mr_flag
+        end if
 
-      SAFE_DEALLOCATE_A(lines)
+        SAFE_DEALLOCATE_A(lines)
 
-      if (sb%mr_flag) then
-        SAFE_ALLOCATE(lines(2))
-        if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-        if (ierr == 0) then
-          read(lines(1),*) str, sb%hr_area%num_areas
-          read(lines(2),*) str, sb%hr_area%num_radii
+        if (sb%mr_flag) then
+          SAFE_ALLOCATE(lines(2))
+          call iopar_read(mpi_grp, iunit, lines, 2, err)
+          if (err /= 0) then
+            ierr = ierr + 2**8
+          else
+            read(lines(1),*) str, sb%hr_area%num_areas
+            read(lines(2),*) str, sb%hr_area%num_radii
+          end if
+          SAFE_DEALLOCATE_A(lines)
+
+          SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
+          SAFE_ALLOCATE(lines(1:sb%hr_area%num_radii))
+          sb%hr_area%num_radii = 0
+          call iopar_read(mpi_grp, iunit, lines, sb%hr_area%num_radii, err)
+          if (err /= 0) then
+            ierr = ierr + 2**9
+          else
+            do il = 1, sb%hr_area%num_radii
+              read(lines(1),*) str, sb%hr_area%radius(il)
+            end do
+          end if
+          SAFE_DEALLOCATE_A(lines)
+
+          SAFE_ALLOCATE(lines(1:sb%dim))
+          call iopar_read(mpi_grp, iunit, lines, sb%dim, err)
+          if (err /= 0) then
+            ierr = ierr + 2**10
+          else
+            do idim = 1, sb%dim
+              read(lines(1), *) str, sb%hr_area%center(idim)
+            end do
+          end if
+          SAFE_DEALLOCATE_A(lines)
+        end if
+
+
+        SAFE_ALLOCATE(lines(sb%dim))
+        call iopar_read(mpi_grp, iunit, lines, sb%dim, err)
+        if (err /= 0) then
+          ierr = ierr + 2**11
+        else
+          do idim = 1, sb%dim
+            read(lines(idim), *) str, rlattice_primitive(1:sb%dim, idim)
+          end do
         end if
         SAFE_DEALLOCATE_A(lines)
 
-        SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
-        SAFE_ALLOCATE(lines(1:sb%hr_area%num_radii))
-        if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, sb%hr_area%num_radii, ierr)
-        do il = 1, sb%hr_area%num_radii
-          if (ierr == 0) read(lines(1),*) str, sb%hr_area%radius(il)
-        end do
-        SAFE_DEALLOCATE_A(lines)
-
-        SAFE_ALLOCATE(lines(1:sb%dim))
-        call iopar_read(mpi_grp, iunit, lines, sb%dim, ierr)
-        do idim = 1, sb%dim
-          if (ierr == 0) read(lines(1), *) str, sb%hr_area%center(idim)
-        end do
-        SAFE_DEALLOCATE_A(lines)
       end if
 
-
-      SAFE_ALLOCATE(lines(sb%dim))
-      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, sb%dim, ierr)      
-      do idim = 1, sb%dim
-        if (ierr == 0) read(lines(idim), *) str, rlattice_primitive(1:sb%dim, idim)
-      end do
-      SAFE_DEALLOCATE_A(lines)
-
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     if (ierr == 0) then
@@ -1511,7 +1545,7 @@ contains
     do il = 1, NLEADS
       call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world, ierr)
       if (ierr /= 0) then
-        message(1) = "Unable to load simulation box from file: '"//trim(dir(il))//"/"//GS_DIR//"/mesh'."
+        message(1) = "Unable to read simulation box information from '"//trim(dir(il))//"/"//GS_DIR//"/mesh'."
         call messages_fatal(1)
       end if
 

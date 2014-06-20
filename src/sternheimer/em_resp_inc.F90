@@ -51,8 +51,8 @@ subroutine X(run_sternheimer)()
           call restart_cd(restart_load)
 
           if(ierr /= 0) then
-            message(1) = "Initializing to zero, could not load response wavefunctions from '" &
-              //trim(wfs_tag_sigma(str_tmp, sigma))//"'"
+            message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
+                 "': Initializing to zero."
             call messages_warning(1)
           end if
           
@@ -65,8 +65,8 @@ subroutine X(run_sternheimer)()
               call restart_cd(restart_load)
               
               if(ierr /= 0) then
-                message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &
-                  //trim(wfs_tag_sigma(str_tmp, sigma))//"'"
+                message(1) = "Unable to read second-order response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
+                     "': Initializing to zero."
                 call messages_warning(1)
               end if
             enddo
@@ -95,9 +95,9 @@ subroutine X(run_sternheimer)()
         restart_load, em_rho_tag(closest_omega, idir), ierr)
       
       if (ierr == 0) then 
-        message(1) = "Loaded restart density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+        message(1) = "Read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
       else
-        message(1) = "Could not load restart density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+        message(1) = "Unable to read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
       end if
       call messages_info(1)
 
@@ -168,7 +168,7 @@ subroutine X(run_sternheimer)()
       call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
       call restart_cd(kdotp_restart)
       if(ierr /= 0) then
-        message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"
+        message(1) = "Unable to read second-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
         message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
         call messages_fatal(2)
       end if

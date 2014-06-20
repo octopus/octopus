@@ -100,7 +100,7 @@ contains
                         dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR)
       call states_load_free_states(restart_ob, sys%st, sys%gr, ierr)
       if (ierr /= 0) then
-        message(1) = "Unable to read free states restart."
+        message(1) = "Unable to read free states wavefunctions."
         call messages_fatal(1)
       end if
       call restart_end(restart_ob)
@@ -117,7 +117,7 @@ contains
       call states_load(restart_load, sys%st, sys%gr, ierr)
 
       if(ierr /= 0) then
-        call messages_write("Could not load wavefunctions")
+        call messages_write("Unable to read wavefunctions.")
         call messages_new_line()
         call messages_write("Starting from scratch!")
         call messages_warning()

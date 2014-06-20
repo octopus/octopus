@@ -566,66 +566,85 @@ contains
   end subroutine mesh_partition_from_parent
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_dump(dirname, mesh, vsize, ierr)
-    character(len=*), intent(in)  :: dirname
+  subroutine mesh_partition_dump(dir, mesh, vsize, ierr)
+    character(len=*), intent(in)  :: dir
     type(mesh_t),     intent(in)  :: mesh
     integer,          intent(in)  :: vsize
     integer,          intent(out) :: ierr
-    
+
+    integer :: err
     character(len=6) :: numstring
 
     PUSH_SUB(mesh_partition_dump)
 
-    write(numstring, '(i6.6)') vsize
-    call mesh_write_fingerprint(mesh, dirname, 'grid_'//trim(numstring), mesh%mpi_grp, ierr)
+    ierr = 0
 
-    if (ierr == 0) then
-      call partition_dump(mesh%inner_partition, trim(dirname)//'/inner_partition_'//trim(numstring)//'.obf', ierr)
+    write(numstring, '(i6.6)') vsize
+    call mesh_write_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, err)
+    if (err /= 0) then
+      message(1) = "Unable to write mesh fingerprint to '"//trim(dir)//"/grid_"//trim(numstring)//"'."
+      ierr = ierr + 1
     end if
 
-    if (ierr == 0) then
-      call partition_dump(mesh%bndry_partition, trim(dirname)//'/bndry_partition_'//trim(numstring)//'.obf', ierr)
+    call partition_dump(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
+    if (err /= 0) then
+      message(1) = "Unable to write inner partition to '"//trim(dir)//'/inner_partition_'//trim(numstring)//".obf'."
+      ierr = ierr + 2
+    end if
+
+    call partition_dump(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
+    if (err /= 0) then
+      message(1) = "Unable to write boundary partition to '"//trim(dir)//'/bndry_partition_'//trim(numstring)//".obf'."
+      ierr = ierr + 4
     end if
 
     POP_SUB(mesh_partition_dump)
   end subroutine mesh_partition_dump
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_load(dirname, mesh, ierr)
-    character(len=*), intent(in)    :: dirname
+  subroutine mesh_partition_load(dir, mesh, ierr)
+    character(len=*), intent(in)    :: dir
     type(mesh_t),     intent(inout) :: mesh
     integer,          intent(out)   :: ierr
-    
+
+    integer :: read_np_part, read_np, err
     character(len=6) :: numstring
-    integer :: read_np_part, read_np
 
     PUSH_SUB(mesh_partition_load)
+
+    ierr = 0
 
     call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
     call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
 
-    ! Read mesh fingerprint and check if the meshes are identical
+    ! Try to read mesh fingerprint and check if the meshes are identical
     write(numstring, '(i6.6)') mesh%mpi_grp%size
-    call mesh_read_fingerprint(mesh, dirname, 'grid_'//trim(numstring), mesh%mpi_grp, read_np_part, read_np, ierr)
-    if (read_np_part /= 0 .or. read_np /= 0 .or. ierr /= 0) ierr = -1
-
-    ! If fingerprint is OK then we read the inner partition
-    if (ierr == 0) then
-      call partition_load(mesh%inner_partition, trim(dirname)//'/inner_partition_'//trim(numstring)//'.obf', ierr)
-    end if
-
-    ! If inner partition is OK then we read the boundary partition
-    if (ierr == 0) then
-      call partition_load(mesh%bndry_partition, trim(dirname)//'/bndry_partition_'//trim(numstring)//'.obf', ierr)
-    end if
-
-    ! Tell the user if we found a compatible mesh partition
-    if (ierr == 0) then
-      message(1) = "Info: Found a compatible mesh partition in '"//trim(dirname)//"'."
+    if (.not. io_file_exists(trim(dir)//"/"//'grid_'//trim(numstring))) then
+      ierr = ierr + 1
     else
-      message(1) = "Info: Could not find a compatible mesh partition in '"//trim(dirname)//"'."
+      call mesh_read_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, read_np_part, read_np, err)
+      if (err /= 0) ierr = ierr + 2
+      if (read_np_part /= 0 .or. read_np /= 0) ierr = ierr + 4
     end if
-    call messages_info(1)
+
+    ! If fingerprint is OK then we try to read the partitions
+    if (ierr == 0) then
+      !Read inner partition
+      call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
+      if (err /= 0) then
+        ierr = ierr + 8
+        message(1) = "Unable to read inner partition from '"//trim(dir)//'/inner_partition_'//trim(numstring)//".obf'."
+        call messages_warning(1)
+      end if
+
+      !Read boundary partition
+      call partition_load(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
+      if (err /= 0) then
+        ierr = ierr + 16
+        message(1) = "Unable to read boundary partition from '"//trim(dir)//'/bndry_partition_'//trim(numstring)//".obf'."
+        call messages_warning(1)
+      end if
+    end if
 
     ! Free the memory in case we were unable to read the partitions
     if (ierr /= 0) then

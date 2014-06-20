@@ -34,6 +34,10 @@
     call messages_info(1)
 
     call states_load(restart, tg%st, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read wavefunctions."
+      call messages_fatal(1)
+    end if
 
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt

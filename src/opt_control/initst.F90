@@ -105,6 +105,10 @@ contains
       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
                          mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
       call states_load(restart, psi, sys%gr, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to read wavefunctions."
+        call messages_fatal(1)
+      end if
       call restart_end(restart)
 
     case(oct_is_excited)  

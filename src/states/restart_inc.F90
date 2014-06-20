@@ -36,7 +36,7 @@ subroutine X(restart_write_function)(restart, filename, mesh, ff, ierr)
   ! all restart files are in atomic units
 
   if (ierr /= 0) then
-    message(1) = "Could not write data to file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    message(1) = "Unable to write restart function to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
     call messages_warning(1)
   end if
 
@@ -136,7 +136,7 @@ subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (ierr /= 0) then
-    message(1) = "Could not read data from file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    message(1) = "Unable to read restart function from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
     call messages_warning(1)
   end if
 

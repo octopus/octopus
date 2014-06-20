@@ -291,7 +291,7 @@ subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
   integer,           intent(out) :: ierr
 
   character(len=100) :: fname
-  integer :: is, s_ierr
+  integer :: is, err, err2
 
   PUSH_SUB(X(lr_dump_rho))
 
@@ -306,11 +306,13 @@ subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
     call messages_info(1)
   end if
 
+  err2 = 0
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), s_ierr)
-    if (s_ierr /= 0) ierr = ierr + 1
+    call X(restart_write_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), err)
+    if (err /= 0) err2 = err2 + 1
   end do
+  if (err2 /= 0) ierr = ierr + 1
 
   if (in_debug_mode) then
     message(1) = "Debug: Writing linear-response density restart done."
@@ -331,7 +333,7 @@ subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
   integer,           intent(out)   :: ierr
 
   character(len=80) :: fname
-  integer :: is, s_ierr
+  integer :: is, err, err2
 
   PUSH_SUB(X(lr_load_rho))
 
@@ -351,11 +353,13 @@ subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
   ASSERT(ubound(dl_rho, 1) >= mesh%np)
   ASSERT(ubound(dl_rho, 2) >= nspin)
 
+  err2 = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_function)(restart, fname, mesh, dl_rho(:, is), s_ierr)
-    if (s_ierr /= 0) ierr = ierr + 1
+    call X(restart_read_function)(restart, fname, mesh, dl_rho(:, is), err)
+    if (err /= 0) err2 = err2 + 1
   end do
+  if (err2 /= 0) ierr = ierr + 1
 
   if (in_debug_mode) then
     message(1) = "Debug: Reading linear-response density restart done."

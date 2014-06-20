@@ -161,7 +161,11 @@ contains
     ierr = 0
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
       !Only root writes to the file
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
@@ -179,8 +183,6 @@ contains
       end if
 
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     POP_SUB(index_dump)
@@ -195,7 +197,7 @@ contains
     type(mpi_grp_t),  intent(in)    :: mpi_grp
     integer,          intent(out)   :: ierr
 
-    integer :: iunit, idir
+    integer :: iunit, idir, err
     character(len=100) :: lines(4)
     character(len=20)  :: str
 
@@ -209,20 +211,30 @@ contains
     idx%is_hypercube = .false.
 
     iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true., grp=mpi_grp)
-    if (iunit > 0) then
+    if (iunit <= 0) then
+      ierr = ierr + 1
+      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    else
       ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, ierr)
-
-      if (ierr == 0) call iopar_read(mpi_grp, iunit, lines, 2, ierr)
-      if (ierr == 0) then
-        read(lines(1), '(a20,l1)')  str, idx%is_hypercube
-        read(lines(2), '(a20,i21)') str, idx%dim
-      end if
+      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
+      if (err /= 0) ierr = ierr + 2
 
       if (ierr == 0) then
+        idx%is_hypercube = .false.
+        call iopar_read(mpi_grp, iunit, lines, 2, err)
+        if (err /= 0) then
+          ierr = ierr + 4
+        else
+          read(lines(1), '(a20,l1)')  str, idx%is_hypercube
+          read(lines(2), '(a20,i21)') str, idx%dim
+        end if
+
         if (.not. idx%is_hypercube) then
-          call iopar_read(mpi_grp, iunit, lines, 4, ierr)
-          if (ierr == 0) then
+          call iopar_read(mpi_grp, iunit, lines, 4, err)
+          if (err /= 0) then
+            ierr = ierr + 8            
+          else
             read(lines(1), '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
             read(lines(2), '(a20,7i8)')  str, (idx%nr(2, idir), idir = 1,idx%dim)
             read(lines(3), '(a20,7i8)')  str, idx%ll(1:idx%dim)
@@ -231,8 +243,6 @@ contains
         end if
       end if
       call io_close(iunit, grp=mpi_grp)
-    else
-      ierr = 1
     end if
 
     POP_SUB(index_load)
@@ -247,16 +257,22 @@ contains
     type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: ierr
 
+    integer :: err
+
     PUSH_SUB(index_dump_lxyz)
 
-    if (idx%is_hypercube) then
-      !Nothing to do
-      ierr = 0
-    else 
+    ierr = 0
+
+    if (.not. idx%is_hypercube) then
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(associated(idx%lxyz))
-        call io_binary_write(trim(dir)//'/lxyz.obf', np*idx%dim, idx%lxyz, ierr)
+        call io_binary_write(trim(dir)//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        if (err /= 0) then
+          ierr = ierr + 1
+          message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
+          call messages_warning(1) 
+        end if
       end if
 
 #if defined(HAVE_MPI)
@@ -272,25 +288,29 @@ contains
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file
   subroutine index_load_lxyz(idx, np, dir, mpi_grp, ierr)
-    type(index_t),    intent(inout) :: idx
-    integer,          intent(in)    :: np
-    character(len=*), intent(in)    :: dir
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: ierr
+    type(index_t),     intent(inout) :: idx
+    integer,           intent(in)    :: np
+    character(len=*),  intent(in)    :: dir
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    integer,           intent(out)   :: ierr
 
-    integer :: ip, idir, ix(MAX_DIM)
+    integer :: ip, idir, ix(MAX_DIM), err
 
     PUSH_SUB(index_load_lxyz)
 
-    if (idx%is_hypercube) then
-      !Nothing to do
-      ierr = 0
-    else
+    ierr = 0
+
+    if (.not. idx%is_hypercube) then
       ASSERT(associated(idx%lxyz))
 
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
-        call io_binary_read(trim(dir)//"/lxyz.obf", np*idx%dim, idx%lxyz, ierr)
+        call io_binary_read(trim(dir)//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        if (err /= 0) then
+          ierr = ierr + 1
+          message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."
+          call messages_warning(1)
+        end if
       end if
 
 #if defined(HAVE_MPI)

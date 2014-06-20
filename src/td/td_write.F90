@@ -290,7 +290,11 @@ contains
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
       call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mesh=gr%mesh, sb=gr%sb)
-      call states_look(restart_gs, gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
+      call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
+      if(ierr /= 0) then
+        message(1) = "Unable to read states information."
+        call messages_fatal(1)
+      end if
 
       ! do this only when not calculating populations, since all states are needed then
       if(.not. writ%out(OUT_POPULATIONS)%write) then
@@ -327,7 +331,7 @@ contains
       writ%gs_st%node(:)  = 0
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
-        message(1) = "Could not load restart information."
+        message(1) = "Unable to read wavefunctions for TDOutput."
         call messages_fatal(1)
       end if
 

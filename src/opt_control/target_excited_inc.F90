@@ -36,7 +36,11 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    call states_look(restart, tg%st%dom_st_kpt_mpi_grp, ip, ip, tg%st%nst, ierr)
+    call states_look(restart, ip, ip, tg%st%nst, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read states information."
+      call messages_fatal(1)
+    end if
     tg%st%st_start = 1
     tg%st%st_end   = tg%st%nst
 
@@ -55,6 +59,10 @@
     tg%st%node(:)  = 0
 
     call states_load(restart, tg%st, gr, ierr)
+    if (ierr /= 0) then
+      message(1) = "Unable to read wavefunctions."
+      call messages_fatal(1)
+    end if
 
     call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
 

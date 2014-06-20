@@ -585,7 +585,7 @@ contains
 
     ! only root node performs the check
     if(mpi_grp_is_root(mpi_world)) then
-      if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
+      if(io_file_exists('enable_debug_mode', msg='Enabling DebugMode')) then
         conf%debug_level = 99
         in_debug_mode    = .true.
         ! this call does not hurt if the directory is already there
@@ -596,19 +596,19 @@ contains
         ! artificially increase sub stack to avoid underflow
         no_sub_stack = no_sub_stack + 8
       end if
-      if(io_file_exists('enable_flush_messages', 'Enabling flushing of messages')) then
+      if(io_file_exists('enable_flush_messages', msg='Enabling flushing of messages')) then
         flush_messages   = .true.
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('enable_flush_messages')
       end if
 
-      if(io_file_exists('disable_debug_mode', 'Disabling DebugMode')) then
+      if(io_file_exists('disable_debug_mode', msg='Disabling DebugMode')) then
         conf%debug_level = 0
         in_debug_mode    = .false.
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('disable_debug_mode')
       end if
-      if(io_file_exists('disable_flush_messages', 'Disabling flushing of messages')) then
+      if(io_file_exists('disable_flush_messages', msg='Disabling flushing of messages')) then
         flush_messages   = .false.
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('disable_flush_messages')
@@ -624,13 +624,14 @@ contains
   !! and issues a reminder.
   ! ---------------------------------------------------------
   logical function io_file_exists(filename, msg) result(file_exists)
-    character(len=*), intent(in)  :: filename, msg
+    character(len=*),           intent(in)  :: filename
+    character(len=*), optional, intent(in)  :: msg
 
     PUSH_SUB(io_file_exists)
 
     file_exists = .false.
     inquire(file=trim(filename), exist=file_exists)
-    if(file_exists) then
+    if(file_exists .and. present(msg)) then
       message(1) = trim(msg)
       call messages_warning(1)
     end if
