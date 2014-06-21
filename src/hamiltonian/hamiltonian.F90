@@ -1422,9 +1422,9 @@ contains
       if (err /= 0) err2(1) = err2(1) + 1
 
       if (hm%cmplxscl%space) then
-        call zrestart_write_function(restart, filename, mesh, hm%vhxc(:,isp) + M_zI*hm%imvhxc(:,isp), err)
+        call zrestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp) + M_zI*hm%imvhxc(:,isp), err)
       else
-        call drestart_write_function(restart, filename, mesh, hm%vhxc(:,isp), err)
+        call drestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
       if (err /= 0) err2(2) = err2(2) + 1
 
@@ -1455,9 +1455,9 @@ contains
         if (err /= 0) err2(1) = err2(1) + 16
 
         if (hm%cmplxscl%space) then
-          call zrestart_write_function(restart, filename, mesh, hm%vtau(:,isp) + M_zI*hm%imvtau(:,isp), err)
+          call zrestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp) + M_zI*hm%imvtau(:,isp), err)
         else
-          call drestart_write_function(restart, filename, mesh, hm%vtau(:,isp), err)
+          call drestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
         if (err /= 0) err2(1) = err2(1) + 1
 
@@ -1520,11 +1520,11 @@ contains
       end if
 
       if (hm%cmplxscl%space) then
-        call zrestart_read_function(restart, filename, mesh, zv, err)
+        call zrestart_read_mesh_function(restart, filename, mesh, zv, err)
         hm%vhxc(:,isp) =  real(zv, REAL_PRECISION)
         hm%imvhxc(:,isp) = aimag(zv)
       else
-        call drestart_read_function(restart, filename, mesh, hm%vhxc(:,isp), err)
+        call drestart_read_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       end if
       if (err /= 0) err2 = err2 + 1
 
@@ -1542,11 +1542,11 @@ contains
         endif
 
         if (hm%cmplxscl%space) then
-          call zrestart_read_function(restart, filename, mesh, zv, err)
+          call zrestart_read_mesh_function(restart, filename, mesh, zv, err)
           hm%vtau(:,isp) =  real(zv, REAL_PRECISION)
           hm%imvtau(:,isp) = aimag(zv)
         else
-          call drestart_read_function(restart, filename, mesh, hm%vtau(:,isp), err)
+          call drestart_read_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
         end if
         if (err /= 0) err2 = err2 + 1
 

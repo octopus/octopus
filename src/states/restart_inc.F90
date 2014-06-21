@@ -20,14 +20,14 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(restart, filename, mesh, ff, ierr)
+subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr)
   type(restart_t),  intent(in)  :: restart
   character(len=*), intent(in)  :: filename
   type(mesh_t),     intent(in)  :: mesh
   R_TYPE,           intent(in)  :: ff(:)
   integer,          intent(out) :: ierr
 
-  PUSH_SUB(X(restart_write_function))
+  PUSH_SUB(X(restart_write_mesh_function))
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
@@ -40,14 +40,14 @@ subroutine X(restart_write_function)(restart, filename, mesh, ff, ierr)
     call messages_warning(1)
   end if
 
-  POP_SUB(X(restart_write_function))
-end subroutine X(restart_write_function)
+  POP_SUB(X(restart_write_mesh_function))
+end subroutine X(restart_write_mesh_function)
 
 
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
-subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
+subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   type(restart_t),  intent(in)    :: restart
   character(len=*), intent(in)    :: filename
   type(mesh_t),     intent(in)    :: mesh
@@ -60,7 +60,7 @@ subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
   type(batch_t) :: ffb
   type(profile_t), save :: prof_comm
 
-  PUSH_SUB(X(restart_read_function))
+  PUSH_SUB(X(restart_read_mesh_function))
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)  
@@ -72,7 +72,7 @@ subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
     call X(io_function_input) (trim(restart%pwd)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, &
                                is_tmp=.true., map = restart%map)
 
-    POP_SUB(X(restart_read_function))
+    POP_SUB(X(restart_read_mesh_function))
     return
   end if
 
@@ -80,7 +80,7 @@ subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
     call io_binary_get_info(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, ierr)
 
     if (ierr /= 0) then
-      POP_SUB(X(restart_read_function))
+      POP_SUB(X(restart_read_mesh_function))
       return
     end if
 
@@ -136,12 +136,123 @@ subroutine X(restart_read_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (ierr /= 0) then
-    message(1) = "Unable to read restart function from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    message(1) = "Unable to read mesh function from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
     call messages_warning(1)
   end if
 
-  POP_SUB(X(restart_read_function))
-end subroutine X(restart_read_function)
+  POP_SUB(X(restart_read_mesh_function))
+end subroutine X(restart_read_mesh_function)
+
+
+! ---------------------------------------------------------
+subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(in)  :: ff(:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_write_binary1))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_DUMP)
+
+  !Only the root node writes
+  if (mpi_grp_is_root(restart%mpi_grp)) then
+    call io_binary_write(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+  end if
+
+#if defined(HAVE_MPI)
+  call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+  call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+#endif
+
+  if (ierr /= 0) then
+    message(1) = "Unable to write restart information to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_write_binary1))
+end subroutine X(restart_write_binary1)
+
+! ---------------------------------------------------------
+subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(in)  :: ff(:,:,:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_write_binary3))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_DUMP)
+
+  !Only the root node writes
+  if (mpi_grp_is_root(restart%mpi_grp)) then
+    call io_binary_write(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+  end if
+
+#if defined(HAVE_MPI)
+  call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+  call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+#endif
+
+  if (ierr /= 0) then
+    message(1) = "Unable to write restart information to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_write_binary3))
+end subroutine X(restart_write_binary3)
+
+
+! ---------------------------------------------------------
+subroutine X(restart_read_binary1)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(out) :: ff(:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_read_binary1))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_LOAD)
+
+  call io_binary_read(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+
+  if (ierr /= 0) then
+    message(1) = "Unable to read restart information from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_read_binary1))
+end subroutine X(restart_read_binary1)
+
+
+! ---------------------------------------------------------
+subroutine X(restart_read_binary3)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(out) :: ff(:,:,:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_read_binary3))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_LOAD)
+
+  call io_binary_read(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+
+  if (ierr /= 0) then
+    message(1) = "Unable to read restart information from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_read_binary3))
+end subroutine X(restart_read_binary3)
 
 
 !! Local Variables:

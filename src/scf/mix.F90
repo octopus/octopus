@@ -322,17 +322,17 @@ contains
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+              call drestart_write_mesh_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(1) = err2(1) + 1
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+              call drestart_write_mesh_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(2) = err2(2) + 1
               
@@ -340,17 +340,17 @@ contains
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-            call drestart_write_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), err)
+            call drestart_write_mesh_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(3) = err2(3) + 1
 
           write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
           if (smix%func_type == TYPE_FLOAT) then
-            call drestart_write_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+            call drestart_write_mesh_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(4) = err2(4) + 1
           
@@ -448,17 +448,17 @@ contains
 
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
               if (smix%func_type == TYPE_FLOAT) then
-                call drestart_read_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(1) = err2(1) + 1
           
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
               if (smix%func_type == TYPE_FLOAT) then
-                call drestart_read_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(2) = err2(2) + 1
 
@@ -466,17 +466,17 @@ contains
 
             write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
+              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(3) = err2(3) + 1
 
             write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
             if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(4) = err2(4) + 1
 

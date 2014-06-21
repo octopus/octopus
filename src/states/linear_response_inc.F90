@@ -309,7 +309,7 @@ subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
   err2 = 0
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), err)
+    call X(restart_write_mesh_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), err)
     if (err /= 0) err2 = err2 + 1
   end do
   if (err2 /= 0) ierr = ierr + 1
@@ -356,7 +356,7 @@ subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
   err2 = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_function)(restart, fname, mesh, dl_rho(:, is), err)
+    call X(restart_read_mesh_function)(restart, fname, mesh, dl_rho(:, is), err)
     if (err /= 0) err2 = err2 + 1
   end do
   if (err2 /= 0) ierr = ierr + 1

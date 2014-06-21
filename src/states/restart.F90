@@ -41,28 +41,49 @@ module restart_m
   implicit none
 
   private
-  public ::                  &
-    restart_t,               &
-    clean_stop,              &
-    restart_module_init,     &
-    restart_init,            &
-    restart_end,             &
-    restart_dir,             &
-    restart_cd,              &
-    restart_mkdir,           &
-    restart_rm,              &
-    restart_open,            &
-    restart_write,           &
-    restart_read,            &
-    restart_close,           &
-    restart_block_signals,   &
-    restart_unblock_signals, &
-    restart_skip,            &
-    restart_has_flag,        &
-    drestart_write_function, &
-    zrestart_write_function, &
-    drestart_read_function,  &
-    zrestart_read_function
+  public ::                       &
+    restart_t,                    &
+    clean_stop,                   &
+    restart_module_init,          &
+    restart_init,                 &
+    restart_end,                  &
+    restart_dir,                  &
+    restart_cd,                   &
+    restart_mkdir,                &
+    restart_rm,                   &
+    restart_open,                 &
+    restart_write,                &
+    restart_read,                 &
+    restart_close,                &
+    restart_block_signals,        &
+    restart_unblock_signals,      &
+    restart_skip,                 &
+    restart_has_flag,             &
+    drestart_write_mesh_function, &
+    zrestart_write_mesh_function, &
+    drestart_read_mesh_function,  &
+    zrestart_read_mesh_function,  &
+    drestart_write_binary,        &
+    zrestart_write_binary,        &
+    drestart_read_binary,         &
+    zrestart_read_binary
+
+  interface drestart_write_binary
+    module procedure drestart_write_binary1, drestart_write_binary3
+  end interface drestart_write_binary
+
+  interface zrestart_write_binary
+    module procedure zrestart_write_binary1, zrestart_write_binary3
+  end interface zrestart_write_binary
+
+  interface drestart_read_binary
+    module procedure drestart_read_binary1, drestart_read_binary3
+  end interface drestart_read_binary
+
+  interface zrestart_read_binary
+    module procedure zrestart_read_binary1, zrestart_read_binary3
+  end interface zrestart_read_binary
+
 
   type restart_t
     private

@@ -248,13 +248,13 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  call drestart_write_function(restart, filename, gr%mesh, dpsi, err)
+                  call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err)
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  call zrestart_write_function(restart, filename, gr%mesh, zpsi, err)
+                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err)
                   if (st%have_left_states) then!cmplxscl
                     call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
-                    call zrestart_write_function(restart, filename1, gr%mesh, zpsi, err)
+                    call zrestart_write_mesh_function(restart, filename1, gr%mesh, zpsi, err)
                   end if
                 end if
               else
@@ -262,9 +262,9 @@ contains
               end if
             else
               if (states_are_real(st)) then
-                call drestart_write_function(restart, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
+                call drestart_write_mesh_function(restart, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
               else
-                call zrestart_write_function(restart, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
+                call zrestart_write_mesh_function(restart, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
               end if
             end if
             if (err /= 0) err2(2) = err2(2) + 1
@@ -604,10 +604,10 @@ contains
           endif
 
           if (states_are_real(st)) then
-            call drestart_read_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
+            call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
           else
-            call zrestart_read_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
-            if (read_left_) call zrestart_read_function(restart, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
+            call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+            if (read_left_) call zrestart_read_mesh_function(restart, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
           end if
 
           if(states_are_real(st)) then
@@ -785,16 +785,16 @@ contains
         if(st%cmplxscl%space) then
           zrho_fine(:) = st%zrho%Re(:,isp) + M_zI*st%zrho%Im(:,isp)
           call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
-          call zrestart_write_function(restart, filename, gr%mesh, zrho, err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err)
         else
           call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
-          call drestart_write_function(restart, filename, gr%mesh, rho, err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_write_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
         else
-          call drestart_write_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
         end if
       end if
       if (err /= 0) err2(2) = err2(2) + 1
@@ -885,21 +885,21 @@ contains
 !      end if
       if(gr%have_fine_mesh)then
         if(st%cmplxscl%space) then
-          call zrestart_read_function(restart, filename, gr%mesh, zrho_coarse, err)
+          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho_coarse, err)
           call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          call drestart_read_function(restart, filename, gr%mesh, rho_coarse, err)
+          call drestart_read_mesh_function(restart, filename, gr%mesh, rho_coarse, err)
           call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_read_function(restart, filename, gr%mesh, zrho, err)
+          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho, err)
           st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
           st%zrho%Im(:,isp) = aimag(zrho)
         else
-          call drestart_read_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+          call drestart_read_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
         end if
       end if
       if (err /= 0) err2 = err2 + 1
@@ -1011,7 +1011,7 @@ contains
       ! if not in the corresponding node cycle
       if(ik < st%d%kpt%start .or. ik > st%d%kpt%end .or. ist < st%st_start .or. ist > st%st_end) cycle
 
-      call zrestart_read_function(restart, fname, m_lead, tmp(:, idim), err)
+      call zrestart_read_mesh_function(restart, fname, m_lead, tmp(:, idim), err)
       if (err /= 0) exit
 
       call lead_dens_accum()

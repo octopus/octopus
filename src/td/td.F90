@@ -710,9 +710,9 @@ contains
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
         if (cmplxscl) then
           zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_function(restart, filename, gr%mesh, zv_old, err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
         else
-          call drestart_write_function(restart, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
         end if
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity
@@ -785,11 +785,11 @@ contains
       do is = 1, st%d%nspin
         write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
         if(cmplxscl) then
-          call zrestart_read_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
+          call zrestart_read_mesh_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
           td%tr%v_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
           td%tr%Imv_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
         else
-          call drestart_read_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
+          call drestart_read_mesh_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
         end if
         if (err /= 0) err2 = err2 + 1
       end do

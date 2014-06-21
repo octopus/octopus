@@ -269,7 +269,7 @@ contains
       end if
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
                       mesh=sys%gr%mesh, sb=sys%gr%sb, dir=trim(base_folder)//trim(folder)) 
-      call drestart_read_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
+      call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
         write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
         call messages_fatal(1)
