@@ -1439,7 +1439,7 @@ contains
     ! MGGAs have an extra term that also needs to be dumped
     if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
       lines(1) = '#     #spin    #nspin    filename'
-      lines(2) = '%vtay'
+      lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
       if (err /= 0) ierr = ierr + 8
 

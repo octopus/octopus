@@ -301,7 +301,7 @@ contains
           call states_dump(restart_dump, sys%st, sys%gr, ierr)
           call restart_cd(restart_dump)
           if(ierr /= 0) then
-            message(1) = 'Unable to write of states wavefunctions.'
+            message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
         endif

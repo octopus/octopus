@@ -472,7 +472,7 @@ contains
     if (err /= 0) ierr = ierr - 2**7
 
     ! If any error occured up to this point then it is not worth continuing,
-    ! as there something fundamentally wrong the restart files
+    ! as there something fundamentally wrong with the restart files
     if (ierr /= 0) then
       call restart_close(restart, wfns_file)
       call restart_close(restart, occ_file)
