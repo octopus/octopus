@@ -59,10 +59,10 @@ program photoelectron_spectrum
   call global_init(is_serial = .true.)
   
   call datasets_init(1)
-  
-  call io_init()
 
   call messages_init()
+  
+  call io_init()
 
 
   call getopt_init(ierr)
@@ -90,12 +90,13 @@ program photoelectron_spectrum
   
   call get_laser_polarization(pol)
   
+  
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
                                      uThstep, uThspan, uPhstep, &
                                      uPhspan, pol, center, pvec, integrate)
   if(interp  ==  0) interpol = .false.
 
-  call pes_mask_read_info("td.general", dim, Emax, Estep, ll(1), Lk,RR)
+  call pes_mask_read_info("td.general/", dim, Emax, Estep, ll(1), Lk,RR)
 
   write(message(1), '(a)') 'Read PES info file.'
   call messages_info(1)
