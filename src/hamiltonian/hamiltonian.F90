@@ -287,6 +287,8 @@ contains
 
     ! initialize variables
     nullify(hm%oct_fxc)
+    nullify(hm%oct_pot)
+    nullify(hm%oct_rho)
 
     !cmplxscl: copy cmplxscl initialized in states.F90
     call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
