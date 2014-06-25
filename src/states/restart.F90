@@ -66,7 +66,8 @@ module restart_m
     drestart_write_binary,        &
     zrestart_write_binary,        &
     drestart_read_binary,         &
-    zrestart_read_binary
+    zrestart_read_binary,         &
+    restart_are_basedirs_equal
 
   interface drestart_write_binary
     module procedure drestart_write_binary1, drestart_write_binary3
@@ -307,7 +308,7 @@ contains
     !% This information is stored under the "em_resp" subdirectory.
     !%Option restart_em_resp_fd 5
     !% (data type) 
-    !% The data resulting from the calculation of the electromagnetic response using finite-diferences. 
+    !% The data resulting from the calculation of the electromagnetic response using finite-differences. 
     !% This information is stored under the "em_resp_fd" subdirectory.
     !%Option restart_kdotp 6
     !% (data type) 
@@ -847,6 +848,17 @@ contains
     restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
 
   end function restart_has_flag
+
+
+  ! ---------------------------------------------------------
+  !> Returns true if...
+  logical pure function restart_are_basedirs_equal(type1, type2)
+    integer, intent(in) :: type1
+    integer, intent(in) :: type2
+
+    restart_are_basedirs_equal = trim(info(type1)%basedir) == trim(info(type2)%basedir)
+
+  end function restart_are_basedirs_equal
 
 
 #include "undef.F90"

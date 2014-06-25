@@ -117,11 +117,14 @@ contains
         call messages_warning(1)
 
         from_scratch = .true.
-        call restart_end(restart_load)
       end if
     end if
 
-    if (from_scratch) then
+    ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
+    ! already, it is a waste of time to try to read again.
+    if (from_scratch .and. .not. (.not. fromScratch .and. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC))) then
+      ! end only if it was init`d previously
+      if(.not. fromScratch) call restart_end(restart_load)
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
       call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -160,11 +163,6 @@ contains
       else
         call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
       endif
-    end if
-
-    if(ierr /= 0) then
-      message(1) = "Info: Could not load all wavefunctions."
-      call messages_info(1)
     end if
 
     if(sys%st%d%ispin == SPINORS) then
