@@ -125,10 +125,6 @@ contains
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
       call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-      if (ierr < 0) then
-        message(1) = "Unable to read wavefunctions of occupied states."
-        call messages_fatal(1)
-      end if
     end if
 
     call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
