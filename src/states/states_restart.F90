@@ -332,7 +332,7 @@ contains
     character(len=256)   :: lines(3), label_
     character(len=50)    :: str
 
-    FLOAT                :: my_occ, imev
+    FLOAT                :: my_occ, imev, my_kweight
     logical              :: read_occ, lr_allocated, verbose_
     logical              :: integral_occs, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
@@ -438,13 +438,12 @@ contains
         call messages_warning(1)
         ierr = ierr - 2**3
       endif
-      if(ik /= st%d%nik) then
-        write(message(1),'(a)') 'Incompatible restart information: wrong number of k-points.'
-        write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, '; Read ', ik
+      if(ik < st%d%nik) then
+        write(message(1),'(a)') 'Incompatible restart information: not enough k-points.'
+        write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, ' > Read ', ik
         call messages_warning(2)
-        ierr = ierr - 2**4
       endif
-      ! FIXME: we could restart anyway if we can check that existing k-points are used correctly
+      ! We will check that they are the right k-points later, so we do not need to put a specific error here.
     end if
     call restart_close(restart, states_file)
 
@@ -528,7 +527,8 @@ contains
 
         if (err == 0) then
           read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
-               (read_kpoint(idir), char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+               (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
+          ! we do not want to read the k-weights, we have already set them appropriately
         else
           ! There is a problem with this states information, so we skip it.
           restart_file_present(idim, ist, ik) = .false.
