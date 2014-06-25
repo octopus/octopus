@@ -306,6 +306,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> returns in ierr:
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
@@ -669,7 +670,13 @@ contains
     SAFE_DEALLOCATE_A(filled)
 
     if (ierr == 0 .and. iread /= st%nst * st%d%nik * st%d%dim) then
-      ierr = iread
+      if(iread > 0) then
+        ierr = iread
+      else
+        ierr = -1
+      endif
+      ! otherwise ierr = 0 would mean either all was read correctly, or nothing at all was read!
+
       if(.not. present(lr)) then
         write(str, '(a,i5)') 'Reading states.'
       else
