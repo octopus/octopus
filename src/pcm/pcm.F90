@@ -920,3 +920,8 @@ contains
   end subroutine pcm_end
 
 end module pcm_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
