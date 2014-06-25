@@ -76,9 +76,10 @@ octopus_LIBS = \
 	$(top_builddir)/src/math/libmath.a               \
 	$(top_builddir)/src/basic/libbasic.a
 
+scalapack_LIBS = @LIBS_SCALAPACK@ @LIBS_BLACS@
+
 core_LIBS = \
-	@LIBS_FFT@ @LIBS_SCALAPACK@ @LIBS_BLACS@     \
-	@LIBS_LAPACK@ @LIBS_BLAS@                     \
+	@LIBS_FFT@  @LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
 	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
@@ -111,7 +112,7 @@ outside_LIBS = @LIBS_PSPIO@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_BERKELEYGW@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
   @LIBS_METIS_5@
 
-other_LIBS = $(external_LIBS) $(outside_LIBS) $(core_LIBS) 
+other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) 
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
 
 # ---------------------------------------------------------------
