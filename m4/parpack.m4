@@ -26,7 +26,7 @@ dnl We cannot use PARPACK if MPI is not found
 if test x$acx_mpi_ok != xyes; then
   acx_parpack_ok=nompi
 fi 
-dnl We cannot use PARPACK if ARPACKis not found
+dnl We cannot use PARPACK if ARPACK is not found
 if test x$acx_arpack_ok != xyes; then
   acx_parpack_ok=noarpack
 fi
