@@ -139,7 +139,7 @@ contains
     call restart_end(restart_load)
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
-      xc_is_orbital_dependent(sys%ks%xc))
+      (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
 
     if(is_orbital_dependent) then
       message(1) = "CalculationMode = unocc is not well-defined for orbital-dependent functionals,"
