@@ -150,6 +150,11 @@ contains
     !%End
     call parse_float(datasets_check('TDDeltaStrength'), M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
+    nullify(kick%l)
+    nullify(kick%m)
+    nullify(kick%weight)
+    kick%function_mode = KICK_FUNCTION_DIPOLE
+
     if(abs(kick%delta_strength) == M_ZERO) then
       kick%delta_strength_mode = 0
       kick%pol_equiv_axes = 0
@@ -160,9 +165,6 @@ contains
       kick%wprime = M_ZERO
       kick%n_multipoles = 0
       kick%qkick_mode = QKICKMODE_NONE
-      nullify(kick%l)
-      nullify(kick%m)
-      nullify(kick%weight)
       POP_SUB(kick_init)
       return
     end if
@@ -194,12 +196,6 @@ contains
     case default
       call input_error('TDDeltaStrengthMode')
     end select
-
-    nullify(kick%l)
-    nullify(kick%m)
-    nullify(kick%weight)
-
-    kick%function_mode = KICK_FUNCTION_DIPOLE
 
     if(parse_isdef(datasets_check('TDDeltaUserDefined')) /= 0) then
 
