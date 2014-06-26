@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: propagator_cn_inc.F90 $
+!! $Id$
 
 
     subroutine td_runge_kutta2()
@@ -457,3 +457,8 @@
       POP_SUB(propagator_dt.td_runge_kutta4)
 #endif
     end subroutine td_runge_kutta4
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
