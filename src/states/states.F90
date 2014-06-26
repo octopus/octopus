@@ -1845,11 +1845,8 @@ contains
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
-    logical            :: cmplxscl
 
     PUSH_SUB(states_generate_random)
-
-    cmplxscl = st%cmplxscl%space
 
     ist_start = optional_default(ist_start_, 1)
     ist_end   = optional_default(ist_end_,   st%nst)

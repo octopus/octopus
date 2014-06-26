@@ -203,16 +203,14 @@ contains
     FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
            
     integer :: ii, jj 
-    integer :: ndim, np
-    FLOAT   :: spacing(1:MAX_DIM), stabilizer
+    integer :: np
+    FLOAT   :: stabilizer
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
     PUSH_SUB(invertks_2part)
     
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
     
-    ndim = gr%sb%dim
-    spacing = gr%mesh%spacing
     np = gr%mesh%np
     
     SAFE_ALLOCATE(sqrtrho(1:gr%der%mesh%np_part, 1:nspin))
@@ -265,10 +263,10 @@ contains
     integer,             intent(in)    :: nspin
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
         
-    integer :: ii, jj, ierr, idiffmax
+    integer :: ii, jj, ierr
     integer :: iunit, iunit2, verbosity, counter, np
     FLOAT :: rr
-    FLOAT :: alpha, beta, convergence, alphascale, betascale
+    FLOAT :: alpha, beta, convergence, betascale
     FLOAT :: stabilizer, convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
@@ -336,7 +334,6 @@ contains
     alpha = CNST(0.1)
     beta  = CNST(0.1)
     convergence = CNST(0.1)
-    alphascale = CNST(10.0)
     betascale = CNST(100.0)
  
     if(verbosity == 2) then
@@ -380,7 +377,6 @@ contains
         do ii = 1, np
           if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
             diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
-            idiffmax=ii
           endif
         enddo
       enddo
@@ -433,7 +429,7 @@ contains
     FLOAT,          intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
     
     integer :: ip, iprime, ii, jj, ivec, jdim
-    FLOAT :: numerator, diffrho, epsij, occij, inverse
+    FLOAT :: diffrho, epsij, occij, inverse
     FLOAT :: vol_element
     FLOAT :: ki(1:np, 1:np)
     FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
@@ -442,7 +438,6 @@ contains
 
     PUSH_SUB(precond_kiks)
 
-    numerator = M_ZERO
     vhxc_out = M_ZERO
     
     !do ip = 1, np

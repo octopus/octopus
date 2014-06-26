@@ -117,7 +117,6 @@ contains
     integer :: iunit
     integer :: vdw_unit
     integer :: grid_unit
-    integer :: pcm_calc_mode
 
     integer, parameter :: mxts = 10000
 
@@ -726,6 +725,7 @@ contains
     SAFE_ALLOCATE( iwork(1:n_tess) )
 
     !> Solving for X = S_I^-1*(2*Pi - D_I) 
+    ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
     call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
 
     SAFE_DEALLOCATE_A(iwork)
