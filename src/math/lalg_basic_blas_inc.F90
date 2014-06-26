@@ -54,11 +54,14 @@ subroutine FNAME(swap_1)(n1, dx, dy)
 
   if (n1 < 1) return
 
+  PUSH_SUB(FNAME(swap_1))
+
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
   call blas_swap(n1, dx(1), 1, dy(1), 1)
 
+  POP_SUB(FNAME(swap_1))
 end subroutine FNAME(swap_1)
 
 subroutine FNAME(swap_2)(n1, n2, dx, dy)
@@ -67,6 +70,8 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
 
   if (n1*n2 < 1) return
 
+  PUSH_SUB(FNAME(swap_2))
+
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
@@ -74,6 +79,7 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
 
   call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
+  POP_SUB(FNAME(swap_2))
 end subroutine FNAME(swap_2)
 
 subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
@@ -81,6 +87,8 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   TYPE1,   intent(inout) :: dx(:,:,:), dy(:,:,:)
 
   if (n1*n2*n3 < 1) return
+
+  PUSH_SUB(FNAME(swap_3))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -91,6 +99,7 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
 
   call blas_swap(n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
+  POP_SUB(FNAME(swap_3))
 end subroutine FNAME(swap_3)
 
 subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
@@ -98,6 +107,8 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   TYPE1,   intent(inout) :: dx(:,:,:,:), dy(:,:,:,:)
 
   if (n1*n2*n3*n4 < 1) return
+
+  PUSH_SUB(FNAME(swap_4))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -110,6 +121,7 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
 
   call blas_swap(n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
+  PUSH_SUB(FNAME(swap_4))
 end subroutine FNAME(swap_4)
 
 !> ------------------------------------------------------------------
@@ -121,12 +133,15 @@ subroutine FNAME(scal_1)(n1, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:)
 
-  ASSERT(ubound(dx, dim = 1) >= n1)
-
   if (n1 < 1) return
+
+  PUSH_SUB(FNAME(scal_1))
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
 
   call blas_scal(n1, da, dx(1), 1)
 
+  POP_SUB(FNAME(scal_1))
 end subroutine FNAME(scal_1)
 
 subroutine FNAME(scal_2)(n1, n2, da, dx)
@@ -136,11 +151,14 @@ subroutine FNAME(scal_2)(n1, n2, da, dx)
 
   if (n1*n2 < 1) return
 
+  PUSH_SUB(FNAME(scal_2))
+
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
 
   call blas_scal(n1*n2, da, dx(1,1), 1)
 
+  POP_SUB(FNAME(scal_2))
 end subroutine FNAME(scal_2)
 
 subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
@@ -150,12 +168,15 @@ subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
 
   if (n1*n2*n3 < 1) return
 
+  PUSH_SUB(FNAME(scal_3))
+
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) >= n3)
 
   call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
 
+  PUSH_SUB(FNAME(scal_3))
 end subroutine FNAME(scal_3)
 
 subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
@@ -165,6 +186,8 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
 
   if (n1*n2*n3*n4 < 1) return
 
+  PUSH_SUB(FNAME(scal_4))
+
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) == n3)
@@ -172,6 +195,7 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
 
   call blas_scal(n1*n2*n3*n4, da, dx(1,1,1,1), 1)
 
+  POP_SUB(FNAME(scal_4))
 end subroutine FNAME(scal_4)
 
 #if TYPE == 3 || TYPE == 4
@@ -180,12 +204,15 @@ subroutine FNAME(scal_5)(n1, da, dx)
   TYPE2,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:)
 
-  ASSERT(ubound(dx, dim = 1) >= n1)
-
   if (n1 < 1) return
+
+  PUSH_SUB(FNAME(scal_5))
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
 
   call blas_scal(n1, da, dx(1))
 
+  POP_SUB(FNAME(scal_5))
 end subroutine FNAME(scal_5)
 #endif
 
@@ -199,11 +226,13 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
 
+  if (n1 < 1) return
+  
+  PUSH_SUB(FNAME(axpy_1))
+
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
-  if (n1 < 1) return
-  
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
@@ -216,6 +245,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 
   call profiling_out(axpy_profile)
 
+  POP_SUB(FNAME(axpy_1))
 end subroutine FNAME(axpy_1)
 
 subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
@@ -225,6 +255,8 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:, :)
 
   if (n1*n2 < 1) return
+
+  PUSH_SUB(FNAME(axpy_2))
 
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
@@ -242,6 +274,7 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
 #endif
 
   call profiling_out(axpy_profile)
+  POP_SUB(FNAME(axpy_2))
 end subroutine FNAME(axpy_2)
 
 subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
@@ -251,6 +284,8 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:, :, :)
 
   if (n1*n2*n3 < 1) return
+
+  PUSH_SUB(FNAME(axpy_3))
 
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
@@ -270,6 +305,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
 #endif
 
   call profiling_out(axpy_profile)
+  POP_SUB(FNAME(axpy_3))
 end subroutine FNAME(axpy_3)
 
 subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
@@ -279,6 +315,8 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:, :, :, :)
 
   if (n1*n2*n3*n4 < 1) return
+
+  PUSH_SUB(FNAME(axpy_4))
 
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
@@ -300,7 +338,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
 #endif
 
   call profiling_out(axpy_profile)
-
+  POP_SUB(FNAME(axpy_2))
 end subroutine FNAME(axpy_4)
 
 #if TYPE == 3 || TYPE == 4
@@ -310,11 +348,13 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
 
+  if (n1 < 1) return
+  
+  PUSH_SUB(FNAME(axpy_5))
+
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
-  if (n1 < 1) return
-  
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1, da, dx(1), dy(1))
@@ -323,6 +363,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 
   call profiling_out(axpy_profile)
 
+  POP_SUB(FNAME(axpy_5))
 end subroutine FNAME(axpy_5)
 
 subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
@@ -334,6 +375,8 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
 
   if (n1 < 1) return
   
+  PUSH_SUB(FNAME(axpy_6))
+
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   ASSERT(ubound(dx, dim = 1) == n1)
@@ -347,6 +390,7 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
 
   call profiling_out(axpy_profile)
 
+  POP_SUB(FNAME(axpy_6))
 end subroutine FNAME(axpy_6)
 #endif
 
@@ -359,10 +403,12 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
 
+  if (n1 < 1) return
+
+  PUSH_SUB(FNAME(copy_1))
+
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
-
-  if (n1 < 1) return
 
   call profiling_in(copy_profile, "BLAS_COPY")
 
@@ -371,7 +417,7 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   call profiling_count_transfers(n1, dx(1))
 
   call profiling_out(copy_profile)
-
+  POP_SUB(FNAME(copy_1))
 end subroutine FNAME(copy_1)
 
 subroutine FNAME(copy_2)(n1, n2, dx, dy)
@@ -380,6 +426,8 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
   TYPE1,   intent(inout) :: dy(:,:)
 
   if (n1*n2 < 1) return
+
+  PUSH_SUB(FNAME(copy_2))
 
   call profiling_in(copy_profile, "BLAS_COPY")
 
@@ -391,7 +439,7 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
   call profiling_out(copy_profile)
-
+  POP_SUB(FNAME(copy_2))
 end subroutine FNAME(copy_2)
 
 subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
@@ -400,6 +448,8 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   TYPE1,   intent(inout) :: dy(:,:,:)
 
   if(n1*n2*n3 < 1) return
+
+  PUSH_SUB(FNAME(copy_3))
 
   call profiling_in(copy_profile, "BLAS_COPY")
 
@@ -413,7 +463,7 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
   call profiling_out(copy_profile)
-
+  POP_SUB(FNAME(copy_3))
 end subroutine FNAME(copy_3)
 
 subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
@@ -422,6 +472,8 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   TYPE1,   intent(inout) :: dy(:,:,:,:)
 
   if (n1*n2*n3*n4 < 1) return
+
+  PUSH_SUB(FNAME(copy_4))
 
   call profiling_in(copy_profile, "BLAS_COPY")
  
@@ -437,7 +489,7 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
   call profiling_out(copy_profile)
-
+  POP_SUB(FNAME(copy_4))
 end subroutine FNAME(copy_4)
 
 !> ------------------------------------------------------------------
@@ -448,13 +500,16 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:)
 
-  ASSERT(ubound(dx, dim = 1) >= n)
+  PUSH_SUB(FNAME(nrm2))
 
   nrm2 = CNST(0.0)
   if (n < 1) return
 
+  ASSERT(ubound(dx, dim = 1) >= n)
+
   nrm2 = blas_nrm2(n, dx(1), 1)
 
+  POP_SUB(FNAME(nrm2))
 end function FNAME(nrm2)
 
 !> ------------------------------------------------------------------
@@ -472,10 +527,13 @@ subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
+  PUSH_SUB(FNAME(symv_1))
+
   call profiling_in(symv_profile, 'BLAS_SYMV')
   call blas_symv('U', n, alpha, a(1, 1), n, x(1), 1, beta, y(1), 1)
   call profiling_out(symv_profile)
 
+  POP_SUB(FNAME(symv_1))
 end subroutine FNAME(symv_1)
 
 subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
@@ -485,10 +543,13 @@ subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:, :)
 
+  PUSH_SUB(FNAME(symv_2))
+
   call profiling_in(symv_profile, 'BLAS_SYMV')
   call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*2, x(1), 1, beta, y(1, 1), 1)
   call profiling_out(symv_profile)
 
+  POP_SUB(FNAME(symv_2))
 end subroutine FNAME(symv_2)
 
 subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
@@ -498,10 +559,13 @@ subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
+  PUSH_SUB(FNAME(gemv_1))
+
   call profiling_in(gemv_profile, "BLAS_GEMV")
   call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
   call profiling_out(gemv_profile)
 
+  POP_SUB(FNAME(gemv_1))
 end subroutine FNAME(gemv_1)
 
 subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
@@ -511,10 +575,13 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:,:)
 
+  PUSH_SUB(FNAME(gemv_2))
+
   call profiling_in(gemv_profile, "BLAS_GEMV")
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
   call profiling_out(gemv_profile)
 
+  POP_SUB(FNAME(gemv_2))
 end subroutine FNAME(gemv_2)
 
 
