@@ -53,7 +53,7 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, np, ndim, nspin, idiffmax
+    integer :: ii, jj, np, ndim, nspin
     integer :: err
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
@@ -129,7 +129,6 @@ contains
       do ii = 1, np
         if (abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
           diffdensity = abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj))
-          idiffmax=ii
         endif
       enddo
     enddo

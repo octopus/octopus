@@ -83,7 +83,6 @@ contains
     FLOAT,               intent(in)    :: dt
 
     integer :: first, id, flags, iout, default
-    logical :: ldoverwrite
 
     PUSH_SUB(local_write_init)
 
@@ -188,9 +187,10 @@ contains
   subroutine local_write_end(writ)
     type(local_write_t), intent(inout) :: writ
     
-    integer :: i
     PUSH_SUB(local_write_end)
+
     SAFE_DEALLOCATE_A(writ%out)
+
     POP_SUB(local_write_end)
   end subroutine local_write_end
 
@@ -214,7 +214,6 @@ contains
 
     type(profile_t), save :: prof
     integer :: id
-    logical :: start
 
     PUSH_SUB(local_write_iter)
     call profiling_in(prof, "LOCAL_WRITE_ITER")
