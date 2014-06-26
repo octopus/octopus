@@ -50,3 +50,23 @@ match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4557
 
 match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.664587
 
+
+# note: states 17 and 18 may be missing if LCAO is used
+Input: 08-spin_orbit_coupling_full.03-unocc.inp
+match ; Eigenvalue 11 ; GREP(static/eigenvalues, '11   --', 13) ; -14.712017
+match ; Eigenvalue 13 ; GREP(static/eigenvalues, '13   --', 13) ; -13.904243
+match ; Eigenvalue 15 ; GREP(static/eigenvalues, '15   --', 13) ; -13.539179
+match ; Eigenvalue 16 ; GREP(static/eigenvalues, '16   --', 13) ; -12.933610
+match ; Eigenvalue 17 ; GREP(static/eigenvalues, '17   --', 13) ;  -5.035700
+match ; Eigenvalue 18 ; GREP(static/eigenvalues, '18   --', 13) ;  -4.975020
+match ; Eigenvalue 19 ; GREP(static/eigenvalues, '19   --', 13) ;  -4.127851
+match ; Eigenvalue 20 ; GREP(static/eigenvalues, '20   --', 13) ;  -4.116743
+
+match ; <Sz>       11 ; GREP(static/eigenvalues, '11   --', 52) ;  0.1300
+match ; <Sz>       13 ; GREP(static/eigenvalues, '13   --', 52) ; -0.1012
+match ; <Sz>       15 ; GREP(static/eigenvalues, '15   --', 52) ;  0.4557
+match ; <Sz>       16 ; GREP(static/eigenvalues, '16   --', 52) ; -0.4671
+match ; <Sz>       17 ; GREP(static/eigenvalues, '17   --', 52) ;  0.5000
+match ; <Sz>       18 ; GREP(static/eigenvalues, '18   --', 52) ; -0.5000
+match ; <Sz>       19 ; GREP(static/eigenvalues, '19   --', 52) ;  0.4525
+match ; <Sz>       20 ; GREP(static/eigenvalues, '20   --', 52) ;  0.4675
