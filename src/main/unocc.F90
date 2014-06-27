@@ -144,15 +144,17 @@ contains
         end if
       enddo
 
-      if(is_orbital_dependent) then
-        message(1) = "For an orbital-dependent functional, all occupied orbitals must be provided."
-      else if(ierr_rho /= 0) then
-        message(1) = "Since density could not be read, all occupied orbitals must be provided."
-      endif
+      if(occ_missing) then
+        if(is_orbital_dependent) then
+          message(1) = "For an orbital-dependent functional, all occupied orbitals must be provided."
+        else if(ierr_rho /= 0) then
+          message(1) = "Since density could not be read, all occupied orbitals must be provided."
+        endif
 
-      message(2) = "Not all the occupied orbitals could be read."
-      message(3) = "Please run a ground-state calculation first!"
-      call messages_fatal(3)
+        message(2) = "Not all the occupied orbitals could be read."
+        message(3) = "Please run a ground-state calculation first!"
+        call messages_fatal(3)
+      endif
 
       message(1) = "Unable to read density: Building density from wavefunctions."
       call messages_info(1)
