@@ -165,12 +165,6 @@ contains
       endif
     end if
 
-    if(sys%st%d%ispin == SPINORS) then
-      message(1) = "Try gs with ExtraStates instead of unocc mode for spinors."
-      call messages_warning(1)
-      call messages_experimental("unocc for spinors")
-    endif
-
     if (states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
     else
