@@ -60,7 +60,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
-    logical :: from_scratch, converged, forced_finish, showoccstates, is_orbital_dependent, occ_missing
+    logical :: converged, forced_finish, showoccstates, is_orbital_dependent, occ_missing
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
@@ -104,25 +104,17 @@ contains
 
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    from_scratch = fromScratch
-
+    ierr = 0
     if (.not. fromScratch) then
       call restart_init(restart_load, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-
-      if (ierr /= 0) then
-        message(1) = "Unable to read wavefunctions: Calculation is going to start from scratch."
-        call messages_warning(1)
-
-        from_scratch = .true.
-      end if
     end if
 
     ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
-    ! already, it is a waste of time to try to read again.
-    if (from_scratch .and. .not. (.not. fromScratch .and. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC))) then
+    ! already and failed, it is a waste of time to try to read again.
+    if (ierr /= 0 .and. .not. (.not. fromScratch .and. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC))) then
       ! end only if it was init`d previously
       if(.not. fromScratch) call restart_end(restart_load)
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
@@ -131,11 +123,6 @@ contains
     end if
 
     call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
-    if (ierr_rho /= 0) then
-      message(1) = "Unable to read density: Building density from wavefunctions."
-      call messages_info(1)
-    end if
-
     call restart_end(restart_load)
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
@@ -166,6 +153,9 @@ contains
       message(2) = "Not all the occupied orbitals could be read."
       message(3) = "Please run a ground-state calculation first!"
       call messages_fatal(3)
+
+      message(1) = "Unable to read density: Building density from wavefunctions."
+      call messages_info(1)
 
       if(.not. hm%cmplxscl%space) then
         call density_calc(sys%st, sys%gr, sys%st%rho)
