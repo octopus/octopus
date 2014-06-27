@@ -60,7 +60,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
-    logical :: from_scratch, converged, forced_finish, showoccstates, is_orbital_dependent
+    logical :: from_scratch, converged, forced_finish, showoccstates, is_orbital_dependent, occ_missing
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
@@ -142,21 +142,30 @@ contains
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
 
     if(is_orbital_dependent) then
-      message(1) = "CalculationMode = unocc is not well-defined for orbital-dependent functionals,"
-      message(2) = "since merely freezing the density does not guarantee consistency with the gs run."
-      message(3) = "Density and occupied orbitals from the same k-points are required to restart."
+      message(1) = "Be sure your gs run is well converged since you have an orbital-dependent functional."
+      message(2) = "Otherwise, the occupied states may change in CalculationMode = unocc, and your"
+      message(3) = "unoccupied states will not be consistent with the gs run."
       call messages_warning(3)
     endif
 
     if(ierr_rho /= 0 .or. is_orbital_dependent) then
       ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
+      occ_missing = .false.
       do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
         if(any(lowest_missing(1:sys%st%d%dim, ik) <= occ_states(ik))) then
-          message(1) = "Not all the occupied KS orbitals could be read."
-          message(2) = "Please run a ground-state calculation first!"
-          call messages_fatal(2)
+          occ_missing = .true.
         end if
       enddo
+
+      if(is_orbital_dependent) then
+        message(1) = "For an orbital-dependent functional, all occupied orbitals must be provided."
+      else if(ierr_rho /= 0) then
+        message(1) = "Since density could not be read, all occupied orbitals must be provided."
+      endif
+
+      message(2) = "Not all the occupied orbitals could be read."
+      message(3) = "Please run a ground-state calculation first!"
+      call messages_fatal(3)
 
       if(.not. hm%cmplxscl%space) then
         call density_calc(sys%st, sys%gr, sys%st%rho)
