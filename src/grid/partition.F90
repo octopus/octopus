@@ -329,6 +329,7 @@ contains
       call MPI_Gatherv(partition%part(1), partition%np_local, MPI_INTEGER, &
            part_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
            root, partition%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(partition%mpi_grp%comm, C_MPI_GATHERV)      
 #endif
     else
 #ifdef HAVE_MPI
