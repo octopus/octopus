@@ -171,6 +171,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
 
+      if(functl(ixc)%family == XC_FAMILY_NONE) cycle
+
       if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
@@ -508,9 +510,6 @@ contains
     integer :: ii
 
     PUSH_SUB(xc_get_vxc.gga_init)
-
-    ii = 1
-    if(ispin /= UNPOLARIZED) ii = 3
 
     ! allocate variables
     SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels))

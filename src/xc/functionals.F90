@@ -151,6 +151,7 @@ contains
 
     else if(functl%family  ==  XC_FAMILY_NONE) then
       functl%type = -1
+      functl%flags = 0
 
     else ! handled by libxc
       ! initialize
