@@ -308,17 +308,18 @@ contains
       !%Type float
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Initial step for the geometry optimizer. The default is 0.5,
-      !% except for the FIRE minimizer, which sets a default value of 50.0,
-      !% and corresponds to the initial time-step.
+      !% Initial step for the geometry optimizer. The default is 0.5.
       !% WARNING: in some weird units.
+      !% For the FIRE minimizer, default value is 50.0 in a.u. of time,
+      !% and corresponds to the initial time-step for the MD.
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
+        call parse_float(datasets_check('GOStep'), default_step, g_opt%step)
       else
         default_step = CNST(50.0)
+        call parse_float(datasets_check('GOStep'), default_step, g_opt%step, unit = units_inp%time)
       endif
-      call parse_float(datasets_check('GOStep'), default_step, g_opt%step)
 
       !%Variable GOLineTol
       !%Type float
@@ -511,10 +512,14 @@ contains
     iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
 
     if(geom_iter == 1) then
-      write(iunit, '(a)') '#     iter                   energy                max_force                   max_dr'
+      write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 
+                           'max_force [' // trim(units_abbrev(units_out%force)) // ']',&
+                           ' max_dr [' // trim(units_abbrev(units_out%length)) // ']'
     end if
 
-    write(iunit, '(i10,3f25.15)')  geom_iter, energy, maxdf, maxdx
+    write(iunit, '(i10,3f25.15)')  geom_iter, units_from_atomic(units_out%energy, energy), & 
+                                              units_from_atomic(units_out%force,maxdf), &
+                                              units_from_atomic(units_out%length,maxdx)
 
     call io_close(iunit)
 
