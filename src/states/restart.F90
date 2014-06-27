@@ -724,12 +724,13 @@ contains
   !! directory. Depending on the type of restart, the file
   !! will be used for reading  (RESTART_TYPE_LOAD), or for
   !! writing (RESTART_TYPE_DUMP).
-  function restart_open(restart, filename, status, position, form)
+  function restart_open(restart, filename, status, position, form, silent)
     type(restart_t),            intent(in) :: restart
     character(len=*),           intent(in) :: filename
     character(len=*), optional, intent(in) :: status
     character(len=*), optional, intent(in) :: position
     character(len=*), optional, intent(in) :: form
+    logical,          optional, intent(in) :: silent
     integer :: restart_open
 
     logical :: die
@@ -760,7 +761,7 @@ contains
     restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
                            die=die, is_tmp=.true., position=position, form=form, grp=restart%mpi_grp)
 
-    if (restart_open < 0) then    
+    if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
       call messages_warning(1)
     end if

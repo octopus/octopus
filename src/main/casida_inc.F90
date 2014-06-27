@@ -641,7 +641,7 @@ contains
     matrix = M_ZERO
 
     ! if fromScratch, we already deleted the restart files
-    iunit = restart_open(cas%restart_load, restart_file)
+    iunit = restart_open(cas%restart_load, restart_file, silent = .true.)
     if(mpi_grp_is_root(mpi_world)) then
       if (iunit > 0) then
         do
@@ -866,7 +866,8 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
 
   ! if fromScratch, we already deleted the restart files
   write(restart_filename,'(a,i6.6,a,i1)') 'lr_hmat1_', iatom, '_', idir
-  iunit = restart_open(cas%restart_load, restart_filename)
+  iunit = restart_open(cas%restart_load, restart_filename, silent = .true.)
+  ! NOTE: this restart file is different from 'kernel' because it is one-state not two-state matrix elements
   if(mpi_grp_is_root(mpi_world)) then
     if(iunit > 0) then
       do
