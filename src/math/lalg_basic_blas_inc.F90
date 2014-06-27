@@ -176,7 +176,7 @@ subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
 
   call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
 
-  PUSH_SUB(FNAME(scal_3))
+  POP_SUB(FNAME(scal_3))
 end subroutine FNAME(scal_3)
 
 subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
