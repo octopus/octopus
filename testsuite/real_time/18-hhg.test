@@ -1,0 +1,38 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 18-hhg.test $
+#
+# This tests the oct-harmonic-spectrum utility. It computes the high harmonic generation
+# of a 1D model of Hydrogen, when irradiated with a 800 nm, 10^14 W/cm^2, 8 periods laser
+# pulse. By changing a few parameters (see the input files), the computation will be
+# equal, except for few numerical differences (proagation scheme, etc), with the 
+# calculation presented in S. C. Rae et al., Phys. Rev. A. 50, 1946 (1994). That was one
+# of the first HHG spectra computed, shortly after the high harmonics from atomic gases
+# were discovered. The results obtained with octopus are similar to the ones shown in 
+# Fig. 2(a) of that paper.
+
+Test       : High harmonic generation
+Programs   : octopus_mpi; octopus
+TestGroups : short-run, real_time
+Enabled    : Yes
+
+# ground state
+Processors : 1
+Input      : 18-hhg.01-gs.inp
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -0.66977716
+
+# td run
+# Here we will test the acceleration file. Not that afterwards the spectrum is computed
+# from the multipoles file, not from this one.
+Precision : 1e-4
+Processors : 4
+Not_Util
+Input      : 18-hhg.02-td.inp
+match ; Dipole acceleration [step   2000] ; LINE(td.general/acceleration, -1, 30) ; 1.583357735415e-04 
+
+# Calculation of the emission spectrum
+Precision : 1e-6
+Util       : oct-harmonic-spectrum
+Input      : 18-hhg.02-td.inp
+match ; Emission spectrum (at resonance frequency) ; LINEFIELD(hs-mult.x, 14, 2) ; 0.544695E-01
+
+

@@ -1,0 +1,57 @@
+# This test calculates a one-dimensional model for Hydrogen, considering
+
+CalculationMode = td
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+# In the original reference, the spacing is 0.25 a.u.
+Spacing = 0.35
+# In the original reference, the box is 300 a.u. long. p
+Radius = 200.0
+
+TheoryLevel = independent_particles
+
+%Species
+"Hydrogen1D" | 1 | spec_user_defined | 1 | "-1/sqrt(1+(x)^2)"
+%
+
+%Coordinates
+"Hydrogen1D" | 0
+%
+
+EigenSolverTolerance = 1e-5
+
+# Frequency corresponding to 800nm.
+omega = 0.05655
+period = 2*pi/omega
+# In the original reference, there are 96 cycles instead of 8.
+stime = 8*period
+# The time-step is shorter in the original referece. But the propagation
+# algorithm is also probably different.
+dt = period / 250
+
+TDMaximumIter = stime/dt
+TDPropagator = exp_mid
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+TDTimeStep = dt
+
+%TDExternalFields
+electric_field   | 1 | 0 | 0 | omega | "envelope_function"
+%
+
+electric_amplitude = (sqrt(10^14)/sqrt(3.509470*10^16))
+%TDFunctions
+"envelope_function" | tdf_from_expr | "electric_amplitude*(sin(pi/stime*t))^2"
+%
+
+#AbsorbingBoundaries = sin2
+AbsorbingBoundaries = mask
+AbWidth = 50
+
+TDOutput = laser + multipoles + dipole_acceleration
+
+PropagationSpectrumMaxEnergy = 50*omega
+PropagationSpectrumEnergyStep = omega/11

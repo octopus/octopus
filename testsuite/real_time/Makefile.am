@@ -94,6 +94,9 @@ dist_share_DATA =                      \
         16-sparskit.test                 \
         16-sparskit.01-gs.inp            \
         16-sparskit.02-kick.inp          \
-        17-absorption-spin_symmetry.test
+        17-absorption-spin_symmetry.test \
+        18-hhg.test \
+        18-hhg.01-gs.inp \
+        18-hhg.02-td.inp
 
 CLEANFILES = *~ *.bak
