@@ -198,7 +198,7 @@ contains
     integer,          intent(out)   :: ierr
 
     integer :: iunit, idir, err
-    character(len=100) :: lines(4)
+    character(len=100) :: lines(6)
     character(len=20)  :: str
 
     PUSH_SUB(index_load)
@@ -231,14 +231,16 @@ contains
         end if
 
         if (.not. idx%is_hypercube) then
-          call iopar_read(mpi_grp, iunit, lines, 4, err)
+          call iopar_read(mpi_grp, iunit, lines, 6, err)
           if (err /= 0) then
             ierr = ierr + 8            
           else
-            read(lines(1), '(a20,7i8)')  str, (idx%nr(1, idir), idir = 1,idx%dim)
-            read(lines(2), '(a20,7i8)')  str, (idx%nr(2, idir), idir = 1,idx%dim)
-            read(lines(3), '(a20,7i8)')  str, idx%ll(1:idx%dim)
-            read(lines(4), '(a20,7i8)')  str, idx%enlarge(1:idx%dim)
+            read(lines(1), '(a20,7i8)') str, (idx%nr(1, idir), idir = 1,idx%dim)
+            read(lines(2), '(a20,7i8)') str, (idx%nr(2, idir), idir = 1,idx%dim)
+            read(lines(3), '(a20,7i8)') str, idx%ll(1:idx%dim)
+            read(lines(4), '(a20,7i8)') str, idx%enlarge(1:idx%dim)
+            !For the moment we do not read the algorithm, as it is always set to 1
+            read(lines(6), '(a20,i21)') str, idx%checksum
           end if
         end if
       end if
