@@ -677,13 +677,13 @@ contains
 
     ! Write the parameters
     iunit = restart_open(restart, trim(lead_name(intf%il))//"_parameters")
-    write(lines(1),'(a20,li10)')   "dim=                ", dim
-    write(lines(2),'(a20,li10)')   "iter=               ", iter
-    write(lines(3),'(a20,li10)')   "np=                 ", np
+    write(lines(1),'(a20,i10)')   "dim=                ", dim
+    write(lines(2),'(a20,i10)')   "iter=               ", iter
+    write(lines(3),'(a20,i10)')   "np=                 ", np
     write(lines(4),'(a20,e21.14)') "spacing=            ", spacing
     write(lines(5),'(a20,e21.14)') "delta=              ", delta
-    write(lines(6),'(a20,li10)')   "op_n                ", op_n
-    write(lines(7),'(a20,li10)')   "mem_type=           ", ob%mem_type
+    write(lines(6),'(a20,i10)')   "op_n                ", op_n
+    write(lines(7),'(a20,i10)')   "mem_type=           ", ob%mem_type
     write(lines(8),'(a20,l1)')     "reducible=          ", intf%reducible
     call restart_write(restart, iunit, lines, 8, err)
     if (err /= 0) ierr = ierr + 1
