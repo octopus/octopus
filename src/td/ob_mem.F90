@@ -766,13 +766,13 @@ contains
     if (err /= 0) then
       ierr = ierr + 1
     else
-      read(lines(1),'(a20,li10)')   str, s_dim
-      read(lines(2),'(a20,li10)')   str, s_iter
-      read(lines(3),'(a20,li10)')   str, s_np
+      read(lines(1),'(a20,i10)')   str, s_dim
+      read(lines(2),'(a20,i10)')   str, s_iter
+      read(lines(3),'(a20,i10)')   str, s_np
       read(lines(4),'(a20,e21.14)') str, s_spacing
       read(lines(5),'(a20,e21.14)') str, s_delta
-      read(lines(6),'(a20,li10)')   str, s_op_n
-      read(lines(7),'(a20,li10)')   str, s_mem_type
+      read(lines(6),'(a20,i10)')   str, s_op_n
+      read(lines(7),'(a20,i10)')   str, s_mem_type
       read(lines(8),'(a20,l1)')     str, s_reducible
     end if
     call restart_close(restart, iunit)
