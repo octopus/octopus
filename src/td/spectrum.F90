@@ -1358,10 +1358,7 @@ contains
 
     ! normalize vector and set to global var
 !    vv = vec / sqrt(sum(vec(:)**2))  
-    vv = vec
-    write (*,*) "vv",vv
-
-
+    vv(1:3) = vec(1:3)
 
     PP(:,0) = M_ZERO
     do istep = 0, time_steps - 1
@@ -1450,7 +1447,7 @@ contains
                       ddipole(3,time_steps) )
 
    ! normalize vector and set to global var
-    vv = vec / sqrt(sum(vec(:)**2))  
+    vv(1:3) = vec(1:3) / sqrt(sum(vec(1:3)**2))  
 
     PP(:,0) = M_ZERO
     do istep = 1, time_steps - 1
@@ -1513,7 +1510,7 @@ contains
     SAFE_ALLOCATE(ddipole(0:time_steps))
     SAFE_ALLOCATE(dd(1:3, 1:nspin))
 
-    vv = vec / sqrt(sum(vec(:)**2))  
+    vv(1:3) = vec(1:3) / sqrt(sum(vec(1:3)**2))  
 
     do istep = 1, time_steps
       read(iunit, *) trash, dump, dump, dd
