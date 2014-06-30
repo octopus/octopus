@@ -70,19 +70,19 @@ module restart_m
     restart_are_basedirs_equal
 
   interface drestart_write_binary
-    module procedure drestart_write_binary1, drestart_write_binary3
+    module procedure drestart_write_binary1, drestart_write_binary2, drestart_write_binary3
   end interface drestart_write_binary
 
   interface zrestart_write_binary
-    module procedure zrestart_write_binary1, zrestart_write_binary3
+    module procedure zrestart_write_binary1, zrestart_write_binary2, zrestart_write_binary3
   end interface zrestart_write_binary
 
   interface drestart_read_binary
-    module procedure drestart_read_binary1, drestart_read_binary3
+    module procedure drestart_read_binary1, drestart_read_binary2, drestart_read_binary3
   end interface drestart_read_binary
 
   interface zrestart_read_binary
-    module procedure zrestart_read_binary1, zrestart_read_binary3
+    module procedure zrestart_read_binary1, zrestart_read_binary2, zrestart_read_binary3
   end interface zrestart_read_binary
 
 
@@ -724,12 +724,13 @@ contains
   !! directory. Depending on the type of restart, the file
   !! will be used for reading  (RESTART_TYPE_LOAD), or for
   !! writing (RESTART_TYPE_DUMP).
-  function restart_open(restart, filename, status, position, form, silent)
+  !! Note that this function only be used to open *formatted* files and that
+  !! unformatted data should be accessed using the restart_*_binary subroutines.
+  function restart_open(restart, filename, status, position, silent)
     type(restart_t),            intent(in) :: restart
     character(len=*),           intent(in) :: filename
     character(len=*), optional, intent(in) :: status
     character(len=*), optional, intent(in) :: position
-    character(len=*), optional, intent(in) :: form
     logical,          optional, intent(in) :: silent
     integer :: restart_open
 
@@ -759,7 +760,7 @@ contains
     if (present(status)) status_ = status
 
     restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
-                           die=die, is_tmp=.true., position=position, form=form, grp=restart%mpi_grp)
+                           die=die, is_tmp=.true., position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."

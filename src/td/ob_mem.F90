@@ -78,7 +78,7 @@ contains
     integer,             intent(in)    :: order
     type(mpi_grp_t),     intent(in)    :: mpi_grp
 
-    integer :: il, np, saved_iter, ii, ij
+    integer :: il, np, saved_iter, ii, ij, ierr
     type(restart_t) :: restart_load, restart_dump
 
     PUSH_SUB(ob_mem_init)
@@ -158,8 +158,12 @@ contains
     do il = 1, NLEADS
       np = intf(il)%np_intf
       ! Try to read the coefficients from file
-      call read_coeffs(restart_load, saved_iter, ob, hm, intf(il), &
-                       op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
+      call ob_mem_load_coeffs(restart_load, saved_iter, ob, hm, intf(il), &
+                       op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to load coefficients of '"//trim(lead_name(il))//"' lead."
+        call messages_warning(1)
+      end if
 
       if (saved_iter  <  max_iter) then ! Calculate missing coefficients.
         if (saved_iter > 0) then
@@ -209,8 +213,12 @@ contains
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
           call messages_info(2)
-          call write_coeffs(restart_dump, ob, hm, intf(il),     &
-              op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order, mpi_grp)
+          call ob_mem_dump_coeffs(restart_dump, ob, hm, intf(il),     &
+              op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to write coefficients of '"//trim(lead_name(il))//"' lead."
+            call messages_warning(1)
+          end if
         end if
       else
         message(1) = 'Info: Successfully loaded memory coefficients from '// &
@@ -635,10 +643,8 @@ contains
 
   ! ---------------------------------------------------------
   !> Write memory coefficients to file.
-  !! FIXME: this routine writes compiler- and/or system-dependent binary files.
-  !! It should be changed to a platform-independent format.
-  subroutine write_coeffs(restart, ob, hm, intf, dim, iter, spacing, delta, op_n, order, mpi_grp)
-    type(restart_t),     intent(in)    :: restart
+  subroutine ob_mem_dump_coeffs(restart, ob, hm, intf, dim, iter, spacing, delta, op_n, order, ierr)
+    type(restart_t),     intent(inout) :: restart
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
     type(interface_t),   intent(in)    :: intf
@@ -648,63 +654,74 @@ contains
     FLOAT,               intent(in)    :: delta           !< Timestep.
     integer,             intent(in)    :: op_n            !< Number of operator points.
     integer,             intent(in)    :: order           !< Discretization order.
-    type(mpi_grp_t),     intent(in)    :: mpi_grp
+    integer,             intent(out)   :: ierr
 
-    integer :: ntime, ip, iunit, np
+    integer :: iunit, np, err
+    character(len=100) :: lines(8)
 
-    PUSH_SUB(write_coeffs)
+    PUSH_SUB(ob_mem_dump_coeffs)
 
-    iunit = restart_open(restart, trim(lead_name(intf%il)), form='unformatted')
-    if(iunit < 0) then
-      message(1) = 'Cannot write memory coefficients to file.'
-      call messages_warning(1)
-      POP_SUB(write_coeffs)
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      POP_SUB(ob_mem_dump_coeffs)
       return
     end if
 
-    if (mpi_grp_is_root(mpi_grp)) then
-      np = intf%np_intf
-
-      ! Write numerical parameters.
-      write(iunit) dim
-      write(iunit) iter
-      write(iunit) np
-      write(iunit) spacing
-      write(iunit) delta
-      write(iunit) op_n
-      write(iunit) ob%mem_type
-      write(iunit) intf%reducible
-      write(iunit) hm%lead(intf%il)%vks(1:np, 1)
-
-      ! Write matrices.
-      select case(ob%mem_type)
-      case(SAVE_CPU_TIME)
-        do ntime = 0, iter
-          do ip = 1, np
-            write(iunit) ob%lead(intf%il)%q(ip:np, ip, ntime)
-          end do
-        end do
-      case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-        ASSERT(dim == 2)
-        write(iunit) ob%lead(intf%il)%q_s(:, :, 1)
-        do ntime = 0, iter
-          write(iunit) ob%lead(intf%il)%q_sp(1:np*order, ntime)
-        end do
-      end select
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing open-boundaries memory coefficients."
+      call messages_info(1)
     end if
 
+    np = intf%np_intf
+
+    ! Write the parameters
+    iunit = restart_open(restart, trim(lead_name(intf%il))//"_parameters")
+    write(lines(1),'(a20,li10)')   "dim=                ", dim
+    write(lines(2),'(a20,li10)')   "iter=               ", iter
+    write(lines(3),'(a20,li10)')   "np=                 ", np
+    write(lines(4),'(a20,e21.14)') "spacing=            ", spacing
+    write(lines(5),'(a20,e21.14)') "delta=              ", delta
+    write(lines(6),'(a20,li10)')   "op_n                ", op_n
+    write(lines(7),'(a20,li10)')   "mem_type=           ", ob%mem_type
+    write(lines(8),'(a20,l1)')     "reducible=          ", intf%reducible
+    call restart_write(restart, iunit, lines, 8, err)
+    if (err /= 0) ierr = ierr + 1
     call restart_close(restart, iunit)
 
-    POP_SUB(write_coeffs)
-  end subroutine write_coeffs
+    ! Write the potential
+    call drestart_write_binary(restart, trim(lead_name(intf%il))//"_vks", np, hm%lead(intf%il)%vks(1:np, 1), err)
+    if (err /= 0) ierr = ierr + 2
+
+    ! Write the matrices
+    select case(ob%mem_type)
+    case(SAVE_CPU_TIME)
+      call zrestart_write_binary(restart, trim(lead_name(intf%il))//"_q", np*np*(iter+1), &
+           ob%lead(intf%il)%q(1:np, 1:np, 0:iter), err)
+      if (err /= 0) ierr = ierr + 4
+    case(SAVE_RAM_USAGE) ! FIXME: only 2D.
+      ASSERT(dim == 2)
+      call zrestart_write_binary(restart, trim(lead_name(intf%il))//"_q_s", np*np, ob%lead(intf%il)%q_s(:, :, 1), err)
+      if (err /= 0) ierr = ierr + 8
+
+      call zrestart_write_binary(restart, trim(lead_name(intf%il))//"_q_sp", np*order*(iter+1), &
+           ob%lead(intf%il)%q_sp(1:np*order, 0:iter), err)
+      if (err /= 0) ierr = ierr + 16
+    end select
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing open-boundaries memory coefficients done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(ob_mem_dump_coeffs)
+  end subroutine ob_mem_dump_coeffs
 
 
   ! ---------------------------------------------------------
   !> Read memory coefficients from file.
-  !! FIXME: this routine reads compiler- and/or system-dependent binary files.
-  !! It should be chanegd to a platform-independent format.
-  subroutine read_coeffs(restart, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
-    type(restart_t),     intent(in)    :: restart
+  subroutine ob_mem_load_coeffs(restart, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order, ierr)
+    type(restart_t),     intent(inout) :: restart
     integer,             intent(out)   :: s_iter       !< Number of saved coefficients.
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
@@ -715,83 +732,100 @@ contains
     FLOAT,               intent(in)    :: delta        !< Timestep.
     integer,             intent(in)    :: op_n         !< Number of operator points.
     integer,             intent(in)    :: order        !< Discretization order.
+    integer,             intent(out)   :: ierr
 
-    integer :: ntime, ip, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il, ierr
+    integer :: iunit, s_dim, s_np, s_op_n, s_mem_type, np, il, read_iter, err
     FLOAT   :: s_spacing, s_delta, det
+    character(len=100) :: lines(8)
+    character(len=50)    :: str
     FLOAT, allocatable :: s_vks(:)
     logical :: s_reducible
 
-    PUSH_SUB(read_coeffs)
+    PUSH_SUB(ob_mem_load_coeffs)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(ob_mem_load_coeffs)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading open-boundaries memory coefficients."
+      call messages_info(1)
+    end if
 
     s_iter = 0
     np = intf%np_intf
     il = intf%il
 
-    ! Try to open file
-    ! FIXME: Here we should use restart_open, but since all the mpi processes need to read the data,
-    ! we would need to use iopar_read, which we cannot, because the data is unformatted.
-    iunit = io_open(trim(restart_dir(restart))//"/"//trim(lead_name(il)), action='read', &
-      status='old', die=.false., is_tmp=.true., form='unformatted')
-    if(iunit  <  0) then ! no file found
-      POP_SUB(read_coeffs)
-      return
+    ! Read the parameters
+    iunit = restart_open(restart, trim(lead_name(il))//"_parameters")
+    call restart_read(restart, iunit, lines, 8, err)
+    if (err /= 0) then
+      ierr = ierr + 1
+    else
+      read(lines(1),'(a20,li10)')   str, s_dim
+      read(lines(2),'(a20,li10)')   str, s_iter
+      read(lines(3),'(a20,li10)')   str, s_np
+      read(lines(4),'(a20,e21.14)') str, s_spacing
+      read(lines(5),'(a20,e21.14)') str, s_delta
+      read(lines(6),'(a20,li10)')   str, s_op_n
+      read(lines(7),'(a20,li10)')   str, s_mem_type
+      read(lines(8),'(a20,l1)')     str, s_reducible
     end if
-
-    SAFE_ALLOCATE(s_vks(1:np))
-
-    ! Now read the data.
-    read(iunit, iostat=ierr) s_dim
-    if (ierr == 0) read(iunit, iostat=ierr) s_iter
-    if (ierr == 0) read(iunit, iostat=ierr) s_np
-    if (ierr == 0) read(iunit, iostat=ierr) s_spacing
-    if (ierr == 0) read(iunit, iostat=ierr) s_delta
-    if (ierr == 0) read(iunit, iostat=ierr) s_op_n
-    if (ierr == 0) read(iunit, iostat=ierr) s_mem_type
-    if (ierr == 0) read(iunit, iostat=ierr) s_reducible
+    call restart_close(restart, iunit)
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
-    if((ierr == 0) .and. (s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
+    if ( .not. ((ierr == 0) .and. (s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
       .and. (s_spacing == spacing) .and. (s_delta == delta) .and. (s_mem_type == ob%mem_type) &
-      .and. (s_reducible.eqv.intf%reducible) ) then
-      ! read the potential
-      read(iunit, iostat=ierr) s_vks(1:np)
-      if((ierr == 0) .and. (hm%lead(il)%vks(1:np, 1).app.s_vks(1:np))) then
-        ! Read the coefficients.
-        if (ob%mem_type == SAVE_CPU_TIME) then ! Full (upper half) matrices.
-          do ntime = 0, min(iter, s_iter)
-            do ip = 1, np
-              if (ierr == 0) then
-                read(iunit, iostat=ierr) ob%lead(il)%q(ip:np, ip, ntime)
-                ob%lead(il)%q(ip, ip:np, ntime) = ob%lead(il)%q(ip:np, ip, ntime)
-              end if
-            end do
-          end do
-        else ! Packed matrices (FIXME: yet only 2D).
-          ASSERT(dim == 2)
-          read(iunit, iostat=ierr) ob%lead(il)%q_s(:, :, 1)
-          if (ierr == 0) then
-            ob%lead(il)%q_s(:, :, 2) = ob%lead(il)%q_s(1:np, 1:np, 1)
-            det = lalg_inverter(np, ob%lead(il)%q_s(:, :, 2), invert=.true.)
-            do ntime = 0, min(iter, s_iter)
-              if (ierr == 0) read(iunit, iostat=ierr) ob%lead(il)%q_sp(1:np*order, ntime)
-            end do
-          end if
-        end if
-      else
-        s_iter = 0
-      end if
-    else
-      s_iter = 0
+      .and. (s_reducible.eqv.intf%reducible) )) &
+      ierr = ierr + 2
+
+
+    if (ierr == 0) then
+      read_iter = min(iter, s_iter)
+
+      ! Read the potential
+      SAFE_ALLOCATE(s_vks(1:np))
+      call drestart_read_binary(restart, trim(lead_name(il))//"_vks", np, s_vks(1:np), err)
+      if (err /= 0) ierr = ierr + 4
+
+      ! Read the coefficients.
+      select case (ob%mem_type)
+      case (SAVE_CPU_TIME) ! Full (upper half) matrices.
+        call zrestart_read_binary(restart, trim(lead_name(il))//"_q", np*np*(read_iter+1), &
+             ob%lead(intf%il)%q(1:np, 1:np, 0:read_iter), err)
+        if (err /= 0) ierr = ierr + 8
+
+      case(SAVE_RAM_USAGE) ! Packed matrices (FIXME: yet only 2D).
+        ASSERT(dim == 2)
+
+        call zrestart_read_binary(restart, trim(lead_name(il))//"_q_s", np*np, ob%lead(intf%il)%q_s(:, :, 1), err)
+        if (err /= 0) ierr = ierr + 16
+
+        call zrestart_read_binary(restart, trim(lead_name(il))//"_q_sp", np*order*(read_iter+1), &
+             ob%lead(intf%il)%q_sp(1:np*order, 0:read_iter), err)
+        if (err /= 0) ierr = ierr + 32
+      case default
+        ierr = ierr + 64
+      end select
+
+      SAFE_DEALLOCATE_A(s_vks)
     end if
+
+    ! If an error occured, then no previous iteration can be used.
     if (ierr /= 0) s_iter = 0
 
-    call io_close(iunit)
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading open-boundaries memory coefficients done."
+      call messages_info(1)
+    end if
 
-    SAFE_DEALLOCATE_A(s_vks)
-
-    POP_SUB(read_coeffs)
-  end subroutine read_coeffs
+    POP_SUB(ob_mem_load_coeffs)
+  end subroutine ob_mem_load_coeffs
 
 
   ! ---------------------------------------------------------
