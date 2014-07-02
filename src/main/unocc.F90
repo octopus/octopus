@@ -65,7 +65,7 @@ contains
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=50) :: str
-    type(restart_t) :: restart_load, restart_dump
+    type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
 
     PUSH_SUB(unocc_run)
 
@@ -106,26 +106,25 @@ contains
 
     read_gs = fromScratch
     if (.not. fromScratch) then
-      call restart_init(restart_load, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
-      call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-
+      call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+      call restart_end(restart_load_unocc)
       if(ierr == 0) read_gs = .false.
     end if
+
+    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+                      mesh=sys%gr%mesh, sb=sys%gr%sb)
 
     ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
     ! already and failed, it is a waste of time to try to read again.
     if (read_gs .and. .not. (.not. fromScratch .and. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC))) then
-      ! end only if it was init`d previously
-      if(.not. fromScratch) call restart_end(restart_load)
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh, sb=sys%gr%sb)
-      call states_load(restart_load, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+      call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
     end if
 
-    call states_load_rho(restart_load, sys%st, sys%gr, ierr_rho)
-    call restart_end(restart_load)
+    call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
+    call restart_end(restart_load_gs)
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
