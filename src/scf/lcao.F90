@@ -664,7 +664,7 @@ contains
       lcao_done = .true.
       
       if(present(st_start)) then
-        write(message(1),'(a,i8,a)') 'Performing LCAO to replace states ', st_start, ' and above'
+        write(message(1),'(a,i8,a)') 'Performing LCAO for states ', st_start, ' and above'
         call messages_info(1)
       endif
 
@@ -697,7 +697,7 @@ contains
         if(present(st_start)) st_start_random = max(st_start, st_start_random)
 
         if(st_start_random > 1) then
-          write(message(1),'(a,i8,a)') 'Generating random wavefunctions to replace states ', st_start_random, ' and above'
+          write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
           call messages_info(1)
         endif
 
