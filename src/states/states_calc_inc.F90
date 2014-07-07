@@ -55,7 +55,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   R_TYPE, allocatable :: ss(:, :)
   type(profile_t), save :: prof
   integer :: nst, ierr
-  logical :: bof
 
 #ifdef HAVE_SCALAPACK
 !pgi$r opt=0
@@ -74,7 +73,30 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   select case(st%d%orth_method)
   case(ORTH_CHOLESKY_SERIAL)
-    
+    call cholesky_serial()
+
+  case(ORTH_CHOLESKY_PARALLEL)
+    call cholesky_parallel()
+
+  case(ORTH_QR)
+    call qr()
+
+  case(ORTH_MGS)
+    call mgs()
+  end select
+
+  call profiling_out(prof)
+  POP_SUB(X(states_orthogonalization_full))
+
+contains
+  
+  subroutine cholesky_serial()
+
+    integer :: ierr
+    logical :: bof
+
+    PUSH_SUB(X(states_orthogonalization_full).cholesky_serial)
+
     if(st%parallel_in_states) then
       message(1) = 'The cholesky_serial orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1)
@@ -99,22 +121,12 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call X(states_trsm)(st, mesh, ik, ss)
 
     SAFE_DEALLOCATE_A(ss)
-  case(ORTH_CHOLESKY_PARALLEL)
-    call cholesky_parallel()
 
-  case(ORTH_QR)
-    call qr()
+    POP_SUB(X(states_orthogonalization_full).cholesky_serial)
+  end subroutine cholesky_serial
 
-  case(ORTH_MGS)
-    call mgs()
-  end select
-
-  call profiling_out(prof)
-  POP_SUB(X(states_orthogonalization_full))
-
-contains
-  
   subroutine cholesky_parallel()
+
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
