@@ -54,7 +54,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   R_TYPE, allocatable :: ss(:, :)
   type(profile_t), save :: prof
-  integer :: nst
+  integer :: nst, ierr
   logical :: bof
 
 #ifdef HAVE_SCALAPACK
@@ -88,11 +88,12 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
     bof = .false.
     ! calculate the Cholesky decomposition
-    call lalg_cholesky(nst, ss, bof = bof)
+    call lalg_cholesky(nst, ss, bof = bof, err_code = ierr)
 
     if(bof) then
-      message(1) = "The cholesky_serial orthogonalization failed; probably eigenvectors are not independent."
-      call messages_warning(1)
+      write(message(1),'(a,i6)') "The cholesky_serial orthogonalization failed with error code ", ierr
+      message(2) = "There may be a linear dependence, a zero vector, or maybe a library problem."
+      call messages_warning(2)
     end if
 
     call X(states_trsm)(st, mesh, ik, ss)
