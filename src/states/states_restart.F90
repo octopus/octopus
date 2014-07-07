@@ -345,6 +345,10 @@ contains
 
     ierr = 0
 
+    ! make sure these intent(out)`s are initialized no matter what
+    if (present(lowest_missing)) lowest_missing = 1
+    if (present(iter)) iter = 0
+
     if (restart_skip(restart)) then
       ierr = -1
       POP_SUB(states_load)
@@ -412,10 +416,6 @@ contains
         (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
     endif
-
-    ! make sure these intent(out)`s are initialized no matter what
-    if (present(lowest_missing)) lowest_missing = 1
-    if (present(iter)) iter = 0
 
     states_file  = restart_open(restart, 'states')
     ! sanity check on spin/k-points. Example file 'states':
