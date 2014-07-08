@@ -178,15 +178,17 @@ contains
     call messages_info(1)
 
     if(fromScratch .or. ierr /= 0) then
-      if(ierr > 0 .and. .not. fromScratch) then
-        nst_calculated = minval(lowest_missing) - 1
-      else
-        ! if not all occupied states read, must recalculate
+      if(fromScratch) then
+        ! do not use previously calculated occupied states
         nst_calculated = min(maxval(occ_states), minval(lowest_missing) - 1)
+      else
+        ! or, use as many states as have been calculated
+        nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
       call lcao_run(sys, hm, st_start = showstart)
     else
+      ! we successfully read all the states and are planning to use them, no need for LCAO
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
