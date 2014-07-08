@@ -104,22 +104,25 @@ contains
 
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    read_gs = fromScratch
+    read_gs = .true.
     if (.not. fromScratch) then
       call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         mesh=sys%gr%mesh, sb=sys%gr%sb)
 
       call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       call restart_end(restart_load_unocc)
-      if(ierr == 0) read_gs = .false.
+      
+      ! If successfully read states from unocc, do not read from gs.
+      ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
+      ! already and failed, it is a waste of time to try to read again.
+      if(ierr == 0 .or. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC)) &
+        read_gs = .false.
     end if
 
     call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       mesh=sys%gr%mesh, sb=sys%gr%sb)
 
-    ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
-    ! already and failed, it is a waste of time to try to read again.
-    if (read_gs .and. .not. (.not. fromScratch .and. restart_are_basedirs_equal(RESTART_GS, RESTART_UNOCC))) then
+    if (read_gs) then
       call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
     end if
 
