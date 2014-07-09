@@ -66,33 +66,54 @@ contains
 
   subroutine opt_control_state_null(ocs)
     type(opt_control_state_t), intent(inout) :: ocs
+
+    PUSH_SUB(opt_control_state_null)
+
     SAFE_DEALLOCATE_A(ocs%q)
     SAFE_DEALLOCATE_A(ocs%p)
     call states_null(ocs%psi)
+
+    POP_SUB(opt_control_state_null)
   end subroutine opt_control_state_null
 
 
   function opt_control_point_qs(ocs)
+    type(opt_control_state_t), target, intent(in) :: ocs
     type(states_t), pointer :: opt_control_point_qs
-    type(opt_control_state_t), target :: ocs
+
+    PUSH_SUB(opt_control_point_qs)
+
     opt_control_point_qs => ocs%psi
+
+    POP_SUB(opt_control_point_qs)
   end function opt_control_point_qs
 
   function opt_control_point_q(ocs)
+    type(opt_control_state_t), target, intent(in) :: ocs
     FLOAT, pointer :: opt_control_point_q(:, :)
-    type(opt_control_state_t), target :: ocs
+
+    PUSH_SUB(opt_control_point_q)
+
     opt_control_point_q => ocs%q
+
+    POP_SUB(opt_control_point_q)
   end function opt_control_point_q
 
   function opt_control_point_p(ocs)
+    type(opt_control_state_t), target, intent(in) :: ocs
     FLOAT, pointer :: opt_control_point_p(:, :)
-    type(opt_control_state_t), target :: ocs
+
+    PUSH_SUB(opt_control_point_p)
+
     opt_control_point_p => ocs%p
+
+    POP_SUB(opt_control_point_p)
   end function opt_control_point_p
 
   subroutine opt_control_get_qs(qstate, ocs)
-    type(states_t), intent(inout)         :: qstate
-    type(opt_control_state_t), intent(in) :: ocs
+    type(states_t),            intent(inout) :: qstate
+    type(opt_control_state_t), intent(in)    :: ocs
+
     PUSH_SUB(opt_control_get_qs)
 
     call states_copy(qstate, ocs%psi)
@@ -101,10 +122,11 @@ contains
   end subroutine opt_control_get_qs
 
   subroutine opt_control_get_classical(geo, ocs)
-    type(geometry_t), intent(inout)       :: geo
-    type(opt_control_state_t), intent(in) :: ocs
+    type(geometry_t),          intent(inout) :: geo
+    type(opt_control_state_t), intent(in)    :: ocs
 
     integer :: idim, iatom
+
     PUSH_SUB(opt_control_get_classical)
 
     do idim = 1, geo%space%dim
@@ -122,6 +144,7 @@ contains
     type(opt_control_state_t), intent(inout) :: ocs
 
     integer :: idim, iatom
+
     PUSH_SUB(opt_control_set_classical)
 
     do idim = 1, geo%space%dim
@@ -136,10 +159,11 @@ contains
 
   subroutine opt_control_state_init(ocs, qstate, geo)
     type(opt_control_state_t), intent(inout) :: ocs
-    type(states_t), intent(in)               :: qstate
-    type(geometry_t), intent(in)             :: geo
+    type(states_t),            intent(in)    :: qstate
+    type(geometry_t),          intent(in)    :: geo
 
     integer :: iatom, idim
+
     PUSH_SUB(opt_control_state_init)
 
     call states_copy(ocs%psi, qstate)
@@ -177,8 +201,10 @@ contains
   end subroutine opt_control_state_end
 
   subroutine opt_control_state_copy(ocsout, ocsin)
-    type(opt_control_state_t), intent(in) :: ocsin
+    type(opt_control_state_t), intent(in)    :: ocsin
     type(opt_control_state_t), intent(inout) :: ocsout
+
+    PUSH_SUB(opt_control_state_copy)
 
     call states_end(ocsout%psi)
     call states_copy(ocsout%psi, ocsin%psi)
@@ -195,6 +221,7 @@ contains
       ocsout%p = ocsin%p
     end if
 
+    POP_SUB(opt_control_state_copy)
   end subroutine opt_control_state_copy
 
 end module opt_control_state_m
