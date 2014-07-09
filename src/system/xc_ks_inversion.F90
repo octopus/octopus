@@ -88,7 +88,7 @@ contains
     integer,                 intent(in)    :: family
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
-    type(multicomm_t),       intent(in)    :: mc  
+    type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(xc_ks_inversion_init)
 
@@ -144,14 +144,14 @@ contains
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call input_error('KSInversionLevel')
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
-      ! initialize auxilary random wavefunctions
+      ! initialize auxiliary random wavefunctions
       call states_null(ks_inv%aux_st)
       call states_init(ks_inv%aux_st, gr, geo)      
+      call states_exec_init(ks_inv%aux_st, mc)
       call states_allocate_wfns(ks_inv%aux_st, gr%mesh)
       call states_generate_random(ks_inv%aux_st, gr%mesh)      
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
-      call states_exec_init(ks_inv%aux_st, mc)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, XC_FAMILY_NONE)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if

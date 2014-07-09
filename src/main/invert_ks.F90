@@ -139,7 +139,7 @@ contains
     ! output for all cases    
     call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks, STATIC_DIR)
 
-    sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
+    sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
     call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
                       sys%gr%mesh, sys%gr%sb)
@@ -166,6 +166,8 @@ contains
       character(len=1)   :: char
 
       PUSH_SUB(invert_ks_run.read_target_rho)
+
+      ! FIXME: just use restart/gs/density*.obf
 
       !%Variable InvertKSTargetDensity
       !%Type string
