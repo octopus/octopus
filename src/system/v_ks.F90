@@ -527,7 +527,6 @@ contains
     nullify(ks%calc%hf_st) 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
-      call states_null(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
     end if
 

@@ -145,7 +145,6 @@ contains
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! initialize auxiliary random wavefunctions
-      call states_null(ks_inv%aux_st)
       call states_init(ks_inv%aux_st, gr, geo)      
       call states_exec_init(ks_inv%aux_st, mc)
       call states_allocate_wfns(ks_inv%aux_st, gr%mesh)
