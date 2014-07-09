@@ -82,14 +82,6 @@
       do ik = kp1, kp2
         do ist = st1, st2
           call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, time -dt)
-          if(hamiltonian_inh_term(hm)) then
-            SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
-            do idim = 1, st%d%dim
-              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
-            end do
-            SAFE_DEALLOCATE_A(inhpsi)
-          end if
         end do
       end do
       do ik = kp1, kp2
@@ -101,6 +93,20 @@
       end do
 
       rhs1 = zphi - M_zI * M_HALF * dt * rhs1
+
+      if(hamiltonian_inh_term(hm)) then
+        SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+        do ik = kp1, kp2
+          do ist = st1, st2
+            do idim = 1, st%d%dim
+              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            end do
+          end do
+        end do
+        SAFE_DEALLOCATE_A(inhpsi)
+      end if
+
       k2 = zphi
 
       i = 1
@@ -124,13 +130,17 @@
           vpsl1_op = hm%ep%vpsl
         end if
         call hamiltonian_update(hm, gr%mesh, time = time)
-        if (i==1) then
-          vhxc1_op(:, :) = tr%v_old(:, :, 0)
-          i = i + 1
+        if(.not.hamiltonian_oct_exchange(hm_p)) then
+          if (i==1) then
+            vhxc1_op(:, :) = tr%v_old(:, :, 0)
+            i = i + 1
+          else
+            vhxc1_op = hm%vhxc
+          end if
+          t_op  = time
         else
           vhxc1_op = hm%vhxc
         end if
-        t_op  = time
 
         if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 

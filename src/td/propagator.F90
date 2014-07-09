@@ -1890,15 +1890,6 @@ contains
           j = j + np
         end do
         call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
-        if(hamiltonian_inh_term(hm_p)) then
-          SAFE_ALLOCATE(inhpsi(1:np))
-          do idim = 1, dim
-            call states_get_state(hm_p%inh_st, grid_p%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:np) opzpsi(ip, idim) = opzpsi(ip, idim) + M_zI * inhpsi(ip)
-          end do
-          SAFE_DEALLOCATE_A(inhpsi)
-        end if
-!
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1994,14 +1985,6 @@ contains
           j = j + np
         end do
         call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
-        if(hamiltonian_inh_term(hm_p)) then
-          SAFE_ALLOCATE(inhpsi(1:np))
-          do idim = 1, dim
-            call states_get_state(hm_p%inh_st, grid_p%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:np) opzpsi(ip, idim) = opzpsi(ip, idim) + M_zI * inhpsi(ip)
-          end do
-          SAFE_DEALLOCATE_A(inhpsi)
-        end if
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

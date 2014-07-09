@@ -32,6 +32,9 @@ module opt_control_m
   use output_m
   use hamiltonian_m
   use io_m
+!!!!NEW
+  use io_function_m
+!!!!ENDOFNEW
   use lasers_m
   use loct_m
   use loct_math_m
@@ -51,6 +54,9 @@ module opt_control_m
   use states_dim_m
   use system_m
   use td_m
+!!!!NEW
+  use unit_system_m
+!!!!ENDOFNEW
 
   implicit none
 
@@ -346,6 +352,11 @@ contains
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
       type(opt_control_state_t) :: qcpsi
+
+!!!!NEW
+      type(states_t), pointer :: psi
+!!!!ENDOFNEW
+
       PUSH_SUB(opt_control_run.scheme_cg)
 
       call controlfunction_set_rep(par)
@@ -353,6 +364,11 @@ contains
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
+!!!!NEW
+    psi => opt_control_point_qs(qcpsi)
+    call zio_function_output(C_OUTPUT_HOW_BINARY, ".", "wf", sys%gr%mesh, psi%zpsi(:, 1, 1, 1), unit_one, ierr)
+    nullify(psi)
+!!!!ENDOFNEW
       f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)
@@ -642,6 +658,11 @@ contains
     type(controlfunction_t) :: par_chi
     type(oct_prop_t)        :: prop_chi, prop_psi;
 
+!!!!NEW
+    integer :: ierr
+    type(states_t), pointer :: psi
+!!!!ENDOFNEW
+
     PUSH_SUB(f_striter)
 
     call oct_prop_init(prop_chi, "chi", sys%gr)
@@ -656,6 +677,12 @@ contains
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
+!!!!NEW
+!!$    psi => opt_control_point_qs(qcpsi)
+!!$    call zio_function_output(C_OUTPUT_HOW_BINARY, ".", "wf", sys%gr%mesh, psi%zpsi(:, 1, 1, 1), unit_one, ierr)
+!!$    nullify(psi)
+!!!!ENDOFNEW
+
     ! Check the performance.
     j1 = target_j1(oct_target, sys%gr, qcpsi, sys%geo)
 
@@ -664,9 +691,19 @@ contains
     call opt_control_state_copy(qcchi, qcpsi)
     call target_chi(oct_target, sys%gr, qcpsi, qcchi, sys%geo)
 
+!!!!NEW
+!!$    call opt_control_state_copy(qcchi, initial_st)
+!!!!ENDOFNEW
+
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
     call bwd_step_2(sys, td, hm, oct_target, par, par_chi, qcchi, prop_chi, prop_psi)
+!!!!NEW
+    psi => opt_control_point_qs(qcchi)
+    call zio_function_output(C_OUTPUT_HOW_BINARY, ".", "wfback", sys%gr%mesh, psi%zpsi(:, 1, 1, 1), unit_one, ierr)
+    nullify(psi)
+    !stop
+!!!!ENDOFNEW
     !if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
 
     ! Copy par_chi to par
