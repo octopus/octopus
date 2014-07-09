@@ -154,6 +154,11 @@ contains
     end if
     call messages_info(1)
 
+    ! setup Hamiltonian
+    message(1) = 'Info: Setting up Hamiltonian for linear response'
+    call messages_info(1)
+    call system_h_setup(sys, hm)
+
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
     if(use_kdotp .and. .not. smear_is_semiconducting(sys%st%smear)) then
@@ -238,11 +243,6 @@ contains
     do ifactor = 1, em_vars%nfactor
       call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
     enddo
-
-    ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian for linear response'
-    call messages_info(1)
-    call system_h_setup(sys, hm)
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
