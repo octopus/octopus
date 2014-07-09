@@ -140,9 +140,8 @@ contains
     endif
 
     if(ierr_rho /= 0 .or. is_orbital_dependent) then
-      ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
       occ_missing = .false.
-      do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+      do ik = 1, sys%st%d%nik
         if(any(lowest_missing(1:sys%st%d%dim, ik) <= occ_states(ik))) then
           occ_missing = .true.
         end if

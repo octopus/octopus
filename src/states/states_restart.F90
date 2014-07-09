@@ -340,6 +340,7 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
+    integer, allocatable :: lowest_missing_tmp(:, :)
 
     PUSH_SUB(states_load)
 
@@ -658,9 +659,20 @@ contains
     end if
 
 #if defined(HAVE_MPI)
-    iread_tmp = iread
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      iread_tmp = iread
       call MPI_Allreduce(iread_tmp, iread, 1, MPI_INTEGER, MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
+    endif
+
+    if(st%d%kpt%parallel) then
+      ! make sure all tasks know lowest_missing over all k-points
+      if(present(lowest_missing)) then
+        SAFE_ALLOCATE(lowest_missing_tmp(1:st%d%dim, 1:st%d%nik))
+        lowest_missing_tmp = lowest_missing
+        call MPI_Allreduce(lowest_missing_tmp, lowest_missing, st%d%dim*st%d%nik, &
+          MPI_INTEGER, MPI_MIN, st%d%kpt%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(lowest_missing_tmp)
+      endif
     end if
 #endif
 
