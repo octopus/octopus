@@ -137,7 +137,7 @@ contains
     endif
     if(sys%st%smear%method  ==  SMEAR_SEMICONDUCTOR .and. &
       (abs(sys%st%smear%ef_occ) > M_EPSILON) .and. abs(sys%st%smear%ef_occ - M_ONE) > M_EPSILON) then
-      write(message(1),'(a,f12.6)') 'Partial occcupation at the Fermi level: ', sys%st%smear%ef_occ
+      write(message(1),'(a,f12.6)') 'Partial occupation at the Fermi level: ', sys%st%smear%ef_occ
       message(2) = 'Semiconducting smearing cannot be used for Sternheimer in this situation.'
       call messages_fatal(2)
     endif
