@@ -136,8 +136,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
 
   integer :: ip, ist, ik, ispin, isigma
   FLOAT   :: weight, xx, dsmear, dos_ef, ef_shift
-  CMPLX   :: cc
-  R_TYPE  :: dd, avg_dl_rho
+  R_TYPE  :: cc, dd, avg_dl_rho
   logical :: is_ef_shift
 
   PUSH_SUB(X(lr_build_dl_rho))
@@ -204,7 +203,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       do ispin = 1, st%d%nspin
         avg_dl_rho = avg_dl_rho + X(mf_integrate)(mesh, lr(isigma)%X(dl_rho)(:, ispin))
       enddo
-      ef_shift = -avg_dl_rho / dos_ef
+      ef_shift = -TOFLOAT(avg_dl_rho) / dos_ef
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
         do ist  = st%st_start, st%st_end
