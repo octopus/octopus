@@ -119,10 +119,6 @@
 
       call controlfunction_end(par_new)
 
-!!!!NEW
-      stop
-!!!!ENDOFNEW
-
     else
       theta = x
       call controlfunction_set_theta(par_, theta)
