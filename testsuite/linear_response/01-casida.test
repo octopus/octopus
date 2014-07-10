@@ -38,9 +38,9 @@ Enabled    : Yes
 Processors: 4
 
 Input: 01-casida.01-gs.inp
-match ; Total energy   ; GREP(static/info, 'Total       =', 20) ;  -19.96949077
-match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.441038
-match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.388160
+match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -19.96949077
+match ; HOMO-1         ; GREPFIELD(static/info, '4   --', 3) ;  -0.441038
+match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 
 # FIXME: These precisions are too generous, and suggest a problem with vib_modes.
 Input: 01-casida.012-vib_modes.inp
@@ -52,22 +52,22 @@ match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.12921
 Precision : 0.0001
 
 Input: 01-casida.02-unocc.inp
-match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.441038
-match ; HOMO           ; LINE(static/eigenvalues, -10, 12); -0.388160
-match ; LUMO           ; LINE(static/eigenvalues, -9, 12) ; -0.087476
-match ; LUMO+2         ; LINE(static/eigenvalues, -7, 12) ;  0.013184
-match ; LUMO+3         ; LINE(static/eigenvalues, -6, 12) ;  0.042382
-match ; LUMO+6         ; LINE(static/eigenvalues, -4, 12) ;  0.045420
-match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153289
+match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
+match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
+match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
+match ; LUMO+2         ; GREPFIELD(static/eigenvalues,  '8   --', 3) ;  0.013184
+match ; LUMO+3         ; GREPFIELD(static/eigenvalues,  '9   --', 3) ;  0.042382
+match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
+match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 Input: 01-casida.022-unocc_restart.inp
-match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.441038
-match ; HOMO           ; LINE(static/eigenvalues, -10, 12); -0.388160
-match ; LUMO           ; LINE(static/eigenvalues, -9, 12) ; -0.087476
-match ; LUMO+2         ; LINE(static/eigenvalues, -7, 12) ;  0.013184
-match ; LUMO+3         ; LINE(static/eigenvalues, -6, 12) ;  0.042382
-match ; LUMO+6         ; LINE(static/eigenvalues, -4, 12) ;  0.045420
-match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153289
+match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
+match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
+match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
+match ; LUMO+2         ; GREPFIELD(static/eigenvalues,  '8   --', 3) ;  0.013184
+match ; LUMO+3         ; GREPFIELD(static/eigenvalues,  '9   --', 3) ;  0.042382
+match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
+match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 Input: 01-casida.03-casida.inp
 match ;  1st eps-diff E ; GREP(casida/eps_diff, '  5   6', 9) ; 3.00684237E-01
