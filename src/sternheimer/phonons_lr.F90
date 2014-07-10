@@ -429,14 +429,14 @@ contains
 
           imat = vibrations_get_index(vib, iatom, idir)
 
-          write(iunit_ir, '(f14.5)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
+          write(iunit_ir, '(f17.8)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
           do jdir = 1, ndim
             lir(jdir) = dot_product(vib%infrared(:, jdir), vib%normal_mode(:, imat))
             write(iunit_ir, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
           end do
 
           lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
-          write(iunit_ir, '(f14.5)') units_from_atomic(units_out%length, lir(ndim + 1))
+          write(iunit_ir, '(f17.8)') units_from_atomic(units_out%length, lir(ndim + 1))
         end do
       end do
 
