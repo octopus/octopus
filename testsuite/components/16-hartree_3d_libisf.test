@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : Hartree ISF
+Test       : Hartree LIBISF
 Options    : libisf
 Programs   : oct-test; oct-test_mpi
 TestGroups : short-run, components
