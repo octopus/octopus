@@ -36,6 +36,7 @@ program oct_convert
   use poisson_m
   use profiling_m
   use system_m
+  use restart_m
   use unit_m
   use unit_system_m
   use utils_m
@@ -235,6 +236,7 @@ contains
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
+    type(restart_t)                 :: restart
 
     integer            :: ierr, ii
     character(64)      :: filename, out_name, ref_filename, folder, frmt
@@ -247,14 +249,15 @@ contains
     SAFE_ALLOCATE(pot(1:mesh%np))
     read_rff(:) = M_ZERO
    
-    write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(in_folder), "//", trim(basename), &
+    write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(in_folder), "/", trim(basename), &
          "' from ", c_start, " to ", c_end, " every ", c_step
     call messages_info(1)
  
     if (subtract_file) then
-      write(*,*) "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
-      write(ref_filename, '(a,a,a,a)') trim(ref_folder),"/", trim(ref_name),".obf"
-      call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
+      write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
+                      dir=trim(ref_folder))
+      call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
     end if
 
     call loct_progress_bar(-1, c_end-c_start)
@@ -282,7 +285,9 @@ contains
       end if
 
       ! Read the obf file
-      call io_binary_read(trim(filename), mesh%np, read_ff, ierr)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
+                      dir=trim(folder))
+      call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
@@ -295,14 +300,14 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      call dio_function_output(how, &
-        trim(folder), trim(out_name), mesh, read_ff, units_out%length, ierr, geo = geo)
+        call dio_function_output(how, &
+          trim(folder), trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
       if (iand(what, C_OUTPUT_POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(how, &
-             trim(folder), trim(out_name), mesh, pot, units_out%length, ierr, geo = geo)
+             trim(folder), trim(out_name), mesh, pot, units_out%energy, ierr, geo = geo)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
     end do
