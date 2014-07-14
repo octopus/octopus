@@ -236,8 +236,8 @@ contains
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
-    type(restart_t)                 :: restart
 
+    type(restart_t)    :: restart
     integer            :: ierr, ii
     character(64)      :: filename, out_name, ref_filename, folder, frmt
     FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
@@ -300,8 +300,8 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+      call dio_function_output(how, &
+        trim(folder), trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
       if (iand(what, C_OUTPUT_POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
