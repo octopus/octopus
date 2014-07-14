@@ -266,6 +266,7 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
+    type(XC_F90(pointer_t)) :: str
     integer :: ii
 
     PUSH_SUB(xc_functl_write_info)
@@ -338,20 +339,12 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
-      call XC_F90(info_refs)(functl%info, ii, s1)
+      call XC_F90(info_refs)(functl%info, ii, str, s1)
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
-        call XC_F90(info_refs)(functl%info, ii, s1)
+        call XC_F90(info_refs)(functl%info, ii, str, s1)
       end do
-
-!      ii = 0
-!      call XC_F90(info_refs)(functl%info, ii, str, s1)
-!      do while(ii >= 0)
-!        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
-!        call messages_info(1, iunit)
-!        call XC_F90(info_refs)(functl%info, ii, str, s1)
-!      end do
     end if
 
     POP_SUB(xc_functl_write_info)
