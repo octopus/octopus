@@ -1839,11 +1839,10 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
 
-    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j, ip
+    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
     CMPLX, allocatable :: zpsi(:, :)
     CMPLX, allocatable :: opzpsi(:, :)
     CMPLX, allocatable :: zpsi_(:, :, :, :)
-    CMPLX, allocatable :: inhpsi(:)
 
     PUSH_SUB(td_rk2op)
 
@@ -1934,11 +1933,10 @@ contains
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
 
-    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j, ip
+    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
     CMPLX, allocatable :: zpsi(:, :)
     CMPLX, allocatable :: opzpsi(:, :)
     CMPLX, allocatable :: zpsi_(:, :, :, :)
-    CMPLX, allocatable :: inhpsi(:)
 
     PUSH_SUB(td_rk2opt)
 

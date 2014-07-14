@@ -215,8 +215,7 @@
 #ifndef HAVE_SPARSKIT
       ASSERT(.false.)
 #else
-      logical :: converged
-      integer :: np_part, np, iter, idim, ip, ist, ik, j, kp1, kp2, st1, st2, nspin
+      integer :: np_part, np, idim, ip, ist, ik, j, kp1, kp2, st1, st2, nspin
       FLOAT :: dres
       CMPLX, allocatable :: inhpsi(:)
       CMPLX, allocatable :: zpsi(:), rhs(:)
