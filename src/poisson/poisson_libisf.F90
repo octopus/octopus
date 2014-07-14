@@ -138,8 +138,12 @@ contains
   subroutine poisson_libisf_end(this)
     type(poisson_libisf_t), intent(inout) :: this
 
+    character(len=*), parameter :: subname='Poisson_Solver'
+
     PUSH_SUB(poisson_libisf_end)
 
+    call pkernel_free(this%kernel, subname)
+    
     POP_SUB(poisson_libisf_end)
   end subroutine poisson_libisf_end
 
@@ -188,13 +192,12 @@ contains
   end subroutine poisson_libisf_parallel_solve
 
   !-----------------------------------------------------------------
-  subroutine poisson_libisf_global_solve(this, mesh, cube, pot, rho, all_nodes)
+  subroutine poisson_libisf_global_solve(this, mesh, cube, pot, rho)
     type(poisson_libisf_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
-    logical,             intent(in)    :: all_nodes
 
 #ifdef HAVE_LIBISF
     type(cube_function_t) :: cf

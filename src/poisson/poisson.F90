@@ -838,7 +838,7 @@ contains
     case(POISSON_LIBISF)
       if (this%libisf_solver%datacode == "G") then
         ! Global version
-        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
+        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho)
       else ! "D" Distributed version
         call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
