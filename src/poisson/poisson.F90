@@ -698,7 +698,7 @@ contains
     if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
       call zpoisson1d_solve_direct(this, pot, rho)
     else
-      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
+      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
     end if
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 

@@ -142,7 +142,9 @@ contains
 
     PUSH_SUB(poisson_libisf_end)
 
+#ifdef HAVE_LIBISF
     call pkernel_free(this%kernel, subname)
+#endif
     
     POP_SUB(poisson_libisf_end)
   end subroutine poisson_libisf_end
