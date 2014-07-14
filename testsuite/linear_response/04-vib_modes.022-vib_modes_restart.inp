@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = vib_modes
+FromScratch = no
+
+FilterPotentials = filter_TS
+BoxShape = minimum
+Spacing = 0.4
+Radius = 6
+
+%Coordinates
+  "H"  | 0 | 0 | 0.053910
+  "Li" | 0 | 0 | 3.058523
+%
+
+LRMaxIter = 1

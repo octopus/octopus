@@ -287,7 +287,15 @@ contains
 
       iunit_restart = restart_open(restart_dump, 'restart', position='append')
       ! open and close makes sure output is not buffered
-      write(line(1), *) imat, vib%dyn_matrix(:, imat), (vib%infrared(imat, idir), idir = 1, ndim)
+      do jmat = 1, vib%num_modes
+        write(line(1), *) jmat, imat, vib%dyn_matrix(jmat, imat)
+        call restart_write(restart_dump, iunit_restart, line, 1, ierr)
+        if (ierr /= 0) then
+          message(1) = "Could not write restart information."
+          call messages_warning(1)
+        end if
+      enddo
+      write(line(1), *) imat, (vib%infrared(imat, idir), idir = 1, ndim)
       call restart_write(restart_dump, iunit_restart, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Could not write restart information."
@@ -546,9 +554,7 @@ contains
     type(vibrations_t), intent(inout) :: vib
     integer,            intent(out)   :: start_mode
 
-    integer :: iunit, ierr, imode, number
-    FLOAT, allocatable :: dyn_row(:)
-    FLOAT :: infrared(MAX_DIM)
+    integer :: iunit, ierr, imode, jmode, imode_read, jmode_read
     character(len=120) :: line(1)
 
     PUSH_SUB(phonons_load)
@@ -556,26 +562,37 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       iunit = restart_open(restart, 'restart')
       if (iunit > 0) then
-        SAFE_ALLOCATE(dyn_row(1:vib%num_modes))
+        imode_loop: do imode = 1, vib%num_modes
+          do jmode = 1, vib%num_modes
+            call restart_read(restart, iunit, line, 1, ierr)
+            if(ierr /= 0) exit imode_loop
+            read(line(1), fmt=*, iostat=ierr) jmode_read, imode_read, vib%dyn_matrix(jmode, imode)
+            if(imode_read /= imode) then
+              write(message(1),'(a,i9,a,i9)') "Corruption of restart data: row ", imode, " is labeled as ", imode_read
+              call messages_fatal(1)
+            endif
+            if(jmode_read /= jmode) then
+              write(message(1),'(a,i9,a,i9)') "Corruption of restart data: column ", jmode, " is labeled as ", jmode_read
+              call messages_fatal(1)
+            endif
+          enddo
 
-        do imode = 1, vib%num_modes
           call restart_read(restart, iunit, line, 1, ierr)
           if(ierr /= 0) exit
-          read(line(1), fmt=*, iostat=ierr) number, dyn_row(:), infrared(1:vib%ndim)
-          if(number /= imode) then
-            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: line ", imode, " is labeled as ", number
+
+          start_mode = imode + 1
+
+          read(line(1), fmt=*, iostat=ierr) imode_read, vib%infrared(imode, 1:vib%ndim)
+          if(imode_read /= imode) then
+            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: infrared row ", imode, " is labeled as ", imode_read
             call messages_fatal(1)
           endif
-          start_mode = imode + 1
-          vib%dyn_matrix(:, imode) = dyn_row(:)
-          vib%infrared(imode, 1:vib%ndim) = infrared(1:vib%ndim)
-        end do
+        end do imode_loop
         
         write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
           start_mode - 1, ' modes out of ', vib%num_modes
         call messages_info(1)
 
-        SAFE_DEALLOCATE_A(dyn_row)
         call restart_close(restart, iunit)
       else
         start_mode = 1
