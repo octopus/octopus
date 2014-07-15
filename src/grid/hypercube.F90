@@ -53,6 +53,8 @@ contains
     integer, allocatable :: npoints(:)
     integer :: ii, jj
 
+    PUSH_SUB(hypercube_init)
+
     SAFE_ALLOCATE(this%boxdim(1:ndim + 1))
     SAFE_ALLOCATE(npoints(1:ndim))
 
@@ -80,30 +82,48 @@ contains
 
     SAFE_DEALLOCATE_A(npoints)
 
+    PUSH_SUB(hypercube_init)
   end subroutine hypercube_init
 
+
+  ! ---------------------------------------------------------
   subroutine hypercube_nullify(this)
     type(hypercube_t), intent(inout) :: this
 
+    PUSH_SUB(hypercube_nullify)
+
     nullify(this%boxdim)
+
+    POP_SUB(hypercube_nullify)
   end subroutine hypercube_nullify
 
+
+  ! ---------------------------------------------------------
   subroutine hypercube_end(this)
     type(hypercube_t), intent(inout) :: this
 
+    PUSH_SUB(hypercube_end)
+
     SAFE_DEALLOCATE_P(this%boxdim)
+
+    POP_SUB(hypercube_end)
   end subroutine hypercube_end
 
+
+  ! ---------------------------------------------------------
   subroutine hypercube_x_to_i(this, ndim, nr, enlarge, coord, icoord)
     type(hypercube_t), intent(in)  :: this
-    integer,           intent(in)  :: ndim, enlarge
-    integer,           intent(in)  :: coord(1:ndim)
+    integer,           intent(in)  :: ndim
     integer,           intent(in)  :: nr(1:2,1:ndim)
+    integer,           intent(in)  :: enlarge
+    integer,           intent(in)  :: coord(:) !< (1:ndim)
     integer,           intent(out) :: icoord
 
     integer :: boxnumb
     integer :: border(1:MAX_DIM), npoints(1:MAX_DIM), lowerb(1:MAX_DIM), tempcoord(1:MAX_DIM)
     integer :: ii, jj
+
+    PUSH_SUB(hypercube_x_to_i)
 
     do ii = 1, ndim
       npoints(ii) = nr(2, ii) - nr(1, ii) + 1
@@ -139,7 +159,7 @@ contains
       enddo
       icoord = icoord+1
       if(icoord > this%boxdim(1) .or. icoord < 1) then
-        message(1) = "Hypercube: Error, box point outside box"
+        message(1) = "hypercube box point outside box"
         call messages_fatal(1)
       endif
     else
@@ -154,7 +174,7 @@ contains
       enddo
       icoord = icoord + 1    
       if(icoord > this%boxdim(boxnumb) .or. icoord < 1) then
-        message(1) = "Hypercube: Error, box point outside box"
+        message(1) = "hypercube box point outside box"
         call messages_fatal(1)
       else
         do jj = 1, boxnumb - 1
@@ -163,14 +183,18 @@ contains
       endif
     endif
 
+    POP_SUB(hypercube_x_to_i)
   end subroutine hypercube_x_to_i
 
+
+  ! ---------------------------------------------------------
   pure subroutine hypercube_i_to_x(this, ndim, nr, enlarge, icoord, coord)
     type(hypercube_t), intent(in)  :: this
-    integer,           intent(in)  :: ndim, enlarge
-    integer,           intent(in)  :: nr(1:2,1:ndim)
+    integer,           intent(in)  :: ndim
+    integer,           intent(in)  :: nr(:,:) !< (1:2,1:ndim)
+    integer,           intent(in)  :: enlarge
     integer,           intent(in)  :: icoord
-    integer,           intent(out) :: coord(1:ndim)
+    integer,           intent(out) :: coord(:) !< (1:ndim)
 
     integer :: boxnumb, tempcoord
     integer :: border(1:MAX_DIM), npoints(1:MAX_DIM), lowerb(1:MAX_DIM)
@@ -237,12 +261,16 @@ contains
 
   end subroutine hypercube_i_to_x
 
+
+  ! ---------------------------------------------------------
   pure integer function hypercube_number_inner_points(this) result(number)
     type(hypercube_t), intent(in)  :: this
     
     number = this%boxdim(1)
   end function hypercube_number_inner_points
 
+
+  ! ---------------------------------------------------------
   pure integer function hypercube_number_total_points(this) result(number)
     type(hypercube_t), intent(in)  :: this
     
@@ -250,7 +278,6 @@ contains
   end function hypercube_number_total_points
   
 end module hypercube_m
-
 
 !! Local Variables:
 !! mode: f90

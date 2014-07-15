@@ -100,7 +100,7 @@ contains
       end do
     else
       do ip = 1, npoints
-        call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index(ip))
+        call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix(:, ip), index(ip))
       end do
     end if
     
