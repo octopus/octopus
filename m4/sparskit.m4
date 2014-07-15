@@ -35,9 +35,9 @@ fi
 
 dnl ... check if it links ...
 if test $acx_sparskit_ok = no; then
-  LIBS="$LIBS_SPARSKIT -L/usr/lib -lskit $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
-  AC_MSG_CHECKING([for SPARSKIT library with -L/usr/lib -lskit])
-  AC_LINK_IFELSE($testprog, [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT -L/usr/lib -lskit"], [])
+  LIBS="$LIBS_SPARSKIT -lskit $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
+  AC_MSG_CHECKING([for SPARSKIT library with -lskit])
+  AC_LINK_IFELSE($testprog, [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT -lskit"], [])
   if test $acx_sparskit_ok = no; then
     AC_MSG_RESULT([$acx_sparskit_ok])
   else
