@@ -559,54 +559,46 @@ contains
 
     PUSH_SUB(phonons_load)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      iunit = restart_open(restart, 'restart')
-      if (iunit > 0) then
-        imode_loop: do imode = 1, vib%num_modes
-          do jmode = 1, vib%num_modes
-            call restart_read(restart, iunit, line, 1, ierr)
-            if(ierr /= 0) exit imode_loop
-            read(line(1), fmt=*, iostat=ierr) jmode_read, imode_read, vib%dyn_matrix(jmode, imode)
-            if(imode_read /= imode) then
-              write(message(1),'(a,i9,a,i9)') "Corruption of restart data: row ", imode, " is labeled as ", imode_read
-              call messages_fatal(1)
-            endif
-            if(jmode_read /= jmode) then
-              write(message(1),'(a,i9,a,i9)') "Corruption of restart data: column ", jmode, " is labeled as ", jmode_read
-              call messages_fatal(1)
-            endif
-          enddo
-
+    iunit = restart_open(restart, 'restart')
+    if (iunit > 0) then
+      imode_loop: do imode = 1, vib%num_modes
+        do jmode = 1, vib%num_modes
           call restart_read(restart, iunit, line, 1, ierr)
-          if(ierr /= 0) exit
-
-          start_mode = imode + 1
-
-          read(line(1), fmt=*, iostat=ierr) imode_read, vib%infrared(imode, 1:vib%ndim)
+          if(ierr /= 0) exit imode_loop
+          read(line(1), fmt=*, iostat=ierr) jmode_read, imode_read, vib%dyn_matrix(jmode, imode)
           if(imode_read /= imode) then
-            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: infrared row ", imode, " is labeled as ", imode_read
+            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: row ", imode, " is labeled as ", imode_read
             call messages_fatal(1)
           endif
-        end do imode_loop
+          if(jmode_read /= jmode) then
+            write(message(1),'(a,i9,a,i9)') "Corruption of restart data: column ", jmode, " is labeled as ", jmode_read
+            call messages_fatal(1)
+          endif
+        enddo
+
+        call restart_read(restart, iunit, line, 1, ierr)
+        if(ierr /= 0) exit
+
+        start_mode = imode + 1
+
+        read(line(1), fmt=*, iostat=ierr) imode_read, vib%infrared(imode, 1:vib%ndim)
+        if(imode_read /= imode) then
+          write(message(1),'(a,i9,a,i9)') "Corruption of restart data: infrared row ", imode, " is labeled as ", imode_read
+          call messages_fatal(1)
+        endif
+      end do imode_loop
         
-        write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
-          start_mode - 1, ' modes out of ', vib%num_modes
-        call messages_info(1)
-
-        call restart_close(restart, iunit)
-      else
-        start_mode = 1
+      write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
+        start_mode - 1, ' modes out of ', vib%num_modes
+      call messages_info(1)
       
-        message(1) = "Could not find restart file 'restart'. Starting from scratch."
-        call messages_warning(1)
-      endif
-    endif
+      call restart_close(restart, iunit)
+    else
+      start_mode = 1
 
-#ifdef HAVE_MPI
-    call MPI_Bcast(start_mode, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
-    call MPI_Bcast(vib%dyn_matrix, vib%num_modes**2, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
-    call MPI_Bcast(vib%infrared, vib%num_modes*MAX_DIM, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
-#endif
+      message(1) = "Could not find restart file 'restart'. Starting from scratch."
+      call messages_warning(1)
+    endif
 
     POP_SUB(phonons_load)
   end subroutine phonons_load
