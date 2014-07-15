@@ -214,10 +214,12 @@ contains
 
     if (fromScratch) then
       start_mode = 1
-      call restart_rm(restart_dump, 'restart')
     else
       call phonons_load(restart_load, vib, start_mode)
     end if
+
+    ! Delete, if fromScratch, or trying to open it failed and there is something wrong with it.
+    if(start_mode == 1) call restart_rm(restart_dump, 'restart')
 
     do imat = 1, start_mode - 1
       call vibrations_out_dyn_matrix_row(vib, imat)
@@ -596,7 +598,7 @@ contains
     else
       start_mode = 1
 
-      message(1) = "Could not find restart file 'restart'. Starting from scratch."
+      message(1) = "Could not open restart file 'restart'. Starting from scratch."
       call messages_warning(1)
     endif
 
