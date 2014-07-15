@@ -148,9 +148,10 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    correct_size = ubound(this%density, dim = 1) == this%gr%fine%mesh%np &
-      .or. ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
-    
+    correct_size = ubound(this%density, dim = 1) == this%gr%fine%mesh%np .or. &
+         ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
+    ASSERT(correct_size)
+
     cmplxscl = associated(this%Imdensity)
     
     ispin = states_dim_get_spin_index(this%st%d, ik)

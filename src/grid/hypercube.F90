@@ -78,6 +78,8 @@ contains
       enddo
     enddo
 
+    SAFE_DEALLOCATE_A(npoints)
+
   end subroutine hypercube_init
 
   subroutine hypercube_nullify(this)
