@@ -27,8 +27,8 @@ match ; 2nd state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -
 # implementation is working), but if it is continued it replicates
 # nicely the results given in Fig. 2.
 Input: 05-adw.02-filter_fixed.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.00063351
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57999057
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.00063234
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57906033
 
 # Now use add a filter. This corresponds to the case presented in
 # Fig. 5 of the same paper. Once again, we stop at iteration #2; 
@@ -36,5 +36,5 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.579990
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
 Input: 05-adw.03-filter_indirect.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16380346
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.42618659
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16377508
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.42440804
