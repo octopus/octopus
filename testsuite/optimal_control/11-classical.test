@@ -11,4 +11,4 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 0.89379037
 
 
 Input: 11-classical.02-oct.inp
-match ; J1 2nd iteration  ; GREP(opt-control/convergence, '##        2   ', 40) ; -1.03679212
+match ; J1 2nd iteration  ; GREP(opt-control/convergence, '##        2   ', 40) ; -1.03679215

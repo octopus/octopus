@@ -25,7 +25,7 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
 # To get a better overlap, increase the quality of the mesh (reduce the grid
 # spacing) and/or increase the time interval.
 Input: 03-localtarget.02-oct.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521609
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521602
 
 
 # Now, we define the target as a time-dependent target. Also, we use
@@ -33,7 +33,7 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521
 Processors : 1
 # does not converge in parallel
 Input: 03-localtarget.03-tdoct.inp
-match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ; 0.36745684
+match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ; 0.36745798
 
 
 # Now we check that the many-particle version of the QOCT optimization of
@@ -45,5 +45,5 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 # Now once again we run for only one iteration and check the convergence.
 Processors : 2
 Input: 03-localtarget.05-oct-mp.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18588210
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18633452
 

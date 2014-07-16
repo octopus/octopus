@@ -31,7 +31,6 @@ module tdfunction_m
   use global_m
   use io_m
   use loct_math_m
-  use math_m
   use messages_m
   use mpi_m
   use parser_m
@@ -819,7 +818,6 @@ contains
     type(tdf_t), intent(in) :: f
     FLOAT,       intent(in) :: t
 
-    FLOAT, allocatable :: timearray(:), valarray(:)
     FLOAT :: r, fre, fim, tcu
     integer :: il, iu
 
@@ -866,25 +864,11 @@ contains
     case(TDF_NUMERICAL)
 
       il = int(t/f%dt)+1; iu = il+1
-
-      SAFE_ALLOCATE(timearray(4))
-      SAFE_ALLOCATE(valarray(4))
-
-      if(il == 1) then
-        timearray = (/ M_ZERO, f%dt, M_TWO*f%dt, M_THREE*f%dt  /)
-        valarray =  (/ f%val(1), f%val(2), f%val(3), f%val(4) /)
-      elseif(iu == f%niter + 1) then
-        timearray = (/ (f%niter-3)*f%dt, (f%niter-2)*f%dt, (f%niter-1)*f%dt, f%niter*f%dt  /)
-        valarray  = (/ f%val(f%niter-2), f%val(f%niter-1), f%val(f%niter), f%val(f%niter+1) /)
+      if(iu>f%niter+1) then
+        y = f%val(il)
       else
-        timearray = (/ (il-2)*f%dt, (il-1)*f%dt, il*f%dt, (il+1)*f%dt  /)
-        valarray =  (/ f%val(il-1), f%val(il), f%val(il+1), f%val(il+2) /)
+        y = f%val(il) + ((f%val(iu)-f%val(il))/f%dt)*(t-(il-1)*f%dt)
       end if
-
-      call interpolate(timearray, valarray, t, y)
-
-      SAFE_DEALLOCATE_A(valarray)
-      SAFE_DEALLOCATE_A(timearray)
 
     case(TDF_FROM_EXPR)
       tcu = units_from_atomic(units_inp%time, t)
@@ -1086,19 +1070,12 @@ contains
     select case(f%mode)
     case(TDF_NUMERICAL)
       ! We assume that the grid is the same for both functions.
-      ! We will apply Simpson's rule. However, note that this rule is only valid if there is an even
-      ! number of orbitals. So if there is an odd number, we will apply a correction term (that will 
-      ! reduce the error order from 4 to 2, similar to the simple trapezoidal rule).
-      fg = M_ZERO
-      do i = 1, f%niter/2
-        fg = fg + f%val(2*i-2+1)*g%val(2*i-2+1) + M_FOUR*f%val(2*i-1+1)*g%val(2*i-1+1) + f%val(2*i+1)*g%val(2*i+1)
+      fg = M_HALF * f%val(1) * g%val(1)
+      do i = 2, f%niter
+        fg = fg + f%val(i) * g%val(i)
       end do
-      fg = fg * f%dt / M_THREE
-      ! This is the correction term.
-      if(mod(f%niter, 2).eq.1) then
-        fg = fg + M_HALF * (f%val(f%niter)*g%val(f%niter) + f%val(f%niter+1) * g%val(f%niter+1)) * f%dt
-      end if
-      
+      fg = fg + M_HALF * f%val(f%niter+1) * g%val(f%niter+1)
+      fg = fg * f%dt
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
     case(TDF_ZERO_FOURIER)
