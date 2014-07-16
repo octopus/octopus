@@ -129,8 +129,9 @@ contains
   ! ---------------------------------------------------------
   subroutine propagator_nullify(this)
     type(propagator_t), intent(out) :: this
-    !
+
     PUSH_SUB(propagator_nullify)
+
     !this%method
     !call exponential_nullify(this%te)
     this%v_old=>null()
@@ -139,8 +140,12 @@ contains
     !call ob_terms_nullify(this%ob)
     !this%scf_propagation_steps 
     !this%first
+
+#ifdef HAVE_SPARSKIT
+    nullify(this%tdsk)
+#endif
+
     POP_SUB(propagator_nullify)
-    return
   end subroutine propagator_nullify
   ! ---------------------------------------------------------
 
@@ -513,17 +518,10 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       SAFE_DEALLOCATE_P(tr%vmagnus)
-    case(PROP_RUNGE_KUTTA4)
 #ifdef HAVE_SPARSKIT
+    case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
       call sparskit_solver_end(tr%tdsk)
-#endif
-    case(PROP_RUNGE_KUTTA2)
-#ifdef HAVE_SPARSKIT
-      call sparskit_solver_end(tr%tdsk)
-#endif
-    case(PROP_CRANK_NICOLSON_SPARSKIT)
-#ifdef HAVE_SPARSKIT
-      call sparskit_solver_end(tr%tdsk)
+      SAFE_DEALLOCATE_P(tr%tdsk)
 #endif
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_end(tr%ob)
