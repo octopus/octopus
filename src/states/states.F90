@@ -115,7 +115,6 @@ module states_m
     states_block_min,                 &
     states_block_max,                 &
     states_block_size,                &
-    states_resize_unocc,              &
     zstates_eigenvalues_sum,          &
     cmplx_array2_t,                   &
     states_wfs_t,                     &
@@ -1615,50 +1614,6 @@ contains
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
-
-
-
-  !---------------------------------------------------------------------
-  subroutine states_resize_unocc(st, nus)
-    type(states_t), intent(inout) :: st
-    integer,        intent(in)    :: nus
-
-    FLOAT, pointer :: new_occ(:,:)
-
-    PUSH_SUB(states_resize_unocc)
-
-    ! Resize st%occ, retaining current values
-    SAFE_ALLOCATE(new_occ(1:st%nst + nus, 1:st%d%nik))
-    new_occ(1:st%nst,:) = st%occ(1:st%nst,:)
-    new_occ(st%nst+1:,:) = M_ZERO
-    SAFE_DEALLOCATE_P(st%occ)
-    st%occ => new_occ
-
-    ! fix states: THIS IS NOT OK
-    st%nst    = st%nst + nus
-    st%st_end = st%nst
-
-    !cmplxscl
-    SAFE_DEALLOCATE_P(st%zeigenval%Re)
-    SAFE_DEALLOCATE_P(st%zeigenval%Im)
-    nullify(st%eigenval)
-    if (st%cmplxscl%space) then      
-      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
-      st%zeigenval%Im = huge(st%zeigenval%Im)      
-    end if
-    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
-    st%zeigenval%Re = huge(st%zeigenval%Re)
-    st%eigenval => st%zeigenval%Re 
-  
-
-    if(st%d%ispin == SPINORS) then
-      SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
-      st%spin = M_ZERO
-    end if
-    
-    POP_SUB(states_resize_unocc)
-    
-  end subroutine states_resize_unocc
 
 
   ! ---------------------------------------------------------
