@@ -107,7 +107,7 @@ module propagator_m
     integer             :: scf_propagation_steps 
     logical             :: first
 #ifdef HAVE_SPARSKIT
-    type(sparskit_solver_t), pointer, private :: tdsk
+    type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
 #endif
     FLOAT              :: scf_threshold
