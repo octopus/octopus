@@ -288,10 +288,6 @@ contains
 
       call messages_obsolete_variable("NumberUnoccStates", "ExtraStates")
 
-      if(st%d%ispin == SPINORS) then
-        SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
-        st%spin = M_ZERO
-      end if
       call states_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff
