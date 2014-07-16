@@ -741,6 +741,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   call messages_info(1)
   
   ! vib_modes for complex wavefunctions will write complex rho, however it is actually real
+  ! FIXME: why?
 #ifdef R_TCOMPLEX
   SAFE_ALLOCATE(zdl_rho(1:mesh%np, 1:st%d%nspin))
 #endif
@@ -821,6 +822,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_A(zdl_rho)
 
   SAFE_DEALLOCATE_A(lr_hmat1)
+  SAFE_DEALLOCATE_P(cas%X(lr_hmat2))
   SAFE_DEALLOCATE_P(cas%X(mat2))
   SAFE_DEALLOCATE_P(cas%X(w2))
   

@@ -711,6 +711,7 @@ contains
 
     ! clean up
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+      SAFE_DEALLOCATE_P(cas%fxc)
       SAFE_DEALLOCATE_P(cas%rho)
     endif
 
