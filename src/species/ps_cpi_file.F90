@@ -34,22 +34,22 @@ module ps_cpi_file_m
     ps_cpi_file_read,       &
     ps_cpi_file_end
 
-  ! First, the contents of the file.
+  !> First, the contents of the file.
   type ps_cpi_file_t
-    FLOAT              :: zval          ! valence charge
-    integer            :: no_l_channels ! number of pseudo components (lmax+1)
+    FLOAT              :: zval          !< valence charge
+    integer            :: no_l_channels !< number of pseudo components (lmax+1)
     
-    integer            :: nr            ! number of mesh points
-    FLOAT              :: a             ! mesh multiplicative increment
+    integer            :: nr            !< number of mesh points
+    FLOAT              :: a             !< mesh multiplicative increment
     
-    FLOAT, pointer     :: rofi(:)       ! radial mesh
-    FLOAT, pointer     :: vps(:,:)      ! pseudopotential
-    FLOAT, pointer     :: rphi(:,:)     ! r times the pseudowavefunctions
+    FLOAT, pointer     :: rofi(:)       !< radial mesh
+    FLOAT, pointer     :: vps(:,:)      !< pseudopotential
+    FLOAT, pointer     :: rphi(:,:)     !< r times the pseudowavefunctions
     
     logical            :: core_corrections
-    FLOAT, pointer     :: chcore(:)     ! r times the core charge
-    FLOAT, pointer     :: d1chcore(:)   ! first  derivative of chcore
-    FLOAT, pointer     :: d2chcore(:)   ! second derivative of chcore
+    FLOAT, pointer     :: chcore(:)     !< r times the core charge
+    FLOAT, pointer     :: d1chcore(:)   !< first  derivative of chcore
+    FLOAT, pointer     :: d2chcore(:)   !< second derivative of chcore
   end type ps_cpi_file_t
   
 contains
@@ -62,7 +62,7 @@ contains
     integer  :: i, l, ios, idummy
     FLOAT    :: a, b, c, d
 
-    PUSH_SUB(read_file_data)
+    PUSH_SUB(ps_cpi_file_read)
 
     read(unit, *) psf%zval, psf%no_l_channels
     ! skip 10 lines
@@ -135,13 +135,16 @@ contains
 
     ! WARNING: This should go away
     psf%vps(:,:) = psf%vps(:,:)*M_TWO ! convert to Rydbergs
-    POP_SUB(read_file_data)
+
+    POP_SUB(ps_cpi_file_read)
   end subroutine ps_cpi_file_read
 
 
   ! ---------------------------------------------------------
   subroutine ps_cpi_file_end(psf)
     type(ps_cpi_file_t), intent(inout) :: psf
+
+    PUSH_SUB(ps_cpi_file_end)
 
     SAFE_DEALLOCATE_P(psf%rofi)
     SAFE_DEALLOCATE_P(psf%vps)
@@ -153,6 +156,7 @@ contains
       SAFE_DEALLOCATE_P(psf%d2chcore)
     end if
 
+    POP_SUB(ps_cpi_file_end)
   end subroutine ps_cpi_file_end
 
 end module ps_cpi_file_m

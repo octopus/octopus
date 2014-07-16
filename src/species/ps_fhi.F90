@@ -39,12 +39,12 @@ module ps_fhi_m
     ps_fhi_end,     &
     ps_fhi_process
 
-  ! remember that the FHI format is basically the CPI format with a header
+  !> remember that the FHI format is basically the CPI format with a header
   type ps_fhi_t
-    type(ps_fhi_file_t), pointer :: fhi_file ! This just includes the extra header
-    type(ps_cpi_file_t), pointer :: cpi_file ! This includes the real pseudopotential
-    type(ps_in_grid_t),  pointer :: ps_grid  ! the pseudopotential in the grid
-    type(valconf_t),     pointer :: conf     ! 
+    type(ps_fhi_file_t), pointer :: fhi_file !< This just includes the extra header
+    type(ps_cpi_file_t), pointer :: cpi_file !< This includes the real pseudopotential
+    type(ps_in_grid_t),  pointer :: ps_grid  !< the pseudopotential in the grid
+    type(valconf_t),     pointer :: conf
   end type ps_fhi_t
 
 contains
@@ -96,10 +96,18 @@ contains
   subroutine ps_fhi_end(ps_fhi)
     type(ps_fhi_t), intent(inout) :: ps_fhi
 
+    PUSH_SUB(ps_fhi_end)
+
     SAFE_DEALLOCATE_P(ps_fhi%fhi_file)
+
+    call ps_cpi_file_end(ps_fhi%cpi_file)
     SAFE_DEALLOCATE_P(ps_fhi%cpi_file)
-    SAFE_DEALLOCATE_P(ps_fhi%ps_grid)
     SAFE_DEALLOCATE_P(ps_fhi%conf)
+
+    call ps_in_grid_end(ps_fhi%ps_grid)
+    SAFE_DEALLOCATE_P(ps_fhi%ps_grid)
+
+    POP_SUB(ps_fhi_end)
   end subroutine ps_fhi_end
 
 
