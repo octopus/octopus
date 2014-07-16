@@ -16,4 +16,4 @@ match ; Eigenvalue   ; GREP(static/info, '2   --',        12) ; 1.481456
 Input: 07-qoct+tddft.02-oct.inp
 
 Precision : 0.005
-match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 40) ; 2.27317105
+match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 40) ; 2.27316502

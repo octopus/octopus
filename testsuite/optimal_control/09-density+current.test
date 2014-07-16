@@ -19,8 +19,8 @@ Input: 09-density+current.02-oct.inp
 
 Precision : 0.000001
 
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  -1.10657067
-match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.22639428
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  -1.10646288
+match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.22634836
 
 
 # optimize overlap of density and minimize
@@ -33,5 +33,5 @@ Input: 09-density+current.03-tdoct.inp
 
 Precision : 0.000001
 
-match ; J1 1st iteration ; GREP(opt-control/convergence, '##        1 ', 40) ; -1.44008328
-match ; J2 1st iteration ; GREP(opt-control/convergence, '##        1 ', 60) ; -0.06420271
+match ; J1 1st iteration ; GREP(opt-control/convergence, '##        1 ', 40) ; -1.44008466
+match ; J2 1st iteration ; GREP(opt-control/convergence, '##        1 ', 60) ; -0.06419693
