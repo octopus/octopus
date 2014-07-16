@@ -39,7 +39,6 @@ Usage: oct-run_regression_test.pl [options]
     -h        this usage
     -D        name of the directory where to look for the executables   
     -s        exec suffix for the executables
-    -c        create template
     -f        filename of testsuite [required]
     -p        preserve working directories
     -l        copy output log to current directory
@@ -54,44 +53,6 @@ Exit codes:
 Report bugs to <octopus-devel\@tddft.org>
 EndOfUsage
 
-  exit 0;
-}
-
-
-sub create_template {
-  $date = `date +"%d.%m.%y"`;
-  chomp($date);
-  $arch = `uname -a`;
-  chomp($arch);
-  $author = `whoami`;
-  chomp($author);
-  $author =~ s/^(\w)(.*)/\u$1$2/;
-  $cvs_id = "\$Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro \$";
-
-  open(TEMPLATE, ">".$opt_c );
-
-  print TEMPLATE <<EndOfTemplate;
-# -*- coding: utf-8 mode: shell-script -*-
-# $cvs_id
-
-Test       : $opt_c
-Programs   : octopus
-TestGroups : short-run
-Enabled    : Yes
-
-Input: 01-template.01-ground_state.inp
-
-# add your own matches
-#
-# Example (of course you have to uncomment the lines :)
-# match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81378481
-# match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
-# match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891538586e-01
-
-EndOfTemplate
-
-  close(TEMPLATE);
-  print "Template written to: $opt_c \n";
   exit 0;
 }
 
@@ -138,7 +99,6 @@ use File::Temp qw/tempdir/;
 
 # Handle options
 $opt_h && usage;
-$opt_c && create_template;
 
 my $exec_directory;
 if($opt_D) {
