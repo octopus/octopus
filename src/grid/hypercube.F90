@@ -82,7 +82,7 @@ contains
 
     SAFE_DEALLOCATE_A(npoints)
 
-    PUSH_SUB(hypercube_init)
+    POP_SUB(hypercube_init)
   end subroutine hypercube_init
 
 
