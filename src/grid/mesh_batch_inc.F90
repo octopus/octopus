@@ -657,9 +657,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(sum(send_count) == mesh%np)
 
       ! Receiving number of points is the inverse matrix of the sending points
+      call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_ALLTOALL)
       call MPI_Alltoall(send_count(1), 1, MPI_INTEGER, &
                         recv_count(1), 1, MPI_INTEGER, &
                         mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALL)
       ASSERT(sum(recv_count) == mesh%np)
 
       send_disp(1) = 0
@@ -699,8 +701,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       send_disp_nstl = send_disp * nstl
       recv_count_nstl = recv_count * nstl
       recv_disp_nstl = recv_disp * nstl
+      call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 
       SAFE_DEALLOCATE_A(send_buffer)
 
@@ -745,8 +749,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       send_disp_nstl = mesh%vp%send_disp * nstl
       recv_count_nstl = recv_count * nstl
       recv_disp_nstl = mesh%vp%recv_disp * nstl
+      call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 
       SAFE_DEALLOCATE_A(send_buffer)
 

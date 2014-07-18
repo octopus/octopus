@@ -896,10 +896,12 @@ contains
         recv_disp(node) = ubound(recv_buffer, dim = 1)*(node - 1)
       end do
 
+      call mpi_debug_in(st%dom_st_mpi_grp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(send_buffer(1, 1), send_count(1), send_disp(1), R_MPITYPE, &
         recv_buffer(1, 1), recv_count(1), recv_disp(1), R_MPITYPE, &
         st%dom_st_mpi_grp%comm, mpi_err)
-
+      call mpi_debug_out(st%dom_st_mpi_grp%comm, C_MPI_ALLTOALLV)
+      
       do node = 1, st%dom_st_mpi_grp%size
         do ii = 1, recv_count(node)
           evec(recv_pos(1, ii, node), recv_pos(2, ii, node)) = recv_buffer(ii, node)

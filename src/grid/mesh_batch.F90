@@ -41,6 +41,7 @@ module mesh_batch_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use mpi_debug_m
   use opencl_m
   use par_vec_m
   use partition_m
