@@ -40,6 +40,7 @@ module lcao_m
   use mesh_function_m
   use messages_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_debug_m
   use parser_m
   use profiling_m
   use ps_m

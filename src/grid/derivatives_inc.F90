@@ -254,7 +254,7 @@ contains
       call mpi_debug_in(der%mesh%vp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
         recvbuffer, recv_count, recv_disp, R_MPITYPE, der%mesh%vp%comm, mpi_err)
-      call mpi_debug_out(der%mesh%vp%comm, C_MPI_ALLTOALL)
+      call mpi_debug_out(der%mesh%vp%comm, C_MPI_ALLTOALLV)
 
       call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
