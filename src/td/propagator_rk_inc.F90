@@ -17,8 +17,17 @@
 !!
 !! $Id$
 
+    subroutine td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
+    type(v_ks_t), target,            intent(inout) :: ks
+    type(hamiltonian_t), target,     intent(inout) :: hm
+    type(grid_t),        target,     intent(inout) :: gr
+    type(states_t),      target,     intent(inout) :: st
+    type(propagator_t),  target,     intent(inout) :: tr
+    FLOAT,                           intent(in)    :: time
+    FLOAT,                           intent(in)    :: dt
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
 
-    subroutine td_runge_kutta2()
 #ifndef HAVE_SPARSKIT
       ASSERT(.false.)
 #else
@@ -132,7 +141,7 @@
         call hamiltonian_update(hm, gr%mesh, time = time)
         if(.not.hamiltonian_oct_exchange(hm_p)) then
           if (i==1) then
-            vhxc1_op(:, :) = tr%v_old(:, :, 0)
+            call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, vhxc1_op, vhxc1_op, 0)
             i = i + 1
           else
             vhxc1_op = hm%vhxc
@@ -211,7 +220,17 @@
     end subroutine td_runge_kutta2
 
 
-    subroutine td_runge_kutta4()
+    subroutine td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+    type(v_ks_t), target,            intent(inout) :: ks
+    type(hamiltonian_t), target,     intent(inout) :: hm
+    type(grid_t),        target,     intent(inout) :: gr
+    type(states_t),      target,     intent(inout) :: st
+    type(propagator_t),  target,     intent(inout) :: tr
+    FLOAT,                           intent(in)    :: time
+    FLOAT,                           intent(in)    :: dt
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
+
 #ifndef HAVE_SPARSKIT
       ASSERT(.false.)
 #else
@@ -466,6 +485,383 @@
       POP_SUB(propagator_dt.td_runge_kutta4)
 #endif
     end subroutine td_runge_kutta4
+
+  ! ---------------------------------------------------------
+  !> operators for Crank-Nicolson scheme
+  subroutine td_rk4op(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    FLOAT :: a(2, 2), c(2)
+    integer :: np_part, np
+
+    PUSH_SUB(td_rk4op)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+
+    a(1, 1) = M_FOURTH
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(2, 2) = M_FOURTH
+
+    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
+    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+
+    zpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
+                             a(1, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    hm_p%vhxc = vhxc2_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = k
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
+                             a(2, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    POP_SUB(td_rk4op)
+  end subroutine td_rk4op
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> Transpose of H (called e.g. by bi-conjugate gradient solver)
+  subroutine td_rk4opt(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    FLOAT :: a(2, 2), c(2)
+    integer :: np_part, np
+
+    PUSH_SUB(td_rk4opt)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+
+    a(1, 1) = M_FOURTH
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(2, 2) = M_FOURTH
+
+    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
+    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+
+    zpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
+                             a(1, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    hm_p%vhxc = vhxc2_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    j = 1
+    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = k
+        do idim = 1, dim
+          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
+                             a(2, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          j = j + np
+          k = k + np
+        end do
+
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    POP_SUB(td_rk4opt)
+  end subroutine td_rk4opt
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> operator for the RK2 propagator
+  subroutine td_rk2op(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    CMPLX, allocatable :: zpsi_(:, :, :, :)
+
+    PUSH_SUB(td_rk2op)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
+
+    zpsi = M_z0
+    opzpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      zpsi_ = M_z0
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+        end do
+      end do
+      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+    end if
+
+    j = 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+          j = j + np
+        end do
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+          opzpsi = M_z0
+          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+
+          do idim = 1, dim
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yim(jj:jj+np-1) = yim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            jj = jj + np
+          end do
+        end do
+      end do
+    end if
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    PUSH_SUB(td_rk2op)
+  end subroutine td_rk2op
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> operator for the RK2 propagator
+  subroutine td_rk2opt(xre, xim, yre, yim)
+    FLOAT, intent(in)  :: xre(:)
+    FLOAT, intent(in)  :: xim(:)
+    FLOAT, intent(out) :: yre(:)
+    FLOAT, intent(out) :: yim(:)
+
+    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
+    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: opzpsi(:, :)
+    CMPLX, allocatable :: zpsi_(:, :, :, :)
+
+    PUSH_SUB(td_rk2opt)
+
+    np_part = grid_p%mesh%np_part
+    np = grid_p%mesh%np
+    st1 = st_p%st_start
+    st2 = st_p%st_end
+    kp1 = st_p%d%kpt%start
+    kp2 = st_p%d%kpt%end
+    dim = st_p%d%dim
+
+    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
+    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
+
+    zpsi = M_z0
+    opzpsi = M_z0
+
+    hm_p%vhxc = vhxc1_op
+    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
+    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      zpsi_ = M_z0
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+        end do
+      end do
+      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+    end if    
+
+    j = 1
+    do ik = kp1, kp2
+      do ist = st1, st2
+        jj = j
+        do idim = 1, dim
+          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
+          j = j + np
+        end do
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+
+        do idim = 1, dim
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          jj = jj + np
+        end do
+      end do
+    end do
+
+    if(hamiltonian_oct_exchange(hm_p)) then
+      j = 1
+      do ik = kp1, kp2
+        do ist = st1, st2
+          jj = j
+          do idim = 1, dim
+            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            j = j + np
+          end do
+          opzpsi = M_z0
+          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+
+          do idim = 1, dim
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yim(jj:jj+np-1) = yim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            jj = jj + np
+          end do
+        end do
+      end do
+    end if
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(opzpsi)
+    PUSH_SUB(td_rk2opt)
+  end subroutine td_rk2opt
+  ! ---------------------------------------------------------
+
 
 !! Local Variables:
 !! mode: f90

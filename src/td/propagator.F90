@@ -54,6 +54,7 @@ module propagator_m
   use opencl_m
   use output_m
   use profiling_m
+  use restart_m
   use scf_m
   use states_dim_m
   use solvers_m
@@ -79,7 +80,10 @@ module propagator_m
     propagator_ions_are_propagated, &
     propagator_dens_is_propagated,  &
     propagator_requires_vks,        &
-    propagator_dt_bo
+    propagator_dt_bo,               &
+    vksinterp_t,                    &
+    vksinterp_dump,                 &
+    vksinterp_load
 
 
   integer, public, parameter ::        &
@@ -95,12 +99,17 @@ module propagator_m
     PROP_RUNGE_KUTTA4            = 13, &
     PROP_RUNGE_KUTTA2            = 14
 
+  type vksinterp_t
+    private
+    FLOAT, pointer      :: v_old(:, :, :) => null()
+    FLOAT, pointer      :: Imv_old(:, :, :) => null()
+  end type vksinterp_t
+
   type propagator_t
     integer             :: method           !< Which evolution method to use.
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     !> Storage of the KS potential of previous iterations.
-    FLOAT, pointer      :: v_old(:, :, :) => null()
-    FLOAT, pointer      :: Imv_old(:, :, :) => null()
+    type(vksinterp_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
@@ -126,6 +135,8 @@ module propagator_m
 
 contains
 
+#include "propagator_vksold_inc.F90"
+
   ! ---------------------------------------------------------
   subroutine propagator_nullify(this)
     type(propagator_t), intent(out) :: this
@@ -134,8 +145,7 @@ contains
 
     !this%method
     !call exponential_nullify(this%te)
-    this%v_old=>null()
-    this%Imv_old=>null()
+    call vksinterp_nullify(this%vksold)
     this%vmagnus=>null() 
     !call ob_terms_nullify(this%ob)
     !this%scf_propagation_steps 
@@ -185,8 +195,8 @@ contains
 #endif
     end select
 
-    call loct_pointer_copy(tro%v_old, tri%v_old)
-    call loct_pointer_copy(tro%Imv_old, tri%Imv_old)
+    call vksinterp_copy(tro%vksold, tri%vksold)
+
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
@@ -416,13 +426,7 @@ contains
       end if
     end if
 
-    ! Allocate memory to store the old KS potentials
-    SAFE_ALLOCATE(tr%v_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
-    tr%v_old(:, :, :) = M_ZERO
-    if(cmplxscl) then
-      SAFE_ALLOCATE(tr%Imv_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
-      tr%Imv_old(:, :, :) = M_ZERO
-    end if
+    call vksinterp_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin)
 
     call exponential_init(tr%te) ! initialize propagator
 
@@ -509,10 +513,7 @@ contains
 
     PUSH_SUB(propagator_end)
 
-    ! sanity check
-    ASSERT(associated(tr%v_old)) 
-    SAFE_DEALLOCATE_P(tr%v_old)         ! clean old KS potentials
-    SAFE_DEALLOCATE_P(tr%Imv_old) 
+    call vksinterp_end(tr%vksold)
 
     select case(tr%method)
     case(PROP_MAGNUS)
@@ -541,17 +542,9 @@ contains
     type(propagator_t),   intent(inout) :: tr
 
     integer :: ip, ispin, idim
-
     PUSH_SUB(propagator_run_zero_iter)
 
-    forall(idim = 1:3, ispin = 1:hm%d%nspin, ip = 1:gr%mesh%np)
-      tr%v_old(ip, ispin, idim) = hm%vhxc(ip, ispin)
-    end forall
-    if(hm%cmplxscl%space) then
-      forall(idim = 1:3, ispin = 1:hm%d%nspin, ip = 1:gr%mesh%np)
-        tr%Imv_old(ip, ispin, idim) = hm%Imvhxc(ip, ispin)
-      end forall
-    end if
+    call vksinterp_run_zero_iter(tr%vksold, hm%cmplxscl%space, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
 
     POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter
@@ -595,49 +588,29 @@ contains
       ASSERT(present(gauge_force))
     end if
 
-    self_consistent = .false.
-    if( hm%theory_level /= INDEPENDENT_PARTICLES .and. &
-        tr%method /= PROP_CAETRS .and. &
-        tr%method /= PROP_RUNGE_KUTTA4 .and. &
-        tr%method /= PROP_RUNGE_KUTTA2 ) then
-      if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
-        self_consistent = .true.
-        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-            call states_get_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
-          end do
+    self_consistent = self_consistent_step()
+    if(self_consistent) then
+      SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+           call states_get_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
         end do
-
-      end if
+      end do
+      SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
+      vaux(1:gr%mesh%np, 1:st%d%nspin) = hm%vhxc(1:gr%mesh%np, 1:st%d%nspin)
+      if (cmplxscl) then
+        SAFE_ALLOCATE(Imvaux(1:gr%mesh%np, 1:st%d%nspin))
+        Imvaux(1:gr%mesh%np, 1:st%d%nspin) = hm%Imvhxc(1:gr%mesh%np, 1:st%d%nspin)
+      end if 
     end if
 
-    SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
-    vaux(1:gr%mesh%np, 1:st%d%nspin) = hm%vhxc(1:gr%mesh%np, 1:st%d%nspin)
-    if (cmplxscl) then
-      SAFE_ALLOCATE(Imvaux(1:gr%mesh%np, 1:st%d%nspin))
-      Imvaux(1:gr%mesh%np, 1:st%d%nspin) = hm%Imvhxc(1:gr%mesh%np, 1:st%d%nspin)
-    end if 
 
     if(.not. propagator_requires_vks(tr)) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), vold)
-      if(cmplxscl) then
-        SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 1), Imvold)
-      end if
+      if(cmplxscl) SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+      call vksinterp_get(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, vold, imvold, 1)
     else
-      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
-      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-      call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
-      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
-      if(cmplxscl) then
-        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 2), tr%Imv_old(:, :, 3))
-        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 1), tr%Imv_old(:, :, 2))
-        call lalg_copy(gr%mesh%np, st%d%nspin, hm%Imvhxc(:, :),     tr%Imv_old(:, :, 1))
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%Imv_old(:, :, 1:3), time, tr%Imv_old(:, :, 0))
-      end if
+      call vksinterp_new(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt)
     end if
 
     select case(tr%method)
@@ -645,8 +618,10 @@ contains
     case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
     case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
     case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
-    case(PROP_RUNGE_KUTTA4);             call td_runge_kutta4()
-    case(PROP_RUNGE_KUTTA2);             call td_runge_kutta2()
+    case(PROP_RUNGE_KUTTA4)
+      call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+    case(PROP_RUNGE_KUTTA2)
+      call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
     case(PROP_MAGNUS);                   call td_magnus()
     case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
@@ -665,14 +640,8 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
       call v_ks_calc(ks, hm, st, geo, time = time - dt)
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
-      d_max = M_ZERO
-      do is = 1, st%d%nspin
-        dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - tr%v_old(1:gr%mesh%np, is, 0)
-        d = dmf_nrm2(gr%mesh, dtmp)
-        if(d > d_max) d_max = d
-      end do
-      SAFE_DEALLOCATE_A(dtmp)
+
+      call vksinterp_diff(tr%vksold, gr, st%d%nspin, hm%vhxc, 0, d_max)
 
       if(d_max > tr%scf_threshold) then
 
@@ -686,20 +655,18 @@ contains
               call states_set_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
             end do
           end do
-          
-          tr%v_old(:, :, 0) = hm%vhxc(:, :)
+          call vksinterp_set(tr%vksold, .false. , gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, 0)
           vaux(:, :) = hm%vhxc(:, :)
-          if(cmplxscl) then
-            tr%v_old(:, :, 0) = hm%vhxc(:, :)
-            vaux(:, :) = hm%vhxc(:, :)
-          end if
+
           select case(tr%method)
           case(PROP_ETRS);                     call td_etrs()
           case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
           case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
           case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
-          case(PROP_RUNGE_KUTTA4);             call td_runge_kutta4()
-          case(PROP_RUNGE_KUTTA2);             call td_runge_kutta2()
+          case(PROP_RUNGE_KUTTA4)
+            call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+          case(PROP_RUNGE_KUTTA2)
+            call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
           case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
           case(PROP_MAGNUS);                   call td_magnus()
           case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
@@ -731,10 +698,12 @@ contains
     end if
     
     SAFE_DEALLOCATE_A(vold)
-    SAFE_DEALLOCATE_A(vaux)
-    
     SAFE_DEALLOCATE_A(Imvold)
-    SAFE_DEALLOCATE_A(Imvaux)
+
+    if(self_consistent) then
+      SAFE_DEALLOCATE_A(vaux)
+      SAFE_DEALLOCATE_A(Imvaux)
+    end if
 
     ! update density
     if(.not. propagator_dens_is_propagated(tr)) then 
@@ -765,40 +734,10 @@ contains
     update_energy_ = optional_default(update_energy, .false.)
 
     if(update_energy_ .or. propagator_requires_vks(tr)) then
-
-      ! save the vhxc potential for later
-      if(.not. propagator_requires_vks(tr)) then
-        SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-        do ispin = 1, st%d%nspin
-          call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
-        end do
-        if(cmplxscl) then
-          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-          do ispin = 1, st%d%nspin
-            call lalg_copy(gr%mesh%np, hm%Imvhxc(:, ispin), Imvold(:, ispin))
-          end do
-        end if
-      end if
-
       ! update Hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
-
       ! Get the energies.
       if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
-
-      ! restore the vhxc
-      if(.not. propagator_requires_vks(tr)) then
-        do ispin = 1, st%d%nspin
-          call lalg_copy(gr%mesh%np, vold(:, ispin), hm%vhxc(:, ispin))
-        end do
-        SAFE_DEALLOCATE_A(vold)
-        if(cmplxscl) then
-          do ispin = 1, st%d%nspin
-            call lalg_copy(gr%mesh%np, Imvold(:, ispin), hm%Imvhxc(:, ispin))
-          end do
-          SAFE_DEALLOCATE_A(Imvold)
-        end if
-      end if
     end if
 
     ! Recalculate forces, update velocities...
@@ -936,10 +875,9 @@ contains
 
       if(tr%method == PROP_CAETRS) then
         call v_ks_calc_finish(ks, hm)
-        call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
-        call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-        call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
+
+        call vksinterp_new(tr%vksold, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt)
+
         forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
           vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
         end forall
@@ -958,8 +896,7 @@ contains
 
       end if
 
-      ! interpolate the Hamiltonian to time t
-      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
+      call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, 0)
 
       ! move the ions to time t
       if(ion_dynamics_ions_move(ions)) then
@@ -1053,9 +990,8 @@ contains
         
         !FIXME: not adapted yet
         if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-          if(hm%cmplxscl%space) &
-            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+          call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+            gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time - dt/M_TWO)
         end if
 
         !FIXME: not implemented yet
@@ -1088,9 +1024,8 @@ contains
       else
 
         if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-          if(hm%cmplxscl%space) &
-            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+          call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+            gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time - dt/M_TWO)
         end if
 
         !move the ions to time 'time - dt/2'
@@ -1127,9 +1062,8 @@ contains
           ! FIXME: check this interpolation!! 
           ! probably need some rethinking 
           if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
-            if(hm%cmplxscl%space) &
-              call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+             call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
+               hm%vhxc, hm%imvhxc, time, dt, time+dt/M_TWO)
           end if
         
           call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
@@ -1148,9 +1082,10 @@ contains
           ! FIXME: check this interpolation!! 
           ! probably need some rethinking 
           if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
+            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%vksold%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
             if(hm%cmplxscl%space) &
-              call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+              call interpolate( (/time, time - dt, time - M_TWO*dt/), &
+                tr%vksold%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
           end if
 
           call hamiltonian_update(hm, gr%mesh, time = time + M_HALF*dt)
@@ -1177,9 +1112,6 @@ contains
 
       POP_SUB(propagator_dt.exponential_midpoint)
     end subroutine exponential_midpoint
-
-
-#include "propagator_rk_inc.F90"
 
 
     ! ---------------------------------------------------------
@@ -1229,10 +1161,9 @@ contains
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
       end if
-        
-      call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      if(hm%cmplxscl%space) & 
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+
+      call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
+        hm%vhxc, hm%imvhxc, time, dt, time -dt/M_TWO)
     
       call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
       
@@ -1291,11 +1222,9 @@ contains
         dt_op = - dt !propagate backwards
         t_op  = time + dt/M_TWO
         
-        
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
-        if(hm%cmplxscl%space) & 
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
-    
+        call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+          gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time + dt/M_TWO)
+
         call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
       
       
@@ -1380,7 +1309,7 @@ contains
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         do j = 1, 2
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), atime(j) - dt, hm%vhxc(:, :))
+          call vksinterp_interpolate(tr%vksold, 3, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, atime(j)-dt)
           call hamiltonian_update(hm, gr%mesh)
         end do
       else
@@ -1436,6 +1365,25 @@ contains
 
       POP_SUB(propagator_dt.td_crank_nicolson_src_mem)
     end subroutine td_crank_nicolson_src_mem
+
+    logical function self_consistent_step() result(scs)
+      scs = .false.
+      if( hm%theory_level /= INDEPENDENT_PARTICLES .and. &
+          tr%method /= PROP_CAETRS .and. &
+          tr%method /= PROP_RUNGE_KUTTA4 .and. &
+          tr%method /= PROP_RUNGE_KUTTA2 ) then
+        if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
+          scs = .true.
+          !_SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+
+        !do ik = st%d%kpt%start, st%d%kpt%end
+          !do ist = st%st_start, st%st_end
+            !call states_get_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
+          !end do
+        !end do
+        end if
+      end if
+    end function self_consistent_step
 
   end subroutine propagator_dt
   ! ---------------------------------------------------------
@@ -1640,384 +1588,7 @@ contains
     POP_SUB(propagator_dt_bo)
   end subroutine propagator_dt_bo
 
-
-  ! ---------------------------------------------------------
-  !> operators for Crank-Nicolson scheme
-  subroutine td_rk4op(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:)
-    FLOAT, intent(in)  :: xim(:)
-    FLOAT, intent(out) :: yre(:)
-    FLOAT, intent(out) :: yim(:)
-
-    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
-    CMPLX, allocatable :: zpsi(:, :)
-    CMPLX, allocatable :: opzpsi(:, :)
-    FLOAT :: a(2, 2), c(2)
-    integer :: np_part, np
-
-    PUSH_SUB(td_rk4op)
-
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
-    st1 = st_p%st_start
-    st2 = st_p%st_end
-    kp1 = st_p%d%kpt%start
-    kp2 = st_p%d%kpt%end
-    dim = st_p%d%dim
-
-    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
-
-    a(1, 1) = M_FOURTH
-    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
-    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
-    a(2, 2) = M_FOURTH
-
-    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
-    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
-
-    zpsi = M_z0
-
-    hm_p%vhxc = vhxc1_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
-    j = 1
-    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = j
-        do idim = 1, dim
-          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
-                             a(1, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
-          j = j + np
-          k = k + np
-        end do
-
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
-
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    hm_p%vhxc = vhxc2_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
-    j = 1
-    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = k
-        do idim = 1, dim
-          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
-                             a(2, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
-          j = j + np
-          k = k + np
-        end do
-
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
-
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(opzpsi)
-    POP_SUB(td_rk4op)
-  end subroutine td_rk4op
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  !> Transpose of H (called e.g. by bi-conjugate gradient solver)
-  subroutine td_rk4opt(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:)
-    FLOAT, intent(in)  :: xim(:)
-    FLOAT, intent(out) :: yre(:)
-    FLOAT, intent(out) :: yim(:)
-
-    integer :: idim, j, ik, ist, kp1, kp2, st1, st2, dim, k, jj
-    CMPLX, allocatable :: zpsi(:, :)
-    CMPLX, allocatable :: opzpsi(:, :)
-    FLOAT :: a(2, 2), c(2)
-    integer :: np_part, np
-
-    PUSH_SUB(td_rk4opt)
-
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
-    st1 = st_p%st_start
-    st2 = st_p%st_end
-    kp1 = st_p%d%kpt%start
-    kp2 = st_p%d%kpt%end
-    dim = st_p%d%dim
-
-    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
-
-    a(1, 1) = M_FOURTH
-    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
-    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
-    a(2, 2) = M_FOURTH
-
-    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
-    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
-
-    zpsi = M_z0
-
-    hm_p%vhxc = vhxc1_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
-    j = 1
-    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = j
-        do idim = 1, dim
-          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
-                             a(1, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
-          j = j + np
-          k = k + np
-        end do
-
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
-
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    hm_p%vhxc = vhxc2_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
-    j = 1
-    k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = k
-        do idim = 1, dim
-          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
-                             a(2, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
-          j = j + np
-          k = k + np
-        end do
-
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
-
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(opzpsi)
-    POP_SUB(td_rk4opt)
-  end subroutine td_rk4opt
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  !> operator for the RK2 propagator
-  subroutine td_rk2op(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:)
-    FLOAT, intent(in)  :: xim(:)
-    FLOAT, intent(out) :: yre(:)
-    FLOAT, intent(out) :: yim(:)
-
-    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
-    CMPLX, allocatable :: zpsi(:, :)
-    CMPLX, allocatable :: opzpsi(:, :)
-    CMPLX, allocatable :: zpsi_(:, :, :, :)
-
-    PUSH_SUB(td_rk2op)
-
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
-    st1 = st_p%st_start
-    st2 = st_p%st_end
-    kp1 = st_p%d%kpt%start
-    kp2 = st_p%d%kpt%end
-    dim = st_p%d%dim
-
-    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
-
-    zpsi = M_z0
-    opzpsi = M_z0
-
-    hm_p%vhxc = vhxc1_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
-
-    if(hamiltonian_oct_exchange(hm_p)) then
-      zpsi_ = M_z0
-      j = 1
-      do ik = kp1, kp2
-        do ist = st1, st2
-          jj = j
-          do idim = 1, dim
-            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
-            j = j + np
-          end do
-        end do
-      end do
-      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
-    end if
-
-    j = 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = j
-        do idim = 1, dim
-          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
-          j = j + np
-        end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    if(hamiltonian_oct_exchange(hm_p)) then
-      j = 1
-      do ik = kp1, kp2
-        do ist = st1, st2
-          jj = j
-          do idim = 1, dim
-            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
-            j = j + np
-          end do
-          opzpsi = M_z0
-          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
-
-          do idim = 1, dim
-            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-            yim(jj:jj+np-1) = yim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-            jj = jj + np
-          end do
-        end do
-      end do
-    end if
-
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(opzpsi)
-    PUSH_SUB(td_rk2op)
-  end subroutine td_rk2op
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  !> operator for the RK2 propagator
-  subroutine td_rk2opt(xre, xim, yre, yim)
-    FLOAT, intent(in)  :: xre(:)
-    FLOAT, intent(in)  :: xim(:)
-    FLOAT, intent(out) :: yre(:)
-    FLOAT, intent(out) :: yim(:)
-
-    integer :: np_part, np, st1, st2, kp1, kp2, dim, idim, ik, ist, jj, j
-    CMPLX, allocatable :: zpsi(:, :)
-    CMPLX, allocatable :: opzpsi(:, :)
-    CMPLX, allocatable :: zpsi_(:, :, :, :)
-
-    PUSH_SUB(td_rk2opt)
-
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
-    st1 = st_p%st_start
-    st2 = st_p%st_end
-    kp1 = st_p%d%kpt%start
-    kp2 = st_p%d%kpt%end
-    dim = st_p%d%dim
-
-    SAFE_ALLOCATE(zpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
-    SAFE_ALLOCATE(zpsi_(1:np_part, 1:dim, st1:st2, kp1:kp2))
-
-    zpsi = M_z0
-    opzpsi = M_z0
-
-    hm_p%vhxc = vhxc1_op
-    if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
-
-    if(hamiltonian_oct_exchange(hm_p)) then
-      zpsi_ = M_z0
-      j = 1
-      do ik = kp1, kp2
-        do ist = st1, st2
-          jj = j
-          do idim = 1, dim
-            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
-            j = j + np
-          end do
-        end do
-      end do
-      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
-    end if    
-
-    j = 1
-    do ik = kp1, kp2
-      do ist = st1, st2
-        jj = j
-        do idim = 1, dim
-          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
-          j = j + np
-        end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
-
-        do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-          yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-          jj = jj + np
-        end do
-      end do
-    end do
-
-    if(hamiltonian_oct_exchange(hm_p)) then
-      j = 1
-      do ik = kp1, kp2
-        do ist = st1, st2
-          jj = j
-          do idim = 1, dim
-            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
-            j = j + np
-          end do
-          opzpsi = M_z0
-          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
-
-          do idim = 1, dim
-            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-            yim(jj:jj+np-1) = yim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
-            jj = jj + np
-          end do
-        end do
-      end do
-    end if
-
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(opzpsi)
-    PUSH_SUB(td_rk2opt)
-  end subroutine td_rk2opt
-  ! ---------------------------------------------------------
-
-
+#include "propagator_rk_inc.F90"
 #include "propagator_qoct_inc.F90"
 
 end module propagator_m

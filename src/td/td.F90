@@ -676,9 +676,7 @@ contains
     integer,         intent(out) :: ierr
 
     logical :: cmplxscl
-    integer :: ii, is, err, err2
-    character(len=256) :: filename
-    CMPLX, allocatable :: zv_old(:)
+    integer :: err, err2
 
     PUSH_SUB(td_dump)
 
@@ -699,31 +697,8 @@ contains
     if (err /= 0) ierr = ierr + 1
 
     cmplxscl = st%cmplxscl%space      
-    if (cmplxscl) then
-      SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
-    end if
-
-    ! write potential from previous interactions
-    err2 = 0
-    do ii = 1, 2
-      do is = 1, st%d%nspin
-        write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
-        if (cmplxscl) then
-          zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
-        else
-          call drestart_write_mesh_function(restart, filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
-        end if
-        ! the unit is energy actually, but this only for restart, and can be kept in atomic units
-        ! for simplicity
-        if (err /= 0) err2 = err2 + 1
-      end do
-    end do
+    call vksinterp_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
-
-    if (cmplxscl) then
-      SAFE_DEALLOCATE_A(zv_old)
-    end if
 
     call pes_dump(restart, td%pesv, st, err)
     if (err /= 0) ierr = ierr + 4
@@ -745,10 +720,7 @@ contains
     integer,         intent(out)   :: ierr
 
     logical :: cmplxscl
-    integer :: ii, is, err, err2
-    character(len=256) :: filename
-    CMPLX, allocatable :: zv_old(:)
-
+    integer :: err, err2
     PUSH_SUB(td_load)
 
     ierr = 0
@@ -775,30 +747,9 @@ contains
 
     ! read potential from previous interactions
     cmplxscl = st%cmplxscl%space
+    call vksinterp_load(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
 
-    if (cmplxscl) then
-      SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
-    end if
-
-    err2 = 0
-    do ii = 1, 2
-      do is = 1, st%d%nspin
-        write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
-        if(cmplxscl) then
-          call zrestart_read_mesh_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), ierr)
-          td%tr%v_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
-          td%tr%Imv_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
-        else
-          call drestart_read_mesh_function(restart, trim(filename), gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), err)
-        end if
-        if (err /= 0) err2 = err2 + 1
-      end do
-    end do
     if (err2 /= 0) ierr = ierr + 2
-
-    if (cmplxscl) then
-      SAFE_DEALLOCATE_A(zv_old)
-    end if
 
     ! read PES restart
     if (td%pesv%calc_rc .or. td%pesv%calc_mask) then

@@ -31,7 +31,8 @@ noinst_HEADERS = \
 	pes_mask_out_inc.F90         \
 	td_init_inc.F90              \
 	propagator_qoct_inc.F90      \
-	propagator_rk_inc.F90
+	propagator_rk_inc.F90        \
+	propagator_vksold_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -43,7 +44,7 @@ pes_rc.o : pes_rc.F90
 pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90 tdpsf.o
 tdpsf.o: tdpsf.F90
 spectrum.o: spectrum.F90
-propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90 propagator_rk_inc.F90
+propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90 propagator_rk_inc.F90 propagator_vksold_inc.F90
 ob_propagator.o: ob_propagator.F90 ob_mem.o ob_src.o ob_terms.o
 ob_mem.o: ob_mem.F90 ob_terms.o
 ob_src.o: ob_src.F90 ob_mem.o ob_terms.o
