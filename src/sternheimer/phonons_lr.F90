@@ -165,9 +165,9 @@ contains
 
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
-        call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
-        call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
-        call restart_cd(kdotp_restart)
+        call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
+        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
           message(1) = "Unable to read kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
@@ -239,13 +239,13 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call restart_cd(restart_load, dirname=wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
-        call states_load(restart_load, st, gr, ierr, lr = lr(1))
+        call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
+        if (ierr == 0) call states_load(restart_load, st, gr, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_fatal(1)
         end if
-        call restart_cd(restart_load)
+        call restart_close_dir(restart_load)
       end if
       
       call pert_setup_atom(ionic_pert, iatom)

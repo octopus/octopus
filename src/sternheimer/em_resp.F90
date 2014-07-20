@@ -186,9 +186,9 @@ contains
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
-        call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
-        call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
-        call restart_cd(kdotp_restart)
+        call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
+        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'"

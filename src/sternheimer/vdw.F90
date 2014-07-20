@@ -242,13 +242,13 @@ contains
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
-          call restart_cd(restart_load, dirname=dirname)
-          call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))
-          
+          call restart_open_dir(restart_load, dirname, ierr)
+          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
           end if
+          call restart_close_dir(restart_load)
         end do
 
         call restart_end(restart_load)

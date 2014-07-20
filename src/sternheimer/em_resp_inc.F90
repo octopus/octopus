@@ -46,9 +46,9 @@ subroutine X(run_sternheimer)()
             sigma_alt = swap_sigma(sigma)
           
           str_tmp = em_wfs_tag(idir, ifactor)
-          call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, sigma))
-          call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-          call restart_cd(restart_load)
+          call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
+          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+          call restart_close_dir(restart_load)
 
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
@@ -59,10 +59,10 @@ subroutine X(run_sternheimer)()
           if(em_vars%calc_hyperpol .and. use_kdotp) then
             do idir2 = 1, gr%sb%periodic_dim
               str_tmp = em_wfs_tag(idir, ifactor, idir2)              
-              call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, sigma))
-              call states_load(restart_load, sys%st, sys%gr, ierr, &
+              call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
+              if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, &
                 lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
-              call restart_cd(restart_load)
+              call restart_close_dir(restart_load)
               
               if(ierr /= 0) then
                 message(1) = "Unable to read second-order response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
@@ -164,9 +164,9 @@ subroutine X(run_sternheimer)()
       ! load wavefunctions
       str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
       ! 1 is the sigma index which is used in em_resp
-      call restart_cd(kdotp_restart, dirname=wfs_tag_sigma(str_tmp, 1))
-      call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
-      call restart_cd(kdotp_restart)
+      call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
+      if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
+      call restart_close_dir(kdotp_restart)
       if(ierr /= 0) then
         message(1) = "Unable to read second-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
         message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."

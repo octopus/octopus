@@ -1040,13 +1040,13 @@ contains
      if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
        write(dirname,'(a, i4.4)') trim(prop%dirname), j
-       call restart_cd(prop%restart_load, dirname=dirname)
-       call states_load(prop%restart_load, stored_st, gr, ierr, verbose=.false.)
+       call restart_open_dir(prop%restart_load, dirname, ierr)
+       if (ierr == 0) call states_load(prop%restart_load, stored_st, gr, ierr, verbose=.false.)
        if (ierr /= 0) then
          message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
          call messages_fatal(1)
        end if
-       call restart_cd(prop%restart_load)
+       call restart_close_dir(prop%restart_load)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
@@ -1096,16 +1096,14 @@ contains
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j)  ==  iter) then
         write(dirname,'(a,i4.4)') trim(prop%dirname), j
-        call restart_cd(prop%restart_dump, dirname=dirname)
-        call states_dump(prop%restart_dump, psi, gr, err, iter)
-
+        call restart_open_dir(prop%restart_dump, dirname, err)
+        if (err == 0) call states_dump(prop%restart_dump, psi, gr, err, iter)
         if (err /= 0) then
           message(1) = "Unable to write wavefunctions to '"//trim(dirname)//"'."
           call messages_warning(1)
           ierr = ierr + 2**j
         end if
-
-        call restart_cd(prop%restart_dump)
+        call restart_close_dir(prop%restart_dump)
       end if
     end do
 
@@ -1148,14 +1146,14 @@ contains
     do j = 1, prop%number_checkpoints + 2
       if (prop%iter(j)  ==  iter) then
         write(dirname,'(a, i4.4)') trim(prop%dirname), j
-        call restart_cd(prop%restart_load, dirname=dirname)
-        call states_load(prop%restart_load, psi, gr, err, verbose=.false.)
+        call restart_open_dir(prop%restart_load, dirname, err)
+        if (err == 0) call states_load(prop%restart_load, psi, gr, err, verbose=.false.)
         if (err /= 0) then
           message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
           call messages_warning(1)
           ierr = ierr + 2**j
         end if
-        call restart_cd(prop%restart_load)
+        call restart_close_dir(prop%restart_load)
       end if
     end do
 

@@ -260,11 +260,11 @@ contains
         fromScratch_local = fromScratch
 
         if(.not. fromScratch) then
-          call restart_cd(restart_load, dirname=trim(dir_name))
-          call states_load(restart_load, sys%st, sys%gr, ierr)
+          call restart_open_dir(restart_load, trim(dir_name), ierr)
+          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
-          call restart_cd(restart_load)
+          call restart_close_dir(restart_load)
         endif
 
         if(fromScratch_local) then
@@ -297,9 +297,9 @@ contains
         call output_cycle_()
 
         if(write_restart_densities) then
-          call restart_cd(restart_dump, dirname=trim(dir_name))
-          call states_dump(restart_dump, sys%st, sys%gr, ierr)
-          call restart_cd(restart_dump)
+          call restart_open_dir(restart_dump, trim(dir_name), ierr)
+          if (ierr == 0) call states_dump(restart_dump, sys%st, sys%gr, ierr)
+          call restart_close_dir(restart_dump)
           if(ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
@@ -340,11 +340,11 @@ contains
       fromScratch_local = fromScratch
 
       if(.not. fromScratch) then
-        call restart_cd(restart_load, dirname="field_yz+")
-        call states_load(restart_load, sys%st, sys%gr, ierr)
+        call restart_open_dir(restart_load, "field_yz+", ierr)
+        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
-        call restart_cd(restart_load)
+        call restart_close_dir(restart_load)
       endif
 
       if(fromScratch_local) then
@@ -385,9 +385,9 @@ contains
       call restart_close(restart_dump, iunit)
 
       if(write_restart_densities) then
-        call restart_cd(restart_dump, dirname="field_yz+")
-        call states_dump(restart_dump, sys%st, sys%gr, ierr)
-        call restart_cd(restart_dump)
+        call restart_open_dir(restart_dump, "field_yz+", ierr)
+        if (ierr == 0) call states_dump(restart_dump, sys%st, sys%gr, ierr)
+        call restart_close_dir(restart_dump)
         if(ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)

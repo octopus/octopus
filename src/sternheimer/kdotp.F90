@@ -197,9 +197,9 @@ contains
       ! load wavefunctions
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
-        call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, 1))
-        call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
-        call restart_cd(restart_load)
+        call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
+        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
@@ -209,9 +209,9 @@ contains
         if(calc_2nd_order) then
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
-            call restart_cd(restart_load, dirname=wfs_tag_sigma(str_tmp, 1))
-            call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
-            call restart_cd(restart_load)
+            call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
+            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            call restart_close_dir(restart_load)
           
             if(ierr /= 0) then
               message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."

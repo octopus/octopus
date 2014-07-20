@@ -48,7 +48,8 @@ module restart_m
     restart_init,                 &
     restart_end,                  &
     restart_dir,                  &
-    restart_cd,                   &
+    restart_open_dir,             &
+    restart_close_dir,            &
     restart_mkdir,                &
     restart_rm,                   &
     restart_open,                 &
@@ -647,41 +648,55 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> If "dirname" is present, change the restart directory to
-  !! dirname, where "dirname" is a subdirectory of the base
-  !! restart directory. If "dirname" is not present, change back
-  !! to the base directory.
-  subroutine restart_cd(restart, dirname)
-    type(restart_t),            intent(inout) :: restart
-    character(len=*), optional, intent(in)    :: dirname
+  !> Change the restart directory to dirname, where "dirname" 
+  !! is a subdirectory of the base restart directory.
+  subroutine restart_open_dir(restart, dirname, ierr)
+    type(restart_t),  intent(inout) :: restart
+    character(len=*), intent(in)    :: dirname
+    integer,          intent(out)   :: ierr
 
-    PUSH_SUB(restart_cd)
+    PUSH_SUB(restart_open_dir)
 
     ASSERT(.not. restart%skip)
 
-    if (present(dirname)) then
-      select case (restart%type)
-      case (RESTART_TYPE_DUMP)
-        call restart_mkdir(restart, dirname)
-      case (RESTART_TYPE_LOAD)
-        if (.not. loct_dir_exists(trim(restart%dir)//"/"//trim(dirname))) then
-          message(1) = "Could not open restart directory '"//trim(restart%dir)//"/"//trim(dirname)//"'."
-          call messages_fatal(1)
-        end if
-      end select
+    ierr = 0
 
+    select case (restart%type)
+    case (RESTART_TYPE_DUMP)
+      call restart_mkdir(restart, dirname)
+    case (RESTART_TYPE_LOAD)
+      if (.not. loct_dir_exists(trim(restart%dir)//"/"//trim(dirname))) then
+        ierr = 1
+        message(1) = "Could not open restart directory '"//trim(restart%dir)//"/"//trim(dirname)//"'."
+        call messages_warning(1)
+      end if
+    end select
+
+    if (ierr == 0) then
       if (index(dirname, '/', .true.) == len_trim(dirname)) then
         restart%pwd = trim(restart%dir)//"/"//dirname(1:len_trim(dirname)-1)
       else
         restart%pwd = trim(restart%dir)//"/"//trim(dirname)
       end if
-
-    else
-      restart%pwd = restart%dir
     end if
 
-    POP_SUB(restart_cd)
-  end subroutine restart_cd
+    POP_SUB(restart_open_dir)
+  end subroutine restart_open_dir
+
+
+  ! ---------------------------------------------------------
+  !> Change back to the base directory. To be called after restart_open_dir.
+  subroutine restart_close_dir(restart)
+    type(restart_t),  intent(inout) :: restart
+
+    PUSH_SUB(restart_close_dir)
+
+    ASSERT(.not. restart%skip)
+
+    restart%pwd = restart%dir
+
+    POP_SUB(restart_close_dir)
+  end subroutine restart_close_dir
 
 
   ! ---------------------------------------------------------
