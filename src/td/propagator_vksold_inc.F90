@@ -23,7 +23,7 @@
     PUSH_SUB(vksinterp_nullify)
     this%v_old => null()
     this%imv_old => null()
-    POP_SUB(vkinterp_nullify)
+    POP_SUB(vksinterp_nullify)
   end subroutine vksinterp_nullify
   ! ---------------------------------------------------------
 
@@ -36,7 +36,7 @@
     call loct_pointer_copy(vkso%v_old, vksi%v_old)
     call loct_pointer_copy(vkso%Imv_old, vksi%Imv_old)
 
-    POP_SUB(vkinterp_copy)
+    POP_SUB(vksinterp_copy)
   end subroutine vksinterp_copy
   ! ---------------------------------------------------------
 
@@ -45,7 +45,7 @@
     type(vksinterp_t), intent(inout) :: vksinterp
     logical, intent(in) :: cmplxscl
     integer, intent(in) :: np, nspin
-    PUSH_SUB(vkinterp_init)
+    PUSH_SUB(vksinterp_init)
 
     SAFE_ALLOCATE(vksinterp%v_old(1:np, 1:nspin, 0:3))
     vksinterp%v_old(:, :, :) = M_ZERO
@@ -54,20 +54,20 @@
       vksinterp%Imv_old(:, :, :) = M_ZERO
     end if
 
-    POP_SUB(vkinterp_init)
+    POP_SUB(vksinterp_init)
   end subroutine vksinterp_init
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine vksinterp_end(vksinterp)
     type(vksinterp_t), intent(inout) :: vksinterp
-    PUSH_SUB(vkinterp_end)
+    PUSH_SUB(vksinterp_end)
 
     ASSERT(associated(vksinterp%v_old)) 
     SAFE_DEALLOCATE_P(vksinterp%v_old)
     SAFE_DEALLOCATE_P(vksinterp%Imv_old) 
 
-    POP_SUB(vkinterp_end)
+    POP_SUB(vksinterp_end)
   end subroutine vksinterp_end
   ! ---------------------------------------------------------
 
@@ -79,7 +79,7 @@
     FLOAT,   intent(in) :: vhxc(:, :), imvhxc(:, :)
 
     integer :: i, ispin, ip
-    PUSH_SUB(vkinterp_run_zero_iter)
+    PUSH_SUB(vksinterp_run_zero_iter)
 
     forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
       vksinterp%v_old(ip, ispin, i) = vhxc(ip, ispin)
@@ -90,7 +90,7 @@
       end forall
     end if
 
-    POP_SUB(vkinterp_run_zero_iter)
+    POP_SUB(vksinterp_run_zero_iter)
   end subroutine vksinterp_run_zero_iter
   ! ---------------------------------------------------------
 
@@ -117,7 +117,7 @@
           vksinterp%imv_old(:, :, 1:3), time, vksinterp%imv_old(:, :, 0))
       end if
 
-    POP_SUB(vksinter_new)
+    POP_SUB(vksinterp_new)
   end subroutine vksinterp_new
   ! ---------------------------------------------------------
 
@@ -137,7 +137,7 @@
     end if
 
 
-    POP_SUB(vksinter_set)
+    POP_SUB(vksinterp_set)
   end subroutine vksinterp_set
   ! ---------------------------------------------------------
 
@@ -156,7 +156,7 @@
       call lalg_copy(np, nspin, vksinterp%imv_old(:, :, i), imvhxc)
     end if
 
-    POP_SUB(vksinter_set)
+    POP_SUB(vksinterp_set)
   end subroutine vksinterp_get
   ! ---------------------------------------------------------
 
@@ -185,7 +185,7 @@
     end do
 
     SAFE_DEALLOCATE_A(dtmp)
-    POP_SUB(vksinter_diff)
+    POP_SUB(vksinterp_diff)
   end subroutine vksinterp_diff
   ! ---------------------------------------------------------
 
@@ -214,7 +214,7 @@
        ASSERT(.false.)
     end select
 
-    POP_SUB(vksinter_interpolate)
+    POP_SUB(vksinterp_interpolate)
   end subroutine vksinterp_interpolate
   ! ---------------------------------------------------------
 
