@@ -94,6 +94,7 @@ module td_m
     logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
 
     type(pes_t)          :: pesv
+    type(gauge_force_t)  :: gauge_force
 
     FLOAT                :: mu
     integer              :: dynamics
@@ -126,7 +127,6 @@ contains
     logical                   :: stopping, cmplxscl
     integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
-    type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
     type(restart_t)           :: restart_load, restart_dump
 
@@ -155,6 +155,9 @@ contains
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
     end if
 
+    ! Calculate initial value of the gauge vector field
+    call gauge_field_init(hm%ep%gfield, gr%sb)
+
     call init_wfs()
 
     if(td%iter >= td%max_iter) then
@@ -175,26 +178,12 @@ contains
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     end if
 
-    ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, gr%sb)
-
-    if (gauge_field_is_applied(hm%ep%gfield)) then
-
-      if(td%iter > 0) then
-        call td_read_gauge_field()
-      else
-        call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-      end if
-
-      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
-
-      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-    end if
-
     call td_write_init(write_handler, gr, st, hm, geo, &
          ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
 
     if(td%iter == 0) call td_run_zero_iter()
+
+    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, td%gauge_force)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
@@ -242,10 +231,10 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, td%ions, geo, &
-          gauge_force = gauge_force, scsteps = scsteps, &
+          gauge_force = td%gauge_force, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
+        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, td%gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Photoelectron stuff 
@@ -324,7 +313,7 @@ contains
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_dump(restart_dump, gr, st, td, iter, ierr)
+        call td_dump(restart_dump, gr, st, hm, td, iter, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write time-dependent restart information."
           call messages_warning(1)
@@ -377,7 +366,7 @@ contains
 
       if (.not. fromscratch) then
         call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, sb=gr%sb)
-        call td_load(restart, gr, st, td, ierr)
+        call td_load(restart, gr, st, hm, td, ierr)
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
@@ -559,6 +548,11 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
+      if (gauge_field_is_applied(hm%ep%gfield)) then
+        call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
+        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+      end if
+
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
@@ -620,60 +614,18 @@ contains
       POP_SUB(td_run.td_read_coordinates)
     end subroutine td_read_coordinates
 
-    ! ---------------------------------------------------------
-    subroutine td_read_gauge_field()
-
-      integer :: iter, iunit
-      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
-
-      PUSH_SUB(td_run.td_read_gauge_field)
-
-      call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/gauge_field'), &
-        action='read', status='old')
-      if(iunit < 0) then
-        message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
-        message(2) = "Starting simulation from initial values."
-        call messages_warning(2)
-        POP_SUB(td_run.td_read_gauge_field)
-        return
-      end if
-
-      call io_skip_header(iunit)
-      do iter = 0, td%iter - 1
-        read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
-      end do
-      read(iunit, '(28x)', advance='no') ! skip the time index.
-
-      vecpot = M_ZERO
-      vecpot_vel = M_ZERO
-
-      read(iunit, '(3es20.12)', advance='no') vecpot(1:gr%mesh%sb%dim)
-      vecpot(1:gr%mesh%sb%dim) = units_to_atomic(units_inp%energy, vecpot(1:gr%mesh%sb%dim))
-      ! A ~ B * length ~ E * length ~ force * length ~ energy (all for e = 1)
-      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:gr%mesh%sb%dim)
-      vecpot_vel(1:gr%mesh%sb%dim) = units_to_atomic(units_inp%energy / units_inp%time, vecpot_vel(1:gr%mesh%sb%dim))
-      read(iunit, '(3es20.12)', advance='no') dummy(1:gr%mesh%sb%dim) ! skip the accel field.
-
-      call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
-      call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh, time = td%iter*td%dt)
-
-      call io_close(iunit)
-      POP_SUB(td_run.td_read_gauge_field)
-    end subroutine td_read_gauge_field
-
   end subroutine td_run
 
 
   ! ---------------------------------------------------------
-  subroutine td_dump(restart, gr, st, td, iter, ierr)
-    type(restart_t), intent(in)  :: restart
-    type(grid_t),    intent(in)  :: gr
-    type(states_t),  intent(in)  :: st
-    type(td_t),      intent(in)  :: td
-    integer,         intent(in)  :: iter
-    integer,         intent(out) :: ierr
+  subroutine td_dump(restart, gr, st, hm, td, iter, ierr)
+    type(restart_t),     intent(in)  :: restart
+    type(grid_t),        intent(in)  :: gr
+    type(states_t),      intent(in)  :: st
+    type(hamiltonian_t), intent(in)  :: hm
+    type(td_t),          intent(in)  :: td
+    integer,             intent(in)  :: iter
+    integer,             intent(out) :: ierr
 
     logical :: cmplxscl
     integer :: err, err2
@@ -703,6 +655,11 @@ contains
     call pes_dump(restart, td%pesv, st, err)
     if (err /= 0) ierr = ierr + 4
 
+    ! Gauge field restart
+    if (gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_dump(restart, hm%ep%gfield, ierr)
+    end if
+
     if (in_debug_mode) then
       message(1) = "Debug: Writing td restart done."
       call messages_info(1)
@@ -712,12 +669,13 @@ contains
   end subroutine td_dump
 
   ! ---------------------------------------------------------
-  subroutine td_load(restart, gr, st, td, ierr)
-    type(restart_t), intent(in)    :: restart
-    type(grid_t),    intent(in)    :: gr
-    type(states_t),  intent(inout) :: st
-    type(td_t),      intent(inout) :: td
-    integer,         intent(out)   :: ierr
+  subroutine td_load(restart, gr, st, hm, td, ierr)
+    type(restart_t),     intent(in)    :: restart
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: hm
+    type(td_t),          intent(inout) :: td
+    integer,             intent(out)   :: ierr
 
     logical :: cmplxscl
     integer :: err, err2
@@ -755,6 +713,16 @@ contains
     if (td%pesv%calc_rc .or. td%pesv%calc_mask) then
       call pes_load(restart, td%pesv, st, err)
       if (err /= 0) ierr = ierr + 4
+    end if
+
+    ! Gauge field restart
+    if (gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_load(restart, hm%ep%gfield, err)
+      if (err /= 0) then
+        ierr = ierr + 8
+      else
+        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+      end if
     end if
 
     if (in_debug_mode) then

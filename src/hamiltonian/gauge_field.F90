@@ -36,6 +36,7 @@ module gauge_field_m
   use profiling_m
   use projector_m
   use ps_m
+  use restart_m
   use simul_box_m
   use solids_m
   use species_m
@@ -70,6 +71,8 @@ module gauge_field_m
     gauge_field_propagate_vel,            &
     gauge_field_get_force,                &
     gauge_field_get_energy,               &
+    gauge_field_dump,                     &
+    gauge_field_load,                     &
     gauge_field_end
 
   type gauge_force_t
@@ -399,7 +402,86 @@ contains
 
     POP_SUB(gauge_field_get_energy)
   end function gauge_field_get_energy
-  
+
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_dump(restart, gfield, ierr)
+    type(restart_t),      intent(in)  :: restart
+    type(gauge_field_t),  intent(in)  :: gfield
+    integer,              intent(out) :: ierr
+
+    integer :: err
+    FLOAT :: vecpot(MAX_DIM, 2)
+    
+    PUSH_SUB(gauge_field_dump)
+
+    ierr = 0
+    
+    if (restart_skip(restart)) then
+      POP_SUB(gauge_field_save)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing gauge field restart."
+      call messages_info(1)
+    end if
+
+    vecpot = M_ZERO
+    vecpot(:,1) = gauge_field_get_vec_pot(gfield)
+    vecpot(:,2) = gauge_field_get_vec_pot_vel(gfield)
+
+    call drestart_write_binary(restart, "gauge_field", 2*MAX_DIM, vecpot, err)
+    if (err /= 0) ierr = ierr + 1
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing gauge field restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(gauge_field_dump)
+  end subroutine gauge_field_dump
+
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_load(restart, gfield, ierr)
+    type(restart_t),      intent(in)    :: restart
+    type(gauge_field_t),  intent(inout) :: gfield
+    integer,              intent(out)   :: ierr
+
+    integer :: err
+    FLOAT :: vecpot(MAX_DIM, 2)
+    
+    PUSH_SUB(gauge_field_load)
+
+    ierr = 0
+    
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(gauge_field_load)
+      return
+    end if
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading gauge field restart."
+      call messages_info(1)
+    end if
+
+    call drestart_read_binary(restart, "gauge_field", 2*MAX_DIM, vecpot, err)
+    if (err /= 0) ierr = ierr + 1
+
+    call gauge_field_set_vec_pot(gfield, vecpot(:,1))
+    call gauge_field_set_vec_pot_vel(gfield, vecpot(:,2))
+
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading gauge field restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(gauge_field_load)
+  end subroutine gauge_field_load
+
+
 end module gauge_field_m
 
 !! Local Variables:

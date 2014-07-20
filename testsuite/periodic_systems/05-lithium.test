@@ -92,7 +92,7 @@ match ; Eigenvalue      [ k = 64 ] ; GREP(static/info, '#k =  64', 12,  1) ;  0.
 
 Input      : 05-lithium.02-td.inp
 
-match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.543774675224e-01
+match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.491972763843e-01
 match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.491962738618e-01
 match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.491979907577e-01
 match ; Energy           [step 15] ; LINE(td.general/energy,  -6, 30) ; -5.491996720732e-01
