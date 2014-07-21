@@ -407,7 +407,7 @@ contains
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi2)
+      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, sys%geo, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       if(aux_fwd_propagation) then
@@ -514,7 +514,7 @@ contains
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, qcchi, psi)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
@@ -661,7 +661,7 @@ contains
 
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, qcchi, st_ref, qinitial, qtildehalf)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qinitial, qtildehalf)
       freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       if(freeze) call ion_dynamics_unfreeze(td%ions)
@@ -719,7 +719,7 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, qcchi, st, qinitial, qtildehalf)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, st, qinitial, qtildehalf)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -728,7 +728,6 @@ contains
     type(target_t), intent(inout)              :: tg
     type(controlfunction_t), intent(in)        :: par_chi
     type(geometry_t), intent(in)               :: geo
-    type(opt_control_state_t) :: qcchi
     type(states_t), intent(inout)              :: st
     FLOAT, intent(in), optional                :: qinitial(:, :)
     FLOAT, intent(in), optional                :: qtildehalf(:, :)
