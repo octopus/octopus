@@ -243,7 +243,7 @@ contains
         if (ierr == 0) call states_load(restart_load, st, gr, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
-          call messages_fatal(1)
+          call messages_warning(1)
         end if
         call restart_close_dir(restart_load)
       end if

@@ -667,8 +667,6 @@ contains
     case (RESTART_TYPE_LOAD)
       if (.not. loct_dir_exists(trim(restart%dir)//"/"//trim(dirname))) then
         ierr = 1
-        message(1) = "Could not open restart directory '"//trim(restart%dir)//"/"//trim(dirname)//"'."
-        call messages_warning(1)
       end if
     end select
 
