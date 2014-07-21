@@ -418,7 +418,7 @@ contains
     ierr = 0
     
     if (restart_skip(restart)) then
-      POP_SUB(gauge_field_save)
+      POP_SUB(gauge_field_dump)
       return
     end if
 
