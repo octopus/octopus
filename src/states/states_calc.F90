@@ -108,38 +108,6 @@ module states_calc_m
 
 contains
 
-  !> ---------------------------------------------------------
-  !! This routine transforms the orbitals of state "st", according
-  !! to the transformation matrix "uu".
-  !!
-  !! Each row of u contains the coefficients of the new orbitals
-  !! in terms of the old ones.
-  !! ---------------------------------------------------------
-  subroutine states_rotate(mesh, st, stin, uu)
-    type(mesh_t),      intent(in)    :: mesh
-    type(states_t),    intent(inout) :: st
-    type(states_t),    intent(in)    :: stin
-    CMPLX,             intent(in)    :: uu(:, :)
-
-    integer :: ik
-
-    PUSH_SUB(states_rotate)
-
-    if(states_are_real(st)) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
-          transpose(real(uu(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
-      end do
-    else
-      do ik = st%d%kpt%start, st%d%kpt%end
-        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_z1, stin%zpsi(:, :, 1:stin%nst, ik), &
-          transpose(uu(:, :)), M_z0, st%zpsi(:, :, :, ik))
-      end do
-    end if
-
-    POP_SUB(states_rotate)
-  end subroutine states_rotate
-
   ! ---------------------------------------------------------
 
   subroutine states_orthogonalize(st, mesh)
