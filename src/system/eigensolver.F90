@@ -563,7 +563,7 @@ contains
 
     if(st%d%nspin == 2) ns = 2
 
-    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not. in_debug_mode) then
       call loct_progress_bar(-1, st%nst*st%d%nik)
     end if
 
@@ -677,7 +677,7 @@ contains
       call cmplxscl_choose_state_order(eigens, st, gr)
     end if
 
-    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not. in_debug_mode) then
       write(stdout, '(1x)')
     end if
 

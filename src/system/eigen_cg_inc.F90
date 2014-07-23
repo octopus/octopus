@@ -216,7 +216,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       diff(ist) = res
     end if
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
       call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
     end if
 
@@ -396,7 +396,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
     st%eigenval(ist, ik) = lambda
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
       call loct_progress_bar(st%nst*(ik - 1) + ist, st%nst*st%d%nik)
     end if
 

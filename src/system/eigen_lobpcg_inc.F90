@@ -56,7 +56,7 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
   
   iblock = 0
   
-  if(mpi_grp_is_root(mpi_world)) then
+  if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
     call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
   end if
   
@@ -87,7 +87,7 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
     niter     = niter + n_matvec
     converged = converged + conv  
     
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
       call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
     end if
   end do
@@ -138,7 +138,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   FLOAT,                  intent(inout) :: diff(:) !< (1:st%nst)
   R_TYPE, optional,       intent(in)    :: constr(:, :, constr_start:) !< (gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
-  integer :: nps   !< Number of points per state.
   integer :: nst   !< Number of eigenstates (i.e. the blocksize).
   integer :: lnst  !< Number of local eigenstates.
 
@@ -186,9 +185,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   ! The results with explicit Gram diagonal blocks were not better, so it is switched off.
   explicit_gram = .false.
-
-  ! Abbreviations.
-  nps = gr%mesh%np_part*st%d%dim
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
