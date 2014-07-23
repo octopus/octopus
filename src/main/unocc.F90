@@ -65,6 +65,7 @@ contains
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=50) :: str
+    character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
 
     PUSH_SUB(unocc_run)
@@ -248,6 +249,11 @@ contains
           message(1) = "Unable to write states wavefunctions."
           call messages_warning(1)
         end if
+      end if
+
+      if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0) then
+        write(dirname,'(a,i4.4)') "unocc.",iter
+        call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
       end if
 
       if(converged .or. forced_finish) exit
