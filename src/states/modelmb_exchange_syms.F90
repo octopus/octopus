@@ -37,7 +37,6 @@ module modelmb_exchange_syms_m
   use messages_m
   use modelmb_particles_m
   use modelmb_density_matrix_m
-  use modelmb_1part_m
   use mpi_m
   use mpi_lib_m
   use parser_m

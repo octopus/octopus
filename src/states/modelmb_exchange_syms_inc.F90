@@ -38,7 +38,6 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
   integer :: nspindown, nspinup
   integer :: idiagram_combo
 
-  type(modelmb_1part_t) :: mb_1part
   type(young_t) :: young
 
   integer, allocatable :: dg_combo_iy(:,:)
@@ -60,8 +59,6 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
   symmetries_satisfied = .false.
 
   call young_nullify (young)
-
-  call modelmb_1part_nullify(mb_1part)
 
   SAFE_ALLOCATE(sym_ok_alltypes(1:modelmbparticles%ntype_of_particle))
 
@@ -173,7 +170,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
   integer :: nspinup
 
   type(permutations_t) :: perms_up, perms_down
-  type(modelmb_1part_t) :: mb_1part
   type(young_t) :: young
 
   type(batch_t) :: antisymwfbatch
@@ -191,15 +187,13 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
   call permutations_nullify(perms_down)
   call young_nullify (young)
 
-  call modelmb_1part_nullify(mb_1part)
-
   sym_ok_alltypes = 0
 
   ndimmb=modelmbparticles%ndim
 
   normalizer = product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
 
-  ! this is in case _none_ of the particles is symetrized,
+  ! this is in case _none_ of the particles is symmetrized,
   !   then the whole itype loop is skipped
   norm = M_ONE
 
@@ -219,11 +213,9 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
     ! FIXME: boson case is not treated yet
     if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then ! 1 = fermion
       sym_ok_alltypes(itype) = 1
+      POP_SUB(X(modelmb_sym_state_1diag))
       return 
     end if
-
-    call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
-           modelmbparticles%ndim, gr%sb%box_offset)
 
     npptype = modelmbparticles%nparticles_per_type(itype)
 
@@ -271,7 +263,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
     call young_end (young)
 
     SAFE_DEALLOCATE_A(ofst)
-    call modelmb_1part_end(mb_1part)
 
     write (tmpstring, '(3x,I4,1x,I4)') nspindown_in(itype), iyoung_in(itype)
     youngstring = trim(youngstring) // trim(tmpstring)
@@ -293,7 +284,7 @@ end subroutine X(modelmb_sym_state_1diag)
 ! ---------------------------------------------------------
 
 
-!> input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagrams
+!> input 1 wave function, and symmetrize wrt spin down labeled particles, according to the given young diagrams
 subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
            ofst, ndown, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
   integer, intent(in) :: ndimmb
@@ -304,11 +295,9 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
   integer, intent(in) :: p_of_type_up(ndown)
   integer, intent(in) :: p_of_type_down(ndown)
   type(grid_t), intent(in) :: gr
-
   FLOAT, intent(in) :: normalizer
   R_TYPE, intent(inout) :: antisymwf(:,:,:)
 
-  !local vars
   integer :: idown, ipart1, ipart2, ip, ipp
   integer, allocatable :: ix(:), ixp(:)
   integer, allocatable :: forward_map_exchange(:)
@@ -399,7 +388,6 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   type(permutations_t), intent(in) :: perms_1spin
   R_TYPE, intent(inout) :: antisymwf(:,:,:)
 
-  !local vars
   integer :: iperm_1spin, i1spin
   integer :: ipart1, ipart2, ip
   R_TYPE :: wfdotp(1,1)
