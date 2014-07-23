@@ -35,7 +35,7 @@
     
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
         (.not.hamiltonian_oct_exchange(hm)) ) then
-      call vksinterp_interpolate(tr%vksold, 2, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, t, dt, t-dt/M_TWO)
+      call vksinterp_interpolate(tr%vksold, 2, .false., gr%mesh%np, st%d%nspin, t, dt, t-dt/M_TWO, hm%vhxc)
     end if
 
     !move the ions to time 'time - dt/2'

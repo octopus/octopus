@@ -544,7 +544,11 @@ contains
     integer :: ip, ispin, idim
     PUSH_SUB(propagator_run_zero_iter)
 
-    call vksinterp_run_zero_iter(tr%vksold, hm%cmplxscl%space, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
+    if(hm%cmplxscl%space) then
+      call vksinterp_run_zero_iter(tr%vksold, hm%cmplxscl%space, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
+    else
+      call vksinterp_run_zero_iter(tr%vksold, hm%cmplxscl%space, gr%mesh%np, hm%d%nspin, hm%vhxc)   
+    end if
 
     POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter
@@ -608,9 +612,17 @@ contains
     if(.not. propagator_requires_vks(tr)) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
       if(cmplxscl) SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-      call vksinterp_get(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, vold, imvold, 1)
+      if(cmplxscl) then
+        call vksinterp_get(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, 1, vold, imvold)
+      else
+        call vksinterp_get(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, 1, vold)
+      end if
     else
-      call vksinterp_new(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt)
+      if(cmplxscl) then
+        call vksinterp_new(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
+      else
+        call vksinterp_new(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
+      end if
     end if
 
     select case(tr%method)
@@ -655,7 +667,7 @@ contains
               call states_set_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
             end do
           end do
-          call vksinterp_set(tr%vksold, .false. , gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, 0)
+          call vksinterp_set(tr%vksold, .false. , gr%mesh%np, st%d%nspin, 0, hm%vhxc)
           vaux(:, :) = hm%vhxc(:, :)
 
           select case(tr%method)
@@ -876,7 +888,7 @@ contains
       if(tr%method == PROP_CAETRS) then
         call v_ks_calc_finish(ks, hm)
 
-        call vksinterp_new(tr%vksold, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt)
+        call vksinterp_new(tr%vksold, .false., gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
 
         forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
           vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
@@ -896,7 +908,7 @@ contains
 
       end if
 
-      call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, 0)
+      call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, 0, hm%vhxc)
 
       ! move the ions to time t
       if(ion_dynamics_ions_move(ions)) then
@@ -990,8 +1002,13 @@ contains
         
         !FIXME: not adapted yet
         if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
-            gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time - dt/M_TWO)
+          if(hm%cmplxscl%space) then
+            call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+              gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
+          else
+            call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+              gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc)
+          end if
         end if
 
         !FIXME: not implemented yet
@@ -1024,8 +1041,13 @@ contains
       else
 
         if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
-            gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time - dt/M_TWO)
+          if(hm%cmplxscl%space) then
+            call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+              gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
+          else
+            call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
+              gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc)
+          end if
         end if
 
         !move the ions to time 'time - dt/2'
@@ -1063,7 +1085,7 @@ contains
           ! probably need some rethinking 
           if(hm%theory_level /= INDEPENDENT_PARTICLES) then
              call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
-               hm%vhxc, hm%imvhxc, time, dt, time+dt/M_TWO)
+               time, dt, time+dt/M_TWO, hm%vhxc, hm%imvhxc)
           end if
         
           call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
@@ -1162,8 +1184,13 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
       end if
 
-      call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
-        hm%vhxc, hm%imvhxc, time, dt, time -dt/M_TWO)
+      if(hm%cmplxscl%space) then
+        call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
+          time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
+      else
+        call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, gr%mesh%np, st%d%nspin, &
+          time, dt, time -dt/M_TWO, hm%vhxc)
+      end if
     
       call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
       
@@ -1223,7 +1250,7 @@ contains
         t_op  = time + dt/M_TWO
         
         call vksinterp_interpolate(tr%vksold, 3, hm%cmplxscl%space, &
-          gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, time + dt/M_TWO)
+          gr%mesh%np, st%d%nspin, time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
 
         call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
       
@@ -1309,7 +1336,7 @@ contains
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         do j = 1, 2
-          call vksinterp_interpolate(tr%vksold, 3, .false., gr%mesh%np, st%d%nspin, hm%vhxc, hm%imvhxc, time, dt, atime(j)-dt)
+          call vksinterp_interpolate(tr%vksold, 3, .false., gr%mesh%np, st%d%nspin, time, dt, atime(j)-dt, hm%vhxc)
           call hamiltonian_update(hm, gr%mesh)
         end do
       else

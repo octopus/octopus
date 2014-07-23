@@ -141,7 +141,7 @@
         call hamiltonian_update(hm, gr%mesh, time = time)
         if(.not.hamiltonian_oct_exchange(hm_p)) then
           if (i==1) then
-            call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, vhxc1_op, vhxc1_op, 0)
+            call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, 0, vhxc1_op)
             i = i + 1
           else
             vhxc1_op = hm%vhxc

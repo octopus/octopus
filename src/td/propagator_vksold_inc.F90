@@ -74,9 +74,10 @@
   ! ---------------------------------------------------------
   subroutine vksinterp_run_zero_iter(vksinterp, cmplxscl, np, nspin, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
-    logical, intent(in) :: cmplxscl
-    integer, intent(in) :: np, nspin
-    FLOAT,   intent(in) :: vhxc(:, :), imvhxc(:, :)
+    logical,           intent(in)    :: cmplxscl
+    integer,           intent(in)    :: np, nspin
+    FLOAT,             intent(in)    :: vhxc(:, :)
+    FLOAT, optional,   intent(in)    :: imvhxc(:, :)
 
     integer :: i, ispin, ip
     PUSH_SUB(vksinterp_run_zero_iter)
@@ -95,12 +96,14 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_new(vksinterp, cmplxscl, np, nspin, vhxc, imvhxc, time, dt)
+  subroutine vksinterp_new(vksinterp, cmplxscl, np, nspin, time, dt, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
-    FLOAT,             intent(in)    :: vhxc(:, :), imvhxc(:, :)
     FLOAT,             intent(in)    :: time, dt
+    FLOAT,             intent(in)    :: vhxc(:, :)
+    FLOAT, optional,   intent(in)    :: imvhxc(:, :)
+
 
     PUSH_SUB(vksinterp_new)
 
@@ -122,12 +125,13 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_set(vksinterp, cmplxscl, np, nspin, vhxc, imvhxc, i)
+  subroutine vksinterp_set(vksinterp, cmplxscl, np, nspin, i, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
-    FLOAT,             intent(inout) :: vhxc(:, :), imvhxc(:, :)
     integer,           intent(in)    :: i
+    FLOAT,             intent(inout) :: vhxc(:, :)
+    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
 
     PUSH_SUB(vksinterp_set)
 
@@ -142,12 +146,13 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_get(vksinterp, cmplxscl, np, nspin, vhxc, imvhxc, i)
+  subroutine vksinterp_get(vksinterp, cmplxscl, np, nspin, i, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
-    FLOAT,             intent(inout) :: vhxc(:, :), imvhxc(:, :)
     integer,           intent(in)    :: i
+    FLOAT,             intent(inout) :: vhxc(:, :)
+    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
 
     PUSH_SUB(vksinterp_set)
 
@@ -191,13 +196,15 @@
 
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_interpolate(vksinterp, order, cmplxscl, np, nspin, vhxc, imvhxc, time, dt, t)
+  subroutine vksinterp_interpolate(vksinterp, order, cmplxscl, np, nspin, time, dt, t, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     integer,           intent(in)    :: order
     logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
-    FLOAT,             intent(inout) :: vhxc(:, :), imvhxc(:, :)
     FLOAT,             intent(in)    :: time, dt, t
+    FLOAT,             intent(inout) :: vhxc(:, :)
+    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
+
 
     PUSH_SUB(vksinterp_interpolate)
 
