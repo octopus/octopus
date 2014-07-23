@@ -125,6 +125,8 @@ contains
     POP_SUB(X(states_orthogonalization_full).cholesky_serial)
   end subroutine cholesky_serial
 
+
+  ! -----------------------------------------------------------------------------------------------
   subroutine cholesky_parallel()
 
 #ifdef HAVE_SCALAPACK
@@ -211,9 +213,10 @@ contains
     POP_SUB(X(states_orthogonalization_full).cholesky_parallel)
   end subroutine cholesky_parallel
 
-  ! -----------------------------------------------------------------------------------------------
 
+  ! -----------------------------------------------------------------------------------------------
   subroutine qr()
+
     integer :: total_np, nref, info, wsize
     R_TYPE, allocatable :: tau(:), work(:)
     R_TYPE :: tmp
@@ -348,9 +351,10 @@ contains
 
   end subroutine qr
 
-  ! ----------------------------------------------------------------------------------
 
+  ! ----------------------------------------------------------------------------------
   subroutine mgs()
+
     integer :: ist, jst, idim
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:)
@@ -368,7 +372,7 @@ contains
     ASSERT(associated(st%X(psi)))
     ! normalize the initial vectors
     do ist = 1, nst
-      bb(ist) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
+      bb(ist) = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.))
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
@@ -399,7 +403,7 @@ contains
       end do
 
       ! renormalize
-      cc = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik))
+      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik)))
       do idim = 1, st%d%dim
         call lalg_scal(mesh%np, M_ONE/sqrt(cc), st%X(psi)(:, idim, ist, ik))
       end do
@@ -670,7 +674,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   R_TYPE,  optional, intent(out)   :: overlap(:) 
   R_TYPE,  optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: Theta_Fi
-  R_TYPE,  optional, intent(in)    :: beta_ij(:)   ! beta_ij(nst)
+  R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
 
   logical :: normalize_
   integer :: ist, idim
@@ -1002,15 +1006,15 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
 #else
         call X(physics_op_L)(gr%der, psi, lpsi)
 
-        ll(ist, ik, 1) = ll(ist, ik, 1) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 1))
+        ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1)))
         if(gr%mesh%sb%dim == 3) then
-          ll(ist, ik, 2) = ll(ist, ik, 2) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 2))
-          ll(ist, ik, 3) = ll(ist, ik, 3) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 3))
+          ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2)))
+          ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3)))
         endif
 #endif
         if(present(l2)) then
           call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))
-          l2(ist, ik) = l2(ist, ik) + X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1))
+          l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1)))
         end if
       enddo
     enddo
@@ -1133,8 +1137,9 @@ subroutine X(states_calc_orth_test)(st, mesh)
 contains
 
   subroutine print_results()
+
     integer :: ist, jst
-    FLOAT :: dd
+    R_TYPE :: dd
     R_TYPE, allocatable :: psi1(:, :), psi2(:, :)
     R_TYPE, allocatable :: spsi1(:, :), spsi2(:, :)
 #ifdef HAVE_MPI
@@ -1215,6 +1220,7 @@ contains
 
     POP_SUB(X(states_calc_orth_test).print_results)
   end subroutine print_results
+
 end subroutine X(states_calc_orth_test)
 
 ! ---------------------------------------------------------
