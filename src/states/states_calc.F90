@@ -307,10 +307,10 @@ contains
   end subroutine states_sort_complex
 
   ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(sb, st, restart)
+  subroutine states_degeneracy_matrix(sb, st, dir)
     type(simul_box_t), intent(in) :: sb
     type(states_t),    intent(in) :: st
-    type(restart_t),   intent(in) :: restart !< GS_DIR
+    character(len=*),  intent(in) :: dir
 
     integer :: idir, is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
@@ -372,14 +372,14 @@ contains
           !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum
           degeneracy_matrix(is, js) = 1
           !degeneracy_matrix(is, js) = &
-          !  sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
+          !  sign(1, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
         end if
 
       end do
     end do
 
-    ! write matrix to restart directory
-    iunit = restart_open(restart, 'degeneracy_matrix')
+    ! write matrix
+    iunit = io_open(trim(dir)//'degeneracy_matrix', action='write')
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit, '(a)', advance='no') '# index  '
       do idir = 1, sb%dim
@@ -402,10 +402,10 @@ contains
         enddo
       end do
     end if
-    call restart_close(restart, iunit)
+    if(iunit > 0) call io_close(iunit)
 
-    ! write index vectors to restart directory
-    iunit = restart_open(restart, 'index_vectors')    
+    ! write index vectors
+    iunit = io_open(trim(dir)//'/index_vectors', action='write')    
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
 
@@ -413,7 +413,7 @@ contains
         write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
       end do
     end if
-    call restart_close(restart, iunit)
+    if(iunit > 0) call io_close(iunit)
 
     SAFE_DEALLOCATE_A(eigenval_sorted)
     SAFE_DEALLOCATE_A(sindex)
