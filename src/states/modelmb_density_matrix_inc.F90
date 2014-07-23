@@ -213,11 +213,6 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     call X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles, &
           gr%mesh, wf, densmatr)
 
-    ! Only node zero writes.
-    ! mjv 14/3/2009: is this still at the right place in the file? None of
-    ! this works in parallel yet...
-    if(.not. mpi_grp_is_root(mpi_world)) cycle
-
     !Diagonalize the density matrix
     bof=.true.
     SAFE_ALLOCATE(densmatr_tmp(1:mb_1part%npt, 1:mb_1part%npt))
@@ -233,75 +228,80 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     evectors = evectors/sqrt(mb_1part%vol_elem_1part)
     evalues  = evalues*mb_1part%vol_elem_1part
 
-    !Write everything into files
-    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
-    iunit = io_open(trim(filename), action='write')
+    ! Only node zero writes.
+    if(mpi_grp_is_root(mpi_world)) then
 
-    do jj = mb_1part%npt, 1, -1
-      write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
-    end do
+      !Write everything into files
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
+      iunit = io_open(trim(filename), action='write')
+
+      do jj = mb_1part%npt, 1, -1
+        write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
+      end do
         
-    call io_close(iunit)
+      call io_close(iunit)
 
-    do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
-      write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
-            ikeeppart,'_imb', mm, '_', mb_1part%npt-jj+1
-      iunit = io_open(filename, action='write')
-      do ll = 1, mb_1part%npt
+      do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
+        write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
+          ikeeppart,'_imb', mm, '_', mb_1part%npt-jj+1
+        iunit = io_open(filename, action='write')
+        do ll = 1, mb_1part%npt
+          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+            mb_1part%enlarge_1part(1), ll, ix_1part)
+          do idir=1,ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+          end do
+          write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
+          !), aimag(evectors(ll,jj)) ! format is too long for real wf case, but should be ok for most compilers
+        end do
+        call io_close(iunit)
+      end do
+      
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
+      iunit = io_open(filename,action='write')
+      do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
-             mb_1part%enlarge_1part(1), ll, ix_1part)
+          mb_1part%enlarge_1part(1), jj, ix_1part)
+        do ll = 1, mb_1part%npt
+          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+            mb_1part%enlarge_1part(1), ll, ix_1part_p)
+          do idir=1,ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+          end do
+          do idir=1,ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+          end do
+          write(iunit,'(es11.3,es11.3)') densmatr(jj,ll)
+          !), aimag(densmatr(jj,ll)) ! format is too long for real wf case, but should be ok for most compilers
+        end do
+        write(iunit,*)
+      end do
+      call io_close(iunit)
+
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
+      iunit = io_open(filename,action='write')
+      do jj = 1, mb_1part%npt
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+          mb_1part%enlarge_1part(1), jj, ix_1part)
         do idir=1,ndim1part
           write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
         end do
-        write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
-        !), aimag(evectors(ll,jj)) ! format is too long for real wf case, but should be ok for most compilers
+        write(iunit,'(es18.10)') real(densmatr(jj,jj))
       end do
-    call io_close(iunit)
-    end do
+      call io_close(iunit)
 
-    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
-    iunit = io_open(filename,action='write')
-    do jj = 1, mb_1part%npt
-      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
-           mb_1part%enlarge_1part(1), jj, ix_1part)
-      do ll = 1, mb_1part%npt
+
+      ! calculate dipole moment from density for this particle
+      dipole_moment(:) = M_ZERO
+      do jj = 1,mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
-             mb_1part%enlarge_1part(1), ll, ix_1part_p)
-        do idir=1,ndim1part
-          write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
-        end do
-        do idir=1,ndim1part
-          write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
-        end do
-        write(iunit,'(es11.3,es11.3)') densmatr(jj,ll)
-        !), aimag(densmatr(jj,ll)) ! format is too long for real wf case, but should be ok for most compilers
+          mb_1part%enlarge_1part(1), jj, ix_1part)
+        dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
+          *TOFLOAT(densmatr(jj,jj))&
+          *st%modelmbparticles%charge_particle(ikeeppart)
       end do
-      write(iunit,*)
-    end do
-    call io_close(iunit)
+    endif
 
-    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
-    iunit = io_open(filename,action='write')
-    do jj = 1, mb_1part%npt
-      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
-           mb_1part%enlarge_1part(1), jj, ix_1part)
-      do idir=1,ndim1part
-        write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
-      end do
-      write(iunit,'(es18.10)') real(densmatr(jj,jj))
-    end do
-    call io_close(iunit)
-
-
-    ! calculate dipole moment from density for this particle
-    dipole_moment(:) = M_ZERO
-    do jj = 1,mb_1part%npt
-      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
-           mb_1part%enlarge_1part(1), jj, ix_1part)
-      dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
-                    *TOFLOAT(densmatr(jj,jj))&
-                    *st%modelmbparticles%charge_particle(ikeeppart)
-    end do
     ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
     write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
     write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
