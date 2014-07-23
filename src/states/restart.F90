@@ -716,7 +716,7 @@ contains
 
 
   ! ---------------------------------------------------------  
-  !> Remove directory "dirname" that is located inside the current restart directory.
+  !> Remove directory or file "name" that is located inside the current restart directory.
   subroutine restart_rm(restart, name)
     type(restart_t),  intent(in) :: restart
     character(len=*), intent(in) :: name

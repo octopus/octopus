@@ -98,10 +98,8 @@ contains
       return
     end if
 
-    if(mc%n_node > 1) then
-      message(1) = "KS Inversion currently not available in parallel. Stopping octopus."
-      call messages_fatal(1)
-    endif
+    if(mc%n_node > 1) &
+      call messages_not_implemented("Kohn-Sham inversion in parallel")
 
     call messages_experimental("Kohn-Sham inversion")
     
@@ -133,7 +131,7 @@ contains
     !%Default ks_inversion_adiabatic
     !%Section Hamiltonian::XC
     !%Description
-    !% At what level shall <tt>Octopus</tt> handle the KS inversion
+    !% At what level <tt>Octopus</tt> shall handle the KS inversion.
     !%Option ks_inversion_none 1
     !% Do not compute KS inversion
     !%Option ks_inversion_adiabatic 2
