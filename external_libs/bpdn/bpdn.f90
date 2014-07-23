@@ -43,6 +43,20 @@ module bpdn_m
     end subroutine spgl1_projector
   end interface
 
+  interface
+     subroutine expmm(nx, ny, x, y, dx, dy, component)
+       implicit none
+       
+       integer, intent(in)  :: nx
+       integer, intent(in)  :: ny
+       real(8), intent(in)  :: x !< (1:nx)
+       real(8), intent(out) :: y !< (1:ny)
+       real(8), intent(in)  :: dx
+       real(8), intent(in)  :: dy
+       integer, intent(in)  :: component
+     end subroutine expmm
+  end interface
+
   integer, parameter ::        &
     EXIT_LINE_ERROR    =-2,    &
     EXIT_ITERATIONS    =-1,    &
