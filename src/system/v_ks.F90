@@ -691,7 +691,7 @@ contains
       logical :: cmplxscl
       FLOAT :: factor
       CMPLX :: ctmp
-      integer :: ispin, ip, ist
+      integer :: ispin
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")

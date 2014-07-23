@@ -239,7 +239,7 @@ contains
 
     type(restart_t)    :: restart
     integer            :: ierr, ii
-    character(64)      :: filename, out_name, ref_filename, folder, frmt
+    character(64)      :: filename, out_name, folder, frmt
     FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
 
     PUSH_SUB(convert_low)

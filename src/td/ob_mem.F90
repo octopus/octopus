@@ -735,7 +735,7 @@ contains
     integer,             intent(out)   :: ierr
 
     integer :: iunit, s_dim, s_np, s_op_n, s_mem_type, np, il, read_iter, err
-    FLOAT   :: s_spacing, s_delta, det
+    FLOAT   :: s_spacing, s_delta
     character(len=100) :: lines(8)
     character(len=50)    :: str
     FLOAT, allocatable :: s_vks(:)

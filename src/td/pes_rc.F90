@@ -215,8 +215,6 @@ contains
     integer,        intent(in) :: iter, save_iter
     FLOAT,          intent(in) :: dt
 
-    type(unit_t) :: units
-
     integer :: ip, iunit, ii, jj, ik, ist, idim
     CMPLX :: vfu
 
@@ -230,9 +228,7 @@ contains
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
-              vfu = pesrc%wf(ip, idim, ist, ik, ii)
-              vfu = units_from_atomic(sqrt(units_out%length**(-3)), vfu)
-              units=sqrt(units_out%length**(-3))
+              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ip, idim, ist, ik, ii))
               write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
                 real(vfu),  aimag(vfu) 
             end do
