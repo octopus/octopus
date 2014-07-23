@@ -310,7 +310,7 @@ contains
   subroutine states_degeneracy_matrix(sb, st, restart)
     type(simul_box_t), intent(in) :: sb
     type(states_t),    intent(in) :: st
-    type(restart_t),   intent(in) :: restart ! GS_DIR
+    type(restart_t),   intent(in) :: restart !< GS_DIR
 
     integer :: idir, is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
@@ -370,7 +370,7 @@ contains
           ! mark forward scattering states with +1 and backward scattering
           ! states with -1
           !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum
-          degeneracy_matrix(is, js) = M_ONE
+          degeneracy_matrix(is, js) = 1
           !degeneracy_matrix(is, js) = &
           !  sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
         end if

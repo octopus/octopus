@@ -54,7 +54,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   R_TYPE, allocatable :: ss(:, :)
   type(profile_t), save :: prof
-  integer :: nst, ierr
+  integer :: nst
 
 #ifdef HAVE_SCALAPACK
 !pgi$r opt=0
