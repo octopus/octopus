@@ -277,12 +277,12 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   ! Apply the constraints to the initial vectors.
   if(nconstr > 0) then
-    call X(lobpcg_apply_constraints)(st_start, st_end, psi, nuc, uc)
+    call X(lobpcg_apply_constraints)(st_start, psi, nuc, uc)
   end if
 
   ! Orthonormalize initial vectors.
   no_bof = .false.
-  call X(lobpcg_orth)(st_start, st_end, psi, no_bof)
+  call X(lobpcg_orth)(st_start, psi, no_bof)
 
   if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
@@ -356,12 +356,12 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
     ! Apply the constraints to the residuals.
     if(nconstr > 0) then
-      call X(lobpcg_apply_constraints)(st_start, st_end, res, nuc, uc)
+      call X(lobpcg_apply_constraints)(st_start, res, nuc, uc)
     end if
 
     ! Orthonormalize residuals.
     no_bof = .false.
-    call X(lobpcg_orth)(st_start, st_end, res, no_bof)
+    call X(lobpcg_orth)(st_start, res, no_bof)
     ! FIXME: a proper restart should be initiated here.
 
     if(no_bof) then
@@ -654,9 +654,8 @@ contains
 
   ! ---------------------------------------------------------
   !> Orthonormalize the column vectors of vs.
-  subroutine X(lobpcg_orth)(v_start, v_end, vs, chol_failure)
+  subroutine X(lobpcg_orth)(v_start, vs, chol_failure)
     integer,        intent(in)    :: v_start
-    integer,        intent(in)    :: v_end
     R_TYPE,         intent(inout) :: vs(:, :, v_start:) !< (gr%mesh%np_part, st%d%dim, v_start:v_end)
     logical,        intent(out)   :: chol_failure
 
@@ -694,9 +693,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine X(lobpcg_apply_constraints)(vs_start, vs_end, vs, nidx, idx)
+  subroutine X(lobpcg_apply_constraints)(vs_start, vs, nidx, idx)
     integer, intent(in)    :: vs_start
-    integer, intent(in)    :: vs_end
     R_TYPE,  intent(inout) :: vs(:, :, vs_start:) !< (gr%mesh%np_part, st%d%dim, vs_start:vs_end)
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)

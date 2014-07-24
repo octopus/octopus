@@ -92,7 +92,7 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(LS_SOS)
-    call X(linear_solver_sos)(this, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
+    call X(linear_solver_sos)(hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
@@ -626,8 +626,7 @@ subroutine X(linear_solver_preconditioner) (x, hx)
 end subroutine X(linear_solver_preconditioner)
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
-  type(linear_solver_t),          intent(inout) :: ls
+subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
   type(hamiltonian_t),            intent(in)    :: hm
   type(grid_t),                   intent(in)    :: gr
   type(states_t),                 intent(in)    :: st

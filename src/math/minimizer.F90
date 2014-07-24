@@ -348,8 +348,6 @@ contains
     integer :: dr_atom_iter
     integer :: i_tmp
 
-    real (8) :: delta_pos
-
     real (8) :: mod_vel
     real (8) :: mod_force
 
@@ -395,8 +393,6 @@ contains
 
       vec_delta_pos(1:dim)=vel(1:dim)*dt
       
-      delta_pos = lalg_nrm2(dim,vec_delta_pos)
-
       x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
       dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
 
