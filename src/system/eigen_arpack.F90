@@ -193,11 +193,13 @@ contains
 
 
   !--------------------------------------------    
-  subroutine arpack_debug(debug_level)
-    integer, intent(in) :: debug_level
+  subroutine arpack_debug()
 
     PUSH_SUB(arpack_debug)
+
+    ! debug_level is global, no need to pass it here.
     ! Debugging variables temporarily removed.  -Ask
+
     POP_SUB(arpack_debug)
   end subroutine arpack_debug
   

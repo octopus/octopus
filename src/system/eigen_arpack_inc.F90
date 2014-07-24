@@ -32,25 +32,25 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
   logical, allocatable :: select(:)
   R_TYPE, allocatable  :: resid(:), v(:, :), &
                           workd(:), workev(:), workl(:), zd(:), &
-                          psi(:,:), hpsi(:,:)
+                          psi(:,:)
                      
-  integer              :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
-    i, j, ishfts, maxitr, mode1, ist, idim, ncv
-  FLOAT                :: tol, sigmar, sigmai, resid_sum, tmp, tolpower
+  integer              :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, &
+    j, ncv
+  FLOAT                :: tol, sigmar, sigmai, tolpower
   FLOAT, allocatable   :: rwork(:), d(:, :)
   CMPLX                :: sigma, eps_temp
   integer              :: mpi_comm
   character(len=2)     :: which
   	
-  !!!!WARNING: No support for spinors, yet. 
   PUSH_SUB(X(eigensolver_arpack))
 
 #ifdef HAVE_ARPACK
 
+  !!!!WARNING: No support for spinors, yet. 
   ASSERT(st%d%dim == 1)
 
   !Enable debug info
-  if(in_debug_mode) call arpack_debug(conf%debug_level)
+  if(in_debug_mode) call arpack_debug()
   
   mpi_comm = mpi_world%comm
   if (gr%mesh%parallel_in_domains) mpi_comm = gr%mesh%mpi_grp%comm
@@ -311,7 +311,7 @@ contains
     R_TYPE,               intent(in) :: v(n)
     R_TYPE,               intent(out):: w(n)
     
-    integer             :: i, np, np_part
+    integer             :: np, np_part
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
     PUSH_SUB(X(eigensolver_arpack).av)
@@ -320,6 +320,9 @@ contains
     np_part = gr%mesh%np_part
 
     ASSERT(n == np .or. n == np_part)
+
+    ! FIXME: why allocate these inside the routine?
+    ! do it outside to avoid repeated allocations of the same size
 
     SAFE_ALLOCATE(psi(1:np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(hpsi(1:np_part, 1:hm%d%dim))
