@@ -228,7 +228,7 @@ contains
     
     select case(method)
     case(MINMETHOD_SD_NATIVE)
-      call minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+      call minimize_sd(dim, x, step, maxiter, f, write_iter_info, minimum, ierr)
       
     case default
       ierr = loct_minimize(method, dim, x(1), step, line_tol, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
@@ -241,12 +241,10 @@ contains
 
   !----------------------------------------------
 
-  subroutine minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+  subroutine minimize_sd(dim, x, step, maxiter, f, write_iter_info, minimum, ierr)
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
     real(8), intent(in)    :: step
-    real(8), intent(in)    :: tolgrad
-    real(8), intent(in)    :: toldr
     integer, intent(in)    :: maxiter
     interface
       subroutine f(n, x, val, getgrad, grad)
@@ -297,12 +295,11 @@ contains
 
   !----------------------------------------------
 
-  subroutine minimize_fire(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, en, ierr, mass)
+  subroutine minimize_fire(dim, x, step, tolgrad, maxiter, f, write_iter_info, en, ierr, mass)
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
     real(8), intent(in)    :: step
     real(8), intent(in)    :: tolgrad
-    real(8), intent(in)    :: toldr
     integer, intent(in)    :: maxiter
     interface
       subroutine f(n, x, val, getgrad, grad)
@@ -352,8 +349,6 @@ contains
     integer :: i_tmp
 
     real (8) :: delta_pos
-    real (8) :: dr_i_max
-    real (8) :: da_max
 
     real (8) :: mod_vel
     real (8) :: mod_force

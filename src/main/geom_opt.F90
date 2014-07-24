@@ -151,7 +151,7 @@ contains
         imass = imass + 3
       end do
 
-      call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8),&
+      call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
         g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass)
       SAFE_DEALLOCATE_A(mass)
 
