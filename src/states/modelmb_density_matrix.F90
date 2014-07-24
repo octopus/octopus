@@ -145,24 +145,31 @@ contains
 
   end subroutine modelmb_density_matrix_init
 
+
+  ! ---------------------------------------------------------
   subroutine modelmb_density_matrix_nullify(this)
     type(modelmb_denmat_t), intent(out) :: this
 
     PUSH_SUB(modelmb_density_matrix_nullify)
+
     nullify(this%labels)
     nullify(this%particle_kept)
     nullify(this%nnatorb_prt)
+
     POP_SUB(modelmb_density_matrix_nullify)
   end subroutine modelmb_density_matrix_nullify
+
 
   ! ---------------------------------------------------------
   subroutine modelmb_density_matrix_end(this)
     type(modelmb_denmat_t), intent(inout) :: this
 
     PUSH_SUB(modelmb_density_matrix_end)
+
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
     SAFE_DEALLOCATE_P(this%nnatorb_prt)
+
     POP_SUB(modelmb_density_matrix_end)
   end subroutine modelmb_density_matrix_end
 

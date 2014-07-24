@@ -38,10 +38,10 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
+#ifdef HAVE_ETSF_IO
   type(fourier_shell_t) :: shell
   integer :: ncid
   logical :: lstat
-#ifdef HAVE_ETSF_IO
   type(etsf_io_low_error)  :: error_data
   type(etsf_dims) :: geometry_dims, density_dims, wfs_dims, pw_dims
   type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags, pw_flags
@@ -734,7 +734,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
 end subroutine output_etsf_wfs_pw_write
 
-!! DAS: copied from ETSF_IO 1.0.3 etsf_io_low_level.f90, changed to send output to standard error
+!> DAS: copied from ETSF_IO 1.0.3 etsf_io_low_level.f90, changed to send output to standard error
 !!****m* etsf_io_low_error_group/etsf_io_low_error_handle
 !! NAME
 !!  etsf_io_low_error_handle
