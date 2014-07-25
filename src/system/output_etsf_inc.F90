@@ -46,7 +46,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   type(etsf_dims) :: geometry_dims, density_dims, wfs_dims, pw_dims
   type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags, pw_flags
 #endif
-
+ 
   PUSH_SUB(output_etsf)
 
 #ifndef HAVE_ETSF_IO
@@ -60,17 +60,22 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   
 #ifdef HAVE_ETSF_IO
 
+  ! Careful: only root processor in MPI should attempt to create or modify files.
+  ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
+
   ! geometry
   if (iand(outp%what, C_OUTPUT_GEOMETRY) /= 0) then
 
-    call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
+    if(mpi_grp_is_root(mpi_world)) then
+      call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
 
-    call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", geometry_dims, geometry_flags, ncid)
+      call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", geometry_dims, geometry_flags, ncid)
 
-    call output_etsf_geometry_write(geo, gr%sb, ncid)
+      call output_etsf_geometry_write(geo, gr%sb, ncid)
 
-    call etsf_io_low_close(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+      call etsf_io_low_close(ncid, lstat, error_data = error_data)
+      if (.not. lstat) call output_etsf_error(error_data)
+    endif
   end if
 
   ! density
@@ -83,10 +88,13 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
 
     call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid)
-    call output_etsf_geometry_write(geo, gr%sb, ncid)
 
-    call etsf_io_low_close(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if(mpi_grp_is_root(mpi_world)) then
+      call output_etsf_geometry_write(geo, gr%sb, ncid)
+
+      call etsf_io_low_close(ncid, lstat, error_data = error_data)
+      if (.not. lstat) call output_etsf_error(error_data)
+    endif
 
     call dcube_function_free_rs(dcube, cf)
   end if
@@ -102,13 +110,17 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
     call output_etsf_file_init(dir//"/wfs-etsf.nc", "Wavefunctions file", wfs_dims, wfs_flags, ncid)
 
-    call output_etsf_electrons_write(st, ncid)
-    call output_etsf_geometry_write(geo, gr%sb, ncid)
-    call output_etsf_kpoints_write(gr%sb, ncid)
+    if(mpi_grp_is_root(mpi_world)) then
+      call output_etsf_electrons_write(st, ncid)
+      call output_etsf_geometry_write(geo, gr%sb, ncid)
+      call output_etsf_kpoints_write(gr%sb, ncid)
+    endif
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid)
 
-    call etsf_io_low_close(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if(mpi_grp_is_root(mpi_world)) then
+      call etsf_io_low_close(ncid, lstat, error_data = error_data)
+      if (.not. lstat) call output_etsf_error(error_data)
+    endif
     
     call dcube_function_free_rs(dcube, cf)
   end if
@@ -127,14 +139,18 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
     call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
 
-    call output_etsf_electrons_write(st, ncid)
-    call output_etsf_geometry_write(geo, gr%sb, ncid)
-    call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_basisdata_write(gr%mesh, shell, ncid)
+    if(mpi_grp_is_root(mpi_world)) then
+      call output_etsf_electrons_write(st, ncid)
+      call output_etsf_geometry_write(geo, gr%sb, ncid)
+      call output_etsf_kpoints_write(gr%sb, ncid)
+      call output_etsf_basisdata_write(gr%mesh, shell, ncid)
+    endif
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
 
-    call etsf_io_low_close(ncid, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if(mpi_grp_is_root(mpi_world)) then
+      call etsf_io_low_close(ncid, lstat, error_data = error_data)
+      if (.not. lstat) call output_etsf_error(error_data)
+    endif
 
     call fourier_shell_end(shell)
     call cube_function_free_fs(zcube, cf)
@@ -160,6 +176,8 @@ subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
 
   logical :: lstat
   type(etsf_io_low_error) :: error_data
+
+  if(.not. mpi_grp_is_root(mpi_world)) return
 
   PUSH_SUB(output_etsf_file_init)
 
@@ -475,8 +493,10 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
     SAFE_DEALLOCATE_A(md)
   end if
 
-  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if(mpi_grp_is_root(mpi_world)) then
+    call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+  endif
 
   SAFE_DEALLOCATE_P(main%density%data4D)
 
@@ -576,8 +596,10 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
 
   main%real_space_wavefunctions%data7D => local_wfs
 
-  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if(mpi_grp_is_root(mpi_world)) then
+    call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+  endif
     
   SAFE_DEALLOCATE_A(local_wfs)
 
@@ -723,10 +745,13 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
   main%coefficients_of_wavefunctions%data6D => local_wfs
 
-  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if(mpi_grp_is_root(mpi_world)) then
+    call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
 
-  call etsf_io_tools_set_time_reversal_symmetry(ncid, .false., lstat, error_data)
+    call etsf_io_tools_set_time_reversal_symmetry(ncid, .false., lstat, error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+  endif
 
   SAFE_DEALLOCATE_A(local_wfs)
 
