@@ -42,12 +42,10 @@ match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -19.96949
 match ; HOMO-1         ; GREPFIELD(static/info, '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 
-# FIXME: These precisions are too generous, and suggest a problem with vib_modes.
 Input: 01-casida.012-vib_modes.inp
-Precision : 0.002
-match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.15827
-Precision : 0.03
-match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.12921
+match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.15830
+Precision : 0.02
+match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.124
 
 Precision : 0.0001
 
