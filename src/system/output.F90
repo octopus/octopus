@@ -1016,9 +1016,6 @@ contains
     if(st%d%kpt%parallel) &
       call messages_not_implemented("BerkeleyGW output parallel in k-points")
 
-    if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points")
-
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals")
 

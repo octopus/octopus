@@ -101,6 +101,12 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! wave-functions
   if (iand(outp%what, C_OUTPUT_WFS) /= 0) then
+
+    if(st%parallel_in_states) &
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states")
+    if(st%d%kpt%parallel) &
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k")
+
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
@@ -127,6 +133,12 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! wave-functions in fourier space
   if (iand(outp%what, C_OUTPUT_WFS_FOURIER) /= 0) then
+
+    if(st%parallel_in_states) &
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states")
+    if(st%d%kpt%parallel) &
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k")
+
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
     call fourier_shell_init(shell, zcube, gr%mesh)
