@@ -631,7 +631,7 @@ contains
     logical,          intent(out) :: is_saved(:,:)
     character(len=*), intent(in)  :: restart_file
 
-    integer :: iunit, err
+    integer :: iunit, err, num_saved
     integer :: ia, jb, ii, aa, ik, jj, bb, jk
     R_TYPE  :: val
 
@@ -639,6 +639,7 @@ contains
 
     is_saved = .false.
     matrix = M_ZERO
+    num_saved = 0
 
     ! if fromScratch, we already deleted the restart files
     iunit = restart_open(cas%restart_load, restart_file, silent = .true.)
@@ -665,9 +666,11 @@ contains
             is_saved(ia, jb) = .true.
             matrix(jb, ia) = R_CONJ(val)
             is_saved(jb, ia) = .true.
+            num_saved = num_saved + 1
           endif
         end do
 
+        write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_file)
       else if(.not. cas%fromScratch) then
         message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
         call messages_warning(1)
