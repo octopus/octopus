@@ -90,7 +90,7 @@ contains
 
     integer :: ix2(MAX_DIM), idir, ip
 
-    PUSH_SUB(index_from_coords_vec)
+    ! No PUSH SUB, called too often
     ix2 = 0
 
     if(.not. idx%is_hypercube) then
@@ -104,7 +104,6 @@ contains
       end do
     end if
     
-    POP_SUB(index_from_coords_vec)
   end subroutine index_from_coords_vec
 
 

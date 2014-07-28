@@ -475,7 +475,7 @@ contains
     FLOAT :: xp, arg, hd, hp, aa
     integer :: ii, ni
 
-    PUSH_SUB(smear_delta_function)
+    ! no PUSH_SUB, called too often
 
     deltaf = M_ZERO
     select case(this%method)
@@ -522,7 +522,6 @@ contains
 
     end select
     
-    POP_SUB(smear_delta_function)
   end function smear_delta_function
 
 
