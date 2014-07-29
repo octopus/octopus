@@ -71,8 +71,7 @@ import fnmatch
 import re
 
 if len(sys.argv)!=2:
-	print('Usage: %s test_result'%(sys.argv[0]))
-	sys.exit()
+	sys.exit('Usage: %s test_result'%(sys.argv[0]))
 
 f_result = open(sys.argv[1])
 f_in  = None
@@ -80,16 +79,17 @@ f_out = None
 
 #Return the next line containing a "match" string from the test file.
 #All lines before the match are copied to the .test.new file
-def get_next_match():
+def get_next_match(match_name):
 	global f_in, f_out
 
 	while 1:
 		line = f_in.readline()
 		if not line: break
-		if line.lstrip()[:5]=='match':
+                match = re.search('match(\s)*;(\s)*%s'%re.escape(match_name), line)
+                if match:
 			return line
 		f_out.write(line)
-	raise Exception('Read past end of file!')
+	raise Exception('Read past end of file, could not find match!')
 
 #Update the current .test and .test.new files. Finishes copying the rest of the
 #.test file into .test.new, and closes/reopens new files.
@@ -144,7 +144,7 @@ n_fine=0
 n_cor=0
 test_exists=False
 for line in f_result.readlines():
-	if line[0:18] == 'Using test file  :' in line:
+	if line[0:18] == 'Using test file  :':
 		# There is a new test! Look for the file...
 		cur_file = line[19:-1].strip()
 		test_exists = False
@@ -163,6 +163,9 @@ for line in f_result.readlines():
 	
 	if not test_exists: continue
 
+        match = re.search('Match\s(.*):', line)
+	if match:
+		match_name = match.group(1)
 	if line[:20] == '   Calculated value ':
 		calc_val = line[21:]
 	if line[:20] == '   Reference value  ':
@@ -173,11 +176,10 @@ for line in f_result.readlines():
 
 	if '[   OK   ]' in line:
 		n_fine += 1; ntot_fine += 1
-		f_out.write(get_next_match())
 
 	elif '[  FAIL  ]' in line:
 		n_cor += 1; ntot_cor += 1
-		buf = get_next_match()
+		buf = get_next_match(match_name)
 		idx = buf.rfind(';')
 		rest = buf[idx+1:].rstrip()
 		spaces = ' '*rest.count(' ')
