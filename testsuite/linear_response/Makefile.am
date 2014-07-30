@@ -27,6 +27,7 @@ dist_share_DATA = \
 	01-casida.02-unocc.inp                   \
 	01-casida.022-unocc_restart.inp          \
 	01-casida.03-casida.inp                  \
+	01-casida.032-casida_restart.inp         \
 	01-casida.04-spectrum.inp                \
 	01-casida.test                           \
 	02-h2o_pol_lr.01_h2o_gs.inp              \
@@ -39,6 +40,7 @@ dist_share_DATA = \
 	03-vdw_sternheimer.test                  \
 	04-vib_modes.01-ground_state.inp         \
 	04-vib_modes.02-vib_modes.inp            \
+	04-vib_modes.022-vib_modes_restart.inp   \
 	04-vib_modes.03-vib_modes_fd.inp         \
 	04-vib_modes.test                        \
 	05-polarizability.01-gs.inp              \
