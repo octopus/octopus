@@ -63,13 +63,6 @@ EOF
 }
 
 
-# Dry run...
-function CMD {
-    [ "$dry_run" == "yes" ] && echo -e "$@";
-    [ "$dry_run" == "no" ] && eval "$@";
-}
-
-
 # Find tests to run. Takes as argument the string passed to the
 # -g command line option.
 function find_tests() {
@@ -203,7 +196,7 @@ for y in $tests; do
 	# store return code in varname for reading in checkqueue when it finishes
 	varname=`get_varname $test_name`
 	# without the final echo it doesn't work, I don't know why...
-	CMD $runtest_directory/oct-run_regression_test.pl -l \
+	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
 	    > ${ybase}.log 2>&1; let $(($varname=$?)); echo > /dev/null &
 	ppid=$!
@@ -292,6 +285,12 @@ else
 
     # trap signals, so we kill all children before dying
     trap "trap_kill" TERM INT
+
+    if [ "$dry_run" == "yes" ]; then
+	opt_n="-n"
+    else
+	opt_n=""
+    fi
 
     # Run testsuite.
     run_testsuite "$testfiles"

@@ -144,6 +144,11 @@ if ("$mpiexec_raw" ne "") {
     }
 }
 
+# default dummy value, for dry run so MPIEXEC need not be set properly
+if("$mpiexec" eq "") {
+    $mpiexec = "mpiexec";
+}
+
 # default number of processors for MPI runs is 2
 $np = 2;
 
@@ -287,7 +292,8 @@ foreach my $octopus_exe (@executables){
 	    if ( $command_suffix !~ /mpi$/) {
 		$np = 1;
 	    }
-	    if( -x "$mpiexec_raw") {
+	    # we do not need to care if mpiexec works if we are just doing a dry run
+	    if( -x "$mpiexec_raw" || $opt_n) {
 	      if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
 		  $specify_np = "";
 		  $my_nslots = "MY_NSLOTS=$np";
@@ -369,7 +375,7 @@ foreach my $octopus_exe (@executables){
 
   }
 
-  if ($opt_l && !$opt_m)  { system ("cat $workdir/out >> out.log"); }
+  if ($opt_l && !$opt_m && !$opt_n)  { system ("cat $workdir/out >> out.log"); }
   if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
   print "\n";
