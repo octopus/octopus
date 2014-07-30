@@ -762,61 +762,64 @@ contains
 
     ! Read the parameters
     iunit = restart_open(restart, trim(lead_name(il))//"_parameters")
-    call restart_read(restart, iunit, lines, 8, err)
-    if (err /= 0) then
-      ierr = ierr + 1
+    if(iunit > 0) then
+      call restart_read(restart, iunit, lines, 8, err)
+      if (err /= 0) then
+        ierr = ierr + 1
+      else
+        read(lines(1),'(a20,i10)')   str, s_dim
+        read(lines(2),'(a20,i10)')   str, s_iter
+        read(lines(3),'(a20,i10)')   str, s_np
+        read(lines(4),'(a20,e21.14)') str, s_spacing
+        read(lines(5),'(a20,e21.14)') str, s_delta
+        read(lines(6),'(a20,i10)')   str, s_op_n
+        read(lines(7),'(a20,i10)')   str, s_mem_type
+        read(lines(8),'(a20,l1)')     str, s_reducible
+      end if
+      call restart_close(restart, iunit)
+
+      ! Check if numerical parameters of saved coefficients match
+      ! current parameter set.
+      if ( .not. ((ierr == 0) .and. (s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
+        .and. (s_spacing == spacing) .and. (s_delta == delta) .and. (s_mem_type == ob%mem_type) &
+        .and. (s_reducible.eqv.intf%reducible) )) &
+        ierr = ierr + 2
+
+      if (ierr == 0) then
+        read_iter = min(iter, s_iter)
+
+        ! Read the potential
+        SAFE_ALLOCATE(s_vks(1:np))
+        call drestart_read_binary(restart, trim(lead_name(il))//"_vks", np, s_vks(1:np), err)
+        if (err /= 0) ierr = ierr + 4
+
+        ! Read the coefficients.
+        select case (ob%mem_type)
+        case (SAVE_CPU_TIME) ! Full (upper half) matrices.
+          call zrestart_read_binary(restart, trim(lead_name(il))//"_q", np*np*(read_iter+1), &
+            ob%lead(intf%il)%q(1:np, 1:np, 0:read_iter), err)
+          if (err /= 0) ierr = ierr + 8
+
+        case(SAVE_RAM_USAGE) ! Packed matrices (FIXME: yet only 2D).
+          ASSERT(dim == 2)
+
+          call zrestart_read_binary(restart, trim(lead_name(il))//"_q_s", np*np, ob%lead(intf%il)%q_s(:, :, 1), err)
+          if (err /= 0) ierr = ierr + 16
+
+          call zrestart_read_binary(restart, trim(lead_name(il))//"_q_sp", np*order*(read_iter+1), &
+            ob%lead(intf%il)%q_sp(1:np*order, 0:read_iter), err)
+          if (err /= 0) ierr = ierr + 32
+        case default
+          ierr = ierr + 64
+        end select
+
+        SAFE_DEALLOCATE_A(s_vks)
+      end if
     else
-      read(lines(1),'(a20,i10)')   str, s_dim
-      read(lines(2),'(a20,i10)')   str, s_iter
-      read(lines(3),'(a20,i10)')   str, s_np
-      read(lines(4),'(a20,e21.14)') str, s_spacing
-      read(lines(5),'(a20,e21.14)') str, s_delta
-      read(lines(6),'(a20,i10)')   str, s_op_n
-      read(lines(7),'(a20,i10)')   str, s_mem_type
-      read(lines(8),'(a20,l1)')     str, s_reducible
-    end if
-    call restart_close(restart, iunit)
+      ierr = -1
+    endif
 
-    ! Check if numerical parameters of saved coefficients match
-    ! current parameter set.
-    if ( .not. ((ierr == 0) .and. (s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
-      .and. (s_spacing == spacing) .and. (s_delta == delta) .and. (s_mem_type == ob%mem_type) &
-      .and. (s_reducible.eqv.intf%reducible) )) &
-      ierr = ierr + 2
-
-
-    if (ierr == 0) then
-      read_iter = min(iter, s_iter)
-
-      ! Read the potential
-      SAFE_ALLOCATE(s_vks(1:np))
-      call drestart_read_binary(restart, trim(lead_name(il))//"_vks", np, s_vks(1:np), err)
-      if (err /= 0) ierr = ierr + 4
-
-      ! Read the coefficients.
-      select case (ob%mem_type)
-      case (SAVE_CPU_TIME) ! Full (upper half) matrices.
-        call zrestart_read_binary(restart, trim(lead_name(il))//"_q", np*np*(read_iter+1), &
-             ob%lead(intf%il)%q(1:np, 1:np, 0:read_iter), err)
-        if (err /= 0) ierr = ierr + 8
-
-      case(SAVE_RAM_USAGE) ! Packed matrices (FIXME: yet only 2D).
-        ASSERT(dim == 2)
-
-        call zrestart_read_binary(restart, trim(lead_name(il))//"_q_s", np*np, ob%lead(intf%il)%q_s(:, :, 1), err)
-        if (err /= 0) ierr = ierr + 16
-
-        call zrestart_read_binary(restart, trim(lead_name(il))//"_q_sp", np*order*(read_iter+1), &
-             ob%lead(intf%il)%q_sp(1:np*order, 0:read_iter), err)
-        if (err /= 0) ierr = ierr + 32
-      case default
-        ierr = ierr + 64
-      end select
-
-      SAFE_DEALLOCATE_A(s_vks)
-    end if
-
-    ! If an error occured, then no previous iteration can be used.
+    ! If an error occurred, then no previous iteration can be used.
     if (ierr /= 0) s_iter = 0
 
     if (in_debug_mode) then
