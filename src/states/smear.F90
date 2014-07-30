@@ -85,6 +85,8 @@ contains
 
     PUSH_SUB(smear_init)
 
+    this%integral_occs = integral_occs
+
     !%Variable SmearingFunction
     !%Type integer
     !%Default semiconducting
@@ -110,7 +112,6 @@ contains
     !%End
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
-      this%integral_occs = integral_occs
     else
       call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')

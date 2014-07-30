@@ -166,8 +166,9 @@ contains
     !% or if the <tt>Occupations</tt> block specifies all full or empty states,
     !% and we are not solving for linear response in the occupied subspace too.
     !%End 
-    default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. sys%st%smear%integral_occs) &
-                        .and. .not. this%occ_response
+    default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
+      (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
+      .and. .not. this%occ_response
     if (parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
       call parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     else 
