@@ -142,8 +142,8 @@ contains
     !% derivatives the algorithm is able to take Newton-type steps towards the function minimum, 
     !% assuming quadratic behavior in that region. We have chosen to implement the "bfgs2" version,
     !% as GSL calls it, which is supposed to be the most efficient version available, and a faithful 
-    !% implementation of the line minimization scheme described in "Practical Methods of
-    !% Optimization", (Fletcher), Algorithms 2.6.2 and 2.6.4.  
+    !% implementation of the line minimization scheme described in "Practical Methods of Optimization",
+    !% (Fletcher), Algorithms 2.6.2 and 2.6.4.  
     !%Option oct_algorithm_direct 9
     !% This is a "direct" optimization scheme. This means that we do not make use of the
     !% "usual" QOCT equations (backward-forward propagations, etc), but we use some gradient-free
