@@ -543,7 +543,7 @@ contains
     integer,              intent(in)    :: iter
     logical,    optional, intent(out)   :: conv
 
-    integer :: maxiter, ik, ns, ist
+    integer :: maxiter, ik, ist
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, lmatvec
@@ -558,10 +558,6 @@ contains
     if(present(conv)) conv = .false.
 
     eigens%matvec = 0
-
-    ns = 1
-
-    if(st%d%nspin == 2) ns = 2
 
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not. in_debug_mode) then
       call loct_progress_bar(-1, st%nst*st%d%nik)
