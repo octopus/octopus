@@ -385,7 +385,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, data_type, type, mpi_grp, mesh, sb, dir, exact)
+  subroutine restart_init(restart, data_type, type, mpi_grp, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information.
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
@@ -393,8 +393,6 @@ contains
     type(mpi_grp_t),             intent(in)  :: mpi_grp   !< The mpi group in charge of handling this restart.
     type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
                                                           !! information is either dumped or the mesh compatibility is checked.
-    type(simul_box_t), optional, intent(in)  :: sb        !< If present and type = RESTART_TYPE_DUMP, the simulation box 
-                                                          !! information will be dumped.
     character(len=*),  optional, intent(in)  :: dir       !< Directory where to find the restart data. It is mandatory if 
                                                           !! data_type=RESTART_UNDEFINED and is ignored in all the other cases.
     logical,           optional, intent(in)  :: exact     !< If loading the restart information, should the mesh be 
@@ -412,11 +410,6 @@ contains
       message(1) = "Error in restart_init: the 'exact' optional argument requires a mesh."
       call messages_fatal(1)
     end if
-
-    if(present(sb) .and. .not. present(mesh)) then
-      message(1) = "Error in restart_init: the 'sb' optional argument requires a mesh."
-      call messages_fatal(1)
-    endif
 
     restart%has_mesh = present(mesh)
 
@@ -532,12 +525,10 @@ contains
             call messages_fatal(1)
           end if
 
-          if (present(sb)) then
-            call simul_box_dump(sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
-            if (ierr /= 0) then
-              message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
-              call messages_fatal(1)
-            end if
+          call simul_box_dump(mesh%sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
+            call messages_fatal(1)
           end if
         end if
         

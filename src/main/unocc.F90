@@ -108,7 +108,7 @@ contains
     read_gs = .true.
     if (.not. fromScratch) then
       call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh, sb=sys%gr%sb)
+                        mesh=sys%gr%mesh)
 
       call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       call restart_end(restart_load_unocc)
@@ -121,7 +121,7 @@ contains
     end if
 
     call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, sb=sys%gr%sb)
+                      mesh=sys%gr%mesh)
 
     if (read_gs) then
       call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -203,7 +203,7 @@ contains
 
     ! Restart dump should be initialized after restart_load, as the mesh might have changed
     call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, sb=sys%gr%sb)
+                      mesh=sys%gr%mesh)
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)

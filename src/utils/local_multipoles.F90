@@ -268,7 +268,7 @@ contains
         write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
       end if
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
-                      mesh=sys%gr%mesh, sb=sys%gr%sb, dir=trim(base_folder)//trim(folder)) 
+                      mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
       ! FIXME: there is a special function for reading the density. Why not use that?
       ! FIXME: why only real functions? Please generalize.
       call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 

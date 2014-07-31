@@ -137,15 +137,15 @@ contains
     !Read ground-state wavefunctions
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, sb=sys%gr%sb, exact=.true.)
+                      mesh=sys%gr%mesh, exact=.true.)
     call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
     call restart_end(restart_load)
 
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
-    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
-    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh)
+    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
