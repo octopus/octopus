@@ -552,8 +552,8 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
-    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, mpi_world, mesh=sys%gr%mesh, sb=sys%gr%sb)
+    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, mpi_world)
+    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, mpi_world)
 
     POP_SUB(casida_type_init)
   end subroutine casida_type_init

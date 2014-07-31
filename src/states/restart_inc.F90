@@ -31,6 +31,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr)
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
+  ASSERT(restart%has_mesh)
 
   call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
@@ -63,7 +64,8 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   PUSH_SUB(X(restart_read_mesh_function))
 
   ASSERT(.not. restart%skip)
-  ASSERT(restart%type == RESTART_TYPE_LOAD)  
+  ASSERT(restart%type == RESTART_TYPE_LOAD)
+  ASSERT(restart%has_mesh)
 
   nullify(read_ff)
 

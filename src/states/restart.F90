@@ -97,7 +97,7 @@ module restart_m
     character(len=80) :: pwd       !< The current directory where the restart information is being loaded from or dumped to.
                                    !! It can be either dir or a subdirectory of dir.
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
-
+    logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
   end type restart_t
 
@@ -412,6 +412,13 @@ contains
       message(1) = "Error in restart_init: the 'exact' optional argument requires a mesh."
       call messages_fatal(1)
     end if
+
+    if(present(sb) .and. .not. present(mesh)) then
+      message(1) = "Error in restart_init: the 'sb' optional argument requires a mesh."
+      call messages_fatal(1)
+    endif
+
+    restart%has_mesh = present(mesh)
 
     ! Some initializations
     restart%type = type

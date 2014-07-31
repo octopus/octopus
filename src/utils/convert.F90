@@ -256,7 +256,7 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      dir=trim(ref_folder))
+                      dir=trim(ref_folder), mesh = mesh, sb = mesh%sb)
       ! FIXME: why only real functions? Please generalize.
       call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
       call restart_end(restart)
@@ -288,7 +288,7 @@ contains
 
       ! Read the obf file
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      dir=trim(folder))
+                      dir=trim(folder), mesh = mesh, sb = mesh%sb)
       call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
       call restart_end(restart)
 
