@@ -30,7 +30,6 @@ program photoelectron_spectrum
   use pes_m  
   use pes_mask_m  
   use profiling_m
-  use restart_m
   use string_m
   use unit_m
   use unit_system_m
