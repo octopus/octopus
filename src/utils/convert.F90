@@ -257,7 +257,9 @@ contains
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
                       dir=trim(ref_folder))
+      ! FIXME: why only real functions? Please generalize.
       call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
+      call restart_end(restart)
     end if
 
     call loct_progress_bar(-1, c_end-c_start)
@@ -288,6 +290,7 @@ contains
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
                       dir=trim(folder))
       call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
+      call restart_end(restart)
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
