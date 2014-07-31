@@ -241,8 +241,8 @@ contains
     !% the external field, defined by <tt>OCTVelocityTarget</tt>
     !%Option oct_tg_hhgnew 12
     !% EXPERIMENTAL: The  target is the optimization of the HHG yield. You must supply the
-    !% OCTHarmonicWeigth string. It attempts to optimized the integral of the harmonic spectrum multiplied
-    !% by some user defined weight function.
+    !% OCTHarmonicWeight string. It attempts to optimized the integral of the harmonic spectrum multiplied
+    !% by some user-defined weight function.
     !%Option oct_tg_classical 13
     !% EXPERIMENTAL
     !%Option oct_tg_spin 14
