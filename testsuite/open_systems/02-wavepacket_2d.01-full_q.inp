@@ -77,10 +77,9 @@ flat_OnlyUserDefinedInitialStates = yes
 kx = 1.75
 ky = 1.0
 alpha = 0.5
-ci = {0, 1}
 %flat_UserDefinedStates
- 1 | 1 | 1 | formula | "exp(ci*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
- 1 | 2 | 1 | formula | "exp(-ci*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
+ 1 | 1 | 1 | formula | "exp(i*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
+ 1 | 2 | 1 | formula | "exp(-i*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
 %
 
 flat_OpenBoundariesAdditionalTerms = mem_term
