@@ -40,27 +40,26 @@ EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
 # OCTOPUS_SHARE has to be set to an absolute path because
 # oct-run_testsuite.sh changes the working directory for every
 # testcase.
-# If the testsuite should be skipped, e. g. in make distcheck,
+# If the testsuite should be skipped, e.g. in make distcheck,
 # set the environment variable SKIP_CHECK to some value.
 check:
 	@if test "x$(SKIP_CHECK)" == "x"; then \
-	    base=`basename "$(top_builddir)/share"` && \
-	    dir=`dirname "$(top_builddir)/share"` && \
-	    sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l -g short-run; \
+	    CHECKOPTS="-g short-run" $(MAKE) check-base; \
 	else \
-	    echo "Skipping checks"; \
+            $(MAKE) check-dryrun; \
 	fi
 
 check-full:
-	@if test "x$(SKIP_CHECK)" == "x"; then \
-	    base=`basename "$(top_builddir)/share"` && \
-	    dir=`dirname "$(top_builddir)/share"` && \
-	    sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l; \
-	else \
-	    echo "Skipping checks"; \
-	fi
+	@CHECKOPTS="" $(MAKE) check-base
+
+check-dryrun:
+	@CHECKOPTS="-n" $(MAKE) check-base
+
+check-base:
+	@base=`basename "$(top_builddir)/share"` && \
+	dir=`dirname "$(top_builddir)/share"` && \
+	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
+	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l $(CHECKOPTS)
 
 clean-local:
 	-find /tmp -name 'octopus*' -type d -mmin +600 -exec rm -rf {} \; 2>/dev/null
