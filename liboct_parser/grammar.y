@@ -69,7 +69,7 @@ exp: NUM                   { $$ = $1;                           }
 | exp '/' exp              { $$ = gsl_complex_div($1, $3);      }
 | '-' exp  %prec NEG       { $$ = gsl_complex_negative($2);     }
 | exp '^' exp              { $$ = gsl_complex_pow($1, $3);      }
-| exp '<' exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <  GSL_REAL($3), 0); } /* Boolean comparisons ues only the real part */
+| exp '<' exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <  GSL_REAL($3), 0); } /* Boolean comparisons use only the real part */
 | exp '>' exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >  GSL_REAL($3), 0); } /* with the exception of '==' */
 | exp LE  exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) <= GSL_REAL($3), 0); }
 | exp GE  exp              { GSL_SET_COMPLEX (&$$, GSL_REAL($1) >= GSL_REAL($3), 0); }

@@ -152,7 +152,7 @@ static struct init_fntc arith_fncts[] = {
   {"acsch",  1, (gsl_complex (*)()) &gsl_complex_arccsch},
   {"acoth",  1, (gsl_complex (*)()) &gsl_complex_arccoth},	
  
-/* user defined step function. this is not available in GSL, 
+/* user-defined step function. this is not available in GSL, 
    but we use GSL namespacing and macros here. */
   {"step",   1, (gsl_complex (*)()) &gsl_complex_step_real},
 
