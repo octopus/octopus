@@ -295,30 +295,28 @@ else
     # Run testsuite.
     run_testsuite "$testfiles"
 
-    if [ "$dry_run" == "no" ]; then
-	# Failure reporting to STDOUT.
-	echo -e "    Passed:  $passed_tests / $total_tests"
-	echo -e "    Skipped: $skipped_tests / $total_tests"
-	if [ $failed_tests -gt 0 ]; then
-	    echo "    Failed:  $failed_tests / $total_tests"
-	    echo
-	    echo "    testfile                                                    # failed testcases"
-	    echo "    ------------------------------------------------------------------------------"
-	    echo -e "$failure_report"
-	else
-	    if [ $passed_tests -gt 0 ]; then
-		echo -e "\nEverything seems to be OK"
-	    else
-		echo -e "\nAll tests were skipped."
-		# make sure a failure will be reported by the exit status
-		failed_tests=100
-	    fi
-	fi
+    # Failure reporting to STDOUT.
+    echo -e "    Passed:  $passed_tests / $total_tests"
+    echo -e "    Skipped: $skipped_tests / $total_tests"
+    if [ $failed_tests -gt 0 ]; then
+	echo "    Failed:  $failed_tests / $total_tests"
 	echo
-
-	# Clean up.
-	[ "$cleanup" == "yes" ] && rm -f *.log
+	echo "    testfile                                                    # failed testcases"
+	echo "    ------------------------------------------------------------------------------"
+	echo -e "$failure_report"
+    else
+	if [ $passed_tests -gt 0 ]; then
+	    echo -e "\nEverything seems to be OK"
+	else
+	    echo -e "\nAll tests were skipped."
+	    # make sure a failure will be reported by the exit status
+	    failed_tests=100
+	fi
     fi
+    echo
+    
+    # Clean up.
+    [ "$cleanup" == "yes" ] && rm -f *.log
 
     # Get epoch seconds after we are done and compute time difference.
     testsuite_end=$(date +%s)

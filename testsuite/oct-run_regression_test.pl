@@ -155,7 +155,11 @@ $np = 2;
 
 # Figure out which are the executables to test
 my @executables;
-find_executables();
+if($opt_n) {
+    @executables = "octopus";
+} else {
+    find_executables();
+}
 
 # This variable counts the number of failed testcases.
 $failures = 0;
