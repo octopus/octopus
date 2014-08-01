@@ -186,6 +186,7 @@ foreach my $octopus_exe (@executables){
       print SCRIPT "#\!/usr/bin/env bash\n\n";
       print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
       close(SCRIPT);
+      chmod 0755, $scriptname;
       
       $matchdir = $workdir;
   } else {
