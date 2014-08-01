@@ -27,10 +27,11 @@ dist_share_DATA = \
 	02-neon_mpi.01-ground_state-IP_par_domains.inp \
 	02-neon_mpi.02-ground_state-kli_par_domains.inp \
 	02-neon_mpi.03-td_calc-kli_par_states.inp \
+	02-neon_mpi.test \
         03-neon.01-gs.inp \
 	03-neon.02-unocc.inp \
 	03-neon.03-casida.inp \
-	02-neon_mpi.test \
+	03-neon.test \
 	09-morse.test \
 	09-morse.01-gs.inp \
 	09-morse.02-unocc.inp \

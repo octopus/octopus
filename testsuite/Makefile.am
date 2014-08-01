@@ -21,7 +21,9 @@
 
 SUBDIRS = \
 	components       \
-	finite_systems_1d finite_systems_2d finite_systems_3d \
+	finite_systems_1d \
+	finite_systems_2d \
+	finite_systems_3d \
 	functionals      \
 	real_time        \
 	linear_response  \
