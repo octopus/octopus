@@ -213,7 +213,10 @@ foreach my $octopus_exe (@executables){
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
       $test{"name"} = $1;
       print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
-      print "Using workdir    : $workdir \n";
+      print "Using workdir    : $workdir\n";
+      if($opt_p) {
+	  print "Workdir will be saved.\n";
+      }
       print "Using executable : $octopus_exe\n";
       print "Using test file  : $opt_f \n";
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
