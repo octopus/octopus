@@ -72,10 +72,3 @@ omega = 1.5
 %TDFunctions
  "ramp" | tdf_trapezoidal | amplitude | 50 | 29.3 | 4.2
 %
-
-
-#########################
-# OUT
-#########################
-
-RestartWriteInterval = 50
