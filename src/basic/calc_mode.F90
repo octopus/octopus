@@ -31,15 +31,13 @@ module calc_mode_m
        calc_mode_parallel_mask,         &
        calc_mode_default_parallel_mask, &
        calc_mode_set_scalapack_compat,  &
-       calc_mode_scalapack_compat,      &
-       calc_mode_set_extra_states
+       calc_mode_scalapack_compat
 
   type calc_mode_t
     private
     integer :: par_mask
     integer :: def_par_mask
     logical :: scalapack_compat
-    logical :: extra_states
   end type calc_mode_t
 
   type(calc_mode_t) :: this
@@ -60,8 +58,6 @@ contains
     this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
     
     this%scalapack_compat = .false.
-    
-    this%extra_states = .true.
   end subroutine calc_mode_init
 
   ! -----------------------------------------------------
@@ -117,21 +113,6 @@ contains
     
     POP_SUB(calc_mode_default_parallel_mask)
   end function calc_mode_default_parallel_mask
-  
-  ! -----------------------------------------------------
-  
-  subroutine calc_mode_set_extra_states(set)
-    logical, intent(in) :: set
-    
-    this%extra_states = set
-  end subroutine calc_mode_set_extra_states
-  
-  ! -----------------------------------------------------
-  
-  logical pure function calc_mode_extra_states() result(extra_states)
-    
-    extra_states = this%extra_states
-  end function calc_mode_extra_states
   
 end module calc_mode_m
 
