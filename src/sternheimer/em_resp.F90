@@ -34,7 +34,6 @@ module em_resp_m
   use kdotp_calc_m
   use lalg_basic_m
   use linear_response_m
-  use linear_solver_m
   use loct_m
   use math_m
   use mesh_m

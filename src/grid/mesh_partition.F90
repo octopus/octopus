@@ -26,7 +26,6 @@ module mesh_partition_m
   use hypercube_m
   use index_m
   use io_m
-  use io_binary_m
   use loct_m
   use math_m
   use mesh_m
