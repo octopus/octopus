@@ -26,9 +26,31 @@
 #include <string.h>
 #include <locale.h>
 #include <dirent.h>
-#include <time.h>
+#include <sys/time.h>
+#include <gsl/gsl_rng.h>
 
 #include "string_f.h"
+
+unsigned long int random_seed()
+{
+ unsigned long int seed;
+ FILE *devrandom;
+
+ if ((devrandom = fopen("/dev/random","r")) == NULL) {
+#ifdef HAVE_GETTIMEOFDAY
+   struct timeval tv;
+   gettimeofday(&tv, 0);
+   seed = tv.tv_sec + tv.tv_usec;
+#else
+   seed = 0;
+#endif
+ } else {
+   fread(&seed, sizeof(seed), 1, devrandom);
+   fclose(devrandom);
+ }
+
+ return seed;
+}
 
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
@@ -38,6 +60,7 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   char *lang, *tmp, dir[512];
   struct dirent **namelist;
   int ii, nn;
+  gsl_rng *rng;
 
   /* get language */
   lang = getenv("LANG");
@@ -76,8 +99,11 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   nn = scandir(dir, &namelist, 0, alphasort);
 	
   /* initialize random numbers */
-  srand((unsigned int)time(NULL));
-  ii = (int) ((double) (nn-3 + 1.0) * (rand()/(RAND_MAX + 1.0)));
+  gsl_rng_env_setup();
+  rng = gsl_rng_alloc(gsl_rng_default);
+  gsl_rng_set(rng, random_seed());
+  ii = gsl_rng_uniform_int(rng, nn - 2);
+  gsl_rng_free(rng);
 
   strcat(dir, "/");
   strcat(dir, namelist[ii+2]->d_name); /* skip ./ and ../ */
@@ -88,5 +114,8 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   free(namelist);
 
   TO_F_STR2(dir, filename);
+
+#else
+  printf("Sorry, recipes cannot be printed unless scandir and alphasort are available with your C compiler.\n");
 #endif
 }
