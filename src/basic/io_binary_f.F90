@@ -513,8 +513,6 @@ contains
 
     PUSH_SUB(io_binary_parallel_end)
 
-    ! why does write have a barrier and read does not?
-    call MPI_Barrier(comm, mpi_err)
 #ifdef HAVE_MPI2
     call MPI_Finalized(finalized, mpi_err)
     if (.not. finalized) then
