@@ -37,7 +37,7 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 #if HAVE_SCANDIR && HAVE_ALPHASORT
   char *lang, *tmp, dir[512];
   struct dirent **namelist;
-  int i, n;
+  int ii, nn;
 
   /* get language */
   lang = getenv("LANG");
@@ -51,40 +51,40 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   strcat(dir, "/recipes");
 
   /* check out if lang dir exists */
-  n = scandir(dir, &namelist, 0, alphasort);
-  if (n < 0){
+  nn = scandir(dir, &namelist, 0, alphasort);
+  if (nn < 0){
     printf("Directory does not exist: %s", dir);
     return;
   }
 
-  for(i=0; i<n; i++)
-    if(strncmp(lang, namelist[i]->d_name, 2) == 0){
+  for(ii=0; ii<nn; ii++)
+    if(strncmp(lang, namelist[ii]->d_name, 2) == 0){
       strcat(dir, "/");
-      strcat(dir, namelist[i]->d_name);
+      strcat(dir, namelist[ii]->d_name);
       break;
     }
 
-  if(i == n)
+  if(ii == nn)
     strcat(dir, "/en"); /* default */
 
   /* clean up */
-  for(i=0; i<n; i++)
-    free(namelist[i]);
+  for(ii=0; ii<nn; ii++)
+    free(namelist[ii]);
   free(namelist);
 
   /* now we read the recipes */
-  n = scandir(dir, &namelist, 0, alphasort);
+  nn = scandir(dir, &namelist, 0, alphasort);
 	
   /* initialize random numbers */
   srand((unsigned int)time(NULL));
-  i = (int) ((double) (n-3 + 1.0) * (rand()/(RAND_MAX + 1.0)));
+  ii = (int) ((double) (nn-3 + 1.0) * (rand()/(RAND_MAX + 1.0)));
 
   strcat(dir, "/");
-  strcat(dir, namelist[i+2]->d_name); /* skip ./ and ../ */
+  strcat(dir, namelist[ii+2]->d_name); /* skip ./ and ../ */
 
   /* clean up again */
-  for(i=0; i<n; i++)
-    free(namelist[i]);
+  for(ii=0; ii<nn; ii++)
+    free(namelist[ii]);
   free(namelist);
 
   TO_F_STR2(dir, filename);
