@@ -17,30 +17,41 @@
 !!
 !! $Id$
 
+#include "global.h"
+
 module pulpo_m
   use global_m
   use io_m
   use loct_m
   use messages_m
 
+  implicit none
+
   private
   public :: pulpo_print
 
 contains
+
   subroutine pulpo_print()
+
     character(len=256) :: filename
+
+    PUSH_SUB(pulpo_print)
 
     ! some white space
     message(1) = ''; message(2) = ''
     call messages_info(2)
 
-    call loct_printRecipe(trim(conf%share), filename)
+    call loct_printrecipe(trim(conf%share), filename)
     call io_dump_file(stdout, filename)
     call messages_info(2)
     call io_dump_file(stdout, trim(conf%share)//"/recipes/disclaimer.txt")
     call messages_info(2)
 
+    POP_SUB(pulpo_print)
+
   end subroutine pulpo_print
+
 end module pulpo_m
 
 !! Local Variables:

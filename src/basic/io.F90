@@ -498,12 +498,14 @@ contains
     integer :: iunit, err
     character(len=80) :: line
 
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
     PUSH_SUB(io_dump_file)
 
     call io_assign(iunit)
     open(unit=iunit, file=filename, iostat=err, action='read', status='old')
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
         action='write', position='append')
     end if
@@ -512,13 +514,13 @@ contains
       read(iunit, fmt='(a80)', iostat=err) line
       if(err==0) then
         write(ounit, '(a)') trim(line)
-        if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+        if(flush_messages) then
           write(iunit_out, '(a)') trim(line)
         endif
       end if
     end do
     
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
+    if(flush_messages) then
       close(iunit_out)
     end if
 
@@ -530,7 +532,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Given a path, it returns the extension (if it exists) of the file
-  !! (that is, the part of the name that comes after its last point)
+  !! (that is, the part of the name that comes after its last point).
   !! If the filename does not have an extension, it returns the empty string.
   character(len=8) function io_get_extension(path) result(ext)
     character(len = * ), intent(in)  :: path

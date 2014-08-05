@@ -169,16 +169,14 @@ contains
 
   !> This subroutine prints the logo followed by information about 
   !! the compilation and the system. It also prints the start time 
-  !! of the execution
+  !! of the execution.
   ! ---------------------------------------------------------
   subroutine print_header()
     
     character(len=256) :: sys_name
     
     ! Let us print our logo
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
-    end if
+    call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
 
     ! Let us print the version
     message(1) = ""
