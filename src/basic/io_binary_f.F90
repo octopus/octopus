@@ -478,6 +478,8 @@ contains
 
     ASSERT(np > 0)
 
+    ! FIXME: everything will fail if sizeof is not available!
+
     ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof_ff+64
@@ -547,7 +549,7 @@ contains
 
     PUSH_SUB(swrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -577,7 +579,7 @@ contains
 
     PUSH_SUB(dwrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -606,7 +608,7 @@ contains
 
     PUSH_SUB(cwrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -635,7 +637,7 @@ contains
 
     PUSH_SUB(zwrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -664,7 +666,7 @@ contains
 
     PUSH_SUB(iwrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -693,7 +695,7 @@ contains
 
     PUSH_SUB(lwrite_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -1014,7 +1016,7 @@ contains
 
     PUSH_SUB(sread_parallel)
 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
@@ -1050,7 +1052,7 @@ contains
     PUSH_SUB(dread_parallel)
 
     ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
 
 #ifdef HAVE_MPI2
     if(ierr == 0) then
@@ -1087,7 +1089,7 @@ contains
     PUSH_SUB(cread_parallel)
 
     ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
 
 #ifdef HAVE_MPI2
     if(ierr == 0) then
@@ -1143,7 +1145,7 @@ contains
       ff = read_ff
       SAFE_DEALLOCATE_A(read_ff)
     else
-      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
       if(ierr == 0) then
         call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
         call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
@@ -1179,7 +1181,7 @@ contains
     PUSH_SUB(iread_parallel)
 
     ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
 
 #ifdef HAVE_MPI2
     if(ierr == 0) then
@@ -1216,7 +1218,7 @@ contains
     PUSH_SUB(lread_parallel)
 
     ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
 
 #ifdef HAVE_MPI2
     if(ierr == 0) then
