@@ -470,7 +470,6 @@ contains
 
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset
-    integer :: status(MPI_STATUS_SIZE)
 #endif
     integer :: amode, mpi_info
 
@@ -489,8 +488,7 @@ contains
     else
       amode = MPI_MODE_RDONLY
     endif
-    mpi_info = MPI_INFO_NULL ! FIXME: no need for temporary variable here
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
+    call MPI_File_open(comm, fname, amode, MPI_INFO_NULL, file_handle, mpi_err)
 
     if(mpi_err == 0) then
       call MPI_File_set_atomicity(file_handle, .true., mpi_err)
@@ -507,9 +505,8 @@ contains
 
   ! ------------------------------------------------------
 
-  subroutine io_binary_parallel_end(file_handle, comm)
+  subroutine io_binary_parallel_end(file_handle)
     integer, intent(out)   :: file_handle
-    integer, intent(in)    :: comm
 
     logical :: finalized
 
@@ -556,7 +553,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(swrite_parallel)
   end subroutine swrite_parallel
@@ -575,7 +572,6 @@ contains
     integer :: status(MPI_STATUS_SIZE)
 #endif
     integer :: file_handle
-    logical :: finalized
 
     PUSH_SUB(dwrite_parallel)
 
@@ -586,7 +582,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(dwrite_parallel)
   end subroutine dwrite_parallel
@@ -615,7 +611,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(cwrite_parallel)
   end subroutine cwrite_parallel
@@ -644,7 +640,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(zwrite_parallel)
   end subroutine zwrite_parallel
@@ -673,7 +669,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(iwrite_parallel)
   end subroutine iwrite_parallel
@@ -702,7 +698,7 @@ contains
     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(lwrite_parallel)
   end subroutine lwrite_parallel
@@ -1029,7 +1025,7 @@ contains
     end if
 #endif
     
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(sread_parallel)
   end subroutine sread_parallel
@@ -1066,7 +1062,7 @@ contains
     endif
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(dread_parallel)
   end subroutine dread_parallel
@@ -1103,7 +1099,7 @@ contains
     endif
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(cread_parallel)
   end subroutine cread_parallel
@@ -1158,7 +1154,7 @@ contains
     endif
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(zread_parallel)
   end subroutine zread_parallel
@@ -1195,7 +1191,7 @@ contains
     endif
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(iread_parallel)
   end subroutine iread_parallel
@@ -1232,7 +1228,7 @@ contains
     endif
 #endif
 
-    call io_binary_parallel_end(file_handle, comm)
+    call io_binary_parallel_end(file_handle)
 
     POP_SUB(lread_parallel)
   end subroutine lread_parallel
