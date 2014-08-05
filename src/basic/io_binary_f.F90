@@ -63,6 +63,16 @@ module io_binary_m
     module procedure swrite_header, dwrite_header, cwrite_header,  zwrite_header, iwrite_header, lwrite_header
   end interface io_binary_write_header
 
+  interface
+    subroutine get_info_binary(np, type, ierr, fname)
+      integer,             intent(out)   :: np
+      integer,             intent(out)   :: type
+      integer,             intent(out)   :: ierr      
+      character(len=*),    intent(in)    :: fname
+    end subroutine get_info_binary
+  end interface
+    
+
 contains
 
   ! ------------------------------------------------------
@@ -448,6 +458,82 @@ contains
 
   ! ------------------------------------------------------
 
+  subroutine io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof_ff, is_write, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(out)   :: file_handle
+    integer,             intent(in)    :: comm
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    integer*8,           intent(in)    :: sizeof_ff !< should be same type as offset?
+    logical,             intent(in)    :: is_write !< if false, is read.
+    integer,             intent(out)   :: ierr
+
+#ifdef HAVE_MPI2
+    integer(MPI_OFFSET_KIND) :: offset
+    integer :: status(MPI_STATUS_SIZE)
+#endif
+    integer :: amode, mpi_info
+
+    PUSH_SUB(io_binary_parallel_start)
+
+    ASSERT(np > 0)
+
+    ierr = 0
+#ifdef HAVE_MPI2
+    offset = (xlocal-1)*sizeof_ff+64
+    
+    if(is_write) then
+      amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
+    else
+      amode = MPI_MODE_RDONLY
+    endif
+    mpi_info = MPI_INFO_NULL ! FIXME: no need for temporary variable here
+    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
+
+    if(mpi_err == 0) then
+      call MPI_File_set_atomicity(file_handle, .true., mpi_err)
+      call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
+    endif
+    ierr = mpi_err
+#else
+    message(1) = "Internal error: cannot call io_binary parallel routines without MPI2."
+    call messages_fatal(1)
+#endif
+
+    POP_SUB(io_binary_parallel_start)
+  end subroutine io_binary_parallel_start
+
+  ! ------------------------------------------------------
+
+  subroutine io_binary_parallel_end(file_handle, comm)
+    integer, intent(out)   :: file_handle
+    integer, intent(in)    :: comm
+
+    logical :: finalized
+
+    PUSH_SUB(io_binary_parallel_end)
+
+    ! why does write have a barrier and read does not?
+    call MPI_Barrier(comm, mpi_err)
+#ifdef HAVE_MPI2
+    call MPI_Finalized(finalized, mpi_err)
+    if (.not. finalized) then
+      call MPI_File_close(file_handle, mpi_err)
+    end if
+#else
+    message(1) = "Internal error: cannot call io_binary parallel routines without MPI2."
+    call messages_fatal(1)
+#endif
+
+    ! how will mpi do error handling with mpi_err?
+    ! do read_count here
+
+    POP_SUB(io_binary_parallel_end)
+  end subroutine io_binary_parallel_end
+
+
+  ! ------------------------------------------------------
+
   subroutine swrite_parallel(fname, comm, xlocal, np, ff, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(in)    :: comm
@@ -456,35 +542,21 @@ contains
     real(4),             intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: file_handle
 
     PUSH_SUB(swrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
-    call MPI_Barrier(comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(swrite_parallel)
   end subroutine swrite_parallel
@@ -499,35 +571,22 @@ contains
     real(8),             intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_count, amode, mpi_info, file_handle
+    integer :: file_handle
     logical :: finalized
 
     PUSH_SUB(dwrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-    call MPI_Barrier(comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(dwrite_parallel)
   end subroutine dwrite_parallel
@@ -542,35 +601,21 @@ contains
     complex(4),          intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: file_handle
 
     PUSH_SUB(cwrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-    call MPI_Barrier(comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(cwrite_parallel)
   end subroutine cwrite_parallel
@@ -585,35 +630,21 @@ contains
     complex(8),          intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: file_handle
 
     PUSH_SUB(zwrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-    call MPI_Barrier(comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(zwrite_parallel)
   end subroutine zwrite_parallel
@@ -628,35 +659,21 @@ contains
     integer(4),          intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: file_handle
 
     PUSH_SUB(iwrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
-    call MPI_Barrier(comm, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(iwrite_parallel)
   end subroutine iwrite_parallel
@@ -671,34 +688,21 @@ contains
     integer(8),          intent(in)    :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif   
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: file_handle
 
     PUSH_SUB(lwrite_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err) 
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err) 
-    call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(lwrite_parallel)
   end subroutine lwrite_parallel
@@ -803,6 +807,8 @@ contains
     
     POP_SUB(zread_binary)
   end subroutine zread_binary
+
+  !------------------------------------------------------
 
   subroutine iread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
@@ -1003,29 +1009,17 @@ contains
     real(4),             intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
-
+    integer :: read_count, file_handle
 
     PUSH_SUB(sread_parallel)
 
-    ASSERT(np > 0)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = MPI_MODE_RDONLY
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
     call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
     call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
     if (read_count /= np) then 
@@ -1033,12 +1027,9 @@ contains
       write(message(2), '(a,a)') " of file= ", fname
       call messages_fatal(2)
     end if
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
 #endif
+    
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(sread_parallel)
   end subroutine sread_parallel
@@ -1053,41 +1044,29 @@ contains
     real(8),             intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset 
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: read_count, file_handle
 
     PUSH_SUB(dread_parallel)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = MPI_MODE_RDONLY
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-    call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " real(8) read elements=", read_count, " instead of", np
-      write(message(2), '(a,a)') " of file= ", fname
-      call messages_fatal(2)
-    end if
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) then
+      call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
+      call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
+      if (read_count /= np) then 
+        write(message(1),'(a,i8,a,i8)') " real(8) read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+    endif
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(dread_parallel)
   end subroutine dread_parallel
@@ -1102,42 +1081,29 @@ contains
     complex(4),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: read_count, file_handle
 
     PUSH_SUB(cread_parallel)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = MPI_MODE_RDONLY
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-    call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " complex(4) read elements=", read_count, " instead of", np
-      write(message(2), '(a,a)') " of file= ", fname
-      call messages_fatal(2)
-    end if
-
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) then
+      call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
+      call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
+      if (read_count /= np) then 
+        write(message(1),'(a,i8,a,i8)') " complex(4) read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+    endif
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(cread_parallel)
   end subroutine cread_parallel
@@ -1154,24 +1120,18 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset
     integer :: status(MPI_STATUS_SIZE)
 #endif
     integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: read_count, file_handle
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(zread_parallel)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     read_count = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
@@ -1185,26 +1145,20 @@ contains
       ff = read_ff
       SAFE_DEALLOCATE_A(read_ff)
     else
-      amode = MPI_MODE_RDONLY
-      mpi_info = MPI_INFO_NULL 
-      call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-      call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-      call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-      call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-      call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
-      if (read_count /= np) then 
-        write(message(1),'(a,i8,a,i8)') " complex(8) read elements=", read_count, " instead of", np
-        write(message(2), '(a,a)') " of file= ", fname
-        call messages_fatal(2)
-      end if
-
-      call MPI_Finalized(finalized, mpi_err)
-      if (.not. finalized) then
-        call MPI_File_close(file_handle, mpi_err)
-      end if
-      ierr = mpi_err
-    end if
+      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
+      if(ierr == 0) then
+        call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
+        call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
+        if (read_count /= np) then 
+          write(message(1),'(a,i8,a,i8)') " complex(8) read elements=", read_count, " instead of", np
+          write(message(2), '(a,a)') " of file= ", fname
+          call messages_fatal(2)
+        end if
+      endif
+    endif
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(zread_parallel)
   end subroutine zread_parallel
@@ -1219,42 +1173,29 @@ contains
     integer(4),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_INT_32
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: read_count, file_handle
 
     PUSH_SUB(iread_parallel)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = MPI_MODE_RDONLY
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
-    call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " integer(4) read elements=", read_count, " instead of", np
-      write(message(2), '(a,a)') " of file= ", fname
-      call messages_fatal(2)
-    end if
-
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) then
+      call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
+      call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
+      if (read_count /= np) then 
+        write(message(1),'(a,i8,a,i8)') " integer(4) read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+    endif
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(iread_parallel)
   end subroutine iread_parallel
@@ -1269,42 +1210,29 @@ contains
     integer(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_INT_64
 #ifdef HAVE_MPI2
-    integer(MPI_OFFSET_KIND) :: offset    
     integer :: status(MPI_STATUS_SIZE)
 #endif
-    integer :: read_np, number_type
-    integer :: read_count, amode, mpi_info, file_handle
-    logical :: finalized
+    integer :: read_count, file_handle
 
     PUSH_SUB(lread_parallel)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, sizeof(ff(1)), .false., ierr)
 
-    ierr = 0
 #ifdef HAVE_MPI2
-    offset = (xlocal-1)*sizeof(ff(1))+64
-    amode = MPI_MODE_RDONLY
-    mpi_info = MPI_INFO_NULL 
-    call MPI_File_open(comm, fname, amode, mpi_info, file_handle, mpi_err)
-    call MPI_File_set_atomicity(file_handle, .true., mpi_err)
-    call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
-    call MPI_Get_count(status, MPI_INTEGER4, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " integer(8) read elements=", read_count, " instead of", np
-      write(message(2), '(a,a)') " of file= ", fname
-      call messages_fatal(2)
-    end if
-
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
-      call MPI_File_close(file_handle, mpi_err)
-    end if
-    ierr = mpi_err
+    if(ierr == 0) then
+      call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
+      call MPI_Get_count(status, MPI_INTEGER4, read_count, mpi_err)
+      if (read_count /= np) then 
+        write(message(1),'(a,i8,a,i8)') " integer(8) read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+    endif
 #endif
+
+    call io_binary_parallel_end(file_handle, comm)
 
     POP_SUB(lread_parallel)
   end subroutine lread_parallel
@@ -1320,7 +1248,6 @@ contains
     
     PUSH_SUB(io_binary_get_info)
 
-    type = 0
     ierr = 0
     call get_info_binary(np, type, ierr, trim(fname))
 
