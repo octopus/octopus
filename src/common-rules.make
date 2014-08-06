@@ -86,7 +86,6 @@ core_LIBS = \
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
 	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
-	$(top_builddir)/external_libs/slatec/libslatec.a          \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a
 
 if COMPILE_OPENCL

@@ -374,7 +374,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/spglib-1.5.2/Makefile
   external_libs/spglib-1.5.2/src/Makefile
   external_libs/newuoa/Makefile
-  external_libs/slatec/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
   liboct_parser/Makefile
