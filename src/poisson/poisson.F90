@@ -76,7 +76,6 @@ module poisson_m
     poisson_end,                 &
     poisson_test,                &
     poisson_is_multigrid,        &
-    poisson_energy,              &
     poisson_slave_work,          &
     poisson_async_init,          &
     poisson_async_end,           &
@@ -1050,18 +1049,6 @@ contains
 
   !-----------------------------------------------------------------
   
-  FLOAT function poisson_energy(this) result(energy)
-    type(poisson_t), intent(in) :: this
-
-    PUSH_SUB(poisson_energy)
-
-    energy = M_ZERO
-
-    POP_SUB(poisson_energy)
-  end function poisson_energy
-
-  !-----------------------------------------------------------------
-
   subroutine poisson_async_init(this, mc)
     type(poisson_t), intent(inout) :: this
     type(multicomm_t), intent(in)  :: mc
