@@ -35,7 +35,7 @@
     
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
         (.not.hamiltonian_oct_exchange(hm)) ) then
-      call vksinterp_interpolate(tr%vksold, 2, .false., gr%mesh%np, st%d%nspin, t, dt, t-dt/M_TWO, hm%vhxc)
+      call vksinterp_interpolate(tr%vksold, 2, gr%mesh%np, st%d%nspin, t, dt, t-dt/M_TWO, hm%vhxc)
     end if
 
     !move the ions to time 'time - dt/2'
@@ -50,6 +50,12 @@
 
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+
+    if(.not. hm%cmplxscl%space) then
+      call density_calc(st, gr, st%rho)
+    else
+      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+    end if
 
     POP_SUB(td_qoct_tddft_propagator)
   end subroutine td_qoct_tddft_propagator

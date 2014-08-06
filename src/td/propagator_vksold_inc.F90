@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: propagator_vksold_inc.F90 $
+!! $Id$
 
   ! ---------------------------------------------------------
   subroutine vksinterp_nullify(this)
@@ -72,9 +72,8 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_run_zero_iter(vksinterp, cmplxscl, np, nspin, vhxc, imvhxc)
+  subroutine vksinterp_run_zero_iter(vksinterp, np, nspin, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
-    logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: vhxc(:, :)
     FLOAT, optional,   intent(in)    :: imvhxc(:, :)
@@ -85,7 +84,7 @@
     forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
       vksinterp%v_old(ip, ispin, i) = vhxc(ip, ispin)
     end forall
-    if(cmplxscl) then
+    if(present(imvhxc)) then
       forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
         vksinterp%imv_old(ip, ispin, i) = imvhxc(ip, ispin)
       end forall
@@ -96,9 +95,8 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_new(vksinterp, cmplxscl, np, nspin, time, dt, vhxc, imvhxc)
+  subroutine vksinterp_new(vksinterp, np, nspin, time, dt, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
-    logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: time, dt
     FLOAT,             intent(in)    :: vhxc(:, :)
@@ -112,7 +110,7 @@
     call lalg_copy(np, nspin, vhxc(:, :),     vksinterp%v_old(:, :, 1))
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
       vksinterp%v_old(:, :, 1:3), time, vksinterp%v_old(:, :, 0))
-    if(cmplxscl) then
+    if(present(imvhxc)) then
       call lalg_copy(np, nspin, vksinterp%Imv_old(:, :, 2), vksinterp%Imv_old(:, :, 3))
         call lalg_copy(np, nspin, vksinterp%Imv_old(:, :, 1), vksinterp%Imv_old(:, :, 2))
         call lalg_copy(np, nspin, imvhxc(:, :),     vksinterp%Imv_old(:, :, 1))
@@ -125,9 +123,8 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_set(vksinterp, cmplxscl, np, nspin, i, vhxc, imvhxc)
+  subroutine vksinterp_set(vksinterp, np, nspin, i, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
-    logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
@@ -136,7 +133,7 @@
     PUSH_SUB(vksinterp_set)
 
     call lalg_copy(np, nspin, vhxc, vksinterp%v_old(:, :, i))
-    if(cmplxscl) then
+    if(present(imvhxc)) then
       call lalg_copy(np, nspin, imvhxc, vksinterp%imv_old(:, :, i))
     end if
 
@@ -146,9 +143,8 @@
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_get(vksinterp, cmplxscl, np, nspin, i, vhxc, imvhxc)
+  subroutine vksinterp_get(vksinterp, np, nspin, i, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
-    logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
@@ -157,7 +153,7 @@
     PUSH_SUB(vksinterp_set)
 
     call lalg_copy(np, nspin, vksinterp%v_old(:, :, i), vhxc)
-    if(cmplxscl) then
+    if(present(imvhxc)) then
       call lalg_copy(np, nspin, vksinterp%imv_old(:, :, i), imvhxc)
     end if
 
@@ -196,10 +192,9 @@
 
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_interpolate(vksinterp, order, cmplxscl, np, nspin, time, dt, t, vhxc, imvhxc)
+  subroutine vksinterp_interpolate(vksinterp, order, np, nspin, time, dt, t, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     integer,           intent(in)    :: order
-    logical,           intent(in)    :: cmplxscl
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: time, dt, t
     FLOAT,             intent(inout) :: vhxc(:, :)
@@ -211,11 +206,11 @@
     select case(order)
     case(3)
       call interpolate( (/time, time - dt, time - M_TWO*dt/), vksinterp%v_old(:, :, 0:2), t, vhxc(:, :))
-      if(cmplxscl) &
+      if(present(imvhxc)) &
         call interpolate( (/time, time - dt, time - M_TWO*dt/), vksinterp%Imv_old(:, :, 0:2), t, imvhxc(:, :))
     case(2)
       call interpolate( (/time, time-dt/), vksinterp%v_old(:, :, 0:1), t, vhxc(:, :))
-      if(cmplxscl) &
+      if(present(imvhxc)) &
         call interpolate( (/time, time-dt/), vksinterp%imv_old(:, :, 0:1), t, imvhxc(:, :))
     case default
        ASSERT(.false.)

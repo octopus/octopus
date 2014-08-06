@@ -141,7 +141,7 @@
         call hamiltonian_update(hm, gr%mesh, time = time)
         if(.not.hamiltonian_oct_exchange(hm_p)) then
           if (i==1) then
-            call vksinterp_get(tr%vksold, .false., gr%mesh%np, st%d%nspin, 0, vhxc1_op)
+            call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
             i = i + 1
           else
             vhxc1_op = hm%vhxc
@@ -207,6 +207,11 @@
         end do
       end do
 
+      if(.not. hm%cmplxscl%space) then
+        call density_calc(st, gr, st%rho)
+      else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+      end if
 
       SAFE_DEALLOCATE_A(k2)
       SAFE_DEALLOCATE_A(oldk2)
@@ -467,6 +472,12 @@
           call states_set_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
         end do
       end do
+
+      if(.not. hm%cmplxscl%space) then
+        call density_calc(st, gr, st%rho)
+      else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+      end if
 
       SAFE_DEALLOCATE_A(rhs1)
       SAFE_DEALLOCATE_A(rhs2)
