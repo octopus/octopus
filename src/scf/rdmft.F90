@@ -351,7 +351,7 @@ contains
     SAFE_DEALLOCATE_A(dpsi2)
     POP_SUB(scf_occ)
 
-    contains
+  contains
   
     subroutine multid_minimize(nst, max_iter, theta, objective)!iris maybe do not pass from the arguments the number of iterations 
       integer, intent(in)        :: nst
@@ -416,10 +416,10 @@ contains
     ! --------------------------------------------
     
     subroutine calcul_objective(nst, theta_new, df, objective_new) 
-      INTEGER, intent(in)                 :: nst
-      FLOAT, intent(in)                   :: theta_new(:)
-      FLOAT, intent(out)                  :: df(1:nst)
-      FLOAT, intent(out)                  :: objective_new
+      integer, intent(in)  :: nst
+      FLOAT,   intent(in)  :: theta_new(:)
+      FLOAT,   intent(out) :: df(:) !< (1:nst)
+      FLOAT,   intent(out) :: objective_new
 
       integer :: ist
       FLOAT ::  energy
@@ -479,7 +479,7 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
     FLOAT ,               intent(out)   :: energy    
     
-    INTEGER :: ist, jst
+    integer :: ist, jst
     FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     
     PUSH_SUB(scf_orb)
@@ -529,6 +529,7 @@ contains
 
   end subroutine scf_orb
 
+  ! ----------------------------------------
   subroutine construct_f(hm, st, gr, lambda)
     type(hamiltonian_t),  intent(in) :: hm
     type(states_t),       intent(inout) :: st
@@ -561,7 +562,7 @@ contains
     dpsi = M_ZERO
     dpsi2 = M_ZERO
         
-    !calculate the single particle part of the lambda matrix, Eq. (9)
+    !calculate the single-particle part of the lambda matrix, Eq. (9)
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
@@ -637,6 +638,7 @@ contains
 
   end subroutine construct_f
    
+  ! ----------------------------------------
   subroutine assign_eigfunctions(st, gr, lambda)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -681,13 +683,14 @@ contains
 
   end subroutine assign_eigfunctions
    
+  ! ----------------------------------------
   subroutine total_energy_rdm(rdm, st, gr, occ, energy, dE_dn)
     type(rdm_t),          intent(inout)  :: rdm
     type(states_t),       intent(in)     :: st 
     type(grid_t),         intent(in)     :: gr
     FLOAT,                intent(in)     :: occ(:)
     FLOAT,                intent(out)    :: energy
-    FLOAT, optional,      intent(out)    :: dE_dn(1:st%nst)
+    FLOAT, optional,      intent(out)    :: dE_dn(:) !< (1:st%nst)
      
     integer :: ist, jst
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:) 
@@ -745,6 +748,7 @@ contains
    
   end subroutine total_energy_rdm
   
+  ! ----------------------------------------
   subroutine rdm_derivatives(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm 
@@ -761,7 +765,7 @@ contains
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
 
-    !derivative of one electron energy with respect to the natural orbitals occupation number
+    !derivative of one-electron energy with respect to the natural orbitals occupation number
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &

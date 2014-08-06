@@ -82,7 +82,7 @@
     type(grid_t),     intent(inout) :: gr
     type(states_t),   intent(inout) :: psi
     
-    INTEGER :: i, j
+    integer :: i, j
 
     PUSH_SUB(target_j1_spin)
 
@@ -107,7 +107,7 @@
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
     
-    INTEGER :: i, j
+    integer :: i, j
 
     PUSH_SUB(target_chi_spin)
     
@@ -120,3 +120,9 @@
 
     POP_SUB(target_chi_spin)
   end subroutine target_chi_spin
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
