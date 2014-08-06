@@ -97,6 +97,17 @@ dist_share_DATA =                      \
         17-absorption-spin_symmetry.test \
         18-hhg.test \
         18-hhg.01-gs.inp \
-        18-hhg.02-td.inp
+        18-hhg.02-td.inp \
+	19-propagators.test \
+	19-propagators.01-gs.inp \
+	19-propagators.02-expmid.inp \
+	19-propagators-03-etrs.inp \
+	19-propagators-04-aetrs.inp \
+	19-propagators-05-caetrs.inp \
+	19-propagators-06-cn.inp \
+	19-propagators-07-cnsparskit.inp \
+	19-propagators-08-magnus.inp \
+	19-propagators-09-rungekutta2.inp \
+	19-propagators-10-rungekutta4.inp
 
 CLEANFILES = *~ *.bak
