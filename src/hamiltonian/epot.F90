@@ -628,7 +628,7 @@ contains
     end if
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo, sb, gr, ep, ep%eii, ep%fii)
+    call ion_interaction_calculate(geo, sb, ep, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
@@ -678,7 +678,6 @@ contains
     FLOAT, allocatable :: vl(:), Imvl(:), rho(:), Imrho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    integer :: counter, conversion(3), nx_half, ny_half, nz_half !ROA
     logical :: cmplxscl
 
     PUSH_SUB(epot_local_potential)
@@ -891,11 +890,10 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(geo, sb, gr, ep, energy, force)
+  subroutine ion_interaction_calculate(geo, sb, ep, energy, force)
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
     type(epot_t),             intent(inout) :: ep
-    type(grid_t),             intent(in)    :: gr
     FLOAT,                    intent(out)   :: energy
     FLOAT,    dimension(:,:), intent(out)   :: force
     !

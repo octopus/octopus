@@ -767,7 +767,7 @@ contains
 
     if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
-      call hamiltonian_set_oct_exchange(hm, st, gr%mesh, ks%xc)
+      call hamiltonian_set_oct_exchange(hm, st, gr%mesh)
     end if
 
     call hamiltonian_adjoint(hm)

@@ -889,11 +889,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(hm, st, mesh, xc)
+  subroutine hamiltonian_set_oct_exchange(hm, st, mesh)
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
     type(mesh_t),        intent(in)    :: mesh
-    type(xc_t),          intent(in)    :: xc
 
     integer :: np, nspin
 
@@ -926,7 +925,7 @@ contains
     CMPLX,               intent(in)    :: psi(:, :, :, :)
     type(xc_t),          intent(in)    :: xc
 
-    integer :: np, nspin, jst, ip, ik
+    integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)
 
     PUSH_SUB(hamiltonian_prepare_oct_exchange)
