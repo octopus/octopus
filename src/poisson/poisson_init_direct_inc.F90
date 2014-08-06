@@ -18,15 +18,11 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine poisson_kernel_init(this, geo, all_nodes_comm)
+subroutine poisson_kernel_init(this, all_nodes_comm)
   type(poisson_t),  intent(inout) :: this
-  type(geometry_t), intent(in)    :: geo
   integer,          intent(in)    :: all_nodes_comm
 
   integer :: maxl, iter
-  integer :: nx, ny, nz
-  FLOAT   :: xl, yl, zl
-
   logical :: valid_solver
 
   PUSH_SUB(poisson_kernel_init)

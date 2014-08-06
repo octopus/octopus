@@ -570,7 +570,7 @@ contains
       end if
     end if
 
-    call poisson_kernel_init(this, geo, mc%master_comm)
+    call poisson_kernel_init(this, mc%master_comm)
 
     POP_SUB(poisson_init)
   end subroutine poisson_init
@@ -739,17 +739,11 @@ contains
     !! its calculations? (Defaults to .true.)
     logical, optional,    intent(in)    :: all_nodes 
     type(derivatives_t), pointer :: der
-    integer :: counter
-    integer :: nx_half, nx
-    integer :: ny_half, ny
-    integer :: nz_half, nz
 
-    FLOAT, allocatable :: vh0(:,:,:), rh0(:,:,:)
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof
-    integer               :: conversion(3)
 
     call profiling_in(prof, 'POISSON_SOLVE')
     PUSH_SUB(dpoisson_solve)
