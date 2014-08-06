@@ -7,7 +7,7 @@ Units = eV_Angstrom
 Radius = 5.0
 Spacing = 0.5
 %Coordinates
-"C"  |    0   |    0  |      0
+  "H" | 0 | 0 | 0
 %
 
 OutputHow = dx
