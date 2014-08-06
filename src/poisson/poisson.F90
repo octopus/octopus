@@ -51,7 +51,6 @@ module poisson_m
   use poisson_fmm_m
   use poisson_libisf_m
   use poisson_multigrid_m
-  use poisson_sete_m
   use profiling_m
   use simul_box_m
   use types_m
@@ -110,7 +109,6 @@ module poisson_m
     FLOAT   :: poisson_soft_coulomb_param
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
-    type(poisson_sete_t) :: sete_solver
     type(poisson_isf_t)  :: isf_solver
     type(poisson_libisf_t) :: libisf_solver
     type(poisson_fmm_t)  :: params_fmm
@@ -213,7 +211,7 @@ contains
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver.
     !%Option sete 9
-    !% (Experimental) SETE solver. Complex boundaries are required.
+    !% (Obsolete) SETE solver.
     !%Option libisf 10
     !% (Experimental) Meant to be exactly the same as Interpolating
     !% Scaling Functions Poisson solver, but using an external
@@ -437,13 +435,8 @@ contains
       end if
 
       if (this%method == POISSON_SETE) then
-        call messages_experimental('SETE poisson solver')
-
-        if(.not. simul_box_complex_boundaries(der%mesh%sb)) then
-          message(1) = 'Complex boundaries must be enabled to use the SETE Poisson solver.'
-          message(2) = 'Use ComplexBoundaries = yes in your input file.'
-          call messages_fatal(2)
-        end if
+        message(1) = 'SETE poisson solver is obsolete and has been removed.'
+        call messages_fatal(1)
       end if
 
       if (this%method == POISSON_FMM) then
@@ -613,9 +606,6 @@ contains
     case(POISSON_LIBISF)
       call poisson_libisf_end(this%libisf_solver)
       has_cube = .true.
-
-    case(POISSON_SETE)
-      call poisson_sete_end(this%sete_solver)
 
     case(POISSON_FMM)
       call poisson_fmm_end(this%params_fmm)
@@ -843,45 +833,6 @@ contains
         call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
 
-    case(POISSON_SETE)
-
-      nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
-      ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
-      nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
-
-      nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
-      ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
-      nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
-
-      SAFE_ALLOCATE(rh0(1:nx, 1:ny, 1:nz))
-      SAFE_ALLOCATE(vh0(1:nx, 1:ny, 1:nz))
-
-      do counter = 1, der%mesh%np
-        call  index_to_coords(der%mesh%idx,counter,conversion)
-        conversion(1)=conversion(1)+nx_half
-        conversion(2)=conversion(2)+ny_half
-        conversion(3)=conversion(3)+nz_half
-        vh0(conversion(1),conversion(2),conversion(3))=pot(counter)
-        rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
-      end do
-
-      call poisson_sete_solve(this%sete_solver, rh0, vh0, nx, ny, nz)
-
-      do counter = 1, der%mesh%np
-
-        call  index_to_coords(der%mesh%idx,counter,conversion)
-
-        conversion(1) = conversion(1) + nx_half
-        conversion(2) = conversion(2) + ny_half
-        conversion(3) = conversion(3) + nz_half
-        
-        pot(counter)=vh0(conversion(1), conversion(2), conversion(3))
-
-      end do
-
-      SAFE_DEALLOCATE_A(vh0)
-      SAFE_DEALLOCATE_A(rh0)
-
     end select
 
     POP_SUB(dpoisson_solve)
@@ -1073,8 +1024,6 @@ contains
     
     free_bc = .true.
 
-    if (this%method == POISSON_SETE) free_bc = .false.
-
     if (this%method == POISSON_FFT .and. &
       this%kernel /= POISSON_FFT_KERNEL_SPH .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
       free_bc = .false.
@@ -1107,7 +1056,6 @@ contains
     PUSH_SUB(poisson_energy)
 
     energy = M_ZERO
-    if(this%method == POISSON_SETE) energy = poisson_sete_energy(this%sete_solver)
 
     POP_SUB(poisson_energy)
   end function poisson_energy

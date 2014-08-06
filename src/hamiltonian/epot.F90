@@ -46,7 +46,6 @@ module epot_m
   use parser_m
   use poisson_m
   use poisson_cutoff_m
-  use poisson_sete_m
   use profiling_m
   use projector_m
   use ps_m
@@ -477,14 +476,6 @@ contains
 
     if(ep%have_density) then
       ep%poisson_solver => psolver
-
-      if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then
-        SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
-        rho_nuc(1:gr%mesh%np) = M_ZERO
-        SAFE_ALLOCATE(v_es(1:gr%mesh%np))
-        v_es(1:gr%mesh%np) = M_ZERO
-      end if
-      
     else
       nullify(ep%poisson_solver)
     end if
@@ -502,13 +493,6 @@ contains
     PUSH_SUB(epot_end)
 
     if(ep%have_density) then
-
-      if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then 
-        SAFE_DEALLOCATE_A(rho_nuc)
-        SAFE_DEALLOCATE_A(v_es)
-        SAFE_DEALLOCATE_A(v_es3)
-      end if
-
       nullify(ep%poisson_solver)
     end if
 
@@ -674,7 +658,7 @@ contains
     
     has_density = &
       species_has_density(atom%spec) .or. (species_is_ps(atom%spec) .and. simul_box_is_periodic(sb)) &
-      .or. (species_is_ps(atom%spec) .and. simul_box_complex_boundaries(sb))
+      .or. (species_is_ps(atom%spec))
 
   end function local_potential_has_density
   
@@ -755,30 +739,7 @@ contains
           end if
         end if
 
-        count_atoms=iatom
-
-        ! cmplxscl: we won`t be caring about whatever POISSON_SETE is
-        
-        if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then  !SEC
-          write(68,*) "Calling rhonuc iatom", iatom
-          rho_nuc(1:der%mesh%np) = rho_nuc(1:der%mesh%np) + rho(1:der%mesh%np)
-          if (iatom==geo%natoms.and.calc_gate_energy==0) then
-            write(68,*) "Entering the zone"
-            nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
-            ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
-            nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
-            do counter = 1, der%mesh%np
-              call index_to_coords(der%mesh%idx, counter, conversion)
-              conversion(1) = conversion(1) + nx_half
-              conversion(2) = conversion(2) + ny_half
-              conversion(3) = conversion(3) + nz_half
-              v_es(counter)=v_es3(conversion(1),conversion(2),conversion(3))
-            enddo
-            es_energy = dmf_dotp(der%mesh, rho_nuc, v_es)
-            write(68,*) "Calculating ion energy due to bias:", es_energy*CNST(2.0*13.60569193)
-          end if
-         end if
-         SAFE_DEALLOCATE_A(rho)
+        SAFE_DEALLOCATE_A(rho)
 
       else
 
@@ -965,16 +926,6 @@ contains
       else
         call ion_interaction_periodic(geo, sb, energy, force)
       end if
-
-    else if(simul_box_complex_boundaries(sb)) then
-      ASSERT(geo%ncatoms==0)
-      ! only interaction inside the cell
-      write(68,'(a)') "Calling SETE interaction"
-      write(6,'(a)') "Calling SETE interaction"
-      !ep%eii= M_ZERO
-      write(68,*) "energy, ep%eii before ion interaction sete" , energy, ep%eii
-      call ion_interaction_sete(gr, sb, geo, ep) 
-      write(*,*) "energy, ep%eii", energy, ep%eii
     else
       natom=geo%natoms+geo%ncatoms
       if(ep%ignore_external_ions) then
@@ -1204,121 +1155,6 @@ contains
     POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
 
-
-  ! ------------------------------------------------------------
-  subroutine ion_interaction_sete(gr, sb, geo, ep)
-    type(grid_t),      intent(in)    :: gr
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    type(epot_t),      intent(inout) :: ep
-  
-    integer                              :: iatom, jatom
-    FLOAT, allocatable                   :: rho1(:), v2(:), rho2(:)
-    FLOAT                                :: temp
-    FLOAT :: rr, dd, zi, zj
-    FLOAT :: sicn, chargeion, sqrtalphapi,sicn2
-
-    PUSH_SUB(ion_interaction_sete)
-
-    write(68,*) "ep%eii values top", ep%eii
-    ep%eii=es_energy*M_HALF
-    write(68,*) "ep%eii values top", ep%eii
-
-!    SAFE _ALLOCATE(rho2(1:gr%mesh%np))
-!    SAFE _ALLOCATE(rho3(1:gr%mesh%np))
-!    v2(1:gr%mesh%np)= M_ZERO
-!    v3(1:gr%mesh%np)= M_ZERO
-!    rho2(1:gr%mesh%np)= M_ZERO
-!    rho3(1:gr%mesh%np)= M_ZERO
-    sicn=M_ZERO
-    sicn2=M_ZERO
-    !This value represents sqrt(alpha/pi)
-    !On species/ps.F90, the value of sigma_erf = 0.625
-    !alpha=(1/2)*(1/erf)**2
-    !It is the same as alpha = CNST(1.1313708)/sqrt(M_PI)
-    sqrtalphapi=sqrt(M_HALF*(CNST(1.6)**2)/M_PI)
-!    do iatom=1,geo%natoms
-!      call epot_local_potential(ep, gr%der, gr%dgrid, ep%poisson_solver, geo, iatom, v2, time1)
-!      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho2)
-!      v3(1:gr%mesh%np)=v3(1:gr%mesh%np)+v2(1:gr%mesh%np)
-!      rho3(1:gr%mesh%np)=rho3(1:gr%mesh%np)+rho2(1:gr%mesh%np)
-!      !Substract this from total energy
-!      write(68,*) "Getting self-interaction correction of", iatom
-!      chargeion=species_zval(geo%atom(iatom)%spec)
-!      sicn=sicn+sqrtalphapi*chargeion*chargeion
-!      write(68,*) "chargeion, value", chargeion,sqrtalphapi*chargeion*chargeion, sicn
-!    end do
-!    temp=dmf_dotp(gr%mesh, rho3, v3) 
-!    temp=M_HALF*temp
-!    write(68,*) "temp, sicn", temp, sicn
-!    ep%eii=ep%eii+temp-sicn
-!    SAFE_DEALLOCATE _A(rho2)
-!    SAFE_DEALLOCATE _A(v2)
-!    SAFE_DEALLOCATE _A(rho3)
-!    SAFE_DEALLOCATE _A(v3)
-
-    do jatom = geo%natoms,2, -1
-      SAFE_ALLOCATE(v2(1:gr%mesh%np))
-      SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-      v2(1:gr%mesh%np)= M_ZERO
-      count_atoms=jatom
-      calc_gate_energy=1
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, jatom, v2)
-
-      do iatom = jatom-1,1,-1
-        SAFE_ALLOCATE(rho1(1:gr%mesh%np))
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho1)
-        temp=dmf_dotp(gr%mesh, rho1, v2) 
-        ep%eii = ep%eii + temp 
-        SAFE_DEALLOCATE_A(rho1)
-        write(68,*) "ep%eii values", iatom, jatom, ep%eii, temp
-      enddo
-      SAFE_DEALLOCATE_A(rho2)
-      SAFE_DEALLOCATE_A(v2)
-    enddo
-
-    !Testing self-interaction approximation
-    temp=0.0
-    do iatom=1,geo%natoms
-      SAFE_ALLOCATE(v2(1:gr%mesh%np))
-      SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-      v2(1:gr%mesh%np)= M_ZERO
-      rho2(1:gr%mesh%np)= M_ZERO
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, v2)
-      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho2)
-      temp=dmf_dotp(gr%mesh, rho2, v2) 
-      sicn2=sicn2+M_HALF*temp
-      chargeion=species_zval(geo%atom(iatom)%spec)
-      sicn=sicn+sqrtalphapi*chargeion*chargeion
-      write(68,*) "Getting sic of:", iatom,M_HALF*temp, sicn2, sqrtalphapi*chargeion*chargeion, sicn
-      SAFE_DEALLOCATE_A(v2)
-      SAFE_DEALLOCATE_A(rho2)
-     enddo
-     !Add off-diagonal, self-interaction and its correction
-     ep%eii=ep%eii+sicn2-sicn
-
-    write(68,*) "ep%eii values very bottom", ep%eii * CNST(2.0)*CNST(13.60569193)
-
-    do iatom = 1, geo%natoms
-      zi = species_zval(geo%atom(iatom)%spec)
-
-      do jatom = 1, geo%natoms
-        if(iatom == jatom) cycle
-        zj = species_zval(geo%atom(jatom)%spec)
-        rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
-        !the force
-        dd = zi * zj / rr**3
-        ep%fii(1:sb%dim, iatom) = ep%fii(1:sb%dim, iatom) + &
-          dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
-        ep%fii(1:sb%dim, iatom) = M_ZERO         
-      enddo
-      write(68,*) "SETE Force:", iatom,ep%fii(1:sb%dim,iatom)
-      !calc_gate_energy=0
-    enddo 
-
-    POP_SUB(ion_interaction_sete)
-   end subroutine ion_interaction_sete
-      
 end module epot_m
 
 !! Local Variables:

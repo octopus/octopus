@@ -34,7 +34,7 @@ subroutine poisson_kernel_init(this, geo, all_nodes_comm)
   select case(this%method)
   case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE, POISSON_LIBISF)
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF)
     valid_solver = .true.
   case default
     valid_solver = .false.
@@ -177,16 +177,6 @@ subroutine poisson_kernel_init(this, geo, all_nodes_comm)
       call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
     end if
 
-  case(POISSON_SETE)
-    nx = this%der%mesh%idx%ll(1) 
-    ny = this%der%mesh%idx%ll(2)
-    nz = this%der%mesh%idx%ll(3)
-    xl = 2*this%der%mesh%sb%lsize(1)
-    yl = 2*this%der%mesh%sb%lsize(2)
-    zl = 2*this%der%mesh%sb%lsize(3)
-
-    call poisson_sete_init(this%sete_solver, nx, ny, nz, xl, yl, zl, geo%natoms)
-     
   end select
 
   POP_SUB(poisson_kernel_init)

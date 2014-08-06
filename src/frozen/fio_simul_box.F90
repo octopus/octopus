@@ -53,7 +53,6 @@ contains
     !if(ierr/=JSON_OK)dir="./"//trim(restart_loaddir)//GS_DIR
 !    call simul_box_load(this, dir, "mesh")
     ASSERT(this%box_shape/=HYPERCUBE)
-    this%complex_boundaries=.false.
     call simul_box_lookup_init(this, geo)
     ASSERT(.not.this%mr_flag)
     nullify(this%hr_area%radius, this%hr_area%interp%posi, this%hr_area%interp%ww)

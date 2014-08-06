@@ -42,7 +42,6 @@ module v_ks_m
   use multigrid_m
   use parser_m
   use poisson_m
-  use poisson_sete_m
   use profiling_m
   use pcm_m 
   use simul_box_m
@@ -1170,15 +1169,6 @@ contains
       !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
       SAFE_DEALLOCATE_P(pot)
     end if
-
-    if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
-      hm%energy%hartree = hm%energy%hartree + poisson_energy(ks%hartree_solver)
-      ASSERT(.not. hm%cmplxscl%space) ! Don`t know how to proceed here with cmplxscl
-      ! can not find any reference to unit 89 anywhere else in the code forgotten debug write?
-      !write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), &
-      !  poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
-      !  hm%ep%eii*CNST(2.0)*CNST(13.60569193)
-    endif
 
     if (hm%cmplxscl%space) then
       SAFE_DEALLOCATE_P(zpot)

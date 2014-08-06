@@ -64,7 +64,6 @@ module simul_box_m
     simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_complex_boundaries,   &
     simul_box_periodic_atom_in_box 
 
   integer, parameter, public :: &
@@ -154,7 +153,6 @@ module simul_box_m
     type(c_ptr)         :: image
     character(len=200)  :: filename
 
-    logical :: complex_boundaries
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -259,18 +257,6 @@ contains
         call messages_write('of total energy and forces.')
         call messages_warning()
       end if
-
-      !%Variable ComplexBoundaries
-      !%Type logical
-      !%Default no
-      !%Section System
-      !%Description
-      !% (Experimental) If enabled the system will have complex
-      !% boundaries defined by an electrostatic potential. Must be
-      !% used with the SETE poisson solver.
-      !%End
-      call parse_logical(datasets_check('ComplexBoundaries'), .false., sb%complex_boundaries)
-      if(sb%complex_boundaries) call messages_experimental("Complex boundaries")
 
       !%Variable MultiResolutionArea
       !%Type block
@@ -1691,14 +1677,6 @@ contains
 
     POP_SUB(ob_simul_box_add_lead_atoms)
   end subroutine ob_simul_box_add_lead_atoms
-
-  ! -----------------------------------------------------
-
-  logical pure function simul_box_complex_boundaries(sb) result(cb)
-    type(simul_box_t),  intent(in) :: sb
-
-    cb = sb%complex_boundaries
-  end function simul_box_complex_boundaries
 
   ! -----------------------------------------------------
 
