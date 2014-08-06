@@ -1,0 +1,10 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Recipe
+Programs   : octopus; octopus_mpi
+TestGroups : short-run, components
+Enabled    : Yes
+
+Input: 17-recipe.inp
+#nothing to test, just whether the execution didn't crash

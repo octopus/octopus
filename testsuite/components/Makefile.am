@@ -61,6 +61,8 @@ dist_share_DATA =                                  \
 	15-cholesky_parallel.02-complex.inp        \
 	16-hartree_3d_libisf.test                  \
 	16-hartree_3d_libisf.01-libisf.inp         \
-	16-hartree_3d_libisf.02-libisf.inp         
+	16-hartree_3d_libisf.02-libisf.inp         \
+	17-recipe.inp                              \
+        17-recipe.test
 
 CLEANFILES = *~ *.bak
