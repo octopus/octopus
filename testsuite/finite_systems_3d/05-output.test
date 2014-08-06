@@ -55,5 +55,10 @@ Precision : 0.000001
 match ; XCrySDen wf 3    ; LINE(static/wf-st0001.xsf, 8087, 8) ; 0.010543843731284
 match ; XCrySDen wf 4    ; LINE(static/wf-st0001.xsf, 8546, 8) ; 0.007238401100039
 
-
+# Convert the density from obf to dx format and check it.
+Util  : oct-convert
+Input : 05-output.02-convert.inp
+match ; Convert to dx (header)     ; GREP(restart/gs/density.dx, 'origin', 8, 0); -5.000000
+match ; Convert to dx (line 513)   ; LINE(restart/gs/density.dx, 671, 1);         0.000097681638760
+match ; Convert to dx (line 29355) ; LINE(restart/gs/density.dx, 9048, 1);        0.000002915649324
 

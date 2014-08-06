@@ -41,6 +41,7 @@ dist_share_DATA = \
 	03-magnetic.06-td-spinors.inp                  \
 	05-output.test                                 \
 	05-output.01-gs.inp                            \
+	05-output.02-convert.inp                       \
 	06-restart.01-gs_mixrho.inp                    \
 	06-restart.02-restart_gs_mixrho.inp            \
 	06-restart.03-gs_mixvhxc.inp                   \
