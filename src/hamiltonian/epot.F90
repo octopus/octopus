@@ -655,10 +655,8 @@ contains
     type(simul_box_t),        intent(in)    :: sb
     type(atom_t),             intent(in)    :: atom
     
-    
     has_density = &
-      species_has_density(atom%spec) .or. (species_is_ps(atom%spec) .and. simul_box_is_periodic(sb)) &
-      .or. (species_is_ps(atom%spec))
+      species_has_density(atom%spec) .or. (species_is_ps(atom%spec) .and. simul_box_is_periodic(sb))
 
   end function local_potential_has_density
   
