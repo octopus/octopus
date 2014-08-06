@@ -101,9 +101,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_spin(tg, gr, psi_in, chi_out)
+  subroutine target_chi_spin(tg, psi_in, chi_out)
     type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
     

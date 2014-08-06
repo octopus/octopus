@@ -661,7 +661,7 @@ contains
 
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qinitial, qtildehalf)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qtildehalf)
       freeze = ion_dynamics_freeze(td%ions)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
       if(freeze) call ion_dynamics_unfreeze(td%ions)
@@ -719,7 +719,7 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, st, qinitial, qtildehalf)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, st, qtildehalf)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -729,7 +729,6 @@ contains
     type(controlfunction_t), intent(in)        :: par_chi
     type(geometry_t), intent(in)               :: geo
     type(states_t), intent(inout)              :: st
-    FLOAT, intent(in), optional                :: qinitial(:, :)
     FLOAT, intent(in), optional                :: qtildehalf(:, :)
 
     type(states_t) :: inh

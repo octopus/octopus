@@ -581,7 +581,7 @@ contains
     case(oct_tg_classical)
       call target_chi_classical(tg, qcpsi_in, qcchi_out, geo)
     case(oct_tg_spin)
-      call target_chi_spin(tg, gr, psi_in, chi_out)
+      call target_chi_spin(tg, psi_in, chi_out)
     end select
 
     nullify(psi_in)
