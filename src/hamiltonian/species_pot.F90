@@ -829,6 +829,7 @@ contains
       SAFE_DEALLOCATE_A(ylm)
 
       nullify(ps)
+
     else
       
       ASSERT(.not. derivative_)
@@ -852,6 +853,7 @@ contains
       case(3)
         do ip = 1, submesh%np
           x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)*hermite(m - 1, x(3)*sqrtw)
         end do
       end select
