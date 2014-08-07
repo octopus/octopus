@@ -71,7 +71,15 @@ module io_binary_m
       character(len=*),    intent(in)    :: fname
     end subroutine get_info_binary
   end interface
-    
+
+  interface
+    subroutine write_header(np_global, type, ierr, fname)
+      integer,             intent(in)  :: np_global
+      integer,             intent(in)  :: type
+      integer,             intent(out) :: ierr      
+      character(len=*),    intent(in)  :: fname
+    end subroutine write_header
+  end interface
 
 contains
 
