@@ -1086,7 +1086,7 @@ contains
     select case(f%mode)
     case(TDF_NUMERICAL)
       ! We assume that the grid is the same for both functions.
-      ! We will apply Simpson's rule. However, note that this rule is only valid if there is an even
+      ! We will apply Simpson`s rule. However, note that this rule is only valid if there is an even
       ! number of orbitals. So if there is an odd number, we will apply a correction term (that will 
       ! reduce the error order from 4 to 2, similar to the simple trapezoidal rule).
       fg = M_ZERO

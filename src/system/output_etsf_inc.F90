@@ -412,7 +412,7 @@ subroutine output_etsf_electrons_write(st, ncid)
   PUSH_SUB(output_etsf_electrons_write)
 
   SAFE_ALLOCATE(electrons%number_of_electrons)
-  electrons%number_of_electrons = st%qtot
+  electrons%number_of_electrons = int(st%qtot)
 
   nspin = 1
   if (st%d%ispin == SPIN_POLARIZED) nspin = 2
