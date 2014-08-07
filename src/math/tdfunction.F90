@@ -499,7 +499,7 @@ contains
     if(present(initval)) then
       f%val = initval
     else
-      f%val = M_z0
+      f%val = M_ZERO
     end if
     f%dt = dt
 
@@ -579,7 +579,7 @@ contains
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
     SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-    f%valww(1) = tmp(1)
+    f%valww(1) = real(tmp(1), REAL_PRECISION)
     do j = 2, f%nfreqs
       f%valww(j) = (sqrt(M_TWO)) * real(tmp(j))
     end do
@@ -800,7 +800,7 @@ contains
 
     ! Maybe there should be a grid for any kind of function, so
     ! that a meaningful number is produced in any case.
-    y = M_z0
+    y = M_ZERO
     select case(f%mode)
     case(TDF_NUMERICAL)
       y = f%val(i)
@@ -829,12 +829,12 @@ contains
 
     case(TDF_CW)
 
-      y = f%a0 * exp(M_zI * f%omega0*t )
+      y = f%a0 * cos( f%omega0*t )
 
     case(TDF_GAUSSIAN)
 
       r = exp(-(t - f%t0)**2 / (M_TWO*f%tau0**2))
-      y = f%a0 * r * exp(M_zI * (f%omega0*t))
+      y = f%a0 * r * cos( f%omega0*t )
 
     case(TDF_COSINOIDAL)
 
@@ -842,7 +842,7 @@ contains
       if(abs(t - f%t0) <= f%tau0) then
         r = cos( (M_Pi/2)*((t - 2*f%tau0 - f%t0)/f%tau0) )
       end if
-      y = f%a0 * r * exp(M_zI * (f%omega0*t))
+      y = f%a0 * r * cos( f%omega0*t )
 
     case(TDF_TRAPEZOIDAL)
       if(t > f%t0-f%tau0/M_TWO-f%tau1 .and. t <= f%t0-f%tau0/M_TWO) then
@@ -854,7 +854,7 @@ contains
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * exp(M_zI * (f%omega0*t))
+      y = f%a0 * r * cos( f%omega0*t )
     case(TDF_FROM_FILE)
 
       if( t >= f%init_time .and. t <= f%final_time) then
@@ -889,7 +889,7 @@ contains
     case(TDF_FROM_EXPR)
       tcu = units_from_atomic(units_inp%time, t)
       call parse_expression(fre, fim, 't', tcu, f%expression)
-      y = TOCMPLX(fre, fim)
+      y = fre
 
     case default
       y = M_ZERO
