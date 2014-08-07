@@ -6,14 +6,12 @@ ComplexScaling = space
 ComplexScalingTheta = 0.4
 
 Dimensions = 1
-ForceComplex = true # arpack solver works only if ForceComplex
 BoxShape = sphere
 fromScratch = yes
 Spacing = 0.1
 Radius = 6.5
 ExtraStates = 8
 XCFunctional=lda_xc_cmplx
-PoissonSolver=direct_sum
 
 ComplexScalingLocalizationRadius = Radius * 0.6
 
@@ -21,8 +19,6 @@ ComplexScalingLocalizationRadius = Radius * 0.6
 EigenSolverArnoldiVectors = 50
 EigensolverTolerance = 1e-15
 ArpackInitialTolerance = 1
-
-TheoryLevel = DFT
 
 Eigensolver = arpack
 
@@ -35,6 +31,3 @@ eith = exp(i * ComplexScalingTheta)
 %Coordinates
  'HARMONIC' | 0
 %
-
-#Output = wfs + density + potential
-#OutputHow = axis_x

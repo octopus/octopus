@@ -5,7 +5,6 @@ ComplexScaling = space
 ComplexScalingTheta = 0.3
 
 Dimensions = 1
-ForceComplex = true # arpack solver works only if ForceComplex
 BoxShape = sphere
 fromScratch = yes
 Spacing = 0.05
@@ -16,14 +15,9 @@ ComplexScalingLocalizedStates = 4
 
 ExtraStates = 8
 XCFunctional = pbe_xc_cmplx
-PoissonSolver = direct_sum
 
-#SpinComponents = polarized
 # recommended 2 * nstates + 1 or more
 EigenSolverArnoldiVectors = 24
-
-#TheoryLevel = independent_particles
-TheoryLevel = DFT
 
 Eigensolver = arpack
 
