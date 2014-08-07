@@ -624,12 +624,11 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
   R_TYPE, allocatable :: ff2(:)
-  logical :: cmplxscl
+  R_TYPE :: factor
 
   PUSH_SUB(X(mf_multipoles))
-  cmplxscl = .false.
-  if(present(cmplxscl_th)) cmplxscl = .true.
 
+  factor = R_TOPREC(exp(M_zI * optional_default(cmplxscl_th, M_ZERO)))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -638,55 +637,26 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2)
   
-  if(.not. cmplxscl) then
-    
-    if(lmax > 0) then
-      do idim = 1, 3
-        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-        multipole(idim+1) = X(mf_integrate)(mesh, ff2)
-      end do
-    end if
-
-    if(lmax>1) then
-      add_lm = 5
-      do ll = 2, lmax
-        do lm = -ll, ll
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, coords=xx)
-            call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
-            ff2(ip) = ff(ip) * ylm * rr**ll
-          end do
-          multipole(add_lm) = X(mf_integrate)(mesh, ff2)
-          add_lm = add_lm + 1
+  if(lmax > 0) then
+    do idim = 1, 3
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim) * factor
+      multipole(idim+1) = X(mf_integrate)(mesh, ff2)
+    end do
+  end if
+  
+  if(lmax>1) then
+    add_lm = 5
+    do ll = 2, lmax
+      do lm = -ll, ll
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, coords=xx)
+          call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
+          ff2(ip) = ff(ip) * ylm * (rr * factor)**ll
         end do
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+        add_lm = add_lm + 1
       end do
-    end if
-
-  else
-
-    if(lmax > 0) then
-      do idim = 1, 3
-        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-        ff2(1:mesh%np) = ff2(1:mesh%np)* exp(M_zI * cmplxscl_th)
-        multipole(idim+1) = X(mf_integrate)(mesh, ff2)
-      end do
-    end if
-
-    if(lmax>1) then
-      add_lm = 5
-      do ll = 2, lmax
-        do lm = -ll, ll
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, coords=xx)
-            call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
-            ff2(ip) = ff(ip) * ylm * rr**ll * exp(M_zI * cmplxscl_th * ll) 
-          end do
-          multipole(add_lm) = X(mf_integrate)(mesh, ff2)
-          add_lm = add_lm + 1
-        end do
-      end do
-    end if
-
+    end do
   end if
 
   SAFE_DEALLOCATE_A(ff2)
@@ -694,6 +664,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
 end subroutine X(mf_multipoles)
 
 
+!--------------------------------------------------------------
 subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole, inside)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: n_domains
@@ -755,7 +726,7 @@ end subroutine X(mf_local_multipoles)
 
 
 !--------------------------------------------------------------
-!> add some part of the function in mesh1 to mesh2 (index based, so same spacing is assumed)
+!> add some part of the function in mesh1 to mesh2 (index-based, so same spacing is assumed)
 subroutine X(mf_add)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per_dim, include_bounds)
   type(mesh_t),      intent(in)    :: mesh1
   integer,           intent(in)    :: start1(1:3)    !< starting point in mesh1
