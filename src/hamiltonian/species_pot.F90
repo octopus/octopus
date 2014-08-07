@@ -224,14 +224,14 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
           rr = max(rr, r_small)
-          do nn = 1, ps%conf%p
+          nn_loop: do nn = 1, ps%conf%p
             do isp = 1, spin_channels
-              if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle
+              if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle nn_loop
             enddo
             do isp = 1, spin_channels
               rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
             enddo
-          end do
+          end do nn_loop
         end do
       end do
   
