@@ -553,7 +553,7 @@
 
     select case(tg%curr_functional)
     case(oct_no_curr)
-      chi(ip, 1, ist, 1) = M_ZERO
+      chi(:, 1, :, 1) = M_ZERO
 
     case(oct_curr_square,oct_curr_square_td)
        ! components current weighted by its position in the mesh, np_part included,
