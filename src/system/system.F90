@@ -111,7 +111,7 @@ contains
     call states_lead_densities_init(sys%st, sys%gr)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc, theta = sys%st%cmplxscl%theta)
+    call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)

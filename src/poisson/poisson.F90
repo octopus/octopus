@@ -27,7 +27,6 @@ module poisson_m
   use datasets_m
   use derivatives_m
   use fft_m
-  use geometry_m
   use global_m
   use index_m
   use io_m
@@ -130,10 +129,9 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, mc, label, theta, qq)
+  subroutine poisson_init(this, der, mc, label, theta, qq)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
-    type(geometry_t),            intent(in)  :: geo
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
