@@ -29,10 +29,12 @@ dist_share_DATA =                      \
 	01-propagators.04-aetrs.inp \
 	01-propagators.05-caetrs.inp \
 	01-propagators.06-cn.inp \
-	01-propagators.07-cnsparskit.inp \
-	01-propagators.08-magnus.inp \
-	01-propagators.09-rungekutta2.inp \
-	01-propagators.10-rungekutta4.inp \
+	01-propagators.07-magnus.inp \
+	02-propagators.test \
+	02-propagators.01-gs.inp \
+	02-propagators.02-cnsparskit.inp \
+	02-propagators.03-rungekutta2.inp \
+	02-propagators.04-rungekutta4.inp \
 	03-exp_mid.01-gs.inp           \
 	03-exp_mid.02-td.inp           \
 	03-exp_mid.test                \

@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Propagators (requiring SPARSKIT)
+Options    : sparskit
+Programs   : octopus_mpi; octopus
+TestGroups : short-run, real_time
+Enabled    : Yes
+
+#This test checks the time propagation, for various propagators
+
+# ground state
+Processors : 1
+Input      : 02-propagators.01-gs.inp
+Precision  : 1.0e-6
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00353072
+
+Processors : 4
+Input      : 02-propagators.02-cnsparskit.inp
+Precision  : 1.0e-6
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.458982795902e-01
+
+Processors : 4
+Input      : 02-propagators.03-rungekutta2.inp
+Precision  : 1.0e-6
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459099074503e-01
+
+Processors : 4
+Input      : 02-propagators.04-rungekutta4.inp
+Precision  : 1.0e-6
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459099074503e-01
