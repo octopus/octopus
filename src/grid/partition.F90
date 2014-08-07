@@ -79,7 +79,7 @@ module partition_m
     integer ::         nppp      !< Number of points per process. The first partition%remainder processes
                                  !! have nppp+1 points, while the other ones have nppp points
 
-    !> The following components are process dependent:
+    !> The following components are process-dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
     integer :: istart            !< The position of the first point stored in this process.
     integer, pointer :: part(:)  !< The local portion of the partition.
@@ -480,7 +480,8 @@ contains
     POP_SUB(partition_get_partition_number)
   end subroutine partition_get_partition_number
 
-  !> Giving the partition, returns the corresponding number of local
+  !---------------------------------------------------------
+  !> Given the partition, returns the corresponding number of local
   !! points that each partition has.
   subroutine partition_get_np_local(partition, np_local_vec)
     type(partition_t),    intent(in)  :: partition       !< Current partition
@@ -491,6 +492,7 @@ contains
 
     PUSH_SUB(partition_get_np_local)
 
+    ASSERT(ubound(np_local_vec, 1) >= partition%npart)
     SAFE_ALLOCATE(np_local_vec_tmp(1:partition%npart))
     np_local_vec_tmp = 0
 
@@ -501,7 +503,7 @@ contains
 
     ! Collect all the local points
 #ifdef HAVE_MPI
-    call MPI_Allreduce(np_local_vec_tmp(1), np_local_vec(1), partition%npart, &
+    call MPI_Allreduce(np_local_vec_tmp, np_local_vec, partition%npart, &
          MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
 #endif
     SAFE_DEALLOCATE_P(np_local_vec_tmp)
@@ -510,12 +512,14 @@ contains
 
   end subroutine partition_get_np_local
 
+  !---------------------------------------------------------
   !> Returns the total number of partitions
   pure integer function partition_get_npart(partition) result(npart)
     type(partition_t), intent(in) :: partition
     npart = partition%npart
   end function partition_get_npart
   
+  !---------------------------------------------------------
   !> Returns the partition of the local point
   pure integer function partition_get_part(partition, local_point) result(part)
     type(partition_t), intent(in) :: partition
@@ -523,6 +527,7 @@ contains
     part = partition%part(local_point)
   end function partition_get_part
   
+  !---------------------------------------------------------
   !> Calculates the local vector of all partitions in parallel.
   !! Local vector stores the global point indexes, that each partition
   !! has.
