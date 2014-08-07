@@ -79,7 +79,7 @@ contains
 
     integer :: isp, ip, in_points, nn, icell
     FLOAT :: rr, x, pos(1:MAX_DIM)
-    FLOAT :: psi1, psi2, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
+    FLOAT :: psi, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: spec
     type(ps_t), pointer :: ps
 
@@ -225,21 +225,12 @@ contains
           call mesh_r(mesh, ip, rr, origin = pos)
           rr = max(rr, r_small)
           do nn = 1, ps%conf%p
-            select case(spin_channels)
-            case(1)
-              if(rr >= spline_range_max(ps%Ur(nn, 1))) cycle
-
-              psi1 = spline_eval(ps%Ur(nn, 1), rr)
-              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
-            case(2)
-              if(rr >= spline_range_max(ps%Ur(nn, 1))) cycle
-              if(rr >= spline_range_max(ps%Ur(nn, 2))) cycle
-
-              psi1 = spline_eval(ps%Ur(nn, 1), rr)
-              psi2 = spline_eval(ps%Ur(nn, 2), rr)
-              rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
-              rho(ip, 2) = rho(ip, 2) + ps%conf%occ(nn, 2)*psi2*psi2 /(M_FOUR*M_PI)
-            end select
+            do isp = 1, spin_channels
+              if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle
+            enddo
+            do isp = 1, spin_channels
+              rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
+            enddo
           end do
         end do
       end do
@@ -697,7 +688,7 @@ contains
     FLOAT,                   intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
     FLOAT, optional,         intent(in)     :: scale
 
-    integer :: i, l, m, ip, icell
+    integer :: i, l, m, ip, icell, nn(3), idir
     FLOAT :: r2, x(1:MAX_DIM), radius, xfactor
     FLOAT, allocatable :: xf(:, :), ylm(:), lorb(:)
     type(ps_t), pointer :: ps
@@ -751,19 +742,17 @@ contains
 
       else
 
+        ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
+        nn = (/i, l, m/)
+
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
-          select case(mesh%sb%dim)
-          case(1)
-            orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
-          case(2)
-             orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * &
-              hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
-          case(3)
-             orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))* &
-              hermite(l - 1, x(2)*sqrt(species_omega(spec)))*hermite(m - 1, x(3)*sqrt(species_omega(spec)))
-          end select
+          lorb = exp(-species_omega(spec)*r2/M_TWO)
+          do idir = 1, mesh%sb%dim
+            lorb(ip) = lorb(ip) * hermite(nn(idir) - 1, x(idir)*sqrt(species_omega(spec)))
+          enddo
+          orb(ip) = orb(ip) + lorb(ip)
         end do
       end if
 
@@ -787,7 +776,7 @@ contains
     FLOAT,                   intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
     logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
-    integer :: i, l, m, ip
+    integer :: i, l, m, ip, nn(3), idir
     FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
     FLOAT, allocatable :: ylm(:)
     type(ps_t), pointer :: ps
@@ -837,26 +826,17 @@ contains
       ww = species_omega(spec)
       sqrtw = sqrt(ww)
 
-      select case(submesh%mesh%sb%dim)
-      case(1)
-        do ip = 1, submesh%np
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
-          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
-          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)
-        end do
-      case(2)
-        do ip = 1, submesh%np
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
-          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
-          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)
-        end do
-      case(3)
-        do ip = 1, submesh%np
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
-          r2 = sum(x(1:submesh%mesh%sb%dim)**2)
-          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)*hermite(m - 1, x(3)*sqrtw)
-        end do
-      end select
+      ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
+      nn = (/i, l, m/)
+
+      do ip = 1, submesh%np
+        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+        r2 = sum(x(1:submesh%mesh%sb%dim)**2)
+        phi(ip) = exp(-ww*r2/M_TWO)
+        do idir = 1, submesh%mesh%sb%dim
+          phi(ip) = phi(ip) * hermite(nn(idir) - 1, x(idir)*sqrtw)
+        enddo
+      end do
       
     end if
 
