@@ -614,12 +614,13 @@ end function X(mf_line_integral_vector)
 !!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
 !! And so on.
 !! -----------------------------------------------------------------------------
-subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:) !< ((lmax + 1)**2)
-  FLOAT, optional,   intent(in)  :: cmplxscl_th !< the space complex scaling angle cmplxscl%theta 
+  FLOAT, optional,   intent(in)  :: cmplxscl_th !< the space complex scaling angle cmplxscl%theta
+  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
@@ -640,7 +641,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
   if(lmax > 0) then
     do idim = 1, 3
       ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim) * factor
-      multipole(idim+1) = X(mf_integrate)(mesh, ff2)
+      multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
     end do
   end if
   
@@ -653,7 +654,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
           call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
           ff2(ip) = ff(ip) * ylm * (rr * factor)**ll
         end do
-        multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = inside)
         add_lm = add_lm + 1
       end do
     end do
@@ -665,61 +666,22 @@ end subroutine X(mf_multipoles)
 
 
 !--------------------------------------------------------------
-subroutine X(mf_local_multipoles) (mesh, n_domains, domains, ff, lmax, multipole, inside)
+subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: n_domains
-  type(box_union_t), intent(in)  :: domains(:)
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
-  logical,           intent(in)  :: inside(:,:)
+  logical,           intent(in)  :: inside(:,:) !< (mesh%np, n_domains)
 
-  integer :: idom, idim, ip, ll, lm, add_lm
-  FLOAT   :: xx(MAX_DIM), rr, ylm
-  R_TYPE, allocatable :: ff2(:)
+  integer :: idom
 
   PUSH_SUB(X(mf_local_multipoles))
 
-  ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
-
-  SAFE_ALLOCATE(ff2(1:mesh%np))
-
-  ff2(1:mesh%np) = ff(1:mesh%np)
-
   do idom = 1, n_domains
-    ll = 0
-    do ip = 1, mesh%np
-      if(inside(ip,idom)) ll = ll + 1
-    end do
-    multipole(1, idom) = X(mf_integrate)(mesh, ff2, mask=inside(:,idom))
+    ! FIXME: should have cmplxscl_theta passed here too.
+    call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
   end do
-  
-  if(lmax > 0) then
-    do idim = 1, 3
-      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-      do idom = 1, n_domains
-        multipole(idim+1, idom) = X(mf_integrate)(mesh, ff2, mask=inside(:,idom))
-      end do
-    end do
-  end if
-
-  if(lmax>1) then
-    add_lm = 5
-    do ll = 2, lmax
-      do lm = -ll, ll
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, coords=xx)
-          call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
-          ff2(ip) = ff(ip) * ylm * rr**ll
-        end do
-        do idom = 1, n_domains
-          multipole(add_lm, idom) = X(mf_integrate)(mesh, ff2, mask=inside(:,idom))
-        end do
-        add_lm = add_lm + 1
-      end do
-    end do
-  end if
-  SAFE_DEALLOCATE_A(ff2)
 
   POP_SUB(X(mf_local_multipoles))
 end subroutine X(mf_local_multipoles)

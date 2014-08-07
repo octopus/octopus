@@ -367,7 +367,7 @@ contains
 
     do is = 1, st%d%nspin
       if(.not. cmplxscl) then
-        call dmf_local_multipoles(gr%mesh, nd, domain, st%rho(:,is), lmax, multipole(:,is,:), inside)
+        call dmf_local_multipoles(gr%mesh, nd, st%rho(:,is), lmax, multipole(:,is,:), inside)
       else
         message(1) = 'Local Multipoles is still not implemented for complex densities'
         call messages_fatal(1)
