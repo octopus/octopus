@@ -11,60 +11,60 @@ Enabled    : Yes
 
 # ground state
 Processors : 1
-Input      : 19-propagators.01-gs.inp
+Input      : 01-propagators.01-gs.inp
 Precision  : 1.0e-6
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00353072
 
 Processors : 4
-Input      : 19-propagators.02-expmid.inp
+Input      : 01-propagators.02-expmid.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891546919e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459069558123e-01
 
 Processors : 4
-Input      : 19-propagators.03-etrs.inp
+Input      : 01-propagators.03-etrs.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891546919e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459506607220e-01
 
 Processors : 4
-Input      : 19-propagators.04-aetrs.inp
+Input      : 01-propagators.04-aetrs.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459069539882e-01
 
 Processors : 4
-Input      : 19-propagators.05-caetrs.inp
+Input      : 01-propagators.05-caetrs.inp
 Precision  : 1.0e-6
 match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.792570054855e-10
 match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.573150610309e-02
 
 Processors : 4
-Input      : 19-propagators.06-cn.inp
+Input      : 01-propagators.06-cn.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.458982690814e-01
 
 Processors : 4
-Input      : 19-propagators.07-cnsparskit.inp
+Input      : 01-propagators.07-cnsparskit.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.458982795902e-01
 
 Processors : 4
-Input      : 19-propagators.08-magnus.inp
+Input      : 01-propagators.08-magnus.inp
 Precision  : 1.0e-6
 match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.792570054855e-10
 match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.041742610317e-04
 
 Processors : 4
-Input      : 19-propagators.09-rungekutta2.inp
+Input      : 01-propagators.09-rungekutta2.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459099074503e-01
 
 Processors : 4
-Input      : 19-propagators.10-rungekutta4.inp
+Input      : 01-propagators.10-rungekutta4.inp
 Precision  : 1.0e-6
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459099074503e-01

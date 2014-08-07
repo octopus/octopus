@@ -22,16 +22,17 @@
 sharedir = $(pkgdatadir)/testsuite/real_time
 
 dist_share_DATA =                      \
-	01-etrs.01-gs.inp              \
-	01-etrs.02-td.inp              \
-	01-etrs.03-td_lanczos.inp      \
-	01-etrs.test                   \
-	02-aetrs.01-gs.inp             \
-	02-aetrs.02-td.inp             \
-	02-aetrs.03-td_lanczos.inp     \
-	02-aetrs.04-kick.inp           \
-	02-aetrs.05-spectrum.inp       \
-	02-aetrs.test                  \
+	01-propagators.test \
+	01-propagators.01-gs.inp \
+	01-propagators.02-expmid.inp \
+	01-propagators.03-etrs.inp \
+	01-propagators.04-aetrs.inp \
+	01-propagators.05-caetrs.inp \
+	01-propagators.06-cn.inp \
+	01-propagators.07-cnsparskit.inp \
+	01-propagators.08-magnus.inp \
+	01-propagators.09-rungekutta2.inp \
+	01-propagators.10-rungekutta4.inp \
 	03-exp_mid.01-gs.inp           \
 	03-exp_mid.02-td.inp           \
 	03-exp_mid.test                \
@@ -97,17 +98,6 @@ dist_share_DATA =                      \
         17-absorption-spin_symmetry.test \
         18-hhg.test \
         18-hhg.01-gs.inp \
-        18-hhg.02-td.inp \
-	19-propagators.test \
-	19-propagators.01-gs.inp \
-	19-propagators.02-expmid.inp \
-	19-propagators.03-etrs.inp \
-	19-propagators.04-aetrs.inp \
-	19-propagators.05-caetrs.inp \
-	19-propagators.06-cn.inp \
-	19-propagators.07-cnsparskit.inp \
-	19-propagators.08-magnus.inp \
-	19-propagators.09-rungekutta2.inp \
-	19-propagators.10-rungekutta4.inp
+        18-hhg.02-td.inp
 
 CLEANFILES = *~ *.bak
