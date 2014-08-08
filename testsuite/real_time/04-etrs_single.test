@@ -12,11 +12,11 @@ Enabled    : Yes
 
 # ground state
 Processors : 1
-Input      : 01-etrs.01-gs.inp
+Input      : 04-etrs_single.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00275421
 
 Processors : 4
-Input      : 01-etrs.02-td.inp
+Input      : 04-etrs_single.02-td.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.098091602325e+01
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.098084259033e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.098077297211e+01

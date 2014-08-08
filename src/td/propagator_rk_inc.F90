@@ -77,6 +77,7 @@
       SAFE_ALLOCATE(rhs(1:tr%tdsk_size))
       SAFE_ALLOCATE(zpsi(1:tr%tdsk_size))
       SAFE_ALLOCATE(vhxc1_op(np, nspin))
+      SAFE_ALLOCATE(vpsl1_op(np))
 
       ! First, we get the state that we want to propagate. For the moment being, only one state.
       do ik = kp1, kp2
@@ -220,6 +221,7 @@
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
       SAFE_DEALLOCATE_A(vhxc1_op)
+      SAFE_DEALLOCATE_A(vpsl1_op)
       POP_SUB(propagator_dt.td_runge_kutta2)
 #endif
     end subroutine td_runge_kutta2
