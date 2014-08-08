@@ -35,10 +35,9 @@ dist_share_DATA =                      \
 	02-propagators.02-cnsparskit.inp \
 	02-propagators.03-rungekutta2.inp \
 	02-propagators.04-rungekutta4.inp \
-	03-exp_mid.01-gs.inp           \
-	03-exp_mid.02-td.inp           \
-	03-exp_mid.test                \
 	04-etrs_single.test            \
+	04-etrs_single.01-gs.inp \
+	04-etrs_single.02-td.inp \
         05-time_propagation.01-gs.inp                                 \
 	05-time_propagation.02-td_domains.inp                         \
 	05-time_propagation.03-td_domains_states.inp                  \

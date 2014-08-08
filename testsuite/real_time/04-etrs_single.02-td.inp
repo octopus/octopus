@@ -1,5 +1,4 @@
 CalculationMode = td
-
 FromScratch = yes
 
 bond_length = 2.8
@@ -24,8 +23,6 @@ TDTimeStep = 0.1
 
 TDMaximumIter = 20
 
-TDPropagator = exp_mid
-
 ParallelizationStrategy = par_domains + par_states
 
 %ParallelizationGroupRanks
@@ -35,3 +32,5 @@ ParallelizationStrategy = par_domains + par_states
 FilterPotentials = filter_ts
 
 TDEnergyUpdateIter = 5
+
+
