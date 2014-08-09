@@ -78,7 +78,6 @@ module propagator_m
     propagator_set_scf_prop,        &
     propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
-    propagator_requires_vks,        &
     propagator_dt_bo,               &
     vksinterp_t,                    &
     vksinterp_dump,                 &
@@ -606,12 +605,10 @@ contains
       end if 
     end if
 
-    if(propagator_requires_vks(tr)) then
-      if(cmplxscl) then
-        call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
-      else
-        call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
-      end if
+    if(cmplxscl) then
+      call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
+    else
+      call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
     end if
 
     select case(tr%method)
@@ -720,13 +717,8 @@ contains
     end if
 
     update_energy_ = optional_default(update_energy, .false.)
-
-    if(update_energy_ .or. propagator_requires_vks(tr)) then
-      ! update Hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
-      ! Get the energies.
-      if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
-    end if
+    call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
+    if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
     if(ion_dynamics_ions_move(ions)) then
@@ -780,19 +772,6 @@ contains
   end function propagator_ions_are_propagated
   ! ---------------------------------------------------------
 
-
-  ! ---------------------------------------------------------
-  logical pure function propagator_requires_vks(tr) result(requires)
-    type(propagator_t), intent(in) :: tr
-    
-    select case(tr%method)
-    case(PROP_CAETRS)
-      requires = .false.
-    case default
-      requires = .true.
-    end select
-    
-  end function propagator_requires_vks
 
   ! ---------------------------------------------------------
 

@@ -151,9 +151,9 @@
         SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
         if(hm%cmplxscl%space) SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
         if(hm%cmplxscl%space) then
-          call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 1, vold, imvold)
+          call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
         else
-          call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 1, vold)
+          call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
         end if
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
         if(hm%cmplxscl%space) call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
@@ -171,7 +171,9 @@
       if(tr%method == PROP_CAETRS) then
         call v_ks_calc_finish(ks, hm)
 
-        call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
+        call vksinterp_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
         forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
           vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
