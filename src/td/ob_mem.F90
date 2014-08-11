@@ -151,9 +151,9 @@ contains
     ! (Note that during the calculation the same directory will be used for reading and writing.
     !  Also, because the information is mesh independent, we do not care about consistency of
     !  the data.)
-    call restart_init(restart_dump, RESTART_OB, RESTART_TYPE_DUMP, mpi_grp)
-    call restart_init(restart_load, RESTART_OB, RESTART_TYPE_LOAD, mpi_grp)
-
+    call restart_init(restart_dump, RESTART_OB, RESTART_TYPE_DUMP, mpi_grp, ierr)
+    ! it is ok if load fails.
+    call restart_init(restart_load, RESTART_OB, RESTART_TYPE_LOAD, mpi_grp, ierr)
 
     do il = 1, NLEADS
       np = intf(il)%np_intf

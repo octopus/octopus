@@ -149,16 +149,21 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, exact=.true.)
-    call states_look_and_load(gs_restart, st, gr)
-    call restart_end(gs_restart)
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
+    if(ierr == 0) then
+      call states_look_and_load(gs_restart, st, gr)
+      call restart_end(gs_restart)
+    else
+      message(1) = "Previous gs calculation is required."
+      call messages_fatal(1)
+    endif
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh)
+      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
@@ -209,8 +214,8 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, mesh=gr%mesh)
-    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh)
+    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
 
     if (fromScratch) then
       start_mode = 1

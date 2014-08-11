@@ -385,12 +385,13 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, data_type, type, mpi_grp, mesh, dir, exact)
+  subroutine restart_init(restart, data_type, type, mpi_grp, ierr, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information.
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
     type(mpi_grp_t),             intent(in)  :: mpi_grp   !< The mpi group in charge of handling this restart.
+    integer,                     intent(out) :: ierr      !< Error code, if any. Required for LOAD, should not be present for DUMP.
     type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
                                                           !! information is either dumped or the mesh compatibility is checked.
     character(len=*),  optional, intent(in)  :: dir       !< Directory where to find the restart data. It is mandatory if 
@@ -399,11 +400,13 @@ contains
                                                           !! exactly the same or not?
 
     logical :: grid_changed, grid_reordered, restart_write, dir_exists
-    integer :: ierr, iunit
+    integer :: iunit
     character(len=20) :: tag
     character(len=80) :: basedir, dirname
 
     PUSH_SUB(restart_init)
+
+    ierr = 0
 
     ! Sanity checks
     if (present(exact) .and. .not. present(mesh)) then
@@ -445,7 +448,7 @@ contains
       end if
         
     case (RESTART_TYPE_LOAD)
-      ! We should never skip anything when loading the restart information
+      ! This is set to true as an error condition, checked by assertions in some routines.
       restart%skip = .false.
       
     case default
@@ -536,6 +539,7 @@ contains
 
     case (RESTART_TYPE_LOAD)
       if (.not. dir_exists) then
+        ierr = 1
         restart%skip = .true.
 
         message(1) = "Could not find '"//trim(restart%pwd)//"' directory for restart."
@@ -578,6 +582,7 @@ contains
               message(1) = "This calculation requires the exact same mesh to restart."
               message(2) = "No restart information will be read from '"//trim(restart%pwd)//"'."
               call messages_warning(2)
+              ierr = 1
             end if
           else
             restart%skip = .false.

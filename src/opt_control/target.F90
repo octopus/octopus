@@ -191,6 +191,7 @@ contains
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
 
+    integer :: ierr
     type(states_t), pointer :: stin
     type(restart_t) :: restart
 
@@ -256,7 +257,11 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tg%st%dom_st_kpt_mpi_grp, mesh=gr%mesh, exact=.true.)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tg%st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
+    if(ierr /= 0) then
+      message(1) = "Could not read gs for OCTTargetOperator."
+      call messages_fatal(1)
+    endif
 
     select case(tg%type)
     case(oct_tg_groundstate)

@@ -441,9 +441,9 @@ contains
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
         restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR
-        call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, dir=restart_dir)
+        call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, ierr, dir=restart_dir)
         ! first get nst and kpoints of all states
-        call states_look(ob_restart, ob_k(il), ob_d(il), ob_st(il), ierr)
+        if(ierr == 0) call states_look(ob_restart, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr /= 0) then
           message(1) = 'Could not read the states information of the periodic calculation'
           message(2) = 'from '//trim(restart_dir)//'.'
@@ -696,7 +696,11 @@ contains
       PUSH_SUB(states_init.read_ob_eigenval_and_occ)
 
       restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR
-      call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, dir=restart_dir)
+      call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, err, dir=restart_dir)
+      if(err /= 0) then
+        message(1) = 'Could not read open-boundaries eigenvalues and occupations.'
+        call messages_fatal(1)
+      endif
 
       occs = restart_open(ob_restart, 'occs')
       if(occs  <  0) then

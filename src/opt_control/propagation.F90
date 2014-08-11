@@ -977,7 +977,7 @@ contains
     character(len=*), intent(in)    :: dirname
     type(grid_t),     intent(in)    :: gr
 
-    integer :: j
+    integer :: j, ierr
 
     PUSH_SUB(oct_prop_init)
 
@@ -987,8 +987,8 @@ contains
 
     ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
     ! so they need to use the same path.
-    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, gr%mesh%mpi_grp, mesh=gr%mesh)
-    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mesh=gr%mesh)
+    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0

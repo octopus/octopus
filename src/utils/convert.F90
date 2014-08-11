@@ -256,10 +256,15 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      dir=trim(ref_folder), mesh = mesh)
+                      ierr, dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
-      call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
-      call restart_end(restart)
+      if(ierr == 0) then
+        call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
+        call restart_end(restart)
+      else
+        message(1) = "Failed to read from ref-file."
+        call messages_fatal(1)
+      endif
     end if
 
     call loct_progress_bar(-1, c_end-c_start)
@@ -288,9 +293,11 @@ contains
 
       ! Read the obf file
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      dir=trim(folder), mesh = mesh)
-      call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
-      call restart_end(restart)
+                      ierr, dir=trim(folder), mesh = mesh)
+      if(ierr == 0) then
+        call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
+        call restart_end(restart)
+      endif
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename

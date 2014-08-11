@@ -95,9 +95,10 @@ contains
     ! Read free states for ground-state open-boundary calculation.
     if(sys%st%open_boundaries) then
       call restart_init(restart_ob, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
+                        ierr, mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
                         dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR)
-      call states_load_free_states(restart_ob, sys%st, sys%gr, ierr)
+      if(ierr == 0) &
+        call states_load_free_states(restart_ob, sys%st, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read free states wavefunctions."
         call messages_fatal(1)
@@ -112,8 +113,9 @@ contains
       ! load wavefunctions
       ! in RDMFT we need the full ground state
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
-      call states_load(restart_load, sys%st, sys%gr, ierr)
+                        ierr, mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
+      if(ierr == 0) &
+        call states_load(restart_load, sys%st, sys%gr, ierr)
 
       if(ierr /= 0) then
         call messages_write("Unable to read wavefunctions.")
@@ -142,7 +144,7 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then

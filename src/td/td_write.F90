@@ -289,8 +289,9 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mesh=gr%mesh)
-      call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
+      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
+      if(ierr == 0) &
+        call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
       if(ierr /= 0) then
         message(1) = "Unable to read states information."
         call messages_fatal(1)

@@ -87,8 +87,8 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, exact=.true.)
-    call states_load(gs_restart, sys%st, sys%gr, ierr)
+                      ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -115,13 +115,16 @@ contains
     field_written = .false.
 
     call restart_init(restart_dump, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-      mesh=sys%gr%mesh)
+      ierr, mesh=sys%gr%mesh)
 
     if(.not. fromScratch) then
       call restart_init(restart_load, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh)
-
-      iunit = restart_open(restart_load, RESTART_FILE)
+                        ierr, mesh=sys%gr%mesh)
+      if(ierr == 0) then
+        iunit = restart_open(restart_load, RESTART_FILE)
+      else
+        iunit = 0
+      endif
 
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.

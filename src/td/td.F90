@@ -188,11 +188,11 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, mesh=gr%mesh)
+    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
       call restart_init(restart_load, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, &
-                        mesh=gr%mesh)
+                        ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -365,8 +365,9 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if (.not. fromscratch) then
-        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh)
-        call td_load(restart, gr, st, hm, td, ierr)
+        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+        if(ierr == 0) &
+          call td_load(restart, gr, st, hm, td, ierr)
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
@@ -384,10 +385,10 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, mesh=gr%mesh, exact=.true.)
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          call states_load(restart, st, gr, ierr, label = ": gs", kpts_dont_matter = st%open_boundaries)
+          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs", kpts_dont_matter = st%open_boundaries)
           if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)

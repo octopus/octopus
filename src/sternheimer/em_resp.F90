@@ -142,9 +142,14 @@ contains
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh, exact=.true.)
-    call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
-    call restart_end(gs_restart)
+                      ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) then
+      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+      call restart_end(gs_restart)
+    else
+      message(1) = "Previous gs calculation is required."
+      call messages_fatal(1)
+    endif
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -176,7 +181,7 @@ contains
       call messages_info(1)
 
       call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh)
+                        ierr, mesh=sys%gr%mesh)
 
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir, 1))

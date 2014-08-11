@@ -108,10 +108,12 @@ contains
     read_gs = .true.
     if (.not. fromScratch) then
       call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh)
+                        ierr, mesh=sys%gr%mesh)
 
-      call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-      call restart_end(restart_load_unocc)
+      if(ierr == 0) then
+        call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call restart_end(restart_load_unocc)
+      endif
       
       ! If successfully read states from unocc, do not read from gs.
       ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
@@ -121,14 +123,15 @@ contains
     end if
 
     call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh)
+                      ierr_rho, mesh=sys%gr%mesh)
 
-    if (read_gs) then
-      call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-    end if
-
-    call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
-    call restart_end(restart_load_gs)
+    if(ierr_rho == 0) then
+      if (read_gs) then
+        call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+      end if
+      call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
+      call restart_end(restart_load_gs)
+    endif
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
@@ -203,7 +206,7 @@ contains
 
     ! Restart dump should be initialized after restart_load, as the mesh might have changed
     call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                      mesh=sys%gr%mesh)
+                      ierr, mesh=sys%gr%mesh)
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)

@@ -196,6 +196,7 @@ contains
       gaus_leg_points (gaus_leg_n) = CNST(0.99999)
       gaus_leg_weights(gaus_leg_n) = M_ZERO
 
+      ! FIXME: this should be part of the restart framework
       ! check if we can restart
       inquire(file=VDW_DIR//'vdw_c6', exist=file_exists)
       if(.not.fromScratch .and. file_exists) then
@@ -221,9 +222,14 @@ contains
 
       ! we always need complex response
       call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh, exact=.true.)
-      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = .true.)
-      call restart_end(gs_restart)
+                        ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr == 0) then
+        call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = .true.)
+        call restart_end(gs_restart)
+      else
+        message(1) = "Previous gs calculation required."
+        call messages_fatal(1)
+      endif
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -238,7 +244,7 @@ contains
       ! load wavefunctions
       if (.not. fromScratch) then
         call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                          mesh=sys%gr%mesh)
+                          ierr, mesh=sys%gr%mesh)
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
@@ -259,7 +265,7 @@ contains
       endif
 
       call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                        mesh=sys%gr%mesh)
+                        ierr, mesh=sys%gr%mesh)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_
