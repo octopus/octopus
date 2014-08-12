@@ -39,28 +39,28 @@ module io_binary_m
     io_binary_get_info
 
   interface io_binary_write
-    module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
-    module procedure iwrite_binary2, lwrite_binary2, dwrite_binary2, zwrite_binary2
-    module procedure zwrite_binary3, cwrite_binary3, dwrite_binary3
+    module procedure dwrite_binary, zwrite_binary, iwrite_binary
+    module procedure iwrite_binary2, dwrite_binary2, zwrite_binary2
+    module procedure zwrite_binary3, dwrite_binary3, iwrite_binary3
   end interface io_binary_write
   
   interface io_binary_write_parallel
-    module procedure swrite_parallel, dwrite_parallel, cwrite_parallel,  zwrite_parallel, iwrite_parallel, lwrite_parallel
+    module procedure dwrite_parallel, zwrite_parallel, iwrite_parallel
   end interface io_binary_write_parallel
 
   interface io_binary_read
-    module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
-    module procedure iread_binary2, lread_binary2, zread_binary2, dread_binary2
-    module procedure zread_binary3, cread_binary3, dread_binary3
+    module procedure dread_binary, zread_binary, iread_binary
+    module procedure iread_binary2, zread_binary2, dread_binary2
+    module procedure zread_binary3, iread_binary3, dread_binary3
   end interface io_binary_read
 
   interface io_binary_read_parallel
-    module procedure sread_parallel, dread_parallel, cread_parallel,  zread_parallel, iread_parallel, lread_parallel
+    module procedure dread_parallel, zread_parallel, iread_parallel
   end interface io_binary_read_parallel
 
   !> Interfaces to C to write the header
   interface io_binary_write_header
-    module procedure swrite_header, dwrite_header, cwrite_header,  zwrite_header, iwrite_header, lwrite_header
+    module procedure dwrite_header, zwrite_header, iwrite_header
   end interface io_binary_write_header
 
   interface
@@ -84,136 +84,6 @@ module io_binary_m
   ! no interfaces for read_binary, write_binary since we call them with different types
 
 contains
-
-  ! ------------------------------------------------------
-
-  subroutine swrite_header(fname, np_global, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np_global
-    real(4),             intent(in)  :: ff
-    integer,             intent(out) :: ierr
-    
-    PUSH_SUB(swrite_header)
-
-    call write_header(np_global, TYPE_FLOAT, ierr, trim(fname))
-    
-    POP_SUB(swrite_header)
-  end subroutine swrite_header
-
-  ! ------------------------------------------------------
-
-  subroutine cwrite_header(fname, np_global, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np_global
-    complex(4),          intent(in)  :: ff
-    integer,             intent(out) :: ierr
-    
-    PUSH_SUB(cwrite_header)
-
-    call write_header(np_global, TYPE_FLOAT_COMPLEX, ierr, trim(fname))
-    
-    POP_SUB(cwrite_header)
-  end subroutine cwrite_header
-
-  ! ------------------------------------------------------
-
-  subroutine lwrite_header(fname, np_global, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np_global
-    integer(8),          intent(in)  :: ff
-    integer,             intent(out) :: ierr
-    
-    PUSH_SUB(lwrite_header)
-
-    call write_header(np_global, TYPE_INT_64, ierr, trim(fname))
-    
-    POP_SUB(lwrite_header)
-  end subroutine lwrite_header
-
-  ! ------------------------------------------------------
-
-  subroutine swrite_binary(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    real(4),             intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(swrite_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call write_binary(np, ff(1), TYPE_FLOAT, ierr, trim(fname))
-
-    POP_SUB(swrite_binary)
-  end subroutine swrite_binary
-
-  !------------------------------------------------------
-
-  subroutine cwrite_binary(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    complex(4),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(cwrite_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call write_binary(np, ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
-
-    POP_SUB(cwrite_binary)
-  end subroutine cwrite_binary
-
-  !------------------------------------------------------
-
-  subroutine lwrite_binary2(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:, :)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(lwrite_binary2)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call write_binary(np, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
-
-    POP_SUB(lwrite_binary2)
-  end subroutine lwrite_binary2
-
-  !------------------------------------------------------
-
-  subroutine cwrite_binary3(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    complex(4),          intent(in)  :: ff(:,:,:)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(cwrite_binary3)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call write_binary(np, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
-
-    POP_SUB(cwrite_binary3)
-  end subroutine cwrite_binary3
-
-  !------------------------------------------------------
-  
-  subroutine lwrite_binary(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    integer(8),          intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(lwrite_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call write_binary(np, ff(1), TYPE_INT_64, ierr, trim(fname))
-
-    POP_SUB(lwrite_binary)
-  end subroutine lwrite_binary
 
   ! ------------------------------------------------------
 
@@ -289,129 +159,6 @@ contains
 
   ! ------------------------------------------------------
 
-  subroutine swrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    real(4),             intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: file_handle
-
-    PUSH_SUB(swrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(swrite_parallel)
-  end subroutine swrite_parallel
-
-  !------------------------------------------------------
-
-  subroutine cwrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    complex(4),          intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: file_handle
-
-    PUSH_SUB(cwrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(cwrite_parallel)
-  end subroutine cwrite_parallel
-
-  !------------------------------------------------------
-
-  subroutine lwrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    integer(8),          intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif   
-    integer :: file_handle
-
-    PUSH_SUB(lwrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(lwrite_parallel)
-  end subroutine lwrite_parallel
-
-  !------------------------------------------------------
-
-  subroutine sread_binary(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)   :: fname
-    integer,             intent(in)   :: np
-    real(4),             intent(out)  :: ff(:)
-    integer,             intent(out)  :: ierr
-    integer, optional,   intent(in)   :: offset
-
-    PUSH_SUB(sread_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT, ierr, trim(fname))
-
-    POP_SUB(sread_binary)
-  end subroutine sread_binary
-
-  !------------------------------------------------------
- 
-  subroutine cread_binary(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    complex(4),          intent(out) :: ff(:)
-    integer,             intent(out) :: ierr
-    integer, optional,   intent(in)  :: offset
-
-    PUSH_SUB(cread_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
-
-    POP_SUB(cread_binary)
-  end subroutine cread_binary
-
-  !------------------------------------------------------
-
   subroutine try_dread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -447,130 +194,6 @@ contains
 
   !------------------------------------------------------
 
-  subroutine lread_binary(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    integer(8),          intent(out) :: ff(:)
-    integer,             intent(out) :: ierr
-    integer, optional,   intent(in)  :: offset
-
-    PUSH_SUB(lread_binary)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_64, ierr, trim(fname))
-
-    POP_SUB(lread_binary)
-  end subroutine lread_binary
-
-  !------------------------------------------------------
-
-  subroutine lread_binary2(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    integer(8),          intent(out) :: ff(:, :)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(lread_binary2)
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, 0, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
-
-    POP_SUB(lread_binary2)
-  end subroutine lread_binary2
-
-  !------------------------------------------------------
-
-  subroutine cread_binary3(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    complex(4),          intent(out) :: ff(:,:,:)
-    integer,             intent(out) :: ierr
-
-    PUSH_SUB(cread_binary3)
-   
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, 0, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
-
-    POP_SUB(cread_binary3)
-  end subroutine cread_binary3
-
-  !------------------------------------------------------ 
-
-  subroutine sread_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    real(4),             intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
-
-    PUSH_SUB(sread_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    call MPI_File_read(file_handle, ff(1), np, MPI_REAL4, status, mpi_err)
-    call MPI_Get_count(status, MPI_REAL4, read_count, mpi_err)
-    if (read_count /= np) then 
-      write(message(1),'(a,i8,a,i8)') " real(4) read elements=", read_count, " instead of", np
-      write(message(2), '(a,a)') " of file= ", fname
-      call messages_fatal(2)
-    end if
-#endif
-    
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(sread_parallel)
-  end subroutine sread_parallel
-
-  !------------------------------------------------------
-
-  subroutine cread_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    complex(4),          intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
-
-    PUSH_SUB(cread_parallel)
-
-    ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) then
-      call MPI_File_read(file_handle, ff(1), np, MPI_COMPLEX, status, mpi_err)
-      call MPI_Get_count(status, MPI_COMPLEX, read_count, mpi_err)
-      if (read_count /= np) then 
-        write(message(1),'(a,i8,a,i8)') " complex(4) read elements=", read_count, " instead of", np
-        write(message(2), '(a,a)') " of file= ", fname
-        call messages_fatal(2)
-      end if
-    endif
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(cread_parallel)
-  end subroutine cread_parallel
-
-  !------------------------------------------------------
-
   subroutine try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(in)    :: comm
@@ -603,43 +226,6 @@ contains
 
     POP_SUB(try_dread_parallel)
   end subroutine try_dread_parallel
-
-  !------------------------------------------------------
-
-  subroutine lread_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    integer(8),          intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
-
-    PUSH_SUB(lread_parallel)
-
-    ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) then
-      call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER4, status, mpi_err)
-      call MPI_Get_count(status, MPI_INTEGER4, read_count, mpi_err)
-      if (read_count /= np) then 
-        write(message(1),'(a,i8,a,i8)') " integer(8) read elements=", read_count, " instead of", np
-        write(message(2), '(a,a)') " of file= ", fname
-        call messages_fatal(2)
-      end if
-    endif
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(lread_parallel)
-  end subroutine lread_parallel
 
   !------------------------------------------------------
 
