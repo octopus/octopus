@@ -910,7 +910,7 @@ contains
 
       !Now that we have the partitions, we save them
 
-      !%Variable MeshPartitionRead
+      !%Variable MeshPartitionWrite
       !%Type logical
       !%Default true
       !%Section Execution::Parallelization
