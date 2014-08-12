@@ -580,22 +580,13 @@ contains
 
     write(numstring, '(i6.6)') vsize
     call mesh_write_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, err)
-    if (err /= 0) then
-      message(1) = "Unable to write mesh fingerprint to '"//trim(dir)//"/grid_"//trim(numstring)//"'."
-      ierr = ierr + 1
-    end if
+    if (err /= 0) ierr = ierr + 1
 
     call partition_dump(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
-    if (err /= 0) then
-      message(1) = "Unable to write inner partition to '"//trim(dir)//'/inner_partition_'//trim(numstring)//".obf'."
-      ierr = ierr + 2
-    end if
+    if (err /= 0) ierr = ierr + 2
 
     call partition_dump(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
-    if (err /= 0) then
-      message(1) = "Unable to write boundary partition to '"//trim(dir)//'/bndry_partition_'//trim(numstring)//".obf'."
-      ierr = ierr + 4
-    end if
+    if (err /= 0) ierr = ierr + 4
 
     POP_SUB(mesh_partition_dump)
   end subroutine mesh_partition_dump

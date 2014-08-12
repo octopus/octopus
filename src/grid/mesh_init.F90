@@ -927,7 +927,11 @@ contains
         call mesh_partition_dump(partition_dir, mesh, vsize, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write partition to '"//trim(partition_dir)//"'."
-          call messages_warning(1)
+          message(2) = "Files: "          
+          if (IAND(ierr,1) /= 0) message(2) = trim(message(2))//" fingerprint"
+          if (IAND(ierr,2) /= 0) message(2) = trim(message(2))//" inner partition"
+          if (IAND(ierr,4) /= 0) message(2) = trim(message(2))//" boundary partition"
+          call messages_warning(2)
         end if
       end if
     end if
