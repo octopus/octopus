@@ -621,19 +621,11 @@ contains
     if (ierr == 0) then
       !Read inner partition
       call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
-      if (err /= 0) then
-        ierr = ierr + 8
-        message(1) = "Unable to read inner partition from '"//trim(dir)//'/inner_partition_'//trim(numstring)//".obf'."
-        call messages_warning(1)
-      end if
+      if (err /= 0) ierr = ierr + 8
 
       !Read boundary partition
       call partition_load(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
-      if (err /= 0) then
-        ierr = ierr + 16
-        message(1) = "Unable to read boundary partition from '"//trim(dir)//'/bndry_partition_'//trim(numstring)//".obf'."
-        call messages_warning(1)
-      end if
+      if (err /= 0) ierr = ierr + 16
     end if
 
     ! Free the memory in case we were unable to read the partitions
