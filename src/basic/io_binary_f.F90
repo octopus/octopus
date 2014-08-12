@@ -81,6 +81,8 @@ module io_binary_m
     end subroutine write_header
   end interface
 
+  ! no interfaces for read_binary, write_binary since we call them with different types
+
 contains
 
   ! ------------------------------------------------------
@@ -144,7 +146,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call write_binary(np, ff(1), TYPE_FLOAT, ierr, trim(fname))
 
     POP_SUB(swrite_binary)
@@ -163,7 +164,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call write_binary(np, ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cwrite_binary)
@@ -182,7 +182,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call write_binary(np, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lwrite_binary2)
@@ -201,7 +200,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call write_binary(np, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cwrite_binary3)
@@ -220,7 +218,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call write_binary(np, ff(1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lwrite_binary)
@@ -249,7 +246,6 @@ contains
 
     ! FIXME: everything will fail if sizeof is not available!
 
-    ierr = 0
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof_ff+64
     
@@ -400,7 +396,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT, ierr, trim(fname))
 
     POP_SUB(sread_binary)
@@ -420,7 +415,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dread_binary)
@@ -440,7 +434,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cread_binary)
@@ -462,8 +455,6 @@ contains
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
-
-    ierr = 0
 
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
@@ -494,7 +485,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_32, ierr, trim(fname))
 
     POP_SUB(iread_binary)
@@ -514,7 +504,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lread_binary)
@@ -533,7 +522,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, 0, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lread_binary2)
@@ -552,7 +540,6 @@ contains
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
-    ierr = 0
     call read_binary(np, 0, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cread_binary3)
@@ -806,7 +793,6 @@ contains
     
     PUSH_SUB(io_binary_get_info)
 
-    ierr = 0
     call get_info_binary(np, type, ierr, trim(fname))
 
     POP_SUB(io_binary_get_info)
