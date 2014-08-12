@@ -122,7 +122,7 @@ command_line.o : command_line.F90 messages.o profiling.o
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
 unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
 write_iter.o : write_iter.F90 c_pointer.o
-io_binary_f.o : io_binary_f.F90 io_binary.h profiling.o messages.o
+io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
 io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
 kinds.o : kinds.F90
 json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
