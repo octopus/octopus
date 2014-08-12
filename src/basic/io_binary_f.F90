@@ -91,12 +91,10 @@ contains
     real(4),             intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_FLOAT
-    
     PUSH_SUB(swrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_FLOAT, ierr, trim(fname))
     
     POP_SUB(swrite_header)
   end subroutine swrite_header
@@ -109,12 +107,10 @@ contains
     real(8),             intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_DOUBLE
-    
     PUSH_SUB(dwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_DOUBLE, ierr, trim(fname))
     
     POP_SUB(dwrite_header)
   end subroutine dwrite_header
@@ -127,12 +123,10 @@ contains
     complex(4),          intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
-    
     PUSH_SUB(cwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_FLOAT_COMPLEX, ierr, trim(fname))
     
     POP_SUB(cwrite_header)
   end subroutine cwrite_header
@@ -145,12 +139,10 @@ contains
     complex(8),          intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-    
     PUSH_SUB(zwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
     
     POP_SUB(zwrite_header)
   end subroutine zwrite_header
@@ -163,12 +155,10 @@ contains
     integer(4),          intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_INT_32
-    
     PUSH_SUB(iwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_INT_32, ierr, trim(fname))
     
     POP_SUB(iwrite_header)
   end subroutine iwrite_header
@@ -181,12 +171,10 @@ contains
     integer(8),          intent(in)  :: ff
     integer,             intent(out) :: ierr
     
-    integer, parameter :: type = TYPE_INT_64
-    
     PUSH_SUB(lwrite_header)
 
     ASSERT(np_global > 0)
-    call write_header(np_global, type, ierr, trim(fname))
+    call write_header(np_global, TYPE_INT_64, ierr, trim(fname))
     
     POP_SUB(lwrite_header)
   end subroutine lwrite_header
@@ -199,15 +187,13 @@ contains
     real(4),             intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT
-
     PUSH_SUB(swrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_FLOAT, ierr, trim(fname))
 
     POP_SUB(swrite_binary)
   end subroutine swrite_binary
@@ -220,15 +206,13 @@ contains
     real(8),             intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dwrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dwrite_binary)
   end subroutine dwrite_binary
@@ -241,15 +225,13 @@ contains
     complex(4),          intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
-
     PUSH_SUB(cwrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cwrite_binary)
   end subroutine cwrite_binary
@@ -262,15 +244,13 @@ contains
     complex(8),          intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-
     PUSH_SUB(zwrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
 
     POP_SUB(zwrite_binary)
   end subroutine zwrite_binary
@@ -283,15 +263,13 @@ contains
     integer(4),          intent(in)  :: ff(:, :)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_32
-
     PUSH_SUB(iwrite_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+    call write_binary(np, ff(1, 1), TYPE_INT_32, ierr, trim(fname))
 
     POP_SUB(iwrite_binary2)
   end subroutine iwrite_binary2
@@ -304,15 +282,13 @@ contains
     integer(8),          intent(in)  :: ff(:, :)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_64
-
     PUSH_SUB(lwrite_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+    call write_binary(np, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lwrite_binary2)
   end subroutine lwrite_binary2
@@ -325,15 +301,13 @@ contains
     real(8),             intent(in)  :: ff(:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dwrite_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1,1), type, ierr, trim(fname))
+    call write_binary(np, ff(1,1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dwrite_binary2)
   end subroutine dwrite_binary2
@@ -346,15 +320,13 @@ contains
     complex(8),          intent(in)  :: ff(:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-
     PUSH_SUB(zwrite_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1,1), type, ierr, trim(fname))
+    call write_binary(np, ff(1,1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
 
     POP_SUB(zwrite_binary2)
   end subroutine zwrite_binary2
@@ -367,15 +339,13 @@ contains
     real(8),             intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dwrite_binary3)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
+    call write_binary(np, ff(1,1,1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dwrite_binary3)
   end subroutine dwrite_binary3
@@ -388,15 +358,13 @@ contains
     complex(8),          intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-
     PUSH_SUB(zwrite_binary3)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
+    call write_binary(np, ff(1,1,1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
 
     POP_SUB(zwrite_binary3)
   end subroutine zwrite_binary3
@@ -409,15 +377,13 @@ contains
     complex(4),          intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
-
     PUSH_SUB(cwrite_binary3)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
+    call write_binary(np, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cwrite_binary3)
   end subroutine cwrite_binary3
@@ -430,15 +396,13 @@ contains
     integer(4),          intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_32
-
     PUSH_SUB(iwrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_INT_32, ierr, trim(fname))
 
     POP_SUB(iwrite_binary)
   end subroutine iwrite_binary
@@ -451,15 +415,13 @@ contains
     integer(8),          intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_64
-
     PUSH_SUB(lwrite_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call write_binary(np, ff(1), type, ierr, trim(fname))
+    call write_binary(np, ff(1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lwrite_binary)
   end subroutine lwrite_binary
@@ -720,15 +682,13 @@ contains
     integer,             intent(out)  :: ierr
     integer, optional,   intent(in)   :: offset
 
-    integer, parameter :: type = TYPE_FLOAT
-
     PUSH_SUB(sread_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT, ierr, trim(fname))
 
     POP_SUB(sread_binary)
   end subroutine sread_binary
@@ -742,15 +702,13 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dread_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dread_binary)
   end subroutine dread_binary
@@ -764,15 +722,13 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
-
     PUSH_SUB(cread_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cread_binary)
   end subroutine cread_binary
@@ -786,7 +742,6 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
     integer :: read_np, number_type
     real(8), allocatable :: read_ff(:)
 
@@ -800,13 +755,13 @@ contains
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
-    if (number_type /= type) then
+    if (number_type /= TYPE_DOUBLE_COMPLEX) then
       SAFE_ALLOCATE(read_ff(1:np))
       call dread_binary(fname, np, read_ff, ierr, offset)
       ff = read_ff
       SAFE_DEALLOCATE_A(read_ff)
     else
-      call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+      call read_binary(np, optional_default(offset, 0), ff(1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
     endif
     
     POP_SUB(zread_binary)
@@ -821,15 +776,13 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer, parameter :: type = TYPE_INT_32
-
     PUSH_SUB(iread_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_32, ierr, trim(fname))
 
     POP_SUB(iread_binary)
   end subroutine iread_binary
@@ -843,15 +796,13 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer, parameter :: type = TYPE_INT_64
-
     PUSH_SUB(lread_binary)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
+    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lread_binary)
   end subroutine lread_binary
@@ -864,15 +815,13 @@ contains
     integer(4),          intent(out) :: ff(:, :)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_32
-
     PUSH_SUB(iread_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1, 1), TYPE_INT_32, ierr, trim(fname))
 
     POP_SUB(iread_binary2)
   end subroutine iread_binary2
@@ -885,15 +834,13 @@ contains
     integer(8),          intent(out) :: ff(:, :)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_INT_64
-
     PUSH_SUB(lread_binary2)
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1, 1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
 
     POP_SUB(lread_binary2)
   end subroutine lread_binary2
@@ -906,15 +853,13 @@ contains
     real(8),             intent(out) :: ff(:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dread_binary2)
    
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dread_binary2)
   end subroutine dread_binary2
@@ -927,15 +872,13 @@ contains
     complex(8),          intent(out) :: ff(:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-
     PUSH_SUB(zread_binary2)
    
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
 
     POP_SUB(zread_binary2)
   end subroutine zread_binary2
@@ -948,15 +891,13 @@ contains
     real(8),          intent(out) :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dread_binary3)
    
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1,1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dread_binary3)
   end subroutine dread_binary3
@@ -969,15 +910,13 @@ contains
     complex(8),          intent(out) :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
-
     PUSH_SUB(zread_binary3)
    
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1,1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
 
     POP_SUB(zread_binary3)
   end subroutine zread_binary3
@@ -990,15 +929,13 @@ contains
     complex(4),          intent(out) :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_FLOAT_COMPLEX
-
     PUSH_SUB(cread_binary3)
    
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
-    call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
+    call read_binary(np, 0, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
 
     POP_SUB(cread_binary3)
   end subroutine cread_binary3
@@ -1122,7 +1059,6 @@ contains
     complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 #ifdef HAVE_MPI2
     integer :: status(MPI_STATUS_SIZE)
 #endif
@@ -1139,9 +1075,9 @@ contains
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
-    if (number_type /= type) then
+    if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (in_debug_mode) then
-        write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", type
+        write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
         call messages_info(1)
       end if
       SAFE_ALLOCATE(read_ff(1:np))
