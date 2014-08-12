@@ -110,58 +110,71 @@
     POP_SUB(X(write_parallel))
   end subroutine X(write_parallel)
 
-!!  !------------------------------------------------------
-!!
-!!  subroutine X(read_binary)(fname, np, ff, ierr, offset)
-!!    character(len=*),    intent(in)   :: fname
-!!    integer,             intent(in)   :: np
-!!    R_TYPE,              intent(out)  :: ff(:)
-!!    integer,             intent(out)  :: ierr
-!!    integer, optional,   intent(in)   :: offset
-!!
-!!    PUSH!_SUB(X(read_binary))
-!!
-!!    ASSERT(product(ubound(ff)) >= np)
-!!
-!!    call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
-!!
-!!    POP!_SUB(X(read_binary))
-!!  end subroutine X(read_binary)
-!!
-!!  !------------------------------------------------------ 
-!!
-!!  subroutine X(read_parallel)(fname, comm, xlocal, np, ff, ierr)
-!!    character(len=*),    intent(in)    :: fname
-!!    integer,             intent(in)    :: comm
-!!    integer,             intent(in)    :: xlocal
-!!    integer,             intent(in)    :: np
-!!    R_TYPE,              intent(inout) :: ff(:)
-!!    integer,             intent(out)   :: ierr
-!!
-!!#ifdef HAVE_MPI2
-!!    integer :: status(MPI_STATUS_SIZE)
-!!#endif
-!!    integer :: read_count, file_handle
-!!
-!!    PUSH!_SUB(X(read_parallel))
-!!
-!!    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-!!    ASSERT(product(ubound(ff)) >= np)
-!!
-!!#ifdef HAVE_MPI2
-!!    call MPI_File_read(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
-!!    call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
-!!    if (read_count /= np) then
-!!      write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " read elements=", read_count, " instead of", np
-!!      write(message(2), '(a,a)') " of file= ", fname
-!!      call messages_fatal(2)
-!!    end if
-!!#endif
-!!    
-!!    call io_binary_parallel_end(file_handle)
-!!
-!!    POP!_SUB(X(read_parallel))
-!!  end subroutine X(read_parallel)
+  !------------------------------------------------------
+
+  subroutine X(read_binary)(fname, np, ff, ierr, offset)
+    character(len=*),    intent(in)   :: fname
+    integer,             intent(in)   :: np
+    R_TYPE,              intent(out)  :: ff(:)
+    integer,             intent(out)  :: ierr
+    integer, optional,   intent(in)   :: offset
+
+    PUSH_SUB(X(read_binary))
+
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = -1
+#ifdef R_TCOMPLEX
+    call try_dread_binary(fname, np, ff, ierr, offset)
+#endif
+    if(ierr == -1) &
+      call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
+
+    POP_SUB(X(read_binary))
+  end subroutine X(read_binary)
+
+  !------------------------------------------------------ 
+
+  subroutine X(read_parallel)(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    R_TYPE,              intent(inout) :: ff(:)
+    integer,             intent(out)   :: ierr
+
+#ifdef HAVE_MPI2
+    integer :: status(MPI_STATUS_SIZE)
+#endif
+    integer :: read_count, file_handle
+
+    PUSH_SUB(X(read_parallel))
+
+    ASSERT(np > 0)
+    ierr = -1
+#ifdef R_TCOMPLEX
+    call try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
+#endif
+    if(ierr == -1) then
+      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
+      ASSERT(product(ubound(ff)) >= np)
+
+#ifdef HAVE_MPI2
+      call MPI_File_read(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
+      call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
+      if (read_count /= np) then
+        write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " read elements=", read_count, " instead of", np
+        write(message(2), '(a,a)') " of file= ", fname
+        call messages_fatal(2)
+      end if
+#endif
+    endif
+    
+    call io_binary_parallel_end(file_handle)
+
+    POP_SUB(X(read_parallel))
+  end subroutine X(read_parallel)
 
   !------------------------------------------------------
 

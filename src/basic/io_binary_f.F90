@@ -95,7 +95,6 @@ contains
     
     PUSH_SUB(swrite_header)
 
-    ASSERT(np_global > 0)
     call write_header(np_global, TYPE_FLOAT, ierr, trim(fname))
     
     POP_SUB(swrite_header)
@@ -111,7 +110,6 @@ contains
     
     PUSH_SUB(cwrite_header)
 
-    ASSERT(np_global > 0)
     call write_header(np_global, TYPE_FLOAT_COMPLEX, ierr, trim(fname))
     
     POP_SUB(cwrite_header)
@@ -127,7 +125,6 @@ contains
     
     PUSH_SUB(lwrite_header)
 
-    ASSERT(np_global > 0)
     call write_header(np_global, TYPE_INT_64, ierr, trim(fname))
     
     POP_SUB(lwrite_header)
@@ -143,7 +140,6 @@ contains
 
     PUSH_SUB(swrite_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1), TYPE_FLOAT, ierr, trim(fname))
@@ -161,7 +157,6 @@ contains
 
     PUSH_SUB(cwrite_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
@@ -179,7 +174,6 @@ contains
 
     PUSH_SUB(lwrite_binary2)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
@@ -197,7 +191,6 @@ contains
 
     PUSH_SUB(cwrite_binary3)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
@@ -215,7 +208,6 @@ contains
 
     PUSH_SUB(lwrite_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1), TYPE_INT_64, ierr, trim(fname))
@@ -393,7 +385,6 @@ contains
 
     PUSH_SUB(sread_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT, ierr, trim(fname))
@@ -403,25 +394,6 @@ contains
 
   !------------------------------------------------------
  
-  subroutine dread_binary(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    real(8),             intent(out) :: ff(:)
-    integer,             intent(out) :: ierr
-    integer, optional,   intent(in)  :: offset
-
-    PUSH_SUB(dread_binary)
-
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_DOUBLE, ierr, trim(fname))
-
-    POP_SUB(dread_binary)
-  end subroutine dread_binary
-
-  !------------------------------------------------------
-
   subroutine cread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -431,7 +403,6 @@ contains
 
     PUSH_SUB(cread_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
@@ -441,7 +412,7 @@ contains
 
   !------------------------------------------------------
 
-  subroutine zread_binary(fname, np, ff, ierr, offset)
+  subroutine try_dread_binary(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(8),          intent(out) :: ff(:)
@@ -451,44 +422,28 @@ contains
     integer :: read_np, number_type
     real(8), allocatable :: read_ff(:)
 
-    PUSH_SUB(zread_binary)
-
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
+    PUSH_SUB(try_dread_binary)
 
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
+      if (in_debug_mode) then
+        write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
+        call messages_info(1)
+      end if
+
       SAFE_ALLOCATE(read_ff(1:np))
       call dread_binary(fname, np, read_ff, ierr, offset)
       ff = read_ff
       SAFE_DEALLOCATE_A(read_ff)
     else
-      call read_binary(np, optional_default(offset, 0), ff(1), TYPE_DOUBLE_COMPLEX, ierr, trim(fname))
+      ierr = -1
     endif
-    
-    POP_SUB(zread_binary)
-  end subroutine zread_binary
+    ! ierr will be 0 if dread_binary succeeded
 
-  !------------------------------------------------------
-
-  subroutine iread_binary(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    integer(4),          intent(out) :: ff(:)
-    integer,             intent(out) :: ierr
-    integer, optional,   intent(in)  :: offset
-
-    PUSH_SUB(iread_binary)
-
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
-
-    call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_32, ierr, trim(fname))
-
-    POP_SUB(iread_binary)
-  end subroutine iread_binary
+    POP_SUB(try_dread_binary)
+  end subroutine try_dread_binary
 
   !------------------------------------------------------
 
@@ -501,7 +456,6 @@ contains
 
     PUSH_SUB(lread_binary)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, optional_default(offset, 0), ff(1), TYPE_INT_64, ierr, trim(fname))
@@ -519,7 +473,6 @@ contains
 
     PUSH_SUB(lread_binary2)
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, 0, ff(1, 1), TYPE_INT_64, ierr, trim(fname))
@@ -537,7 +490,6 @@ contains
 
     PUSH_SUB(cread_binary3)
    
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, 0, ff(1,1,1), TYPE_FLOAT_COMPLEX, ierr, trim(fname))
@@ -582,43 +534,6 @@ contains
 
   !------------------------------------------------------
 
-  subroutine dread_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    real(8),             intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
-
-    PUSH_SUB(dread_parallel)
-
-    ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) then
-      call MPI_File_read(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-      call MPI_Get_count(status, MPI_REAL8, read_count, mpi_err)
-      if (read_count /= np) then 
-        write(message(1),'(a,i8,a,i8)') " real(8) read elements=", read_count, " instead of", np
-        write(message(2), '(a,a)') " of file= ", fname
-        call messages_fatal(2)
-      end if
-    endif
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(dread_parallel)
-  end subroutine dread_parallel
-
-  !------------------------------------------------------
-
   subroutine cread_parallel(fname, comm, xlocal, np, ff, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(in)    :: comm
@@ -656,7 +571,7 @@ contains
 
   !------------------------------------------------------
 
-  subroutine zread_parallel(fname, comm, xlocal, np, ff, ierr)
+  subroutine try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
@@ -664,19 +579,11 @@ contains
     complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
     integer :: read_np, number_type
-    integer :: read_count, file_handle
     real(8), allocatable :: read_ff(:)
 
-    PUSH_SUB(zread_parallel)
+    PUSH_SUB(try_dread_parallel)
 
-    ASSERT(product(ubound(ff)) >= np)
-
-    read_count = 0
-#ifdef HAVE_MPI2
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     ! @TODO other casts are missing
@@ -690,60 +597,12 @@ contains
       ff = read_ff
       SAFE_DEALLOCATE_A(read_ff)
     else
-      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-      if(ierr == 0) then
-        call MPI_File_read(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-        call MPI_Get_count(status, MPI_DOUBLE_COMPLEX, read_count, mpi_err)
-        if (read_count /= np) then 
-          write(message(1),'(a,i8,a,i8)') " complex(8) read elements=", read_count, " instead of", np
-          write(message(2), '(a,a)') " of file= ", fname
-          call messages_fatal(2)
-        end if
-      endif
+      ierr = -1
     endif
-#endif
+    ! ierr will be 0 if dread_parallel succeeded
 
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(zread_parallel)
-  end subroutine zread_parallel
-
-  !------------------------------------------------------
-  
-  subroutine iread_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    integer(4),          intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
-
-    PUSH_SUB(iread_parallel)
-
-    ASSERT(product(ubound(ff)) >= np)
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) then
-      call MPI_File_read(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
-      call MPI_Get_count(status, MPI_INTEGER, read_count, mpi_err)
-      if (read_count /= np) then 
-        write(message(1),'(a,i8,a,i8)') " integer(4) read elements=", read_count, " instead of", np
-        write(message(2), '(a,a)') " of file= ", fname
-        call messages_fatal(2)
-      end if
-    endif
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(iread_parallel)
-  end subroutine iread_parallel
+    POP_SUB(try_dread_parallel)
+  end subroutine try_dread_parallel
 
   !------------------------------------------------------
 
