@@ -90,32 +90,32 @@
 
   ! ------------------------------------------------------
 
-!!   subroutine X(write_parallel)(fname, comm, xlocal, np, ff, ierr)
-!!     character(len=*),    intent(in)    :: fname
-!!     integer,             intent(in)    :: comm
-!!     integer,             intent(in)    :: xlocal
-!!     integer,             intent(in)    :: np
-!!     R_TYPE,              intent(in)    :: ff(:)
-!!     integer,             intent(out)   :: ierr
-!! 
-!! #ifdef HAVE_MPI2
-!!     integer :: status(MPI_STATUS_SIZE)
-!! #endif
-!!     integer :: file_handle
-!! 
-!!     PUSH_SUB(X(write_parallel))
-!! 
-!!     call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-!!     ASSERT(product(ubound(ff)) >= np)
-!! 
-!! #ifdef HAVE_MPI2
-!!     if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE_IOBINARY, status, mpi_err)
-!! #endif
-!! 
-!!     call io_binary_parallel_end(file_handle)
-!! 
-!!     POP_SUB(X(write_parallel))
-!!   end subroutine X(write_parallel)
+  subroutine X(write_parallel)(fname, comm, xlocal, np, ff, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(in)    :: comm
+    integer,             intent(in)    :: xlocal
+    integer,             intent(in)    :: np
+    R_TYPE,              intent(in)    :: ff(:)
+    integer,             intent(out)   :: ierr
+ 
+ #ifdef HAVE_MPI2
+    integer :: status(MPI_STATUS_SIZE)
+ #endif
+    integer :: file_handle
+ 
+    PUSH_SUB(X(write_parallel))
+ 
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
+    ASSERT(product(ubound(ff)) >= np)
+ 
+ #ifdef HAVE_MPI2
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE_IOBINARY, status, mpi_err)
+ #endif
+ 
+    call io_binary_parallel_end(file_handle)
+ 
+    POP_SUB(X(write_parallel))
+  end subroutine X(write_parallel)
 
 !!  !------------------------------------------------------
 !!
@@ -126,7 +126,7 @@
 !!    integer,             intent(out)  :: ierr
 !!    integer, optional,   intent(in)   :: offset
 !!
-!!    PUSH_SUB(X(read_binary))
+!!    PUSH!_SUB(X(read_binary))
 !!
 !!    ASSERT(np > 0)
 !!    ASSERT(product(ubound(ff)) >= np)
@@ -134,7 +134,7 @@
 !!    ierr = 0
 !!    call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
 !!
-!!    POP_SUB(X(read_binary))
+!!    POP!_SUB(X(read_binary))
 !!  end subroutine X(read_binary)
 !!
 !!  !------------------------------------------------------ 
@@ -152,7 +152,7 @@
 !!#endif
 !!    integer :: read_count, file_handle
 !!
-!!    PUSH_SUB(X(read_parallel))
+!!    PUSH!_SUB(X(read_parallel))
 !!
 !!    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
 !!    ASSERT(product(ubound(ff)) >= np)
@@ -169,7 +169,7 @@
 !!    
 !!    call io_binary_parallel_end(file_handle)
 !!
-!!    POP_SUB(X(read_parallel))
+!!    POP!_SUB(X(read_parallel))
 !!  end subroutine X(read_parallel)
 
   !------------------------------------------------------

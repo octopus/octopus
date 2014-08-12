@@ -330,35 +330,6 @@ contains
 
   !------------------------------------------------------
 
-  subroutine dwrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    real(8),             intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: file_handle
-
-    PUSH_SUB(dwrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_REAL8, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(dwrite_parallel)
-  end subroutine dwrite_parallel
-
-  !------------------------------------------------------
-
   subroutine cwrite_parallel(fname, comm, xlocal, np, ff, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(in)    :: comm
@@ -385,64 +356,6 @@ contains
 
     POP_SUB(cwrite_parallel)
   end subroutine cwrite_parallel
-
-  !------------------------------------------------------
-
-  subroutine zwrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    complex(8),          intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: file_handle
-
-    PUSH_SUB(zwrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_DOUBLE_COMPLEX, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(zwrite_parallel)
-  end subroutine zwrite_parallel
-
-  !------------------------------------------------------
-  
-  subroutine iwrite_parallel(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm   
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    integer(4),          intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
-
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: file_handle
-
-    PUSH_SUB(iwrite_parallel)
-
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
-
-#ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, MPI_INTEGER, status, mpi_err)
-#endif
-
-    call io_binary_parallel_end(file_handle)
-
-    POP_SUB(iwrite_parallel)
-  end subroutine iwrite_parallel
 
   !------------------------------------------------------
 
