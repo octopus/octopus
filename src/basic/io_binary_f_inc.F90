@@ -25,7 +25,6 @@
     
     PUSH_SUB(X(write_header))
 
-    ASSERT(np_global > 0)
     call write_header(np_global, R_TYPE_IOBINARY, ierr, trim(fname))
     
     POP_SUB(X(write_header))
@@ -41,7 +40,6 @@
 
     PUSH_SUB(X(write_binary))
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
@@ -59,7 +57,6 @@
 
     PUSH_SUB(X(write_binary2))
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, trim(fname))
@@ -77,7 +74,6 @@
 
     PUSH_SUB(X(write_binary3))
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, trim(fname))
@@ -125,7 +121,6 @@
 !!
 !!    PUSH!_SUB(X(read_binary))
 !!
-!!    ASSERT(np > 0)
 !!    ASSERT(product(ubound(ff)) >= np)
 !!
 !!    call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
@@ -178,7 +173,6 @@
 
     PUSH_SUB(X(read_binary2))
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, 0, ff(1,1), R_TYPE_IOBINARY, ierr, trim(fname))
@@ -196,7 +190,6 @@
 
     PUSH_SUB(X(read_binary3))
 
-    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     call read_binary(np, 0, ff(1,1,1), R_TYPE_IOBINARY, ierr, trim(fname))

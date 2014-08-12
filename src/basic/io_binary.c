@@ -193,6 +193,7 @@ void write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname ST
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
+  assert(np > 0);
 
   *ierr = 0;
   TO_C_STR1(fname, filename);
@@ -242,6 +243,8 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   int fd;
   ssize_t moved;
   unsigned long fname_len;
+
+  assert(np > 0);
   *ierr = 0;
   
   fname_len = l1;
@@ -331,6 +334,8 @@ void FC_FUNC_(read_binary,READ_BINARY)
   int correct_endianness;
   byte * read_f;
   
+  assert(np > 0);
+
   /* read the header */
   fname_len = l1;
   h = (header_t *) malloc(sizeof(header_t));
