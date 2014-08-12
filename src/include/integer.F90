@@ -25,7 +25,6 @@
 #define R_TYPE_VAL  TYPE_INTEGER
 #define R_MPITYPE   MPI_INTEGER
 #define R_TYPE_IOBINARY TYPE_INT_32
-#define R_MPITYPE_IOBINARY MPI_INTEGER
 #define R_TOTYPE(x) (x)
 
 #define R_ABS(x)    abs(x)

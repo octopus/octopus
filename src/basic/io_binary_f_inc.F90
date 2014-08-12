@@ -109,7 +109,7 @@
     ASSERT(product(ubound(ff)) >= np)
  
  #ifdef HAVE_MPI2
-    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE_IOBINARY, status, mpi_err)
+    if(ierr == 0) call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
  #endif
  
     call io_binary_parallel_end(file_handle)

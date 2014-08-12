@@ -37,7 +37,6 @@
 #undef R_TYPE_VAL
 #undef R_TYPE_CL
 #undef R_TYPE_IOBINARY
-#undef R_MPITYPE_IOBINARY
 #undef R_DOUBLE
 #undef R_SINGLE  
 #undef R_MPITYPE
