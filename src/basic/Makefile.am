@@ -86,7 +86,8 @@ noinst_HEADERS =               \
 	io_binary.h            \
 	io_csv.h               \
 	comm_inc.F90           \
-	opencl_inc.F90
+	opencl_inc.F90         \
+        io_binary_f_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -148,4 +149,3 @@ space.o : space.F90 json.o datasets.o parser.o messages.o
 
 openscad.o : openscad.F90 io.o messages.o profiling.o global.o polyhedron.o
 polyhedron.o : messages.o profiling.o global.o
-
