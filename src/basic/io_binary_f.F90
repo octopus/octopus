@@ -148,9 +148,6 @@ contains
     call messages_fatal(1)
 #endif
 
-    ! how will mpi do error handling with mpi_err?
-    ! do read_count here
-
     POP_SUB(io_binary_parallel_end)
   end subroutine io_binary_parallel_end
 
@@ -171,7 +168,6 @@ contains
 
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
-    ! @TODO other casts are missing
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (in_debug_mode) then
         write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
@@ -207,7 +203,6 @@ contains
 
     call get_info_binary(read_np, number_type, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
-    ! @TODO other casts are missing
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (in_debug_mode) then
         write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
