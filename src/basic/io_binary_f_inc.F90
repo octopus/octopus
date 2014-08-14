@@ -98,7 +98,7 @@
  
     PUSH_SUB(X(write_parallel))
  
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .true., ierr)
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
  
  #ifdef HAVE_MPI2
@@ -157,7 +157,7 @@
     call try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
 #endif
     if(ierr == -1) then
-      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, int(sizeof(ff(1)), kind=8), .false., ierr)
+      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .false., ierr)
       ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2

@@ -93,7 +93,7 @@ contains
     integer,             intent(in)    :: comm
     integer,             intent(in)    :: xlocal
     integer,             intent(in)    :: np
-    integer*8,           intent(in)    :: sizeof_ff !< should be same type as offset?
+    integer,             intent(in)    :: sizeof_ff
     logical,             intent(in)    :: is_write !< if false, is read.
     integer,             intent(out)   :: ierr
 
@@ -105,8 +105,6 @@ contains
     PUSH_SUB(io_binary_parallel_start)
 
     ASSERT(np > 0)
-
-    ! FIXME: everything will fail if sizeof is not available!
 
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof_ff+64
