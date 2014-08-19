@@ -226,7 +226,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       end do
         
       call X(mf_interpolate_points)(2, int(dims(1), FC_INTEGER_SIZE), x_in(:,:),&
-           &read_ff, cube%rs_n_global(1), x_out(:,:), ff)
+        read_ff, cube%rs_n_global(1), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
@@ -238,8 +238,8 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       do ii = 1, int(dims(2))
         do jj = 1, int(dims(1))
           x_in((ii-1)*dims(1) + jj,:) = & 
-              &(/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
-              &   real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
+            (/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
+               real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
         end do
       end do
       
@@ -249,7 +249,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
         end do
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2), FC_INTEGER_SIZE), x_in(:,:),&
-           &read_ff, cube%rs_n_global(1)*cube%rs_n_global(2), x_out(:,:), ff)
+        read_ff, cube%rs_n_global(1)*cube%rs_n_global(2), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
@@ -261,9 +261,9 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
         do jj = 1, int(dims(2))
           do kk = 1, int(dims(1))
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
-              &(/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
-              &   real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
-              &   real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
+              (/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
+                 real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
+                 real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
           end do
         end do
       end do
@@ -272,12 +272,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
         do jj = 1, cube%rs_n_global(2)
           do kk = 1, cube%rs_n_global(1)
             x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
-              &(/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
+              (/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
             end do
           end do
         end do
       call X(mf_interpolate_points)(3, int(dims(1)*dims(2)*dims(3), FC_INTEGER_SIZE), x_in(:,:),&
-           &read_ff, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), x_out(:,:), ff)
+        read_ff, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), x_out(:,:), ff)
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
     end if
