@@ -1187,7 +1187,7 @@ contains
     !%
     !%Option file 0
     !% Read initial orbital from file. 
-    !% Accepted file formats: obf, ncdf and csv.
+    !% Accepted file formats, detected by extension: obf, ncdf and csv (real only).
     !%Option formula 1
     !% Calculate initial orbital by given analytic expression.
     !%Option normalize_yes 1

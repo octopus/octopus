@@ -40,12 +40,9 @@ contains
     real(8),             intent(out) :: ff(:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE
-
     PUSH_SUB(dread_csv)
 
-    ierr = 0
-    call read_csv(np, ff(1), type, ierr, trim(fname))
+    call read_csv(np, ff(1), TYPE_DOUBLE, ierr, trim(fname))
 
     POP_SUB(dread_csv)
   end subroutine dread_csv
@@ -57,7 +54,6 @@ contains
 
     PUSH_SUB(io_csv_get_info)
 
-    ierr = 0
     call get_info_csv(dims, ierr, trim(fname))
 
     POP_SUB(io_csv_get_info)

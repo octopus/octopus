@@ -373,6 +373,7 @@ contains
     !% Column 5 is an expression for the charge distribution.
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
+    !% Accepted file formats, detected by extension: obf, ncdf and csv.
     !%Option spec_soft_coulomb 128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%

@@ -112,7 +112,8 @@ void FC_FUNC_(read_csv,READ_CSV)
   TO_C_STR1(fname, filename);
   fd = fopen(filename, "r");
   free(filename);
-  
+
+  *ierr = 0;
   if(fd == NULL) {
     *ierr = 2;
     return;
@@ -171,6 +172,8 @@ void FC_FUNC_(get_info_csv,GET_INFO_CSV)
   TO_C_STR1(fname, filename);
   fd = fopen(filename, "r");
   free(filename);
+
+  *ierr = 0;
   if (fd == NULL) {
     *ierr = 2;
     return;
