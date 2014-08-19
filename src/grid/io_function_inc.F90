@@ -205,7 +205,11 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     end if
     
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
-    call io_csv_read(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
+#ifdef R_TREAL
+    call dread_csv(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
+#else
+    call messages_not_implemented("Reading complex CSV file")
+#endif
 
     if (ierr /= 0) then
       message(1) = "Could not read file "//trim(filename)//""
