@@ -308,6 +308,9 @@ foreach my $octopus_exe (@executables){
 	      } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
 		  $specify_np = "--np $np --exe";
 		  $my_nslots = "";
+	      } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
+                  $specify_np = ""; 
+                  $my_nslots = "MP_PROCS=$np"; 
 	      } else { # for mpirun and Cray's aprun
 		  $specify_np = "-n $np";
 		  $my_nslots = "";
