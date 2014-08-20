@@ -95,7 +95,8 @@ module propagator_m
     PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
     PROP_CAETRS                  = 12, &
     PROP_RUNGE_KUTTA4            = 13, &
-    PROP_RUNGE_KUTTA2            = 14
+    PROP_RUNGE_KUTTA2            = 14, & 
+    PROP_EXPLICIT_RUNGE_KUTTA4   = 15
 
   type vksinterp_t
     private
@@ -331,6 +332,8 @@ contains
     !%Option runge_kutta2 14
     !% WARNING: EXPERIMENTAL. Implicit 2nd order Runge-Kutta (trapezoidal rule).
     !% Similar, but not identical, to Crank-Nicolson method.
+    !%Option expl_runge_kutta4 15
+    !% WARNING: EXPERIMENTAL. Explicit RK4 method.
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
@@ -405,6 +408,7 @@ contains
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
+    case(PROP_EXPLICIT_RUNGE_KUTTA4)
     case default
       call input_error('TDPropagator')
     end select
@@ -632,6 +636,8 @@ contains
       call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
+    case(PROP_EXPLICIT_RUNGE_KUTTA4)
+      call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
     end select
 
     if(present(scsteps)) scsteps = 1
@@ -678,6 +684,8 @@ contains
             call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
+          case(PROP_EXPLICIT_RUNGE_KUTTA4)
+            call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
           end select
 
           call v_ks_calc(ks, hm, st, geo, time = time - dt)
@@ -744,6 +752,7 @@ contains
       if( hm%theory_level /= INDEPENDENT_PARTICLES .and. &
           tr%method /= PROP_CAETRS .and. &
           tr%method /= PROP_RUNGE_KUTTA4 .and. &
+          tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
           tr%method /= PROP_RUNGE_KUTTA2 ) then
         if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
           scs = .true.

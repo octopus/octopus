@@ -157,6 +157,7 @@
         call messages_fatal(3)
       end if
       if( (tr%method /= PROP_QOCT_TDDFT_PROPAGATOR) .and. &
+          (tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4) .and. &
           (tr%method /= PROP_RUNGE_KUTTA2) ) then
         if( .not. oct_algorithm_is_direct(oct) ) then
           write(message(1), '(a)') 'When doing QOCT with interacting electrons, then you must set'

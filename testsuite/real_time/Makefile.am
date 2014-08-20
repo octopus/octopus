@@ -30,6 +30,7 @@ dist_share_DATA =                      \
 	01-propagators.05-caetrs.inp \
 	01-propagators.06-cn.inp \
 	01-propagators.07-magnus.inp \
+	01-propagators.08-exprk4.inp \
 	02-propagators.test \
 	02-propagators.01-gs.inp \
 	02-propagators.02-cnsparskit.inp \

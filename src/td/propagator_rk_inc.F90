@@ -17,6 +17,83 @@
 !!
 !! $Id$
 
+    subroutine td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+      type(v_ks_t), target,            intent(inout) :: ks
+      type(hamiltonian_t), target,     intent(inout) :: hm
+      type(grid_t),        target,     intent(inout) :: gr
+      type(states_t),      target,     intent(inout) :: st
+      type(propagator_t),  target,     intent(inout) :: tr
+      FLOAT,                           intent(in)    :: time
+      FLOAT,                           intent(in)    :: dt
+      type(ion_dynamics_t),            intent(inout) :: ions
+      type(geometry_t),                intent(inout) :: geo
+
+      integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist
+      CMPLX, allocatable :: zphi(:, :, :, :)
+      type(states_t) :: hst, stphi
+
+      PUSH_SUB(propagator_dt.td_explicit_runge_kutta4)
+
+      st1 = st%st_start
+      st2 = st%st_end
+      kp1 = st%d%kpt%start
+      kp2 = st%d%kpt%end
+      np_part = gr%mesh%np_part
+      np = gr%mesh%np
+      nspin = hm%d%nspin
+
+      SAFE_ALLOCATE(zphi(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
+
+      call states_copy(hst, st)
+      call states_copy(stphi, st)
+
+      ! First, we get the state that we want to propagate.
+      zphi = st%zpsi
+
+      call hamiltonian_update(hm, gr%mesh, time = time-dt)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst, time-dt)
+
+      st%zpsi = st%zpsi - M_zI * dt * hst%zpsi / M_SIX
+
+      stphi%zpsi = zphi - M_HALF * M_zI * dt * hst%zpsi
+        if(.not.hamiltonian_oct_exchange(hm)) then
+          call density_calc(stphi, gr, stphi%rho)
+          call v_ks_calc(ks, hm, stphi, geo)
+        end if
+      call hamiltonian_update(hm, gr%mesh, time = time-M_HALF*dt)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)!, time - M_HALF*dt)
+
+      st%zpsi = st%zpsi - M_zI * dt * hst%zpsi * M_THIRD
+
+      stphi%zpsi = zphi - M_HALF * M_zI * dt * hst%zpsi
+        if(.not.hamiltonian_oct_exchange(hm)) then
+          call density_calc(stphi, gr, stphi%rho)
+          call v_ks_calc(ks, hm, stphi, geo)
+        end if
+      call hamiltonian_update(hm, gr%mesh, time = time-M_HALF*dt)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)!, time - M_HALF*dt)
+
+      st%zpsi = st%zpsi - M_zI * dt * hst%zpsi * M_THIRD
+
+      stphi%zpsi = zphi - M_zI *dt * hst%zpsi
+        if(.not.hamiltonian_oct_exchange(hm)) then
+          call density_calc(stphi, gr, stphi%rho)
+          call v_ks_calc(ks, hm, stphi, geo)
+        end if
+      call hamiltonian_update(hm, gr%mesh, time = time)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)!, time)
+
+      st%zpsi = st%zpsi - M_zI * dt * hst%zpsi / M_SIX
+
+      call density_calc(st, gr, st%rho)
+
+      call states_end(hst)
+      call states_end(stphi)
+      SAFE_DEALLOCATE_A(zphi)
+      POP_SUB(propagator_dt.td_explicit_runge_kutta4)
+    end subroutine td_explicit_runge_kutta4
+
+
     subroutine td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
