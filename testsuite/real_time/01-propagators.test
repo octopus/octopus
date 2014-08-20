@@ -29,7 +29,7 @@ match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.4595066072
 Processors : 4
 Input      : 01-propagators.04-aetrs.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.7008291414518e-01
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891414518e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.459069539882e-01
 
 Processors : 4
