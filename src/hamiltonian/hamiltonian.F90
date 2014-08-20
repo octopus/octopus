@@ -1139,7 +1139,7 @@ contains
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb)) then
+      if(simul_box_is_periodic(mesh%sb) .or. associated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
