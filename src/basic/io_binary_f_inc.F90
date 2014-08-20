@@ -94,7 +94,7 @@
  #ifdef HAVE_MPI2
     integer :: status(MPI_STATUS_SIZE)
  #endif
-    integer :: read_count, file_handle
+    integer :: write_count, file_handle
  
     PUSH_SUB(X(write_parallel))
  
@@ -104,9 +104,9 @@
  #ifdef HAVE_MPI2
     if(ierr == 0) then
       call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
-      call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
-      if (read_count /= np) then
-        write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " wrote elements=", read_count, " instead of", np
+      call MPI_Get_count(status, R_MPITYPE, write_count, mpi_err)
+      if (write_count /= np) then
+        write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " wrote elements=", write_count, " instead of", np
         write(message(2), '(a,a)') " of file= ", fname
         call messages_fatal(2)
       end if
