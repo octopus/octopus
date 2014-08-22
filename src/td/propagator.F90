@@ -56,6 +56,7 @@ module propagator_m
   use profiling_m
   use restart_m
   use scf_m
+  use species_m
   use states_dim_m
   use solvers_m
   use sparskit_m
@@ -421,6 +422,7 @@ contains
          tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
          tr%method /= PROP_CRANK_NICOLSON .and. &
          tr%method /= PROP_RUNGE_KUTTA4 .and. &
+         tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
          tr%method /= PROP_RUNGE_KUTTA2 .and. &
          tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
@@ -729,7 +731,7 @@ contains
     if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
-    if(ion_dynamics_ions_move(ions)) then
+    if(ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
@@ -772,7 +774,7 @@ contains
     type(propagator_t), intent(in) :: tr
 
     select case(tr%method)
-    case(PROP_ETRS, PROP_AETRS, PROP_CAETRS)
+    case(PROP_ETRS, PROP_AETRS, PROP_CAETRS, PROP_EXPLICIT_RUNGE_KUTTA4)
       propagated = .true.
     case default
       propagated = .false.
