@@ -240,13 +240,14 @@ end subroutine X(batch_axpy_vec)
 
 ! --------------------------------------------------------------
 
-subroutine X(batch_scal_vec)(np, aa, xx, a_start)
+subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa(:)
   type(batch_t),     intent(inout) :: xx
   integer, optional, intent(in)    :: a_start
+  logical, optional, intent(in)    :: a_full
 
-  integer :: ist, ip, effsize
+  integer :: ist, ip, effsize, iaa
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
   integer :: localsize
@@ -271,7 +272,9 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
 
   aa_linear = M_ZERO
   do ist = 1, xx%nst_linear
-    aa_linear(ist) = aa(batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1))
+    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    aa_linear(ist) = aa(iaa)
   end do
   
   select case(batch_status(xx))

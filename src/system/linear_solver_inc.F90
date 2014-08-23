@@ -798,10 +798,13 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       alpha(ii) = alpha(ii)*xsi(ii)/rho(ii)
     end do
 
+    call batch_scal(gr%mesh%np, CNST(1.0)/rho, vvb, a_full = .false.)
+    call batch_scal(gr%mesh%np, CNST(1.0)/xsi, zzb, a_full = .false.)
+    
     do ii = 1, xb%nst
       do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), vvb%states(ii)%X(psi)(:, idim))
-        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi(ii), zzb%states(ii)%X(psi)(:, idim))
+!        call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), vvb%states(ii)%X(psi)(:, idim))
+!        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi(ii), zzb%states(ii)%X(psi)(:, idim))
       end do
     end do
 
@@ -829,11 +832,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, qqb, ppb)
 
-    do ii = 1, xb%nst
-      do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, alpha(ii), ppb%states(ii)%X(psi)(:, idim))
-      end do
-    end do
+    call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
 
     do ii = 1, xb%nst
       eps(ii) = X(mf_dotp)(gr%mesh, st%d%dim, qqb%states(ii)%X(psi), ppb%states(ii)%X(psi))
@@ -861,11 +860,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     call X(preconditioner_apply_batch)(this%pre, gr, hm, ik, vvb, zzb, omega = shift)
 
-    do ii = 1, xb%nst
-      do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, CNST(1.0)/alpha(ii), zzb%states(ii)%X(psi)(:, idim))
-      end do
-    end do
+    call batch_scal(gr%mesh%np, CNST(1.0)/alpha, zzb, a_full = .false.)
 
     do ii = 1, xb%nst
       xsi(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, zzb%states(ii)%X(psi))
