@@ -840,12 +840,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       beta(ii) = eps(ii)/delta(ii)
     end do
 
-    do ii = 1, xb%nst
-      forall (ip = 1:gr%mesh%np) 
-        vvb%states(ii)%X(psi)(ip, 1) = -beta(ii)*vvb%states(ii)%X(psi)(ip, 1) + ppb%states(ii)%X(psi)(ip, 1)
-      end forall
-    end do
-
+    call batch_xpay(gr%mesh%np, ppb, -beta, vvb, a_full = .false.)
+    
     forall (ii = 1:xb%nst) oldrho(ii) = rho(ii)
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)

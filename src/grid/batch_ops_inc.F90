@@ -352,14 +352,15 @@ end subroutine X(batch_scal_vec)
 
 ! --------------------------------------------------------------
 
-subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
+subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer,           intent(in)    :: np
   type(batch_t),     intent(in)    :: xx
   R_TYPE,            intent(in)    :: aa(:)
   type(batch_t),     intent(inout) :: yy
   integer, optional, intent(in)    :: a_start
+  logical, optional, intent(in)    :: a_full
 
-  integer :: ist, ip, effsize
+  integer :: ist, ip, effsize, iaa
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
   integer :: size_factor, localsize
@@ -386,7 +387,9 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    aa_linear(ist) = aa(batch_linear_to_ist(yy, ist) - (optional_default(a_start, 1) - 1))
+    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    aa_linear(ist) = aa(iaa)
   end do
 
   select case(batch_status(xx))
