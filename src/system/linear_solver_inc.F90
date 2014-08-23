@@ -801,13 +801,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     call batch_scal(gr%mesh%np, CNST(1.0)/rho, vvb, a_full = .false.)
     call batch_scal(gr%mesh%np, CNST(1.0)/xsi, zzb, a_full = .false.)
     
-    do ii = 1, xb%nst
-      do idim = 1, st%d%dim
-!        call lalg_scal(gr%mesh%np, CNST(1.0)/rho(ii), vvb%states(ii)%X(psi)(:, idim))
-!        call lalg_scal(gr%mesh%np, CNST(1.0)/xsi(ii), zzb%states(ii)%X(psi)(:, idim))
-      end do
-    end do
-
     call X(mesh_batch_dotp_vector)(gr%mesh, vvb, zzb, delta)
 
     do ii = 1, xb%nst
@@ -851,20 +844,17 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       forall (ip = 1:gr%mesh%np) 
         vvb%states(ii)%X(psi)(ip, 1) = -beta(ii)*vvb%states(ii)%X(psi)(ip, 1) + ppb%states(ii)%X(psi)(ip, 1)
       end forall
-      oldrho(ii) = rho(ii)
     end do
 
-    do ii = 1, xb%nst
-      rho(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, vvb%states(ii)%X(psi))
-    end do
+    forall (ii = 1:xb%nst) oldrho(ii) = rho(ii)
+
+    call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
     call X(preconditioner_apply_batch)(this%pre, gr, hm, ik, vvb, zzb, omega = shift)
 
     call batch_scal(gr%mesh%np, CNST(1.0)/alpha, zzb, a_full = .false.)
 
-    do ii = 1, xb%nst
-      xsi(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, zzb%states(ii)%X(psi))
-    end do
+    call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
     do ii = 1, xb%nst
       oldtheta(ii) = theta(ii)
