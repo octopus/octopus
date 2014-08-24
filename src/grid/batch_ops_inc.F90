@@ -582,6 +582,25 @@ end subroutine X(batch_set_state2)
 
 ! --------------------------------------------------------------
 
+subroutine X(batch_set_state3)(this, ii, np, psi)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: ii
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(in)    :: psi(:, :)
+
+  integer :: i2
+
+  PUSH_SUB(X(batch_set_state3))
+
+  do i2 = 1, this%dim
+    call X(batch_set_state1)(this, (ii - 1)*this%dim + i2, np, psi(:, i2))
+  end do
+
+  POP_SUB(X(batch_set_state3))
+end subroutine X(batch_set_state3)
+
+! --------------------------------------------------------------
+
 subroutine X(batch_get_state1)(this, ist, np, psi)
   type(batch_t),  intent(in)    :: this
   integer,        intent(in)    :: ist
@@ -655,6 +674,25 @@ subroutine X(batch_get_state2)(this, index, np, psi)
   POP_SUB(X(batch_get_state2))
 end subroutine X(batch_get_state2)
 
+
+! --------------------------------------------------------------
+
+subroutine X(batch_get_state3)(this, ii, np, psi)
+  type(batch_t),  intent(in)    :: this
+  integer,        intent(in)    :: ii
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(inout) :: psi(:, :)
+
+  integer :: i2
+
+  PUSH_SUB(X(batch_get_state3))
+
+  do i2 = 1, this%dim
+    call X(batch_get_state1)(this, (ii - 1)*this%dim + i2, np, psi(:, i2))
+  end do
+
+  POP_SUB(X(batch_get_state3))
+end subroutine X(batch_get_state3)
 
 ! --------------------------------------------------------------
 

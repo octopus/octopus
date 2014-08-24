@@ -85,6 +85,8 @@ module batch_ops_m
     module procedure zbatch_set_state1
     module procedure dbatch_set_state2
     module procedure zbatch_set_state2
+    module procedure dbatch_set_state3
+    module procedure zbatch_set_state3
   end interface batch_set_state
 
   interface batch_get_state
@@ -92,6 +94,8 @@ module batch_ops_m
     module procedure zbatch_get_state1
     module procedure dbatch_get_state2
     module procedure zbatch_get_state2
+    module procedure dbatch_get_state3
+    module procedure zbatch_get_state3
   end interface batch_get_state
 
   interface batch_get_points
