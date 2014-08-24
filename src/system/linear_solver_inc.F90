@@ -692,12 +692,12 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
   FLOAT,                 intent(in)    :: threshold    !< convergence threshold
 
-  type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar, exception_saved
+  type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   R_TYPE              :: rtmp
   FLOAT               :: oldgamma, tmp
   integer             :: ip, ii, iter, idim
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
-  R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:)
+  R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:), exception_saved(:, :, :)
   integer, allocatable :: status(:), saved_iter(:)
 
   integer, parameter ::        &
@@ -729,6 +729,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   SAFE_ALLOCATE(status(1:xb%nst))
   SAFE_ALLOCATE(saved_iter(1:xb%nst))
 
+  SAFE_ALLOCATE(exception_saved(1:gr%mesh%np, 1:xb%nst, 1:st%d%dim))
+
   call batch_copy(xb, vvb, reference = .false.)
   call batch_copy(xb, res, reference = .false.)
   call batch_copy(xb, zzb, reference = .false.)
@@ -736,7 +738,6 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   call batch_copy(xb, ppb, reference = .false.)
   call batch_copy(xb, deltax, reference = .false.)
   call batch_copy(xb, deltar, reference = .false.)
-  call batch_copy(xb, exception_saved, reference = .false.)
 
   call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
 
@@ -758,15 +759,17 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     if(abs(rho(ii)) <= M_EPSILON) then
       status(ii) = QMR_RES_ZERO
       residue(ii) = rho(ii)
-      exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+      do idim = 1, st%d%dim
+        call batch_get_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+      end do
       saved_iter(ii) = iter
       saved_res(ii) = residue(ii)
     end if
 
     ! if b is zero, the solution is trivial
     if(status(ii) == QMR_NOT_CONVERGED .and. abs(norm_b(ii)) <= M_EPSILON) then
+      exception_saved = CNST(0.0)
       status(ii) = QMR_B_ZERO
-      exception_saved%states(ii)%X(psi) = CNST(0.0)
       residue(ii) = norm_b(ii)
       saved_iter(ii) = iter
       saved_res(ii) = residue(ii)
@@ -789,7 +792,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. (abs(rho(ii)) < M_EPSILON .or. abs(xsi(ii)) < M_EPSILON)) then
-        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call batch_get_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+        end do
         status(ii) = QMR_BREAKDOWN_PB
         saved_iter(ii) = iter
         saved_res(ii) = residue(ii)
@@ -805,7 +810,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(delta(ii)) < M_EPSILON) then
-        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call batch_get_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+        end do
         status(ii) = QMR_BREAKDOWN_VZ
         saved_iter(ii) = iter
         saved_res(ii) = residue(ii)
@@ -831,7 +838,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       eps(ii) = X(mf_dotp)(gr%mesh, st%d%dim, qqb%states(ii)%X(psi), ppb%states(ii)%X(psi))
 
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(eps(ii)) < M_EPSILON) then
-        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call batch_get_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+        end do
         status(ii) = QMR_BREAKDOWN_QP
         saved_iter(ii) = iter
         saved_res(ii) = residue(ii)
@@ -859,7 +868,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       gamma(ii) = CNST(1.0)/sqrt(CNST(1.0) + theta(ii)**2)
 
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(gamma(ii)) < M_EPSILON) then
-        exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+        do idim = 1, st%d%dim
+          call batch_get_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+        end do
         status(ii) = QMR_BREAKDOWN_GAMMA
         saved_iter(ii) = iter
         saved_res(ii) = residue(ii)
@@ -916,7 +927,9 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     if(status(ii) == QMR_NOT_CONVERGED .or. status(ii) == QMR_CONVERGED) then
       iter_used(ii) = iter
     else
-      xb%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim) = exception_saved%states(ii)%X(psi)(1:gr%mesh%np, 1:st%d%dim)
+      do idim = 1, st%d%dim
+        call batch_set_state(xb, (/ii, idim/), gr%mesh%np, exception_saved(:, ii, idim))
+      end do
       iter_used(ii) = saved_iter(ii)
       residue(ii) = saved_res(ii) 
     end if
@@ -949,8 +962,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   call batch_end(ppb)
   call batch_end(deltax)
   call batch_end(deltar)
-  call batch_end(exception_saved)
-
+  
+  SAFE_DEALLOCATE_A(exception_saved)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(oldrho)
   SAFE_DEALLOCATE_A(norm_b)
