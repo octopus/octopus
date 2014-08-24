@@ -189,6 +189,11 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
 
+          if(hamiltonian_apply_packed(hm, sys%gr%mesh)) then
+            call batch_pack(dlpsib)
+            call batch_pack(rhsb)
+          end if
+
           call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
