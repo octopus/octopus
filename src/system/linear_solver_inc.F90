@@ -813,24 +813,19 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       end if
     end do
 
-    do ii = 1, xb%nst
-      if(iter == 1) then
-        do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, zzb%states(ii)%X(psi)(:, idim), qqb%states(ii)%X(psi)(:, idim))
-        end do
-      else
-        rtmp = -rho(ii)*delta(ii)/eps(ii)
-        forall (ip = 1:gr%mesh%np) qqb%states(ii)%X(psi)(ip, 1) = rtmp*qqb%states(ii)%X(psi)(ip, 1) + zzb%states(ii)%X(psi)(ip, 1)
-      end if
-    end do
+    if(iter == 1) then
+      call batch_copy_data(gr%mesh%np, zzb, qqb)
+    else
+      call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
+    end if
 
     call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, qqb, ppb)
 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
 
-    do ii = 1, xb%nst
-      eps(ii) = X(mf_dotp)(gr%mesh, st%d%dim, qqb%states(ii)%X(psi), ppb%states(ii)%X(psi))
+    call X(mesh_batch_dotp_vector)(gr%mesh, qqb, ppb, eps)
 
+    do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(eps(ii)) < M_EPSILON) then
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
         status(ii) = QMR_BREAKDOWN_QP
