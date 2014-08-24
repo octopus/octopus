@@ -695,7 +695,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   R_TYPE              :: rtmp
   FLOAT               :: oldgamma, tmp
-  integer             :: ip, ii, iter, idim
+  integer             :: ip, ii, iter
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
   R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:), exception_saved(:, :, :)
   integer, allocatable :: status(:), saved_iter(:)
@@ -801,7 +801,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     call batch_scal(gr%mesh%np, CNST(1.0)/rho, vvb, a_full = .false.)
     call batch_scal(gr%mesh%np, CNST(1.0)/xsi, zzb, a_full = .false.)
-    
+
     call X(mesh_batch_dotp_vector)(gr%mesh, vvb, zzb, delta)
 
     do ii = 1, xb%nst
@@ -837,7 +837,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     end do
 
     call batch_xpay(gr%mesh%np, ppb, -beta, vvb, a_full = .false.)
-    
+
     forall (ii = 1:xb%nst) oldrho(ii) = rho(ii)
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
@@ -864,41 +864,30 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       eta(ii) = -eta(ii)*oldrho(ii)*gamma(ii)**2/(beta(ii)*oldgamma**2)
     end do
 
-    do ii = 1, xb%nst
+    if(iter == 1) then
 
-      rtmp = eta(ii)*alpha(ii)
+      call batch_copy_data(gr%mesh%np, qqb, deltax)
+      call batch_scal(gr%mesh%np, eta*alpha, deltax, a_full = .false.)
+      call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
+      
+      call batch_copy_data(gr%mesh%np, ppb, deltar)
+      call batch_scal(gr%mesh%np, eta, deltar, a_full = .false.)
+      call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
-      if(iter == 1) then
+    else
 
-        forall (ip = 1:gr%mesh%np)
-          deltax%states(ii)%X(psi)(ip, 1) = rtmp*qqb%states(ii)%X(psi)(ip, 1)
-          xb%states(ii)%X(psi)(ip, 1) = xb%states(ii)%X(psi)(ip, 1) + deltax%states(ii)%X(psi)(ip, 1)
-        end forall
+      call batch_scal(gr%mesh%np, (oldtheta*gamma)**2, deltax, a_full = .false.)
+      call batch_axpy(gr%mesh%np, eta*alpha, qqb, deltax, a_full = .false.)
+      call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
 
-        forall (ip = 1:gr%mesh%np)
-          deltar%states(ii)%X(psi)(ip, 1) = eta(ii)*ppb%states(ii)%X(psi)(ip, 1)
-          res%states(ii)%X(psi)(ip, 1) = res%states(ii)%X(psi)(ip, 1) - deltar%states(ii)%X(psi)(ip, 1)
-        end forall
+      call batch_scal(gr%mesh%np, (oldtheta*gamma)**2, deltar, a_full = .false.)
+      call batch_axpy(gr%mesh%np, eta, ppb, deltar, a_full = .false.)
+      call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
-      else
+    end if
 
-        tmp  = (oldtheta(ii)*gamma(ii))**2
-        forall (ip = 1:gr%mesh%np)
-          deltax%states(ii)%X(psi)(ip, 1) = tmp*deltax%states(ii)%X(psi)(ip, 1) + rtmp*qqb%states(ii)%X(psi)(ip, 1)
-          xb%states(ii)%X(psi)(ip, 1) = xb%states(ii)%X(psi)(ip, 1) + deltax%states(ii)%X(psi)(ip, 1)
-        end forall
-
-        forall (ip = 1:gr%mesh%np)
-          deltar%states(ii)%X(psi)(ip, 1) = tmp*deltar%states(ii)%X(psi)(ip, 1) + eta(ii)*ppb%states(ii)%X(psi)(ip, 1)
-          res%states(ii)%X(psi)(ip, 1) = res%states(ii)%X(psi)(ip, 1) - deltar%states(ii)%X(psi)(ip, 1)
-        end forall
-
-      end if
-    end do
-
-    do ii = 1, xb%nst
-      residue(ii) = X(mf_nrm2)(gr%mesh, st%d%dim, res%states(ii)%X(psi))/norm_b(ii)
-    end do
+    call mesh_batch_nrm2(gr%mesh, res, residue)
+    forall(ii = 1:xb%nst) residue(ii) = residue(ii)/norm_b(ii)
 
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. residue(ii) < threshold) then
@@ -945,7 +934,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   call batch_end(ppb)
   call batch_end(deltax)
   call batch_end(deltar)
-  
+
   SAFE_DEALLOCATE_A(exception_saved)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(oldrho)
