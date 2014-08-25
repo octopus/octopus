@@ -1805,12 +1805,11 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
   type(states_t),   intent(in)  :: st
   integer,          intent(out) :: ierr
 
-  character(len=20) :: filename
-  character(len=80) :: lines(2)
+  character(len=80) :: filename, path, lines(2)
   integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2
   CMPLX, pointer :: gwf(:,:,:)
   type(profile_t), save :: prof
-
+   
   PUSH_SUB(pes_mask_dump)
 
   ierr = 0
@@ -1844,7 +1843,12 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
 
         itot = ist + (ik - 1)*st%nst +  (idim - 1)*st%nst*st%d%kpt%nglobal
 
-        write(filename,'(a,i10.10)') "pes_", itot
+        write(filename,'(i10.10)') itot
+
+        !FIXME: the following should not use io_binary_write directly. Instead, the
+        !task of writing the function to the file should be done by the restart module.
+
+        path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
 
         if (mask%cube%parallel_in_domains) then
           SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
@@ -1858,15 +1862,18 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
           !  call zcube_function_allgather(mask%cube, gwf, wf, order = (/2,3,1/))
           !                                      
           !end if
+          
         else
           gwf => mask%k(:,:,:, idim, ist, ik)
         end if
 
-        call zrestart_write_binary(restart, filename, np, gwf, err)
-        if (err /= 0) then
-          err2 = err2 + 1
-          message(1) = "Unable to write PES mask restart data to '"//trim(filename)//"'."
-          call messages_warning(1)
+        if (mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
+          call io_binary_write(path, np, gwf(:,:,:), err)
+          if (err /= 0) then
+            err2 = err2 + 1
+            message(1) = "Unable to write PES mask restart data to '"//trim(path)//"'."
+            call messages_warning(1)
+          end if
         end if
 
         if (mask%cube%parallel_in_domains) then
@@ -1895,9 +1902,9 @@ subroutine pes_mask_load(restart, mask, st, ierr)
   type(states_t),   intent(inout) :: st
   integer,          intent(out)   :: ierr
 
-  character(len=20) :: filename
+  character(len=80) :: filename, path
   integer :: itot, ik, ist, idim , np, err, err2, iunit, ll(3)
-  character(len=80) :: lines(2)
+  character(len=128) :: lines(2)
   character(len=7) :: dummy
   FLOAT, allocatable :: rr(:)
 
@@ -1938,11 +1945,17 @@ subroutine pes_mask_load(restart, mask, st, ierr)
       do idim = 1, st%d%dim
         itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
 
-        write(filename,'(a,i10.10)') "pes_", itot
-        call zrestart_read_binary(restart, filename, np, mask%k(:,:,:, idim, ist, ik), err)
+        write(filename,'(i10.10)') itot
+
+        !FIXME: the following should not use io_binary_read directly. Instead, the
+        !task of reading the function to the file should be done by the restart module.
+       
+        path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
+        
+        call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), err)
         if (err /= 0) then
           err2 = err2 + 1
-          message(1) = "Unable to read PES mask restart data from '"//trim(filename)//"'."
+          message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
           call messages_warning(1)
         end if
 
