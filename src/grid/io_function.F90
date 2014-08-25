@@ -89,7 +89,8 @@ module io_function_m
     C_OUTPUT_HOW_CUBE            =  131072,    &
     C_OUTPUT_HOW_OPENSCAD        =  262144,    &
     C_OUTPUT_HOW_JSON            =  524288,    &
-    C_OUTPUT_HOW_BILD            = 1048576
+    C_OUTPUT_HOW_BILD            = 1048576,    &
+    C_OUTPUT_HOW_VTK             = 2097152
     
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
@@ -189,11 +190,13 @@ contains
     !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>).
     !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
-    !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
+    !% Generates output in OpenSCAD format (<tt>http://www.openscad.org/</tt>). For the moment only the geometry is supported.
     !%Option json 524288
     !% Generates output in JSON format.
     !%Option bild 1048576
-    !% Generates output BILD format (<tt>http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html </tt> )
+    !% Generates output BILD format (<tt>http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html</tt>).
+    !%Option vtk 2097152
+    !% Generates output VTK legacy format (<tt>http://www.vtk.org/VTK/img/file-formats.pdf</tt>).
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
@@ -289,6 +292,7 @@ contains
 #endif
     if(index(where, "Cube")      /= 0) how = ior(how, C_OUTPUT_HOW_CUBE)
     if(index(where, "OpenSCAD")  /= 0) how = ior(how, C_OUTPUT_HOW_OPENSCAD)
+    if(index(where, "VTK")       /= 0) how = ior(how, C_OUTPUT_HOW_VTK)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how

@@ -32,51 +32,82 @@
 
   ! ------------------------------------------------------
 
-  subroutine X(write_binary)(fname, np, ff, ierr)
+  subroutine X(write_binary)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     R_TYPE,              intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
+    logical, optional,   intent(in)  :: nohead   !> skip header
+    logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+    logical :: nhd, flpe
 
     PUSH_SUB(X(write_binary))
 
     ASSERT(product(ubound(ff)) >= np)
 
-    call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, trim(fname))
+    nhd = .false.
+    if(present(nohead)) nhd = nohead
+
+    flpe = .false.
+    if(present(fendian)) flpe = fendian
+      
+    call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, nhd, flpe, trim(fname))
 
     POP_SUB(X(write_binary))
   end subroutine X(write_binary)
 
   !------------------------------------------------------
 
-  subroutine X(write_binary2)(fname, np, ff, ierr)
+  subroutine X(write_binary2)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     R_TYPE,              intent(in)  :: ff(:, :)
     integer,             intent(out) :: ierr
+    logical, optional,   intent(in)  :: nohead   !> skip header
+    logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+    logical :: nhd, flpe
 
     PUSH_SUB(X(write_binary2))
 
+    nhd = .false.
+    if(present(nohead)) nhd = nohead
+
+    flpe = .false.
+    if(present(fendian)) flpe = fendian
+
     ASSERT(product(ubound(ff)) >= np)
 
-    call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, trim(fname))
+    call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, nhd, flpe, trim(fname))
 
     POP_SUB(X(write_binary2))
   end subroutine X(write_binary2)
 
   !------------------------------------------------------
 
-  subroutine X(write_binary3)(fname, np, ff, ierr)
+  subroutine X(write_binary3)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     R_TYPE,              intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
+    logical, optional,   intent(in)  :: nohead   !> skip header
+    logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+
+    logical :: nhd, flpe
 
     PUSH_SUB(X(write_binary3))
 
+    nhd = .false.
+    if(present(nohead)) nhd = nohead
+
+    flpe = .false.
+    if(present(fendian)) flpe = fendian
+
     ASSERT(product(ubound(ff)) >= np)
 
-    call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, trim(fname))
+    call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, nhd, flpe, trim(fname))
 
     POP_SUB(X(write_binary3))
   end subroutine X(write_binary3)

@@ -237,10 +237,10 @@ void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ie
 }
 
 void FC_FUNC_(write_binary,WRITE_BINARY)
-     (const fint * np, void * f, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+     (const fint * np, void * f, fint * type, fint * ierr, fint * nhd, fint * flpe, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
-  int fd;
+  int fd,i;
   ssize_t moved;
   unsigned long fname_len;
 
@@ -249,10 +249,14 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   
   fname_len = l1;
   TO_C_STR1(fname, filename);
-  write_header(np, type, ierr, fname, fname_len);
 
+  if(*nhd != 1){
+    write_header(np, type, ierr, fname, fname_len);
+  }
+  
   fd = open (filename, O_WRONLY, 
-	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );    
+  
   free(filename);
   if( fd < 0 ) {
     inf_error("octopus.write_binary in opening the file");
@@ -262,6 +266,12 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 
   /* skip the header and go until the end */
   lseek(fd, 0, SEEK_END);
+  
+  /* flip endianness*/
+  if (*flpe == 1){
+    for(i=0; i < (*np)*size_of[(*type)] ; i+=base_size_of[(*type)]) 
+      endian_convert(base_size_of[(*type)], (char *) (f + i));
+  }
   
   /* now write the values */
   moved = write(fd, f, (*np)*size_of[(*type)]);
