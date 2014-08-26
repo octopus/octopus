@@ -1342,8 +1342,8 @@ end function X(interpolate_isolevel)
 
   ! --------------------------------------------------------- 
   !>  Writes a cube_function in VTK legacy format
-  !>  see http://www.vtk.org/VTK/img/file-formats.pdf
-  !>  for the moment only real part 
+  !!  see http://www.vtk.org/VTK/img/file-formats.pdf
+  !!  for the moment only real part 
   ! ---------------------------------------------------------
   subroutine X(out_cf_vtk)(filename, ierr, cf, cube, sb_dim, spacing, unit)
     character(len=*),      intent(in) :: filename        !< the file name

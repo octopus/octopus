@@ -37,8 +37,8 @@
     integer,             intent(in)  :: np
     R_TYPE,              intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !> skip header
-    logical, optional,   intent(in)  :: fendian  !> flip endianness
+    logical, optional,   intent(in)  :: nohead   !< skip header
+    logical, optional,   intent(in)  :: fendian  !< flip endianness
 
     logical :: nhd, flpe
 
