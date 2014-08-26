@@ -60,7 +60,9 @@ module io_function_m
     dio_function_input,           &
     zio_function_input,           &
     dio_function_output,          &
-    zio_function_output
+    zio_function_output,          &
+    dout_cf_vtk,                  &
+    zout_cf_vtk
 
 #if defined(HAVE_NETCDF)
  public ::                        &

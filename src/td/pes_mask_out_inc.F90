@@ -346,57 +346,61 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, Lk)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  FLOAT,            intent(in) :: Lk(:)
-  character(len=*), intent(in) :: file
-
+subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  FLOAT,             intent(in) :: Lk(:)
+  integer,           intent(in) :: how
+  type(simul_box_t), intent(in) :: sb 
+  
   integer :: iunit
-#if defined(HAVE_NETCDF)
-  integer :: ierr, sb_dim 
+  integer :: ierr
   character(len=512) :: filename
   type(cube_t) :: cube
   type(cube_function_t) :: cf
   integer :: ll(3),ii
-  type(simul_box_t) :: sb 
   FLOAT :: dk(3)  
-#endif
 
   PUSH_SUB(pes_mask_output_full_mapM)
-  
-#if defined(HAVE_NETCDF)  
 
-  sb_dim = 3 ! tested only in 3D 
-  
   ll = 1
   do ii = 1, 3
     ll(ii) = size(pesK,ii) 
   end do
 
-  sb%dim = sb_dim
-  sb%periodic_dim = 0
-   
   call cube_init(cube, ll, sb)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
 
   dk= abs(Lk(2)-Lk(1))
+  
+#if defined(HAVE_NETCDF)  
+  
+  if(iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
+    filename = trim(file)//".ncdf"
 
-  filename = trim(file)//".ncdf"
+    call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, &
+          units_from_atomic(units_out%mass*units_out%velocity, dk ), & 
+          .false., units_out%mass*units_out%velocity**sb%dim)
 
-  call dout_cf_netcdf(filename, ierr, cf, cube, sb_dim, &
-        units_from_atomic(sqrt(units_out%energy), dk ), & 
-        .false., sqrt(units_out%energy)**sb_dim)
+  end if
 
-  call cube_end(cube)
-  call dcube_function_free_RS(cube, cf)
-
-#else
-
-  call out_ascii()
 #endif
   
+  if(iand(how, C_OUTPUT_HOW_VTK) /= 0)  then
+    filename = trim(file)//".vtk"
+        
+    call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, & 
+      units_from_atomic(units_out%mass*units_out%velocity, dk),& 
+      units_out%mass*units_out%velocity**sb%dim)
+      
+  else
+    call out_ascii()
+  end if
+  
+  call cube_end(cube)
+  call dcube_function_free_RS(cube, cf)
 
   POP_SUB(pes_mask_output_full_mapM)
   

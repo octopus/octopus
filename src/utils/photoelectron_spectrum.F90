@@ -22,31 +22,39 @@
 program photoelectron_spectrum
   use command_line_m
   use datasets_m
+  use geometry_m
   use global_m
-  use io_m
   use io_binary_m
+  use io_function_m
+  use io_m
   use messages_m
   use parser_m
   use pes_m  
   use pes_mask_m  
   use profiling_m
+  use simul_box_m
+  use space_m
   use string_m
   use unit_m
   use unit_system_m
   use utils_m
   use varinfo_m
-
+  
   implicit none
 
   integer              :: ierr, mode, interp, integrate
 
-  integer              :: dim, ll(MAX_DIM), ii, dir
+  integer              :: dim, ll(MAX_DIM), ii, dir, how
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2), pvec(3)
   FLOAT                :: center(3)
   FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpol
+  
+  type(space_t)     :: space
+  type(geometry_t)  :: geo
+  type(simul_box_t) :: sb
   
   character(len=512) :: filename
 
@@ -63,6 +71,9 @@ program photoelectron_spectrum
   
   call io_init()
 
+  call space_init(space)
+  call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -202,7 +213,9 @@ program photoelectron_spectrum
     write(message(1), '(a)') 'Compute full momentum-resolved PES'
     call messages_info(1)
  
-    call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk)        
+    call io_function_read_how(sb, how)
+ 
+    call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk, how, sb)        
 
   end select
 
