@@ -1,4 +1,4 @@
-!! Copyright (C) 2013 J. Alberdi-Rodriguez
+!! Copyright (C) 2013 J. Alberdi-Rodriguez, J. Jornet-Somoza
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ program oct_convert
   use command_line_m
   use datasets_m
   use fft_m
+  use fftw_m
   use geometry_m
   use global_m
   use io_m
@@ -32,6 +33,7 @@ program oct_convert
   use loct_m
   use messages_m
   use mesh_m
+  use mpi_m
   use output_m
   use parser_m
   use poisson_m
@@ -92,7 +94,7 @@ contains
 
     character(64)  :: basename, folder, ref_name, ref_folder, folder_default
     integer        :: c_start, c_end, c_step, c_start_default, length
-    logical        :: iterate_folder, subtract_file
+    logical        :: iterate_folder, subtract_file, fourier_trans
 
     PUSH_SUB(convert)
 
@@ -211,9 +213,25 @@ contains
     call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
     if ( ref_folder == " " ) ref_folder = ""
 
-    call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
+    !%Variable ConvertTransform
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-convert
+    !%Description
+    !% The reference file that is going to be transformed via Fourier Transform.
+    !%End
+    call parse_logical(datasets_check('ConvertTransform'), .false., fourier_trans)
+
+    ! Compute Fourier transform 
+    if (fourier_trans) then
+      call convert_transform(sys%gr%mesh, basename, folder, &
+         c_start, c_end, c_step, subtract_file, &
+         ref_name, ref_folder, sys%st%d%nspin)
+    else
+      call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
          c_start, c_end, c_step, sys%outp%how, sys%outp%what, iterate_folder, &
-         subtract_file, ref_name, ref_folder )
+         subtract_file, ref_name, ref_folder)
+    end if
 
     call system_end(sys)
 
@@ -330,7 +348,200 @@ contains
     SAFE_DEALLOCATE_A(pot)
     POP_SUB(convert_low)
   end subroutine convert_low
-  
+
+  ! ---------------------------------------------------------
+  !> Giving a range of input files, it computes the Fourier transform
+  !! of the file.
+  subroutine convert_transform(mesh, basename, in_folder, c_start, c_end, c_step, & 
+       subtract_file, ref_name, ref_folder, nspin)
+    type(mesh_t)    , intent(in)    :: mesh
+    character(len=*), intent(inout) :: basename       !< File name
+    character(len=*), intent(in)    :: in_folder      !< Folder name
+    integer,          intent(in)    :: c_start        !< The first file number
+    integer,          intent(in)    :: c_end          !< The last file number
+    integer,          intent(in)    :: c_step         !< The step between files
+    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
+    character(len=*), intent(inout) :: ref_name       !< Reference file name 
+    character(len=*), intent(inout) :: ref_folder     !< Reference folder name
+    integer,          intent(in)    :: nspin
+
+    integer             :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
+    integer             :: i_energy, e_end, e_start, e_step, e_point, no_e
+    logical             :: optimize(1:3)
+    character(64)       :: filename, ref_filename, folder
+    FLOAT               :: fdefault, w_max
+    FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point_over_time(:,:,:), read_point(:), write_point(:,:)
+    FLOAT, allocatable  :: real_out_fft(:,:,:)
+    CMPLX, allocatable  :: out_fft(:)
+    type(fft_t)         :: fft
+
+    FLOAT   :: start_time          !< start time for the transform
+    integer :: time_steps          !< number of time steps
+    FLOAT   :: dt                  !< step in time mesh
+    FLOAT   :: dw                  !< step in energy mesh
+    FLOAT   :: max_energy          !< maximum of energy mesh
+    FLOAT   :: min_energy          !< minimum of energy mesh
+    type(restart_t)    :: restart
+
+    PUSH_SUB(convert_transform)
+
+    ! set default time_step as dt from TD section
+    fdefault = M_ZERO
+    call parse_float(datasets_check('TDTimeStep'), fdefault, dt, unit = units_inp%time)
+    if (dt <= M_ZERO) then
+      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+      write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
+      call messages_info(2)
+    end if
+
+    e_point = (c_end - c_start) / c_step + 1
+    nn(1) = e_point
+    nn(2) = 1
+    nn(3) = 1
+    start_time = M_ZERO
+    SAFE_ALLOCATE(read_point_over_time(0:c_end, 1, 1:nspin))
+    SAFE_ALLOCATE(real_out_fft(0:e_point+1, 1, 1:nspin))
+    SAFE_ALLOCATE(read_ft(1:e_point+1))
+    SAFE_ALLOCATE(out_fft(1:e_point+1))
+    SAFE_ALLOCATE(read_point(1:1))
+    SAFE_ALLOCATE(read_rff(1:mesh%np))
+
+    !%Variable ConvertEnergyMin
+    !%Type float
+    !%Default 0.
+    !%Section Utilities::oct-convert
+    !%Description
+    !% The starting number of the filename.
+    !%End
+    call parse_float(datasets_check('ConvertEnergyMin'), M_ZERO, min_energy, units_inp%energy)
+
+    ! Calculate the limits in frequency space.
+    start_time = c_start * dt
+    dt = dt * c_step
+    time_steps = (c_end - c_start)/c_step 
+    w_max = M_TWO * M_PI / dt 
+
+    !%Variable ConvertEnergyMax
+    !%Type float
+    !%Default w_max
+    !%Section Utilities::oct-convert
+    !%Description
+    !% The last number of the filename.
+    !%End
+    fdefault = units_from_atomic(units_inp%energy, w_max)
+    call parse_float(datasets_check('ConvertEnergyMax'),fdefault, max_energy, units_inp%energy)
+    if( (max_energy > w_max)) then
+      write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
+           units_from_atomic(units_inp%energy, max_energy)
+      write(message(2),'(a)')'ConvertEnergyMax is too large.'
+      write(message(3),'(a,f12.7,a)')'ConvertEnergyMax reset to ', &
+           units_from_atomic(units_inp%energy, w_max),'[' // trim(units_abbrev(units_out%energy)) // ']'
+      call messages_info(3)
+      max_energy = w_max
+    end if
+
+    optimize = .false.
+    optimize_parity = -1
+    call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
+    dw = M_TWO*M_PI / (dt * time_steps)
+    e_start = int(min_energy / dw)
+    e_end   = int(max_energy / dw)
+    no_e    = e_end - e_start + 1
+    e_step  = 1
+    write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
+         units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')' 
+    write(message(2),'(a,f12.7,a)')'Frequency Step, dw:  ', units_from_atomic(units_out%energy, dw), &
+         '[' // trim(units_abbrev(units_out%energy)) // ']'
+    call messages_info(2)
+
+    if (subtract_file) then
+      write(ref_filename, '(a,a,a,a)') trim(ref_folder),"/", trim(ref_name),".obf"
+      write(message(1),'(a,a)') "Reading ref-file from ", trim(ref_filename)
+      call io_binary_read(trim(ref_filename), mesh%np, read_rff, ierr)
+    end if
+    
+    !For each mesh point, open density file and read corresponding point.  
+    if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
+    SAFE_ALLOCATE(write_point(1:mesh%np,e_point+1))
+
+    ! Space
+    do i_space = 1, mesh%np
+      ! Time
+      do i_time = c_start, c_end, c_step
+        ! Here, we always iterate folders
+        ! Delete the last / and add the corresponding folder number
+        write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
+        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
+
+        if (mpi_world%size > 1) then
+          ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
+        else
+          ii = i_space
+        end if
+        ! Read the obf files, only one point per file
+        call io_binary_read(trim(filename), 1, read_point, ierr, offset = ii)
+
+        if (subtract_file) then
+          read_point_over_time(i_time, 1, 1) = read_point(1) - read_rff(ii)
+        else
+          read_point_over_time(i_time, 1, 1) = read_point(1)
+        end if
+        if (ierr /= 0) then
+          write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), ii, i_time
+          write(message(2), '(a)') "Skipping...."
+          call messages_warning(2)
+          cycle
+        end if
+      end do ! Time
+
+      e_point = 0
+      do i_time = c_start, c_end, c_step
+        e_point = e_point + 1
+        read_ft(e_point) = read_point_over_time(i_time, 1, 1)
+      end do
+      call fftw_execute_dft(fft%planf, read_ft(1), out_fft(1))
+
+      ! save densities
+      do i_energy = e_start+1, e_end+1, e_step
+        write_point(i_space, i_energy) = DBLE(out_fft(i_energy))
+      end do ! Energy
+
+      if (mod(i_space, 100) == 0 .and. mpi_world%rank == 0) then
+        call loct_progress_bar(i_space-1, mesh%np) 
+      end if
+    end do ! Space
+
+    if (mpi_world%rank == 0) call loct_progress_bar(mesh%np, mesh%np) 
+#ifdef HAVE_MPI
+    call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+#endif
+    
+    ! write the output files
+    do i_energy = e_start+1, e_end+1, e_step
+      call io_mkdir('wd.general')
+      write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy-1,'/'
+      write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
+           units_from_atomic(units_out%energy,(i_energy-1) * dw), & 
+           '[' // trim(units_abbrev(units_out%energy)) // ']'
+      call messages_info(1)
+      call io_mkdir(trim(filename))
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, mesh%mpi_grp, &
+           ierr, dir=trim(filename), mesh = mesh)
+      filename = 'density'      
+      call drestart_write_mesh_function(restart, filename, mesh, write_point(1:mesh%np,i_energy), ierr)
+      call restart_end(restart)
+    end do
+    
+    SAFE_DEALLOCATE_A(write_point)
+    SAFE_DEALLOCATE_A(read_point_over_time)
+    SAFE_DEALLOCATE_A(real_out_fft)
+    SAFE_DEALLOCATE_A(read_ft)
+    SAFE_DEALLOCATE_A(out_fft)
+    SAFE_DEALLOCATE_A(read_point)
+    SAFE_DEALLOCATE_A(read_rff)
+
+    POP_SUB(convert_transform)
+  end subroutine convert_transform
 end program
 
 !! Local Variables:
