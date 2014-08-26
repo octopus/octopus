@@ -80,9 +80,9 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
       zaa = aa
       call opencl_set_kernel_arg(kernel_zaxpy, 0, zaa)
       call opencl_set_kernel_arg(kernel_zaxpy, 1, xx%pack%buffer)
-      call opencl_set_kernel_arg(kernel_zaxpy, 2, xx%pack%size(1))
+      call opencl_set_kernel_arg(kernel_zaxpy, 2, log2(xx%pack%size(1)))
       call opencl_set_kernel_arg(kernel_zaxpy, 3, yy%pack%buffer)
-      call opencl_set_kernel_arg(kernel_zaxpy, 4, yy%pack%size(1))
+      call opencl_set_kernel_arg(kernel_zaxpy, 4, log2(yy%pack%size(1)))
       
       localsize = opencl_max_workgroup_size()
       call opencl_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))

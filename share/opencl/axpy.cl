@@ -29,7 +29,7 @@ __kernel void X(axpy)(const rtype aa,
   int ist = get_global_id(0);
   int ip = get_global_id(1);
 
-  yy[ip*ldyy + ist] += MUL(aa, xx[ip*ldxx + ist]);
+  yy[(ip<<ldyy) + ist] += MUL(aa, xx[(ip<<ldxx) + ist]);
 
 }
 
