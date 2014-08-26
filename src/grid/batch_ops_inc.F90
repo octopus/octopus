@@ -69,12 +69,12 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
       call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
       call opencl_set_kernel_arg(kernel_daxpy, 1, xx%pack%buffer)
-      call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size(1)))
       call opencl_set_kernel_arg(kernel_daxpy, 3, yy%pack%buffer)
-      call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size(1)))
       
-      localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
-      call opencl_kernel_run(kernel_daxpy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
+      localsize = opencl_max_workgroup_size()
+      call opencl_kernel_run(kernel_daxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
       
     else
       zaa = aa
