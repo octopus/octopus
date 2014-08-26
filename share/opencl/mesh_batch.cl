@@ -24,10 +24,10 @@
 
 __kernel void ddot_vector(const int np,
 			  const int npblock,
-			  const __global double * xx, const int ldxx,
-			  const __global double * yy, const int ldyy,
-			  __global double * dot,
-			  __local double * lsum){
+			  const __global double * restrict xx, const int ldxx,
+			  const __global double * restrict yy, const int ldyy,
+			  __global double * restrict dot,
+			  __local double * restrict lsum){
   
   const int ist = get_global_id(0);
   const int lip = get_local_id(1);
@@ -55,10 +55,10 @@ __kernel void ddot_vector(const int np,
 
 __kernel void zdot_vector(const int np,
 			  const int npblock,
-			  const __global double2 * xx, const int ldxx,
-			  const __global double2 * yy, const int ldyy,
-			  __global double2 * dot,
-			  __local double2 * lsum){
+			  const __global double2 * restrict xx, const int ldxx,
+			  const __global double2 * restrict yy, const int ldyy,
+			  __global double2 * restrict dot,
+			  __local double2 * restrict lsum){
   
   const int ist = get_global_id(0);
   const int lip = get_local_id(1);
@@ -145,8 +145,8 @@ __kernel void zdot_matrix_spinors(const int np,
 
 
 __kernel void nrm2_vector(const int np,
-			  const __global double * xx, const int ldxx,
-			  __global double * nrm2){
+			  const __global double * restrict xx, const int ldxx,
+			  __global double * restrict nrm2){
   
   int ist = get_global_id(0);
   double ssq, scale;
