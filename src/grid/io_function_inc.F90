@@ -1359,7 +1359,6 @@ end function X(interpolate_isolevel)
 
     PUSH_SUB(X(out_cf_vtk))
 
-
   
     np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
@@ -1371,8 +1370,10 @@ end function X(interpolate_isolevel)
       trim(conf%latest_svn), " build: ",  trim(conf%build_time)
     write(iunit, '(1a)') 'BINARY'
     write(iunit, '(1a)') 'DATASET STRUCTURED_POINTS'
-    write(iunit, '(1a,3i5)') 'DIMENSIONS ', cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)
-    write(iunit, '(1a,3i5)') 'ORIGIN ', 0,0,0
+    write(iunit, '(1a,3i5)') 'DIMENSIONS ', cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3) 
+    write(iunit, '(1a,3f12.6)') 'ORIGIN ', - int(cube%rs_n_global(1)/2)* spacing(1),&
+                                           - int(cube%rs_n_global(2)/2)* spacing(2),&
+                                           - int(cube%rs_n_global(3)/2)* spacing(3)
     write(iunit, '(1a,3f12.6)') 'SPACING ', spacing(1), spacing(2), spacing(3)
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 #if defined(SINGLE_PRECISION)
@@ -1384,7 +1385,8 @@ end function X(interpolate_isolevel)
     call io_close(iunit)
 
     ! Paraview likes BigEndian binaries
-    call io_binary_write(trim(filename), np, R_REAL(cf%X(RS)), ierr, nohead = .true., fendian = is_little_endian())
+    call io_binary_write(trim(filename), np, units_from_atomic(unit, R_REAL(cf%X(RS))),&
+                         ierr, nohead = .true., fendian = is_little_endian())
 
 
     POP_SUB(X(out_cf_vtk))
