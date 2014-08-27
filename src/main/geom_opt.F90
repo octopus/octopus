@@ -35,6 +35,7 @@ module geom_opt_m
   use mesh_m
   use messages_m
   use minimizer_m
+  use mpi_m 
   use profiling_m
   use restart_m
   use scf_m
@@ -507,21 +508,21 @@ contains
 
     call from_coords(g_opt, coords)
 
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
 
-    
-    iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
+      if(geom_iter == 1) then
+        write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 
+                             'max_force [' // trim(units_abbrev(units_out%force)) // ']',&
+                             ' max_dr [' // trim(units_abbrev(units_out%length)) // ']'
+      end if
 
-    if(geom_iter == 1) then
-      write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 
-                           'max_force [' // trim(units_abbrev(units_out%force)) // ']',&
-                           ' max_dr [' // trim(units_abbrev(units_out%length)) // ']'
+      write(iunit, '(i10,3f25.15)')  geom_iter, units_from_atomic(units_out%energy, energy), & 
+                                                units_from_atomic(units_out%force,maxdf), &
+                                                units_from_atomic(units_out%length,maxdx)
+
+      call io_close(iunit)
     end if
-
-    write(iunit, '(i10,3f25.15)')  geom_iter, units_from_atomic(units_out%energy, energy), & 
-                                              units_from_atomic(units_out%force,maxdf), &
-                                              units_from_atomic(units_out%length,maxdx)
-
-    call io_close(iunit)
 
     call messages_new_line()
     call messages_new_line()

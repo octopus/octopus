@@ -401,7 +401,7 @@ contains
       end do
 
       call f(dim, x_new, en, 1, grad)
-
+      
       vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
       
       grad_atoms = 0.0
@@ -421,10 +421,9 @@ contains
 
       mod_force = lalg_nrm2(dim,grad)
       mod_vel = lalg_nrm2(dim,vel)
-      do i_tmp = 1, dim
-        vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
-      end do
-
+      
+      vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
+      
       if(p_value > 0.0) then
         p_times = p_times + 1
         if(p_times > n_min) then
@@ -443,7 +442,7 @@ contains
       
       if(max_grad_atoms < tolgrad) then
         ierr = 0
-        n_iter = maxiter+1
+        n_iter = maxiter + 1
       else
         n_iter = n_iter + 1
       end if
