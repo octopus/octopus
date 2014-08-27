@@ -458,7 +458,7 @@ contains
     end if
 
     ! masses are always in amu, so convert them to a.u.
-    spec%weight =  units_to_atomic(units_inp%mass, spec%weight)
+    spec%weight =  units_to_atomic(unit_amu, spec%weight)
 
     spec%has_density = .false.
 

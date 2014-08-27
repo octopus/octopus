@@ -70,6 +70,7 @@ module unit_system_m
   type(unit_t),        public :: unit_susc_ppm_cgs  !< Some magnetic stuff.
   type(unit_t),        public :: unit_kelvin        !< For converting energies into temperatures.
   type(unit_t),        public :: unit_femtosecond   !< Time in femtoseconds.
+  type(unit_t),        public :: unit_amu           !< Mass in atomic mass units (AKA Dalton).
   type(unit_t),        public :: unit_kilobytes     !< For small amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_megabytes     !< For large amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_gigabytes     !< For larger amounts of data (natural code units are bytes)
@@ -190,6 +191,11 @@ contains
     unit_kelvin%abbrev = 'K'
     unit_kelvin%name   = 'degrees Kelvin'
 
+    !atomic mass units
+    unit_amu%factor = M_ONE/CNST(5.485799110e-4)
+    unit_amu%abbrev = 'u'
+    unit_amu%name   = '1/12 of the mass of C^12'
+
     unit_femtosecond%factor = CNST(1.0)/CNST(0.024188843)
     unit_femtosecond%abbrev = 'fs'
     unit_femtosecond%name   = 'femtoseconds'
@@ -266,9 +272,9 @@ contains
     uu%velocity%name   = "Bohr times Hartree over hbar"
     uu%velocity%factor = M_ONE
 
-    uu%mass%abbrev   = "u"
-    uu%mass%name     = "1/12 of the mass of C^12"
-    uu%mass%factor   = M_ONE/CNST(5.485799110e-4)
+    uu%mass%abbrev   = "me"
+    uu%mass%name     = "electron mass"
+    uu%mass%factor   = M_ONE
 
     uu%force%abbrev  = "H/b"
     uu%force%name    = "Hartree/Bohr"
@@ -315,9 +321,9 @@ contains
     uu%velocity%name   = "Angstrom times electronvolts over hbar"
     uu%velocity%factor = uu%length%factor*uu%energy%factor
 
-    uu%mass%abbrev   = "u"
-    uu%mass%name     = "1/12 of the mass of C^12"
-    uu%mass%factor   = M_ONE/CNST(5.485799110e-4)
+    uu%mass%abbrev   = "eV/c^2"
+    uu%mass%name     = "electronvolt/(speed of light)^2"
+    uu%mass%factor   = uu%energy%factor/P_C**2
 
     uu%force%abbrev  = "eV/A"
     uu%force%name    = "electronvolt/Angstrom"
