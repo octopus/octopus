@@ -266,9 +266,12 @@ contains
     uu%velocity%name   = "Bohr times Hartree over hbar"
     uu%velocity%factor = M_ONE
 
-    uu%mass%abbrev   = "me"
-    uu%mass%name     = "electron mass"
-    uu%mass%factor   = M_ONE
+    ! NOTE: This is atomic mass units (roughly the mass of a proton)
+    ! not the electron mass in atomic units.
+    ! http://en.wikipedia.org/wiki/Atomic_mass_unit
+    uu%mass%abbrev   = "u"
+    uu%mass%name     = "1/12 of the mass of C^12"
+    uu%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
     uu%force%abbrev  = "H/b"
     uu%force%name    = "Hartree/Bohr"
