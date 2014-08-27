@@ -381,8 +381,8 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
     filename = trim(file)//".ncdf"
 
     call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, &
-          units_from_atomic(units_out%mass*units_out%velocity, dk ), & 
-          .false., units_out%mass*units_out%velocity**sb%dim)
+          units_from_atomic(sqrt(units_out%energy), dk ), & 
+          .false., sqrt(units_out%energy)**sb%dim)
 
   end if
 
@@ -392,8 +392,8 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
     filename = trim(file)//".vtk"
         
     call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, & 
-      units_from_atomic(units_out%mass*units_out%velocity, dk),& 
-      units_out%mass*units_out%velocity**sb%dim)
+      units_from_atomic(sqrt(units_out%energy), dk),& 
+      sqrt(units_out%energy)**sb%dim)
       
   else
     call out_ascii()
