@@ -139,3 +139,8 @@ module metis_m
   end interface
 
 end module metis_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
