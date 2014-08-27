@@ -792,6 +792,8 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
   FLOAT, allocatable :: scal(:), ssq(:)
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: nrm2_buffer
+  integer  :: redsize, lredsize
+  FLOAT, allocatable :: ssqred(:, :)
 #endif
   type(profile_t), save :: prof
 
@@ -862,21 +864,29 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 
     SAFE_ALLOCATE(ssq(1:aa%pack%size_real(1)))
 #ifdef HAVE_OPENCL
-    
-    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size_real(1))
+
+    lredsize = opencl_kernel_workgroup_size(kernel_nrm2_vector)/aa%pack%size_real(1)
+    redsize = pad(1000, lredsize)
+
+    SAFE_ALLOCATE(ssqred(1:aa%pack%size_real(1), 1:redsize))
+    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size_real(1)*redsize)
 
     call opencl_set_kernel_arg(kernel_nrm2_vector, 0, mesh%np)
     call opencl_set_kernel_arg(kernel_nrm2_vector, 1, aa%pack%buffer)
     call opencl_set_kernel_arg(kernel_nrm2_vector, 2, log2(aa%pack%size_real(1)))
     call opencl_set_kernel_arg(kernel_nrm2_vector, 3, nrm2_buffer)
     
-    call opencl_kernel_run(kernel_nrm2_vector, (/aa%pack%size_real(1)/), (/aa%pack%size_real(1)/))
+    call opencl_kernel_run(kernel_nrm2_vector, (/aa%pack%size_real(1), redsize/), (/aa%pack%size_real(1), lredsize/))
     
     call opencl_finish()
 
-    call opencl_read_buffer(nrm2_buffer, aa%pack%size_real(1), ssq)
+    call opencl_read_buffer(nrm2_buffer, aa%pack%size_real(1)*redsize, ssqred)
     call opencl_release_buffer(nrm2_buffer)
 #endif
+
+    do indb = 1, aa%pack%size_real(1)
+      ssq(indb) = blas_nrm2(redsize, ssqred(indb, 1), aa%pack%size_real(1))
+    end do
 
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
