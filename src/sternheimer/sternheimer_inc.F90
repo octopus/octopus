@@ -50,7 +50,7 @@ subroutine X(sternheimer_solve)(                           &
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
-  integer :: total_iter, idim, ip, ispin
+  integer :: total_iter, idim, ip, ispin, ib
 
   PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
@@ -139,10 +139,11 @@ subroutine X(sternheimer_solve)(                           &
       ispin = states_dim_get_spin_index(sys%st%d, ik)
 
       states_conv = .true.
-
-      do sst = st%st_start, st%st_end, st%d%block_size
-        est = min(sst + st%d%block_size - 1, st%st_end)
-
+      do ib = st%group%block_start, st%group%block_end
+        
+        sst = states_block_min(st, ib)
+        est = states_block_max(st, ib)
+        
         do sigma = 1, nsigma
 
           if(sigma == 1) then 
@@ -151,24 +152,43 @@ subroutine X(sternheimer_solve)(                           &
             omega_sigma = -R_CONJ(omega)
           end if
 
-          !calculate the RHS of the Sternheimer eq
+          
+          if(sternheimer_have_rhs(this)) then
+            !calculate the RHS of the Sternheimer eq
+            ii = 0
+            do ist = sst, est
+              ii = ii + 1
+              
+              ASSERT(associated(this%X(rhs)))
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, ii) = this%X(rhs)(ip, idim, ist, ik)
+
+            end do
+
+          else
+
+            ii = 0
+            do ist = sst, est
+              ii = ii + 1
+              
+              call batch_init(rhsb, st%d%dim, sst, est, rhs)
+             
+              call batch_set_zero(rhsb)
+              call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
+
+              call batch_end(rhsb)
+
+            end do
+
+          end if
+
           ii = 0
           do ist = sst, est
             ii = ii + 1
-
+            
             call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-            if(sternheimer_have_rhs(this)) then
-              ASSERT(associated(this%X(rhs)))
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, ii) = this%X(rhs)(ip, idim, ist, ik)
-            else
-              rhs(1:mesh%np, 1:st%d%dim, ii) = R_TOTYPE(M_ZERO)
-              call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, ii))
-            end if
-
             do idim = 1, st%d%dim
-              rhs(1:mesh%np, idim, ii) = -rhs(1:mesh%np, idim, ii) &
-                - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
+              rhs(1:mesh%np, idim, ii) = -rhs(1:mesh%np, idim, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
             end do
 
             if(sternheimer_have_inhomog(this)) then

@@ -21,6 +21,7 @@
 
 module sternheimer_m
   use batch_m
+  use batch_ops_m
   use datasets_m
   use density_m
   use global_m
