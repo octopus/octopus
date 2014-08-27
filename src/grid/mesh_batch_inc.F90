@@ -882,7 +882,6 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 
     call opencl_read_buffer(nrm2_buffer, aa%pack%size_real(1)*redsize, ssqred)
     call opencl_release_buffer(nrm2_buffer)
-#endif
 
     do indb = 1, aa%pack%size_real(1)
       ssq(indb) = blas_nrm2(redsize, ssqred(indb, 1), aa%pack%size_real(1))
@@ -900,6 +899,7 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 #endif
       end do
     end do
+#endif
 
     SAFE_DEALLOCATE_A(ssq)
 
