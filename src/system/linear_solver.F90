@@ -74,7 +74,7 @@ module linear_solver_m
      integer                :: max_iter
   end type linear_solver_t
 
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, prof_batch
 
   type linear_solver_args_t
     type(linear_solver_t), pointer :: ls

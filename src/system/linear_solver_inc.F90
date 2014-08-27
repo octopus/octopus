@@ -125,10 +125,11 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
 
   PUSH_SUB(X(linear_solver_solve_HXeY_batch))
 
-
   select case(this%solver)
   case(LS_QMR_DOTP)
+    call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
+    call profiling_out(prof_batch)
 
   case default
     do ii = 1, xb%nst
