@@ -235,6 +235,14 @@ contains
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info
+  
+  ! ------------------------------------------------------
+  integer pure function logical_to_integer(flag) result(iflag)
+    logical, intent(in) :: flag
+    iflag = 0
+    if(flag) iflag = 1
+  end function logical_to_integer
+  
 
 #include "complex.F90"
 #include "io_binary_f_inc.F90"
