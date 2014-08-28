@@ -46,11 +46,8 @@
 
     ASSERT(product(ubound(ff)) >= np)
 
-    nhd = .false.
-    if(present(nohead)) nhd = nohead
-
-    flpe = .false.
-    if(present(fendian)) flpe = fendian
+    nhd = optional_default(nohead, .false.)
+    flpe = optional_default(fendian, .false.)
       
     call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, nhd, flpe, trim(fname))
 
@@ -71,11 +68,8 @@
 
     PUSH_SUB(X(write_binary2))
 
-    nhd = .false.
-    if(present(nohead)) nhd = nohead
-
-    flpe = .false.
-    if(present(fendian)) flpe = fendian
+    nhd = optional_default(nohead, .false.)
+    flpe = optional_default(fendian, .false.)
 
     ASSERT(product(ubound(ff)) >= np)
 
@@ -99,11 +93,8 @@
 
     PUSH_SUB(X(write_binary3))
 
-    nhd = .false.
-    if(present(nohead)) nhd = nohead
-
-    flpe = .false.
-    if(present(fendian)) flpe = fendian
+    nhd = optional_default(nohead, .false.)
+    flpe = optional_default(fendian, .false.)
 
     ASSERT(product(ubound(ff)) >= np)
 
