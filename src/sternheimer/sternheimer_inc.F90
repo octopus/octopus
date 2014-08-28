@@ -46,7 +46,7 @@ subroutine X(sternheimer_solve)(                           &
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
-  type(batch_t) :: rhsb, dlpsib
+  type(batch_t) :: rhsb, dlpsib, orhsb
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
@@ -152,34 +152,20 @@ subroutine X(sternheimer_solve)(                           &
             omega_sigma = -R_CONJ(omega)
           end if
 
+          !calculate the RHS of the Sternheimer eq
+
+          call batch_init(rhsb, st%d%dim, sst, est, rhs)
           
           if(sternheimer_have_rhs(this)) then
-            !calculate the RHS of the Sternheimer eq
-            ii = 0
-            do ist = sst, est
-              ii = ii + 1
-              
-              ASSERT(associated(this%X(rhs)))
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, ii) = this%X(rhs)(ip, idim, ist, ik)
-
-            end do
-
+            call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik))
+            call batch_copy_data(mesh%np, orhsb, rhsb)
+            call batch_end(orhsb)
           else
-
-            ii = 0
-            do ist = sst, est
-              ii = ii + 1
-              
-              call batch_init(rhsb, st%d%dim, sst, est, rhs)
-             
-              call batch_set_zero(rhsb)
-              call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
-
-              call batch_end(rhsb)
-
-            end do
-
+            call batch_set_zero(rhsb)
+            call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
           end if
+
+          call batch_end(rhsb)
 
           ii = 0
           do ist = sst, est
