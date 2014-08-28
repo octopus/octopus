@@ -379,7 +379,9 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
   
   if(iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
-
+    write(message(1), '(a)') 'Writing netcdf format file: '
+    call messages_info(1)
+  
     call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, &
           units_from_atomic(sqrt(units_out%energy), dk ), & 
           .false., sqrt(units_out%energy)**sb%dim)
@@ -390,12 +392,16 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
   
   if(iand(how, C_OUTPUT_HOW_VTK) /= 0)  then
     filename = trim(file)//".vtk"
+    write(message(1), '(a)') 'Writing vtk format file: '
+    call messages_info(1)
         
     call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, & 
       units_from_atomic(sqrt(units_out%energy), dk),& 
       sqrt(units_out%energy)**sb%dim)
       
   else
+    write(message(1), '(a)') 'Writing ASCII format file: '
+    call messages_info(1)
     call out_ascii()
   end if
   

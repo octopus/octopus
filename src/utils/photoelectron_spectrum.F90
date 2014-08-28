@@ -71,9 +71,6 @@ program photoelectron_spectrum
   
   call io_init()
 
-  call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -210,12 +207,21 @@ program photoelectron_spectrum
     call pes_mask_output_ar_spherical_cut_M(pesk,'./PES_sphere.map', Lk, dim, pol, Emin, Emax, Estep)       
 
   case(6) ! Full momentum resolved matrix 
+ 
+    call space_init(space)
+    call geometry_init(geo, space)
+    call simul_box_init(sb, geo, space)
+ 
+    call io_function_read_how(sb, how, ignore_error = .true.)
+ 
     write(message(1), '(a)') 'Compute full momentum-resolved PES'
     call messages_info(1)
- 
-    call io_function_read_how(sb, how)
- 
+
     call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk, how, sb)        
+
+    call simul_box_end(sb)
+    call geometry_end(geo)
+    call space_end(space)
 
   end select
 

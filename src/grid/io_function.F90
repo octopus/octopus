@@ -109,9 +109,10 @@ module io_function_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, how)
+  subroutine io_function_read_how(sb, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(out) :: how
+    logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
     PUSH_SUB(io_function_read_how)
 
@@ -205,7 +206,7 @@ contains
       call input_error('OutputHow')
     end if
 
-    if(how  ==  0) then
+    if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
       write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
       call messages_fatal(1, only_root_writes = .true.)
      endif
