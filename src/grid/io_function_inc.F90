@@ -1128,6 +1128,8 @@ contains
 
     PUSH_SUB(X(io_function_output_global).out_openscad)
 
+    ASSERT(present(geo))
+
     SAFE_ALLOCATE(edges(0:255))
     SAFE_ALLOCATE(triangles(1:16, 0:255))
 
@@ -1270,9 +1272,7 @@ contains
     type(cube_t) :: cube
     type(cube_function_t) :: cf
 
-    PUSH_SUB(X(io_function_output_global).out_cube)
-
-    ASSERT(present(geo))
+    PUSH_SUB(X(io_function_output_global).out_vtk)
 
     call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
@@ -1289,9 +1289,6 @@ contains
 
     POP_SUB(X(io_function_output_global).out_vtk)
   end subroutine out_vtk
-  
-
-
 
 end subroutine X(io_function_output_global)
 
