@@ -39,7 +39,8 @@ libstates_a_SOURCES =                \
 	modelmb_exchange_syms.F90    \
 	density.F90                  \
 	states_io.F90                \
-	cmplxscl.F90
+	cmplxscl.F90                 \
+        opt_control_state.F90
 
 noinst_HEADERS = \
 	physics_op_inc.F90 \
@@ -73,3 +74,4 @@ density.o : density.F90 states.o smear.o states_dim.o
 states_io.o : states_io.F90 states.o smear.o ob_green.o states_dim.o
 cmplxscl.o : cmplxscl.F90
 smear.o : smear.F90 cmplxscl.o
+opt_control_state.o : opt_control_state.F90 states.o

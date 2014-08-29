@@ -20,11 +20,8 @@
 #include "global.h"
 
 
-!> This module holds the "oct_state_t" datatype, which contains all the information
-!! about the "state" that is propagated, i.e. for the moment being just the electronic
-!! state, that is a state_t datatype. However, it is intended to include the ionic positions
-!! and velocities, also, so that one can propagate (and optimize) simultaneously the quantum
-!! and classical subsystems.
+!> This module holds the "opt_control_state_t" datatype, which contains a quantum-classical
+!! state.
 module opt_control_state_m
   use geometry_m
   use global_m
