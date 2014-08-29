@@ -52,6 +52,7 @@ module propagator_m
   use ob_propagator_m
   use ob_terms_m
   use opencl_m
+  use opt_control_state_m
   use output_m
   use profiling_m
   use restart_m
@@ -562,7 +563,8 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, ions, geo, gauge_force, scsteps, update_energy)
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, ions, geo, &
+    gauge_force, scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -578,6 +580,7 @@ contains
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     integer,              optional,  intent(out)   :: scsteps
     logical,              optional,  intent(in)    :: update_energy
+    type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
     integer :: is, iter, ik, ist, ispin
     FLOAT   :: d, d_max
@@ -639,7 +642,11 @@ contains
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
-      call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+      if(present(qcchi)) then
+        call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo, qcchi)
+      else
+        call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+      end if
     end select
 
     if(present(scsteps)) scsteps = 1

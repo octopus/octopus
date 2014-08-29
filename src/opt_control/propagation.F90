@@ -629,54 +629,68 @@ contains
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
-      if(ion_dynamics_ions_move(td%ions)) then
-        qtildehalf = q
+      select case(td%tr%method)
 
-        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
-        call ion_dynamics_propagate(td%ions, gr%sb, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt)
-        call geometry_get_positions(sys%geo, qinitial)
-        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
+      case(PROP_EXPLICIT_RUNGE_KUTTA4)
 
-        SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
-        SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
-        call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fold, q)
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
+        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo, &
+          qcchi = qcchi)
 
-        call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
-        call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
-      end if
+      case default
 
-      ! Here propagate psi one full step, and then simply interpolate to get the state
-      ! at half the time interval. Perhaps one could gain some accuracy by performing two
-      ! successive propagations of half time step.
-      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
-      st_ref%zpsi = psi%zpsi
-      vhxc(:, :) = hm%vhxc(:, :)
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+        if(ion_dynamics_ions_move(td%ions)) then
+          qtildehalf = q
 
-      if(ion_dynamics_ions_move(td%ions)) then
-        call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
-        call geometry_set_positions(sys%geo, qinitial)
-        call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-      end if
+          call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
+          call ion_dynamics_propagate(td%ions, gr%sb, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt)
+          call geometry_get_positions(sys%geo, qinitial)
+          call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
 
-      st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
-      hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qtildehalf)
-      freeze = ion_dynamics_freeze(td%ions)
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
-      if(freeze) call ion_dynamics_unfreeze(td%ions)
+          SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
+          SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
+          call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fold, q)
 
-      if(ion_dynamics_ions_move(td%ions)) then
-        call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
-        call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-        call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
-        call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
-        call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
-        SAFE_DEALLOCATE_A(fold)
-        SAFE_DEALLOCATE_A(fnew)
-      end if
+          call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
+          call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
+        end if
 
-      hm%vhxc(:, :) = vhxc(:, :)
+        ! Here propagate psi one full step, and then simply interpolate to get the state
+        ! at half the time interval. Perhaps one could gain some accuracy by performing two
+        ! successive propagations of half time step.
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
+
+        st_ref%zpsi = psi%zpsi
+        vhxc(:, :) = hm%vhxc(:, :)
+        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+
+        if(ion_dynamics_ions_move(td%ions)) then
+          call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
+          call geometry_set_positions(sys%geo, qinitial)
+          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+        end if
+
+        st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
+        hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
+        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qtildehalf)
+        freeze = ion_dynamics_freeze(td%ions)
+        call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i-1, td%ions, sys%geo)
+        if(freeze) call ion_dynamics_unfreeze(td%ions)
+
+        if(ion_dynamics_ions_move(td%ions)) then
+          call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
+          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+          call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
+          call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
+          call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
+          SAFE_DEALLOCATE_A(fold)
+          SAFE_DEALLOCATE_A(fnew)
+        end if
+
+        hm%vhxc(:, :) = vhxc(:, :)
+
+      end select
+
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
