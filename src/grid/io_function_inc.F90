@@ -1342,10 +1342,10 @@ end function X(interpolate_isolevel)
   !!  see http://www.vtk.org/VTK/img/file-formats.pdf
   !!  for the moment only real part 
   ! ---------------------------------------------------------
-  subroutine X(out_cf_vtk)(filename, ierr, cf, cube, sb_dim, spacing, unit)
+  subroutine X(out_cf_vtk)(filename, ierr, cf_in, cube, sb_dim, spacing, unit)
     character(len=*),      intent(in) :: filename        !< the file name
     integer,               intent(out):: ierr            !< error message   
-    type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
+    type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
     type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
     integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
     FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
@@ -1353,6 +1353,9 @@ end function X(interpolate_isolevel)
 
 
     integer :: iunit, np
+    type(cube_function_t) :: cf_out
+    integer :: i1,i2,i3
+
 
     PUSH_SUB(X(out_cf_vtk))
 
@@ -1381,9 +1384,18 @@ end function X(interpolate_isolevel)
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
+
+    call cube_function_null(cf_out)
+    call X(cube_function_alloc_RS) (cube, cf_out)
+
+    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) &
+              cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+
     ! Paraview likes BigEndian binaries
-    call io_binary_write(trim(filename), np, units_from_atomic(unit, R_REAL(cf%X(RS))),&
+    call io_binary_write(trim(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
                          ierr, nohead = .true., fendian = is_little_endian())
+
+    call X(cube_function_free_RS)(cube, cf_out)
 
 
     POP_SUB(X(out_cf_vtk))

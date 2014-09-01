@@ -374,6 +374,9 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
   cf%dRS = pesK
 
   dk= abs(Lk(2)-Lk(1))
+  do ii = 1, 3
+    dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
+  end do
   
 #if defined(HAVE_NETCDF)  
   
@@ -382,8 +385,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
   
-    call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, &
-          units_from_atomic(sqrt(units_out%energy), dk ), & 
+    call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , & 
           .false., sqrt(units_out%energy)**sb%dim)
 
   end if
@@ -395,8 +397,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
         
-    call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, & 
-      units_from_atomic(sqrt(units_out%energy), dk),& 
+    call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, dk(:),& 
       sqrt(units_out%energy)**sb%dim)
       
   else
