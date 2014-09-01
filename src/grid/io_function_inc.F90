@@ -1390,17 +1390,17 @@ end function X(interpolate_isolevel)
     
     contains
       !< check endianness
-      pure function is_little_endian() result(is_little)
+      !< Logical output: true is the running architecture uses little endian ordering, false otherwise.
+      logical pure function is_little_endian() result(is_little)
         implicit none
         integer, parameter:: I4P  = selected_int_kind(9)  
         integer, parameter:: I1P  = selected_int_kind(2)
-        logical :: is_little !< Logical output: true is the running architecture uses little endian ordering, false otherwise.
         integer(I1P) :: int1(1:4) !< One byte integer array for casting 4 bytes integer.
 
         int1 = transfer(1_I4P, int1)
         is_little = (int1(1) == 1_I1P)
         return
-      endfunction is_little_endian
+      end function is_little_endian
 
   end subroutine X(out_cf_vtk)
   
