@@ -1271,7 +1271,9 @@ contains
   subroutine out_vtk()
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-
+    FLOAT :: dk(3)  
+    integer :: i 
+    
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -1280,9 +1282,10 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk", is_tmp=is_tmp)
+
+    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
      
-    call X(out_cf_vtk)(filename, ierr, cf, cube, mesh%sb%dim, & 
-      units_from_atomic(units_out%length, mesh%spacing), unit)
+    call X(out_cf_vtk)(filename, ierr, cf, cube, mesh%sb%dim, dk(:), unit)
 
     call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)
