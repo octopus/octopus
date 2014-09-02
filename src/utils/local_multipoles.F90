@@ -43,11 +43,13 @@ program oct_local_multipoles
   use restart_m
   use space_m
   use species_m
+  use species_pot_m
   use simul_box_m
   use system_m    
   use unit_m
   use unit_system_m
   use utils_m
+  use varinfo_m
 
   implicit none
   
@@ -62,6 +64,7 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(system_t)        :: sys
+  type(hamiltonian_t)   :: hm
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -81,6 +84,7 @@ program oct_local_multipoles
   call unit_system_init()
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
+  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
 
   call local_domains()
 
@@ -143,7 +147,6 @@ contains
     
     aux = folder(1:3)
     if (aux == 'td.') then
-      write(*,*) "WE ARE INSIDE", "base_folder:", trim(base_folder), " folder:", trim(folder)
       aux = trim(folder(4:len_trim(folder)-1))
       read(aux,'(I10.0)')iter
       default_dt = M_ZERO
@@ -270,7 +273,9 @@ contains
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
                       err, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
       ! FIXME: there is a special function for reading the density. Why not use that?
+      ! TODO: Find the function that reads the density. Which one?
       ! FIXME: why only real functions? Please generalize.
+      ! TODO: up to know the loacal domains utlityty acts over dnesity functions, which are real.
       if(err == 0) &
         call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
@@ -286,7 +291,6 @@ contains
         call local_inside_domain(local, sys%st%rho(:,1), ldupdate)
       end if
 
-      write(*,*)'Iteration: ',iter
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
                               sys%gr, sys%st, sys%geo, kick, iter, dt, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
@@ -461,23 +465,23 @@ contains
           if(loct_isinstringlist(ic, clist)) nb = nb + 1
         end do
     end select
-      ! fill in lsize structure
-      select case(shape)
-      case(SPHERE)
-        lsize(1:dim) = rsize
-      case(CYLINDER)       
-        lsize(1)     = xsize
-        lsize(2:dim) = rsize
-      case(MINIMUM, BADER)
-        do idir = 1, dim
-          lgst = M_ZERO; val = M_ZERO
-          do ic = 1, sys%geo%natoms
-            if(loct_isinstringlist(ic, clist)) val = abs(sys%geo%atom(ic)%x(idir))
-            if(lgst <= val) lgst = val
-          end do
-          lsize(idir) =  lgst + rsize
+    ! fill in lsize structure
+    select case(shape)
+    case(SPHERE)
+      lsize(1:dim) = rsize
+    case(CYLINDER)       
+      lsize(1)     = xsize
+      lsize(2:dim) = rsize
+    case(MINIMUM, BADER)
+      do idir = 1, dim
+        lgst = M_ZERO; val = M_ZERO
+        do ic = 1, sys%geo%natoms
+          if(loct_isinstringlist(ic, clist)) val = abs(sys%geo%atom(ic)%x(idir))
+          if(lgst <= val) lgst = val
         end do
-      end select
+        lsize(idir) =  lgst + rsize
+      end do
+    end select
     call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
 
     POP_SUB(local_read_from_block)
@@ -542,12 +546,6 @@ contains
       do ia = 1, sys%geo%natoms
         if (box_union_inside(dom, sys%geo%atom(ia)%x).and. .not.loct_isinstringlist(ia, clist) ) then
           ic = ic + 1
-          if ( shape == BADER ) then
-            write(message(1),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%spec)),ia, &
-                                             ' is inside the union box BUT not in list: ',trim(clist)
-            message(2) = ' BUG: This could not be possible for BADER SHAPED BOXES'
-            call messages_fatal(2)
-          end if
           if( ic <= 20 ) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%spec)),ia, & 
                                  ' is inside the union box BUT not in list: ',trim(clist)
         end if
@@ -578,17 +576,18 @@ contains
     FLOAT,                  intent(in)    :: ff(:)
     logical,                intent(in)    :: update
     
-    integer             :: id, ip, ix, iunit
+    integer             :: how, id, ip, ix, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
-    character(len=64)   :: filename
+    character(len=64)   :: filename, base_folder, folder
+    type(restart_t)     :: restart
     
     PUSH_SUB(local_inside_domain)
 
     if (update) then
+      SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1)); ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
       if (any(lcl%dshape(:) == BADER)) then
-        SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np_part,1)); ff2(1:sys%gr%mesh%np_part,1) = ff(1:sys%gr%mesh%np_part)
         call add_dens_to_ion_x(ff2,sys%geo)
         call basins_init(basins, sys%gr%mesh)
         call parse_float(datasets_check('LDBaderThreshold'), CNST(0.01), BaderThreshold)
@@ -596,22 +595,37 @@ contains
         call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
         call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
         if (extra_write) then
+          call parse_integer(datasets_check('LDOutputHow'), 0, how)
+          if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
+            call input_error('LDOutputHow')
+          end if
           filename = 'basinsmap'
-          iunit = io_open(file=trim(filename), action='write')
-          do ip = 1, sys%gr%mesh%np
-            write(iunit, '(3(f21.12,1x),i9)') (units_from_atomic(units_out%length,sys%gr%mesh%x(ip,ix)),ix=1,3), &
-             basins%map(ip)
-          end do
+          call dio_function_output(how, &
+            trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
           call io_close(iunit)
         end if
         call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
-        SAFE_DEALLOCATE_A(ff2)
       else
         do id = 1, lcl%nd
           call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
         end do
         call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
       end if
+
+    ! Write restart file for local domains
+      base_folder = "./restart/"
+      folder = "ld/"
+      filename = "ldomains"
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
+                    ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+      ff2 = M_ZERO
+      do id = 1, lcl%nd
+        forall(ip = 1:sys%gr%mesh%np, lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
+      end do
+      call drestart_write_binary(restart, trim(filename), sys%gr%mesh%np, ff2(:,1), ierr) 
+      call restart_end(restart)
+    
+      SAFE_DEALLOCATE_A(ff2)
     end if 
     
     POP_SUB(local_inside_domain)
@@ -627,13 +641,13 @@ contains
     integer,           intent(in)  :: dsh(:)
     logical,           intent(out) :: inside(:,:)
 
-    integer           :: ib, id, ip, ix, nb, rankmin
-    integer           :: max_check
-    integer, allocatable :: dunit(:), domain_map(:,:)
-    FLOAT             :: dmin
-    FLOAT, allocatable :: xi(:)
-    logical           :: extra_write
-    character(len=64) :: filename
+    integer               :: how, ib, id, ierr, ip, ix, nb, rankmin
+    integer               :: max_check
+    integer, allocatable  :: dunit(:), domain_map(:,:)
+    FLOAT                 :: dmin
+    FLOAT, allocatable    :: xi(:), dble_domain_map(:,:)
+    logical               :: extra_write
+    character(len=64)     :: filename
 
     PUSH_SUB(bader_union_inside)
 
@@ -670,22 +684,23 @@ contains
     call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
 
     if (extra_write) then
-      SAFE_ALLOCATE(dunit(1:nd))
+      call parse_integer(datasets_check('LDOutputHow'), 0, how)
+      if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
+        call input_error('LDOutputHow')
+      end if
+      SAFE_ALLOCATE(dble_domain_map(nd, sys%gr%mesh%np))
       do ip = 1, sys%gr%mesh%np
         do id = 1, nd
-          if(ip == 1)then
-            write(filename,'(a,a,a)')'local.general/domain.',trim(lab(id)),'.xyz'
-            dunit(id) = io_open(file=trim(filename), action='write')
-          end if
-          if (inside(ip,id)) then
-            write(dunit(id),*)(units_from_atomic(units_out%length, sys%gr%mesh%x(ip,ib)),ib=1,3)
-          end if
+          if (inside(ip, id)) dble_domain_map(id, ip) = DBLE(id)
         end do
       end do
       
       do id = 1, nd
-        call io_close(dunit(id))
+        write(filename,'(a,a,a)')'domain.',trim(lab(id))
+        call dio_function_output(how, &
+        trim('local.general'), trim(filename), sys%gr%mesh, dble_domain_map(id,:) , unit_one, ierr, geo = sys%geo)
       end do
+      SAFE_DEALLOCATE_A(dble_domain_map)
     end if
 
     SAFE_DEALLOCATE_A(xi)
@@ -700,16 +715,20 @@ contains
     FLOAT,              intent(inout)   :: ff(:,:)
     type(geometry_t),   intent(inout)   :: geo
 
-    integer :: ia, ix, rankmin
-    FLOAT   :: dmin
+    integer :: ia, is, rankmin
+    FLOAT, allocatable :: ffs(:)
 
     PUSH_SUB(add_dens_to_ion_x)
 
+    SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
-      ix = mesh_nearest_point(sys%gr%mesh, geo%atom(ia)%x, dmin, rankmin)
-      ff(ix,1) = ff(ix,1) + species_z(geo%atom(ia)%spec)
+      call species_get_density(geo%atom(ia)%spec, geo%atom(ia)%x, sys%gr%mesh, ffs)
+      do is = 1, sys%st%d%nspin
+        ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
+      end do
     end do
 
+    SAFE_DEALLOCATE_A(ffs)
     POP_SUB(add_dens_to_ion_x)
   end subroutine add_dens_to_ion_x
 
