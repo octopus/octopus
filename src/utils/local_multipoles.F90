@@ -24,8 +24,8 @@ program oct_local_multipoles
   use basins_m
   use box_m
   use box_union_m
-  use datasets_m
   use command_line_m
+  use datasets_m
   use geometry_m
   use global_m
   use hamiltonian_m
@@ -255,7 +255,7 @@ contains
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
     call messages_info(2)
-    
+
     call local_init(local)
 
     ! Starting loop over selected densities.
@@ -292,7 +292,7 @@ contains
       end if
 
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-                              sys%gr, sys%st, sys%geo, kick, iter, dt, l_start, ldoverwrite)
+                              sys%gr, sys%st, hm, sys%ks, sys%mc, sys%geo, kick, iter, dt, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 

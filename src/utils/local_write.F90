@@ -26,6 +26,7 @@ module local_write_m
   use geometry_m
   use global_m
   use grid_m
+  use hamiltonian_m
   use io_m
   use io_function_m
   use kick_m
@@ -35,13 +36,16 @@ module local_write_m
   use mpi_m
   use mpi_debug_m
   use mpi_lib_m
+  use multicomm_m
   use parser_m
+  use poisson_m
   use profiling_m
   use species_m
   use states_m
   use unit_m
   use unit_system_m
   use varinfo_m
+  use v_ks_m
   use write_iter_m
 
   implicit none
@@ -57,7 +61,8 @@ module local_write_m
     LOCAL_OUT_MULTIPOLES  =  1, &
     LOCAL_OUT_DENSITY     =  2, &
     LOCAL_OUT_POTENTIAL   =  3, &
-    LOCAL_OUT_MAX         =  3
+    LOCAL_OUT_ENERGY      =  8, &
+    LOCAL_OUT_MAX         =  8
   
   type local_write_prop_t
     private
@@ -100,15 +105,20 @@ contains
     !% most cases the default value is enough, as it is adapted to the
     !% details. 
     !%Option multipoles 1
-    !% Outputs the (electric) multipole moments of the density to the file <tt>td.general/multipoles</tt>.
+    !% Outputs the (electric) multipole moments of the density to the file <tt>ld.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>LDMultipoleLmax</tt>.
     !%Option density 2
-    !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
-    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
-    !%Option local_v 128
-    !% If set, <tt>octopus</tt> outputs the different components of the Coulomb potential
-    !% to the file <tt>td.general/energy</tt>. Will be zero except for every <tt>TDEnergyUpdateIter</tt> iterations.
+    !% If set, <tt>octopus</tt> outputs the densities corresponding to the local domains to 
+    !%the folder <tt>ld.general/densities</tt>. 
+    !% The output format is set by the LDOuputHow input variable.
+    !%Option local_v 4
+    !% If set, <tt>octopus</tt> outputs the different components potential
+    !% to the folder <tt>ld.general/potential</tt>. 
+    !% The output format is set by the LDOuputHow input variable.
+    !%Option energy 128
+    !% If set, <tt>octopus</tt> outputs the different components of the energy of the local domains
+    !% to the folder <tt>ld.general/energy</tt>.
     !%End
 
     default = 2**(LOCAL_OUT_MULTIPOLES - 1) 
@@ -163,19 +173,22 @@ contains
         end if
 
         if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
-          message(1) = 'Potential output is still not implemented'
-          call messages_warning(1)
-          !call io_mkdir('local.general/potential')
-          !call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL)%handle(id), first, &
-          !units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"/trim(lab(id))/".potential")))
+          call io_mkdir('local.general/potential')
+          call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL,id)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential")))
         end if
 
-        if(writ%out(LOCAL_OUT_DENSITY,id)%write) then
-          message(1) = 'Density output is still not implemented'
-          call messages_warning(1)
-          !call io_mkdir('local.general/densities')
-          !call write_iter_init(writ%out(LOCAL_OUT_DENSITY)%handle(id), first, &
-          !units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/densities/"/trim(lab(id))/".densities")))
+        if(writ%out(LOCAL_OUT_DENSITY, id)%write) then
+          call io_mkdir('local.general/densities')
+          call write_iter_init(writ%out(LOCAL_OUT_DENSITY,id)%handle, first, &
+            units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities")))
+        end if
+
+        if(writ%out(LOCAL_OUT_ENERGY, id)%write) then 
+          call io_mkdir('local.general/energy')
+          call write_iter_init(writ%out(LOCAL_OUT_ENERGY,id)%handle, &
+            iter, units_from_atomic(units_out%time, dt), &
+          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy")))
         end if
       end do
     end if
@@ -196,7 +209,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, & 
-                              geo, kick, iter, dt, l_start, ldoverwrite)
+                              hm, ks, mc, geo, kick, iter, dt, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     integer,                intent(in)    :: nd 
     type(box_union_t),      intent(in)    :: domain(:)
@@ -205,6 +218,9 @@ contains
     FLOAT  ,                intent(in)    :: center(:,:)
     type(grid_t),           intent(inout) :: gr
     type(states_t),         intent(inout) :: st
+    type(hamiltonian_t),    intent(inout) :: hm
+    type(v_ks_t),           intent(inout) :: ks
+    type(multicomm_t),      intent(in)    :: mc
     type(geometry_t),       intent(inout) :: geo
     type(kick_t),           intent(inout) :: kick
     integer,                intent(in)    :: iter
@@ -221,15 +237,17 @@ contains
     if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) then
       if(.not.ldoverwrite)then
       end if
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES,:), nd, domain, lab, inside, center, & 
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES, :), nd, domain, lab, inside, center, & 
                         gr, geo, st, writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
       do id = 1, nd
         call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES, id)%handle)
       end do
     end if
 
-    !if(writ%out(LOCAL_OUT_DENSITY)%write) &
-    !  call local_write_density(writ%out(LOCAL_OUT_DENSITY)%handle, hm, iter, geo%kinetic_energy)
+    if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
+      call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), writ%out(LOCAL_OUT_POTENTIAL,:), & 
+                               nd, domain, lab, inside, center, &
+                               gr, geo, st, hm, ks, mc, iter, l_start, ldoverwrite, writ%how)
     
     !if(writ%out(LOCAL_OUT_POTENTIAL)%write) &
     !  call local_write_potential(writ%out(LOCAL_OUT_POTENTIAL)%handle, hm, iter, geo%kinetic_energy)
@@ -239,6 +257,95 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
+  subroutine local_write_density(out_dens, out_pot, nd, domain, lab, inside, center, & 
+                                gr, geo, st, hm, ks, mc, iter, l_start, start, how)
+    type(local_write_prop_t),      intent(inout) :: out_dens(:)
+    type(local_write_prop_t),      intent(inout) :: out_pot(:)
+    integer,                  intent(in)    :: nd 
+    type(box_union_t),        intent(in)    :: domain(:)
+    character(len=15),        intent(in)    :: lab(:)
+    logical,                  intent(in)    :: inside(:,:)
+    FLOAT,                    intent(in)    :: center(:,:)
+    type(grid_t),         intent(inout) :: gr
+    type(geometry_t),     intent(inout) :: geo
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(v_ks_t),         intent(inout) :: ks
+    type(multicomm_t),    intent(in)    :: mc
+    integer,              intent(in) :: iter
+    integer,              intent(in) :: l_start
+    logical,              intent(in) :: start
+    integer,              intent(in) :: how
+
+    integer            :: id, is, ix, ierr
+    character(len=120) :: folder, out_name
+    FLOAT, allocatable :: tmp_rho(:),st_rho(:)
+    FLOAT, allocatable :: tmp_vh(:)
+
+    PUSH_SUB(local_write_density)
+
+    SAFE_ALLOCATE(tmp_rho(1:gr%mesh%np))
+    SAFE_ALLOCATE(st_rho(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(tmp_vh(1:gr%mesh%np))
+
+    ! FIXME: use just v_ks_calc subroutine for either compute vhartree and vxc
+    do id = 1, nd
+      do is = 1, st%d%nspin
+        tmp_rho = M_ZERO
+        st_rho(:) = st%rho(:, is)
+        forall (ix = 1:gr%mesh%np, inside(ix, id)) tmp_rho(ix) = st_rho(ix)
+        if (out_dens(id)%write) then
+          folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
+          write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
+          call dio_function_output(how, &
+            trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+        end if
+        if (out_pot(id)%write) then
+        !Computes Hartree potential just for n[r], r belongs to id domain.
+          tmp_vh = M_ZERO
+          call dpoisson_solve(psolver, tmp_vh, tmp_rho)
+          folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
+          write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
+          call dio_function_output(how, &
+            trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+        !Computes XC potential
+          st%rho(:,is) = M_ZERO
+          forall (ix = 1:gr%mesh%np, inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+          call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+          folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
+          write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
+          call dio_function_output(how, &
+            trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+          st%rho(:,is) = st_rho(:)
+        end if
+      end do
+    end do
+
+    if (any(out_pot(:)%write)) then
+      call v_ks_init(ks, gr, st, geo, mc)
+      do is = 1, st%d%nspin
+      !Computes Hartree potential
+        call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+        folder = 'local.general/potential/'
+        write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
+        call dio_function_output(how, &
+          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+      !Computes global XC potential
+        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        folder = 'local.general/potential/'
+        write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
+        call dio_function_output(how, &
+          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+      end do
+    end if
+
+    SAFE_DEALLOCATE_A(tmp_vh)
+    SAFE_DEALLOCATE_A(st_rho)
+    SAFE_DEALLOCATE_A(tmp_rho)
+    POP_SUB(local_write_density)
+  end subroutine local_write_density
+  ! ---------------------------------------------------------
+
   subroutine local_write_multipole(out_multip, nd, domain, lab, inside, center, & 
                                 gr, geo, st, lmax, kick, iter, l_start, start, how)
     type(local_write_prop_t),      intent(inout) :: out_multip(:)
