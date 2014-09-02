@@ -161,7 +161,6 @@ subroutine X(sternheimer_solve)(                           &
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
-            call batch_set_zero(rhsb)
             call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
           end if
 
