@@ -275,7 +275,7 @@ contains
       ! FIXME: there is a special function for reading the density. Why not use that?
       ! TODO: Find the function that reads the density. Which one?
       ! FIXME: why only real functions? Please generalize.
-      ! TODO: up to know the loacal domains utlityty acts over dnesity functions, which are real.
+      ! TODO: up to know the local_multipoles utlity acts over density functions, which are real.
       if(err == 0) &
         call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
