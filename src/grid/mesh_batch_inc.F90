@@ -782,7 +782,7 @@ end subroutine X(mesh_batch_exchange_points)
 
 ! -----------------------------------------------------
 !> This function should not be called directly, but through mesh_batch_nrm2.
-subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
+subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(mesh_t),            intent(in)    :: mesh
   type(batch_t),           intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
@@ -797,7 +797,7 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 #endif
   type(profile_t), save :: prof
 
-  PUSH_SUB(X(mesh_batch_nrm2))
+  PUSH_SUB(X(priv_mesh_batch_nrm2))
   call profiling_in(prof, 'MESH_BATCH_NRM2')
 
   select case(batch_status(aa))
@@ -905,9 +905,11 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 
   end select
   
+  ! REDUCTION IS REQUIRED, THIS IS DONE BY THE CALLING FUNCTION
+
   call profiling_out(prof)
-  POP_SUB(X(mesh_batch_nrm2))
-end subroutine X(mesh_batch_nrm2)
+  POP_SUB(X(priv_mesh_batch_nrm2))
+end subroutine X(priv_mesh_batch_nrm2)
 
 
 !! Local Variables:

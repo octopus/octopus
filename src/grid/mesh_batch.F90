@@ -77,9 +77,9 @@ contains
     PUSH_SUB(mesh_batch_nrm2)
     
     if(batch_type(aa) == TYPE_FLOAT) then
-      call dmesh_batch_nrm2(mesh, aa, nrm2)
+      call dpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     else
-      call zmesh_batch_nrm2(mesh, aa, nrm2)
+      call zpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     end if
     
     if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
