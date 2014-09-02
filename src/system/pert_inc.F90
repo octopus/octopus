@@ -32,13 +32,56 @@ subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
   PUSH_SUB(X(pert_apply_batch))
 
   ASSERT(batch_status(f_in) == batch_status(f_out))
-  ASSERT(batch_status(f_in) == BATCH_NOT_PACKED)
 
-  do ist = 1, f_in%nst
-    call X(pert_apply)(this, gr, geo, hm, ik, f_in%states(ist)%X(psi), f_out%states(ist)%X(psi))
-  end do
+
+  select case(this%pert_type)
+  case(PERTURBATION_ELECTRIC)
+
+    call electric()
+
+  case default
+
+    ASSERT(batch_status(f_in) == BATCH_NOT_PACKED)
+
+    do ist = 1, f_in%nst
+      call X(pert_apply)(this, gr, geo, hm, ik, f_in%states(ist)%X(psi), f_out%states(ist)%X(psi))
+    end do
+  end select
 
   POP_SUB(X(pert_apply_batch))
+
+contains
+  
+  subroutine electric()
+    integer :: ii, ip
+
+    select case(batch_status(f_in))
+      
+    case(BATCH_NOT_PACKED)
+      do ii = 1, f_in%nst_linear
+        do ip = 1, gr%mesh%np
+          f_out%states_linear(ii)%X(psi)(ip) = gr%mesh%x(ip, this%dir)*f_in%states_linear(ii)%X(psi)(ip) 
+        end do
+      end do
+
+    case(BATCH_PACKED)
+
+      do ip = 1, gr%mesh%np
+        do ii = 1, f_in%nst_linear
+          f_out%pack%X(psi)(ii, ip) = gr%mesh%x(ip, this%dir)*f_in%pack%X(psi)(ii, ip)
+        end do
+      end do
+
+    case(BATCH_CL_PACKED)
+      
+      ASSERT(.false.)
+
+    end select
+
+    call batch_pack_was_modified(f_out)
+
+  end subroutine electric
+  
 end subroutine X(pert_apply_batch)
 
 ! --------------------------------------------------------------------------
