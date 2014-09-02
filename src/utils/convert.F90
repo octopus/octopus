@@ -183,25 +183,25 @@ contains
     !%End
     call parse_integer(datasets_check('ConvertStep'), 1, c_step)
 
-    !%Variable ConvertRefFileName
+    !%Variable ConvertSubtractFilename
     !%Type string
     !%Default density
     !%Section Utilities::oct-convert
     !%Description
-    !% Input filename. The original filename which is going to convert in the formats 
+    !% Input filename. The file which is going to subtracted to rest of the files.
     !% specified in <tt>OutputHow</tt>.
     !%End
-    call parse_string(datasets_check('ConvertRefFileName'), 'density', ref_name)
+    call parse_string(datasets_check('ConvertSubtractFilename'), 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
 
-    !%Variable ConvertSubtractFile
+    !%Variable ConvertSubtract
     !%Type logical
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% The reference file that is going to be used to subtract from.
+    !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_logical(datasets_check('ConvertSubtractFile'), .false., subtract_file)
+    call parse_logical(datasets_check('ConvertSubtract'), .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -210,15 +210,17 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_string(datasets_check('ConvertSubtractFolder'), ' ', ref_folder)
-    if ( ref_folder == " " ) ref_folder = ""
-
+    call parse_string(datasets_check('ConvertSubtractFolder'), '.', ref_folder) 
+    if (index(folder, '/', .true.) /= len_trim(folder)) then
+      write(folder,'(a,a1)') trim(folder), '/'
+    end if
+    
     !%Variable ConvertTransform
     !%Type logical
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% The reference file that is going to be transformed via Fourier Transform.
+    !% Decides if the input files are going to be transformed via Fourier Transform.
     !%End
     call parse_logical(datasets_check('ConvertTransform'), .false., fourier_trans)
 
@@ -277,14 +279,15 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      ierr, dir=trim(ref_folder), mesh = mesh)
+                      ierr, dir=trim(ref_folder))
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
         call restart_end(restart)
       else
-        message(1) = "Failed to read from ref-file."
-        call messages_fatal(1)
+        write(message(1),'(2a)') "Failed to read from ref-file ", trim(ref_name)
+        write(message(2), '(2a)') "from folder ", trim(ref_folder)
+        call messages_fatal(2)
       endif
     end if
 
@@ -314,7 +317,7 @@ contains
 
       ! Read the obf file
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      ierr, dir=trim(folder), mesh = mesh)
+                      ierr, dir=trim(folder))
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
         call restart_end(restart)
@@ -322,8 +325,9 @@ contains
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
-        write(message(2), '(a)') "Skipping...."
-        call messages_warning(2)
+        write(message(2), '(a,i4)') "Error code: ",ierr
+        write(message(3), '(a)') "Skipping...."
+        call messages_warning(3)
         cycle
       end if
       if (subtract_file) then
