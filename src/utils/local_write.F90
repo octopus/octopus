@@ -249,8 +249,13 @@ contains
                                nd, domain, lab, inside, center, &
                                gr, geo, st, hm, ks, mc, iter, l_start, ldoverwrite, writ%how)
     
-    !if(writ%out(LOCAL_OUT_POTENTIAL)%write) &
-    !  call local_write_potential(writ%out(LOCAL_OUT_POTENTIAL)%handle, hm, iter, geo%kinetic_energy)
+    if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), nd, domain, lab, inside, center, &
+                               gr, geo, st, hm, ks, mc, iter, l_start, ldoverwrite, writ%how)
+      do id = 1, nd
+        call write_iter_flush(writ%out(LOCAL_OUT_ENERGY, id)%handle)
+      end do
+    end if
 
     call profiling_out(prof)
     POP_SUB(local_write_iter)
@@ -344,7 +349,144 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     POP_SUB(local_write_density)
   end subroutine local_write_density
+
   ! ---------------------------------------------------------
+  subroutine local_write_energy(out_energy, nd, domain, lab, inside, center, & 
+                                gr, geo, st, hm, ks, mc, iter, l_start, start, how)
+    type(local_write_prop_t),      intent(inout) :: out_energy(:)
+    integer,                  intent(in)    :: nd 
+    type(box_union_t),        intent(in)    :: domain(:)
+    character(len=15),        intent(in)    :: lab(:)
+    logical,                  intent(in)    :: inside(:,:)
+    FLOAT,                    intent(in)    :: center(:,:)
+    type(grid_t),         intent(inout) :: gr
+    type(geometry_t),     intent(inout) :: geo
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(v_ks_t),         intent(inout) :: ks
+    type(multicomm_t),    intent(in)    :: mc
+    integer,              intent(in) :: iter
+    integer,              intent(in) :: l_start
+    logical,              intent(in) :: start
+    integer,              intent(in) :: how
+
+    integer :: id, ii, is, ix, ierr, jd
+    character(len=120) :: folder, out_name, aux
+    FLOAT              :: geh, gexc, leh, lexc
+    FLOAT, allocatable :: tmp_rhoi(:), st_rho(:)
+    FLOAT, allocatable :: hm_vxc(:), hm_vh(:)
+
+    PUSH_SUB(local_write_energy)
+
+    SAFE_ALLOCATE(tmp_rhoi(1:gr%mesh%np))
+    SAFE_ALLOCATE(st_rho(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm_vxc(1:gr%mesh%np))
+    SAFE_ALLOCATE(hm_vh(1:gr%mesh%np))
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    if(iter == l_start .and. start) then
+      do id = 1, nd   
+        call local_write_print_header_init(out_energy(id)%handle)
+
+      ! first line -> column names
+        write(aux,'(a,i4.4,2x,a,2x,a,2x,a)')'# Domain ID:',id,'- ',trim(lab(id))
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        write(aux,'(a)')trim(lab(id))
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        call write_iter_nl(out_energy(id)%handle)
+        call write_iter_header_start(out_energy(id)%handle)
+        aux = 'Total Hartree'
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        aux = 'Total Int[n*vxc]'
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        write(aux,'(a,i2.2,a,i2.2,a)')'Int[n(',id,')*vh(',id,')]'
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        write(aux,'(a,i2.2,a,i2.2,a)')'Int[n(',id,')*vxc(',id,')]'
+        call write_iter_header(out_energy(id)%handle, trim(aux))
+        do jd = 1, nd
+          if (jd /= id) then
+            write(aux,'(a,i2.2,a,i2.2,a)')'Int[n(',id,')*vh(',jd,')]'
+            call write_iter_header(out_energy(id)%handle, trim(aux))
+            write(aux,'(a,i2.2,a,i2.2,a)')'Int[n(',id,')*vxc(',jd,')]'
+            call write_iter_header(out_energy(id)%handle, trim(aux))
+          end if
+        end do
+        call write_iter_nl(out_energy(id)%handle)
+
+      ! units
+        call write_iter_string(out_energy(id)%handle, '#[Iter n.]')
+        call write_iter_header(out_energy(id)%handle, '[' // trim(units_abbrev(units_out%time)) // ']')
+        do ii = 1, 2*nd + 2
+          call write_iter_header(out_energy(id)%handle, '[' // trim(units_abbrev(units_out%energy)) // ']')
+        end do
+        call write_iter_nl(out_energy(id)%handle)
+      
+        call local_write_print_header_end(out_energy(id)%handle)
+      end do
+    end if
+
+    ! TODO: Make new files for each nspin value. 
+    do is = 1, st%d%nspin
+      !Compute Hartree potential
+      call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+      !Compute XC potential
+      call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+ ! 
+      st_rho(:) = st%rho(:, is)
+      hm_vxc(:) = hm%vxc(:, is)
+      hm_vh(:) = hm%vhartree(:)
+     !Compute Global Values
+      geh = dmf_integrate(gr%mesh, st_rho(1:gr%mesh%np)*hm%vhartree) 
+      gexc = dmf_integrate(gr%mesh, st_rho(1:gr%mesh%np)*hm_vxc(1:gr%mesh%np))
+      do id = 1, nd
+        call write_iter_set(out_energy(id)%handle, iter)
+        call write_iter_start(out_energy(id)%handle)
+        call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, geh), 1)
+        call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, gexc), 1)
+     !Compute Local Values
+        tmp_rhoi = M_ZERO
+        st%rho(:,is) = M_ZERO
+        hm%vxc(:,is) = M_ZERO
+        hm%vhartree(:) = M_ZERO
+        forall (ix = 1:gr%mesh%np, inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
+      !eh = Int[n(id)*v_h(id)]
+        leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree) 
+        call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, leh), 1)
+      !exc = Int[n(id)*v_xc(id)]
+        lexc = dmf_integrate(gr%mesh, tmp_rhoi*hm%vxc(1:gr%mesh%np,is))
+        call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, lexc), 1)
+        do jd = 1, nd
+          if (jd /= id) then
+            ! TODO: Check for domains overlaping to avoid segmentation fault. 
+          !eh = Int[n(id)*v_h(jd)]
+            st%rho(:,is) = M_ZERO
+            hm%vxc(:,is) = M_ZERO
+            hm%vhartree(:) = M_ZERO
+            forall (ix = 1:gr%mesh%np, inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
+            call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+            leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree) 
+            call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, leh), 1)
+          !exc = Int[n(id)*v_xc(jd)]
+            lexc = dmf_integrate(gr%mesh, tmp_rhoi*hm%vxc(1:gr%mesh%np, is))
+            call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, lexc), 1)
+          end if
+        end do
+        st%rho(:,is) = st_rho(:)
+        hm%vxc(:,is) = hm_vxc(:)
+        hm%vhartree(:) = hm_vh(:)
+        call write_iter_nl(out_energy(id)%handle)
+      end do 
+    end do
+
+    SAFE_DEALLOCATE_A(hm_vh)
+    SAFE_DEALLOCATE_A(hm_vxc)
+    SAFE_DEALLOCATE_A(st_rho)
+    SAFE_DEALLOCATE_A(tmp_rhoi)
+    POP_SUB(local_write_energy)
+  end subroutine local_write_energy
 
   subroutine local_write_multipole(out_multip, nd, domain, lab, inside, center, & 
                                 gr, geo, st, lmax, kick, iter, l_start, start, how)

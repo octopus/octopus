@@ -622,7 +622,7 @@ contains
       do id = 1, lcl%nd
         forall(ip = 1:sys%gr%mesh%np, lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
       end do
-      call drestart_write_binary(restart, trim(filename), sys%gr%mesh%np, ff2(:,1), ierr) 
+      call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
       call restart_end(restart)
     
       SAFE_DEALLOCATE_A(ff2)
