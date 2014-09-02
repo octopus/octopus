@@ -193,7 +193,14 @@ contains
     !%End
     call parse_string(datasets_check('ConvertSubtractFilename'), 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
-
+    ! Delete the extension if present
+    length = len_trim(basename)
+    if ( length > 4) then
+      if ( ref_name(length-3:length) == '.obf' ) then
+        ref_name = trim(ref_name(1:length-4))
+      end if
+    end if
+    
     !%Variable ConvertSubtract
     !%Type logical
     !%Default false
