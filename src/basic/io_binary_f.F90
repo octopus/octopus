@@ -31,12 +31,14 @@ module io_binary_m
   private
 
   public ::                   &
-    io_binary_write_header,   &
     io_binary_write,          &
     io_binary_write_parallel, &
     io_binary_read,           &
     io_binary_read_parallel,  &
-    io_binary_get_info
+    io_binary_get_info,       &
+    dwrite_header,            &
+    zwrite_header,            &
+    iwrite_header
 
   interface io_binary_write
     module procedure dwrite_binary, zwrite_binary, iwrite_binary
@@ -57,11 +59,6 @@ module io_binary_m
   interface io_binary_read_parallel
     module procedure dread_parallel, zread_parallel, iread_parallel
   end interface io_binary_read_parallel
-
-  !> Interfaces to C to write the header
-  interface io_binary_write_header
-    module procedure dwrite_header, zwrite_header, iwrite_header
-  end interface io_binary_write_header
 
   interface
     subroutine get_info_binary(np, type, ierr, fname)

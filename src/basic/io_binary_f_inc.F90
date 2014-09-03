@@ -17,10 +17,9 @@
 !!
 !! $Id$
 
-  subroutine X(write_header)(fname, np_global, ff, ierr)
+  subroutine X(write_header)(fname, np_global, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np_global
-    R_TYPE,              intent(in)  :: ff
     integer,             intent(out) :: ierr
     
     PUSH_SUB(X(write_header))

@@ -174,7 +174,7 @@ contains
     
     ! Write the header (root only) and wait
     if (mpi_grp_is_root(partition%mpi_grp)) then
-      call io_binary_write_header(filename, partition%np_global, partition%part(1), err)
+      call iwrite_header(filename, partition%np_global, err)
       if (err /= 0) ierr = ierr + 1
     end if
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
