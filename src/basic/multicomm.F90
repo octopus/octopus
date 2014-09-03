@@ -298,7 +298,7 @@ contains
         mc%par_strategy = iand(mc%par_strategy, par_mask)
 
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
-          message(1) = "More than one node is available, but this run mode cannot run in parallel."
+          message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
           message(2) = "Please select a ParallelizationStrategy compatible with"
           jj = 2
           do ii = 1, n_par_types
