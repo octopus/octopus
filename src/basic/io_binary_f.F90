@@ -122,6 +122,8 @@ contains
     endif
     ierr = mpi_err
 #else
+    ierr = -1
+    file_handle = -1
     message(1) = "Internal error: cannot call io_binary parallel routines without MPI2."
     call messages_fatal(1)
 #endif
@@ -132,7 +134,7 @@ contains
   ! ------------------------------------------------------
 
   subroutine io_binary_parallel_end(file_handle)
-    integer, intent(out)   :: file_handle
+    integer, intent(in) :: file_handle
 
     logical :: finalized
 

@@ -124,17 +124,17 @@
     call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .true., ierr)
     ASSERT(product(ubound(ff)) >= np)
  
- #ifdef HAVE_MPI2
     if(ierr == 0) then
+ #ifdef HAVE_MPI2
       call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
       call MPI_Get_count(status, R_MPITYPE, write_count, mpi_err)
+ #endif
       if (write_count /= np) then
         write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " wrote elements=", write_count, " instead of", np
         write(message(2), '(a,a)') " of file= ", fname
         call messages_fatal(2)
       end if
     endif
- #endif
  
     call io_binary_parallel_end(file_handle)
  
@@ -194,12 +194,12 @@
 #ifdef HAVE_MPI2
       call MPI_File_read(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
       call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
+#endif
       if (read_count /= np) then
         write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " read elements=", read_count, " instead of", np
         write(message(2), '(a,a)') " of file= ", fname
         call messages_fatal(2)
       end if
-#endif
     endif
     
     call io_binary_parallel_end(file_handle)
