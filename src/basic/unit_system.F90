@@ -322,7 +322,7 @@ contains
     uu%velocity%factor = uu%length%factor*uu%energy%factor
 
     uu%mass%abbrev   = "hbar^2/(eV A^2)"
-    uu%mass%name     = "hbar/(electronvolt * Angstrom^2)"
+    uu%mass%name     = "hbar^2/(electronvolt * Angstrom^2)"
     uu%mass%factor   = M_ONE/(uu%energy%factor *  uu%length%factor**2)
 
     uu%force%abbrev  = "eV/A"
