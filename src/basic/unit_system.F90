@@ -317,7 +317,7 @@ contains
     uu%time%name   = "hbar/electronvolt"
     uu%time%factor = M_ONE/uu%energy%factor
 
-    uu%velocity%abbrev = "AeV(2pi/h)"
+    uu%velocity%abbrev = "A eV/hbar"
     uu%velocity%name   = "Angstrom times electronvolts over hbar"
     uu%velocity%factor = uu%length%factor*uu%energy%factor
 
@@ -329,7 +329,7 @@ contains
     uu%force%name    = "electronvolt/Angstrom"
     uu%force%factor  = uu%energy%factor/uu%length%factor
 
-    uu%acceleration%abbrev = "AeV(2pi/h)^2"
+    uu%acceleration%abbrev = "A (eV/hbar)^2"
     uu%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
     uu%acceleration%factor = uu%length%factor/uu%time%factor**2
 
