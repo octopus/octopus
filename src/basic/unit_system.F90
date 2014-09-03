@@ -321,9 +321,9 @@ contains
     uu%velocity%name   = "Angstrom times electronvolts over hbar"
     uu%velocity%factor = uu%length%factor*uu%energy%factor
 
-    uu%mass%abbrev   = "eV/c^2"
-    uu%mass%name     = "electronvolt/(speed of light)^2"
-    uu%mass%factor   = uu%energy%factor/P_C**2
+    uu%mass%abbrev   = "hbar^2/(eV A^2)"
+    uu%mass%name     = "hbar/(electronvolt * Angstrom^2)"
+    uu%mass%factor   = M_ONE/(uu%energy%factor *  uu%length%factor**2)
 
     uu%force%abbrev  = "eV/A"
     uu%force%name    = "electronvolt/Angstrom"
