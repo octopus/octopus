@@ -96,16 +96,18 @@ contains
     PUSH_SUB(run)
 
 #ifdef HAVE_MPI2
-    if(sys%ks%theory_level/=INDEPENDENT_PARTICLES)then
-      call poisson_async_init(sys%ks%hartree_solver, sys%mc)
-      ! slave nodes do not call the calculation routine
-      if(multicomm_is_slave(sys%mc))then
-        !for the moment we only have one type of slave
-        call poisson_slave_work(sys%ks%hartree_solver)
-        POP_SUB(run)
-        return
+    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
+      if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) then
+        call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+        ! slave nodes do not call the calculation routine
+        if(multicomm_is_slave(sys%mc))then
+          !for the moment we only have one type of slave
+          call poisson_slave_work(sys%ks%hartree_solver)
+          POP_SUB(run)
+          return
+        end if
       end if
-    end if
+    endif
 #endif
 
     call messages_write('Info: Octopus initialization completed.', new_line = .true.)
@@ -172,8 +174,10 @@ contains
     call profiling_out(calc_mode_prof)
 
 #ifdef HAVE_MPI2
-    if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
-      call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
+      if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
+        call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+    endif
 #endif
 
     POP_SUB(run)
