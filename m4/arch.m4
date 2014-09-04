@@ -71,6 +71,26 @@ CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
 
 ################################################################
+# Check whether the hardware accepts FMA3 instructions
+# ----------------------------------
+AC_DEFUN([ACX_FMA3],
+[AC_MSG_CHECKING([whether FMA3 instructions can be used])
+acx_save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS"
+AC_RUN_IFELSE([AC_LANG_PROGRAM( [
+#include <x86intrin.h>
+], [
+__m128d a __attribute__((aligned(16)));
+__m128d b __attribute__((aligned(16)));
+__m128d c __attribute__((aligned(16)));
+__m128d d __attribute__((aligned(16)));
+d = (__m128d) _mm_fmadd_pd(a, b, c);
+ ])], 
+ [acx_fma3=yes], [acx_fma3=no], [acx_fma3=no;echo -n "cross-compiling; assuming... "])
+CFLAGS="$acx_save_CFLAGS"
+AC_MSG_RESULT($acx_fma3)])
+
+################################################################
 # Check whether the hardware accepts FMA4 instructions
 # ----------------------------------
 AC_DEFUN([ACX_FMA4],
@@ -134,6 +154,15 @@ AC_ARG_ENABLE(fma4, AS_HELP_STRING([--enable-fma4], [Enable the use of FMA4 vect
 	[ac_enable_fma4=${enableval}])
 if test "x$vector" = "xno" ; then
  ac_enable_fma4=no
+fi
+if test "x$ac_enable_fma3" = "x" ; then
+  ACX_FMA3
+elif test "x$ac_enable_fma3" = "xyes" ; then
+  AC_MSG_NOTICE([FMA3 instruction support enabled])
+  acx_fma3=yes
+else # no
+  AC_MSG_NOTICE([FMA3 instruction support disabled])
+  acx_fma3=no
 fi
 if test "x$ac_enable_fma4" = "x" ; then
   ACX_FMA4
