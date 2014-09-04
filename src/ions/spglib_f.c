@@ -24,20 +24,20 @@
 #include "string_f.h" /* Fortran <-> c string compatibility issues */
 
 int FC_FUNC_(spglib_get_multiplicity, SPGLIB_GET_MULTIPLICITY)
-     (const double lattice[3][3], const double position[][3],
+     (double lattice[3][3], double position[][3],
       const int types[], const int * num_atom, const double * symprec){
 
   return spg_get_multiplicity(lattice, position, types, *num_atom, *symprec);
 }
 
 int FC_FUNC_(spglib_get_symmetry, SPGLIB_GET_SYMMETRY)
-     (int rotation[][3][3], double translation[][3], const int * max_size, const double lattice[3][3],
-      const double position[][3], const int types[], const int * num_atom, const double * symprec){
+     (int rotation[][3][3], double translation[][3], const int * max_size, double lattice[3][3],
+      double position[][3], const int types[], const int * num_atom, const double * symprec){
 
   return spg_get_symmetry(rotation, translation, *max_size, lattice, position, types, *num_atom, *symprec);
 }
 
-int FC_FUNC_(spglib_get_international, SPGLIB_GET_INTERNATIONAL)(STR_F_TYPE symbol, const double lattice[3][3], const double position[][3],
+int FC_FUNC_(spglib_get_international, SPGLIB_GET_INTERNATIONAL)(STR_F_TYPE symbol, double lattice[3][3], double position[][3],
 								 const int types[], const int * num_atom, const double * symprec STR_ARG1){
   char symbol_c[11];
   int space_group = spg_get_international(symbol_c, lattice, position, types, *num_atom, *symprec);
@@ -45,7 +45,7 @@ int FC_FUNC_(spglib_get_international, SPGLIB_GET_INTERNATIONAL)(STR_F_TYPE symb
   return space_group;
 }
 
-int FC_FUNC_(spglib_get_schoenflies, SPGLIB_GET_SCHOENFLIES)(STR_F_TYPE symbol, const double lattice[3][3], const double position[][3],
+int FC_FUNC_(spglib_get_schoenflies, SPGLIB_GET_SCHOENFLIES)(STR_F_TYPE symbol, double lattice[3][3], double position[][3],
 							     const int types[], const int * num_atom, const double * symprec STR_ARG1){
   char symbol_c[10];
   int space_group = spg_get_schoenflies(symbol_c, lattice, position, types, *num_atom, *symprec);
