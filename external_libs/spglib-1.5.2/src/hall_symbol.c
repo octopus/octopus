@@ -2136,7 +2136,7 @@ static int get_origin_shift(double shift[3],
 			    SPGCONST double trans[3][3],
 			    const Centering centering,
 			    SPGCONST double VSpU[3][9]);
-static void unpack_generators(int rot[3][3][3], int generators[3][9]);
+static void unpack_generators(int rot[3][3][3], SPGCONST int generators[3][9]);
 static int set_dw(double dw[3],
 		  const int operation_index[2],
 		  SPGCONST int rot[3][3],
@@ -2553,7 +2553,7 @@ static int is_hall_symbol_tricli(double shift[3],
 
 }
 
-static void unpack_generators(int rot[3][3][3], int generators[3][9])
+static void unpack_generators(int rot[3][3][3], SPGCONST int generators[3][9])
 {
   int i, j, k;
   for (i = 0; i < 3; i++) {
