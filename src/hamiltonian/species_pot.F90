@@ -79,7 +79,7 @@ contains
 
     integer :: isp, ip, in_points, nn, icell
     FLOAT :: rr, x, pos(1:MAX_DIM)
-    FLOAT :: psi, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
+    FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: spec
     type(ps_t), pointer :: ps
 

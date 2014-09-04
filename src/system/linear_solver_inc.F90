@@ -694,9 +694,8 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   FLOAT,                 intent(in)    :: threshold    !< convergence threshold
 
   type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
-  R_TYPE              :: rtmp
-  FLOAT               :: oldgamma, tmp
-  integer             :: ip, ii, iter
+  FLOAT               :: oldgamma
+  integer             :: ii, iter
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
   R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:), exception_saved(:, :, :)
   integer, allocatable :: status(:), saved_iter(:)
