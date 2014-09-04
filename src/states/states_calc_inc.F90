@@ -564,7 +564,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   R_TYPE,  optional, intent(out)   :: overlap(:) 
   R_TYPE,  optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
-  R_TYPE,  optional, intent(in)    :: beta_ij(:)   ! beta_ij(nst)
+  R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
 
   integer :: ist, idim
   R_TYPE  :: nrm2

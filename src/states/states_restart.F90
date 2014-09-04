@@ -84,6 +84,11 @@ contains
       call messages_fatal(1)
     end if
 
+    if(st%parallel_in_states) then
+      message(1) = "Internal error: cannot use states_look_and_load when parallel in states."
+      call messages_fatal(1)
+    endif
+
     ! Resize st%occ, retaining information there
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
     new_occ(:,:) = M_ZERO
@@ -92,7 +97,7 @@ contains
     st%occ => new_occ
 
     ! FIXME: This wrong, one cannot just change the number of states
-    ! without updating the internal structures.
+    ! without updating the internal structures. (Especially changing st_end!)
     st%nst    = nst
     st%st_end = nst
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
