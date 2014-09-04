@@ -298,7 +298,9 @@ contains
       do is = 1, st%d%nspin
         tmp_rho = M_ZERO
         st_rho(:) = st%rho(:, is)
-        forall (ix = 1:gr%mesh%np, inside(ix, id)) tmp_rho(ix) = st_rho(ix)
+        do ix = 1, gr%mesh%np 
+          if (inside(ix, id)) tmp_rho(ix) = st_rho(ix)
+        end do
         if (out_dens(id)%write) then
           folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
           write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
@@ -315,7 +317,9 @@ contains
             trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
           st%rho(:,is) = M_ZERO
-          forall (ix = 1:gr%mesh%np, inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+          do ix = 1, gr%mesh%np
+            if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+          end do
           call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
@@ -449,7 +453,9 @@ contains
         st%rho(:,is) = M_ZERO
         hm%vxc(:,is) = M_ZERO
         hm%vhartree(:) = M_ZERO
-        forall (ix = 1:gr%mesh%np, inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+        do ix = 1, gr%mesh%np 
+          if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+        end do
         call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
       !eh = Int[n(id)*v_h(id)]
@@ -465,7 +471,9 @@ contains
             st%rho(:,is) = M_ZERO
             hm%vxc(:,is) = M_ZERO
             hm%vhartree(:) = M_ZERO
-            forall (ix = 1:gr%mesh%np, inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
+            do ix = 1, gr%mesh%np 
+              if (inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
+            end do
             call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
             leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree) 
             call write_iter_double(out_energy(id)%handle, units_from_atomic(units_out%energy, leh), 1)

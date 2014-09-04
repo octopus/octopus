@@ -80,7 +80,11 @@ program oct_local_multipoles
   call datasets_init(1)
   call io_init()
   call profiling_init()
-
+ 
+  call print_header()
+  call messages_print_stress(stdout, "Local Domains mode")
+  call messages_print_stress(stdout)
+    
   call unit_system_init()
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
@@ -94,6 +98,7 @@ program oct_local_multipoles
   call profiling_output()
   call profiling_end()
   call io_end()
+  call print_date("Calculation ended on ")
   call datasets_end()
   call messages_end()
   call global_end()
@@ -271,7 +276,7 @@ contains
         write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
       end if
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
-                      err, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+                      err, dir=trim(base_folder)//trim(folder)) 
       ! FIXME: there is a special function for reading the density. Why not use that?
       ! TODO: Find the function that reads the density. Which one?
       ! FIXME: why only real functions? Please generalize.
