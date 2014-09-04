@@ -3,6 +3,9 @@ FromScratch = yes
 ExperimentalFeatures = yes
 Dimensions = 2
 
+ExtraStates = 1
+ParallelizationStrategy = par_domains
+
 omega0 = 1.0
 dist = 3.0
 
