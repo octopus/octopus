@@ -84,7 +84,7 @@ __m128d a __attribute__((aligned(16)));
 __m128d b __attribute__((aligned(16)));
 __m128d c __attribute__((aligned(16)));
 __m128d d __attribute__((aligned(16)));
-d = (__m128d) _mm_fmadd_pd(a, b, c);
+d = (__m128d) _mm256_fmadd_pd(a, b, c);
  ])], 
  [acx_fma3=yes], [acx_fma3=no], [acx_fma3=no;echo -n "cross-compiling; assuming... "])
 CFLAGS="$acx_save_CFLAGS"
