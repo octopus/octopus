@@ -53,7 +53,7 @@ module unit_m
 
   type unit_t
     real(8)           :: factor
-    character(len=12) :: abbrev !< common abbreviation of the unit name
+    character(len=20) :: abbrev !< common abbreviation of the unit name
     character(len=50) :: name   !< common name
   end type unit_t
 
@@ -170,7 +170,7 @@ contains
   !-----------------------------------------------
 
 
-  character(len=12) pure function units_abbrev(this) result(abbrev)
+  character(len=20) pure function units_abbrev(this) result(abbrev)
     type(unit_t), intent(in) :: this
     
     abbrev = this%abbrev

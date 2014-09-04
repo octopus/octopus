@@ -62,7 +62,7 @@ module unit_system_m
   !> the units systems for reading and writing
   type(unit_system_t), public :: units_inp, units_out
 
-  ! some special units required for particular quantities
+  !> some special units required for particular quantities
   type(unit_t),        public :: unit_one           !< For unitless quantities and arithmetics with units.
   type(unit_t),        public :: unit_ppm           !< Parts per million.
   type(unit_t),        public :: unit_debye         !< For dipoles.
