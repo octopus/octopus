@@ -67,7 +67,7 @@ get_ir_reciprocal_mesh_openmp(int grid_address[][3],
 			      SPGCONST PointSymmetry * point_symmetry);
 static int relocate_BZ_grid_address(int bz_grid_address[][3],
 				    int bz_map[],
-				    SPGCONST int grid_address[][3],
+				    int grid_address[][3],
 				    const int mesh[3],
 				    SPGCONST double rec_lattice[3][3],
 				    const int is_shift[3]);
@@ -210,7 +210,7 @@ int kpt_get_stabilized_reciprocal_mesh(int grid_address[][3],
 
 int kpt_relocate_BZ_grid_address(int bz_grid_address[][3],
 				 int bz_map[],
-				 SPGCONST int grid_address[][3],
+				 int grid_address[][3],
 				 const int mesh[3],
 				 SPGCONST double rec_lattice[3][3],
 				 const int is_shift[3])
@@ -562,7 +562,7 @@ get_ir_reciprocal_mesh_openmp(int grid_address[][3],
 /* bz_map[prod(mesh * 2 - 1)] */
 static int relocate_BZ_grid_address(int bz_grid_address[][3],
 				    int bz_map[],
-				    SPGCONST int grid_address[][3],
+				    int grid_address[][3],
 				    const int mesh[3],
 				    SPGCONST double rec_lattice[3][3],
 				    const int is_shift[3])

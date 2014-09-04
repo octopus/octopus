@@ -32,7 +32,7 @@ static int get_overlap_table(int ** table,
 			     SPGCONST Cell *primitive_cell,
 			     const VecDBL * position,
 			     const double symprec);
-static int check_overlap_table(int **overlap_table,
+static int check_overlap_table(SPGCONST int **overlap_table,
 			       const int cell_size,
 			       const int ratio);
 static void free_overlap_table(int ** table, const int size);
@@ -486,7 +486,7 @@ static int get_overlap_table(int **overlap_table,
 }
 
 
-static int check_overlap_table(int **overlap_table,
+static int check_overlap_table(SPGCONST int **overlap_table,
 			       const int cell_size,
 			       const int ratio) {
   int i, j, index_compared, all_ok;
