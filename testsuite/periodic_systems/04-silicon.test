@@ -3,7 +3,7 @@
 
 Test       : Silicon crystal
 Programs   : octopus; octopus_mpi
-TestGroups : short-run, periodic_systems
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 Input      : 04-silicon.01-gs.inp
