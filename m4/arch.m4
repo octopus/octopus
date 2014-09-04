@@ -149,11 +149,11 @@ ACX_M128D
 vector=$acx_m128d
 vector_type="(sse2)"
 
-#FMA4
-AC_ARG_ENABLE(fma4, AS_HELP_STRING([--enable-fma4], [Enable the use of FMA4 vectorial instructions (x86_64)]), 
-	[ac_enable_fma4=${enableval}])
+#FMA3
+AC_ARG_ENABLE(fma3, AS_HELP_STRING([--enable-fma3], [Enable the use of FMA3 vectorial instructions (x86_64)]), 
+	[ac_enable_fma3=${enableval}])
 if test "x$vector" = "xno" ; then
- ac_enable_fma4=no
+ ac_enable_fma3=no
 fi
 if test "x$ac_enable_fma3" = "x" ; then
   ACX_FMA3
@@ -163,6 +163,16 @@ elif test "x$ac_enable_fma3" = "xyes" ; then
 else # no
   AC_MSG_NOTICE([FMA3 instruction support disabled])
   acx_fma3=no
+fi
+if test "x$acx_fma3" = "xyes" ; then
+  AC_DEFINE(HAVE_FMA3, 1, [compiler and hardware supports the FMA3 instructions])
+fi
+
+#FMA4
+AC_ARG_ENABLE(fma4, AS_HELP_STRING([--enable-fma4], [Enable the use of FMA4 vectorial instructions (x86_64)]), 
+	[ac_enable_fma4=${enableval}])
+if test "x$vector" = "xno" ; then
+ ac_enable_fma4=no
 fi
 if test "x$ac_enable_fma4" = "x" ; then
   ACX_FMA4
