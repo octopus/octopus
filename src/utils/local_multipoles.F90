@@ -625,7 +625,9 @@ contains
                     ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
       ff2 = M_ZERO
       do id = 1, lcl%nd
-        forall(ip = 1:sys%gr%mesh%np, lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
+        do ip = 1, sys%gr%mesh%np 
+          if (lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
+        end do
       end do
       call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
       call restart_end(restart)
