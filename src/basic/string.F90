@@ -30,6 +30,7 @@ module string_m
     upcase,          &
     lowcase,         &
     compact,         &
+    add_last_slash,  &
     str_trim,        &
     str_center,      &
     print_C_string,  &
@@ -92,6 +93,18 @@ contains
     end do
 
   end subroutine compact
+
+  ! ---------------------------------------------------------
+  !> Adds a '/' in the end of the string, only if it missing.
+  !! Useful for directories
+  subroutine add_last_slash(str)
+    character(len=*), intent(inout) :: str
+
+    if (index(str, '/', .true.) /= len_trim(str)) then
+      write(str,'(a,a1)') trim(str), '/'
+    end if
+  end subroutine add_last_slash
+
 
   ! ---------------------------------------------------------
   !> removes leading spaces from string

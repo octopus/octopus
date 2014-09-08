@@ -38,6 +38,7 @@ program oct_convert
   use parser_m
   use poisson_m
   use profiling_m
+  use string_m
   use system_m
   use restart_m
   use unit_m
@@ -151,10 +152,7 @@ contains
     !% The folder name where the input files are.
     !%End
     call parse_string(datasets_check('ConvertFolder'), folder_default, folder)
-    ! Check if the folder is finished by an /
-    if (index(folder, '/', .true.) /= len_trim(folder)) then
-      write(folder,'(a,a1)') trim(folder), '/'
-    end if
+    call add_last_slash(folder)
 
     !%Variable ConvertStart
     !%Type integer
@@ -217,10 +215,8 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_string(datasets_check('ConvertSubtractFolder'), '.', ref_folder) 
-    if (index(folder, '/', .true.) /= len_trim(folder)) then
-      write(folder,'(a,a1)') trim(folder), '/'
-    end if
+    call parse_string(datasets_check('ConvertSubtractFolder'), '.', ref_folder)
+    call add_last_slash(folder)
     
     !%Variable ConvertTransform
     !%Type logical
