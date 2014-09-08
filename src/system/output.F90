@@ -60,6 +60,7 @@ module output_m
   use profiling_m
   use simul_box_m
   use smear_m
+  use string_m
   use solids_m
   use species_m
   use states_m
@@ -481,6 +482,20 @@ contains
 
     if(iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
+    end if
+
+    !%Variable OutputDir
+    !%Default ""
+    !%Type string
+    !%Section Output
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores binary information
+    !% such as the density, forces, etc.
+    !%End
+    call parse_string('OutputDir', "output", outputdir)
+    call add_last_slash(outputdir)
+    if (outp%what /= 0 .and. outputdir /= "") then
+      call io_mkdir(outputdir, is_tmp=.true.)
     end if
 
     !%Variable OutputInterval

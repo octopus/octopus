@@ -614,19 +614,6 @@ contains
       end do
     end if
 
-    !%Variable OutputDir
-    !%Default ""
-    !%Type string
-    !%Section Execution::IO
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores binary information
-    !% such as the density, forces, etc.
-    !%End
-    call parse_string('OutputDir', "", outputdir)
-    if (outputdir /= "") then
-      call io_mkdir(outputdir, is_tmp=.true.)
-    end if
-
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outputdir),"td.", iter  ! name of directory
 

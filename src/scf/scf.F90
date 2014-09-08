@@ -440,7 +440,7 @@ contains
     integer :: iter, is, idim, iatom, nspin, ierr, iberry, idir, verbosity_
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
-    character(len=8) :: dirname
+    character(len=32) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
@@ -834,8 +834,8 @@ contains
         exit
       end if
 
-      if(outp%output_interval /= 0 .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,i4.4)') "scf.",iter
+      if(outp%output_interval /= 0 .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then  
+        write(dirname,'(a,a,i4.4)') trim(outputdir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
       end if
 
