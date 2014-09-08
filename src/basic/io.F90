@@ -379,8 +379,7 @@ contains
       call io_assign(iunit)
       if(iunit<0) then
         if(die_) then
-          write(stderr, '(a)') '*** IO Error: Too many files open'
-          message(1) = 'io_open.'
+          write(message(1), '(a)') '*** IO Error: Too many files open.'
           call messages_fatal(1)
         end if
         POP_SUB(io_open)
@@ -403,9 +402,8 @@ contains
         call io_free(iunit)
         iunit = -1
         if(die_) then
-          write(stderr, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
-            '" for action="', trim(action), '"'
-          message(1) = 'io_open.'
+          write(message(1), '(5a,i6)') '*** IO Error: Could not open file "', trim(file_), &
+            '" for action="', trim(action), '". Error code = ', iostat
           call messages_fatal(1)
         end if
       end if
