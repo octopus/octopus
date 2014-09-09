@@ -485,17 +485,20 @@ contains
     end if
 
     !%Variable OutputDir
-    !%Default ""
+    !%Default "output"
     !%Type string
     !%Section Output
     !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores binary information
-    !% such as the density, forces, etc.
+    !% The name of the directory where <tt>Octopus</tt> stores information
+    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+    !% in the format specified by <tt>OutputHow</tt>
+    !% This information is written while iterating GS or TD, according to 
+    !% <tt>OutputInterval</tt> and has nothing to do with the restart information.
     !%End
     call parse_string('OutputDir', "output", outputdir)
     call add_last_slash(outputdir)
     if (outp%what /= 0 .and. outputdir /= "") then
-      call io_mkdir(outputdir, is_tmp=.true.)
+      call io_mkdir(outputdir, is_tmp=.false.)
     end if
 
     !%Variable OutputInterval
