@@ -15,14 +15,17 @@ match ; Reduced k-points   ; GREP(static/info, 'Number of symmetry-reduced k-poi
 match ; Space group        ; GREP(out, 'Space group', 16)                      ; 187
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; 713.8631542
-match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; 326.75322251
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -198.67043598
-match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   -524.27950994
-match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -174.81774990
-match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -24.25113394
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  516.48050371
-match ; External energy    ; GREP(static/info, 'External    =', 20) ;  593.97786850
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  713.8631542
+match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  713.8631542
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  326.75322251
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67043598
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27950994
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.81774990
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -24.25113394
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48050371
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97786850
+match ; Entropy            ; GREPFIELD(static/info, 'Entropy     =', 3) ;    0.0
+match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -1.383530
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ;   0.000000
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ;   0.000000

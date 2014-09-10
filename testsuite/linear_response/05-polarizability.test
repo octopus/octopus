@@ -9,11 +9,13 @@ Enabled    : Yes
 
 Input: 05-polarizability.01-gs.inp
 match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -11.40377627
-match ; Free energy    ; GREP(static/info, 'Free        =', 20) ; -11.48089886
+# due to the perversity of Methfessel-Paxton, occupations can be outside [0,2] and entropy can be negative
+match ; Free energy    ; GREP(static/info, 'Free        =', 20) ; -11.32666634
 match ; Eigenvalue     ; GREP(static/info, '1   --', 12) ;  -3.178226
 match ; Occupation     ; GREP(static/info, '1   --', 28) ;   2.032697
 match ; Eigenvalue     ; GREP(static/info, '2   --', 12) ;  -1.836886
 match ; Occupation     ; GREP(static/info, '2   --', 28) ;  -0.032680
+match ; Fermi energy   ; GREPFIELD(static/info, 'Fermi energy =', 4) ; -2.712932
 
 Input: 05-polarizability.02-sternheimer.inp
 Precision: 0.0015

@@ -188,6 +188,7 @@ contains
     POP_SUB(smear_copy)
   end subroutine smear_copy
 
+
   !------------------------------------------------------------------
   subroutine smear_occupy_states_by_ordering(this, eigenvalues, Imeigenvalues, occupations, &
     qtot, nik, nst, kweights, penalizationfactor)
@@ -457,7 +458,7 @@ contains
       do ik = 1, nik
         do ist = 1, nst
           xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
-          entropy = entropy + kweights(ik) * this%el_per_state *  &
+          entropy = entropy - kweights(ik) * this%el_per_state *  &
             smear_entropy_function(this, xx)
         end do
       end do
@@ -659,6 +660,8 @@ contains
     POP_SUB(smear_entropy_function)
   end function smear_entropy_function
 
+
+  ! ---------------------------------------------------------
   logical function smear_is_semiconducting(this) result(answer)
     type(smear_t), intent(in) :: this
 
