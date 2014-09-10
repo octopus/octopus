@@ -229,9 +229,9 @@ contains
 
     ! Compute Fourier transform 
     if (fourier_trans) then
-      call convert_transform(sys%gr%mesh, basename, folder, &
-         c_start, c_end, c_step, subtract_file, &
-         ref_name, ref_folder, sys%st%d%nspin)
+      call convert_transform(sys%gr%mesh, sys%geo, basename, folder, &
+         c_start, c_end, c_step, sys%outp%how, subtract_file, &
+         ref_name, ref_folder)
     else
       call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
          c_start, c_end, c_step, sys%outp%how, sys%outp%what, iterate_folder, &
@@ -359,26 +359,26 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, basename, in_folder, c_start, c_end, c_step, & 
-       subtract_file, ref_name, ref_folder, nspin)
+  subroutine convert_transform(mesh, geo, basename, in_folder, c_start, c_end, c_step, how, & 
+       subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
+    type(geometry_t), intent(in)    :: geo
     character(len=*), intent(inout) :: basename       !< File name
     character(len=*), intent(in)    :: in_folder      !< Folder name
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
+    integer,          intent(in)    :: how            !< Decides the kind of the output
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
-    integer,          intent(in)    :: nspin
 
     integer             :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
     integer             :: i_energy, e_end, e_start, e_step, e_point, no_e
     logical             :: optimize(1:3)
     character(64)       :: filename, ref_filename, folder
     FLOAT               :: fdefault, w_max
-    FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point_over_time(:,:,:), read_point(:), write_point(:,:)
-    FLOAT, allocatable  :: real_out_fft(:,:,:)
+    FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point(:), write_point(:,:)
     CMPLX, allocatable  :: out_fft(:)
     type(fft_t)         :: fft
 
@@ -406,8 +406,6 @@ contains
     nn(2) = 1
     nn(3) = 1
     start_time = M_ZERO
-    SAFE_ALLOCATE(read_point_over_time(0:c_end, 1, 1:nspin))
-    SAFE_ALLOCATE(real_out_fft(0:e_point+1, 1, 1:nspin))
     SAFE_ALLOCATE(read_ft(1:e_point+1))
     SAFE_ALLOCATE(out_fft(1:e_point+1))
     SAFE_ALLOCATE(read_point(1:1))
@@ -474,24 +472,24 @@ contains
     ! Space
     do i_space = 1, mesh%np
       ! Time
+      e_point = 0
       do i_time = c_start, c_end, c_step
+         e_point = e_point + 1
         ! Here, we always iterate folders
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
-        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
-
+        write(filename, '(a,a,a,a)') trim(outputdir), trim(folder), trim(basename), ".obf"
         if (mpi_world%size > 1) then
           ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
         else
           ii = i_space
         end if
         ! Read the obf files, only one point per file
-        call io_binary_read(trim(filename), 1, read_point, ierr, offset = ii)
-
+        call io_binary_read(trim(filename), 1, read_point(1:1), ierr, offset = ii-1)
         if (subtract_file) then
-          read_point_over_time(i_time, 1, 1) = read_point(1) - read_rff(ii)
+          read_ft(e_point) =  read_point(1) - read_rff(ii)
         else
-          read_point_over_time(i_time, 1, 1) = read_point(1)
+          read_ft(e_point) = read_point(1)
         end if
         if (ierr /= 0) then
           write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), ii, i_time
@@ -501,11 +499,6 @@ contains
         end if
       end do ! Time
 
-      e_point = 0
-      do i_time = c_start, c_end, c_step
-        e_point = e_point + 1
-        read_ft(e_point) = read_point_over_time(i_time, 1, 1)
-      end do
       call fftw_execute_dft(fft%planf, read_ft(1), out_fft(1))
 
       ! save densities
@@ -532,16 +525,11 @@ contains
            '[' // trim(units_abbrev(units_out%energy)) // ']'
       call messages_info(1)
       call io_mkdir(trim(filename))
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, mesh%mpi_grp, &
-           ierr, dir=trim(filename), mesh = mesh)
-      filename = 'density'      
-      call drestart_write_mesh_function(restart, filename, mesh, write_point(1:mesh%np,i_energy), ierr)
-      call restart_end(restart)
+      call dio_function_output(how, trim(filename), & 
+           trim('density'), mesh, write_point(:, i_energy), units_out%length**(-mesh%sb%dim), ierr, geo = geo)
     end do
     
     SAFE_DEALLOCATE_A(write_point)
-    SAFE_DEALLOCATE_A(read_point_over_time)
-    SAFE_DEALLOCATE_A(real_out_fft)
     SAFE_DEALLOCATE_A(read_ft)
     SAFE_DEALLOCATE_A(out_fft)
     SAFE_DEALLOCATE_A(read_point)
