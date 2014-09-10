@@ -72,7 +72,7 @@ contains
     FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional, intent(in) :: st_start
 
-    integer :: ik, ist, ns, is, idir, st_start_
+    integer :: ik, ikk, ist, ns, is, idir, st_start_
     FLOAT :: kpoint(1:MAX_DIM)
     character(len=80) :: tmp_str(max(MAX_DIM, 3)), cspin
 
@@ -111,8 +111,9 @@ contains
 
     do ik = 1, st%d%nik, ns
       if(simul_box_is_periodic(sb)) then
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .false.)
-        write(message(1), '(a,i4,a)') '#k =', ik, ', k = ('
+        ikk = states_dim_get_kpoint_index(st%d, ik)
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
+        write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
         do idir = 1, sb%dim
           write(tmp_str(1), '(f10.6)') kpoint(idir)
           message(1) = trim(message(1))//trim(tmp_str(1))
