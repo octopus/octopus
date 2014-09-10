@@ -24,7 +24,6 @@ noinst_LIBRARIES = libspecies.a
 libspecies_a_SOURCES =     \
 	atomic.F90         \
 	logrid.F90         \
-	periodic_table.F90 \
 	ps.F90             \
 	ps_cpi.F90         \
 	ps_cpi_file.F90    \
@@ -45,7 +44,7 @@ depend:
 	@makedepf90 $(libspecies_a_SOURCES)
 
 logrid.o : logrid.F90 
-atomic.o : atomic.F90 logrid.o periodic_table.o
+atomic.o : atomic.F90 logrid.o
 ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
@@ -57,4 +56,3 @@ ps_upf.o : ps_upf.F90 atomic.o ps_in_grid.o
 ps_hgh.o : ps_hgh.F90 logrid.o atomic.o 
 ps.o : ps.F90 ps_pspio_inc.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
 species.o : species.F90 ps.o 
-periodic_table.o : periodic_table.F90
