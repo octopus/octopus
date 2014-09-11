@@ -312,11 +312,12 @@ contains
     type(density_calc_t), intent(inout) :: this
 
     type(symmetrizer_t) :: symmetrizer
-    FLOAT,  allocatable :: tmpdensity(:), fdensity(:)
+    FLOAT, allocatable :: tmpdensity(:)
     integer :: ispin
     type(profile_t), save :: reduce_prof
 #ifdef HAVE_OPENCL
     integer :: ip
+    FLOAT, allocatable :: fdensity(:)
 #endif
 
     PUSH_SUB(density_calc_end)

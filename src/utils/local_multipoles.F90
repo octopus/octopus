@@ -581,7 +581,7 @@ contains
     FLOAT,                  intent(in)    :: ff(:)
     logical,                intent(in)    :: update
     
-    integer             :: how, id, ip, ix, iunit, ierr
+    integer             :: how, id, ip, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
@@ -722,7 +722,7 @@ contains
     FLOAT,              intent(inout)   :: ff(:,:)
     type(geometry_t),   intent(inout)   :: geo
 
-    integer :: ia, is, rankmin
+    integer :: ia, is
     FLOAT, allocatable :: ffs(:)
 
     PUSH_SUB(add_dens_to_ion_x)

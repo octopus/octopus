@@ -388,7 +388,6 @@ contains
     FLOAT   :: dw                  !< step in energy mesh
     FLOAT   :: max_energy          !< maximum of energy mesh
     FLOAT   :: min_energy          !< minimum of energy mesh
-    type(restart_t)    :: restart
 
     PUSH_SUB(convert_transform)
 

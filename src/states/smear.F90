@@ -191,12 +191,12 @@ contains
 
   !------------------------------------------------------------------
   subroutine smear_occupy_states_by_ordering(this, eigenvalues, Imeigenvalues, occupations, &
-    qtot, nik, nst, kweights, penalizationfactor)
+    qtot, nik, nst, penalizationfactor)
     type(smear_t),   intent(inout) :: this
     FLOAT,           intent(in)    :: eigenvalues(:,:)
     FLOAT,           intent(in)    :: Imeigenvalues(:,:)
     FLOAT,           intent(inout) :: occupations(:,:)
-    FLOAT,           intent(in)    :: qtot, kweights(:)
+    FLOAT,           intent(in)    :: qtot
     integer,         intent(in)    :: nik, nst
     FLOAT,           intent(in)    :: penalizationfactor
     
