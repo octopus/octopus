@@ -13,107 +13,107 @@ match ; Reduced k-points ; GREP(static/info, 'Number of symmetry-reduced k-point
 match ; Space group        ; GREP(out, 'Space group', 16)                      ;  1
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  1
 
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.07122302
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.21402984
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.57875943
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.10324066
-match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   2.32096655
-match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -8.14407061
-match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.50033151
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.50920753
-match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.67823564
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.41198384
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   2.12949053
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -8.06785218
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.49544943
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.69060953
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.96931873
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.25
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.25
 match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ; 0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.266255
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ; -0.005894
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.146785
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   1', 12, 17) ;  0.188691
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.281326
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ; -0.019996
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.142040
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   1', 12, 17) ;  0.185983
 
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ; 0.25
 match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; 0.25
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ; -0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.267549
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ;  0.003273
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.145440
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   2', 12, 17) ;  0.174741
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.283185
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ;  -0.004876
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.139867
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   2', 12, 17) ;  0.170245
 
 match ; k-point 3 (x) ; GREPFIELD(static/info, '#k =   3', 7) ; 0.25
 match ; k-point 3 (y) ; GREPFIELD(static/info, '#k =   3', 8) ; -0.25
 match ; k-point 3 (z) ; GREPFIELD(static/info, '#k =   3', 9) ; 0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   3', 12,  1) ; -0.268014
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   3', 12,  8) ;  0.007729
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   3', 12, 16) ;  0.131328
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   3', 12, 17) ;  0.178340
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   3', 12,  1) ; -0.283617
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   3', 12,  8) ;  -0.000883
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   3', 12, 16) ;  0.122583
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   3', 12, 17) ;  0.175305
 
 match ; k-point 4 (x) ; GREPFIELD(static/info, '#k =   4', 7) ; -0.25
 match ; k-point 4 (y) ; GREPFIELD(static/info, '#k =   4', 8) ; 0.25
 match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   4', 12,  1) ; -0.266322
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   4', 12,  8) ; -0.004282
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 16) ;  0.147773
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.186572
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   4', 12,  1) ; -0.281394
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   4', 12,  8) ; -0.017108
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 16) ;  0.143270
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.183426
 
 match ; k-point 5 (x) ; GREPFIELD(static/info, '#k =   5', 7) ; 0.25
 match ; k-point 5 (y) ; GREPFIELD(static/info, '#k =   5', 8) ; -0.25
 match ; k-point 5 (z) ; GREPFIELD(static/info, '#k =   5', 9) ; -0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   5', 12,  1) ; -0.266322
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   5', 12,  8) ; -0.004282
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   5', 12, 16) ;  0.147773
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   5', 12, 17) ;  0.186572
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   5', 12,  1) ; -0.281394
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   5', 12,  8) ; -0.017108
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   5', 12, 16) ;  0.143270
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   5', 12, 17) ;  0.183426
 
 match ; k-point 6 (x) ; GREPFIELD(static/info, '#k =   6', 7) ; -0.25
 match ; k-point 6 (y) ; GREPFIELD(static/info, '#k =   6', 8) ; 0.25
 match ; k-point 6 (z) ; GREPFIELD(static/info, '#k =   6', 9) ; -0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   6', 12,  1) ; -0.268014
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   6', 12,  8) ;  0.007729
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   6', 12, 16) ;  0.131328
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   6', 12, 17) ;  0.178340
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   6', 12,  1) ; -0.283617
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   6', 12,  8) ;  -0.000883
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   6', 12, 16) ;  0.122583
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   6', 12, 17) ;  0.175305
 
 match ; k-point 7 (x) ; GREPFIELD(static/info, '#k =   7', 7) ; -0.25
 match ; k-point 7 (y) ; GREPFIELD(static/info, '#k =   7', 8) ; -0.25
 match ; k-point 7 (z) ; GREPFIELD(static/info, '#k =   7', 9) ; 0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   7', 12,  1) ; -0.267549
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   7', 12,  8) ;  0.003273
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   7', 12, 16) ;  0.145440
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   7', 12, 17) ;  0.174741
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   7', 12,  1) ; -0.283185
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   7', 12,  8) ;  -0.004876
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   7', 12, 16) ;  0.139867
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   7', 12, 17) ;  0.170245
 
 match ; k-point 8 (x) ; GREPFIELD(static/info, '#k =   8', 7) ; -0.25
 match ; k-point 8 (y) ; GREPFIELD(static/info, '#k =   8', 8) ; -0.25
 match ; k-point 8 (z) ; GREPFIELD(static/info, '#k =   8', 9) ; -0.25
-match ; Eigenvalue  1 ; GREP(static/info, '#k =   8', 12,  1) ; -0.266255
-match ; Eigenvalue  8 ; GREP(static/info, '#k =   8', 12,  8) ; -0.005894
-match ; Eigenvalue 16 ; GREP(static/info, '#k =   8', 12, 16) ;  0.146785
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   8', 12, 17) ;  0.188691
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   8', 12,  1) ; -0.281326
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   8', 12,  8) ; -0.019996
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   8', 12, 16) ;  0.142040
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   8', 12, 17) ;  0.185983
 
-match ; Force 1 (x)   ; GREP(static/info, '1        Si', 20)  ; -0.111553
-match ; Force 1 (y)   ; GREP(static/info, '1        Si', 35)  ; -0.019337
-match ; Force 1 (z)   ; GREP(static/info, '1        Si', 50)  ; -0.018634
+match ; Force 1 (x)   ; GREP(static/info, '1        Si', 20)  ; -0.048884
+match ; Force 1 (y)   ; GREP(static/info, '1        Si', 35)  ; -0.008447
+match ; Force 1 (z)   ; GREP(static/info, '1        Si', 50)  ; -0.012165
 
-match ; Force 2 (x)   ; GREP(static/info, '2        Si', 20)  ;  0.008895
-match ; Force 2 (y)   ; GREP(static/info, '2        Si', 35)  ; -0.002540
-match ; Force 2 (z)   ; GREP(static/info, '2        Si', 50)  ; -0.005519
+match ; Force 2 (x)   ; GREP(static/info, '2        Si', 20)  ;  -0.017923
+match ; Force 2 (y)   ; GREP(static/info, '2        Si', 35)  ; 0.006425
+match ; Force 2 (z)   ; GREP(static/info, '2        Si', 50)  ; -0.000431
 
-match ; Force 3 (x)   ; GREP(static/info, '3        Si', 20)  ;  0.008617
-match ; Force 3 (y)   ; GREP(static/info, '3        Si', 35)  ;  0.004099
-match ; Force 3 (z)   ; GREP(static/info, '3        Si', 50)  ;  0.003070
+match ; Force 3 (x)   ; GREP(static/info, '3        Si', 20)  ;  -0.019399
+match ; Force 3 (y)   ; GREP(static/info, '3        Si', 35)  ;  -0.005613
+match ; Force 3 (z)   ; GREP(static/info, '3        Si', 50)  ;  -0.007261
 
-match ; Force 4 (x)   ; GREP(static/info, '4        Si', 20)  ; -0.016613 
-match ; Force 4 (y)   ; GREP(static/info, '4        Si', 35)  ; -0.002359
-match ; Force 4 (z)   ; GREP(static/info, '4        Si', 50)  ;  0.003074
+match ; Force 4 (x)   ; GREP(static/info, '4        Si', 20)  ; -0.012134
+match ; Force 4 (y)   ; GREP(static/info, '4        Si', 35)  ; 0.005794
+match ; Force 4 (z)   ; GREP(static/info, '4        Si', 50)  ;  -0.003533
 
-match ; Force 5 (x)   ; GREP(static/info, '5        Si', 20)  ;  0.041366
-match ; Force 5 (y)   ; GREP(static/info, '5        Si', 35)  ;  0.056746
-match ; Force 5 (z)   ; GREP(static/info, '5        Si', 50)  ;  0.046636
+match ; Force 5 (x)   ; GREP(static/info, '5        Si', 20)  ;  0.013836
+match ; Force 5 (y)   ; GREP(static/info, '5        Si', 35)  ;  0.011170
+match ; Force 5 (z)   ; GREP(static/info, '5        Si', 50)  ;  0.010385
 
-match ; Force 6 (x)   ; GREP(static/info, '6        Si', 20)  ;  0.019336
-match ; Force 6 (y)   ; GREP(static/info, '6        Si', 35)  ;  0.005730
-match ; Force 6 (z)   ; GREP(static/info, '6        Si', 50)  ; -0.004348
+match ; Force 6 (x)   ; GREP(static/info, '6        Si', 20)  ;  0.026354
+match ; Force 6 (y)   ; GREP(static/info, '6        Si', 35)  ;  -0.002651
+match ; Force 6 (z)   ; GREP(static/info, '6        Si', 50)  ; 0.006775
 
-match ; Force 7 (x)   ; GREP(static/info, '7        Si', 20)  ;  0.018722  
-match ; Force 7 (y)   ; GREP(static/info, '7        Si', 35)  ; -0.010350 
-match ; Force 7 (z)   ; GREP(static/info, '7        Si', 50)  ;  0.011465
+match ; Force 7 (x)   ; GREP(static/info, '7        Si', 20)  ;  0.020591
+match ; Force 7 (y)   ; GREP(static/info, '7        Si', 35)  ; 0.005601
+match ; Force 7 (z)   ; GREP(static/info, '7        Si', 50)  ;  -0.003597
 
-match ; Force 8 (x)   ; GREP(static/info, '8        Si', 20)  ;  0.031092
-match ; Force 8 (y)   ; GREP(static/info, '8        Si', 35)  ; -0.031929 
-match ; Force 8 (z)   ; GREP(static/info, '8        Si', 50)  ; -0.035871 
+match ; Force 8 (x)   ; GREP(static/info, '8        Si', 20)  ;  0.010799
+match ; Force 8 (y)   ; GREP(static/info, '8        Si', 35)  ; -0.003412
+match ; Force 8 (z)   ; GREP(static/info, '8        Si', 50)  ; -0.003310
