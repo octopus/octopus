@@ -1476,12 +1476,18 @@ contains
     integer :: ii
     logical :: cmplxscl
 
+    integer :: n_columns         
+    integer :: n_columns_cmplxscl
+
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     PUSH_SUB(td_write_energy)
 
     cmplxscl = .false.
     cmplxscl = hm%cmplxscl%space
+
+    n_columns = 9          
+    n_columns_cmplxscl = 7
 
     if(iter == 0) then
       call td_write_print_header_init(out_energy)
@@ -1504,6 +1510,12 @@ contains
       if(cmplxscl) call write_iter_header(out_energy, ' ')      
       call write_iter_header(out_energy, 'Correlation')
       if(cmplxscl) call write_iter_header(out_energy, ' ')      
+
+      if (hm%pcm%run_pcm) then 
+          call write_iter_header(out_energy, 'E_M-solvent')
+          n_columns = n_columns + 1    
+      endif   
+
       call write_iter_nl(out_energy)
 
       if(cmplxscl) then
@@ -1529,13 +1541,16 @@ contains
       end if
 
       ! units
+
       call write_iter_string(out_energy, '#[Iter n.]')
       call write_iter_header(out_energy, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do ii = 1, 9
+
+      do ii = 1, n_columns
         call write_iter_header(out_energy, '[' // trim(units_abbrev(units_out%energy)) // ']')
       end do
       if(cmplxscl) then
-        do ii = 1, 7
+
+        do ii = 1, n_columns_cmplxscl 
           call write_iter_header(out_energy, '[' // trim(units_abbrev(units_out%energy)) // ']')
         end do        
       end if
@@ -1562,6 +1577,11 @@ contains
     if(cmplxscl) call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%Imexchange), 1)
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%correlation), 1)
     if(cmplxscl) call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%Imcorrelation), 1)
+    
+    !adding the molecule-solvent electrostatic interaction
+    if (hm%pcm%run_pcm) call write_iter_double(out_energy, &
+                             units_from_atomic(units_out%energy, hm%energy%int_e_pcm + hm%energy%int_n_pcm), 1)
+
     call write_iter_nl(out_energy)
 
     POP_SUB(td_write_energy)
