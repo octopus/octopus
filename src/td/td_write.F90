@@ -615,7 +615,7 @@ contains
     end if
 
     ! now write down the rest
-    write(filename, '(a,a,i7.7)') trim(outputdir),"td.", iter  ! name of directory
+    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
     ! this is required if st%X(psi) is used
     call states_sync(st)

@@ -835,7 +835,7 @@ contains
       end if
 
       if(outp%output_interval /= 0 .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then  
-        write(dirname,'(a,a,i4.4)') trim(outputdir),"scf.",iter
+        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
       end if
 

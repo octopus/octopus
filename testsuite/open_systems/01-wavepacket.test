@@ -17,9 +17,9 @@ match ; Density [step 100] ; LINE(flat_td.general/multipoles, 117, 30) ; 1.98658
 match ; Density [step 200] ; LINE(flat_td.general/multipoles, 217, 30) ; 1.226785158230e+00
 match ; Density [step 300] ; LINE(flat_td.general/multipoles, 317, 30) ; 4.850766932375e-01
 Precision : 1.0e-11
-match ; Current [step 100] ; LINE(flat_output/td.0000100/current-flow, 3, 22) ; -0.146885635235E-05
-match ; Current [step 200] ; LINE(flat_output/td.0000200/current-flow, 3, 22) ; -0.832684659805E-06
-match ; Current [step 300] ; LINE(flat_output/td.0000300/current-flow, 3, 22) ; 0.498330914025E-06
+match ; Current [step 100] ; LINE(flat_output_iter/td.0000100/current-flow, 3, 22) ; -0.146885635235E-05
+match ; Current [step 200] ; LINE(flat_output_iter/td.0000200/current-flow, 3, 22) ; -0.832684659805E-06
+match ; Current [step 300] ; LINE(flat_output_iter/td.0000300/current-flow, 3, 22) ; 0.498330914025E-06
 
 Input: 01-wavepacket.02-deriv_order_4.inp
 Precision : 1.0e-6
@@ -28,7 +28,7 @@ match ; Density [step 100] ; LINE(flat_td.general/multipoles, 117, 30) ; 1.98616
 match ; Density [step 200] ; LINE(flat_td.general/multipoles, 217, 30) ; 1.223080179950e+00
 match ; Density [step 300] ; LINE(flat_td.general/multipoles, 317, 30) ; 4.839848256222e-01
 Precision : 1.0e-11
-match ; Current [step 100] ; LINE(flat_output/td.0000100/current-flow, 3, 22) ; -0.253639904656E-05
-match ; Current [step 200] ; LINE(flat_output/td.0000200/current-flow, 3, 22) ; 0.769258904085E-06
-match ; Current [step 300] ; LINE(flat_output/td.0000300/current-flow, 3, 22) ; 0.790657950270E-06
+match ; Current [step 100] ; LINE(flat_output_iter/td.0000100/current-flow, 3, 22) ; -0.253639904656E-05
+match ; Current [step 200] ; LINE(flat_output_iter/td.0000200/current-flow, 3, 22) ; 0.769258904085E-06
+match ; Current [step 300] ; LINE(flat_output_iter/td.0000300/current-flow, 3, 22) ; 0.790657950270E-06
 

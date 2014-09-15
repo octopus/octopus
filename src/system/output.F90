@@ -125,6 +125,7 @@ module output_m
     integer :: restart_write_interval
 
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
+    character(len=32) :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
@@ -188,8 +189,9 @@ contains
     !%Section Output
     !%Description
     !% Specifies what to print. The output files go into the <tt>static</tt> directory, except when
-    !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used. For
-    !% linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% running a time-dependent simulation, when the directory <tt>OutputIterDir</tt>/<tt>td.XXXXXXX</tt> is used, 
+    !% or ground-state simulations, when the directory <tt>OutputIterDir</tt>/<tt>scf.XXXX</tt> is used.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
     !% the options below; the files will be printed in the directory
     !% for the run mode. Indices in the filename are labelled as follows:
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
@@ -484,8 +486,8 @@ contains
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
-    !%Variable OutputDir
-    !%Default "output"
+    !%Variable OutputIterDir
+    !%Default "output_iter"
     !%Type string
     !%Section Output
     !%Description
@@ -495,10 +497,10 @@ contains
     !% This information is written while iterating GS or TD, according to 
     !% <tt>OutputInterval</tt> and has nothing to do with the restart information.
     !%End
-    call parse_string('OutputDir', "output", outputdir)
-    call add_last_slash(outputdir)
-    if (outp%what /= 0 .and. outputdir /= "") then
-      call io_mkdir(outputdir, is_tmp=.false.)
+    call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
+    call add_last_slash(outp%iter_dir)
+    if (outp%what /= 0 .and. outp%iter_dir /= "") then
+      call io_mkdir(outp%iter_dir, is_tmp=.false.)
     end if
 
     !%Variable OutputInterval

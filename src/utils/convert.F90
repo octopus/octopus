@@ -159,7 +159,7 @@ contains
     !%Default 0
     !%Section Utilities::oct-convert
     !%Description
-    !% The starting number of the filename.
+    !% The starting number of the filename or folder.
     !%End
     call parse_integer(datasets_check('ConvertStart'), c_start_default, c_start)
 
@@ -168,7 +168,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-convert
     !%Description
-    !% The last number of the filename.
+    !% The last number of the filename or folder.
     !%End
     call parse_integer(datasets_check('ConvertEnd'), 1, c_end)
 
@@ -177,7 +177,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-convert
     !%Description
-    !% The padding between the filenames.
+    !% The padding between the filenames or folder.
     !%End
     call parse_integer(datasets_check('ConvertStep'), 1, c_step)
 
@@ -230,11 +230,11 @@ contains
     ! Compute Fourier transform 
     if (fourier_trans) then
       call convert_transform(sys%gr%mesh, sys%geo, basename, folder, &
-         c_start, c_end, c_step, sys%outp%how, subtract_file, &
+         c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
     else
       call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
-         c_start, c_end, c_step, sys%outp%how, sys%outp%what, iterate_folder, &
+         c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end if
 
@@ -246,7 +246,7 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, geo, basename, in_folder, c_start, c_end, c_step, how, what, iterate_folder, & 
+  subroutine convert_low(mesh, geo, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
                                  subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
@@ -255,8 +255,7 @@ contains
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
-    integer,          intent(in)    :: how            !< Decides the kind of the output
-    integer,          intent(in)    :: what           !< Decides what is going to be written
+    type(output_t),   intent(in)    :: outp           !< Output objetct; Decides the kind, what and where to output
     logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
                                                       !! If false, it iterates over the filenames
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
@@ -338,17 +337,18 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      call dio_function_output(how, &
+      call dio_function_output(outp%how, &
         trim(folder), trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
-      if (iand(what, C_OUTPUT_POTENTIAL) /= 0) then
+      if (iand(outp%what, C_OUTPUT_POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
-        call dio_function_output(how, &
+        call dio_function_output(outp%how, &
              trim(folder), trim(out_name), mesh, pot, units_out%energy, ierr, geo = geo)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
     end do
+    call restart_end(restart)
     
     SAFE_DEALLOCATE_A(read_ff)
     SAFE_DEALLOCATE_A(read_rff)
@@ -359,7 +359,7 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, geo, basename, in_folder, c_start, c_end, c_step, how, & 
+  subroutine convert_transform(mesh, geo, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
@@ -368,7 +368,7 @@ contains
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
-    integer,          intent(in)    :: how            !< Decides the kind of the output
+    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
@@ -477,7 +477,7 @@ contains
         ! Here, we always iterate folders
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
-        write(filename, '(a,a,a,a)') trim(outputdir), trim(folder), trim(basename), ".obf"
+        write(filename, '(a,a,a,a)') trim(outp%iter_dir), trim(folder), trim(basename), ".obf"
         if (mpi_world%size > 1) then
           ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
         else
@@ -524,7 +524,7 @@ contains
            '[' // trim(units_abbrev(units_out%energy)) // ']'
       call messages_info(1)
       call io_mkdir(trim(filename))
-      call dio_function_output(how, trim(filename), & 
+      call dio_function_output(outp%how, trim(filename), & 
            trim('density'), mesh, write_point(:, i_energy), units_out%length**(-mesh%sb%dim), ierr, geo = geo)
     end do
     
