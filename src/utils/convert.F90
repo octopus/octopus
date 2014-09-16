@@ -126,7 +126,6 @@ contains
       end if
     end if
 
-
     !%Variable ConvertIterateFolder
     !%Type logical
     !%Default true
@@ -263,8 +262,8 @@ contains
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
     type(restart_t)    :: restart
-    integer            :: ierr, ii
-    character(64)      :: filename, out_name, folder, frmt
+    integer            :: ierr, ii, folder_index
+    character(64)      :: filename, out_name, folder, frmt, restart_folder
     FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
 
     PUSH_SUB(convert_low)
@@ -281,7 +280,7 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      ierr, dir=trim(ref_folder))
+                      ierr, dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
@@ -293,15 +292,28 @@ contains
       endif
     end if
 
+    ! Initialize the restart directory from <tt>ConvertFolder</tt> value.
+    ! This directory has to have the files 'grid' and 'lxyz.obf'
+    ! and the files that are going to be converged, must be inside this folder
+    if (iterate_folder) then
+      ! Delete the last / and find the previous /, if any
+      folder = in_folder(1:len_trim(in_folder)-1)
+      folder_index = index(folder, '/', .true.)
+      restart_folder = folder(1:folder_index)
+    else 
+      restart_folder = in_folder
+    end if
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
+         ierr, dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
         ! Delete the last / and add the corresponding folder number
-        write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),ii,"/"
-        write(filename, '(a,a,a)') trim(folder), trim(basename), ".obf"
+        write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),ii,"/"
+        write(filename, '(a,a,a)') trim(folder), trim(basename)
         out_name = trim(basename)
       else
-        folder = in_folder
+        folder = ""
         if ( c_start /= c_end ) then
           ! Here, we are only considering 10 character long filenames.
           ! Subtract the initial part given at 'ConvertFilename' from the format and pad
@@ -309,20 +321,17 @@ contains
           write(frmt,'(a,i0,a)')"(a,i0.",10-len_trim(basename),")"
           write(filename, fmt=trim(frmt)) trim(basename), ii
           write(out_name, '(a)') trim(filename)
-          write(filename, '(a,a,a,a)') trim(folder),"/", trim(out_name),".obf"
         else 
           ! Assuming filename is given complete in the 'ConvertFilename'
-          write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename),".obf"
+          write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename)
+          filename = basename
           write(out_name, '(a)') trim(basename)
         end if
       end if
 
       ! Read the obf file
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      ierr, dir=trim(folder))
       if(ierr == 0) then
-        call drestart_read_mesh_function(restart, trim(out_name), mesh, read_ff, ierr)
-        call restart_end(restart)
+        call drestart_read_mesh_function(restart, trim(filename), mesh, read_ff, ierr)
       endif
 
       if (ierr /= 0) then
@@ -337,16 +346,18 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      call dio_function_output(outp%how, &
-        trim(folder), trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+      call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
+           trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
       if (iand(outp%what, C_OUTPUT_POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
-        call dio_function_output(outp%how, &
-             trim(folder), trim(out_name), mesh, pot, units_out%energy, ierr, geo = geo)
+        call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
+             trim(out_name), mesh, pot, units_out%energy, ierr, geo = geo)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
+      ! It does not matter if the current write has failed for the next iteration
+      ierr = 0
     end do
     call restart_end(restart)
     

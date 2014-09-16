@@ -65,7 +65,8 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)
-  
+  ASSERT(restart%has_mesh)
+
   nullify(read_ff)
 
   if (associated(restart%map) .and. mesh%parallel_in_domains) then 
