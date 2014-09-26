@@ -708,13 +708,15 @@ contains
 
     SAFE_ALLOCATE(lorb(1:mesh%np))
 
+    if(species_is_ps(spec)) then
+      ps => species_ps(spec)
+      SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
+      SAFE_ALLOCATE(ylm(1:mesh%np))
+    endif
+
     do icell = 1, periodic_copy_num(pc)
 
       if(species_is_ps(spec)) then
-
-        ps => species_ps(spec)
-        SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
-        SAFE_ALLOCATE(ylm(1:mesh%np))
 
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
@@ -735,18 +737,13 @@ contains
           orb(ip) = orb(ip) + lorb(ip)*ylm(ip)
         end do
 
-        SAFE_DEALLOCATE_A(xf)
-        SAFE_DEALLOCATE_A(ylm)
-
-        nullify(ps)
-
       else
 
         ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
         nn = (/i, l, m/)
 
         do ip = 1, mesh%np
-          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim))*xfactor
+          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
           lorb = exp(-species_omega(spec)*r2/M_TWO)
           do idir = 1, mesh%sb%dim
@@ -759,6 +756,12 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(lorb)
+
+    if(species_is_ps(spec)) then
+      SAFE_DEALLOCATE_A(xf)
+      SAFE_DEALLOCATE_A(ylm)
+      nullify(ps)
+    endif
 
     call periodic_copy_end(pc)
 
