@@ -524,7 +524,7 @@ contains
   !!  side -> -1 left-sided, +1 right-sided, 0 centered (default)
   subroutine weights(N, M, cc, side)
     integer,           intent(in)  :: N, M
-    FLOAT,             intent(out) :: cc(:,:,:) !< (0:M, 0:M, 0:N)
+    FLOAT,             intent(out) :: cc(0:,0:,0:) !< (0:M, 0:M, 0:N)
     integer, optional, intent(in)  :: side
 
     integer :: i, j, k, mn, side_
@@ -543,15 +543,15 @@ contains
 
     select case(side_)
     case(-1)
-      ! grid-points for left-side finite-difference formulas on an equi.spaced grid
+      ! grid-points for left-side finite-difference formulas on an equi-spaced grid
       mn = M
       x(:) = (/(-i,i=0,mn)/)
     case(+1)
-      ! grid-points for right-side finite-difference formulas on an equi.spaced grid
+      ! grid-points for right-side finite-difference formulas on an equi-spaced grid
       mn = M
       x(:) = (/(i,i=0,mn)/)
     case default
-      ! grid-points for centered finite-difference formulas on an equi.spaced grid
+      ! grid-points for centered finite-difference formulas on an equi-spaced grid
       mn = M/2
       x(:) = (/0,(-i,i,i=1,mn)/)
     end select
