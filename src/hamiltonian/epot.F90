@@ -295,6 +295,10 @@ contains
     !% if you are running the code in 1D mode, this will not work, and if you
     !% are running the code in 2D mode the magnetic field will have to be in
     !% the <i>z</i>-direction, so that the first two columns should be zero.
+    !% Possible in periodic system only in these cases: 2D system, 1D periodic,
+    !% with <tt>StaticMagneticField2DGauge = linear_y</tt>;
+    !% 3D system, 1D periodic, field is zero in <i>x</i>-direction (given
+    !% currently implemented gauges).
     !%
     !% The magnetic field should always be entered in atomic units, regardless
     !% of the <tt>Units</tt> variable. Note that we use the "Gaussian" system
@@ -311,14 +315,13 @@ contains
       !%Description
       !% The gauge of the static vector potential A when a magnetic field B = (0,0,B_z) is applied onto a 2D-system.
       !%Option linear_xy 0
-      !% Linear gauge with A = ((1/2)/P_c)*(-y,x)*B_z. This is the default.
+      !% Linear gauge with A = ((1/2)/P_c)*(-y,x)*B_z. This is the default. (Cannot be used for periodic systems.)
       !%Option linear_y 1
-      !% Linear gauge with A = (1/P_c)*(-y,0)*B_z
+      !% Linear gauge with A = (1/P_c)*(-y,0)*B_z. Can be used for PeriodicDimensions = 1 but not PeriodicDimensions = 2.
       !%End
       call parse_integer(datasets_check('StaticMagneticField2DGauge'), 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
         call input_error('StaticMagneticField2DGauge')
-
 
       SAFE_ALLOCATE(ep%B_field(1:3))
       do idir = 1, 3
@@ -328,7 +331,22 @@ contains
       case(1)
         call input_error('StaticMagneticField')
       case(2)
+        if(gr%sb%periodic_dim == 2) then
+          message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
+          call messages_fatal(1)
+        endif
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
+      case(3)
+        ! Consider cross-product below: if grx(1:sb%periodic_dim) is used, it is not ok.
+        ! Therefore, if idir is periodic, B_field for all other directions must be zero.
+        ! 1D-periodic: only Bx. 2D-periodic or 3D-periodic: not allowed. Other gauges could allow 2D-periodic case.
+        if(gr%sb%periodic_dim >= 2) then
+          message(1) = "In 3D, StaticMagneticField cannot be applied when the system is 2D- or 3D-periodic."
+          call messages_fatal(1)
+        else if(gr%sb%periodic_dim == 1 .and. abs(ep%B_field(1)) > M_ZERO) then
+          message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the x-direction."
+          call messages_fatal(1)
+        endif
       end select
       call parse_block_end(blk)
 
@@ -342,6 +360,11 @@ contains
       case(2)
         select case(gauge_2d)
         case(0) ! linear_xy
+          if(gr%sb%periodic_dim == 1) then
+            message(1) = "For 2D system, 1D-periodic, StaticMagneticField can only be "
+            message(2) = "applied for StaticMagneticField2DGauge = linear_y."
+            call messages_fatal(2)
+          endif
           do ip = 1, gr%mesh%np
             grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
             ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
