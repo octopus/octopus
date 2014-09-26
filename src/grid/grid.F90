@@ -143,7 +143,9 @@ contains
     !% coordinates, this is a canonical spacing that will be changed locally by the
     !% transformation. In periodic directions, your spacing may be slightly larger than
     !% what you request here, since the box size must be an integer multiple of the spacing.
-    !% The default is defined by the species, or by the image resolution if <tt>BoxShape = box_image</tt>.
+    !% The default is defined by the species if set in the file <tt>OCTOPUS-HOME/share/PP/defaults</tt>,
+    !% or by the image resolution if <tt>BoxShape = box_image</tt>. Otherwise, there is
+    !% no default.
     !%
     !% It is possible to have a different spacing in each one of the Cartesian directions
     !% if we define <tt>Spacing</tt> as block of the form
@@ -189,8 +191,8 @@ contains
         else
           message(1) = 'Either:'
           message(2) = "   *) variable 'Spacing' is not defined and"
-          message(4) = "      I can't find a suitable default"
-          message(3) = "   *) your input for 'Spacing' is negative"
+          message(3) = "      I can't find a suitable default"
+          message(4) = "   *) your input for 'Spacing' is negative"
           call messages_fatal(4)
         end if
       end if

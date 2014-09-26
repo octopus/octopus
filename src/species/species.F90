@@ -263,6 +263,8 @@ contains
     !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials, you are
     !% not required to define them explicitly in the <tt>Species</tt> block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
+    !% The defaults, including for <tt>Spacing</tt> and <tt>Radius</tt>,
+    !% are found in <tt>OCTOPUS-HOME/share/PP/defaults</tt>.
     !% Additional pseudopotentials can be downloaded from the 
     !% <a href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
     !% octopus homepage</a>.
