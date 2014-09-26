@@ -297,7 +297,7 @@ contains
     !% the <i>z</i>-direction, so that the first two columns should be zero.
     !% Possible in periodic system only in these cases: 2D system, 1D periodic,
     !% with <tt>StaticMagneticField2DGauge = linear_y</tt>;
-    !% 3D system, 1D periodic, field is zero in <i>x</i>-direction (given
+    !% 3D system, 1D periodic, field is zero in <i>y- and <i>z</i>-directions (given
     !% currently implemented gauges).
     !%
     !% The magnetic field should always be entered in atomic units, regardless
@@ -343,8 +343,8 @@ contains
         if(gr%sb%periodic_dim >= 2) then
           message(1) = "In 3D, StaticMagneticField cannot be applied when the system is 2D- or 3D-periodic."
           call messages_fatal(1)
-        else if(gr%sb%periodic_dim == 1 .and. abs(ep%B_field(1)) > M_ZERO) then
-          message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the x-direction."
+        else if(gr%sb%periodic_dim == 1 .and. any(abs(ep%B_field(2:3)) > M_ZERO)) then
+          message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the y- and z-directions."
           call messages_fatal(1)
         endif
       end select
