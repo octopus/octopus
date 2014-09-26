@@ -38,6 +38,7 @@ module berry_m
   public ::                 &
     berry_dipole,           &
     berry_phase_det,        &
+    berry_phase_matrix,     &
     berry_potential,        &
     berry_energy_correction
 
@@ -93,7 +94,7 @@ contains
     integer,        intent(in) :: dir
     integer,        intent(in) :: ik
 
-    integer :: ist, ist2, idim, ip, noccst
+    integer :: ist, ist2, idim, ip, noccst, gvector(3)
     CMPLX, allocatable :: matrix(:, :), tmp(:), phase(:)
     CMPLX, allocatable :: psi(:, :), psi2(:, :)
 
@@ -106,31 +107,10 @@ contains
     enddo
 
     SAFE_ALLOCATE(matrix(1:noccst, 1:noccst))
-    SAFE_ALLOCATE(tmp(1:mesh%np))
-    SAFE_ALLOCATE(phase(1:mesh%np))
-    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
 
-    forall(ip = 1:mesh%np)
-      phase(ip) = exp(-M_zI*(M_PI/mesh%sb%lsize(dir))*mesh%x(ip, dir))
-      ! factor of two removed from exp since actual lattice vector is 2*lsize
-    end forall
-
-    do ist = 1, noccst
-      call states_get_state(st, mesh, ist, ik, psi)
-      do ist2 = 1, noccst
-        call states_get_state(st, mesh, ist2, ik, psi2)
-        matrix(ist, ist2) = M_Z0
-        do idim = 1, st%d%dim ! spinor components
-            
-          forall(ip = 1:mesh%np)
-            tmp(ip) = conjg(psi(ip, idim))*phase(ip)*psi2(ip, idim)
-          end forall
-          
-          matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
-        end do
-      enddo !ist2
-    enddo !ist
+    gvector(:) = 0
+    gvector(dir) = 1
+    call berry_phase_matrix(st, mesh, noccst, ik, ik, gvector, matrix)
       
     if(noccst > 0) then
       det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
@@ -146,6 +126,66 @@ contains
 
     POP_SUB(berry_phase_det)
   end function berry_phase_det
+
+
+  ! ---------------------------------------------------------
+  subroutine berry_phase_matrix(st, mesh, nst, ik, ik2, gvector, matrix)
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: mesh
+    integer,        intent(in)  :: nst
+    integer,        intent(in)  :: ik
+    integer,        intent(in)  :: ik2
+    integer,        intent(in)  :: gvector(:) !< (3)
+    CMPLX,          intent(out) :: matrix(:,:) !< (nst, nst)
+
+    integer :: ist, ist2, idim, ip, idir
+    CMPLX, allocatable :: tmp(:), phase(:)
+    CMPLX, allocatable :: psi(:, :), psi2(:, :)
+    ! FIXME: real/cplx versions
+
+    PUSH_SUB(berry_phase_det)
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("Berry phase parallel in states")
+    endif
+
+    SAFE_ALLOCATE(tmp(1:mesh%np))
+    SAFE_ALLOCATE(phase(1:mesh%np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
+
+    phase = M_ZERO
+    do idir = 1, mesh%sb%dim
+      if(gvector(idir) == 0) cycle
+      forall(ip = 1:mesh%np)
+        phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_PI/mesh%sb%lsize(idir))*mesh%x(ip, idir))
+        ! factor of two removed from exp since actual lattice vector is 2*lsize
+      end forall
+    enddo
+
+    do ist = 1, nst
+      call states_get_state(st, mesh, ist, ik, psi)
+      do ist2 = 1, nst
+        call states_get_state(st, mesh, ist2, ik2, psi2)
+        matrix(ist, ist2) = M_Z0
+        do idim = 1, st%d%dim ! spinor components
+            
+          forall(ip = 1:mesh%np)
+            tmp(ip) = conjg(psi(ip, idim))*phase(ip)*psi2(ip, idim)
+          end forall
+          
+          matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
+        end do
+      enddo !ist2
+    enddo !ist
+      
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi2)
+
+    POP_SUB(berry_phase_matrix)
+  end subroutine berry_phase_matrix
 
  
   ! ---------------------------------------------------------
