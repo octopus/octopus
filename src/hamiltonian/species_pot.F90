@@ -780,7 +780,7 @@ contains
     logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
     integer :: i, l, m, ip, nn(3), idir
-    FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
+    FLOAT :: sqrtw, ww
     FLOAT, allocatable :: ylm(:)
     type(ps_t), pointer :: ps
     type(spline_t) :: dur
@@ -825,6 +825,8 @@ contains
     else
       
       ASSERT(.not. derivative_)
+      ! Question: why not implemented derivatives here?
+      ! Answer: because they are linearly dependent with lower-order Hermite polynomials.
 
       ww = species_omega(spec)
       sqrtw = sqrt(ww)
@@ -833,11 +835,9 @@ contains
       nn = (/i, l, m/)
 
       do ip = 1, submesh%np
-        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
-        r2 = sum(x(1:submesh%mesh%sb%dim)**2)
-        phi(ip) = exp(-ww*r2/M_TWO)
+        phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)
         do idir = 1, submesh%mesh%sb%dim
-          phi(ip) = phi(ip) * hermite(nn(idir) - 1, x(idir)*sqrtw)
+          phi(ip) = phi(ip) * hermite(nn(idir) - 1, submesh%x(ip, idir)*sqrtw)
         enddo
       end do
       
