@@ -966,7 +966,7 @@ contains
 
     gylm = M_ZERO
 
-    call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+    call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
     uv = uvr0*ylm
     if(r >= r_small) then
       duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)

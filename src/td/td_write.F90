@@ -985,7 +985,7 @@ contains
     character(len=120) :: aux, aux2
     FLOAT   :: ftchd_bessel
     CMPLX   :: ftchd
-    FLOAT   :: ylm, gylm(1:MAX_DIM)
+    FLOAT   :: ylm
     FLOAT, allocatable :: integrand_bessel(:)
     CMPLX, allocatable :: integrand(:)
 
@@ -1056,7 +1056,7 @@ contains
       integrand_bessel = M_ZERO
       do is = 1, st%d%nspin
         do ip = 1, gr%mesh%np
-          call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
+          call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
           integrand_bessel(ip) = integrand_bessel(ip) + st%rho(ip, is) * &
                                  loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(gr%mesh%x(ip, :)**2)))*ylm
         end do

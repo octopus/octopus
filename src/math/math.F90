@@ -255,11 +255,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Computes spherical harmonics ylm in the direction of vector r
+  !> Computes spherical harmonics ylm in the direction of vector (x, y, z)
   subroutine ylmr(x, y, z, li, mi, ylm)
+    FLOAT,   intent(in) :: x, y, z
     integer, intent(in) :: li, mi
-    FLOAT, intent(in) :: x, y, z
-    CMPLX, intent(out) :: ylm
+    CMPLX,   intent(out) :: ylm
 
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
@@ -314,14 +314,16 @@ contains
 
   ! ---------------------------------------------------------
   !> This is a Numerical Recipes-based subroutine
-  !! computes real spherical harmonics ylm in the direction of vector r:
+  !! computes real spherical harmonics ylm in the direction of vector (x, y, z),
+  !! and the gradients of ylm:
   !!    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
   !!    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
   !! with (theta,phi) the polar angles of r, c a positive normalization
   subroutine grylmr(x, y, z, li, mi, ylm, grylm)
-    integer, intent(in) :: li, mi
-    FLOAT, intent(in) :: x, y, z
-    FLOAT, intent(out) :: ylm, grylm(3)
+    FLOAT,           intent(in)  :: x, y, z
+    integer,         intent(in)  :: li, mi
+    FLOAT,           intent(out) :: ylm
+    FLOAT, optional, intent(out) :: grylm(3)
 
     integer, parameter :: lmaxd = 20
     FLOAT,   parameter :: tiny = CNST(1.e-30)
@@ -357,7 +359,7 @@ contains
     ! if l=0, no calculations are required
     if (li == 0) then
       ylm = c(0)
-      grylm(:) = M_ZERO
+      if(present(grylm)) grylm(:) = M_ZERO
       return
     end if
 
@@ -365,7 +367,7 @@ contains
     r2 = x**2 + y**2 + z**2
     if(r2 < tiny) then
       ylm = M_ZERO
-      grylm(:) = M_ZERO
+      if(present(grylm)) grylm(:) = M_ZERO
       return
     end if
     rsize = sqrt(r2)
@@ -379,19 +381,25 @@ contains
       select case(mi)
       case(-1)
         ylm = (-c(1))*Ry
-        grylm(1) = c(1)*Rx*Ry/rsize
-        grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
-        grylm(3) = c(1)*Rz*Ry/rsize
+        if(present(grylm)) then
+          grylm(1) = c(1)*Rx*Ry/rsize
+          grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
+          grylm(3) = c(1)*Rz*Ry/rsize
+        endif
       case(0)
         ylm = c(2)*Rz
-        grylm(1) = (-c(2))*Rx*Rz/rsize
-        grylm(2) = (-c(2))*Ry*Rz/rsize
-        grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
+        if(present(grylm)) then
+          grylm(1) = (-c(2))*Rx*Rz/rsize
+          grylm(2) = (-c(2))*Ry*Rz/rsize
+          grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
+        endif
       case(1)
         ylm = (-c(3))*Rx
-        grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
-        grylm(2) = c(3)*Ry*Rx/rsize
-        grylm(3) = c(3)*Rz*Rx/rsize
+        if(present(grylm)) then
+          grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
+          grylm(2) = c(3)*Ry*Rx/rsize
+          grylm(3) = c(3)*Rz*Rx/rsize
+        endif
       end select
       return
     end if
@@ -400,29 +408,39 @@ contains
       select case(mi)
       case(-2)
         ylm = c(4)*M_SIX*Rx*Ry
-        grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
-        grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
-        grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
+        if(present(grylm)) then
+          grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
+          grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
+          grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
+        endif
       case(-1)
         ylm = (-c(5))*M_THREE*Ry*Rz
-        grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
-        grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
-        grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
+        if(present(grylm)) then
+          grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
+          grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
+          grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
+        endif
       case(0)
         ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
-        grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
-        grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
-        grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
+        if(present(grylm)) then
+          grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
+          grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
+          grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
+        endif
       case(1)
         ylm = (-c(7))*M_THREE*Rx*Rz
-        grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
-        grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
-        grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
+        if(present(grylm)) then
+          grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
+          grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
+          grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
+        endif
       case(2)
         ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
-        grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
-        grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
-        grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
+        if(present(grylm)) then
+          grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
+          grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
+          grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
+        endif
       end select
       return
     end if
@@ -481,11 +499,14 @@ contains
     ilm0 = li*li + li
     cmi = c(ilm0 + mi)
     ylm = cmi*plgndr*phase
-    grylm(1) = (-cmi)*dplg*Rx*Rz*phase/rsize     &
-      -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
-    grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
-      +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
-    grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
+
+    if(present(grylm)) then
+      grylm(1) = (-cmi)*dplg*Rx*Rz*phase/rsize     &
+        -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
+      grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
+        +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
+      grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
+    endif
 
     return
   end subroutine grylmr

@@ -73,7 +73,7 @@ contains
     integer,              intent(in)  :: ml
     type(mesh_t),         intent(in)  :: mesh
 
-    FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), rr, xx(MAX_DIM)
+    FLOAT :: alpha, gamma, ylm, rr, xx(MAX_DIM)
     integer :: ip, ll, add_lm, lldfac, jj, mm
 
     PUSH_SUB(poisson_corrections_init)
@@ -125,7 +125,7 @@ contains
           end do
           gamma = ( sqrt(M_PI)*2**(ll+3) ) / lldfac
           do mm = -ll, ll
-            call grylmr(xx(1), xx(2), xx(3), ll, mm, ylm, gylm)
+            call grylmr(xx(1), xx(2), xx(3), ll, mm, ylm)
             if(rr > M_EPSILON) then
               this%phi(ip, add_lm) = gamma*isubl(ll, rr/alpha)*ylm/rr**(ll+1)
               this%aux(ip, add_lm) = rr**ll*ylm
@@ -321,7 +321,7 @@ contains
     FLOAT,                intent(inout) :: pot(:)  !< pot(mesh%np_part)
 
     integer :: ip, add_lm, ll, mm, bp_lower
-    FLOAT   :: xx(MAX_DIM), rr, s1, sa, gylm(1:MAX_DIM)
+    FLOAT   :: xx(MAX_DIM), rr, s1, sa
     FLOAT, allocatable :: mult(:)
 
     PUSH_SUB(poisson_boundary_conditions)
@@ -342,7 +342,7 @@ contains
       do ll = 0, this%maxl
         s1 = M_FOUR*M_PI/((M_TWO*ll + M_ONE)*rr**(ll + 1))
         do mm = -ll, ll
-          call grylmr(xx(1), xx(2), xx(3), ll, mm, sa, gylm)
+          call grylmr(xx(1), xx(2), xx(3), ll, mm, sa)
           pot(ip) = pot(ip) + sa * mult(add_lm) * s1
           add_lm = add_lm+1
         end do

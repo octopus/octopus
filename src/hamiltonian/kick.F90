@@ -588,7 +588,7 @@ contains
 
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
-    FLOAT   :: rkick, ikick, gylm(1:MAX_DIM), rr, ylm
+    FLOAT   :: rkick, ikick, rr, ylm
     logical :: cmplxscl
 
     PUSH_SUB(kick_function_get)
@@ -628,7 +628,7 @@ contains
           case (QKICKMODE_EXP)
             kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
           case (QKICKMODE_BESSEL)
-            call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
+            call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
               kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
         end select
       end do
