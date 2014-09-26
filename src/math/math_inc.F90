@@ -108,7 +108,7 @@ end subroutine X(interpolate_0)
 
 ! ---------------------------------------------------------
 subroutine X(shellsort1)(a, x)
-  FLOAT, intent(inout) :: a(:)
+  FLOAT,  intent(inout) :: a(:)
   R_TYPE, intent(inout) :: x(:, :)
 
   integer :: i, j, inc, n, m
@@ -154,7 +154,7 @@ end subroutine X(shellsort1)
 
 ! ---------------------------------------------------------
 subroutine X(shellsort2)(a, x)
-  FLOAT, intent(inout) :: a(:)
+  FLOAT,  intent(inout) :: a(:)
   R_TYPE, intent(inout) :: x(:, :, :)
 
   integer :: i, j, inc, n, p, q

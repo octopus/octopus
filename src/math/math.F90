@@ -523,9 +523,9 @@ contains
   !!
   !!  side -> -1 left-sided, +1 right-sided, 0 centered (default)
   subroutine weights(N, M, cc, side)
-    integer, intent(in) :: N, M
-    FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
-    integer, optional, intent(in) :: side
+    integer,           intent(in)  :: N, M
+    FLOAT,             intent(out) :: cc(:,:,:) !< (0:M, 0:M, 0:N)
+    integer, optional, intent(in)  :: side
 
     integer :: i, j, k, mn, side_
     FLOAT :: c1, c2, c3, c4, c5, xi
@@ -622,8 +622,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine shellsort(a, ind)
-    FLOAT, intent(inout) :: a(:)
-    integer, intent(inout), optional :: ind(:)
+    FLOAT,             intent(inout) :: a(:)
+    integer, optional, intent(out)   :: ind(:)
 
     integer :: i,j,inc,n, indi, indj
     FLOAT   :: v
@@ -676,8 +676,8 @@ contains
   ! ---------------------------------------------------------
   !> Shell sort for integer arrays.
   subroutine ishellsort(a, ind)
-    integer, intent(inout)           :: a(:)
-    integer, intent(inout), optional :: ind(:)
+    integer,           intent(inout) :: a(:)
+    integer, optional, intent(out)   :: ind(:)
 
     integer :: i,j,inc,n, indi, indj
     integer :: v
