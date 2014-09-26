@@ -255,7 +255,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Computes spherical harmonics ylm in the direction of vector (x, y, z)
+  !> Computes spherical harmonics ylm at position (x, y, z)
   subroutine ylmr(x, y, z, li, mi, ylm)
     FLOAT,   intent(in) :: x, y, z
     integer, intent(in) :: li, mi
@@ -314,7 +314,7 @@ contains
 
   ! ---------------------------------------------------------
   !> This is a Numerical Recipes-based subroutine
-  !! computes real spherical harmonics ylm in the direction of vector (x, y, z),
+  !! computes real spherical harmonics ylm at position (x, y, z)
   !! and the gradients of ylm:
   !!    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
   !!    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
