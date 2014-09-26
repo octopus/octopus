@@ -28,3 +28,4 @@ LSize = 5
 FromScratch = yes
 
 ProfilingMode = yes
+SCFCalculateDipole = yes
