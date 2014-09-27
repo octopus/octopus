@@ -145,7 +145,7 @@ contains
     pd = sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sb)) then
-      pcopy = this%pos
+      pcopy(1:sb%dim) = this%pos(1:sb%dim)
       return
     end if
 
