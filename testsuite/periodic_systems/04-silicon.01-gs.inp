@@ -33,3 +33,6 @@ SymmetrizeDensity = yes
 ExtraStates = 1
 ConvRelDens = 1e-7
 Preconditioner = none
+
+Output = geometry
+OutputHow = xyz

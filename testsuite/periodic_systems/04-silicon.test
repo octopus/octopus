@@ -54,6 +54,22 @@ match ; Eigenvalue  8 ; GREP(static/info, '#k =   4', 12,  8) ; -0.067345
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 16) ;  0.109820
 match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.223391
 
+match ; geometry size  ; LINEFIELD(static/geometry.xyz,  1, 1) ;  8
+match ; geometry  4 1  ; LINEFIELD(static/geometry.xyz,  6, 2) ;  0.0
+match ; geometry  4 3  ; LINEFIELD(static/geometry.xyz,  6, 3) ; -5.1
+match ; geometry  4 4  ; LINEFIELD(static/geometry.xyz,  6, 4) ; -5.1
+match ; geometry  8 1  ; LINEFIELD(static/geometry.xyz, 10, 2) ;  2.55
+match ; geometry  8 2  ; LINEFIELD(static/geometry.xyz, 10, 3) ; -2.55
+match ; geometry  8 3  ; LINEFIELD(static/geometry.xyz, 10, 4) ; -2.55
+
+match ; crystal  size  ; LINEFIELD(static/crystal.xyz,  1, 1) ;  95
+match ; crystal  14 1  ; LINEFIELD(static/crystal.xyz, 16, 2) ;  0.0
+match ; crystal  14 3  ; LINEFIELD(static/crystal.xyz, 16, 3) ;  0.0
+match ; crystal  14 4  ; LINEFIELD(static/crystal.xyz, 16, 4) ;  0.0
+match ; crystal  70 1  ; LINEFIELD(static/crystal.xyz, 72, 2) ; -7.65
+match ; crystal  70 2  ; LINEFIELD(static/crystal.xyz, 72, 3) ; -7.65
+match ; crystal  70 3  ; LINEFIELD(static/crystal.xyz, 72, 4) ;  2.55
+
 Input      : 04-silicon.02-kdotp.inp
 
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06525

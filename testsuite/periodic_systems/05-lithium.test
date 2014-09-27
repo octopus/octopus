@@ -90,6 +90,12 @@ match ; Eigenvalue      [ k = 62 ] ; GREP(static/info, '#k =  62', 12,  1) ;  0.
 match ; Eigenvalue      [ k = 63 ] ; GREP(static/info, '#k =  63', 12,  1) ;  0.007876
 match ; Eigenvalue      [ k = 64 ] ; GREP(static/info, '#k =  64', 12,  1) ;  0.007876
 
+match ; XSF natoms   ; GREPFIELD(static/density.xsf, 'PRIMCOORD', 1, 1) ;  2
+match ; XSF coord    ; GREPFIELD(static/density.xsf, 'PRIMCOORD', 2, 2) ;  3.316469
+match ; XSF npoints  ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 1) ;  11
+match ; XSF latvec   ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 3) ;  6.632939
+match ; XSF value    ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 100) ; 0.007355993308159
+
 Input      : 05-lithium.02-td.inp
 
 match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.491972763843e-01
