@@ -372,7 +372,7 @@ contains
 
       !%Variable CurrentThroughPlane
       !%Type block
-      !%Section States
+      !%Section Output
       !%Description
       !% The code can calculate current
       !% traversing a user-defined portion of a plane, as specified by this block.
