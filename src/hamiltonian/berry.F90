@@ -143,7 +143,7 @@ contains
     CMPLX, allocatable :: psi(:, :), psi2(:, :)
     ! FIXME: real/cplx versions
 
-    PUSH_SUB(berry_phase_det)
+    PUSH_SUB(berry_phase_matrix)
 
     if(st%parallel_in_states) then
       call messages_not_implemented("Berry phase parallel in states")
