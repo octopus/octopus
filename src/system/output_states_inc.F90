@@ -249,6 +249,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(mpi_grp_is_root(mpi_world)) then
 
+    call io_mkdir(dir)
     iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
 
     select case(gr%mesh%sb%dim)

@@ -376,6 +376,7 @@ contains
       !%Description
       !% The code can calculate current
       !% traversing a user-defined portion of a plane, as specified by this block.
+      !% A small plain-text file <tt>current-flow</tt> will be written containing this information.
       !% In the format below, <tt>origin</tt> is a point in the plane.
       !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) lattice vectors defining the plane;
       !% they will be normalized by the code. <tt>spacing</tt> is the fineness of the mesh
@@ -385,7 +386,8 @@ contains
       !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
       !% for <tt>nu <= i <= mu</tt> and <tt>nv <= j <= mv</tt>.
       !% Analogously, in the 2D case, the current flow is calculated through a line;
-      !% in the 1D case, the current flow is calculated through a point.
+      !% in the 1D case, the current flow is calculated through a point. Note that the spacing
+      !% can differ from the one used in the main calculation; an interpolation will be performed.
       !%
       !% Example (3D):
       !%
@@ -539,7 +541,7 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &
-      C_OUTPUT_TPA + C_OUTPUT_MMB + C_OUTPUT_MMB_DEN
+      C_OUTPUT_TPA + C_OUTPUT_MMB + C_OUTPUT_MMB_DEN + C_OUTPUT_J_FLOW
 
     ! we are using a what that has a how.
     if(iand(outp%what, not(what_no_how)) /= 0) then
