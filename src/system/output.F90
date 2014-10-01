@@ -509,6 +509,7 @@ contains
     !%Section Output
     !%Description
     !% The output requested by variable <tt>Output</tt> is written
+    !% to the directory <tt>OutputIterDir</tt>
     !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
     !% (Output of restart files is controlled by <tt>RestartWriteInterval</tt>.)
     !% Must be >= 0. If it is 0, then no output is written.
