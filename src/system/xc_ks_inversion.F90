@@ -501,12 +501,12 @@ contains
       diffrho = target_rho(iprime, 1) - st%rho(iprime, 1)
       do ip = 1, np
 	vhxc_out(ip, 1, 1) = vhxc_out(ip, 1, 1) + inverseki(ip, iprime)*diffrho
-	write(200,*) ip, iprime, inverseki(ip, iprime) 
+!	write(200,*) ip, iprime, inverseki(ip, iprime) 
       enddo
     enddo
    
     do ip = 1, np
-      write(100,*) ip, vhxc_out(ip, 1, 1),  target_rho(ip, 1) - st%rho(ip, 1)
+!      write(100,*) ip, vhxc_out(ip, 1, 1),  target_rho(ip, 1) - st%rho(ip, 1)
     enddo   
     
     
