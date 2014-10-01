@@ -435,14 +435,14 @@ contains
 
         norm = sqrt(sum(outp%plane%u(1:3)**2))
         if(norm < M_EPSILON) then
-          write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
         endif
         outp%plane%u(1:3) = outp%plane%u(1:3) / norm
 
         norm = sqrt(sum(outp%plane%v(1:3)**2))
         if(norm < M_EPSILON) then
-          write(1, '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
+          write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
         endif
         outp%plane%v(1:3) = outp%plane%v(1:3) / norm
@@ -463,7 +463,7 @@ contains
 
         norm = sqrt(sum(outp%line%u(1:2)**2))
         if(norm < M_EPSILON) then
-          write(1, '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
         endif
         outp%line%u(1:2) = outp%line%u(1:2) / norm
