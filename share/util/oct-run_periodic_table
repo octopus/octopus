@@ -25,7 +25,7 @@ Usage: oct-run_periodic_table [options]
     
      -h              this message
      -n              dry run mode (show what would be executed)
-     -s specie       run octopus for given specie
+     -s species      run octopus for given species
      -a              run octopus for all atoms            
      -r              do a restart, i.e. do not use fromScratch=yes
      -t temperature  run with electronic temperature
@@ -47,7 +47,7 @@ while getopts "hns:art:e:x:d:" opt ; do
     case "$opt" in
         h) usage ;;
         n) ECHO="echo" ;; 
-        s) specie="$OPTARG" ;;
+        s) species="$OPTARG" ;;
         a) ECHO="" ;;
         r) fromScratch="no" ;;
         t) electronic_temp="$OPTARG" ;;
@@ -69,11 +69,11 @@ if [ ! -f $defaults ]; then
   exit 1
 fi
 
-if [ "$specie" = "" ]; then
+if [ "$species" = "" ]; then
   # for which atoms are pseudopotentials available?
   pseudos=$(awk '{ print $1 }' $defaults | grep -v "#")
 else
-  pseudos="$specie"
+  pseudos="$species"
 fi
 
 # loop over all pseudopotentials
