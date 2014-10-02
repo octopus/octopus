@@ -117,11 +117,24 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   
   ! we have to adjust a couple of things for the periodic directions
   do idir = 1, sb%periodic_dim
+    if(mesh%idx%nr(2, idir) == 0) then
+      ! this happens if Spacing > box size
+      mesh%idx%nr(2, idir) =  1
+      mesh%idx%nr(1, idir) = -1
+    endif
+
     !the spacing has to be a divisor of the box size
     mesh%spacing(idir) = sb%lsize(idir)/real(mesh%idx%nr(2, idir))
     !the upper boundary does not have to be included (as it is a copy of the lower boundary)
     mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
   end do
+
+  do idir = sb%periodic_dim + 1, sb%dim
+    if(mesh%idx%nr(2, idir) == 0) then
+      write(message(1),'(a,i2)') 'Spacing > box size in direction ', idir
+      call messages_fatal(1)
+    endif
+  enddo
 
   if(ob_grid%open_boundaries) then
     ! The upper boundary must be discarded to preserve periodicity in the leads.
