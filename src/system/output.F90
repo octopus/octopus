@@ -377,9 +377,10 @@ contains
       !% The code can calculate current
       !% traversing a user-defined portion of a plane, as specified by this block.
       !% A small plain-text file <tt>current-flow</tt> will be written containing this information.
+      !% Only available for 1D, 2D, or 3D.
       !% In the format below, <tt>origin</tt> is a point in the plane.
-      !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) lattice vectors defining the plane;
-      !% they will be normalized by the code. <tt>spacing</tt> is the fineness of the mesh
+      !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) vectors defining the plane;
+      !% they will be normalized. <tt>spacing</tt> is the fineness of the mesh
       !% on the plane. Integers <tt>nu</tt> and <tt>mu</tt> are the length and
       !% width of the portion of the plane, in units of <tt>spacing</tt>.
       !% Thus, the grid points included in the plane are
@@ -476,6 +477,10 @@ contains
       case(1)
 
         call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
+
+      case default
+
+        call messages_not_implemented("CurrentThroughPlane for 4D or higher")
 
       end select
     end if
