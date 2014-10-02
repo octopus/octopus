@@ -45,11 +45,11 @@ module solids_m
   !> parts of this module explicitly work only for 3 dimensions
   type periodic_copy_t
     private
-    FLOAT :: pos(1:3)
-    FLOAT :: pos_chi(1:3)
+    FLOAT :: pos(1:MAX_DIM)
+    FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
-    integer :: nbmax(3), nbmin(3)
-    integer, pointer :: icell(:, :)
+    integer :: nbmax(1:MAX_DIM), nbmin(1:MAX_DIM)
+    integer, pointer :: icell(:, :) !< (sb%dim, periodic_copy_num)
   end type periodic_copy_t
 
 contains
@@ -71,11 +71,12 @@ contains
 
     this%range = range
     this%pos(1:dim4syms) = pos(1:dim4syms)
-    nullify(this%icell)
 
     if(.not. simul_box_is_periodic(sb)) then
       this%nbmin = 0
       this%nbmax = 0
+      nullify(this%icell)
+
       POP_SUB(periodic_copy_init)
       return
     end if
