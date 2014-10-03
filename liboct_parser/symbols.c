@@ -39,7 +39,7 @@ char *str_tolower(char *in)
 {
   char *s;
   for(s=in; *s; s++)
-    *s = tolower(*s);
+    *s = (char)tolower(*s);
   return in;
 }
 

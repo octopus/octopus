@@ -63,7 +63,7 @@ static int parse_get_line(FILE *f, char **s, int *length)
 	*length *= 2;
 	*s = (char *)realloc(*s, *length + 1);
       }
-      (*s)[i++] = c;
+      (*s)[i++] = (char)c;
     }
   }while(c != EOF && c != '\n');
   (*s)[i] = '\0';
@@ -156,8 +156,8 @@ int parse_input(char *file_in)
 	  }while(c != EOF && *s != '%');
 	}
       }else{ /* we can parse it np */
-	parse_result c;
-	parse_exp(s, &c);
+	parse_result pc;
+	parse_exp(s, &pc);
       }
     }
   }while(c != EOF);
@@ -180,8 +180,8 @@ int parse_input(char *file_in)
     while(*env) {
       /* Only consider variables that begin with OCT_ */
       if( strncmp(OCT_ENV_HEADER, *env, strlen(OCT_ENV_HEADER)) == 0 ){	
-	parse_result c;
-	parse_exp( (*env) + strlen(OCT_ENV_HEADER), &c);
+	parse_result pc;
+	parse_exp( (*env) + strlen(OCT_ENV_HEADER), &pc);
       }
       
       env++;

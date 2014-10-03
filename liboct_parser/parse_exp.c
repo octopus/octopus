@@ -127,7 +127,7 @@ static int oct_parser_lex (){
   /* Char starts an identifier => read the name.       */
   if (isalpha (c) || c == '\'' || c == '\"'){
     symrec *s;
-    char startc = c;
+    char startc = (char)c;
     int i;
 		
     /* Initially make the buffer long enough
@@ -154,7 +154,7 @@ static int oct_parser_lex (){
 	}
       }
       /* Add this character to the buffer.         */
-      symbuf[i++] = c;
+      symbuf[i++] = (char)c;
       /* Get another character.                    */
       c = par_string[par_pos++];
     }while (c != '\0' && 
