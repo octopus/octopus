@@ -45,11 +45,12 @@ module solids_m
   !> parts of this module explicitly work only for 3 dimensions
   type periodic_copy_t
     private
+    integer :: num
     FLOAT :: pos(1:MAX_DIM)
     FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
     integer :: nbmax(1:MAX_DIM), nbmin(1:MAX_DIM)
-    integer, pointer :: icell(:, :) !< (sb%dim, periodic_copy_num)
+    integer, pointer :: icell(:, :) !< (sb%dim, num)
   end type periodic_copy_t
 
 contains
@@ -73,6 +74,7 @@ contains
     this%pos(1:dim4syms) = pos(1:dim4syms)
 
     if(.not. simul_box_is_periodic(sb)) then
+      this%num = 0
       this%nbmin = 0
       this%nbmax = 0
       nullify(this%icell)
@@ -93,7 +95,9 @@ contains
     this%nbmin(pd + 1:3) = 0
     this%nbmax(pd + 1:3) = 0
 
-    SAFE_ALLOCATE(this%icell(1:3, 1:periodic_copy_num(this)))
+    this%num = product(this%nbmax(1:sb%periodic_dim) - this%nbmin(1:sb%periodic_dim) + 1)
+
+    SAFE_ALLOCATE(this%icell(1:3, 1:this%num))
 
     jj = 1
     do icell1 = this%nbmin(1), this%nbmax(1)
@@ -129,7 +133,7 @@ contains
     type(periodic_copy_t), intent(in)    :: this
 
     ! no push_sub allowed in pure function
-    num = product(this%nbmax - this%nbmin + 1)
+    num = this%num
 
   end function periodic_copy_num
   
