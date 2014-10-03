@@ -74,7 +74,7 @@ contains
     this%pos(1:dim4syms) = pos(1:dim4syms)
 
     if(.not. simul_box_is_periodic(sb)) then
-      this%num = 0
+      this%num = 1
       this%nbmin = 0
       this%nbmax = 0
       nullify(this%icell)
