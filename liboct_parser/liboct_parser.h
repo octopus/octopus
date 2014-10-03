@@ -26,7 +26,7 @@
 
 int         parse_init   (char *file_out, int *mpiv_node);
 int         parse_input  (char *file_in);
-void        parse_end    ();
+void        parse_end    (void);
 
 int         parse_isdef  (char *name);
 int         parse_int    (char *name, int def);

@@ -57,10 +57,10 @@ int      rmsym (char *sym_name);
 
 void sym_notdef(symrec *sym);
 void sym_wrong_arg(symrec *sym);
-void sym_init_table();
-void sym_clear_reserved();
-void sym_end_table();
-void sym_output_table();
+void sym_init_table(void);
+void sym_clear_reserved(void);
+void sym_end_table(void);
+void sym_output_table(void);
 char *str_tolower(char *in);
 
 #endif

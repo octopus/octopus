@@ -33,7 +33,7 @@ static char *par_string;
 static int par_pos;
 parse_result par_res;
 
-static int oct_parser_lex();
+static int oct_parser_lex(void);
 static int oct_parser_error (char *s)  /* Called by oct_parser_parse on error */
 {
   /* Do nothing */
