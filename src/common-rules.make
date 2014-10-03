@@ -21,7 +21,7 @@
 # Include paths.
 # ---------------------------------------------------------------
 
-AM_FCFLAGS = \
+FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/basic   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/math    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/species 	 \
@@ -90,7 +90,7 @@ external_LIBS = \
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@
-  AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl
+  FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl
 endif
 
 if COMPILE_METIS
@@ -101,7 +101,7 @@ endif
 
 if COMPILE_NEWUOA
   external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
-  AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
+  FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
 endif
 
 # Since ETSF_IO depends on netCDF, it must be first in the list
@@ -127,7 +127,7 @@ SUFFIXES = _oct.f90 .F90 .o
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
-	@FC@ @FCFLAGS@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBXC@ @FCFLAGS_LIBFM@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBXC@ @FCFLAGS_LIBFM@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # This rule is basically to create a _oct.f90 file by hand for
