@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module solids_m
+module periodic_copy_m
   use geometry_m
   use global_m
   use io_m
@@ -199,7 +199,7 @@ contains
     POP_SUB(periodic_write_crystal)
   end subroutine periodic_write_crystal
 
-end module solids_m
+end module periodic_copy_m
 
 !! Local Variables:
 !! mode: f90

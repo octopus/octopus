@@ -42,11 +42,11 @@ module lcao_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_debug_m
   use parser_m
+  use periodic_copy_m
   use profiling_m
   use ps_m
   use simul_box_m
   use scalapack_m
-  use solids_m
   use species_m
   use species_pot_m
   use states_m

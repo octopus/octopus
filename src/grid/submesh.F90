@@ -29,9 +29,9 @@ module submesh_m
   use mesh_m
   use mpi_m
   use par_vec_m
+  use periodic_copy_m
   use profiling_m
   use simul_box_m
-  use solids_m
   use unit_m
   use unit_system_m
     

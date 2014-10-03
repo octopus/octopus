@@ -36,12 +36,12 @@ module species_pot_m
   use messages_m
   use mpi_m
   use parser_m
+  use periodic_copy_m
   use poisson_m
   use profiling_m
   use ps_m
   use root_solver_m
   use simul_box_m
-  use solids_m
   use species_m
   use splines_m
   use submesh_m

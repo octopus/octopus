@@ -38,7 +38,6 @@ module gauge_field_m
   use ps_m
   use restart_m
   use simul_box_m
-  use solids_m
   use species_m
   use splines_m
   use states_m

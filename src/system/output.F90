@@ -57,11 +57,11 @@ module output_m
   use output_me_m
   use parser_m
   use par_vec_m
+  use periodic_copy_m
   use profiling_m
   use simul_box_m
   use smear_m
   use string_m
-  use solids_m
   use species_m
   use states_m
   use states_dim_m
