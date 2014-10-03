@@ -42,7 +42,6 @@ module solids_m
     periodic_copy_num,        &
     periodic_write_crystal
 
-  !> parts of this module explicitly work only for 3 dimensions
   type periodic_copy_t
     private
     integer :: num
@@ -58,20 +57,17 @@ contains
   subroutine periodic_copy_init(this, sb, pos, range)
     type(periodic_copy_t), intent(out) :: this
     type(simul_box_t),     intent(in)  :: sb
-    FLOAT,                 intent(in)  :: pos(:)
+    FLOAT,                 intent(in)  :: pos(:) !< (sb%dim)
     FLOAT,                 intent(in)  :: range
 
-    integer :: pd, dim4syms
-    integer :: icell1, icell2, icell3, jj
+    integer :: pd, jj, kk, idir
 
     PUSH_SUB(periodic_copy_init)
 
     ASSERT(range >= M_ZERO)
 
-    dim4syms = min(3, sb%dim)
-
     this%range = range
-    this%pos(1:dim4syms) = pos(1:dim4syms)
+    this%pos(1:sb%dim) = pos(1:sb%dim)
 
     if(.not. simul_box_is_periodic(sb)) then
       this%num = 1
@@ -90,24 +86,19 @@ contains
 
     this%nbmin(1:pd) = -int(-(this%pos_chi(1:pd) - range)/(M_TWO*sb%lsize(1:pd)) + M_HALF)
     this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/(M_TWO*sb%lsize(1:pd)) + M_HALF)
-
     ! no copies in non-periodic directions
-    this%nbmin(pd + 1:3) = 0
-    this%nbmax(pd + 1:3) = 0
 
     this%num = product(this%nbmax(1:sb%periodic_dim) - this%nbmin(1:sb%periodic_dim) + 1)
+    SAFE_ALLOCATE(this%icell(1:sb%periodic_dim, 1:this%num))
 
-    SAFE_ALLOCATE(this%icell(1:3, 1:this%num))
-
-    jj = 1
-    do icell1 = this%nbmin(1), this%nbmax(1)
-      do icell2 = this%nbmin(2), this%nbmax(2)
-        do icell3 = this%nbmin(3), this%nbmax(3)
-          this%icell(1:3, jj) = (/icell1, icell2, icell3/)
-          jj = jj + 1
-        end do
-      end do
-    end do
+    do jj = 1, this%num
+      kk = jj - 1
+      do idir = sb%periodic_dim, 1, -1
+        this%icell(idir, jj) = mod(kk, this%nbmax(idir) - this%nbmin(idir) + 1) + this%nbmin(idir)
+        if(idir > 1) &
+          kk = kk / (this%nbmax(idir) - this%nbmin(idir) + 1)
+      enddo
+    enddo
 
     POP_SUB(periodic_copy_init)
   end subroutine periodic_copy_init
@@ -142,7 +133,7 @@ contains
   pure function periodic_copy_position(this, sb, ii) result(pcopy)
     type(periodic_copy_t),   intent(in)  :: this
     type(simul_box_t),       intent(in)  :: sb
-    integer, intent(in)                  :: ii
+    integer,                 intent(in)  :: ii
     FLOAT                                :: pcopy(sb%dim)
     
     integer :: pd
