@@ -182,6 +182,14 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
+#ifdef LCAO_DEBUG
+  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+    call io_close(iunit_h)
+    call io_close(iunit_s)
+    call io_close(iunit_o)
+  endif
+#endif
+
   SAFE_DEALLOCATE_A(hpsi)
 
   SAFE_ALLOCATE(ev(1:this%norbs))
@@ -220,10 +228,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
         enddo
       enddo
     enddo
-
-    call io_close(iunit_h)
-    call io_close(iunit_s)
-    call io_close(iunit_o)
     call io_close(iunit_e)
   endif
 #endif
