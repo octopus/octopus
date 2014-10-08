@@ -162,6 +162,13 @@ double FC_FUNC_(oct_sine_integral, OCT_SINE_INTEGRAL)
   return gsl_sf_Si(*x);
 }
 
+/* generalized Laguerre polynomials */
+double FC_FUNC_(oct_sf_laguerre_n, OCT_SF_LAGUERRE_N)
+     (const int *n, const double *a, const double *x)
+{
+  return gsl_sf_laguerre_n(*n, *a, *x);
+}
+
 
 /* Vectors and Matrices */
 

@@ -41,6 +41,7 @@ module loct_math_m
     loct_sph_bessel,           &
     loct_legendre_sphplm,      &
     loct_sine_integral,        &
+    loct_sf_laguerre_n,        &
     loct_ran_init,             &
     loct_ran_end,              &
     loct_ran_gaussian,         &
@@ -210,6 +211,17 @@ module loct_math_m
     end function oct_sine_integral
     module procedure oct_sine_integral4
   end interface loct_sine_integral
+
+  interface loct_sf_laguerre_n
+    function oct_sf_laguerre_n(n, a, x)
+      implicit none
+      real(8) :: oct_sf_laguerre_n
+      integer, intent(in) :: n
+      real(8), intent(in) :: a
+      real(8), intent(in) :: x
+    end function oct_sf_laguerre_n
+    module procedure oct_sf_laguerre_n4
+  end interface loct_sf_laguerre_n
 
   interface loct_ylm
     subroutine oct_ylm(n, x, y, z, l, m, ylm)
@@ -412,6 +424,14 @@ contains
 
     oct_sine_integral4 = real(oct_sine_integral(real(x, kind=8)), kind=4)
   end function oct_sine_integral4
+
+  real(4) function oct_sf_laguerre_n4(n, a, x)
+    integer, intent(in)  :: n
+    real(4), intent(in)  :: a
+    real(4), intent(in)  :: x
+
+    oct_sf_laguerre_n4 = real(oct_sf_laguerre_n(n, real(a, kind=8), real(x, kind=8)), kind=4)
+  end function oct_sf_laguerre_n4
 
   subroutine oct_ylm4(n, x, y, z, l, m, ylm)
     integer, intent(in)  :: n
