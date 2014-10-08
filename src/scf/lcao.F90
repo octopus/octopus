@@ -92,8 +92,8 @@ module lcao_m
     logical           :: derivative
     integer, pointer  :: cst(:, :)
     integer, pointer  :: ck(:, :)
-    real(4), pointer  :: dbuff(:, :, :, :)
-    real(8), pointer  :: zbuff(:, :, :, :)
+    real(4), pointer  :: dbuff(:, :, :, :) !< single-precision buffer
+    complex(4), pointer :: zbuff(:, :, :, :) !< single-precision buffer
     FLOAT             :: orbital_scale_factor
 
     !> For the alternative LCAO
