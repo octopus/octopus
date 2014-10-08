@@ -41,7 +41,6 @@ module geom_opt_m
   use scf_m
   use simul_box_m
   use species_m
-  use species_pot_m
   use states_m
   use states_calc_m
   use states_restart_m

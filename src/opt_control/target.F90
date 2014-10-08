@@ -47,7 +47,6 @@ module target_m
   use profiling_m
   use restart_m
   use species_m
-  use species_pot_m
   use spectrum_m
   use states_m
   use states_calc_m
