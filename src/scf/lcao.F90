@@ -752,55 +752,6 @@ contains
 
     call profiling_out(prof)
     POP_SUB(lcao_run)
-
-  contains
-
-    ! currently unused. introduced r7716, deactivated r11613
-    subroutine init_states(st, mesh, geo)
-      type(states_t),   intent(inout) :: st
-      type(mesh_t),     intent(inout) :: mesh
-      type(geometry_t), intent(in)    :: geo
-
-      integer :: iatom, iorb, maxorbs, ist, idim, iqn, ispin
-      FLOAT, allocatable :: aorbital(:)
-
-      PUSH_SUB(lcao_run.init_states)
-
-      SAFE_ALLOCATE(aorbital(1:mesh%np))
-
-      maxorbs = 0
-      do iatom = 1, geo%natoms
-        maxorbs = max(maxorbs, species_niwfs(geo%atom(iatom)%spec))
-      end do
-
-      ist = 0
-      do iorb = 1, maxorbs
-        do iatom = 1, geo%natoms
-          if(iorb > species_niwfs(geo%atom(iatom)%spec)) cycle
-
-          INCR(ist, 1)
-          if(ist < st%st_start .or. ist > st%st_end) cycle
-
-          do ispin = 1, st%d%spin_channels ! we have to iterate over spinor dimensions or spin
-            idim = min(st%d%dim, ispin)
-
-            call species_get_orbital(geo%atom(iatom)%spec, mesh, iorb, 1, geo%atom(iatom)%x, aorbital)
-
-            do iqn = st%d%kpt%start, st%d%kpt%end
-              if(st%d%ispin == SPIN_POLARIZED .and. ispin /= states_dim_get_spin_index(st%d, iqn)) cycle
-
-              call states_set_state(st, mesh, idim, ist, iqn, aorbital)
-
-            end do
-          end do
-
-        end do
-      end do
-
-      SAFE_DEALLOCATE_A(aorbital)
-      POP_SUB(lcao_run.init_states)
-    end subroutine init_states
-
   end subroutine lcao_run
 
   ! ---------------------------------------------------------
