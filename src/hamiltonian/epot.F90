@@ -297,7 +297,7 @@ contains
     !% the <i>z</i>-direction, so that the first two columns should be zero.
     !% Possible in periodic system only in these cases: 2D system, 1D periodic,
     !% with <tt>StaticMagneticField2DGauge = linear_y</tt>;
-    !% 3D system, 1D periodic, field is zero in <i>y- and <i>z</i>-directions (given
+    !% 3D system, 1D periodic, field is zero in <i>y</i>- and <i>z</i>-directions (given
     !% currently implemented gauges).
     !%
     !% The magnetic field should always be entered in atomic units, regardless
