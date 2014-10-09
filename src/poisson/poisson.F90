@@ -94,7 +94,7 @@ module poisson_m
     POISSON_ISF           =  8,         &
     POISSON_SETE          =  9,         &
     POISSON_LIBISF        = 10,         &
-    POISSON_NULL          = -99
+    POISSON_NULL          = -999
   
   type poisson_t
     type(derivatives_t), pointer :: der
@@ -268,6 +268,8 @@ contains
       str = "SETE"
     case (POISSON_LIBISF)
       str = "interpolating scaling function (from BIGDFT)"
+    case (POISSON_NULL)
+      str = "none"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
     write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., J. Comp. Chem 35, 427-444 (2014)"
