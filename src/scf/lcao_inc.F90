@@ -50,15 +50,25 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   spec => geo%atom(iatom)%spec
   ASSERT(jj <= species_niwfs(spec))
 
-  SAFE_ALLOCATE(ao(1:mesh%np))
+#ifdef R_TCOMPLEX
+  if(this%complex_ylms) then
+    call zspecies_get_orbital(spec, mesh, jj, max(spin_channel, idim), &
+      geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
+  else
+#endif
+    SAFE_ALLOCATE(ao(1:mesh%np))
 
-  call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
+    call dspecies_get_orbital(spec, mesh, jj, max(spin_channel, idim), &
+      geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
   
-  do ip = 1, mesh%np
-    psi(ip, idim) = ao(ip)
-  end do
+    do ip = 1, mesh%np
+      psi(ip, idim) = ao(ip)
+    end do
 
-  SAFE_DEALLOCATE_A(ao)
+    SAFE_DEALLOCATE_A(ao)
+#ifdef R_TCOMPLEX
+  endif
+#endif
 
   POP_SUB(X(lcao_atomic_orbital))
   call profiling_out(prof)

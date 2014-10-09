@@ -46,7 +46,8 @@ noinst_HEADERS =                      \
 	hgh_projector_inc.F90         \
 	projector_inc.F90             \
 	hamiltonian_base_inc.F90      \
-	hamiltonian_inc.F90
+	hamiltonian_inc.F90           \
+	species_pot_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -56,7 +57,7 @@ depend:
 ob_lead.o: ob_lead.F90
 gauge_field.o : gauge_field.F90 projector.o
 lasers.o : lasers.F90 lasers_inc.F90
-species_pot.o : species_pot.F90 
+species_pot.o : species_pot.F90 species_pot_inc.F90
 rkb_projector.o : rkb_projector.F90 species_pot.o 
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
@@ -70,4 +71,3 @@ projector_matrix.o : projector_matrix.F90
 berry.o : berry.F90
 kick.o : kick.F90
 energy.o : energy.F90
-

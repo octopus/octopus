@@ -28,6 +28,8 @@ units = ev_angstrom
 spacing = 0.19
 radius = 5.0
 
+ForceComplex = yes
+LCAOComplexYlms = yes
 SpinComponents = polarized
 
 ExtraStates = 2

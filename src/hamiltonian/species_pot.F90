@@ -52,12 +52,13 @@ module species_pot_m
   implicit none
 
   private
-  public ::                      &
-    species_get_density,         &
-    species_get_nlcc,            &
-    species_get_orbital,         &
-    species_get_orbital_submesh, &
-    species_get_local,           &
+  public ::                       &
+    species_get_density,          &
+    species_get_nlcc,             &
+    dspecies_get_orbital,         &
+    zspecies_get_orbital,         &
+    species_get_orbital_submesh,  &
+    species_get_local,            &
     species_atom_density
 
   type(mesh_t), pointer :: mesh_p
@@ -666,108 +667,6 @@ contains
     POP_SUB(species_get_local)
   end subroutine species_get_local
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> Places, in the function phi (defined in each point of the mesh), the
-  !! iorb-th atomic orbital. The orbitals are obtained from the species data
-  !! type, and are numbered from one to species_niwfs(spec). It may happen
-  !! that there are different orbitals for each spin-polarization direction,
-  !! and therefore the orbital is also characterized by the label "is".
-  !!
-  !! In order to put the orbital in the mesh, it is necessary to know where
-  !! the species is, and this is given by the vector "pos".
-  !!
-  !! \todo Most of this work should be done inside the species
-  !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, orb, scale)
-    type(species_t), target, intent(in)     :: spec
-    type(mesh_t),            intent(in)     :: mesh
-    integer,                 intent(in)     :: iorb
-    integer,                 intent(in)     :: ispin   !< The spin index.
-    FLOAT,                   intent(in)     :: pos(:)  !< The position of the atom.
-    FLOAT,                   intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
-    FLOAT, optional,         intent(in)     :: scale
-
-    integer :: i, l, m, ip, icell, nn(3), idir
-    FLOAT :: r2, x(1:MAX_DIM), radius, xfactor
-    FLOAT, allocatable :: xf(:, :), ylm(:), lorb(:)
-    type(ps_t), pointer :: ps
-    type(periodic_copy_t) :: pc
-
-    PUSH_SUB(species_get_orbital)
-
-    xfactor = CNST(1.0)/optional_default(scale, CNST(1.0))
-
-    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
-
-    radius = min(species_get_iwf_radius(spec, iorb, ispin)/xfactor, maxval(mesh%sb%lsize))
-
-    call periodic_copy_init(pc, mesh%sb, pos, range = radius)
-
-    orb = M_ZERO
-
-    SAFE_ALLOCATE(lorb(1:mesh%np))
-
-    if(species_is_ps(spec)) then
-      ps => species_ps(spec)
-      SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
-      SAFE_ALLOCATE(ylm(1:mesh%np))
-    endif
-
-    do icell = 1, periodic_copy_num(pc)
-
-      if(species_is_ps(spec)) then
-
-        do ip = 1, mesh%np
-          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
-          r2 = sum(x(1:mesh%sb%dim)**2)
-          xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
-          
-          if(r2 < spline_range_max(ps%ur_sq(i, ispin))) then
-            lorb(ip) = spline_eval(ps%ur_sq(i, ispin), r2)
-          else
-            lorb(ip) = M_ZERO
-          end if
-
-        end do
-
-        call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
-
-        do ip = 1, mesh%np
-          orb(ip) = orb(ip) + lorb(ip)*ylm(ip)
-        end do
-
-      else
-
-        ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
-        nn = (/i, l, m/)
-
-        do ip = 1, mesh%np
-          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
-          r2 = sum(x(1:mesh%sb%dim)**2)
-          lorb = exp(-species_omega(spec)*r2/M_TWO)
-          do idir = 1, mesh%sb%dim
-            lorb(ip) = lorb(ip) * hermite(nn(idir) - 1, x(idir)*sqrt(species_omega(spec)))
-          enddo
-          orb(ip) = orb(ip) + lorb(ip)
-        end do
-      end if
-
-    end do
-
-    SAFE_DEALLOCATE_A(lorb)
-
-    if(species_is_ps(spec)) then
-      SAFE_DEALLOCATE_A(xf)
-      SAFE_DEALLOCATE_A(ylm)
-      nullify(ps)
-    endif
-
-    call periodic_copy_end(pc)
-
-    POP_SUB(species_get_orbital)
-  end subroutine species_get_orbital
-
 
   ! ---------------------------------------------------------
   subroutine species_get_orbital_submesh(spec, submesh, iorb, ispin, pos, phi, derivative)
@@ -845,6 +744,14 @@ contains
 
     POP_SUB(species_get_orbital_submesh)
   end subroutine species_get_orbital_submesh
+
+#include "complex.F90"
+#include "species_pot_inc.F90"
+
+#include "undef.F90"
+
+#include "real.F90"
+#include "species_pot_inc.F90"
 
 end module species_pot_m
 

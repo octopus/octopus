@@ -82,6 +82,7 @@ module lcao_m
     private
     integer           :: mode
     logical           :: debug !< whether to output extra info to file
+    logical           :: complex_ylms !< whether to use real or complex Ylms
     logical           :: initialized !< are k, s and v1 matrices filled?
     integer           :: norbs   !< number of orbitals used
     integer           :: maxorbs !< largest number of orbitals that could be used
@@ -224,6 +225,20 @@ contains
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
     endif
+
+    !%Variable LCAOComplexYlms
+    !%Type logical
+    !%Default false
+    !%Section SCF::LCAO
+    !%Description
+    !% If set to true, and using complex states, complex spherical harmonics will be used, <i>i.e.</i>
+    !% with exp(i m \phi). If false, real spherical harmonics with sin(m \phi) or cos(m \phi) are used.
+    !% This variable will make it more likely to get states that are eigenvectors of the <math>L_z</math>
+    !% operator, with a definite angular momentum.
+    !%End
+
+    if(states_are_complex(st)) &
+      call parse_logical(datasets_check('LCAOComplexYlms'), .false., this%complex_ylms)
 
 ! uncomment below to use LCAODebug
 !#define LCAO_DEBUG
