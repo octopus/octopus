@@ -89,7 +89,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
-  integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e, iunit_o, ii, ll, mm
+  integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e
 
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
@@ -127,17 +127,13 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 #ifdef LCAO_DEBUG
 ! This code (and related below) is commented out because it causes mysterious optimization
 ! problems with PGI 12.4.0 -- LAPACK fails in diagonalization, only if mesh partition from scratch!
-  if(this%debug) then
+  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
     iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-    iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
     iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-      write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-      write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
-      write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-    endif
+    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
   endif
 #endif
 
@@ -147,13 +143,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     do ispin = 1, st%d%spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
     end do
-
-#ifdef LCAO_DEBUG
-    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      call species_iwf_ilm(geo%atom(this%atom(n1))%spec, this%level(n1), this%ddim(n1), ii, ll, mm)
-      write(iunit_o,'(7i6)') n1, this%atom(n1), this%level(n1), ii, ll, mm, this%ddim(n1)
-    endif
-#endif
 
     do ik = kstart, kend
       ispin = states_dim_get_spin_index(st%d, ik)
@@ -196,7 +185,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     call io_close(iunit_h)
     call io_close(iunit_s)
-    call io_close(iunit_o)
   endif
 #endif
 
@@ -459,8 +447,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, ispin, nev, ib
-  integer :: ibasis, jbasis, iorb, jorb, norbs
+  integer :: iatom, jatom, ik, ist, ispin, nev, ib, n1, n2
+  integer :: ibasis, jbasis, iorb, jorb, norbs, iunit_h, iunit_s, iunit_e
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
@@ -473,6 +461,18 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   PUSH_SUB(X(lcao_alt_wf))
 
   ASSERT(start == 1)
+
+#ifdef LCAO_DEBUG
+  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
+    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
+    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+  endif
+#endif
+
 
   if(.not. this%parallel) then
     if (mpi_grp_is_root(mpi_world)) then
@@ -571,9 +571,22 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           if (.not. this%parallel) then
             if (mpi_grp_is_root(mpi_world)) then
               do iorb = 1, norbs
+                n1 = ibasis - 1 + iorb
+
                 do jorb = 1, this%norb_atom(jatom)
-                  hamiltonian(ibasis - 1 + iorb, jbasis - 1 + jorb) = aa(iorb, jorb)
-                  overlap(ibasis - 1 + iorb, jbasis - 1 + jorb) = bb(iorb, jorb)
+                  n2 = jbasis - 1 + jorb
+
+                  if(n2 < n1) cycle ! only upper triangle
+                  hamiltonian(n1, n2) = aa(iorb, jorb)
+                  overlap(n1, n2) = bb(iorb, jorb)
+
+#ifdef LCAO_DEBUG
+                  if(this%debug) then
+                    write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
+                    write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
+                  endif
+#endif
+
                 end do
               end do
             end if
@@ -582,6 +595,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
               do jorb = 1, this%norb_atom(jatom)
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
+                ! FIXME: debug needed here too
                 if(all((/prow, pcol/) == this%myroc)) then
                   hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
                   overlap(ilbasis, jlbasis) = bb(iorb, jorb)
@@ -598,7 +612,14 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
-      end do
+      end do ! iatom
+
+#ifdef LCAO_DEBUG
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+        call io_close(iunit_h)
+        call io_close(iunit_s)
+      endif
+#endif
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
@@ -1000,6 +1021,17 @@ contains
       end if
 #endif      
     end if
+
+#ifdef LCAO_DEBUG
+    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      do n2 = 1, this%norbs
+        do n1 = 1, this%norbs
+          write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, evec(n1, n2)
+        enddo
+      enddo
+      call io_close(iunit_e)
+    endif
+#endif
 
     SAFE_DEALLOCATE_A(iwork)
     SAFE_DEALLOCATE_A(work)

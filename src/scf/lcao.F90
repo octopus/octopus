@@ -135,7 +135,7 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
 
-    integer :: ia, n, ii, jj, maxj, idim
+    integer :: ia, n, ii, jj, maxj, idim, iii, ll, mm, iunit_o
     integer :: mode_default
     FLOAT   :: max_orb_radius
 
@@ -256,6 +256,11 @@ contains
     call parse_logical(datasets_check('LCAODebug'), .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
+
+    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
+      write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
+    endif
 #endif
 
     if(.not. this%alternative) then
@@ -334,10 +339,22 @@ contains
             this%level(ii) = jj
             this%ddim(ii) = idim
 
+#ifdef LCAO_DEBUG
+            if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+              call species_iwf_ilm(geo%atom(this%atom(ii))%spec, this%level(ii), this%ddim(ii), iii, ll, mm)
+              write(iunit_o,'(7i6)') ii, this%atom(ii), this%level(ii), iii, ll, mm, this%ddim(ii)
+            endif
+#endif
+
             ii = ii + 1
           end do
         end do
       end do
+
+#ifdef LCAO_DEBUG
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+        call io_close(iunit_o)
+#endif
 
       ! some orbitals might have been removed because of their radii
       if(this%maxorbs /= ii - 1) then
@@ -531,8 +548,21 @@ contains
           this%atom_orb_basis(iatom, iorb) = ibasis
           this%basis_atom(ibasis) = iatom
           this%basis_orb(ibasis) = iorb
+
+#ifdef LCAO_DEBUG
+          ! no stored spin index in alternative mode
+          if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+            call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
+            write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
+          endif
+#endif
         end do
       end do
+
+#ifdef LCAO_DEBUG
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+        call io_close(iunit_o)
+#endif
 
       ! this is determined by the stencil we are using and the spacing
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
