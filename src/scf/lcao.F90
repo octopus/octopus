@@ -128,6 +128,9 @@ module lcao_m
 
 contains
 
+! uncomment below to use LCAODebug
+!#define LCAO_DEBUG
+
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
     type(lcao_t),         intent(out)   :: this
@@ -135,9 +138,12 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
 
-    integer :: ia, n, ii, jj, maxj, idim, iii, ll, mm, iunit_o
+    integer :: ia, n, ii, jj, maxj, idim
     integer :: mode_default
     FLOAT   :: max_orb_radius
+#ifdef LCAO_DEBUG
+    integer :: iii, ll, mm, iunit_o
+#endif
 
     PUSH_SUB(lcao_init)
 
@@ -239,9 +245,6 @@ contains
 
     if(states_are_complex(st)) &
       call parse_logical(datasets_check('LCAOComplexYlms'), .false., this%complex_ylms)
-
-! uncomment below to use LCAODebug
-!#define LCAO_DEBUG
 
     !!%Variable LCAODebug
     !!%Type logical
@@ -653,7 +656,7 @@ contains
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
-    integer :: s1, s2, k1, k2, is, ik, ip, idim, st_start_random
+    integer :: s1, s2, k1, k2, is, ik, st_start_random
     logical :: lcao_done
     type(profile_t), save :: prof
 

@@ -51,21 +51,21 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   ASSERT(jj <= species_niwfs(spec))
 
 #ifdef R_TCOMPLEX
-  if(this%complex_ylms) then
-    call zspecies_get_orbital(spec, mesh, jj, max(spin_channel, idim), &
-      geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
-  else
-#endif
+  if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(ao(1:mesh%np))
 
     call dspecies_get_orbital(spec, mesh, jj, max(spin_channel, idim), &
       geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
-  
+
     do ip = 1, mesh%np
       psi(ip, idim) = ao(ip)
     end do
 
     SAFE_DEALLOCATE_A(ao)
+  else
+#endif
+    call X(species_get_orbital)(spec, mesh, jj, max(spin_channel, idim), &
+      geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
 #ifdef R_TCOMPLEX
   endif
 #endif
@@ -89,7 +89,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
-  integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e
+  integer :: kstart, kend, ispin
+
+#ifdef LCAO_DEBUG
+  integer :: iunit_h, iunit_s, iunit_e
+#endif
 
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
@@ -447,8 +451,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, ispin, nev, ib, n1, n2
-  integer :: ibasis, jbasis, iorb, jorb, norbs, iunit_h, iunit_s, iunit_e
+  integer :: iatom, jatom, ik, ispin, nev, ib, n1, n2
+  integer :: ibasis, jbasis, iorb, jorb, norbs
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
@@ -457,6 +461,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
+#ifdef LCAO_DEBUG
+  integer :: iunit_h, iunit_s, iunit_e
+#endif
 
   PUSH_SUB(X(lcao_alt_wf))
 
