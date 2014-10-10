@@ -20,8 +20,7 @@
 
   ! ---------------------------------------------------------
   !> Magnus propagator
-  subroutine td_magnus(ks, hm, gr, st, tr, time, dt)
-    type(v_ks_t), target,            intent(inout) :: ks
+  subroutine td_magnus(hm, gr, st, tr, time, dt)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -42,7 +41,7 @@
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
-        call vksinterp_interpolate(tr%vksold, 3, gr%mesh%np, st%d%nspin, time, dt, atime(j)-dt, hm%vhxc)
+        call vksinterp_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
         call hamiltonian_update(hm, gr%mesh)
       end do
     else

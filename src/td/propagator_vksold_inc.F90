@@ -192,10 +192,9 @@
 
 
   ! ---------------------------------------------------------
-  subroutine vksinterp_interpolate(vksinterp, order, np, nspin, time, dt, t, vhxc, imvhxc)
+  subroutine vksinterp_interpolate(vksinterp, order, time, dt, t, vhxc, imvhxc)
     type(vksinterp_t), intent(inout) :: vksinterp
     integer,           intent(in)    :: order
-    integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: time, dt, t
     FLOAT,             intent(inout) :: vhxc(:, :)
     FLOAT, optional,   intent(inout) :: imvhxc(:, :)

@@ -546,7 +546,6 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(propagator_t),   intent(inout) :: tr
 
-    integer :: ip, ispin, idim
     PUSH_SUB(propagator_run_zero_iter)
 
     if(hm%cmplxscl%space) then
@@ -582,7 +581,7 @@ contains
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    integer :: is, iter, ik, ist, ispin
+    integer :: is, iter, ik, ist
     FLOAT   :: d, d_max
     logical :: self_consistent, cmplxscl, generate, update_energy_
     CMPLX, allocatable :: zpsi1(:, :, :, :)
@@ -626,26 +625,26 @@ contains
     case(PROP_AETRS, PROP_CAETRS)
       call td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+      call exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(ks, hm, gr, st, tr, time, dt, ions, geo, .false.)
+      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
       call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
       call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(ks, hm, gr, st, tr, time, dt, ions, geo, .true.)
+      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
-      call td_magnus(ks, hm, gr, st, tr, time, dt)
+      call td_magnus(hm, gr, st, tr, time, dt)
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo, qcchi)
+        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
       else
-        call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
       end if
     end select
 
@@ -678,23 +677,23 @@ contains
           case(PROP_AETRS, PROP_CAETRS)
             call td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
           case(PROP_EXPONENTIAL_MIDPOINT)
-            call exponential_midpoint(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+            call exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
           case(PROP_CRANK_NICOLSON)
-            call td_crank_nicolson(ks, hm, gr, st, tr, time, dt, ions, geo, .false.)
+            call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
           case(PROP_RUNGE_KUTTA4)
             call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
           case(PROP_RUNGE_KUTTA2)
             call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
           case(PROP_CRANK_NICOLSON_SPARSKIT)
-            call td_crank_nicolson(ks, hm, gr, st, tr, time, dt, ions, geo, .true.)
+            call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
           case(PROP_MAGNUS)
-            call td_magnus(ks, hm, gr, st, tr, time, dt)
+            call td_magnus(hm, gr, st, tr, time, dt)
           case(PROP_CRANK_NICOLSON_SRC_MEM)
             call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
           case(PROP_EXPLICIT_RUNGE_KUTTA4)
-            call td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+            call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
           end select
 
           call v_ks_calc(ks, hm, st, geo, time = time - dt)

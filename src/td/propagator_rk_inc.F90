@@ -17,12 +17,11 @@
 !!
 !! $Id$
 
-    subroutine td_explicit_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo, qcchi)
+    subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
       type(v_ks_t), target,            intent(inout) :: ks
       type(hamiltonian_t), target,     intent(inout) :: hm
       type(grid_t),        target,     intent(inout) :: gr
       type(states_t),      target,     intent(inout) :: st
-      type(propagator_t),  target,     intent(inout) :: tr
       FLOAT,                           intent(in)    :: time
       FLOAT,                           intent(in)    :: dt
       type(ion_dynamics_t),            intent(inout) :: ions

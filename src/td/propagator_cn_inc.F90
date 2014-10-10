@@ -50,8 +50,7 @@
 
   ! ---------------------------------------------------------
   !> Crank-Nicolson propagator
-  subroutine td_crank_nicolson(ks, hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
-    type(v_ks_t), target,            intent(inout) :: ks
+  subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -106,10 +105,10 @@
     end if
 
     if(hm%cmplxscl%space) then
-    call vksinterp_interpolate(tr%vksold, 3, gr%mesh%np, st%d%nspin, &
+    call vksinterp_interpolate(tr%vksold, 3, &
       time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
     else
-    call vksinterp_interpolate(tr%vksold, 3, gr%mesh%np, st%d%nspin, &
+    call vksinterp_interpolate(tr%vksold, 3, &
       time, dt, time -dt/M_TWO, hm%vhxc)
     end if
     
@@ -170,7 +169,7 @@
       t_op  = time + dt/M_TWO
         
       call vksinterp_interpolate(tr%vksold, 3,  &
-        gr%mesh%np, st%d%nspin, time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
+        time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
 
       call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
       

@@ -19,8 +19,7 @@
 
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
-    type(v_ks_t), target,            intent(inout) :: ks
+  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -47,10 +46,10 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if(hm%cmplxscl%space) then
           call vksinterp_interpolate(tr%vksold, 3, &
-            gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
+            time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
         else
           call vksinterp_interpolate(tr%vksold, 3, &
-            gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc)
+            time, dt, time - dt/M_TWO, hm%vhxc)
         end if
       end if
       !FIXME: not implemented yet
@@ -84,10 +83,10 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if(hm%cmplxscl%space) then
           call vksinterp_interpolate(tr%vksold, 3, &
-            gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
+            time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
         else
           call vksinterp_interpolate(tr%vksold, 3, &
-            gr%mesh%np, st%d%nspin, time, dt, time - dt/M_TWO, hm%vhxc)
+            time, dt, time - dt/M_TWO, hm%vhxc)
         end if
       end if
       !move the ions to time 'time - dt/2'
@@ -121,7 +120,7 @@
         ! FIXME: check this interpolation!! 
         ! probably need some rethinking 
         if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-           call vksinterp_interpolate(tr%vksold, 3, gr%mesh%np, st%d%nspin, &
+           call vksinterp_interpolate(tr%vksold, 3, &
              time, dt, time+dt/M_TWO, hm%vhxc, hm%imvhxc)
         end if
       
