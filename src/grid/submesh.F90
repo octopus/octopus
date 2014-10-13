@@ -68,8 +68,6 @@ module submesh_m
     logical               :: has_points
   end type submesh_t
   
-  integer :: tagcounter = 0
-
   interface submesh_add_to_mesh
     module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh
   end interface submesh_add_to_mesh
