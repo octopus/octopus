@@ -255,6 +255,8 @@ module splines_m
   interface spline_eval_vec
     module procedure spline_eval4_array
     module procedure spline_eval8_array
+    module procedure spline_evalc_array
+    module procedure spline_evalz_array
   end interface spline_eval_vec
 
   !> The integral may be done with or without integration limits, but
@@ -327,6 +329,24 @@ module splines_m
       type(c_ptr), intent(in)    :: spl
       type(c_ptr), intent(in)    :: acc  
     end subroutine oct_spline_eval_array4
+
+    pure subroutine oct_spline_eval_arrayz(nn, xf, spl, acc)
+      use c_pointer_m
+
+      integer,     intent(in)    :: nn
+      complex(8),  intent(inout) :: xf
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc  
+    end subroutine oct_spline_eval_arrayz
+
+    pure subroutine oct_spline_eval_arrayc(nn, xf, spl, acc)
+      use c_pointer_m
+
+      integer,     intent(in)    :: nn
+      complex(4),  intent(inout) :: xf
+      type(c_ptr), intent(in)    :: spl
+      type(c_ptr), intent(in)    :: acc  
+    end subroutine oct_spline_eval_arrayc
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
       use c_pointer_m
@@ -580,6 +600,26 @@ contains
 
     call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_eval4_array
+
+
+  !------------------------------------------------------------
+  pure subroutine spline_evalz_array(spl, nn, xf)
+    type(spline_t), intent(in)    :: spl
+    integer,        intent(in)    :: nn
+    complex(8),     intent(inout) :: xf(:)
+
+    call oct_spline_eval_arrayz(nn, xf(1), spl%spl, spl%acc)
+  end subroutine spline_evalz_array
+
+
+  !------------------------------------------------------------
+  pure subroutine spline_evalc_array(spl, nn, xf)
+    type(spline_t), intent(in)    :: spl
+    integer,        intent(in)    :: nn
+    complex(4),     intent(inout) :: xf(:)
+
+    call oct_spline_eval_arrayc(nn, xf(1), spl%spl, spl%acc)
+  end subroutine spline_evalc_array
 
 
   !------------------------------------------------------------

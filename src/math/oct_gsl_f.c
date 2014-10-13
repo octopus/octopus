@@ -273,12 +273,32 @@ void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
   }
 }
 
-void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
+void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY4)
      (const fint * nn, float *xf, const void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
     xf[ii] = (float) gsl_spline_eval((gsl_spline *)(*spl), (double) xf[ii], (gsl_interp_accel *)(*acc));
+  }
+}
+
+/* use a stride of 2 to store into just the real part of a Fortran complex array */
+void FC_FUNC_(oct_spline_eval_arrayz, OCT_SPLINE_EVAL_ARRAYZ)
+     (const fint * nn, double *xf, const void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii*2] = gsl_spline_eval((gsl_spline *)(*spl), xf[ii*2], (gsl_interp_accel *)(*acc));
+  }
+}
+
+/* use a stride of 2 to store into just the real part of a Fortran complex array */
+void FC_FUNC_(oct_spline_eval_arrayc, OCT_SPLINE_EVAL_ARRAYC)
+     (const fint * nn, float *xf, const void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii*2] = (float) gsl_spline_eval((gsl_spline *)(*spl), (double) xf[ii*2], (gsl_interp_accel *)(*acc));
   }
 }
 
