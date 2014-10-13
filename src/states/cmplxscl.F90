@@ -22,6 +22,7 @@
 module cmplxscl_m
   use datasets_m
   use global_m
+  use opencl_m
   use parser_m
   use messages_m
   use varinfo_m
@@ -73,6 +74,7 @@ contains
     !%Description
     !% (experimental) Global complex scaling. The options 
     !% allow to scale space and time coordinates in the Hamiltonian.
+    !% Cannot be used with OpenCL currently.
     !% You can specify more than one value by giving them as a sum, 
     !% for example:
     !% <tt>ComplexScaling = space + time</tt>
@@ -92,10 +94,14 @@ contains
     if(.not.varinfo_valid_option('ComplexScaling', cmplxscl_flags, is_flag = .true.)) then
       call input_error('ComplexScaling')
     end if
-    
+
     this%space = iand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
     this%time  = iand(cmplxscl_flags, CMPLXSCL_TIME)  /= 0
 
+    if((this%space .or. this%time) .and. opencl_is_enabled()) &
+      call messages_not_implemented("ComplexScaling with OpenCL")
+    ! scaling of kinetic energy in src/hamiltonian/hamiltonian_inc.F90 seg-faults, for example
+    
     if(this%space) then
       !%Variable ComplexScalingTheta
       !%Type float 

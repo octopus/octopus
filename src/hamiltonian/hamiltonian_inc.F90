@@ -119,6 +119,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
 
+    ! FIXME: need to handle OpenCL case here.
     if(hm%cmplxscl%space) then !cmplxscl
     !complex scale the laplacian 
       do sp = 1, der%mesh%np, bs   
