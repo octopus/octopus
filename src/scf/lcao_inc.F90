@@ -89,7 +89,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
-  integer :: kstart, kend, ispin
+  integer :: kstart, kend, ispin, ierr
+  character(len=256) :: filename
 
 #ifdef LCAO_DEBUG
   integer :: iunit_h, iunit_s, iunit_e
@@ -146,6 +147,14 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     
     do ispin = 1, st%d%spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
+
+#ifdef LCAO_DEBUG
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+        write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
+        call X(io_function_output)(C_OUTPUT_HOW_XCRYSDEN, "./static", filename, gr%mesh, lcaopsi(:, 1, ispin), &
+          sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, is_tmp = .false., geo = geo)
+      endif
+#endif
     end do
 
     do ik = kstart, kend
@@ -462,7 +471,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
 #ifdef LCAO_DEBUG
-  integer :: iunit_h, iunit_s, iunit_e
+  integer :: iunit_h, iunit_s, iunit_e, ierr
+  character(len=256) :: filename
 #endif
 
   PUSH_SUB(X(lcao_alt_wf))
@@ -579,6 +589,14 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
             if (mpi_grp_is_root(mpi_world)) then
               do iorb = 1, norbs
                 n1 = ibasis - 1 + iorb
+
+#ifdef LCAO_DEBUG
+                if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+                  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
+                  call X(io_function_output)(C_OUTPUT_HOW_XCRYSDEN, "./static", filename, gr%mesh, psii(:, 1, iorb), &
+                    sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, is_tmp = .false., geo = geo)
+                endif
+#endif
 
                 do jorb = 1, this%norb_atom(jatom)
                   n2 = jbasis - 1 + jorb
