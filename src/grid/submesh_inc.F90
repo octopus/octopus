@@ -73,7 +73,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   integer :: is, idim
 
-  PUSH_SUB(X(dsubmesh_to mesh_dotp))
+  PUSH_SUB(X(dsubmesh_to_mesh_dotp))
 
   dotp = R_TOTYPE(M_ZERO)
 
@@ -94,7 +94,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) call comm_allreduce(this%mesh%vp%comm, dotp)
 
-  POP_SUB(X(dsubmesh_to mesh_dotp))
+  POP_SUB(X(dsubmesh_to_mesh_dotp))
 end function X(dsubmesh_to_mesh_dotp)
 
 !------------------------------------------------------------
@@ -214,7 +214,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
             do is = 1, this%np
               dotp = dotp + this%mesh%vol_pp(this%map(is))*&
-                mm%states(jst)%X(psi)(this%map(is), idim)*&
+                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%dpsi(is, jdim)
             end do
 
@@ -222,7 +222,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
             do is = 1, this%np
               dotp = dotp + this%mesh%vol_pp(this%map(is))*&
-                mm%states(jst)%X(psi)(this%map(is), idim)*&
+                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
 
@@ -246,13 +246,13 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
           if(associated(ss%states(ist)%dpsi)) then
             do is = 1, this%np
               dotp = dotp + &
-                mm%states(jst)%X(psi)(this%map(is), idim)*&
+                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%dpsi(is, jdim)
             end do
           else
             do is = 1, this%np
               dotp = dotp + &
-                mm%states(jst)%X(psi)(this%map(is), idim)*&
+                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
           end if
