@@ -136,7 +136,7 @@ contains
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
-    case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
+    case (SPEC_JELLI) ! ... from jellium
       in_points = 0
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = atom%x)
@@ -611,7 +611,7 @@ contains
           call messages_fatal(2)
         end if
 
-      case(SPEC_POINT, SPEC_JELLI)
+      case(SPEC_JELLI)
         a1 = species_z(spec)/(M_TWO*species_jradius(spec)**3)
         a2 = species_z(spec)/species_jradius(spec)
         Rb2= species_jradius(spec)**2

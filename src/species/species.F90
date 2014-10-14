@@ -86,7 +86,6 @@ module species_m
   integer, public, parameter :: LABEL_LEN=15
 
   integer, public, parameter ::  &
-    SPEC_POINT          = 2,     & !< point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI          = 3,     & !< jellium sphere.
     SPEC_JELLI_SLAB     = 4,     & !< jellium slab.
     SPEC_FROZEN         = 5,     & !< frozen species.
@@ -283,7 +282,6 @@ contains
     !% <br>&nbsp;&nbsp;'H'       |   1.0079 | spec_ps_hgh         | 1 
     !% <br>&nbsp;&nbsp;'jlm'     |  23.2    | spec_jelli          | 8   | 5.0
     !% <br>&nbsp;&nbsp;'rho'     |  17.0    | spec_charge_density | 6   | "exp(-r/a)"
-    !% <br>&nbsp;&nbsp;'pnt'     |  32.3    | spec_point          | 2.0
     !% <br>&nbsp;&nbsp;'udf'     |   0.0    | spec_user_defined   | 8   | "1/2*r^2"
     !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_delta     | 1
     !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_gaussian  | 1
@@ -298,10 +296,9 @@ contains
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
-    !%Option spec_point  2
-    !% Point charge. No extra columns.
+    !%Option spec_point  3
     !%Option spec_jelli  3
-    !% Jellium sphere: the fifth field is the radius of the sphere.
+    !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
     !%Option spec_jelli_slab  4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
@@ -517,7 +514,7 @@ contains
       spec%niwfs = 2*nint(spec%z_val)
       spec%omega = CNST(0.1)
 
-    case(SPEC_JELLI, SPEC_POINT)
+    case(SPEC_JELLI)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium sphere / approximated point particle.'
         write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
@@ -1139,7 +1136,7 @@ contains
     bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
     write(iunit, '(2a)')      'usdef  = ', trim(spec%user_def)
-    if (spec%type == SPEC_JELLI .or. spec%type == SPEC_POINT) then
+    if (spec%type == SPEC_JELLI) then
       write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
     end if
     if (spec%type == SPEC_JELLI_SLAB) then
@@ -1204,10 +1201,11 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: nn
+    integer :: ncols
 
     PUSH_SUB(read_from_block)
 
+    ncols = parse_block_cols(blk, row)
     read_data = 0
 
     call parse_block_float(blk, row, 1, spec%weight)
@@ -1234,22 +1232,23 @@ contains
       call parse_block_string(blk, row, 4, spec%filename)
       read_data = 5
 
-    case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-      call parse_block_float(blk, row, 3, spec%Z)
-      spec%jradius = M_HALF
-      spec%Z_val = 0
-      read_data = 4
-
     case(SPEC_JELLI)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
-      call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
-      spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
+      if(ncols > 4) then
+        call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
+        if(spec%jradius <= M_ZERO) call input_error('Species')
+        spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
+        read_data = 5
+      else
+        spec%jradius = M_HALF
+        read_data = 4
+      endif
       spec%Z_val = spec%Z
-      read_data = 5
 
     case(SPEC_JELLI_SLAB)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium slab
       call parse_block_float(blk, row, 4, spec%jthick) ! thickness of the jellium slab
+      if(spec%jthick <= M_ZERO) call input_error('Species')
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
       spec%Z_val = spec%Z
       read_data = 5
@@ -1273,41 +1272,39 @@ contains
       read_data = 5
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
-      nn = parse_block_cols(blk, row)
-
       call parse_block_float(blk, row, 3, spec%Z)
       read_data = 4
 
       if(spec%type == SPEC_PS_PSF .or. spec%type == SPEC_PS_CPI .or. spec%type == SPEC_PS_FHI) then
-        if(nn > 4) then
+        if(ncols > 4) then
           call parse_block_integer(blk, row, 4, spec%lmax)
           read_data = 5
         end if
 
-        if(nn > 5) then
+        if(ncols > 5) then
           call parse_block_integer(blk, row, 5, spec%lloc)
           read_data = 6
         end if
 
-        if(nn > 5 .and. spec%lloc > spec%lmax) then
+        if(ncols > 5 .and. spec%lloc > spec%lmax) then
           message(1) = "lloc > lmax in Species block for " // trim(spec%label) // "."
           call messages_fatal(1)
         endif
       endif
 
-      if(nn > read_data) then
+      if(ncols > read_data) then
         call parse_block_float(blk, row, read_data, spec%def_h)
         spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
         read_data = read_data + 1
       end if
 
-      if(nn > read_data) then
+      if(ncols > read_data) then
         call parse_block_float(blk, row, read_data, spec%def_rsize)
         spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
         read_data = read_data + 1
       end if
 
-      if(nn > read_data) then
+      if(ncols > read_data) then
         message(1) = "Too many columns in Species block for " // trim(spec%label) // "."
         call messages_fatal(1)
       endif
