@@ -69,7 +69,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   nullify(read_ff)
 
-  if (associated(restart%map) .and. mesh%parallel_in_domains) then 
+  if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
     call X(io_function_input) (trim(restart%pwd)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, &
                                is_tmp=.true., map = restart%map)
@@ -78,7 +78,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     return
   end if
 
-  if (associated(restart%map)) then
+  if (restart_has_map(restart)) then
     call io_binary_get_info(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, ierr)
 
     if (ierr /= 0) then
@@ -128,7 +128,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     call profiling_out(prof_comm)
   end if
 
-  if (associated(restart%map)) then
+  if (restart_has_map(restart)) then
     ff(1:mesh%np_global) = M_ZERO
     do ip = 1, min(np, ubound(restart%map, dim = 1))
       if (restart%map(ip) > 0) ff(restart%map(ip)) = read_ff(ip)
