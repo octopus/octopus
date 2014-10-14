@@ -60,6 +60,7 @@ module restart_m
     restart_unblock_signals,      &
     restart_skip,                 &
     restart_has_flag,             &
+    restart_has_map,              &
     drestart_write_mesh_function, &
     zrestart_write_mesh_function, &
     drestart_read_mesh_function,  &
@@ -554,7 +555,7 @@ contains
           call mesh_check_dump_compatibility(mesh, restart%pwd, "grid", restart%mpi_grp, &
             grid_changed, grid_reordered, restart%map, ierr)
 
-          ! Check if an error occurred. If so, stop the calculation, because at the moment we really need a compatible mesh.
+          ! Check whether an error occurred. If so, stop the calculation, because at the moment we really need a compatible mesh.
           if (ierr /= 0) then
             if (ierr == -1) then
               message(1) = "Unable to check mesh compatibility: unable to read mesh fingerprint"
@@ -626,6 +627,7 @@ contains
     restart%data_type = 0
     restart%skip = .true.
     SAFE_DEALLOCATE_P(restart%map)
+    restart%has_mesh = .false.
 
     POP_SUB(restart_end)
   end subroutine restart_end
@@ -866,6 +868,16 @@ contains
     restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
 
   end function restart_has_flag
+
+
+  ! ---------------------------------------------------------
+  !> Returns true if the restart was from a different order of mesh points
+  logical pure function restart_has_map(restart)
+    type(restart_t), intent(in) :: restart
+
+    restart_has_map = associated(restart%map)
+
+  end function restart_has_map
 
 
   ! ---------------------------------------------------------

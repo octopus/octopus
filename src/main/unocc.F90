@@ -67,6 +67,7 @@ contains
     character(len=50) :: str
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
+    logical :: write_density
 
     PUSH_SUB(unocc_run)
 
@@ -130,7 +131,10 @@ contains
         call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
+      write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
+    else
+      write_density = .true.
     endif
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
@@ -207,6 +211,10 @@ contains
     ! Restart dump should be initialized after restart_load, as the mesh might have changed
     call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                       ierr, mesh=sys%gr%mesh)
+
+    ! make sure the density is defined on the same mesh as the wavefunctions that will be written
+    if(write_density) &
+      call states_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
