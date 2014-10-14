@@ -397,7 +397,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
         
-    call dout_cf_vtk(filename, ierr, cf, cube, sb%dim, dk(:),& 
+    call dout_cf_vtk(filename, ierr, cf, cube, dk(:),& 
       sqrt(units_out%energy)**sb%dim)
       
   else

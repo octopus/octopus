@@ -1264,6 +1264,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! FIXME: why is this never called?
   subroutine spectrum_hsfunction_ar_end
 
     PUSH_SUB(spectrum_hsfunction_ar_end)

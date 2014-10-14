@@ -1285,7 +1285,7 @@ contains
 
     forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
      
-    call X(out_cf_vtk)(filename, ierr, cf, cube, mesh%sb%dim, dk(:), unit)
+    call X(out_cf_vtk)(filename, ierr, cf, cube, dk(:), unit)
 
     call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)
@@ -1345,23 +1345,19 @@ end function X(interpolate_isolevel)
   !!  see http://www.vtk.org/VTK/img/file-formats.pdf
   !!  for the moment only real part 
   ! ---------------------------------------------------------
-  subroutine X(out_cf_vtk)(filename, ierr, cf_in, cube, sb_dim, spacing, unit)
+  subroutine X(out_cf_vtk)(filename, ierr, cf_in, cube, spacing, unit)
     character(len=*),      intent(in) :: filename        !< the file name
     integer,               intent(out):: ierr            !< error message   
     type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
     type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
-    integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
     FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
     type(unit_t),          intent(in) :: unit            !< unit of data in cf
-
 
     integer :: iunit, np
     type(cube_function_t) :: cf_out
     integer :: i1,i2,i3
 
-
     PUSH_SUB(X(out_cf_vtk))
-
   
     np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
