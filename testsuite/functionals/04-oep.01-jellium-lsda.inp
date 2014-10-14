@@ -40,9 +40,8 @@ Spacing = 0.35
 
 XCFunctional = lda_x + lda_c_pw
 
-ConvRelDens = 8e-6
-
-EigenSolverTolerance = 1e-5
+LCAOStart = lcao_states
+ConvRelDens = 1e-6
 
 Preconditioner = no
 

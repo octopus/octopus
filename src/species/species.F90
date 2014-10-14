@@ -470,7 +470,7 @@ contains
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a soft-Coulomb potential.'
         call messages_info(1)
       end if
-      spec%niwfs = 2*nint(spec%z_val)
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
       spec%omega = CNST(0.1)
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
@@ -525,7 +525,7 @@ contains
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
         call messages_info(4)
       end if
-      spec%niwfs = 2*nint(spec%z_val)
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI_SLAB)
@@ -541,7 +541,6 @@ contains
       spec%omega = CNST(0.1)
 
     case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
-      spec%niwfs = 2*nint(spec%z_val)
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'
@@ -550,6 +549,7 @@ contains
         write(message(4),'(a)')  '   for a delta density distribution.'
         call messages_info(4)
       end if
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
       spec%omega = spec%z_val 
 
     case(SPEC_CHARGE_DENSITY)
@@ -579,6 +579,23 @@ contains
 
     POP_SUB(species_init)
   end subroutine species_init
+  ! ---------------------------------------------------------
+
+
+  !> find size of closed shell for hydrogenic atom with size at least min_niwfs
+  integer function species_closed_shell_size(min_niwfs) result(size)
+    integer, intent(in) :: min_niwfs
+
+    integer :: nn
+
+    size = 0
+    do nn = 1, min_niwfs
+      if(size >= min_niwfs) exit
+      size = size + nn**2
+    enddo
+
+  end function species_closed_shell_size
+
   ! ---------------------------------------------------------
 
 
@@ -1029,9 +1046,16 @@ contains
 
     if(species_is_ps(spec)) then
       radius = spline_cutoff_radius(spec%ps%ur(i, is), threshold)
+    else if(species_represents_real_atom(spec)) then
+      radius = -i*log(threshold)/spec%Z_val
     else
       radius = sqrt(-M_TWO*log(threshold)/spec%omega)
     end if
+
+    ! The values for hydrogenic and harmonic-oscillator wavefunctions
+    ! come from taking the exponential part (i.e. the one that controls
+    ! the asymptotic behavior at large r), and setting it equal to
+    ! the threshold.
 
     POP_SUB(species_get_iwf_radius)
   end function species_get_iwf_radius
@@ -1350,10 +1374,29 @@ contains
           end do
           
         end do
+        ! FIXME: this is wrong when spin-polarized or spinors!
         spec%niwfs = n - 1
       end do
 
       SAFE_DEALLOCATE_A(bound)
+
+    else if(species_represents_real_atom(spec) .and. space%dim == 3) then
+
+      do is = 1, ispin
+        n = 1
+        ! just up to the highest principal quantum number, actually
+        do i = 1, spec%niwfs
+          if(n > spec%niwfs) exit
+          do l = 0, i-1
+            do m = -l, l
+              spec%iwf_i(n, is) = i
+              spec%iwf_l(n, is) = l
+              spec%iwf_m(n, is) = m
+              n = n + 1
+            end do
+          end do
+        end do
+      end do
 
     else
 

@@ -60,27 +60,34 @@
 
     SAFE_ALLOCATE(lorb(1:mesh%np))
 
-    if(species_is_ps(spec)) then
-      ps => species_ps(spec)
+    if(species_represents_real_atom(spec)) then
+      if(species_is_ps(spec)) &
+        ps => species_ps(spec)
       SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
       SAFE_ALLOCATE(ylm(1:mesh%np))
     endif
 
     do icell = 1, periodic_copy_num(pc)
 
-      if(species_is_ps(spec)) then
+      if(species_represents_real_atom(spec) .and. mesh%sb%dim == 3) then
 
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
           xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
           
-          if(r2 < spline_range_max(ps%ur_sq(i, ispin))) then
-            lorb(ip) = spline_eval(ps%ur_sq(i, ispin), r2)
+          if(species_is_ps(spec)) then
+            if(r2 < spline_range_max(ps%ur_sq(i, ispin))) then
+              lorb(ip) = spline_eval(ps%ur_sq(i, ispin), r2)
+            else
+              lorb(ip) = M_ZERO
+            end if
           else
-            lorb(ip) = M_ZERO
-          end if
-
+            ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
+            lorb(ip) = sqrt( (2*species_zval(spec)/i)**3 * factorial(i - l - 1) / (2*i*factorial(i+l)) ) * &
+              exp(-species_zval(spec) * sqrt(r2) / i) * (2*species_zval(spec)*sqrt(r2)/i)**l * &
+              loct_sf_laguerre_n(i-l-1, real(2*l + 1, REAL_PRECISION), 2*species_zval(spec)*sqrt(r2)/i)
+          endif
         end do
 
 #ifdef R_TCOMPLEX
@@ -100,6 +107,7 @@
       else
 
         ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
+        ! also, these are far from normalized.
         nn = (/i, l, m/)
 
         do ip = 1, mesh%np
@@ -141,7 +149,6 @@
 
     integer :: i, l, m, ip, nn(3), idir
     FLOAT :: sqrtw, ww
-!    FLOAT, allocatable :: ylm(:)
     R_TYPE, allocatable :: ylm(:)
     type(ps_t), pointer :: ps
     type(spline_t) :: dur

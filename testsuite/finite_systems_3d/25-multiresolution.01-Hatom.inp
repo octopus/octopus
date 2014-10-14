@@ -5,7 +5,6 @@
  'H_f' | 1.00794 | spec_full_delta | 1
 %
 
-LCAOStart = no
 Boxshape = sphere
 Radius = 8.0
 Spacing = 0.2

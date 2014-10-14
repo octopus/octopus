@@ -192,7 +192,9 @@ contains
     !% <tt>spec_jelli</tt>, and <tt>spec_jelli_slab</tt>;
     !% or uniform for CPI and FHI pseudopotentials, <tt>spec_full_delta</tt>, <tt>spec_full_gaussian</tt>,
     !% <tt>spec_user_defined</tt>, or <tt>species_from_file</tt>.
-    !% (Non-pseudopotential species use Hermite polynomials as orbitals.)
+    !% Pseudopotential species use the pseudo-wavefunctions as orbitals, full-potential atomic species
+    !% (<tt>spec_full_delta</tt> and <tt>spec_full_gaussian</tt>) use hydrogenic wavefunctions, and
+    !% others use harmonic-oscillator wavefunctions.
     !%Option lcao_none 0
     !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
     !%Option lcao_states 2

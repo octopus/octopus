@@ -22,6 +22,7 @@ ExtraStates = 1
 0 | 1
 %
 
+LCAOComplexYlms = true
 %StaticMagneticField
 0.0 | 0.0 | 0.5
 %
