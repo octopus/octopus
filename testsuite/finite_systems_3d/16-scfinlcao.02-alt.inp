@@ -31,4 +31,6 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 
 SCFinLCAO = yes
 LCAOAlternative = yes
+ForceComplex = yes
+LCAOComplexYlms = yes
 ExperimentalFeatures = yes

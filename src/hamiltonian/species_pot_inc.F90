@@ -128,6 +128,93 @@
     POP_SUB(X(species_get_orbital))
   end subroutine X(species_get_orbital)
 
+
+  ! ---------------------------------------------------------
+  subroutine X(species_get_orbital_submesh)(spec, submesh, iorb, ispin, pos, phi, derivative)
+    type(species_t), target, intent(in)  :: spec       !< The species.
+    type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
+    integer,                 intent(in)  :: iorb       !< The index of the orbital to return.
+    integer,                 intent(in)  :: ispin      !< The spin index.
+    FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
+    R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
+    logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
+
+    integer :: i, l, m, ip, nn(3), idir
+    FLOAT :: sqrtw, ww
+!    FLOAT, allocatable :: ylm(:)
+    R_TYPE, allocatable :: ylm(:)
+    type(ps_t), pointer :: ps
+    type(spline_t) :: dur
+    logical :: derivative_
+    
+    if(submesh%np == 0) return
+
+    PUSH_SUB(X(species_get_orbital_submesh))
+
+    derivative_ = optional_default(derivative, .false.)
+
+    ASSERT(ubound(phi, dim = 1) >= submesh%np)
+
+    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
+
+    if(species_is_ps(spec)) then
+      ps => species_ps(spec)
+      
+      forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
+
+      if(.not. derivative_) then
+        call spline_eval_vec(ps%ur(i, ispin), submesh%np, phi)
+      else
+        call spline_init(dur)
+        call spline_der(ps%ur(i, ispin), dur)
+        call spline_eval_vec(dur, submesh%np, phi)
+        call spline_end(dur)
+      end if
+
+      SAFE_ALLOCATE(ylm(1:submesh%np))
+
+#ifdef R_TCOMPLEX
+      ! complex spherical harmonics. FIXME: vectorize
+      do ip = 1, submesh%np
+        call ylmr(submesh%x(ip, 1), submesh%x(ip, 2), submesh%x(ip, 3), l, m, ylm(ip))
+      enddo
+#else
+      ! real spherical harmonics
+      call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), l, m, ylm(1))
+#endif      
+
+      do ip = 1, submesh%np
+        phi(ip) = phi(ip)*ylm(ip)
+      end do
+
+      SAFE_DEALLOCATE_A(ylm)
+
+      nullify(ps)
+
+    else
+      
+      ASSERT(.not. derivative_)
+      ! Question: why not implemented derivatives here?
+      ! Answer: because they are linearly dependent with lower-order Hermite polynomials.
+
+      ww = species_omega(spec)
+      sqrtw = sqrt(ww)
+
+      ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
+      nn = (/i, l, m/)
+
+      do ip = 1, submesh%np
+        phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)
+        do idir = 1, submesh%mesh%sb%dim
+          phi(ip) = phi(ip) * hermite(nn(idir) - 1, submesh%x(ip, idir)*sqrtw)
+        enddo
+      end do
+      
+    end if
+
+    POP_SUB(X(species_get_orbital_submesh))
+  end subroutine X(species_get_orbital_submesh)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

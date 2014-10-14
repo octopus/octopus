@@ -243,8 +243,11 @@ contains
     !% operator, with a definite angular momentum.
     !%End
 
-    if(states_are_complex(st)) &
+    if(states_are_complex(st)) then
       call parse_logical(datasets_check('LCAOComplexYlms'), .false., this%complex_ylms)
+    else
+      this%complex_ylms = .false.
+    endif
 
     !!%Variable LCAODebug
     !!%Type logical
@@ -914,48 +917,6 @@ contains
 
   end subroutine lcao_local_index
 
-  ! --------------------------------------------------------- 
-  
-  !> This function generates the set of an atomic orbitals for an atom
-  !! and stores it in the batch orbitalb. It can be called when the
-  !! orbitals are already stored. In that case it does not do anything.
-  subroutine lcao_alt_get_orbital(orbitalb, sphere, geo, ispin, iatom, norbs)
-    type(batch_t),     intent(inout) :: orbitalb
-    type(submesh_t),   intent(in)    :: sphere
-    type(geometry_t),  intent(in)    :: geo
-    integer,           intent(in)    :: ispin
-    integer,           intent(in)    :: iatom
-    integer,           intent(in)    :: norbs
-
-    integer :: iorb
-
-    PUSH_SUB(lcao_alt_get_orbital)
-
-    if(.not. batch_is_ok(orbitalb)) then
-
-      call profiling_in(prof_orbitals, "LCAO_ORBITALS")
-
-      ! allocate memory
-      call dbatch_new(orbitalb, 1, norbs, sphere%np)
-      
-      ! generate the orbitals
-      do iorb = 1, norbs
-        if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
-          call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb - species_niwfs(geo%atom(iatom)%spec), &
-            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1), derivative = .true.)
-        else
-          call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, &
-            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%dpsi(:, 1))
-        end if
-      end do
- 
-      call profiling_out(prof_orbitals)
-    end if
-
-    POP_SUB(lcao_alt_get_orbital)
-
-  end subroutine lcao_alt_get_orbital
-
   ! ---------------------------------------------------------
 
   !> This function deallocates a set of an atomic orbitals for an
@@ -1043,7 +1004,8 @@ contains
 
       else
 
-        call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
+        ! for simplicity, always use real ones here.
+        call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
 
         ! the extra orbitals with the derivative are not relevant here, hence we divide by this%mult
         SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)/this%mult))

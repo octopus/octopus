@@ -549,7 +549,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
-        call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+        if(this%complex_ylms) then
+          call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+        else
+          call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+        endif
 
         psii = M_ZERO
 
@@ -568,7 +572,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
 
-          call lcao_alt_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
+          if(this%complex_ylms) then
+            call zlcao_alt_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
+          else
+            call dlcao_alt_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
+          endif
 
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
@@ -704,7 +712,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           do iatom = 1, geo%natoms
             norbs = this%norb_atom(iatom)
 
-            call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+            if(this%complex_ylms) then
+              call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+            else
+              call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+            endif
 
             ! FIXME: this call handles spinors incorrectly.
             call X(submesh_batch_add_matrix)(this%sphere(iatom), block_evec(ibasis:, :), &
@@ -735,7 +747,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         do iatom = 1, geo%natoms
           norbs = this%norb_atom(iatom)
 
-          call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+          if(this%complex_ylms) then
+            call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+          else
+            call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+          endif
 
           do ib = st%group%block_start, st%group%block_end
             ! FIXME: this call handles spinors incorrectly.
@@ -1068,6 +1084,48 @@ contains
   end subroutine diagonalization
 
 end subroutine X(lcao_alt_wf)
+
+  ! --------------------------------------------------------- 
+  
+  !> This function generates the set of an atomic orbitals for an atom
+  !! and stores it in the batch orbitalb. It can be called when the
+  !! orbitals are already stored. In that case it does not do anything.
+  subroutine X(lcao_alt_get_orbital)(orbitalb, sphere, geo, ispin, iatom, norbs)
+    type(batch_t),     intent(inout) :: orbitalb
+    type(submesh_t),   intent(in)    :: sphere
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: ispin
+    integer,           intent(in)    :: iatom
+    integer,           intent(in)    :: norbs
+
+    integer :: iorb
+
+    PUSH_SUB(X(lcao_alt_get_orbital))
+
+    if(.not. batch_is_ok(orbitalb)) then
+
+      call profiling_in(prof_orbitals, "LCAO_ORBITALS")
+
+      ! allocate memory
+      call X(batch_new)(orbitalb, 1, norbs, sphere%np)
+      
+      ! generate the orbitals
+      do iorb = 1, norbs
+        if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
+          call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, iorb - species_niwfs(geo%atom(iatom)%spec), &
+            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = .true.)
+        else
+          call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, iorb, &
+            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1))
+        end if
+      end do
+ 
+      call profiling_out(prof_orbitals)
+    end if
+
+    POP_SUB(X(lcao_alt_get_orbital))
+
+  end subroutine X(lcao_alt_get_orbital)
 
 !! Local Variables:
 !! mode: f90
