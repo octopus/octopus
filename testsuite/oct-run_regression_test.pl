@@ -397,7 +397,7 @@ exit $failures;
 
 
 sub find_executables {
-  my $name;
+  my $name = "";
   $options = ""; # initialize in case no options specified
 
   open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
@@ -438,6 +438,11 @@ sub find_executables {
 
   }
   close(TESTSUITE);
+
+  if($name eq "") {
+      print STDERR "ERROR: No name was provided with Test tag.\n";
+      exit 254;
+  }
 
   # Exit if no suitable executable was found.
   if( @executables == 0 ){
