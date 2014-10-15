@@ -127,10 +127,17 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
               mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
           end forall
         else
+
+#ifdef R_TCOMPLEX
           forall(is = 1:this%np)
             mm%states(ist)%X(psi)(this%map(is), idim) = &
               mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
           end forall
+#else
+        message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
+        call messages_fatal(1)
+#endif
+
         end if
       end do
     end do
@@ -174,11 +181,16 @@ subroutine X(submesh_batch_add)(this, ss, mm)
         end forall
         
       else
-        
+
+#ifdef R_TCOMPLEX        
         forall(is = 1:this%np)
           mm%states(ist)%X(psi)(this%map(is), idim) = &
             mm%states(ist)%X(psi)(this%map(is), idim) + ss%states(ist)%zpsi(is, jdim)
         end forall
+#else
+        message(1) = "Internal error: cannot call dsubmesh_batch_add with complex batch ss"
+        call messages_fatal(1)
+#endif
         
       end if
     end do
@@ -220,11 +232,16 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
           else
 
+#ifdef R_TCOMPLEX
             do is = 1, this%np
               dotp = dotp + this%mesh%vol_pp(this%map(is))*&
                 R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
+#else
+            message(1) = "Internal error: cannot call dsubmesh_batch_dotp_matrix with complex batch ss"
+            call messages_fatal(1)
+#endif
 
           end if
         end do
@@ -250,11 +267,18 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
                 ss%states(ist)%dpsi(is, jdim)
             end do
           else
+
+#ifdef R_TCOMPLEX
             do is = 1, this%np
               dotp = dotp + &
                 R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
+#else
+            message(1) = "Internal error: cannot call dsubmesh_batch_dotp_matrix with complex batch ss"
+            call messages_fatal(1)
+#endif
+
           end if
 
         end do
