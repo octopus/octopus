@@ -256,7 +256,7 @@ contains
       call messages_print_stress(stdout, "Species")
     end if
     do i = 1, geo%nspecies
-      call species_init(geo%species(i), ispin, geo%space, print_info=print_info_)
+      call species_init(geo%species(i), ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
       call messages_print_stress(stdout)

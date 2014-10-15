@@ -439,10 +439,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init(spec, ispin, space, print_info)
+  subroutine species_init(spec, ispin, dim, print_info)
     type(species_t),   intent(inout) :: spec
     integer,           intent(in)    :: ispin
-    type(space_t),     intent(in)    :: space
+    integer,           intent(in)    :: dim
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_
@@ -563,7 +563,7 @@ contains
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
 
-    call species_iwf_fix_qn(spec, ispin, space)
+    call species_iwf_fix_qn(spec, ispin, dim)
 
     if(species_is_ps(spec)) then
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: total = ', ps_niwfs(spec%ps), ', bound = ', spec%niwfs
@@ -1329,10 +1329,10 @@ contains
 
   ! ---------------------------------------------------------
   !> set up quantum numbers of orbitals, and reject those that are unbound (for pseudopotentials)
-  subroutine species_iwf_fix_qn(spec, ispin, space)
+  subroutine species_iwf_fix_qn(spec, ispin, dim)
     type(species_t), intent(inout) :: spec
     integer,         intent(in)    :: ispin
-    type(space_t),   intent(in)    :: space
+    integer,         intent(in)    :: dim
 
     integer :: is, n, i, l, m, n1, n2, n3
     FLOAT   :: radius
@@ -1376,7 +1376,7 @@ contains
 
       SAFE_DEALLOCATE_A(bound)
 
-    else if(species_represents_real_atom(spec) .and. space%dim == 3) then
+    else if(species_represents_real_atom(spec) .and. dim == 3) then
 
       do is = 1, ispin
         n = 1
@@ -1396,7 +1396,7 @@ contains
 
     else
 
-      select case(space%dim)
+      select case(dim)
       case(1)
         do is = 1, ispin
           do i = 1, spec%niwfs
