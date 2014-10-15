@@ -164,19 +164,28 @@
 
     call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
-    if(species_is_ps(spec)) then
+    if(species_represents_real_atom(spec)) then
       ps => species_ps(spec)
       
       forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
 
-      if(.not. derivative_) then
-        call spline_eval_vec(ps%ur(i, ispin), submesh%np, phi)
+      if(species_is_ps(spec)) then
+        if(.not. derivative_) then
+          call spline_eval_vec(ps%ur(i, ispin), submesh%np, phi)
+        else
+          call spline_init(dur)
+          call spline_der(ps%ur(i, ispin), dur)
+          call spline_eval_vec(dur, submesh%np, phi)
+          call spline_end(dur)
+        end if
       else
-        call spline_init(dur)
-        call spline_der(ps%ur(i, ispin), dur)
-        call spline_eval_vec(dur, submesh%np, phi)
-        call spline_end(dur)
-      end if
+        ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
+        do ip = 1, submesh%np
+          ww = species_zval(spec)*submesh%x(ip, 0)/i
+          phi(ip) = sqrt( (2*species_zval(spec)/i)**3 * factorial(i - l - 1) / (2*i*factorial(i+l)) ) * &
+            exp(-ww) * (2 * ww)**l * loct_sf_laguerre_n(i-l-1, real(2*l + 1, REAL_PRECISION), 2*ww)
+        enddo
+      endif
 
       SAFE_ALLOCATE(ylm(1:submesh%np))
 

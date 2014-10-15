@@ -78,8 +78,8 @@ module ps_m
     FLOAT    :: z, z_val
     type(valconf_t)   :: conf
     type(logrid_t) :: g
-    type(spline_t), pointer :: ur(:, :)     !< atomic wavefunctions
-    type(spline_t), pointer :: ur_sq(:, :)  !< atomic wavefunctions
+    type(spline_t), pointer :: ur(:, :)     !< atomic wavefunctions, as a function of r
+    type(spline_t), pointer :: ur_sq(:, :)  !< atomic wavefunctions, as a function of r^2
 
     ! Kleinman-Bylander projectors stuff
     integer  :: l_max    !< maximum value of l to take
