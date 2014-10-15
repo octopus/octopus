@@ -35,6 +35,7 @@ module propagator_m
   use exponential_m
   use forces_m
   use gauge_field_m
+  use gauge_field_force_m
   use grid_m
   use geometry_m
   use global_m
@@ -745,7 +746,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+      call gauge_field_get_force(gr, hm, geo, hm%ep%proj, hm%phase, st, gauge_force)
       call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
     end if
 

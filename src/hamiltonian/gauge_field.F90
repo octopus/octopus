@@ -68,19 +68,16 @@ module gauge_field_m
     gauge_field_get_vec_pot_acc,          &
     gauge_field_propagate,                &
     gauge_field_propagate_vel,            &
-    gauge_field_get_force,                &
     gauge_field_get_energy,               &
     gauge_field_dump,                     &
     gauge_field_load,                     &
     gauge_field_end
 
   type gauge_force_t
-    private
     FLOAT   :: vecpot(1:MAX_DIM)   
   end type gauge_force_t
 
   type gauge_field_t
-    private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
@@ -289,107 +286,6 @@ contains
 
     POP_SUB(gauge_field_init_vec_pot)
   end subroutine gauge_field_init_vec_pot
-
-
-  ! ---------------------------------------------------------
-  subroutine gauge_field_get_force(gr, geo, pj, phases, st, force)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(projector_t),    intent(in)    :: pj(:)
-    CMPLX,                intent(in)    :: phases(:, :)
-    type(states_t),       intent(inout) :: st
-    type(gauge_force_t),  intent(out)   :: force
-
-    integer :: ik, ist, idir, idim, iatom, ip
-    CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
-    FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
-    type(profile_t), save :: prof
-    type(symmetrizer_t) :: symmetrizer
-#ifdef HAVE_MPI
-    FLOAT :: force_tmp(1:MAX_DIM)
-#endif
-
-    call profiling_in(prof, "GAUGE_FIELD_FORCE")
-    PUSH_SUB(gauge_field_get_force)
-
-    SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(microcurrent(1:gr%mesh%np_part, 1:gr%sb%dim))
-
-    microcurrent = M_ZERO
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-
-        call states_get_state(st, gr%mesh, ist, ik, epsi)
-
-        do idim = 1, st%d%dim
-          call zderivatives_set_bc(gr%der, epsi(:, idim))
-
-          ! Apply the phase that contains both the k-point and vector-potential terms.
-          forall(ip = 1:gr%mesh%np_part)
-            epsi(ip, idim) = phases(ip, ik - st%d%kpt%start + 1)*epsi(ip, idim)
-          end forall
-
-          call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-
-        end do
-
-        do idir = 1, gr%sb%dim
-          do iatom = 1, geo%natoms
-            if(species_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi, gpsi(:, idir, :))
-            end if
-          end do
-        end do
-        
-        do idir = 1, gr%sb%dim
-          do idim = 1, st%d%dim
-            microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
-              M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-              aimag(conjg(epsi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
-          end do
-        end do
-        
-      end do
-    end do
-
-    if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
-      call symmetrizer_init(symmetrizer, gr%mesh)
-      call dsymmetrizer_apply(symmetrizer, field_vector = microcurrent, symmfield_vector = symmcurrent)
-      microcurrent(1:gr%mesh%np, 1:gr%sb%dim) = symmcurrent(1:gr%mesh%np, 1:gr%sb%dim)
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symmcurrent)
-    end if
-
-    do idir = 1, gr%sb%dim
-      force%vecpot(idir) = dmf_integrate(gr%mesh, microcurrent(:, idir))
-    end do
-
-#ifdef HAVE_MPI
-    if(st%parallel_in_states) then
-      call MPI_Allreduce(force%vecpot, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      force%vecpot = force_tmp
-    end if
-    if(st%d%kpt%parallel) then
-      call MPI_Allreduce(force%vecpot, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-      force%vecpot = force_tmp
-    end if
-#endif
-
-    ! The line below should not be added: since the vector potential
-    ! is applied as a phase to the states, this term appears
-    ! automatically. I keep it with this comment to alert possible
-    ! readers of the code who might think that the term is missing.
-    !
-    !    force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
-
-    SAFE_DEALLOCATE_A(gpsi)
-
-    call profiling_out(prof)
-    POP_SUB(gauge_field_get_force)
-  end subroutine gauge_field_get_force
-
 
   ! ---------------------------------------------------------
   FLOAT function gauge_field_get_energy(this, sb) result(energy)
