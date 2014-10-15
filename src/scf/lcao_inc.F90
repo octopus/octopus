@@ -434,7 +434,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     norbs = species_niwfs(geo%atom(iatom)%spec)
 
     ! initialize the radial grid
-    call submesh_init_sphere(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
     ! FIXME: the second argument should be dim = st%d%dim, not 1!
     call batch_init(this%orbitals(iatom), 1, this%mult*norbs)

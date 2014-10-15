@@ -284,7 +284,7 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
       ps => species_ps(spec)
 
-      call submesh_init_sphere(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
+      call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
       
       forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)

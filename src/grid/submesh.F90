@@ -41,7 +41,7 @@ module submesh_m
   public ::                      &
     submesh_t,                   &
     submesh_null,                &
-    submesh_init_sphere,         &
+    submesh_init,                &
     submesh_copy,                &
     submesh_get_inv,             &
     dsm_integrate,               &
@@ -94,7 +94,7 @@ contains
 
   ! -------------------------------------------------------------
 
-  subroutine submesh_init_sphere(this, sb, mesh, center, rc)
+  subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
@@ -109,7 +109,7 @@ contains
     integer, allocatable :: map_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
 
-    PUSH_SUB(submesh_init_sphere)
+    PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
     this%mesh => mesh
@@ -255,8 +255,8 @@ contains
     this%has_points = (this%np > 0)
 
     call profiling_out(submesh_init_prof)
-    POP_SUB(submesh_init_sphere)
-  end subroutine submesh_init_sphere
+    POP_SUB(submesh_init)
+  end subroutine submesh_init
 
   ! --------------------------------------------------------------
 
