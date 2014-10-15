@@ -570,6 +570,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
           dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
 
+          ! FIXME: this is only correct for KS DFT, but not Hartree-Fock or generalized KS
           if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
 
           if(this%complex_ylms) then

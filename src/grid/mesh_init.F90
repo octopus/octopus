@@ -887,11 +887,11 @@ contains
       else
         message(1) = "Info: Could not find a compatible mesh partition in '"//trim(partition_dir)//"'."
         message(2) = "Reason: "
-        if (IAND(ierr,1)  /= 0) message(2) = trim(message(2))//"fingerprint does not exist"
-        if (IAND(ierr,2)  /= 0) message(2) = trim(message(2))//"fingerprint read error"
-        if (IAND(ierr,4)  /= 0) message(2) = trim(message(2))//"fingerprint differs"
-        if (IAND(ierr,8)  /= 0) message(2) = trim(message(2))//"inner partition read failed"
-        if (IAND(ierr,16) /= 0) message(2) = trim(message(2))//"boundary partition read failed"
+        if (IAND(ierr,1)  /= 0) message(2) = trim(message(2))//" fingerprint does not exist"
+        if (IAND(ierr,2)  /= 0) message(2) = trim(message(2))//" fingerprint read error"
+        if (IAND(ierr,4)  /= 0) message(2) = trim(message(2))//" fingerprint differs"
+        if (IAND(ierr,8)  /= 0) message(2) = trim(message(2))//" inner partition read failed"
+        if (IAND(ierr,16) /= 0) message(2) = trim(message(2))//" boundary partition read failed"
         call messages_info(2)
       end if
     end if

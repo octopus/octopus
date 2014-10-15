@@ -356,7 +356,7 @@ contains
 
       !%Variable KdotPOccupiedSolutionMethod
       !%Type integer
-      !%Default sternheimer
+      !%Default sternheimer_eqn
       !%Section Linear Response::KdotP
       !%Description
       !% Method of calculating the contribution of the projection of the

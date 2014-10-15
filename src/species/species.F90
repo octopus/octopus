@@ -470,18 +470,14 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
       spec%omega = CNST(0.1)
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
       ! allocate structure
-      SAFE_ALLOCATE(spec%ps) 
-      call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
-      spec%z_val = spec%ps%z_val
-      spec%nlcc = (spec%ps%icore /= 'nc  ' )
-      spec%niwfs = ps_niwfs(spec%ps)
-
-    case(SPEC_PSPIO)
-      ! allocate structure
-      SAFE_ALLOCATE(spec%ps) 
-      call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+      SAFE_ALLOCATE(spec%ps)
+      if(spec%type == SPEC_PSPIO) then
+        call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+      else
+        call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
+      endif
       spec%z_val = spec%ps%z_val
       spec%nlcc = (spec%ps%icore /= 'nc  ' )
       spec%niwfs = ps_niwfs(spec%ps)
@@ -571,8 +567,11 @@ contains
 
     if(species_is_ps(spec)) then
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: total = ', ps_niwfs(spec%ps), ', bound = ', spec%niwfs
-      call messages_info(1)
+    else
+      write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
+      nullify(spec%ps)
     endif
+    call messages_info(1)
 
     POP_SUB(species_init)
   end subroutine species_init
