@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
@@ -27,6 +27,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   FLOAT, optional,       intent(in)    :: time
   FLOAT, optional,       intent(in)    :: Imtime
   integer, optional,     intent(in)    :: terms
+  logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:)
@@ -79,7 +80,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call batch_pack(hpsib, copy = .false.)
   end if
 
-  call X(derivatives_batch_set_bc)(der, psib)
+  if(optional_default(set_bc, .true.)) call X(derivatives_batch_set_bc)(der, psib)
 
   if(apply_phase) then
     SAFE_ALLOCATE(epsib)
@@ -299,7 +300,7 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime, set_bc)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
@@ -309,6 +310,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtim
   FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
   FLOAT,    optional,  intent(in)    :: Imtime
+  logical,  optional,  intent(in)    :: set_bc
 
   type(batch_t) :: psib, hpsib
 
@@ -319,7 +321,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtim
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime)
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 
   call batch_end(psib)
   call batch_end(hpsib)
