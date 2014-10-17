@@ -319,27 +319,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtim
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  if(present(time)) then
-    if(present(terms)) then
-      if(present(Imtime)) then
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime)
-      else       
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
-      end if
-    else
-      if(present(Imtime)) then
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, Imtime = Imtime)
-      else 
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
-      end if
-    endif
-  else
-    if(present(terms)) then
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms)
-    else
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
-    endif
-  endif
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime)
 
   call batch_end(psib)
   call batch_end(hpsib)
