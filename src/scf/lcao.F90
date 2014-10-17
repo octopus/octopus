@@ -228,10 +228,14 @@ contains
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
     ! DAS: For spinors, you will always get magnetization in (1, 0, 0) direction, and the
-    ! eigenvalues will be incorrect.
+    ! eigenvalues will be incorrect. This is due to confusion between spins and spinors in the code.
     if(st%d%ispin == SPINORS .and. this%alternative) then
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
+    endif
+    if(simul_box_is_periodic(gr%mesh%sb) .and. this%alternative) then
+      call messages_experimental("LCAOAlternative in periodic systems")
+      ! specifically, if you get the message about submesh radius > box size, results will probably be totally wrong.
     endif
 
     !%Variable LCAOComplexYlms
