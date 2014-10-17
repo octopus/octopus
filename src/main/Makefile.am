@@ -43,7 +43,6 @@ oct_test_LDADD = \
         $(top_builddir)/src/species/libspecies.a         \
         $(top_builddir)/src/math/libmath.a               \
         $(top_builddir)/src/basic/libbasic.a \
-        $(top_builddir)/src/pcm/libpcm.a \
         $(other_LIBS)
 
 noinst_HEADERS = \

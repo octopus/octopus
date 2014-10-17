@@ -383,7 +383,6 @@ AC_CONFIG_FILES([Makefile
   src/math/Makefile
   src/species/Makefile
   src/ions/Makefile
-  src/pcm/Makefile
   src/grid/Makefile
   src/poisson/Makefile
   src/frozen/Makefile

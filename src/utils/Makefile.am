@@ -110,7 +110,6 @@ oct_photoelectron_spectrum_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
-                                   $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
 oct_xyz_anim_SOURCES = xyzanim.F90
@@ -174,12 +173,11 @@ oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
-                                   $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
 oct_local_multipoles_SOURCES = local_multipoles.F90 \
                                 local_write.F90 
-                               
+
 oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
@@ -192,7 +190,6 @@ oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
-                                   $(top_builddir)/src/pcm/libpcm.a \
                                    $(other_LIBS)
 
 
