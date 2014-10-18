@@ -132,7 +132,6 @@ contains
 
     PUSH_SUB(sternheimer_init)
 
-    if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_experimental("Sternheimer equation for periodic systems")
     if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
     endif
