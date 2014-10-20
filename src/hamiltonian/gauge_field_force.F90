@@ -28,6 +28,7 @@ module gauge_field_force_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use lalg_basic_m
   use logrid_m
   use mesh_m
@@ -71,56 +72,94 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom, ip
-    CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
+    integer :: ik, ist, idir, idim, iatom, ip, ierr
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
+    logical, parameter :: hamiltonian_current = .false.
 
     call profiling_in(prof, "GAUGE_FIELD_FORCE")
     PUSH_SUB(gauge_field_get_force)
 
-    SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(rhpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(rpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(hrpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(microcurrent(1:gr%mesh%np_part, 1:gr%sb%dim))
 
     microcurrent = M_ZERO
+
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
-        call states_get_state(st, gr%mesh, ist, ik, epsi)
+        call states_get_state(st, gr%mesh, ist, ik, psi)
 
         do idim = 1, st%d%dim
-          call zderivatives_set_bc(gr%der, epsi(:, idim))
-
-          ! Apply the phase that contains both the k-point and vector-potential terms.
-          forall(ip = 1:gr%mesh%np_part)
-            epsi(ip, idim) = phases(ip, ik - st%d%kpt%start + 1)*epsi(ip, idim)
-          end forall
-
-          call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-
-        end do
-
-        do idir = 1, gr%sb%dim
-          do iatom = 1, geo%natoms
-            if(species_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi, gpsi(:, idir, :))
-            end if
-          end do
+          call zderivatives_set_bc(gr%der, psi(:, idim))
         end do
         
-        do idir = 1, gr%sb%dim
+        if(hamiltonian_current) then
+          
+          ! we use that the current operator is i[H,r]
+
+          call zhamiltonian_apply(hm, gr%der, psi, hpsi, ist, ik, set_bc = .false.)
+          
+          do idir = 1, gr%sb%dim
+
+            do idim = 1, st%d%dim
+              forall(ip = 1:gr%mesh%np_part)
+                rhpsi(ip, idim) = gr%mesh%x(ip, idir)*hpsi(ip, idim)
+                rpsi(ip, idim) = gr%mesh%x(ip, idir)*psi(ip, idim)
+              end forall
+            end do
+
+            call zhamiltonian_apply(hm, gr%der, rpsi, hrpsi, ist, ik, set_bc = .false.)
+
+            do idim = 1, st%d%dim
+              microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) - &
+                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+                aimag(conjg(psi(1:gr%mesh%np, idim))*hrpsi(1:gr%mesh%np, idim) &
+                - conjg(psi(1:gr%mesh%np, idim))*rhpsi(1:gr%mesh%np, idim))
+            end do
+          end do
+
+        else
+
           do idim = 1, st%d%dim
-            microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
-              M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-              aimag(conjg(epsi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
+
+            ! Apply the phase that contains both the k-point and vector-potential terms.
+            forall(ip = 1:gr%mesh%np_part)
+              psi(ip, idim) = phases(ip, ik - st%d%kpt%start + 1)*psi(ip, idim)
+            end forall
+
+            call zderivatives_grad(gr%der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+
           end do
-        end do
-        
+
+          do idir = 1, gr%sb%dim
+            do iatom = 1, geo%natoms
+              if(species_is_ps(geo%atom(iatom)%spec)) then
+                call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, psi, gpsi(:, idir, :))
+              end if
+            end do
+          end do
+
+          do idir = 1, gr%sb%dim
+
+            do idim = 1, st%d%dim
+              microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
+                M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+                aimag(conjg(psi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
+            end do
+          end do
+        end if
+
       end do
     end do
 
