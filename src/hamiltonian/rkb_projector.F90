@@ -81,8 +81,6 @@ contains
     FLOAT,                 intent(in)    :: so_strength
  
     integer :: is, i
-    FLOAT :: x(3)
-    CMPLX :: zv
     type(ps_t), pointer :: ps
 
     PUSH_SUB(rkb_projector_init)
@@ -94,32 +92,24 @@ contains
     SAFE_ALLOCATE(rkb_p%ket(1:rkb_p%n_s, 1:2, 1:2, 1:2))
 
     !Build projectors
-    do is = 1, rkb_p%n_s
-      x(1:3) = sm%x(is, 1:3)
+    do i = 1, 2
+      call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 1:3), l, lm, i, rkb_p%ket(:, i, 1, 1))
+      rkb_p%bra(:, i) = conjg(rkb_p%ket(:, i, 1, 1))
+      rkb_p%ket(:, i, 2, 2) = rkb_p%ket(:, i, 1, 1)
 
-      ! i runs over j=l+1/2 and j=l-1/2
-      do i = 1, 2
-        call species_nl_projector(a%spec, x, l, lm, i, zv)
-        rkb_p%bra(is, i) = conjg(zv)
-        
-        rkb_p%ket(is, i, 1, 1) = zv
-        rkb_p%ket(is, i, 2, 2) = zv
-        if (lm /= l) then
-          call species_nl_projector(a%spec, x, l, lm+1, i, zv)
-          rkb_p%ket(is, i, 2, 1) = zv
-        else
-          rkb_p%ket(is, i, 2, 1) = M_z0
-        end if
-        if (lm /= -l) then
-          call species_nl_projector(a%spec, x, l, lm-1, i, zv)
-          rkb_p%ket(is, i, 1, 2) = zv
-        else
-          rkb_p%ket(is, i, 1, 2) = M_z0
-        end if
-      end do
-    end do
+      if (lm /= l) then
+        call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 1:3), l, lm+1, i, rkb_p%ket(:, i, 2, 1))
+      else
+        rkb_p%ket(:, i, 2, 1) = M_z0
+      end if
+      if (lm /= -l) then
+        call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 1:3), l, lm-1, i, rkb_p%ket(:, i, 1, 2))
+      else
+        rkb_p%ket(:, i, 1, 2) = M_z0
+      end if
+    enddo
     
-    ! The l and m dependent prefactors are included in the KB energies
+    ! The l- and m-dependent prefactors are included in the KB energies
     rkb_p%f(1, 1, 1) = real(l + so_strength*lm + 1, REAL_PRECISION)
     rkb_p%f(1, 2, 1) = so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
     rkb_p%f(1, 1, 2) = so_strength*sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))

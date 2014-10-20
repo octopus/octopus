@@ -1007,22 +1007,28 @@ contains
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector, built using
   !! spherical harmonics
-  subroutine species_nl_projector(spec, x, l, lm, i, uV)
+  subroutine species_nl_projector(spec, np, x, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
-    FLOAT,             intent(in)  :: x(1:3)
+    integer,           intent(in)  :: np
+    FLOAT,             intent(in)  :: x(:,:) !< (np, 3)
     integer,           intent(in)  :: l, lm, i
-    CMPLX,             intent(out) :: uV
+    CMPLX,             intent(out) :: uV(:) !< (np)
 
+    integer :: ip
     FLOAT :: r, uVr0
     CMPLX :: ylm
 
     ! no push_sub because this function is called very frequently
-    r = sqrt(sum(x(1:3)**2))
 
-    uVr0 = spline_eval(spec%ps%kb(l, i), r)
+    do ip = 1, np
+      ! FIXME: use x(0) instead
+      r = sqrt(sum(x(ip, 1:3)**2))
 
-    call ylmr(x(1), x(2), x(3), l, lm, ylm)
-    uv = uvr0*ylm
+      uVr0 = spline_eval(spec%ps%kb(l, i), r)
+
+      call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
+      uv(ip) = uvr0*ylm
+    enddo
 
   end subroutine species_nl_projector
   ! ---------------------------------------------------------
