@@ -81,7 +81,7 @@ contains
     FLOAT,                 intent(in)    :: so_strength
  
     integer :: is, i
-    FLOAT :: x(MAX_DIM)
+    FLOAT :: x(3)
     CMPLX :: zv
     type(ps_t), pointer :: ps
 
@@ -95,7 +95,7 @@ contains
 
     !Build projectors
     do is = 1, rkb_p%n_s
-      x(1:ubound(sm%x, 2)) = sm%x(is, 1:ubound(sm%x, 2))
+      x(1:3) = sm%x(is, 1:3)
 
       ! i runs over j=l+1/2 and j=l-1/2
       do i = 1, 2

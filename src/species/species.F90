@@ -1009,7 +1009,7 @@ contains
   !! spherical harmonics
   subroutine species_nl_projector(spec, x, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
-    FLOAT,             intent(in)  :: x(1:MAX_DIM)
+    FLOAT,             intent(in)  :: x(1:3)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV
 
@@ -1017,7 +1017,7 @@ contains
     CMPLX :: ylm
 
     ! no push_sub because this function is called very frequently
-    r = sqrt(sum(x(1:MAX_DIM)**2))
+    r = sqrt(sum(x(1:3)**2))
 
     uVr0 = spline_eval(spec%ps%kb(l, i), r)
 
