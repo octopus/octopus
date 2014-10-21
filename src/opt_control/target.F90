@@ -136,12 +136,10 @@ module target_m
     CMPLX, pointer :: vel(:, :)
     CMPLX, pointer :: gvec(:, :)
     FLOAT, pointer :: alpha(:)
-    type(fft_t) :: fft_handler
-
     CMPLX :: spin_matrix(2, 2)
+    type(fft_t) :: fft_handler
   end type target_t
-
-
+  
 contains
 
   ! ---------------------------------------------------------
