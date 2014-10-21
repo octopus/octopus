@@ -184,7 +184,7 @@ static inline int check_header(header_t * h, int * correct_endianness){
   return 0;
 }
 
-void write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+void io_write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   header_t * h;
@@ -233,7 +233,7 @@ void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ie
   fname_len = l1;
   TO_C_STR1(fname, filename);
   free(filename);
-  write_header(np, type, ierr, fname, fname_len);
+  io_write_header(np, type, ierr, fname, fname_len);
 }
 
 void FC_FUNC_(write_binary,WRITE_BINARY)
@@ -287,7 +287,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   return;
 }
 
-void read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
+void io_read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   int fd;
@@ -330,7 +330,7 @@ void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, f
   fname_len = l1;
   TO_C_STR1(fname, filename);
   free(filename);
-  read_header(h, correct_endianness, ierr, fname, fname_len);
+  io_read_header(h, correct_endianness, ierr, fname, fname_len);
 }
 
 void FC_FUNC_(read_binary,READ_BINARY)
