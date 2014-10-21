@@ -251,7 +251,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   TO_C_STR1(fname, filename);
 
   if(*nhd != 1){
-    write_header(np, type, ierr, fname, fname_len);
+    io_write_header(np, type, ierr, fname, fname_len);
   }
   
   fd = open (filename, O_WRONLY, 
@@ -350,7 +350,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   fname_len = l1;
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
-  read_header(h, &correct_endianness, ierr, fname, fname_len);
+  io_read_header(h, &correct_endianness, ierr, fname, fname_len);
   if (*ierr != 0) return;
   
   /* check whether the sizes match */ 
@@ -516,7 +516,7 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
 
   /* read header */
   fname_len = l1;
-  read_header(h, &correct_endianness, ierr, fname, fname_len);
+  io_read_header(h, &correct_endianness, ierr, fname, fname_len);
 
   *np  = h->np;
   *type = (int) h->type;
