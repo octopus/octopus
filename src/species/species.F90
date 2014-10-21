@@ -1010,7 +1010,7 @@ contains
   subroutine species_nl_projector(spec, np, x, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
     integer,           intent(in)  :: np
-    FLOAT,             intent(in)  :: x(:,:) !< (np, 3)
+    FLOAT,             intent(in)  :: x(:,0:) !< (np, 3)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV(:) !< (np)
 
@@ -1018,17 +1018,17 @@ contains
     FLOAT :: r, uVr0
     CMPLX :: ylm
 
-    ! no push_sub because this function is called very frequently
+    PUSH_SUB(species_nl_projector)
+
+    uv(:) = x(:, 0)
+    call spline_eval_vec(spec%ps%kb(l, i), np, uv)
 
     do ip = 1, np
-      ! FIXME: use x(0) instead
-      r = sqrt(sum(x(ip, 1:3)**2))
-
-      uVr0 = spline_eval(spec%ps%kb(l, i), r)
-
       call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
-      uv(ip) = uvr0*ylm
+      uv(ip) = uv(ip) * ylm
     enddo
+
+    POP_SUB(species_nl_projector)
 
   end subroutine species_nl_projector
   ! ---------------------------------------------------------
