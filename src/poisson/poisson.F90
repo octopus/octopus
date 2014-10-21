@@ -109,10 +109,10 @@ module poisson_m
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
     type(poisson_libisf_t) :: libisf_solver
-    type(poisson_fmm_t)  :: params_fmm
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
+    type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
     type(mpi_grp_t) :: local_grp
