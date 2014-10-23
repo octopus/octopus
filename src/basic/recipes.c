@@ -36,7 +36,7 @@ unsigned long int random_seed()
  unsigned long int seed;
  FILE *devrandom;
 
- if ((devrandom = fopen("/dev/random","r")) == NULL) {
+ if ((devrandom = fopen("/dev/urandom","r")) == NULL) {
 #ifdef HAVE_GETTIMEOFDAY
    struct timeval tv;
    gettimeofday(&tv, 0);
