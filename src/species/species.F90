@@ -1010,17 +1010,16 @@ contains
   subroutine species_nl_projector(spec, np, x, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
     integer,           intent(in)  :: np
-    FLOAT,             intent(in)  :: x(:,0:) !< (np, 3)
+    FLOAT,             intent(in)  :: x(:,0:) !< (np_part, 3)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV(:) !< (np)
 
     integer :: ip
-    FLOAT :: r, uVr0
     CMPLX :: ylm
 
     PUSH_SUB(species_nl_projector)
 
-    uv(:) = x(:, 0)
+    uv(1:np) = x(1:np, 0)
     call spline_eval_vec(spec%ps%kb(l, i), np, uv)
 
     do ip = 1, np
