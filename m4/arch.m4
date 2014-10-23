@@ -127,6 +127,20 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM( [
  [AC_DEFINE(HAVE_BLUE_GENE, 1, [compiler supports Blue Gene intrinsics]) [acx_blue_gene=yes]], [acx_blue_gene=no])
 AC_MSG_RESULT($acx_blue_gene)])
 
+################################################################
+# Check whether the compiler accepts Blue Gene extensions
+# ----------------------------------
+AC_DEFUN([ACX_BLUE_GENE_Q],
+[AC_MSG_CHECKING([for Blue Gene Q intrinsics])
+AC_LINK_IFELSE([AC_LANG_PROGRAM( [
+], [[
+  vector4double aa, bb, cc;
+
+  cc = vec_madd(aa, bb, cc);
+ ]])], 
+ [AC_DEFINE(HAVE_BLUE_GENE_Q, 1, [compiler supports Blue Gene Q intrinsics]) [acx_blue_gene_q=yes]], [acx_blue_gene_q=no])
+AC_MSG_RESULT($acx_blue_gene_q)])
+
 #################################################################
 # Enables architecture-specific code
 AC_DEFUN([ACX_ARCH],
@@ -255,9 +269,16 @@ powerpc*)
 oct_arch=powerpc
 AC_DEFINE(OCT_ARCH_POWERPC, 1, [This is a PowerPC system])
 ACX_BLUE_GENE
-blue_gene=$acx_blue_gene
-vector=$acx_blue_gene
-vector_type="(bg)"
+ACX_BLUE_GENE_Q
+if test x$acx_blue_gene_q = x"yes"; then
+  blue_gene=$acx_blue_gene_q
+  vector=$acx_blue_gene_q
+  vector_type="(blue gene/q)"
+else
+  blue_gene=$acx_blue_gene
+  vector=$acx_blue_gene
+  vector_type="(blue gene/p)"
+fi
 ;;
 ##########################################
 *)

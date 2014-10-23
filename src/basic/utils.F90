@@ -244,7 +244,10 @@ contains
     get_config_opts = trim(get_config_opts)//' avx'
 #endif
 #ifdef HAVE_BLUE_GENE
-    get_config_opts = trim(get_config_opts)//' bluegene'
+    get_config_opts = trim(get_config_opts)//' bluegene/p'
+#endif
+#ifdef HAVE_BLUE_GENE_Q
+    get_config_opts = trim(get_config_opts)//' bluegene/q'
 #endif
 
   end function get_config_opts
