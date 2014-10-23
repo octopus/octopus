@@ -72,7 +72,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom, ip, ierr
+    integer :: ik, ist, idir, idim, iatom, ip
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof

@@ -80,7 +80,7 @@ contains
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength
  
-    integer :: is, i
+    integer :: i
     type(ps_t), pointer :: ps
 
     PUSH_SUB(rkb_projector_init)

@@ -448,7 +448,7 @@ subroutine X(oct_exchange_operator) (hm, der, hpsi, ist, ik)
 
   integer :: ik2
   R_TYPE, allocatable :: psi(:, :), psi2(:, :)
-  integer :: jst, ip
+  integer :: ip
 
   PUSH_SUB(X(oct_exchange_operator))
 

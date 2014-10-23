@@ -94,7 +94,7 @@ contains
     integer,        intent(in) :: dir
     integer,        intent(in) :: ik
 
-    integer :: ist, ist2, idim, ip, noccst, gvector(3)
+    integer :: ist, noccst, gvector(3)
     CMPLX, allocatable :: matrix(:, :), tmp(:), phase(:)
     CMPLX, allocatable :: psi(:, :), psi2(:, :)
 
