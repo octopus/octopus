@@ -138,11 +138,11 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
 
-    integer :: ia, n, ii, jj, maxj, idim
+    integer :: ia, n, iorb, jj, maxj, idim
     integer :: mode_default
     FLOAT   :: max_orb_radius
 #ifdef LCAO_DEBUG
-    integer :: iii, ll, mm, iunit_o
+    integer :: ii, ll, mm, iunit_o
 #endif
 
     PUSH_SUB(lcao_init)
@@ -340,25 +340,25 @@ contains
       ! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
       ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
 
-      ii = 1
+      iorb = 1
       do jj = 1, maxj
         do ia = 1, geo%natoms
           do idim = 1,st%d%dim
             if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
             if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%spec, jj, is = 1) >= max_orb_radius) cycle
 
-            this%atom(ii) = ia
-            this%level(ii) = jj
-            this%ddim(ii) = idim
+            this%atom(iorb) = ia
+            this%level(iorb) = jj
+            this%ddim(iorb) = idim
 
 #ifdef LCAO_DEBUG
             if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-              call species_iwf_ilm(geo%atom(this%atom(ii))%spec, this%level(ii), this%ddim(ii), iii, ll, mm)
-              write(iunit_o,'(7i6)') ii, this%atom(ii), this%level(ii), iii, ll, mm, this%ddim(ii)
+              call species_iwf_ilm(geo%atom(this%atom(iorb))%spec, this%level(iorb), this%ddim(iorb), ii, ll, mm)
+              write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
             endif
 #endif
 
-            ii = ii + 1
+            iorb = iorb + 1
           end do
         end do
       end do
@@ -369,9 +369,9 @@ contains
 #endif
 
       ! some orbitals might have been removed because of their radii
-      if(this%maxorbs /= ii - 1) then
+      if(this%maxorbs /= iorb - 1) then
         call messages_write('Info: ')
-        call messages_write(this%maxorbs - ii + 1)
+        call messages_write(this%maxorbs - iorb + 1)
         call messages_write(' of ')
         call messages_write(this%maxorbs)
         call messages_write(' orbitals cannot be used for the LCAO calculation,')
@@ -381,7 +381,7 @@ contains
         call messages_write(').')
         call messages_warning()
 
-        this%maxorbs = ii - 1
+        this%maxorbs = iorb - 1
       end if
 
       if(this%maxorbs < st%nst) then
