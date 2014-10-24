@@ -67,7 +67,11 @@
 	bc = bd = be = bf = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
+#ifdef VEC_SCAL_LD
+	  register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else	  
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
@@ -154,7 +158,11 @@
 	ac = ad = ae = af = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
+#ifdef VEC_SCAL_LD
+	  register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
@@ -204,7 +212,11 @@
 	a4 = a5 = a6 = a7 = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
+#ifdef VEC_SCAL_LD
+	  register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
@@ -236,7 +248,11 @@
 	a0 = a1 = a2 = a3 = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
+#ifdef VEC_SCAL_LD
+	  register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
@@ -277,7 +293,11 @@
       for(k = 0; k < (1<<ldf); k += VEC_SIZE){
 	register VEC_TYPE a0 = VEC_ZERO;
 	for(j = 0; j < n; j++) {
+#ifdef VEC_SCAL_LD
+	  register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
 	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj + k), a0);
 	}

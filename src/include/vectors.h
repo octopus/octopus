@@ -77,12 +77,13 @@
 #ifdef HAVE_BLUE_GENE_Q
 #define VEC_SIZE 4
 #define VEC_TYPE vector4double
-#define VEC_LD(addr) vec_lda(0, (double *) (addr))
+#define VEC_LD(addr) vec_ld(0, (double *) (addr))
 #define VEC_LDU(addr) ((vector4double) {(addr)[0], (addr)[1], (addr)[2], (addr)[3]})
-#define VEC_ST(addr, vec)  vec_sta(vec, 0, (double *) (addr))
+#define VEC_ST(addr, vec)  vec_st(vec, 0, (double *) (addr))
 #define VEC_STU(addr, vec) (addr)[0] = vec_extract(vec, 0); (addr)[1] = vec_extract(vec, 1); (addr)[2] = vec_extract(vec, 2); (addr)[3] = vec_extract(vec, 3)
 #define VEC_FMA(aa, bb, cc) vec_madd(aa, bb, cc)
 #define VEC_SCAL(aa) ((vector4double) {aa, aa, aa, aa})
+#define VEC_SCAL_LD(addr) vec_lds(0, (double*) (addr))
 #define VEC_ZERO ((vector4double) {0.0, 0.0, 0.0, 0.0})
 
 #define DEPTH 16
