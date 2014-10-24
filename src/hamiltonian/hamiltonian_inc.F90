@@ -695,6 +695,8 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
   PUSH_SUB(X(hamiltonian_phase))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY")
 
+  call profiling_count_operations(R_MUL*dble(np)*psib%nst_linear)
+
   ASSERT(np <= der%mesh%np_part)
 
   src_ => psib
@@ -704,20 +706,23 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
   case(BATCH_PACKED)
     
     if(conjugate) then
-
+      !$omp parallel do private(ip, ii)
       do ip = 1, np
         forall (ii = 1:psib%nst_linear)
           psib%pack%X(psi)(ii, ip) = conjg(this%phase(ip, iqn))*src_%pack%X(psi)(ii, ip)
         end forall
       end do
+      !$omp end parallel do
       
     else
 
+      !$omp parallel do private(ip, ii)
       do ip = 1, np
         forall (ii = 1:psib%nst_linear)
           psib%pack%X(psi)(ii, ip) = this%phase(ip, iqn)*src_%pack%X(psi)(ii, ip)
         end forall
       end do
+      !$omp end parallel do
 
     end if
     
@@ -725,19 +730,26 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 
     if(conjugate) then
 
+      !$omp parallel private(ii, ip)
       do ii = 1, psib%nst_linear
-        forall(ip = 1:np)
+        !$omp do
+        do ip = 1, np
           psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
-        end forall
+        end do
+        !$omp end do nowait
       end do
+      !$omp end parallel
       
     else
-
+      !$omp parallel private(ii, ip)
       do ii = 1, psib%nst_linear
-        forall(ip = 1:np)
+        !$omp do
+        do ip = 1, np
           psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
-        end forall
+        end do
+        !$omp end do nowait
       end do
+      !$omp end parallel
 
     end if
 
