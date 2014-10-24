@@ -32,7 +32,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   integer,                  intent(in)    :: spin_channel
 
   type(species_t), pointer :: spec
-  integer :: idim, iatom, jj, ip
+  integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
   FLOAT, allocatable :: ao(:)
   type(profile_t), save :: prof
 
@@ -49,13 +49,16 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   idim = this%ddim(iorb)
   spec => geo%atom(iatom)%spec
   ASSERT(jj <= species_niwfs(spec))
+  ispin = max(spin_channel, idim)
+
+  call species_iwf_ilm(spec, jj, ispin, ii, ll, mm)
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(ao(1:mesh%np))
 
-    call dspecies_get_orbital(spec, mesh, jj, max(spin_channel, idim), &
-      geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
+    call dspecies_get_orbital(spec, mesh, ii, ll, mm, &
+      ispin, geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
 
     do ip = 1, mesh%np
       psi(ip, idim) = ao(ip)
@@ -64,8 +67,8 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
     SAFE_DEALLOCATE_A(ao)
   else
 #endif
-    call X(species_get_orbital)(spec, mesh, jj, max(spin_channel, idim), &
-      geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
+    call X(species_get_orbital)(spec, mesh, ii, ll, mm, &
+      ispin, geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
 #ifdef R_TCOMPLEX
   endif
 #endif
@@ -1099,7 +1102,8 @@ end subroutine X(lcao_alt_wf)
     integer,           intent(in)    :: iatom
     integer,           intent(in)    :: norbs
 
-    integer :: iorb
+    integer :: iorb, ii, ll, mm
+    logical :: derivative
 
     PUSH_SUB(X(lcao_alt_get_orbital))
 
@@ -1113,12 +1117,16 @@ end subroutine X(lcao_alt_wf)
       ! generate the orbitals
       do iorb = 1, norbs
         if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
-          call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, iorb - species_niwfs(geo%atom(iatom)%spec), &
-            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = .true.)
+          call species_iwf_ilm(geo%atom(iatom)%spec, &
+            iorb - species_niwfs(geo%atom(iatom)%spec), ispin, ii, ll, mm)
+          derivative = .true.
         else
-          call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, iorb, &
-            ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1))
-        end if
+          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, ispin, ii, ll, mm)
+          derivative = .false.
+        endif
+
+        call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, ii, ll, mm, &
+          ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
       end do
  
       call profiling_out(prof_orbitals)

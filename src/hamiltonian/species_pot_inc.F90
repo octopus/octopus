@@ -19,7 +19,7 @@
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Places, in the function phi (defined in each point of the mesh), the
-  !! iorb-th atomic orbital. The orbitals are obtained from the species data
+  !! atomic orbital. The orbitals are obtained from the species data
   !! type, and are numbered from one to species_niwfs(spec). It may happen
   !! that there are different orbitals for each spin-polarization direction,
   !! and therefore the orbital is also characterized by the label "is".
@@ -30,16 +30,18 @@
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine X(species_get_orbital)(spec, mesh, iorb, ispin, pos, orb, scale)
+  subroutine X(species_get_orbital)(spec, mesh, ii, ll, mm, ispin, pos, orb, scale)
     type(species_t), target, intent(in)     :: spec
     type(mesh_t),            intent(in)     :: mesh
-    integer,                 intent(in)     :: iorb
+    integer,                 intent(in)     :: ii
+    integer,                 intent(in)     :: ll
+    integer,                 intent(in)     :: mm
     integer,                 intent(in)     :: ispin   !< The spin index.
     FLOAT,                   intent(in)     :: pos(:)  !< The position of the atom.
     R_TYPE,                  intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
     FLOAT, optional,         intent(in)     :: scale
 
-    integer :: i, l, m, ip, icell, nn(3), idir
+    integer :: ip, icell, nn(3), idir
     FLOAT :: r2, x(1:MAX_DIM), radius, xfactor
     FLOAT, allocatable :: xf(:, :), lorb(:)
     R_TYPE, allocatable :: ylm(:)
@@ -50,9 +52,7 @@
 
     xfactor = CNST(1.0)/optional_default(scale, CNST(1.0))
 
-    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
-
-    radius = min(species_get_iwf_radius(spec, iorb, ispin)/xfactor, maxval(mesh%sb%lsize))
+    radius = min(species_get_iwf_radius(spec, ii, ispin)/xfactor, maxval(mesh%sb%lsize))
 
     call periodic_copy_init(pc, mesh%sb, pos, range = radius)
 
@@ -61,8 +61,10 @@
     SAFE_ALLOCATE(lorb(1:mesh%np))
 
     if(species_represents_real_atom(spec)) then
-      if(species_is_ps(spec)) &
+      if(species_is_ps(spec)) then
         ps => species_ps(spec)
+        ASSERT(ii <= ps%conf%p)
+      endif
       SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
       SAFE_ALLOCATE(ylm(1:mesh%np))
     endif
@@ -77,27 +79,27 @@
           xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
           
           if(species_is_ps(spec)) then
-            if(r2 < spline_range_max(ps%ur_sq(i, ispin))) then
-              lorb(ip) = spline_eval(ps%ur_sq(i, ispin), r2)
+            if(r2 < spline_range_max(ps%ur_sq(ii, ispin))) then
+              lorb(ip) = spline_eval(ps%ur_sq(ii, ispin), r2)
             else
               lorb(ip) = M_ZERO
             end if
           else
             ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
-            lorb(ip) = sqrt( (2*species_zval(spec)/i)**3 * factorial(i - l - 1) / (2*i*factorial(i+l)) ) * &
-              exp(-species_zval(spec) * sqrt(r2) / i) * (2*species_zval(spec)*sqrt(r2)/i)**l * &
-              loct_sf_laguerre_n(i-l-1, real(2*l + 1, REAL_PRECISION), 2*species_zval(spec)*sqrt(r2)/i)
+            lorb(ip) = sqrt( (2*species_zval(spec)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
+              exp(-species_zval(spec) * sqrt(r2) / ii) * (2*species_zval(spec)*sqrt(r2)/ii)**ll * &
+              loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*species_zval(spec)*sqrt(r2)/ii)
           endif
         end do
 
 #ifdef R_TCOMPLEX
         ! complex spherical harmonics. FIXME: vectorize
         do ip = 1, mesh%np
-          call ylmr(xf(ip, 1), xf(ip, 2), xf(ip, 3), l, m, ylm(ip))
+          call ylmr(xf(ip, 1), xf(ip, 2), xf(ip, 3), ll, mm, ylm(ip))
         enddo
 #else
         ! real spherical harmonics
-        call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+        call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), ll, mm, ylm(1))
 #endif
 
         do ip = 1, mesh%np
@@ -108,7 +110,7 @@
 
         ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
         ! also, these are far from normalized.
-        nn = (/i, l, m/)
+        nn = (/ii, ll, mm/)
 
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
@@ -138,16 +140,18 @@
 
 
   ! ---------------------------------------------------------
-  subroutine X(species_get_orbital_submesh)(spec, submesh, iorb, ispin, pos, phi, derivative)
+  subroutine X(species_get_orbital_submesh)(spec, submesh, ii, ll, mm, ispin, pos, phi, derivative)
     type(species_t), target, intent(in)  :: spec       !< The species.
     type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
-    integer,                 intent(in)  :: iorb       !< The index of the orbital to return.
+    integer,                 intent(in)  :: ii
+    integer,                 intent(in)  :: ll
+    integer,                 intent(in)  :: mm
     integer,                 intent(in)  :: ispin      !< The spin index.
     FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
     R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
     logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
-    integer :: i, l, m, ip, nn(3), idir
+    integer :: ip, nn(3), idir
     FLOAT :: sqrtw, ww
     R_TYPE, allocatable :: ylm(:)
     type(ps_t), pointer :: ps
@@ -162,8 +166,6 @@
 
     ASSERT(ubound(phi, dim = 1) >= submesh%np)
 
-    call species_iwf_ilm(spec, iorb, ispin, i, l, m)
-
     if(species_represents_real_atom(spec)) then
       ps => species_ps(spec)
       
@@ -171,19 +173,19 @@
 
       if(species_is_ps(spec)) then
         if(.not. derivative_) then
-          call spline_eval_vec(ps%ur(i, ispin), submesh%np, phi)
+          call spline_eval_vec(ps%ur(ii, ispin), submesh%np, phi)
         else
           call spline_init(dur)
-          call spline_der(ps%ur(i, ispin), dur)
+          call spline_der(ps%ur(ii, ispin), dur)
           call spline_eval_vec(dur, submesh%np, phi)
           call spline_end(dur)
         end if
       else
         ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
         do ip = 1, submesh%np
-          ww = species_zval(spec)*submesh%x(ip, 0)/i
-          phi(ip) = sqrt( (2*species_zval(spec)/i)**3 * factorial(i - l - 1) / (2*i*factorial(i+l)) ) * &
-            exp(-ww) * (2 * ww)**l * loct_sf_laguerre_n(i-l-1, real(2*l + 1, REAL_PRECISION), 2*ww)
+          ww = species_zval(spec)*submesh%x(ip, 0)/ii
+          phi(ip) = sqrt( (2*species_zval(spec)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
+            exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
         enddo
       endif
 
@@ -192,11 +194,11 @@
 #ifdef R_TCOMPLEX
       ! complex spherical harmonics. FIXME: vectorize
       do ip = 1, submesh%np
-        call ylmr(submesh%x(ip, 1), submesh%x(ip, 2), submesh%x(ip, 3), l, m, ylm(ip))
+        call ylmr(submesh%x(ip, 1), submesh%x(ip, 2), submesh%x(ip, 3), ll, mm, ylm(ip))
       enddo
 #else
       ! real spherical harmonics
-      call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), l, m, ylm(1))
+      call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), ll, mm, ylm(1))
 #endif      
 
       do ip = 1, submesh%np
@@ -217,7 +219,7 @@
       sqrtw = sqrt(ww)
 
       ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
-      nn = (/i, l, m/)
+      nn = (/ii, ll, mm/)
 
       do ip = 1, submesh%np
         phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)

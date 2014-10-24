@@ -626,8 +626,9 @@ contains
       local_radius = spline_cutoff_radius(this%ps%vl, this%ps%projectors_sphere_threshold)
 
       orbital_radius = M_ZERO
+      ! FIXME: should take max over spins too here.
       do iorb = 1, species_niwfs(this)
-        orbital_radius = max(orbital_radius, species_get_iwf_radius(this, iorb, is = 1))
+        orbital_radius = max(orbital_radius, species_get_iwf_radius(this, this%iwf_i(iorb, 1), is = 1))
       end do
 
       call messages_write('Info: Pseudopotential for '//trim(this%label), new_line = .true.)
@@ -1033,22 +1034,21 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  FLOAT function species_get_iwf_radius(spec, j, is) result(radius)
+  !> Return radius outside which orbital is less than threshold value 0.001
+  FLOAT function species_get_iwf_radius(spec, ii, is) result(radius)
     type(species_t),   intent(in) :: spec
-    integer,           intent(in) :: j
-    integer,           intent(in) :: is
+    integer,           intent(in) :: ii !< principal quantum number
+    integer,           intent(in) :: is !< spin component
 
-    integer :: i
     FLOAT, parameter :: threshold = CNST(0.001)
 
     PUSH_SUB(species_get_iwf_radius)
 
-    i = spec%iwf_i(j, is)
-
     if(species_is_ps(spec)) then
-      radius = spline_cutoff_radius(spec%ps%ur(i, is), threshold)
+      ASSERT(ii <= spec%ps%conf%p)
+      radius = spline_cutoff_radius(spec%ps%ur(ii, is), threshold)
     else if(species_represents_real_atom(spec)) then
-      radius = -i*log(threshold)/spec%Z_val
+      radius = -ii*log(threshold)/spec%Z_val
     else
       radius = sqrt(-M_TWO*log(threshold)/spec%omega)
     end if

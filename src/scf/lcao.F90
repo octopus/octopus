@@ -139,10 +139,11 @@ contains
     type(states_t),       intent(in)    :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
+    integer :: ii, ll, mm
     integer :: mode_default
     FLOAT   :: max_orb_radius
 #ifdef LCAO_DEBUG
-    integer :: ii, ll, mm, iunit_o
+    integer :: iunit_o
 #endif
 
     PUSH_SUB(lcao_init)
@@ -345,7 +346,8 @@ contains
         do ia = 1, geo%natoms
           do idim = 1,st%d%dim
             if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
-            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%spec, jj, is = 1) >= max_orb_radius) cycle
+            call species_iwf_ilm(geo%atom(ia)%spec, jj, idim, ii, ll, mm)            
+            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%spec, ii, is = 1) >= max_orb_radius) cycle
 
             this%atom(iorb) = ia
             this%level(iorb) = jj
@@ -353,7 +355,6 @@ contains
 
 #ifdef LCAO_DEBUG
             if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-              call species_iwf_ilm(geo%atom(this%atom(iorb))%spec, this%level(iorb), this%ddim(iorb), ii, ll, mm)
               write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
             endif
 #endif
@@ -587,7 +588,8 @@ contains
 
         maxradius = M_ZERO
         do iorb = 1, norbs
-          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1))
+          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
+          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, ii, is = 1))
         end do
 
         if(this%derivative) maxradius = maxradius + this%lapdist
