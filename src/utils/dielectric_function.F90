@@ -189,7 +189,7 @@ program dielectric_function
 
   SAFE_DEALLOCATE_A(fullmat)
 
-  write(header, '(7a15)') 'energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+  write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
