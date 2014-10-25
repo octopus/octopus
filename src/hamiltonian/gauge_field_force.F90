@@ -113,19 +113,24 @@ contains
           do idir = 1, gr%sb%dim
 
             do idim = 1, st%d%dim
-              forall(ip = 1:gr%mesh%np_part)
+              !$omp parallel do
+              do ip = 1, gr%mesh%np_part
                 rhpsi(ip, idim) = gr%mesh%x(ip, idir)*hpsi(ip, idim)
                 rpsi(ip, idim) = gr%mesh%x(ip, idir)*psi(ip, idim)
-              end forall
+              end do
+              !$omp end parallel do
             end do
 
             call zhamiltonian_apply(hm, gr%der, rpsi, hrpsi, ist, ik, set_bc = .false.)
 
             do idim = 1, st%d%dim
-              microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) - &
+              !$omp parallel do
+              do ip = 1, gr%mesh%np
+                microcurrent(ip, idir) = microcurrent(ip, idir) - &
                 CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-                aimag(conjg(psi(1:gr%mesh%np, idim))*hrpsi(1:gr%mesh%np, idim) &
-                - conjg(psi(1:gr%mesh%np, idim))*rhpsi(1:gr%mesh%np, idim))
+                aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+              end do
+              !$omp end parallel do
             end do
           end do
 
@@ -134,9 +139,10 @@ contains
           do idim = 1, st%d%dim
 
             ! Apply the phase that contains both the k-point and vector-potential terms.
-            forall(ip = 1:gr%mesh%np_part)
+            !$omp parallel do
+            do ip = 1, gr%mesh%np_part
               psi(ip, idim) = phases(ip, ik - st%d%kpt%start + 1)*psi(ip, idim)
-            end forall
+            end do
 
             call zderivatives_grad(gr%der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
 
@@ -153,9 +159,13 @@ contains
           do idir = 1, gr%sb%dim
 
             do idim = 1, st%d%dim
-              microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
-                M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-                aimag(conjg(psi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
+              !$omp parallel do
+              do ip = 1, gr%mesh%np
+                microcurrent(ip, idir) = microcurrent(ip, idir) + &
+                  M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+                  aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
+              end do
+              !$omp end parallel do
             end do
           end do
         end if
