@@ -354,6 +354,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
   R_TYPE, allocatable :: psi(:, :)
+  R_TYPE :: phase
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
@@ -456,23 +457,40 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       ! collect all the points we need in a continuous array
       if(batch_is_packed(psib)) then
-        forall(ip = 1:npoints)
+
+        !$omp parallel do private(ip, ist)
+        do ip = 1, npoints
           forall(ist = 1:nst)
             psi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
           end forall
-        end forall
+        end do
+        !$omp end parallel do
+
       else
-        forall(ist = 1:nst, ip = 1:npoints)
-          psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
-        end forall
+
+        !$omp parallel private(ip, ist)
+        do ist = 1, nst
+          !$omp do
+          do ip = 1, npoints
+            psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+          end do
+          !$omp end do nowait
+        end do
+        !$omp end parallel
+
       end if
 
       if(associated(this%projector_phases)) then
-        forall(ip = 1:npoints)
+
+        !$omp parallel do private(ip, ist, phase)
+        do ip = 1, npoints
+          phase = this%projector_phases(ip, imat, ik)
           forall(ist = 1:nst)
-            psi(ist, ip) = this%projector_phases(ip, imat, ik)*psi(ist, ip)
+            psi(ist, ip) = phase*psi(ist, ip)
           end forall
-        end forall
+        end do
+        !$omp end parallel do
+
       end if
 
       call profiling_out(prof_gather)
@@ -483,9 +501,13 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
         M_ZERO, projection%X(projection)(1, iprojection + 1), nreal)
 
       ! apply the scale
-      forall(ist = 1:nst, iproj = 1:nprojs)
-        projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
-      end forall
+      !$omp parallel do private(iproj, ist)
+      do iproj = 1, nprojs
+        do ist = 1, nst
+          projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
+        end do
+      end do
+      !$omp end parallel do
 
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
 
@@ -512,6 +534,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
   integer :: ist, ip, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
+  R_TYPE  :: phase
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
@@ -588,28 +611,39 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
       if(associated(this%projector_phases)) then
-        forall(ip = 1:npoints)
+        !$omp parallel do private(ip, ist, phase)
+        do ip = 1, npoints
+          phase = conjg(this%projector_phases(ip, imat, ik))
           forall(ist = 1:nst)
-            psi(ist, ip) = conjg(this%projector_phases(ip, imat, ik))*psi(ist, ip)
+            psi(ist, ip) = phase*psi(ist, ip)
           end forall
-        end forall
+        end do
+        !$omp end parallel do
       end if
       
       ! and copy the points from the local buffer to its position
       if(batch_is_packed(vpsib)) then
-        forall(ip = 1:npoints)
+        !$omp parallel do private(ip, ist)
+        do ip = 1, npoints
           forall(ist = 1:nst)
             vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
           end forall
-        end forall
+        end do
+        !$omp end parallel do
 
         call batch_pack_was_modified(vpsib)
       else
+        
+        !$omp parallel private(ip, ist)
         do ist = 1, nst
-          forall(ip = 1:npoints)
+          !$omp do
+          do ip = 1, npoints
             vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
-          end forall
+          end do
+          !$omp end do nowait
         end do
+        !$omp end parallel
+        
       end if
       call profiling_count_operations(nst*npoints*R_ADD)
       call profiling_out(prof_scatter)
