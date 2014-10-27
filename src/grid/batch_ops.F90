@@ -54,7 +54,8 @@ module batch_ops_m
     batch_get_state,                &
     batch_get_points,               &
     batch_set_points,               &
-    batch_points_block_size
+    batch_points_block_size,        &
+    batch_mul
 
   interface batch_set
     module procedure dbatch_set
@@ -110,7 +111,13 @@ module batch_ops_m
     module procedure batch_set_points_cl
   end interface batch_set_points
 
+  interface batch_mul
+    module procedure dbatch_mul
+    module procedure zbatch_mul
+  end interface batch_mul
+
   type(profile_t), save :: scal_prof, xpay_prof, axpy_const_prof, axpy_vec_prof, get_points_prof, set_points_prof
+  type(profile_t), save :: mul_prof
 
 contains
 

@@ -627,16 +627,34 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
-      forall(ip = 1:np) psi(ip) = this%states_linear(ist)%dpsi(ip)
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip) = this%states_linear(ist)%dpsi(ip)
+      end do
+      !$omp end parallel do
     else
-      forall(ip = 1:np) psi(ip) = this%states_linear(ist)%zpsi(ip)
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip) = this%states_linear(ist)%zpsi(ip)
+      end do
+      !$omp end parallel do
     end if
+
   case(BATCH_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
-      forall(ip = 1:np) psi(ip) = this%pack%dpsi(ist, ip)
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip) = this%pack%dpsi(ist, ip)
+      end do
+      !$omp end parallel do
     else
-      forall(ip = 1:np) psi(ip) = this%pack%zpsi(ist, ip)
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip) = this%pack%zpsi(ist, ip)
+      end do
+      !$omp end parallel do
     end if
+
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
@@ -851,6 +869,88 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
   POP_SUB(X(batch_set_points))
 end subroutine X(batch_set_points)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_mul)(np, ff,  xx, yy)
+  integer,           intent(in)    :: np
+  R_TYPE,            intent(in)    :: ff(:)
+  type(batch_t),     intent(in)    :: xx
+  type(batch_t),     intent(inout) :: yy
+
+  integer :: ist, ip
+  R_TYPE :: mul
+
+  PUSH_SUB(X(batch_mul))
+  call profiling_in(mul_prof, "BATCH_MUL")
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+#ifdef R_TCMPLX
+  !if aa is complex, the functions must be complex
+  ASSERT(batch_type(yy) == TYPE_CMPLX)
+#endif
+  ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
+
+  select case(batch_status(yy))
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("OpenCL batch_mul")
+
+  case(BATCH_PACKED)
+    if(batch_type(yy) == TYPE_CMPLX) then
+      !$omp parallel do private(ip, ist, mul)
+      do ip = 1, np
+        mul = ff(ip)
+        do ist = 1, yy%nst_linear
+          yy%pack%zpsi(ist, ip) = mul*xx%pack%zpsi(ist, ip)
+        end do
+      end do
+      !$omp end parallel do
+    else
+#ifdef R_TREAL
+      !$omp parallel do private(ip, ist, mul)
+      do ip = 1, np
+        mul = ff(ip)
+        do ist = 1, yy%nst_linear
+          yy%pack%dpsi(ist, ip) = mul*xx%pack%dpsi(ist, ip)
+        end do
+      end do
+      !$omp end parallel do
+#endif
+    end if
+
+  case(BATCH_NOT_PACKED)
+    if(batch_type(yy) == TYPE_CMPLX) then
+      !$omp parallel private(ist, ip)
+      do ist = 1, yy%nst_linear
+        !$omp do
+        do ip = 1, np
+          yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+    else
+#ifdef R_TREAL
+      !$omp parallel private(ist, ip)
+      do ist = 1, yy%nst_linear
+        !$omp do
+        do ip = 1, np
+          yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+#endif
+    end if
+  end select
+
+  call batch_pack_was_modified(yy)
+
+  call profiling_out(mul_prof)
+  POP_SUB(X(batch_mul))
+
+end subroutine X(batch_mul)
 
 !! Local Variables:
 !! mode: f90
