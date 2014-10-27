@@ -50,6 +50,7 @@ module species_m
     species_set_index,             & 
     species_read,                  &
     species_init,                  &
+    species_read_delta,            &
     species_pot_init,              &
     species_init_from_data_object, &
     species_create_data_object,    &
@@ -142,8 +143,7 @@ module species_m
 
 
     integer :: niwfs              !< The number of initial wavefunctions
-    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
-
+    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :) !< i, l, m as a function of iorb and ispin
 
     integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
   end type species_t
@@ -467,7 +467,7 @@ contains
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a soft-Coulomb potential.'
         call messages_info(1)
       end if
-      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
@@ -507,7 +507,7 @@ contains
         write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
         call messages_info(1)
       end if
-      spec%niwfs = 2*nint(spec%z_val)
+      spec%niwfs = 2*nint(spec%z_val+M_HALF)
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI)
@@ -518,7 +518,7 @@ contains
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
         call messages_info(4)
       end if
-      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI_SLAB)
@@ -530,7 +530,7 @@ contains
         !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
         call messages_info(3)
       end if
-      spec%niwfs = 2*nint(spec%z_val)
+      spec%niwfs = 2*nint(spec%z_val+M_HALF)
       spec%omega = CNST(0.1)
 
     case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
@@ -542,8 +542,8 @@ contains
         write(message(4),'(a)')  '   for a delta density distribution.'
         call messages_info(4)
       end if
-      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val))
-      spec%omega = spec%z_val 
+      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
+      spec%omega = spec%z_val
 
     case(SPEC_CHARGE_DENSITY)
       spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
@@ -559,6 +559,11 @@ contains
       call input_error('Species')
     end select
 
+    if(.not. species_is_ps(spec)) then
+      ! since there is no real cap, make sure there are at least a few available
+      spec%niwfs = max(5, spec%niwfs)
+    endif
+
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
@@ -571,10 +576,27 @@ contains
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
       nullify(spec%ps)
     endif
-    call messages_info(1)
+    if(print_info_) call messages_info(1)
 
     POP_SUB(species_init)
   end subroutine species_init
+  ! ---------------------------------------------------------
+
+  subroutine species_read_delta(spec, zz)
+    type(species_t), intent(out) :: spec
+    FLOAT,           intent(in)  :: zz
+
+    PUSH_SUB(species_read_delta)
+
+    spec%type = SPEC_FULL_DELTA
+    spec%z     = zz
+    spec%z_val = zz
+    spec%sigma = CNST(0.25)
+
+    POP_SUB(species_read_delta)
+  end subroutine species_read_delta
+
+
   ! ---------------------------------------------------------
 
 
@@ -880,6 +902,7 @@ contains
     type(species_t), intent(in) :: spec
     integer, intent(in)         :: j, is
     integer, intent(out)        :: i, l, m
+
     i = spec%iwf_i(j, is)
     l = spec%iwf_l(j, is)
     m = spec%iwf_m(j, is)
@@ -894,6 +917,7 @@ contains
     FLOAT,             intent(in) :: xx(1:MAX_DIM), r
     
     FLOAT :: pot_re, pot_im
+
     call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%user_def)
     species_userdef_pot = pot_re + M_zI * pot_im  
 
