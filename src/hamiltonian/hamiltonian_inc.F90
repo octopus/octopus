@@ -686,6 +686,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
   integer :: ip, ii
   type(batch_t), pointer :: src_
   type(profile_t), save :: phase_prof
+  R_TYPE :: phase
 #ifdef HAVE_OPENCL
   integer :: wgsize
   type(octcl_kernel_t), save :: ker_phase
@@ -706,21 +707,24 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
   case(BATCH_PACKED)
     
     if(conjugate) then
-      !$omp parallel do private(ip, ii)
+
+      !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        forall (ii = 1:psib%nst_linear)
-          psib%pack%X(psi)(ii, ip) = conjg(this%phase(ip, iqn))*src_%pack%X(psi)(ii, ip)
-        end forall
+        phase = conjg(this%phase(ip, iqn))
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+        end do
       end do
       !$omp end parallel do
       
     else
 
-      !$omp parallel do private(ip, ii)
+      !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        forall (ii = 1:psib%nst_linear)
-          psib%pack%X(psi)(ii, ip) = this%phase(ip, iqn)*src_%pack%X(psi)(ii, ip)
-        end forall
+        phase = this%phase(ip, iqn)
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+        end do
       end do
       !$omp end parallel do
 
