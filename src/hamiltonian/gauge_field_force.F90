@@ -20,6 +20,8 @@
 #include "global.h"
 
 module gauge_field_force_m
+  use batch_m
+  use batch_ops_m
   use datasets_m
   use derivatives_m
   use gauge_field_m
@@ -72,11 +74,12 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom, ip
+    integer :: ik, ist, idir, idim, iatom, ip, ib, minst, maxst, ii
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
+    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
@@ -95,46 +98,73 @@ contains
 
     microcurrent = M_ZERO
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
+    if(hamiltonian_current) then
+      
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
 
-        call states_get_state(st, gr%mesh, ist, ik, psi)
+          call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-        do idim = 1, st%d%dim
-          call zderivatives_set_bc(gr%der, psi(:, idim))
-        end do
-        
-        if(hamiltonian_current) then
-          
-          ! we use that the current operator is i[H,r]
+          call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), rhpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), rpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
 
-          call zhamiltonian_apply(hm, gr%der, psi, hpsi, ist, ik, set_bc = .false.)
-          
+          call zderivatives_batch_set_bc(gr%der, st%group%psib(ib, ik))
+          call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+
           do idir = 1, gr%sb%dim
 
-            do idim = 1, st%d%dim
-              !$omp parallel do
-              do ip = 1, gr%mesh%np_part
-                rhpsi(ip, idim) = gr%mesh%x(ip, idir)*hpsi(ip, idim)
-                rpsi(ip, idim) = gr%mesh%x(ip, idir)*psi(ip, idim)
-              end do
-              !$omp end parallel do
-            end do
+            call batch_mul(gr%mesh%np, gr%mesh%x(:, idir), hpsib, rhpsib)
+            call batch_mul(gr%mesh%np_part, gr%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
+          
+            call zhamiltonian_apply_batch(hm, gr%der, rpsib, hrpsib, ik, set_bc = .false.)
 
-            call zhamiltonian_apply(hm, gr%der, rpsi, hrpsi, ist, ik, set_bc = .false.)
-
-            do idim = 1, st%d%dim
-              !$omp parallel do
-              do ip = 1, gr%mesh%np
-                microcurrent(ip, idir) = microcurrent(ip, idir) - &
-                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-                aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+            minst = states_block_min(st, ib)
+            maxst = states_block_max(st, ib)
+            
+            do ist = st%st_start, st%st_end
+            
+              do idim = 1, st%d%dim
+                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
+                call batch_get_state(st%group%psib(ib, ik), ii, gr%mesh%np, psi(:, idim))
+                call batch_get_state(hrpsib, ii, gr%mesh%np, hrpsi(:, idim))
+                call batch_get_state(rhpsib, ii, gr%mesh%np, rhpsi(:, idim))
               end do
-              !$omp end parallel do
+              
+              do idim = 1, st%d%dim
+                !$omp parallel do
+                do ip = 1, gr%mesh%np
+                  microcurrent(ip, idir) = microcurrent(ip, idir) - &
+                    CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+                    aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                end do
+                !$omp end parallel do
+              end do
             end do
+            
           end do
 
-        else
+          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+
+          call batch_end(hpsib)
+          call batch_end(rhpsib)
+          call batch_end(rpsib)
+          call batch_end(hrpsib)
+
+        end do
+      end do
+    
+    else
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          
+          call states_get_state(st, gr%mesh, ist, ik, psi)
+          
+          do idim = 1, st%d%dim
+            call zderivatives_set_bc(gr%der, psi(:, idim))
+          end do
 
           do idim = 1, st%d%dim
 
@@ -145,9 +175,9 @@ contains
             end do
 
             call zderivatives_grad(gr%der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-
+            
           end do
-
+          
           do idir = 1, gr%sb%dim
             do iatom = 1, geo%natoms
               if(species_is_ps(geo%atom(iatom)%spec)) then
@@ -155,9 +185,9 @@ contains
               end if
             end do
           end do
-
+          
           do idir = 1, gr%sb%dim
-
+            
             do idim = 1, st%d%dim
               !$omp parallel do
               do ip = 1, gr%mesh%np
@@ -168,11 +198,12 @@ contains
               !$omp end parallel do
             end do
           end do
-        end if
 
+        end do
       end do
-    end do
-
+      
+    end if
+    
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
       call symmetrizer_init(symmetrizer, gr%mesh)
