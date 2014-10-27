@@ -166,6 +166,7 @@ $failures = 0;
 
 $tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
+if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
