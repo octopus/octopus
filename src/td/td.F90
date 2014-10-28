@@ -158,8 +158,15 @@ contains
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
-    !if the gauge field is applied, we need to tell v_ks to calculate the current
-    if (gauge_field_is_applied(hm%ep%gfield)) call v_ks_calculate_current(sys%ks, .true.)
+
+    if (gauge_field_is_applied(hm%ep%gfield)) then
+      !if the gauge field is applied, we need to tell v_ks to calculate the current
+      call v_ks_calculate_current(sys%ks, .true.)
+
+      ! initialize the vector field and update the hamiltonian
+      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
+      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+    end if
 
     call init_wfs()
 
@@ -551,11 +558,6 @@ contains
     ! ---------------------------------------------------------
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
-
-      if (gauge_field_is_applied(hm%ep%gfield)) then
-        call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
-      end if
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
