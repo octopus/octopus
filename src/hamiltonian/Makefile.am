@@ -35,7 +35,6 @@ libhamiltonian_a_SOURCES =         \
 	hamiltonian.F90            \
 	scf_tol.F90                \
 	gauge_field.F90            \
-	gauge_field_force.F90      \
 	ob_lead.F90                \
 	born_charges.F90           \
 	projector_matrix.F90       \
@@ -58,7 +57,6 @@ depend:
 
 ob_lead.o: ob_lead.F90
 gauge_field.o : gauge_field.F90 projector.o
-gauge_field_force.o : gauge_field.F90 hamiltonian.o
 lasers.o : lasers.F90 lasers_inc.F90
 species_pot.o : species_pot.F90 species_pot_inc.F90
 rkb_projector.o : rkb_projector.F90 species_pot.o 

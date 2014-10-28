@@ -71,7 +71,8 @@ module gauge_field_m
     gauge_field_get_energy,               &
     gauge_field_dump,                     &
     gauge_field_load,                     &
-    gauge_field_end
+    gauge_field_end,                      &
+    gauge_field_get_force
 
   type gauge_force_t
     FLOAT   :: vecpot(1:MAX_DIM)   
@@ -375,6 +376,26 @@ contains
 
     POP_SUB(gauge_field_load)
   end subroutine gauge_field_load
+
+  ! ---------------------------------------------------------
+
+  subroutine gauge_field_get_force(gr, st, force)
+    type(grid_t),         intent(in)    :: gr
+    type(states_t),       intent(in)    :: st
+    type(gauge_force_t),  intent(out)   :: force
+
+    integer :: idir
+
+    PUSH_SUB(gauge_field_get_force)
+
+    ASSERT(st%d%nspin == 1)
+
+    do idir = 1, gr%sb%dim
+      force%vecpot(idir) = CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, 1))
+    end do
+
+    POP_SUB(gauge_field_get_force)
+  end subroutine gauge_field_get_force
 
 
 end module gauge_field_m

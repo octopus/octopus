@@ -29,7 +29,6 @@ module td_m
   use epot_m
   use forces_m
   use gauge_field_m
-  use gauge_field_force_m
   use geometry_m
   use global_m
   use grid_m
@@ -193,7 +192,7 @@ contains
 
     if(td%iter == 0) call td_run_zero_iter()
 
-    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(gr, hm, geo, hm%ep%proj, hm%phase, st, td%gauge_force)
+    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(gr, st, td%gauge_force)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
