@@ -134,9 +134,9 @@ contains
               do idim = 1, st%d%dim
                 !$omp parallel do
                 do ip = 1, gr%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) - &
-                    CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-                    aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                  current(ip, idir, 1) = current(ip, idir, 1) &
+                    - st%d%kweights(ik)*st%occ(ist, ik)&
+                    *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
                 end do
                 !$omp end parallel do
               end do
@@ -191,8 +191,7 @@ contains
               !$omp parallel do
               do ip = 1, gr%mesh%np
                 current(ip, idir, 1) = current(ip, idir, 1) + &
-                  M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-                  aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
+                  st%d%kweights(ik)*st%occ(ist, ik)*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
               end do
               !$omp end parallel do
             end do
