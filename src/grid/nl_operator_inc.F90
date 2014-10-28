@@ -198,10 +198,11 @@ contains
 #ifdef R_TCOMPLEX
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn)) * &
-            fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
+        do ii = imin(ll) + 1, imax(ll)
+          do ist = 1, fi%nst_linear 
+            fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end do
+        end do
       end do
       !$omp end parallel do
 #endif
@@ -211,18 +212,21 @@ contains
       if(batch_is_packed(fi)) then
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            ! intel openmp seg faults here in testsuite/components/01-derivatives_1d.02-fortran.inp
-            fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
-          end forall
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear
+              fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            end do
+          end do
         end do
         !$omp end parallel do
       else   
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-          end forall
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear
+              fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            end do
+          end do
         end do
         !$omp end parallel do
       end if
