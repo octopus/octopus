@@ -84,6 +84,7 @@ module states_m
     states_exec_init,                 &
     states_allocate_wfns,             &
     states_allocate_intf_wfns,        &
+    states_allocate_current,          &
     states_deallocate_wfns,           &
     states_null,                      &
     states_end,                       &
@@ -1510,6 +1511,7 @@ contains
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
+
     if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
@@ -1528,7 +1530,19 @@ contains
     POP_SUB(states_densities_init)
   end subroutine states_densities_init
 
+  subroutine states_allocate_current(st, gr)
+    type(states_t), target, intent(inout) :: st
+    type(grid_t),           intent(in)    :: gr
 
+    PUSH_SUB(states_allocate_current)
+    
+    if(.not. associated(st%current)) then
+      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      st%current = M_ZERO
+    end if
+
+    POP_SUB(states_allocate_current)
+  end subroutine states_allocate_current
 
   !---------------------------------------------------------------------
   !> This subroutine: (i) Fills in the block size (st\%d\%block_size);

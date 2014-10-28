@@ -158,6 +158,8 @@ contains
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
+    !if the gauge field is applied, we need to tell v_ks to calculate the current
+    if (gauge_field_is_applied(hm%ep%gfield)) call v_ks_calculate_current(sys%ks, .true.)
 
     call init_wfs()
 

@@ -21,6 +21,7 @@
  
 module v_ks_m
   use berry_m
+  use current_m
   use datasets_m
   use density_m
   use derivatives_m
@@ -67,7 +68,8 @@ module v_ks_m
     v_ks_calc_t,        &
     v_ks_calc_start,    &
     v_ks_calc_finish,   &
-    v_ks_freeze_hxc
+    v_ks_freeze_hxc,    &
+    v_ks_calculate_current
 
   integer, parameter, public :: &
     SIC_NONE   = 1,     &  !< no self-interaction correction
@@ -93,7 +95,6 @@ module v_ks_m
     FLOAT,                pointer :: a_ind(:, :)
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
-
     !cmplxscl
     FLOAT,                pointer :: Imdensity(:, :)
     FLOAT,                pointer :: Imtotal_density(:)
@@ -123,6 +124,7 @@ module v_ks_m
     integer                  :: tc_delay
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
+    logical                  :: calculate_current
   end type v_ks_t
 
 contains
@@ -329,6 +331,8 @@ contains
     ks%gr => gr
     ks%calc%calculating = .false.
 
+    ks%calculate_current = .false.
+
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
   ! ---------------------------------------------------------
@@ -521,6 +525,11 @@ contains
       if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(geo, hm)
     else
       ks%calc%total_density_alloc = .false.
+    end if
+
+    if(ks%calculate_current) then
+      call states_allocate_current(st, ks%gr)
+      call current_calculate(ks%gr, hm, geo, st, st%current)
     end if
 
     nullify(ks%calc%hf_st) 
@@ -1191,6 +1200,14 @@ contains
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
 
+  subroutine v_ks_calculate_current(this, calc_cur)
+    type(v_ks_t), intent(inout) :: this
+    logical,      intent(in)    :: calc_cur
+    
+    this%calculate_current = calc_cur
+
+  end subroutine v_ks_calculate_current
+  
 end module v_ks_m
 
 !! Local Variables:
