@@ -117,11 +117,6 @@ module v_ks_m
     type(xc_ks_inversion_t)  :: ks_inversion
     type(poisson_t), pointer :: hartree_solver
     logical                  :: new_hartree
-    logical                  :: tail_correction
-    FLOAT                    :: tail_correction_tol
-    FLOAT                    :: tc_link_factor
-    FLOAT                    :: tc_distance 
-    integer                  :: tc_delay
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
     logical                  :: calculate_current
@@ -180,7 +175,6 @@ contains
     
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
-    ks%tail_correction = .false.
     
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -234,73 +228,6 @@ contains
 
       else
         ks%sic_type = SIC_NONE
-      end if
-
-      !%Variable XCTailCorrection
-      !%Type logical
-      !%Default no
-      !%Section Hamiltonian::XC
-      !%Description
-      !% (Experimental) This variable applies a correction to
-      !% the value of the XC functional in near-zero-density regions.
-      !% This zone might have numerical noise or it might 
-      !% even be set to zero by <tt>libxc</tt>.
-      !% The correction is performed by forcing the "-1/<i>r</i> behaviour" of the XC potential
-      !% in the zones where the density is lower then <tt>XCTailCorrectionTol</tt>.
-      !%End
-      call parse_logical(datasets_check('XCTailCorrection'), .false., ks%tail_correction)
-
-      if(ks%tail_correction) then 
-        call messages_experimental("XC tail correction")
-        write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density.'
-        call messages_info(1)
-
-        !%Variable XCTailCorrectionTol
-        !%Type float
-        !%Default 5e-12
-        !%Section Hamiltonian::XC
-        !%Description
-        !%This variable sets the total electronic density threshold corresponding
-        !% to the starting point of the <tt>XCTailCorrection</tt>.
-        !%The value is always assumed to be in atomic units.
-        !%End
-        call parse_float(datasets_check('XCTailCorrectionTol'), CNST(5e-12), ks%tail_correction_tol)
-
-
-        !%Variable XCTailCorrectionLinkFactor
-        !%Type float
-        !%Default 1
-        !%Section Hamiltonian::XC
-        !%Description
-        !% (Experimental) This variable forces a smooth transition between the region where the values of the XC functional 
-        !% have been previously calculated and the region where the -1/<i>r</i> correction has been applied. 
-        !% The region of the transition starts where the electronic total density reaches the value of
-        !% (<tt>XCTailCorrectionLinkFactor</tt> * <tt>XCTailCorrectionTol</tt>) and ends where the density reaches
-        !% the value of <tt>XCTailCorrectionTol</tt>.
-        !%End
-        call parse_float(datasets_check('XCTailCorrectionLinkFactor'), CNST(1.0), ks%tc_link_factor)
-
-        !%Variable XCTailCorrectionDelay
-        !%Type integer 
-        !%Default 0
-        !%Section Hamiltonian::XC
-        !%Description
-        !% (Experimental) This variable skips the application of the tail correction during the first calls of the
-        !% subroutine that build the exchange-correlation potential (<tt>XCTailCorrectionDelay</tt> = number of calls skipped):
-        !% this can avoid problems caused by initial guess wavefunctions.
-        !%End
-        call parse_integer(datasets_check('XCTailCorrectionDelay'), 0, ks%tc_delay)
-
-        !%Variable XCTailCorrectionCMDistance
-        !%Type integer 
-        !%Default 0
-        !%Section Hamiltonian::XC
-        !%Description
-        !% (Experimental) This variable allows the application of the tail correction to the XC potential only where
-        !% the distance of the local point from the center of mass of the system is greater than
-        !% <tt>XCTailCorrectionCMDistance</tt>.
-        !%End
-        call parse_float(datasets_check('XCTailCorrectionCMDistance'), M_ZERO, ks%tc_distance)
       end if
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
@@ -794,11 +721,6 @@ contains
         endif
       end if
 
-      if(ks%tail_correction) then 
-        if (cmplxscl) call messages_not_implemented('Complex Scaling with tail_correction')
-        call tail_correction(ks%calc%vxc, geo)
-      end if
-
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         energy%intnvxc = M_ZERO
@@ -826,104 +748,6 @@ contains
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
     end subroutine v_a_xc
-
-    !---------------------------------------------
-    subroutine tail_correction(vxc,geo)
-      FLOAT,            intent(inout) :: vxc(:, :) 
-      type(geometry_t), intent(in)    :: geo
-
-      FLOAT :: pos(MAX_DIM), distance_cm
-      FLOAT, allocatable :: vxcc(:)
-      FLOAT ::  s_dens,vnew 
-      FLOAT  :: smooth_ratio
-      integer :: nspin, is, ip, idim, ik, ist, ik_tmp  
-      integer , save :: counter = 0
-      logical :: to_calc   
-
-      PUSH_SUB(v_ks_calc_start.tail_correction)
-
-      SAFE_ALLOCATE(vxcc(1:ks%gr%fine%mesh%np))
-
-      counter = counter + 1
-      !print *, "vxc tail correction call number" , counter
-      nspin = 1
-      if (st%d%ispin == SPIN_POLARIZED) nspin = 2
-
-
-      spin_cycle: do is = 1,nspin
-        kpoint_cycle: do ik_tmp = st%d%kpt%start, st%d%kpt%end, nspin
-          ik = ik_tmp + is - 1
-          state_cycle: do ist = st%st_start, st%st_end
-
-            to_calc = .false.
-            if ((st%occ(ist,ik) /= M_ZERO) .and. (counter > ks%tc_delay) ) to_calc = .true.
-
-            ! If the state is not occupied and the call counter is greater than the desired value
-            ! don`t apply the correction and cycle
-            if (to_calc .eqv. .false.) cycle 
-
-            vxcc(1:ks%gr%fine%mesh%np) = vxc(1:ks%gr%fine%mesh%np, is)
-
-            ! some lines for debugging:
-            ! set the name of the output file and print the XC potential before the tail correction 
-            ! write (vxc_name,'(i10)') is
-            ! itmp = verify(vxc_name," ")
-            ! vxc_name =  "vxc"//trim(vxc_name(itmp:))
-            ! call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("precorr"), &
-            ! ks%gr%fine%mesh, vxcc, unit_one, ierr)
-
-            do ip = 1, ks%gr%fine%mesh%np
-              s_dens = ks%calc%density(ip, is)
-
-              distance_cm = M_ZERO
-              call cm_pos(geo,pos)
-              pos = M_ZERO
-              if (ks%gr%mesh%sb%dim /= MAX_DIM) then
-                message(1) = "Simulation box dimension different from the dimension used in subroutine cm_pos."
-                call messages_fatal(1)
-              end if
-
-              do idim = 1,ks%gr%mesh%sb%dim 
-                distance_cm = distance_cm +  (ks%gr%fine%mesh%x(ip,idim) - pos(idim) )**2
-              end do
-              distance_cm = sqrt(distance_cm)
-
-              !If:
-              !- the density is not exactly zero (and)...
-              !- at least we have reached the linking region (and)...
-              !- the cm distance is greater than the desired value ...
-              ! then apply the correction
-              if( (s_dens /= M_ZERO) .and. (ks%calc%total_density(ip)  <  ks%tc_link_factor*ks%tail_correction_tol) & 
-                .and. (distance_cm > ks%tc_distance) ) then
-
-                if (ks%calc%total_density(ip) > ks%tail_correction_tol ) then 
-                  smooth_ratio =  ks%calc%total_density(ip)/ks%tail_correction_tol
-                  vnew = - M_ONE/distance_cm
-                  vxcc(ip) = ( smooth_ratio*vxcc(ip) + (ks%tc_link_factor-smooth_ratio)*vnew ) / ks%tc_link_factor
-                else 
-                  vxcc(ip) = -M_ONE/distance_cm
-                end if
-              end if
-            end do
-
-            !Another output call for debugging
-            !!print the XC potential after the tail correction
-            !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("tcorrected") , &
-            !ks%gr%fine%mesh, vxcc, unit_one, ierr)
-
-            vxc(1:ks%gr%fine%mesh%np, is) = vxcc(1:ks%gr%fine%mesh%np)
-
-
-          end do state_cycle
-        end do kpoint_cycle
-      end do spin_cycle
-
-
-      SAFE_DEALLOCATE_A(vxcc)
-
-      POP_SUB(v_ks_calc_start.tail_correction)
-
-    end subroutine tail_correction
 
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
