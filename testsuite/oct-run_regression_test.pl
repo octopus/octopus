@@ -346,10 +346,16 @@ foreach my $octopus_exe (@executables){
 	      printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
 	      
 	    } else {
-	      print "\n\nTest run failed with exit code $return_value.\n\n";
+	      print "\n\nTest run failed with exit code $return_value.\n";
+	      print "These are the last lines of output:\n\n";
+	      print "----------------------------------------\n";
+	      system("tail -20 $workdir/out");
+	      print "----------------------------------------\n\n";
+
 	      printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+
 	      $failures++;
-	      $test_succeeded = 0;
+	      $test_succeeded = 0;      
 	    }
 	    $test{"run"} = 1;
 	  }
