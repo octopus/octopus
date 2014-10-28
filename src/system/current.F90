@@ -79,13 +79,10 @@ contains
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
     type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib
-#ifdef HAVE_MPI
-    FLOAT :: force_tmp(1:MAX_DIM)
-#endif
     logical, parameter :: hamiltonian_current = .false.
 
     call profiling_in(prof, "CURRENT")
-    PUSH_SUB(gauge_field_get_force)
+    PUSH_SUB(current_calculate)
 
     ! spin not implemented or tested
     ASSERT(st%d%nspin == 1)
@@ -223,7 +220,7 @@ contains
     SAFE_DEALLOCATE_A(gpsi)
 
     call profiling_out(prof)
-    POP_SUB(gauge_field_get_force)
+    POP_SUB(current_calculate)
 
   end subroutine current_calculate
 

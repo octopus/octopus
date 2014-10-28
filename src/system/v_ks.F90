@@ -1203,9 +1203,12 @@ contains
   subroutine v_ks_calculate_current(this, calc_cur)
     type(v_ks_t), intent(inout) :: this
     logical,      intent(in)    :: calc_cur
+
+    PUSH_SUB(v_ks_calculate_current)
     
     this%calculate_current = calc_cur
 
+    POP_SUB(v_ks_calculate_current)
   end subroutine v_ks_calculate_current
   
 end module v_ks_m
