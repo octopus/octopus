@@ -3,7 +3,7 @@
 
 Test       : RDMFT
 Programs   : octopus; octopus_mpi
-TestGroups : short-run, functionals
+TestGroups : long-run, functionals
 Enabled    : Yes
 
 Processors: 1
