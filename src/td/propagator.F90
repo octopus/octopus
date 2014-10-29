@@ -583,7 +583,7 @@ contains
 
     integer :: is, iter, ik, ist
     FLOAT   :: d, d_max
-    logical :: self_consistent, cmplxscl, generate, update_energy_
+    logical :: cmplxscl, generate, update_energy_
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:), vaux(:, :), imvaux(:, :)
     type(profile_t), save :: prof
@@ -597,8 +597,7 @@ contains
       ASSERT(present(gauge_force))
     end if
 
-    self_consistent = self_consistent_step()
-    if(self_consistent) then
+    if(self_consistent_step()) then
       SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -650,7 +649,7 @@ contains
 
     if(present(scsteps)) scsteps = 1
 
-    if(self_consistent) then
+    if(self_consistent_step()) then
 
       ! First, compare the new potential to the extrapolated one.
       call v_ks_calc(ks, hm, st, geo, time = time - dt)
@@ -755,7 +754,7 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    logical function self_consistent_step() result(scs)
+    logical pure function self_consistent_step() result(scs)
       scs = .false.
       if( hm%theory_level /= INDEPENDENT_PARTICLES .and. &
           tr%method /= PROP_CAETRS .and. &
