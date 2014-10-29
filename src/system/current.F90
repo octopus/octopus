@@ -165,18 +165,18 @@ contains
             call zderivatives_set_bc(gr%der, psi(:, idim))
           end do
 
-          do idim = 1, st%d%dim
-
+          if(associated(hm%phase)) then 
             ! Apply the phase that contains both the k-point and vector-potential terms.
-            !$omp parallel do
-            do ip = 1, gr%mesh%np_part
-              psi(ip, idim) = hm%phase(ip, ik - st%d%kpt%start + 1)*psi(ip, idim)
+            do idim = 1, st%d%dim
+              !$omp parallel do
+              do ip = 1, gr%mesh%np_part
+                psi(ip, idim) = hm%phase(ip, ik - st%d%kpt%start + 1)*psi(ip, idim)
+              end do
+              
+              call zderivatives_grad(gr%der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
             end do
+          end if
 
-            call zderivatives_grad(gr%der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-            
-          end do
-          
           do idir = 1, gr%sb%dim
             do iatom = 1, geo%natoms
               if(species_is_ps(geo%atom(iatom)%spec)) then
