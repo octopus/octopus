@@ -634,15 +634,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
         call batch_pack_was_modified(vpsib)
       else
         
-        !$omp parallel private(ip, ist)
         do ist = 1, nst
-          !$omp do
+          !$omp parallel do
           do ip = 1, npoints
             vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
           end do
-          !$omp end do nowait
+          !$omp end parallel do
         end do
-        !$omp end parallel
         
       end if
       call profiling_count_operations(nst*npoints*R_ADD)
