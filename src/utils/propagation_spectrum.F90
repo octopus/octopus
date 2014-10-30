@@ -62,7 +62,9 @@ program propagation_spectrum
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
       call read_files('multipoles', refmultipoles)
-      call calculate('cross_section')
+      call calculate_absorption('cross_section')
+    case (SPECTRUM_P_POWER)
+      call calculate_dipole_power("multipoles", 'dipole_power')
     case (SPECTRUM_ENERGYLOSS)
       call calculate_ftchd('ftchd', 'dynamic_structure_factor')
     case default
@@ -226,13 +228,13 @@ program propagation_spectrum
 
 
     !----------------------------------------------------------------------------   
-    subroutine calculate(fname)
+    subroutine calculate_absorption(fname)
       character(len=*), intent(in) :: fname
 
       integer :: ii, jj
       character(len=150), allocatable :: filename(:)
 
-      PUSH_SUB(calculate)
+      PUSH_SUB(calculate_absorption)
 
       if(.not.calculate_tensor) then
 
@@ -271,9 +273,31 @@ program propagation_spectrum
         
       end if
 
-      POP_SUB(calculate)
-    end subroutine calculate
+      POP_SUB(calculate_absorption)
+    end subroutine calculate_absorption
 
+    !----------------------------------------------------------------------------   
+    subroutine calculate_dipole_power(fname_in, fname_out)
+      character(len=*), intent(in) :: fname_in, fname_out
+
+      PUSH_SUB(calculate_dipole_power)
+
+      in_file(1) = io_open(trim(fname_in), action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), action='read', status='old', die=.false.)
+      if(in_file(1) >= 0) then
+        write(message(1),'(3a)') 'File "', trim(fname_in), '" found.'
+        write(message(2),'(a)')
+        call messages_info(2)
+      end if
+
+      out_file(1) = io_open(trim(fname_out), action='write')
+      call spectrum_dipole_power(in_file(1), out_file(1), spectrum)
+
+      call io_close(in_file(1))
+      call io_close(out_file(1))
+
+      POP_SUB(calculate_dipole_power)
+    end subroutine calculate_dipole_power
 
     !----------------------------------------------------------------------------   
     subroutine calculate_ftchd(fname_in, fname_out)
@@ -291,7 +315,6 @@ program propagation_spectrum
       call io_close(out_file(1))
 
       POP_SUB(calculate_ftchd)
-
     end subroutine calculate_ftchd
 
 end program propagation_spectrum

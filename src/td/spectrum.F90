@@ -50,6 +50,7 @@ module spectrum_m
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
+    spectrum_dipole_power,         &
     spectrum_dyn_structure_factor, &
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
@@ -78,7 +79,8 @@ module spectrum_m
 
   integer, public, parameter ::    &
     SPECTRUM_ABSORPTION      = 1,  &
-    SPECTRUM_ENERGYLOSS      = 2
+    SPECTRUM_ENERGYLOSS      = 2,  &
+    SPECTRUM_P_POWER         = 3
 
   integer, public, parameter ::       &
     SPECTRUM_FOURIER            = 1,  &
@@ -92,7 +94,7 @@ module spectrum_m
     integer :: damp                !< damping type (none, exp or pol)
     integer :: transform           !< sine, cosine, or exponential transform
     FLOAT   :: damp_factor         !< factor used in damping
-    integer :: spectype            !< damping type (none, exp or pol)
+    integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
     integer :: method              !< fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
     type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
@@ -131,6 +133,8 @@ contains
     !% Photoabsorption spectrum.
     !%Option EnergyLossSpectrum 2
     !% Dynamic structure factor (also known as energy-loss function or spectrum).
+    !%Option DipolePower 3
+    !% Power spectrum of the dipole moment.
     !%End
 
     call parse_integer(datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
@@ -802,6 +806,115 @@ contains
 
   end subroutine spectrum_read_dipole
   
+  ! ---------------------------------------------------------
+  subroutine spectrum_dipole_power(in_file, out_file, spectrum)
+    integer,           intent(in)    :: in_file
+    integer,           intent(in)    :: out_file
+    type(spec_t),      intent(inout) :: spectrum
+
+    character(len=20) :: header_string
+    integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, ii, isp, no_e, ie, idir
+    FLOAT   :: dt
+    FLOAT, allocatable :: dipole(:, :, :), transform_cos(:, :, :), transform_sin(:, :, :), power(:, :, :)
+    type(unit_system_t) :: file_units
+    type(batch_t) :: dipoleb, transformb_cos, transformb_sin
+    type(kick_t) :: kick
+
+    PUSH_SUB(spectrum_dipole_power)
+
+    ! This function gives us back the unit connected to the "multipoles" file, the header information,
+    ! the number of time steps, and the time step.
+    call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units, lmax=lmax)
+
+    ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
+    if (lmax /= 1) then
+      message(1) = 'Multipoles file should contain the dipole -- and only the dipole.'
+      call messages_fatal(1)
+    end if
+
+    ! Find out the iteration numbers corresponding to the time limits.
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
+    call spectrum_read_dipole(in_file, dipole)
+
+    ! Now subtract the initial dipole.
+    do it = time_steps, 0, -1
+      dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
+    end do
+
+    if (spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
+    ! Get the number of energy steps.
+    no_e = int(spectrum%max_energy / spectrum%energy_step)
+    SAFE_ALLOCATE(transform_cos(0:no_e, 1:3, 1:nspin))
+    SAFE_ALLOCATE(transform_sin(0:no_e, 1:3, 1:nspin))
+    SAFE_ALLOCATE(power(0:no_e, 1:3, 1:nspin))
+
+
+    call batch_init(dipoleb, 3, 1, nspin, dipole)
+    call batch_init(transformb_cos, 3, 1, nspin, transform_cos)
+    call batch_init(transformb_sin, 3, 1, nspin, transform_sin)
+
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
+
+    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+         istart + 1, iend + 1, spectrum%start_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, transformb_cos)
+    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+         istart + 1, iend + 1, spectrum%start_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, transformb_sin)
+
+    do ie = 0, no_e
+      power(ie, :, :) = (transform_sin(ie, :, :)**2 + transform_cos(ie, :, :)**2)
+    end do
+
+    call batch_end(dipoleb)
+    call batch_end(transformb_cos)
+    call batch_end(transformb_sin)
+
+    SAFE_DEALLOCATE_A(dipole)
+    SAFE_DEALLOCATE_A(transform_sin)
+    SAFE_DEALLOCATE_A(transform_cos)
+
+    write(out_file, '(a15,i2)')      '# nspin        ', nspin
+    write(out_file, '(a)') '#%'
+    write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
+    write(out_file, '(a,i4)')    '# PropagationSpectrumDampMode   = ', spectrum%damp
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumDampFactor = ', units_from_atomic(units_out%time**(-1), &
+                                                                       spectrum%damp_factor)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumStartTime  = ', units_from_atomic(units_out%time, spectrum%start_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEndTime    = ', units_from_atomic(units_out%time, spectrum%end_time)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_out%energy, spectrum%max_energy)
+    write(out_file, '(a,f10.4)') '# PropagationSpectrumEnergyStep = ', units_from_atomic(units_out%energy, spectrum%energy_step)
+    write(out_file, '(a)') '#%'
+    
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
+    do isp = 1, nspin
+      do idir = 1, 3
+        write(header_string,'(a6,i1,a8,i1,a1)') 'power(', idir, ', nspin=', isp, ')'
+        write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+      end do
+    end do
+    write(out_file, '(1x)')
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
+    do ii = 1, nspin * 3
+      write(out_file, '(a20)', advance = 'no') str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+    end do
+    write(out_file, '(1x)')
+
+    do ie = 0, no_e
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ie * spectrum%energy_step)
+      do isp = 1, nspin
+        write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, power(ie, idir, isp)), &
+                                                    idir = 1, 3)
+      end do
+      write(out_file, '(1x)')
+    end do
+
+    SAFE_DEALLOCATE_A(power)
+
+    POP_SUB(spectrum_dipole_power)
+  end subroutine spectrum_dipole_power
+
   ! ---------------------------------------------------------
   subroutine spectrum_dyn_structure_factor(in_file_sin, in_file_cos, out_file, spectrum)
     integer,      intent(in)    :: in_file_sin, in_file_cos
