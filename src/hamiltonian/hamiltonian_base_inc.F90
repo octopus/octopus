@@ -468,15 +468,13 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       else
 
-        !$omp parallel private(ip, ist)
         do ist = 1, nst
-          !$omp do
+          !$omp parallel do
           do ip = 1, npoints
             psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
           end do
-          !$omp end do nowait
+          !$omp end parallel do 
         end do
-        !$omp end parallel
 
       end if
 

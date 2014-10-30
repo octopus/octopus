@@ -921,26 +921,23 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
   case(BATCH_NOT_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
-      !$omp parallel private(ist, ip)
       do ist = 1, yy%nst_linear
-        !$omp do
+        !$omp parallel do
         do ip = 1, np
           yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
         end do
-        !$omp end do nowait
+        !$omp end parallel do
       end do
-      !$omp end parallel
     else
 #ifdef R_TREAL
-      !$omp parallel private(ist, ip)
       do ist = 1, yy%nst_linear
-        !$omp do
+        !$omp parallel do
         do ip = 1, np
           yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
         end do
-        !$omp end do nowait
+        !$omp end parallel do
       end do
-      !$omp end parallel
+
 #endif
     end if
   end select

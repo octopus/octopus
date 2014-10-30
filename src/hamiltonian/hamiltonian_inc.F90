@@ -734,26 +734,23 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 
     if(conjugate) then
 
-      !$omp parallel private(ii, ip)
       do ii = 1, psib%nst_linear
-        !$omp do
+        !$omp parallel do
         do ip = 1, np
           psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
         end do
-        !$omp end do nowait
+        !$omp end parallel do
       end do
-      !$omp end parallel
       
     else
-      !$omp parallel private(ii, ip)
+
       do ii = 1, psib%nst_linear
-        !$omp do
+        !$omp parallel do
         do ip = 1, np
           psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
         end do
-        !$omp end do nowait
+        !$omp end parallel do
       end do
-      !$omp end parallel
 
     end if
 
