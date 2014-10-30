@@ -100,8 +100,11 @@ contains
   subroutine add_last_slash(str)
     character(len=*), intent(inout) :: str
 
+    character(64) :: tmp_str
+    
     if (index(str, '/', .true.) /= len_trim(str)) then
-      write(str,'(a,a1)') trim(str), '/'
+      tmp_str = str
+      write(str,'(a,a1)') trim(tmp_str), '/'
     end if
   end subroutine add_last_slash
 
