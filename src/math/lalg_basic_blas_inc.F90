@@ -527,13 +527,12 @@ subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
-  PUSH_SUB(FNAME(symv_1))
+  ! no push_sub, called too frequently
 
   call profiling_in(symv_profile, 'BLAS_SYMV')
   call blas_symv('U', n, alpha, a(1, 1), n, x(1), 1, beta, y(1), 1)
   call profiling_out(symv_profile)
 
-  POP_SUB(FNAME(symv_1))
 end subroutine FNAME(symv_1)
 
 subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
@@ -661,7 +660,7 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
 
   integer :: lda
 
-  PUSH_SUB(FNAME(symm_1))
+  ! no push_sub, called too frequently
 
   select case(side)
   case('l', 'L')
@@ -672,7 +671,6 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   
   call blas_symm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
 
-  POP_SUB(FNAME(symm_1))
 end subroutine FNAME(symm_1)
 
 
@@ -711,7 +709,7 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
 
   integer :: lda
 
-  PUSH_SUB(FNAME(trmm_1))
+  ! no push_sub, called too frequently
 
   select case(side)
     case('L', 'l')
@@ -722,7 +720,6 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
       
   call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
 
-  POP_SUB(FNAME(trmm_1))
 end subroutine FNAME(trmm_1)
 
 
