@@ -165,8 +165,10 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr)
   end if
 
 #if defined(HAVE_MPI)
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-  call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  if(restart%mpi_grp%size > 1) then
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  endif
 #endif
 
   if (ierr /= 0) then
@@ -196,8 +198,10 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr)
   end if
 
 #if defined(HAVE_MPI)
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-  call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  if(restart%mpi_grp%size > 1) then
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  endif
 #endif
 
   if (ierr /= 0) then
@@ -227,8 +231,10 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
   end if
 
 #if defined(HAVE_MPI)
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-  call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  if(restart%mpi_grp%size > 1) then
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  endif
 #endif
 
   if (ierr /= 0) then

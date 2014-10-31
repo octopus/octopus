@@ -598,7 +598,8 @@ contains
     ! as there might be some subsequent calls to this function where that information will
     ! be written/read to/from the same directory.
 #if defined(HAVE_MPI)
-    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+    if(restart%mpi_grp%size > 1) &
+      call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
 #endif
 
     POP_SUB(restart_init)
