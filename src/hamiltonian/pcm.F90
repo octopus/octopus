@@ -42,10 +42,9 @@ module pcm_m
             pcm_end,              &
             pcm_charges,          &
             pcm_pot_rs,           &
-            pcm_classical_energy, &
+            pcm_elect_energy,     &
             v_nuclei_cav,         &
-            v_electrons_cav_li,   &
-            v_electrons_cav
+            v_electrons_cav_li
 
 
  !> The cavity hosting the solute molecule is built from a set of 
@@ -96,6 +95,8 @@ module pcm_m
 
   integer :: nearest_idx_unit   
   integer :: idx_from_coord_unit
+
+  FLOAT, allocatable :: mat_gamess(:,:)     !< testing!
 
   !> End of variable declaration.
   !! ----------------------------
@@ -177,10 +178,19 @@ contains
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Parameter used to control the width of the Gaussian density of polarization charges,
-    !% which is the area of each tessera.
+    !% Parameter used to control the width (area of each tessera) of the Gaussians used to distribute
+    !% the polarization charges on each tessera of the cavity surface. If sets to zero, the solvent 
+    !% reaction potential in real-space is defined by using point charges.
     !%End
     call parse_float(datasets_check('SmearingFactor'), M_ONE, pcm%gaussian_width)
+
+    if (pcm%gaussian_width == M_ZERO) then
+        message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
+        call messages_info(1)
+    else
+        message(1) = "Info: PCM potential is regularized to avoid Coulomb singularity"
+        call messages_info(1)        
+    endif
 
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
@@ -307,22 +317,22 @@ contains
     SAFE_ALLOCATE( pcm%arg_li(1:pcm%n_tesserae, 1:MAX_DIM) )
     pcm%arg_li = M_ZERO
 
-    vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')
-    grid_unit = io_open('pcm/grid.dat', action='write')
+!    vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')
+!    grid_unit = io_open('pcm/grid.dat', action='write')
 
-     do ia=1,pcm%n_tesserae
-        write(vdw_unit,*) pcm%tess(ia)%x/P_Ang
-     enddo
+!     do ia=1,pcm%n_tesserae
+!        write(vdw_unit,*) pcm%tess(ia)%x/P_Ang
+!     enddo
 
-     do ia=1, grid%mesh%np
-        write(grid_unit,*) grid%mesh%x(ia,:)/P_Ang
-     enddo
+!     do ia=1, grid%mesh%np
+!        write(grid_unit,*) grid%mesh%x(ia,:)/P_Ang
+!     enddo
 
-    call io_close(vdw_unit)
-    call io_close(grid_unit)
+!    call io_close(vdw_unit)
+!    call io_close(grid_unit)
     
-    nearest_idx_unit    = io_open('pcm/nearest_index.dat', action='write')
-    idx_from_coord_unit = io_open('pcm/index_from_coords.dat', action='write')
+!    nearest_idx_unit    = io_open('pcm/nearest_index.dat', action='write')
+!    idx_from_coord_unit = io_open('pcm/index_from_coords.dat', action='write')
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
@@ -330,8 +340,12 @@ contains
         call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices )
      enddo
 
-    call io_close(nearest_idx_unit)
-    call io_close(idx_from_coord_unit)
+!    call io_close(nearest_idx_unit)
+!    call io_close(idx_from_coord_unit)
+
+!   Testing 
+    SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
+    mat_gamess = M_ZERO
 
     SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
@@ -341,11 +355,18 @@ contains
 
     pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
 
+    OPEN(1000, FILE='pcm/pcm_matrix_gamess.out')
+
      do jtess=1, pcm%n_tesserae
       do itess=1, pcm%n_tesserae
          write(pcmmat_unit,*) pcm%matrix(itess,jtess)
+
+         WRITE(1000,*) mat_gamess(itess,jtess) !testing
+
       enddo
      enddo
+
+    CLOSE(1000)
 	 
     call io_close(pcmmat_unit)
 
@@ -366,32 +387,7 @@ contains
     POP_SUB(pcm_init)
     return
   end subroutine pcm_init
-!=======================================================================================
-  !> Calculates the Hartree potential at the tessera representative points by taking the 
-  !! average of 'v_hartree' over the closest 8 (cube vertices) grid points. 
-  subroutine v_electrons_cav(v_e_cav, v_hartree, pcm)
-    type(pcm_t), intent(in)  :: pcm
-    FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
-    FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
-
-    integer :: ia
-    integer :: ib
-
-    PUSH_SUB(v_electrons_cav)    
-
-     v_e_cav = M_ZERO
-
-      do ia=1, pcm%n_tesserae
-        do ib=1, pcm%n_vertices
-           v_e_cav(ia) = v_e_cav(ia) + v_hartree( pcm%ind_vh(ia,ib) )
-        enddo
-
-        v_e_cav(ia) = -v_e_cav(ia)/pcm%n_vertices !Notice the explicit minus sign. 
-
-      enddo
-
-    POP_SUB(v_electrons_cav)
-  end subroutine v_electrons_cav      
+      
 !==================================================================
   !> Calculates the Hartree potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
@@ -477,15 +473,15 @@ contains
     POP_SUB(v_nuclei_cav)
   end subroutine v_nuclei_cav
 !==================================================================
-  !> Calculates the classical electrostatic interaction energy between the polarization
-  !! charges and the ions: int_n_pcm = 1/2 \sum_{I=1}^{natoms} \sum_{j=1}^{n_tess} &
-  !! Z_val*(q_j^e+q_j^n) / |s_{j} - R_I|
-  FLOAT function pcm_classical_energy(geo, q_e, q_n, tess, n_tess)
+  !> Calculates the solute-solvent electrostatic interaction energy
+  !! E_M-solv = \sum{ik=1}^n_tess { [VHartree(ik) + Vnuclei(ik)]*[q_e(ik) + q_n(ik)] }   
+  subroutine pcm_elect_energy(geo, pcm, E_int_ee, E_int_en, E_int_ne, E_int_nn)
     type(geometry_t), intent(in) :: geo
-    FLOAT                        :: q_e(:)  !< (1:n_tess)
-    FLOAT                        :: q_n(:)  !< (1:n_tess)
-    type(tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
-    integer, intent(in)          :: n_tess
+    type(pcm_t), intent(in)      :: pcm
+    FLOAT, intent(out)           :: E_int_ee 
+    FLOAT, intent(out)           :: E_int_en 
+    FLOAT, intent(out)           :: E_int_ne 
+    FLOAT, intent(out)           :: E_int_nn 
 
     FLOAT   :: diff(1:MAX_DIM)
     FLOAT   :: dist
@@ -495,28 +491,41 @@ contains
 
     type(species_t), pointer :: spci 
 
-    PUSH_SUB(pcm_classical_energy)
+    PUSH_SUB(pcm_elect_energy)
      
-    pcm_classical_energy = M_ZERO
+    E_int_ee = M_ZERO
+    E_int_en = M_ZERO
+    E_int_ne = M_ZERO
+    E_int_nn = M_ZERO
 
-    do ik = 1, n_tess
+    do ik = 1, pcm%n_tesserae
+
+       E_int_ee = E_int_ee + pcm%v_e(ik)*pcm%q_e(ik)
+       E_int_en = E_int_en + pcm%v_e(ik)*pcm%q_n(ik)
+
      do ia = 1, geo%natoms
-        diff = geo%atom(ia)%x - tess(ik)%x 
+        diff = geo%atom(ia)%x - pcm%tess(ik)%x 
         
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
         spci => geo%atom(ia)%spec
-        z_ia = species_zval(spci)
+        z_ia = -species_zval(spci)
 
-        pcm_classical_energy = pcm_classical_energy + z_ia*( q_e(ik) + q_n(ik) ) / dist       
+        E_int_ne = E_int_ne + z_ia*pcm%q_e(ik) / dist
+        E_int_nn = E_int_nn + z_ia*pcm%q_n(ik) / dist
+
      enddo
     enddo
 
-    pcm_classical_energy = M_HALF*pcm_classical_energy
+    E_int_ee = M_HALF*E_int_ee
+    E_int_en = M_HALF*E_int_en
+    E_int_ne = M_HALF*E_int_ne
+    E_int_nn = M_HALF*E_int_nn
 
-    POP_SUB(pcm_classical_energy)
-  end function pcm_classical_energy
+    POP_SUB(pcm_elect_energy)
+  end subroutine pcm_elect_energy
+
 !==================================================================
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
@@ -538,10 +547,10 @@ contains
    integer :: point_0(1:MAX_DIM)
    integer :: point_f(1:MAX_DIM)
    integer :: ii
-   integer :: tess_unit
-   integer :: vertices_unit
+!   integer :: tess_unit
+!   integer :: vertices_unit
 
-   character(LEN=20) :: cc
+!   character(LEN=20) :: cc
 
    PUSH_SUB(nearest_cube_vertices)    
 
@@ -550,8 +559,8 @@ contains
    coord_0 = mesh%x(vert_idx(1), :)
    point_0 = NINT(coord_0/mesh%spacing)
    
-   write(nearest_idx_unit,*) vert_idx(1)
-   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
+!   write(nearest_idx_unit,*) vert_idx(1)
+!   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
 
    sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
    sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
@@ -593,19 +602,19 @@ contains
    point_f(2) = point_f(2) - sign_y
    vert_idx(8) = index_from_coords(mesh%idx, point_f)
 
-   write(cc,'(I3)') ia
+!   write(cc,'(I3)') ia
 
-   tess_unit     = io_open('pcm/'//trim(cc)//'_tess.dat', action='write')
-   vertices_unit = io_open('pcm/'//trim(cc)//'_vertices.dat', action='write')
+!   tess_unit     = io_open('pcm/'//trim(cc)//'_tess.dat', action='write')
+!   vertices_unit = io_open('pcm/'//trim(cc)//'_vertices.dat', action='write')
 
-    write(tess_unit,*) point/P_Ang
+!    write(tess_unit,*) point/P_Ang
    
-    do ii=1, n_vertices
-       write(vertices_unit,*) mesh%x(vert_idx(ii), :)/P_Ang 
-    enddo
+!    do ii=1, n_vertices
+!       write(vertices_unit,*) mesh%x(vert_idx(ii), :)/P_Ang 
+!    enddo
 
-   call io_close(tess_unit)
-   call io_close(vertices_unit)
+!   call io_close(tess_unit)
+!   call io_close(vertices_unit)
 
    POP_SUB(nearest_cube_vertices)    
   
@@ -663,22 +672,30 @@ contains
 
     v_pcm = M_ZERO
 
-    do ia = 1, n_tess
+    if (width_factor /= M_ZERO) then
+    
+     do ia = 1, n_tess
         coord_tess = tess(ia)%x
-       do ip = 1, mesh%np !running serially np=np_global
+        do ip = 1, mesh%np !running serially np=np_global
+           call mesh_r(mesh, ip, rr, origin=coord_tess)
+           arg = rr/sqrt( tess(ia)%area*width_factor )    
+           term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
+           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
+        enddo 
+     enddo
+     v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
 
-          call mesh_r(mesh, ip, rr, origin=coord_tess)
+    else
+     
+     do ia = 1, n_tess
+        coord_tess = tess(ia)%x
+        do ip = 1, mesh%np !running serially np=np_global
+           call mesh_r(mesh, ip, rr, origin=coord_tess)
+           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/rr !< standard PCM field
+        enddo 
+     enddo
 
-          arg = rr/sqrt( tess(ia)%area*width_factor )    
-
-          term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
-          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor )
-
-       enddo 
-    enddo
-
-    v_pcm = M_TWO*v_pcm/sqrt(M_Pi) 
-
+    endif
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
 !=====================================================================================
@@ -773,6 +790,11 @@ contains
     SAFE_DEALLOCATE_A(mat_tmp)
 
     pcm_mat = -pcm_mat
+
+!   Testing
+    DO i=1, n_tess
+       mat_gamess(i,:) = pcm_mat(i,:)/tess(i)%area
+    ENDDO    
        
     POP_SUB(pcm_matrix)
 

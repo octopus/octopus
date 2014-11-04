@@ -1580,7 +1580,8 @@ contains
     
     !adding the molecule-solvent electrostatic interaction
     if (hm%pcm%run_pcm) call write_iter_double(out_energy, &
-                             units_from_atomic(units_out%energy, hm%energy%int_e_pcm + hm%energy%int_n_pcm), 1)
+                             units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
+                                                                 hm%energy%int_nn_pcm + hm%energy%int_ne_pcm), 1)
 
     call write_iter_nl(out_energy)
 

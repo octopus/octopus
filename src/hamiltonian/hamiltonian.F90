@@ -1251,7 +1251,7 @@ contains
 
      write(this%pcm%info_unit,'(1X,A33,F12.8)') &
                            "Nuclear molecular charge Q_M^n = ", &
-                           -( this%pcm%epsilon_0/(this%pcm%epsilon_0 - M_ONE) )*this%pcm%qtot_n
+                           ( this%pcm%epsilon_0/(this%pcm%epsilon_0 - M_ONE) )*this%pcm%qtot_n
 
      call pcm_pot_rs( this%pcm%v_n_rs, this%pcm%q_n, this%pcm%tess, this%pcm%n_tesserae, gr%mesh, this%pcm%gaussian_width )
     endif

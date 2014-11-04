@@ -965,11 +965,12 @@ contains
         call v_electrons_cav_li(hm%pcm%v_e, pot, hm%pcm)
         call pcm_charges(hm%pcm%q_e, hm%pcm%qtot_e, hm%pcm%v_e, hm%pcm%matrix, hm%pcm%n_tesserae) 
         write(hm%pcm%info_unit,'(1X,A36,F12.8)') &
-                 "Electronic molecular charge Q_M^e = ", -(hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_e
+                 "Electronic molecular charge Q_M^e = ", (hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_e
 
         call pcm_pot_rs( hm%pcm%v_e_rs, hm%pcm%q_e, hm%pcm%tess, hm%pcm%n_tesserae, ks%gr%mesh, hm%pcm%gaussian_width )
-        ! Get the electronic PCM contribution to the total energy
-        hm%energy%int_e_pcm = M_HALF*dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
+
+        ! Calculating the PCM term renormalizing the sum of the single-particle energies
+        hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
     endif
 
     if(ks%calc%calc_energy) then

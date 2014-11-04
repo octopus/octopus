@@ -111,7 +111,20 @@ contains
     end if
 
     if (hm%pcm%run_pcm) then
-      hm%energy%int_n_pcm = -pcm_classical_energy( hm%geo, hm%pcm%q_e, hm%pcm%q_n, hm%pcm%tess, hm%pcm%n_tesserae )
+       call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
+                                             hm%energy%int_ne_pcm, hm%energy%int_nn_pcm)
+
+       write(hm%pcm%info_unit,*)
+       write(hm%pcm%info_unit,*) 'E_en(PB) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_en_pcm ),&
+                              '   E_ne(PC) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_ne_pcm )
+       write(hm%pcm%info_unit,*) 'E_ee(PX) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_ee_pcm ),&
+                              '   E_nn(UNZ) = ', units_from_atomic(units_out%energy, hm%energy%int_nn_pcm )
+       write(hm%pcm%info_unit,*)
+       write(hm%pcm%info_unit,*) 'Elect. contribution=', units_from_atomic(units_out%energy, &
+                                                                           (hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
+                                                                            hm%energy%int_nn_pcm + hm%energy%int_ne_pcm) )
+       write(hm%pcm%info_unit,*) '===================================================================='
+       write(hm%pcm%info_unit,*) 
     endif
 
     select case(hm%theory_level)
@@ -132,7 +145,8 @@ contains
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau &
-        + hm%energy%int_n_pcm - hm%energy%int_e_pcm
+        - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
+                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm
 
       if (cmplxscl) hm%energy%Imtotal = hm%energy%Imeigenvalues &
         - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation - hm%energy%Imintnvxc - Imevxctau
@@ -197,10 +211,13 @@ contains
       call messages_info(9, iunit)
       
       if (hm%pcm%run_pcm) then
-          write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_e_pcm)
-          write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_n_pcm)
+          write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
+                                                                                                  hm%energy%int_en_pcm   )
+          write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_nn_pcm + &
+                                                                                                  hm%energy%int_ne_pcm   )
           write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
-                                                                             hm%energy%int_e_pcm + hm%energy%int_n_pcm)
+                                                                             hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
+                                                                             hm%energy%int_nn_pcm + hm%energy%int_ne_pcm   )
           call messages_info(3, iunit)
       endif
 
