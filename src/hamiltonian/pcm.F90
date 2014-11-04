@@ -96,7 +96,7 @@ module pcm_m
   integer :: nearest_idx_unit   
   integer :: idx_from_coord_unit
 
-  FLOAT, allocatable :: mat_gamess(:,:)     !< testing!
+  FLOAT, allocatable :: mat_gamess(:,:) !< PCM matrix formatted to be inputed to GAMESS
 
   !> End of variable declaration.
   !! ----------------------------
@@ -115,6 +115,7 @@ contains
     integer :: jtess
     integer :: cav_unit_test
     integer :: pcmmat_unit
+    integer :: pcmmat_gamess_unit
     integer :: iunit
     integer :: vdw_unit
     integer :: grid_unit
@@ -354,21 +355,17 @@ contains
     call messages_info(1)
 
     pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
-
-    OPEN(1000, FILE='pcm/pcm_matrix_gamess.out')
+    pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess.out', action='write')
 
      do jtess=1, pcm%n_tesserae
       do itess=1, pcm%n_tesserae
          write(pcmmat_unit,*) pcm%matrix(itess,jtess)
-
-         WRITE(1000,*) mat_gamess(itess,jtess) !testing
-
+         write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
       enddo
      enddo
 
-    CLOSE(1000)
-	 
     call io_close(pcmmat_unit)
+    call io_close(pcmmat_gamess_unit)
 
     SAFE_ALLOCATE( pcm%v_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_n(1:pcm%n_tesserae) )
