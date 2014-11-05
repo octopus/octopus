@@ -97,6 +97,7 @@ module pcm_m
   integer :: idx_from_coord_unit
 
   FLOAT, allocatable :: mat_gamess(:,:) !< PCM matrix formatted to be inputed to GAMESS
+  FLOAT, allocatable :: sr_dist(:,:)    !< Table storing the distances between tesserae and grid points.
 
   !> End of variable declaration.
   !! ----------------------------
@@ -119,6 +120,7 @@ contains
     integer :: iunit
     integer :: vdw_unit
     integer :: grid_unit
+    integer :: ip
 
     integer, parameter :: mxts = 10000
 
@@ -337,19 +339,41 @@ contains
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
+     SAFE_ALLOCATE( sr_dist(pcm%n_tesserae,grid%mesh%np) ) 
+     sr_dist = M_ZERO
      do ia = 1, pcm%n_tesserae
-        call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices )
+      call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices )
+      do ip = 1, grid%mesh%np !running serially np=np_global
+       call mesh_r(grid%mesh, ip, sr_dist(ia,ip), origin=pcm%tess(ia)%x)
+      enddo
      enddo
 
 !    call io_close(nearest_idx_unit)
 !    call io_close(idx_from_coord_unit)
 
-!   Testing 
+!   Generating the dynamical PCM matrix to be inputed to GAMESS
+    pcm%epsilon_infty = CNST(1.7760) 
     SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     mat_gamess = M_ZERO
 
     SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
+
+    call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix) 
+
+    pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess_dyn.out', action='write')
+
+     do jtess=1, pcm%n_tesserae
+      do itess=1, pcm%n_tesserae
+         write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
+      enddo
+     enddo
+
+    call io_close(pcmmat_gamess_unit)
+
+    pcm%matrix = M_ZERO
+    mat_gamess = M_ZERO
+
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
@@ -658,8 +682,6 @@ contains
     FLOAT, parameter :: p_2 = CNST(0.205117)
     FLOAT, parameter :: q_1 = CNST(0.137546)
     FLOAT, parameter :: q_2 = CNST(0.434344)
-    FLOAT            :: coord_tess(1:MAX_DIM) 
-    FLOAT            :: rr
     FLOAT            :: arg
     FLOAT            :: term
     integer 	     :: ip
@@ -672,10 +694,8 @@ contains
     if (width_factor /= M_ZERO) then
     
      do ia = 1, n_tess
-        coord_tess = tess(ia)%x
         do ip = 1, mesh%np !running serially np=np_global
-           call mesh_r(mesh, ip, rr, origin=coord_tess)
-           arg = rr/sqrt( tess(ia)%area*width_factor )    
+           arg = sr_dist(ia,ip)/sqrt( tess(ia)%area*width_factor )        
            term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
            v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
         enddo 
@@ -685,10 +705,8 @@ contains
     else
      
      do ia = 1, n_tess
-        coord_tess = tess(ia)%x
         do ip = 1, mesh%np !running serially np=np_global
-           call mesh_r(mesh, ip, rr, origin=coord_tess)
-           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/rr !< standard PCM field
+           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/sr_dist(ia,ip) !< standard PCM field
         enddo 
      enddo
 
@@ -932,6 +950,7 @@ contains
      SAFE_DEALLOCATE_A(pcm%v_n_rs)
      SAFE_DEALLOCATE_A(pcm%ind_vh)
      SAFE_DEALLOCATE_A(pcm%arg_li)
+     SAFE_DEALLOCATE_A(sr_dist) 
 
      call io_close(pcm%info_unit)
 
