@@ -180,13 +180,18 @@ contains
     !% this kick may be done in several modes. For use to calculate triplet excitations,
     !% see MJT Oliveira, A Castro, MAL Marques, and A Rubio, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>, 3392 (2008).
     !%Option kick_density 0
-    !% The total density of the system is perturbed.
+    !% The total density of the system is perturbed. This mode is appropriate for
+    !% electric dipole response, as for optical absorption.
     !%Option kick_spin 1
-    !% The individual spin densities are perturbed differently. Note that this mode
+    !% The individual spin densities are perturbed oppositely. Note that this mode
     !% is only possible if the run is done in spin-polarized mode, or with spinors.
+    !% This mode is appropriate for the paramagnetic dipole response, which can couple
+    !% to triplet excitations.
     !%Option kick_spin_and_density 2
     !% A combination of the two above. Note that this mode
     !% is only possible if the run is done in spin-polarized mode, or with spinors.
+    !% This mode is intended for use with symmetries to obtain both of the responses
+    !% at once, at described in the reference above.
     !%End
     call parse_integer(datasets_check('TDDeltaStrengthMode'), KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
