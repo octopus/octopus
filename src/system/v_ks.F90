@@ -120,6 +120,7 @@ module v_ks_m
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
     logical                  :: calculate_current
+    type(current_t)          :: current_calculator
   end type v_ks_t
 
 contains
@@ -259,6 +260,7 @@ contains
     ks%calc%calculating = .false.
 
     ks%calculate_current = .false.
+    call current_init(ks%current_calculator)
 
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
@@ -271,6 +273,8 @@ contains
     type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
+
+    call current_end(ks%current_calculator)
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
@@ -456,7 +460,7 @@ contains
 
     if(ks%calculate_current) then
       call states_allocate_current(st, ks%gr)
-      call current_calculate(ks%gr, hm, geo, st, st%current)
+      call current_calculate(ks%current_calculator, ks%gr, hm, geo, st, st%current)
     end if
 
     nullify(ks%calc%hf_st) 

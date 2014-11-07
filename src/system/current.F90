@@ -60,13 +60,65 @@ module current_m
 
   private
 
+  type current_t
+    integer :: method
+  end type current_t
+    
+
   public ::                               &
+    current_t,                            &
+    current_init,                         &
+    current_end,                          &
     current_calculate
+
+  integer, parameter, public ::           &
+    CURRENT_GRADIENT           = 1,       &
+    CURRENT_HAMILTONIAN        = 2
 
 contains
 
+  subroutine current_init(this)
+    type(current_t), intent(out)   :: this
+
+    PUSH_SUB(current_init)
+
+    !%Variable CurrentDensity
+    !%Type integer
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) This variable selects the method used to
+    !% calculate the current density. For the moment this variable is
+    !% for development purposes and users should not need to use
+    !% it. The default is 'gradient'.
+    !%Option gradient 1
+    !% The calculation of current is done using the gradient operator
+    !% with additional corrections for non-local operators.
+    !%Option hamiltonian 2
+    !% The current density is obtained from the commutator of the
+    !% Hamiltonian with the position operator.
+    !%End
+
+    call parse_integer(datasets_check('CurrentDensity'), CURRENT_GRADIENT, this%method)
+    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
+
+
+    POP_SUB(current_init)
+  end subroutine current_init
+
   ! ---------------------------------------------------------
-  subroutine current_calculate(gr, hm, geo, st, current)
+
+  subroutine current_end(this)
+    type(current_t), intent(inout) :: this
+
+    PUSH_SUB(current_end)
+
+
+    POP_SUB(current_end)
+  end subroutine current_end
+
+  ! ---------------------------------------------------------
+  subroutine current_calculate(this, gr, hm, geo, st, current)
+    type(current_t),      intent(in)    :: this
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
@@ -97,7 +149,8 @@ contains
 
     current = M_ZERO
 
-    if(hamiltonian_current) then
+    select case(this%method)
+    case(CURRENT_HAMILTONIAN)
       
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
@@ -154,7 +207,7 @@ contains
         end do
       end do
     
-    else
+    case(CURRENT_GRADIENT)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -203,7 +256,7 @@ contains
         end do
       end do
       
-    end if
+    end select
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/gr%mesh%np, gr%sb%dim, st%d%nspin/)) to reduce the amount of data copied
