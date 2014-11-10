@@ -158,7 +158,7 @@ contains
     do il = 1, NLEADS
       np = intf(il)%np_intf
       ! Try to read the coefficients from file
-      call ob_mem_load_coeffs(restart_load, saved_iter, ob, hm, intf(il), &
+      call ob_mem_load_coeffs(restart_load, saved_iter, ob, intf(il), &
                        op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to load coefficients of '"//trim(lead_name(il))//"' lead."
@@ -720,11 +720,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Read memory coefficients from file.
-  subroutine ob_mem_load_coeffs(restart, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order, ierr)
+  subroutine ob_mem_load_coeffs(restart, s_iter, ob, intf, dim, iter, spacing, delta, op_n, order, ierr)
     type(restart_t),     intent(inout) :: restart
     integer,             intent(out)   :: s_iter       !< Number of saved coefficients.
     type(ob_terms_t),    intent(inout) :: ob
-    type(hamiltonian_t), intent(in)    :: hm
     type(interface_t),   intent(in)    :: intf
     integer,             intent(in)    :: dim          !< Dimension of the problem.
     integer,             intent(in)    :: iter         !< Number of coefficients.

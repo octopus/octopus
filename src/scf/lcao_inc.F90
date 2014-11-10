@@ -92,11 +92,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
-  integer :: kstart, kend, ispin, ierr
-  character(len=256) :: filename
+  integer :: kstart, kend, ispin
 
 #ifdef LCAO_DEBUG
-  integer :: iunit_h, iunit_s, iunit_e
+  integer :: iunit_h, iunit_s, iunit_e, ierr
+  character(len=256) :: filename
 #endif
 
 #ifdef HAVE_MPI

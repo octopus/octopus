@@ -97,7 +97,7 @@ contains
 #ifdef HAVE_MPI2
     integer(MPI_OFFSET_KIND) :: offset
 #endif
-    integer :: amode, mpi_info
+    integer :: amode
 
     PUSH_SUB(io_binary_parallel_start)
 
