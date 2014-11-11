@@ -122,7 +122,7 @@ contains
       this%datacode = "G"
     end if
 
-    this%kernel = pkernel_init(.false., mpi_world%rank, mpi_world%size, 0,&
+    this%kernel = pkernel_init(.false., cube%mpi_grp%rank, cube%mpi_grp%size, 0,&
         this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
     call pkernel_set(this%kernel,.false.)
 
@@ -288,7 +288,7 @@ contains
     PUSH_SUB(poisson_libisf_get_dims)
 
     !! Get the dimensions of the cube
-    call PS_dim4allocation(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
+    call PS_dim4allocation(this%geocode, this%datacode, cube%mpi_grp%rank, cube%mpi_grp%size, &
          cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
          use_gradient, use_wb_corr, &
          n3d, n3p, n3pi, i3xcsh, i3s)
