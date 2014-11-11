@@ -124,9 +124,8 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   PUSH_SUB(X(cube_function_allgather))
   call profiling_in(prof_allgather, "CF_ALLGATHER")
 
-
-  if(cube%fft%library == FFTLIB_PFFT .or. &
-    (cube%fft%library == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
+  if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &
+    (cube_getFFTLibrary(cube) == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
     
     SAFE_ALLOCATE(cf_tmp(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
     call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)

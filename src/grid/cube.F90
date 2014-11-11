@@ -47,6 +47,7 @@ module cube_m
     cube_point_to_process, &
     cube_partition,     &
     cube_global2local,  &
+    cube_getFFTLibrary, &
     cube_end
 
   type cube_t
@@ -383,6 +384,22 @@ contains
               lxyz(3) >= 1 .and. lxyz(3) <= cube%rs_n(3)
     
   end function cube_global2local
+
+
+  ! ---------------------------------------------------------
+  !> Returns the FFT library of the cube.
+  !! Possible values are FFTLIB_NONE, FFTLIB_FFTW, FFTLIB_PFFT 
+  !! FFTLIB_CLAMD, FFTLIB_NFFT and FFTLIB_PNFFT 
+  !! (defined in fft.F90)
+  integer function cube_getFFTLibrary(cube) result(fft_library)
+    type(cube_t), intent(in)  :: cube
+
+    if (associated(cube%fft)) then
+       fft_library = cube%fft%library
+    else
+       fft_library = FFTLIB_NONE
+    end if
+  end function cube_getFFTLibrary
 
   ! ---------------------------------------------------------
   !> do the mapping between global and local points of the cube
