@@ -160,7 +160,7 @@ contains
     call opt_control_get_classical(sys%geo, qcpsi)
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, hm, sys%geo, ion_dynamics_ions_move(td%ions), &
+      call td_write_init(write_handler, gr, sys%st, hm, sys%geo, sys%ks, ion_dynamics_ions_move(td%ions), &
            gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
       call td_write_data(write_handler, gr, psi, hm, sys%ks, sys%outp, sys%geo, 0)
     end if
