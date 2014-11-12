@@ -97,7 +97,8 @@ module td_write_m
     OUT_VEL         = 14, &
     OUT_EIGS        = 15, &
     OUT_ION_CH      = 16, &
-    OUT_MAX         = 16
+    OUT_TOTAL_CURRENT = 17, &
+    OUT_MAX         = 17
   
   type td_write_t
     private
@@ -134,12 +135,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, gr, st, hm, geo, ions_move, with_gauge_field, kick, iter, max_iter, dt)
+  subroutine td_write_init(writ, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt)
     type(td_write_t), target, intent(out)   :: writ
     type(grid_t),             intent(in)    :: gr
-    type(states_t),           intent(in)    :: st
+    type(states_t),           intent(inout) :: st
     type(hamiltonian_t),      intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
+    type(v_ks_t),             intent(inout) :: ks
     logical,                  intent(in)    :: ions_move
     logical,                  intent(in)    :: with_gauge_field
     type(kick_t),             intent(in)    :: kick
@@ -228,6 +230,8 @@ contains
     !%Option ionization_channels    32768
     !% Write the multiple-ionization channels using the KS orbital densities as proposed in  
     !% C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
+    !%Option total_current 65536
+    !% Output the total current.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -249,6 +253,7 @@ contains
     if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
     if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
+    if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -481,7 +486,13 @@ contains
       if(writ%out(OUT_ION_CH)%write) &
         call write_iter_init(writ%out(OUT_ION_CH)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/ion_ch")))
-        
+
+      if(writ%out(OUT_TOTAL_CURRENT)%write) then
+        call v_ks_calculate_current(ks, .true.)
+        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.false., time = iter*dt)
+        call write_iter_init(writ%out(OUT_TOTAL_CURRENT)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_current")))
+      end if
     end if
 
     POP_SUB(td_write_init)
@@ -582,6 +593,9 @@ contains
 
     if(writ%out(OUT_ION_CH)%write) &
       call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter)
+
+    if(writ%out(OUT_TOTAL_CURRENT)%write) &
+      call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -2052,6 +2066,55 @@ contains
     end subroutine distribute_projections
 
   end subroutine td_write_proj
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_total_current(out_total_current, gr, st, iter)
+    type(c_ptr),         intent(inout) :: out_total_current
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+    integer,             intent(in)    :: iter
+
+    integer :: idir, ispin
+    character(len=50) :: aux
+    FLOAT :: total_current(1:MAX_DIM)
+
+    PUSH_SUB(td_write_total_current)
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_total_current)
+      
+      ! first line: column names
+      call write_iter_header_start(out_total_current)
+      
+      do idir = 1, gr%mesh%sb%dim
+        write(aux, '(a2,i1,a1)') 'I(', idir, ')'
+        call write_iter_header(out_total_current, aux)
+      end do
+      
+      call write_iter_nl(out_total_current)
+
+      call td_write_print_header_end(out_total_current)
+    end if
+    
+    ASSERT(associated(st%current))
+
+    call write_iter_start(out_total_current)
+
+    total_current = CNST(0.0)
+    do idir = 1, gr%sb%dim
+      do ispin = 1, st%d%nspin
+        total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+      end do
+      total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
+    end do
+
+    call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+
+    call write_iter_nl(out_total_current)
+
+    POP_SUB(td_write_total_current)
+  end subroutine td_write_total_current
 
 
   ! ---------------------------------------------------------

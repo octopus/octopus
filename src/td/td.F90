@@ -187,7 +187,7 @@ contains
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     end if
 
-    call td_write_init(write_handler, gr, st, hm, geo, &
+    call td_write_init(write_handler, gr, st, hm, geo, sys%ks, &
          ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
 
     if(td%iter == 0) call td_run_zero_iter()
