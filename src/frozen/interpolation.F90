@@ -12,7 +12,7 @@ module interpolation_m
   use index_m,       only: index_from_coords
   use kinds_m,       only: wp
   use mesh_m,        only: mesh_t
-  use qshepmod_m,    only: qshep_t, init_qshep, qshep_interpolate, kill_qshep
+  use qshep_m,    only: qshep_t, qshep_init, qshep_interpolate, qshep_end
   use simulation_m,  only: simulation_t, simulation_get
 
   implicit none
@@ -85,9 +85,9 @@ contains
       SAFE_ALLOCATE(this%qshep)
       select case(mesh%sb%dim)
       case(2)
-        call init_qshep(this%qshep, n, vals, mesh%x(1:n,1), mesh%x(1:n,2))
+        call qshep_init(this%qshep, n, vals, mesh%x(1:n,1), mesh%x(1:n,2))
       case(3)
-        call init_qshep(this%qshep, n, vals, mesh%x(1:n,1), mesh%x(1:n,2), mesh%x(1:n,3))
+        call qshep_init(this%qshep, n, vals, mesh%x(1:n,1), mesh%x(1:n,2), mesh%x(1:n,3))
       case default
         message(1)='Quadratic Shepard interpolation only works in two or three dimensions.'
         call messages_fatal(1)
@@ -145,7 +145,7 @@ contains
     PUSH_SUB(intrp_end)
     select case(this%type)
     case(QSHEP)
-      call kill_qshep(this%qshep)
+      call qshep_end(this%qshep)
       SAFE_DEALLOCATE_P(this%qshep)
     end select
     this%qshep =>null()

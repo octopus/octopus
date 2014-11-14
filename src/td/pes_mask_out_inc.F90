@@ -310,9 +310,9 @@ subroutine pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
   select case(dim)
     case (2)
-      call init_qshep(interp, np, cube_f, kx, ky) 
+      call qshep_init(interp, np, cube_f, kx, ky) 
     case (3)
-      call init_qshep(interp, np, cube_f, kx, ky, kz) 
+      call qshep_init(interp, np, cube_f, kx, ky, kz) 
   end select
  
   SAFE_DEALLOCATE_A(kx)    
@@ -336,7 +336,7 @@ subroutine pes_mask_interpolator_end(cube_f, interp)
 
   PUSH_SUB(pes_mask_interpolator_end)
   
-  call kill_qshep(interp)
+  call qshep_end(interp)
   
   SAFE_DEALLOCATE_P(cube_f)
   
@@ -1457,7 +1457,7 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
           end do
         end do
         
-        call init_qshep(interp, np, cube_f, kx, ky)
+        call qshep_init(interp, np, cube_f, kx, ky)
         
         do ii = 1, nn
           EE = ii*step
@@ -1474,7 +1474,7 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
         pes = pes * Dtheta
         
         
-        call kill_qshep(interp)
+        call qshep_end(interp)
         
         SAFE_DEALLOCATE_A(cube_f)    
         SAFE_DEALLOCATE_A(kx)    
@@ -1521,7 +1521,7 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
           end do
         end do
         
-        call init_qshep(interp, np, cube_f, kx, ky, kz)
+        call qshep_init(interp, np, cube_f, kx, ky, kz)
 
         do ii = 1, nn
           EE = ii*step
@@ -1542,7 +1542,7 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
 
         pes = pes * Dtheta * Dphi
         
-        call kill_qshep(interp)
+        call qshep_end(interp)
         
         SAFE_DEALLOCATE_A(cube_f)    
         SAFE_DEALLOCATE_A(kx)    

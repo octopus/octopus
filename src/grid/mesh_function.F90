@@ -37,7 +37,7 @@ module mesh_function_m
   use mpi_m
   use par_vec_m
   use profiling_m
-  use qshepmod_m
+  use qshep_m
   use splines_m
   use box_union_m
 

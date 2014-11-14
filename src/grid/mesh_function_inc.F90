@@ -365,20 +365,20 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
 
   select case(ndim)
   case(2)
-    call init_qshep(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2))
+    call qshep_init(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2))
     do ip = 1, npoints_out
       pp(1:2)   = x_out(ip, 1:2)
       f_out(ip) = qshep_interpolate(interp, rf_in, pp(1:2))
     end do
-    call kill_qshep(interp)
+    call qshep_end(interp)
 
   case(3)
-    call init_qshep(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2), rx_in(:, 3))
+    call qshep_init(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2), rx_in(:, 3))
     do ip = 1, npoints_out
       pp(1:3)   = x_out(ip, 1:3)
       f_out(ip) = qshep_interpolate(interp, rf_in, pp(1:3))
     end do
-    call kill_qshep(interp)
+    call qshep_end(interp)
 
   case(1)
 #ifdef R_TCOMPLEX
@@ -433,7 +433,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   f_global(1:mesh%np_global) = ff(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2), xglobal(:, 3) )
+  call qshep_init(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2), xglobal(:, 3) )
 
   do iu = plane%nu, plane%mu
     do iv = plane%nv, plane%mv
@@ -444,7 +444,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
     end do
   end do
 
-  call kill_qshep(interp)
+  call qshep_end(interp)
 
   SAFE_DEALLOCATE_A(xglobal)
   SAFE_DEALLOCATE_A(f_global)
@@ -482,13 +482,13 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   f_global(1:mesh%np_global) = ff(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2))
+  call qshep_init(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2))
   do iu = line%nu, line%mu
     pp(1) = line%origin(1) + iu * line%spacing * line%u(1)
     pp(2) = line%origin(2) + iu * line%spacing * line%u(2)
     f_in_line(iu) = qshep_interpolate(interp, f_global, pp(1:2))
   end do
-  call kill_qshep(interp)
+  call qshep_end(interp)
 
   SAFE_DEALLOCATE_A(f_global)
   SAFE_DEALLOCATE_A(xglobal)

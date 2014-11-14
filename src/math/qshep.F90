@@ -1,12 +1,12 @@
-module qshepmod_m
+module qshep_m
 
   implicit none
 
   private
   public :: qshep_t, &
-            init_qshep, &
+            qshep_init, &
             qshep_interpolate, &
-            kill_qshep
+            qshep_end
 
   type qshepr_t
    private
@@ -24,8 +24,8 @@ module qshepmod_m
    type(qshepr_t) :: re, im
   end type qshep_t
 
-  interface init_qshep
-    module procedure dinit_qshep, zinit_qshep
+  interface qshep_init
+    module procedure dqshep_init, zqshep_init
   end interface
 
   interface qshep_interpolate
@@ -34,7 +34,7 @@ module qshepmod_m
 
   contains
 
-  subroutine dinit_qshep(interp, npoints, f, x, y, z)
+  subroutine dqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
     integer, intent(in) :: npoints
     real(8), intent(in) :: f(:)
@@ -43,14 +43,14 @@ module qshepmod_m
 
     interp%kind = 0
     if(present(z)) then
-      call init_qshepr(interp%re, npoints, f, x, y, z)
+      call qshepr_init(interp%re, npoints, f, x, y, z)
     else
-      call init_qshepr(interp%re, npoints, f, x, y)
+      call qshepr_init(interp%re, npoints, f, x, y)
     end if
 
-  end subroutine dinit_qshep
+  end subroutine dqshep_init
 
-  subroutine zinit_qshep(interp, npoints, f, x, y, z)
+  subroutine zqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
     integer, intent(in) :: npoints
     complex(8), intent(in) :: f(:)
@@ -59,16 +59,16 @@ module qshepmod_m
 
     interp%kind = 1
     if(present(z)) then
-      call init_qshepr(interp%re, npoints, real(f), x, y, z)
-      call init_qshepr(interp%im, npoints, aimag(f), x, y, z)
+      call qshepr_init(interp%re, npoints, real(f), x, y, z)
+      call qshepr_init(interp%im, npoints, aimag(f), x, y, z)
     else
-      call init_qshepr(interp%re, npoints, real(f), x, y)
-      call init_qshepr(interp%im, npoints, aimag(f), x, y)
+      call qshepr_init(interp%re, npoints, real(f), x, y)
+      call qshepr_init(interp%im, npoints, aimag(f), x, y)
     end if
 
-  end subroutine zinit_qshep
+  end subroutine zqshep_init
 
-  subroutine init_qshepr(interp, npoints, f, x, y, z)
+  subroutine qshepr_init(interp, npoints, f, x, y, z)
     type(qshepr_t), intent(out) :: interp
     integer, intent(in) :: npoints
     real(8), intent(in) :: f(:)
@@ -124,7 +124,7 @@ module qshepmod_m
       interp%z(1:npoints) = z(1:npoints)
     end select
 
-  end subroutine init_qshepr
+  end subroutine qshepr_init
 
 
   real(8) function qshep_interpolater(interp, f, p, gf) result(v)
@@ -200,14 +200,14 @@ module qshepmod_m
   end function zqshep_interpolate
 
 
-  subroutine kill_qshep(interp)
+  subroutine qshep_end(interp)
     type(qshep_t), intent(inout) :: interp
-    call kill_qshepr(interp%re)
-    if(interp%kind == 1) call kill_qshepr(interp%im)
-  end subroutine kill_qshep
+    call qshepr_end(interp%re)
+    if(interp%kind == 1) call qshepr_end(interp%im)
+  end subroutine qshep_end
 
 
-  subroutine kill_qshepr(interp)
+  subroutine qshepr_end(interp)
     type(qshepr_t), intent(inout) :: interp
     if(associated(interp%lcell)) then
       deallocate(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
@@ -217,6 +217,6 @@ module qshepmod_m
          nullify(interp%z)
       end if
     end if
-  end subroutine kill_qshepr
+  end subroutine qshepr_end
 
-end module qshepmod_m
+end module qshep_m
