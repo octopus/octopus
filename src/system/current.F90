@@ -30,6 +30,7 @@ module current_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use io_m
   use io_function_m
   use lalg_basic_m
@@ -39,6 +40,7 @@ module current_m
   use messages_m
   use mpi_m
   use parser_m
+  use poisson_m
   use profiling_m
   use projector_m
   use ps_m
@@ -73,7 +75,9 @@ module current_m
 
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
-    CURRENT_HAMILTONIAN        = 2
+    CURRENT_HAMILTONIAN        = 2,       &
+    CURRENT_POISSON            = 3,       &
+    CURRENT_POISSON_CORRECTION = 4
 
 contains
 
@@ -96,6 +100,10 @@ contains
     !%Option hamiltonian 2
     !% The current density is obtained from the commutator of the
     !% Hamiltonian with the position operator.
+    !%Option poisson 3
+    !% Obtain the current from solving the poisson equation from the continuity equation.
+    !%Option poisson_correction 4
+    !% Obtain the current from the hamiltonian and then add a correction term by solving the poisson equation.
     !%End
 
     call parse_integer(datasets_check('CurrentDensity'), CURRENT_GRADIENT, this%method)
@@ -125,7 +133,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, minst, maxst, ii
+    integer :: ik, ist, idir, idim, iatom, ip, ib, minst, maxst, ii, ierr
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
@@ -151,8 +159,9 @@ contains
 
     select case(this%method)
     case(CURRENT_HAMILTONIAN)
-      
+
       do ik = st%d%kpt%start, st%d%kpt%end
+
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -193,12 +202,13 @@ contains
                 end do
                 !$omp end parallel do
               end do
+              
             end do
             
           end do
 
           call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-
+          
           call batch_end(hpsib)
           call batch_end(rhpsib)
           call batch_end(rpsib)
@@ -256,6 +266,18 @@ contains
         end do
       end do
       
+    case(CURRENT_POISSON)
+
+      call current_poisson()
+
+    case(CURRENT_POISSON_CORRECTION)
+
+      call current_poisson_correction()
+
+    case default
+
+      ASSERT(.false.)
+
     end select
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
@@ -276,6 +298,177 @@ contains
 
     call profiling_out(prof)
     POP_SUB(current_calculate)
+
+    contains
+      
+      subroutine current_poisson()
+        
+        FLOAT, allocatable :: charge(:), potential(:)
+        CMPLX, allocatable :: hpsi(:, :)
+
+        SAFE_ALLOCATE(charge(1:gr%mesh%np))
+        SAFE_ALLOCATE(potential(1:gr%mesh%np_part))
+        SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+
+        ASSERT(st%d%dim == 1)
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ib = st%group%block_start, st%group%block_end
+            
+            call batch_pack(st%group%psib(ib, ik), copy = .true.)
+            
+            call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+            
+            call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), hpsib, ik)
+            
+            minst = states_block_min(st, ib)
+            maxst = states_block_max(st, ib)
+            
+            do ist = st%st_start, st%st_end
+              
+              do idim = 1, st%d%dim
+                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
+                call batch_get_state(st%group%psib(ib, ik), ii, gr%mesh%np, psi(:, idim))
+                call batch_get_state(hpsib, ii, gr%mesh%np, hpsi(:, idim))
+              end do
+              
+              do idim = 1, st%d%dim
+                !$omp parallel do
+                do ip = 1, gr%mesh%np
+                  charge(ip) = charge(ip) &
+                    - st%d%kweights(ik)*st%occ(ist, ik)/(CNST(4.0)*M_PI)&
+                    *aimag(psi(ip, idim)*conjg(hpsi(ip, idim)) - conjg(psi(ip, idim))*hpsi(ip, idim))
+                end do
+                !$omp end parallel do
+              end do
+            end do
+
+          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+          
+          call batch_end(hpsib)
+          
+        end do
+      end do
+
+      call dpoisson_solve(psolver, potential, charge)
+
+      call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+      call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+      call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+
+      call dderivatives_grad(gr%der, potential, current(:, :, 1))
+      
+    end subroutine current_poisson
+
+
+    subroutine current_poisson_correction()
+
+      FLOAT, allocatable :: charge(:), potential(:), current2(:, :)
+      type(batch_t) :: vpsib
+
+      SAFE_ALLOCATE(charge(1:gr%mesh%np))
+      SAFE_ALLOCATE(potential(1:gr%mesh%np_part))
+      SAFE_ALLOCATE(current2(1:gr%mesh%np_part, 1:gr%sb%dim))
+
+      ASSERT(st%d%dim == 1)
+
+      charge = CNST(0.0)
+      current = CNST(0.0)
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+
+          call batch_pack(st%group%psib(ib, ik), copy = .true.)
+
+          call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), rhpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), rpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), vpsib, reference = .false.)
+
+          call zderivatives_batch_set_bc(gr%der, st%group%psib(ib, ik))
+
+          call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false., &
+            terms = TERM_KINETIC)
+          call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), vpsib, ik, set_bc = .false., &
+            terms = TERM_NON_LOCAL_POTENTIAL)
+
+          minst = states_block_min(st, ib)
+          maxst = states_block_max(st, ib)
+            
+          do ist = st%st_start, st%st_end
+            
+            do idim = 1, st%d%dim
+              ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
+              call batch_get_state(st%group%psib(ib, ik), ii, gr%mesh%np, psi(:, idim))
+              call batch_get_state(vpsib, ii, gr%mesh%np, hpsi(:, idim))
+            end do
+            
+            do idim = 1, st%d%dim
+              !$omp parallel do
+              do ip = 1, gr%mesh%np
+                charge(ip) = charge(ip) &
+                  - st%d%kweights(ik)*st%occ(ist, ik)/(CNST(4.0)*M_PI)&
+                  *aimag(psi(ip, idim)*conjg(hpsi(ip, idim)) - conjg(psi(ip, idim))*hpsi(ip, idim))
+              end do
+              !$omp end parallel do
+            end do
+          end do
+          
+          do idir = 1, gr%sb%dim
+
+            call batch_mul(gr%mesh%np, gr%mesh%x(:, idir), hpsib, rhpsib)
+            call batch_mul(gr%mesh%np_part, gr%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
+
+            call zhamiltonian_apply_batch(hm, gr%der, rpsib, hrpsib, ik, set_bc = .false.)
+
+            do ist = st%st_start, st%st_end
+
+              do idim = 1, st%d%dim
+                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
+                call batch_get_state(st%group%psib(ib, ik), ii, gr%mesh%np, psi(:, idim))
+                call batch_get_state(hrpsib, ii, gr%mesh%np, hrpsi(:, idim))
+                call batch_get_state(rhpsib, ii, gr%mesh%np, rhpsi(:, idim))
+              end do
+
+              do idim = 1, st%d%dim
+                !$omp parallel do
+                do ip = 1, gr%mesh%np
+                  current(ip, idir, 1) = current(ip, idir, 1) &
+                    - st%d%kweights(ik)*st%occ(ist, ik)&
+                    *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                end do
+                !$omp end parallel do
+              end do
+            end do
+
+          end do
+          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+
+          call batch_end(hpsib)
+          call batch_end(vpsib)
+          call batch_end(rhpsib)
+          call batch_end(rpsib)
+          call batch_end(hrpsib)
+
+        end do
+      end do
+
+      call dpoisson_solve(psolver, potential, charge)
+
+!      call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+!      call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+!      call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
+
+      call dderivatives_grad(gr%der, potential, current2)
+
+      do idir = 1, gr%sb%dim
+        do ip = 1, gr%mesh%np
+          current(ip, idir, 1) = current(ip, idir, 1) + current2(ip, idir)
+        end do
+      end do
+      
+    end subroutine current_poisson_correction
 
   end subroutine current_calculate
 
