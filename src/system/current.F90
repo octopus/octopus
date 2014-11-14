@@ -268,11 +268,11 @@ contains
       
     case(CURRENT_POISSON)
 
-      call current_poisson()
+      call calc_current_poisson()
 
     case(CURRENT_POISSON_CORRECTION)
 
-      call current_poisson_correction()
+      call calc_current_poisson_correction()
 
     case default
 
@@ -301,7 +301,7 @@ contains
 
     contains
       
-      subroutine current_poisson()
+      subroutine calc_current_poisson()
         
         FLOAT, allocatable :: charge(:), potential(:)
         CMPLX, allocatable :: hpsi(:, :)
@@ -358,10 +358,10 @@ contains
 
       call dderivatives_grad(gr%der, potential, current(:, :, 1))
       
-    end subroutine current_poisson
+    end subroutine calc_current_poisson
 
 
-    subroutine current_poisson_correction()
+    subroutine calc_current_poisson_correction()
 
       FLOAT, allocatable :: charge(:), potential(:), current2(:, :)
       type(batch_t) :: vpsib
@@ -468,7 +468,7 @@ contains
         end do
       end do
       
-    end subroutine current_poisson_correction
+    end subroutine calc_current_poisson_correction
 
   end subroutine current_calculate
 
