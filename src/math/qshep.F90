@@ -21,6 +21,9 @@
 
 module qshep_m
 
+  use global_m
+  use messages_m
+  
   implicit none
 
   private
@@ -62,6 +65,8 @@ contains
     real(8)                    :: x(:), y(:)
     real(8),          optional :: z(:)
 
+    PUSH_SUB(dqshep_init)
+
     interp%kind = 0
     if(present(z)) then
       call qshepr_init(interp%re, npoints, f, x, y, z)
@@ -69,6 +74,7 @@ contains
       call qshepr_init(interp%re, npoints, f, x, y)
     end if
 
+    POP_SUB(dqshep_init)
   end subroutine dqshep_init
 
   subroutine zqshep_init(interp, npoints, f, x, y, z)
@@ -77,6 +83,8 @@ contains
     complex(8),    intent(in)  :: f(:)
     real(8)                    :: x(:), y(:)
     real(8),       optional    :: z(:)
+
+    PUSH_SUB(zqshep_init)
 
     interp%kind = 1
     if(present(z)) then
@@ -87,6 +95,7 @@ contains
       call qshepr_init(interp%im, npoints, aimag(f), x, y)
     end if
 
+    POP_SUB(zqshep_init)
   end subroutine zqshep_init
 
   subroutine qshepr_init(interp, npoints, f, x, y, z)
@@ -97,6 +106,8 @@ contains
     real(8),  target, optional :: z(:)
 
     integer :: ier
+
+    PUSH_SUB(qshepr_init)
 
     interp%npoints = npoints
 
@@ -145,6 +156,7 @@ contains
       interp%z(1:npoints) = z(1:npoints)
     end select
 
+    POP_SUB(qshepr_init)
   end subroutine qshepr_init
 
 
@@ -157,6 +169,8 @@ contains
     integer :: ier
     real(8), external :: qs2val, qs3val
 
+    PUSH_SUB(qshep_interpolater)
+    
     select case(interp%dim)
     case(2)
       if(present(gf)) then
@@ -182,6 +196,7 @@ contains
       end if
     end select
 
+    POP_SUB(qshep_interpolater)
   end function qshep_interpolater
 
 
@@ -190,11 +205,16 @@ contains
     real(8),           intent(in)    :: f(:)
     real(8),           intent(in)    :: p(:)
     real(8), optional, intent(inout) :: gf(:)
+
+    PUSH_SUB(dqshep_interpolate)
+
     if(present(gf)) then
       v = qshep_interpolater(interp%re, f, p, gf)
     else
       v = qshep_interpolater(interp%re, f, p)
     end if
+
+    PUSH_SUB(dqshep_interpolate)
   end function dqshep_interpolate
 
 
@@ -203,8 +223,12 @@ contains
     complex(8),           intent(in)    :: f(:)
     real(8),              intent(in)    :: p(:)
     complex(8), optional, intent(inout) :: gf(:)
+
     integer :: i
     real(8), allocatable :: rgf(:), igf(:)
+
+    PUSH_SUB(zqshep_interpolate)
+    
     if(present(gf)) then
       allocate(rgf(size(gf)))
       allocate(igf(size(gf)))
@@ -218,19 +242,27 @@ contains
       v = cmplx(qshep_interpolater(interp%re, real(f), p ), &
                 qshep_interpolater(interp%im, aimag(f), p ), 8) 
     end if
+
+    POP_SUB(zqshep_interpolate)
   end function zqshep_interpolate
 
 
   subroutine qshep_end(interp)
     type(qshep_t), intent(inout) :: interp
 
+    PUSH_SUB(qshep_end)
+
     call qshepr_end(interp%re)
     if(interp%kind == 1) call qshepr_end(interp%im)
+
+    POP_SUB(qshep_end)
   end subroutine qshep_end
 
 
   subroutine qshepr_end(interp)
     type(qshepr_t), intent(inout) :: interp
+
+    PUSH_SUB(qshepr_end)
 
     if(associated(interp%lcell)) then
       deallocate(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
@@ -240,6 +272,8 @@ contains
          nullify(interp%z)
       end if
     end if
+
+    POP_SUB(qshepr_end)
   end subroutine qshepr_end
 
 end module qshep_m
