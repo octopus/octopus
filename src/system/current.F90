@@ -87,28 +87,30 @@ contains
     PUSH_SUB(current_init)
 
     !%Variable CurrentDensity
+    !%Default gradient
     !%Type integer
     !%Section Hamiltonian
     !%Description
-    !% (Experimental) This variable selects the method used to
+    !% This variable selects the method used to
     !% calculate the current density. For the moment this variable is
     !% for development purposes and users should not need to use
-    !% it. The default is 'gradient'.
+    !% it.
     !%Option gradient 1
     !% The calculation of current is done using the gradient operator
     !% with additional corrections for non-local operators.
     !%Option hamiltonian 2
     !% The current density is obtained from the commutator of the
-    !% Hamiltonian with the position operator.
+    !% Hamiltonian with the position operator. (Experimental)
     !%Option poisson 3
-    !% Obtain the current from solving the poisson equation from the continuity equation.
+    !% Obtain the current from solving the Poisson equation from the continuity equation. (Experimental)
     !%Option poisson_correction 4
-    !% Obtain the current from the hamiltonian and then add a correction term by solving the poisson equation.
+    !% Obtain the current from the hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
     call parse_integer(datasets_check('CurrentDensity'), CURRENT_GRADIENT, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
-
+    if(this%method /= CURRENT_GRADIENT) &
+      call messages_experimental("CurrentDensity /= gradient")
 
     POP_SUB(current_init)
   end subroutine current_init
@@ -306,6 +308,8 @@ contains
         FLOAT, allocatable :: charge(:), potential(:)
         CMPLX, allocatable :: hpsi(:, :)
 
+        PUSH_SUB(current_calculate.calc_current_poisson)
+        
         SAFE_ALLOCATE(charge(1:gr%mesh%np))
         SAFE_ALLOCATE(potential(1:gr%mesh%np_part))
         SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
@@ -357,7 +361,8 @@ contains
       call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./continuity", "potential", gr%mesh, potential, unit_one, ierr)
 
       call dderivatives_grad(gr%der, potential, current(:, :, 1))
-      
+
+      POP_SUB(current_calculate.calc_current_poisson)
     end subroutine calc_current_poisson
 
 
@@ -366,6 +371,8 @@ contains
       FLOAT, allocatable :: charge(:), potential(:), current2(:, :)
       type(batch_t) :: vpsib
 
+      PUSH_SUB(current_calculate.calc_current_poisson_correction)
+      
       SAFE_ALLOCATE(charge(1:gr%mesh%np))
       SAFE_ALLOCATE(potential(1:gr%mesh%np_part))
       SAFE_ALLOCATE(current2(1:gr%mesh%np_part, 1:gr%sb%dim))
@@ -467,7 +474,8 @@ contains
           current(ip, idir, 1) = current(ip, idir, 1) + current2(ip, idir)
         end do
       end do
-      
+
+      POP_SUB(current_calculate.calc_current_poisson_correction)
     end subroutine calc_current_poisson_correction
 
   end subroutine current_calculate
