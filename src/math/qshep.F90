@@ -214,7 +214,7 @@ contains
       v = qshep_interpolater(interp%re, f, p)
     end if
 
-    PUSH_SUB(dqshep_interpolate)
+    POP_SUB(dqshep_interpolate)
   end function dqshep_interpolate
 
 
