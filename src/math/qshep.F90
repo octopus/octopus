@@ -23,6 +23,7 @@ module qshep_m
 
   use global_m
   use messages_m
+  use profiling_m
   
   implicit none
 
@@ -122,35 +123,35 @@ contains
       interp%nq = 13
       interp%nw = 19
       interp%nr = nint(sqrt(interp%npoints/3.0_8))
-      allocate(interp%lcell(interp%nr, interp%nr, 1))
-      allocate(interp%a(5, npoints))
+      SAFE_ALLOCATE(interp%lcell(1:interp%nr, 1:interp%nr, 1:1))
+      SAFE_ALLOCATE(interp%a(1:5, 1:npoints))
     case(3) 
       interp%nq = 17 ! This is the recommended value in qshep3d.f90
       interp%nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
       interp%nr = nint((interp%npoints/3.0_8)**(1.0_8/3.0_8))
-      allocate(interp%lcell(interp%nr, interp%nr, interp%nr))
-      allocate(interp%a(9, interp%npoints))
+      SAFE_ALLOCATE(interp%lcell(1:interp%nr, 1:interp%nr, 1:interp%nr))
+      SAFE_ALLOCATE(interp%a(1:9, 1:interp%npoints))
     end select
 
-    allocate(interp%lnext(npoints))
-    allocate(interp%rsq(npoints))
+    SAFE_ALLOCATE(interp%lnext(1:npoints))
+    SAFE_ALLOCATE(interp%rsq(1:npoints))
 
     select case(interp%dim)
     case(2)
       call qshep2 ( npoints, x, y, f, interp%nq, interp%nw, interp%nr, interp%lcell(:, :, 1), &
                     interp%lnext, interp%xmin, interp%ymin, interp%dx, interp%dy, &
                     interp%rmax, interp%rsq, interp%a, ier )
-      allocate(interp%x(npoints))
-      allocate(interp%y(npoints))
+      SAFE_ALLOCATE(interp%x(1:npoints))
+      SAFE_ALLOCATE(interp%y(1:npoints))
       interp%x(1:npoints) = x(1:npoints)
       interp%y(1:npoints) = y(1:npoints)
     case(3)
       call qshep3 ( npoints, x, y, z, f, interp%nq, interp%nw, interp%nr, interp%lcell, &
                     interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
                     interp%a, ier )
-      allocate(interp%x(npoints))
-      allocate(interp%y(npoints))
-      allocate(interp%z(npoints))
+      SAFE_ALLOCATE(interp%x(1:npoints))
+      SAFE_ALLOCATE(interp%y(1:npoints))
+      SAFE_ALLOCATE(interp%z(1:npoints))
       interp%x(1:npoints) = x(1:npoints)
       interp%y(1:npoints) = y(1:npoints)
       interp%z(1:npoints) = z(1:npoints)
@@ -230,14 +231,15 @@ contains
     PUSH_SUB(zqshep_interpolate)
     
     if(present(gf)) then
-      allocate(rgf(size(gf)))
-      allocate(igf(size(gf)))
+      SAFE_ALLOCATE(rgf(1:size(gf)))
+      SAFE_ALLOCATE(igf(1:size(gf)))
       v = cmplx(qshep_interpolater(interp%re, real(f), p, rgf ), &
                 qshep_interpolater(interp%im, aimag(f), p, igf ), 8) 
       do i = 1, size(gf)
         gf(i) = cmplx( rgf(i), igf(i), 8)
       end do
-      deallocate(rgf, igf)
+      SAFE_DEALLOCATE_A(rgf)
+      SAFE_DEALLOCATE_A(igf)
     else
       v = cmplx(qshep_interpolater(interp%re, real(f), p ), &
                 qshep_interpolater(interp%im, aimag(f), p ), 8) 
@@ -265,11 +267,14 @@ contains
     PUSH_SUB(qshepr_end)
 
     if(associated(interp%lcell)) then
-      deallocate(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
-      nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
+      SAFE_DEALLOCATE_P(interp%lcell)
+      SAFE_DEALLOCATE_P(interp%lnext)
+      SAFE_DEALLOCATE_P(interp%rsq)
+      SAFE_DEALLOCATE_P(interp%a)
+      SAFE_DEALLOCATE_P(interp%x)
+      SAFE_DEALLOCATE_P(interp%y)
       if(interp%dim .eq. 3) then
-         deallocate(interp%z)
-         nullify(interp%z)
+         SAFE_DEALLOCATE_P(interp%z)
       end if
     end if
 
