@@ -1,3 +1,24 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+!! 02110-1301, USA.
+!!
+!! $Id$
+
+#include "global.h"
+
 module qshep_m
 
   implicit none
@@ -32,14 +53,14 @@ module qshep_m
     module procedure dqshep_interpolate, zqshep_interpolate
   end interface qshep_interpolate
 
-  contains
+contains
 
   subroutine dqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
-    integer, intent(in) :: npoints
-    real(8), intent(in) :: f(:)
-    real(8)             :: x(:), y(:)
-    real(8), optional   :: z(:)
+    integer,       intent(in)  :: npoints
+    real(8),       intent(in)  :: f(:)
+    real(8)                    :: x(:), y(:)
+    real(8),          optional :: z(:)
 
     interp%kind = 0
     if(present(z)) then
@@ -52,10 +73,10 @@ module qshep_m
 
   subroutine zqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
-    integer, intent(in) :: npoints
-    complex(8), intent(in) :: f(:)
-    real(8)                :: x(:), y(:)
-    real(8), optional      :: z(:)
+    integer,       intent(in)  :: npoints
+    complex(8),    intent(in)  :: f(:)
+    real(8)                    :: x(:), y(:)
+    real(8),       optional    :: z(:)
 
     interp%kind = 1
     if(present(z)) then
@@ -70,10 +91,10 @@ module qshep_m
 
   subroutine qshepr_init(interp, npoints, f, x, y, z)
     type(qshepr_t), intent(out) :: interp
-    integer, intent(in) :: npoints
-    real(8), intent(in) :: f(:)
-    real(8), target :: x(:), y(:)
-    real(8), target, optional :: z(:)
+    integer,        intent(in) :: npoints
+    real(8),        intent(in) :: f(:)
+    real(8),        target     :: x(:), y(:)
+    real(8),  target, optional :: z(:)
 
     integer :: ier
 
@@ -128,9 +149,9 @@ module qshep_m
 
 
   real(8) function qshep_interpolater(interp, f, p, gf) result(v)
-    type(qshepr_t), intent(in) :: interp
-    real(8), intent(in) :: f(:)
-    real(8), intent(in) :: p(:)
+    type(qshepr_t),    intent(in)    :: interp
+    real(8),           intent(in)    :: f(:)
+    real(8),           intent(in)    :: p(:)
     real(8), optional, intent(inout) :: gf(:)
 
     integer :: ier
@@ -165,9 +186,9 @@ module qshep_m
 
 
   real(8) function dqshep_interpolate(interp, f, p, gf) result(v)
-    type(qshep_t), intent(in) :: interp
-    real(8), intent(in) :: f(:)
-    real(8), intent(in) :: p(:)
+    type(qshep_t),     intent(in)    :: interp
+    real(8),           intent(in)    :: f(:)
+    real(8),           intent(in)    :: p(:)
     real(8), optional, intent(inout) :: gf(:)
     if(present(gf)) then
       v = qshep_interpolater(interp%re, f, p, gf)
@@ -178,9 +199,9 @@ module qshep_m
 
 
   complex(8) function zqshep_interpolate(interp, f, p, gf) result(v)
-    type(qshep_t), intent(in) :: interp
-    complex(8), intent(in) :: f(:)
-    real(8), intent(in) :: p(:)
+    type(qshep_t),        intent(in)    :: interp
+    complex(8),           intent(in)    :: f(:)
+    real(8),              intent(in)    :: p(:)
     complex(8), optional, intent(inout) :: gf(:)
     integer :: i
     real(8), allocatable :: rgf(:), igf(:)
@@ -202,6 +223,7 @@ module qshep_m
 
   subroutine qshep_end(interp)
     type(qshep_t), intent(inout) :: interp
+
     call qshepr_end(interp%re)
     if(interp%kind == 1) call qshepr_end(interp%im)
   end subroutine qshep_end
@@ -209,6 +231,7 @@ module qshep_m
 
   subroutine qshepr_end(interp)
     type(qshepr_t), intent(inout) :: interp
+
     if(associated(interp%lcell)) then
       deallocate(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
       nullify(interp%lcell, interp%lnext, interp%rsq, interp%a, interp%x, interp%y)
@@ -220,3 +243,8 @@ module qshep_m
   end subroutine qshepr_end
 
 end module qshep_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
