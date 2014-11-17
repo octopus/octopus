@@ -96,8 +96,9 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
       end do
     end do
 
-    uvpsi(1:kb_p%n_c, 1:dim) = uvpsi(1:kb_p%n_c, 1:dim)*mesh%vol_pp(1)
   end if
+
+  uvpsi(1:kb_p%n_c, 1:dim) = uvpsi(1:kb_p%n_c, 1:dim)*mesh%volume_element
 
 #ifndef HAVE_OPENMP
   POP_SUB(X(kb_project_bra))

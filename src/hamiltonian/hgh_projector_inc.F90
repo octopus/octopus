@@ -93,8 +93,8 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
       bra(1:n_s, 4, jj) = hgh_p%p(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
     end do
   else
-    if(reltype == 1) bra(1:n_s, 1:3, 1:3) = hgh_p%lp(1:n_s, 1:3, 1:3)*mesh%vol_pp(1)
-    bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%vol_pp(1)
+    if(reltype == 1) bra(1:n_s, 1:3, 1:3) = hgh_p%lp(1:n_s, 1:3, 1:3)*mesh%volume_element
+    bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%volume_element
   end if
 
   do idim = 1, dim

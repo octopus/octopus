@@ -194,7 +194,7 @@ contains
       bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%map(1:n_s))
       bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%map(1:n_s))
     else
-      bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%vol_pp(1)
+      bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%volume_element
     end if
 
     do idim = 1, 2
