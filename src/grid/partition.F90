@@ -493,6 +493,8 @@ contains
     PUSH_SUB(partition_get_np_local)
 
     ASSERT(ubound(np_local_vec, 1) >= partition%npart)
+    ASSERT(partition%npart > 0)
+    ASSERT(all(partition%part(:) > 0))
     SAFE_ALLOCATE(np_local_vec_tmp(1:partition%npart))
     np_local_vec_tmp = 0
 
