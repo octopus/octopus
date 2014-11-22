@@ -113,18 +113,20 @@ contains
     if (hm%pcm%run_pcm) then
        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm)
+       hm%pcm%counter = hm%pcm%counter + 1
 
-       write(hm%pcm%info_unit,*)
-       write(hm%pcm%info_unit,*) 'E_en(PB) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_en_pcm ),&
-                              '   E_ne(PC) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_ne_pcm )
-       write(hm%pcm%info_unit,*) 'E_ee(PX) = ', units_from_atomic(units_out%energy, M_TWO*hm%energy%int_ee_pcm ),&
-                              '   E_nn(UNZ) = ', units_from_atomic(units_out%energy, hm%energy%int_nn_pcm )
-       write(hm%pcm%info_unit,*)
-       write(hm%pcm%info_unit,*) 'Elect. contribution=', units_from_atomic(units_out%energy, &
-                                                                           (hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
-                                                                            hm%energy%int_nn_pcm + hm%energy%int_ne_pcm) )
-       write(hm%pcm%info_unit,*) '===================================================================='
-       write(hm%pcm%info_unit,*) 
+       write(hm%pcm%info_unit,'(3X,I5,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8)') &
+                              hm%pcm%counter, &
+                              units_from_atomic(units_out%energy, hm%energy%int_ee_pcm ), & 
+                              units_from_atomic(units_out%energy, hm%energy%int_en_pcm ), &
+                              units_from_atomic(units_out%energy, hm%energy%int_nn_pcm ), &
+                              units_from_atomic(units_out%energy, hm%energy%int_ne_pcm ), &
+                              units_from_atomic(units_out%energy, hm%energy%int_ee_pcm +  &
+                                                                  hm%energy%int_en_pcm +  &
+                                                                  hm%energy%int_nn_pcm +  &
+                                                                  hm%energy%int_ne_pcm ), &
+                               (hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_e, &
+                               (hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_n
     endif
 
     select case(hm%theory_level)

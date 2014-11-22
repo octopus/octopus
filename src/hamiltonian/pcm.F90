@@ -84,7 +84,8 @@ module pcm_m
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                   !! at the tesserae representative points 
     integer, allocatable         :: ind_vh(:,:)   !< Grid points used during interpolation 
-    integer                      :: info_unit     !< unit for pcm info file 
+    integer                      :: info_unit     !< unit for pcm info file
+    integer                      :: counter       !< used to print the number of SCF or TD iterations in energy_calc  
     character(len=80)            :: input_cavity  !< file name containing the geometry of the VdW cavity
   end type pcm_t
 
@@ -225,15 +226,15 @@ contains
 
     pcm%info_unit = io_open('pcm/pcm_info.out', action='write')
 
-    write(pcm%info_unit,'(2X,A33)') 'Configuration: Molecule + Solvent'
-    write(pcm%info_unit,'(2X,A33)') '---------------------------------'
-    write(pcm%info_unit,'(2X,A19,F12.3)') 'Epsilon(Solvent) = ', pcm%epsilon_0
-    write(pcm%info_unit,'(2X)') 
-    write(pcm%info_unit,'(2X,A33,I4)') 'Number of interlocking spheres = ', pcm%n_spheres
-    write(pcm%info_unit,'(2X)')  
+    write(pcm%info_unit,'(A34)') '#Configuration: Molecule + Solvent'
+    write(pcm%info_unit,'(A34)') '#---------------------------------'
+    write(pcm%info_unit,'(A20,F12.3)') '#Epsilon(Solvent) = ', pcm%epsilon_0
+    write(pcm%info_unit,'(A1)')'#' 
+    write(pcm%info_unit,'(A34,I4)') '#Number of interlocking spheres = ', pcm%n_spheres
+    write(pcm%info_unit,'(A1)')'#'  
 
-    write(pcm%info_unit,'(2X,A6,3X,A7,8X,A26,20X,A10)') 'SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
-    write(pcm%info_unit,'(2X,A6,3X,A7,4X,A43,7X,A10)') '------', '-------', &
+    write(pcm%info_unit,'(A7,3X,A7,8X,A26,20X,A10)') '#SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
+    write(pcm%info_unit,'(A7,3X,A7,4X,A43,7X,A10)') '#------', '-------', &
                               '-------------------------------------------', '----------'  
 
     pcm%n_spheres = 0
@@ -241,12 +242,15 @@ contains
        if (geo%atom(ia)%label == 'H') cycle
        pcm%n_spheres = pcm%n_spheres + 1       
 
-       write(pcm%info_unit,'(2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)') pcm%n_spheres,            &
-                              						        geo%atom(ia)%label,       &
-                                                                                geo%atom(ia)%x*P_a_B,     &
-                                                                                pcm%spheres(pcm%n_spheres)%r*P_a_B
+       write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres,            &
+                              						               geo%atom(ia)%label,       &
+                                                                                       geo%atom(ia)%x*P_a_B,     &
+                                                                                       pcm%spheres(pcm%n_spheres)%r*P_a_B
     enddo
-    write(pcm%info_unit,'(2X)')  
+    write(pcm%info_unit,'(A1)')'#'  
+    write(pcm%info_unit,'(A1,4X,A4,9X,A4,15X,A4,15X,A4,15X,A4,15X,A8,12X,A5,15X,A5)') &
+                                                  '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+    pcm%counter = 0
 
     !%Variable CavityGeometry
     !%Type string
