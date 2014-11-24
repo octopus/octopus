@@ -179,11 +179,13 @@ contains
 
     call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
   
+    SAFE_ALLOCATE(pot_ion(1:cube%rs_n(1),1:cube%rs_n(2),1:cube%rs_n(3)))
     call profiling_in(prof,"ISF_LIBRARY")
     call H_potential(this%datacode, this%kernel, &
          cf%dRS, pot_ion, hartree_energy, offset, .false., &
          quiet = "YES ", stress_tensor = strten) !optional argument
     call profiling_out(prof)
+    SAFE_DEALLOCATE_A(pot_ion)
 
     call dcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
 
@@ -228,9 +230,11 @@ contains
       call dmesh_to_cube(mesh, rho, cube, cf)
     end if
 
+    SAFE_ALLOCATE(pot_ion(1:cube%rs_n(1),1:cube%rs_n(2),1:cube%rs_n(3)))
     call H_potential(this%datacode, this%kernel, &
          cf%dRS,  pot_ion, hartree_energy, offset, .false., &
          quiet = "YES ", stress_tensor = strten) !optional argument
+    SAFE_DEALLOCATE_A(pot_ion)
 
     if(mesh%parallel_in_domains) then
       call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
