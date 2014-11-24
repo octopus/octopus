@@ -93,8 +93,9 @@ contains
     !%Default 1e-5
     !%Section Linear Response::SCF in LR calculations
     !%Description
-    !% The tolerance in the variation of the density, to determine if
+    !% The tolerance in the absolute variation of the density response, to determine if
     !% the SCF for linear response is converged.
+    !% <math>\epsilon = \int {\rm d}^3r \vert \rho^{out}(\bf r) -\rho^{inp}(\bf r) \vert</math>.
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvAbsDens'
@@ -107,8 +108,9 @@ contains
     !%Default 0.0
     !%Section Linear Response::SCF in LR calculations
     !%Description
-    !% The tolerance in the variation of the density, to determine if
+    !% The tolerance in the relative variation of the density response, to determine if
     !% the SCF for linear response is converged.
+    !% <math>\epsilon = {1\over N} LRConvAbsDens</math>.
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvRelDens'
