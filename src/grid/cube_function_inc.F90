@@ -500,8 +500,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
 
   ASSERT(.not. cf%in_device_memory)
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
-
-  if(mesh%parallel_in_domains) then
+  if(cube%parallel_in_domains) then
     SAFE_ALLOCATE(in(1:map%c2m_nsend))
     SAFE_ALLOCATE(out(1:map%c2m_nrec))
 
@@ -527,7 +526,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   else
     !collect the data in all processes
     SAFE_ALLOCATE(gcf(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
-    if (cube%mpi_grp%size > 1) then
+    if (mpi_world%size > 1) then
 #ifdef HAVE_MPI
     call X(cube_function_allgather)(cube, gcf, cf%X(rs))
 #endif

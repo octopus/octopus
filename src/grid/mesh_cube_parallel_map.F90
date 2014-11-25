@@ -108,8 +108,17 @@ contains
     ! We will work only with the local mesh points and we need to know the global index of those points.
     SAFE_ALLOCATE(cube_part_local(1:mesh%np))
     SAFE_ALLOCATE(global_index(1:mesh%np))
+    if (mesh%parallel_in_domains) then
+      do ip = 1, mesh%np
+        global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
+      end do
+    else
+      do ip = 1, mesh%np
+        global_index(ip) = ip
+      end do
+    end if
+      
     do ip = 1, mesh%np
-      global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
       call index_to_coords(mesh%idx, global_index(ip), ixyz)
       ixyz = ixyz + cube%center
       cube_part_local(ip) = cube_point_to_process(ixyz, part)
@@ -119,9 +128,13 @@ contains
     call partition_transfer_init(this%m2c, mesh%np, global_index, mesh%mpi_grp, &
                                  cube%mpi_grp, cube_part_local, &
                                  this%m2c_nsend, this%m2c_nrec, mf_order, cf_order)
-   ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
+    ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
     SAFE_ALLOCATE(this%m2c_mf_order(1:this%m2c_nsend))
     SAFE_ALLOCATE(this%m2c_cf_order(1:this%m2c_nrec, 1:3))
+
+    ! Initialize all to 0, to detect possible errors
+    this%m2c_mf_order = 0
+        
     do ip = 1, this%m2c_nsend
 #ifdef HAVE_MPI
       this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
@@ -165,7 +178,12 @@ contains
         global_index(ipos) = ip
       end if
     end do
-    call partition_get_partition_number(mesh%inner_partition, ipos, global_index, cube_part_local)      
+
+    if (mesh%parallel_in_domains) then
+      call partition_get_partition_number(mesh%inner_partition, ipos, global_index, cube_part_local)      
+    else
+      cube_part_local = 1
+    end if
     
     SAFE_DEALLOCATE_A(part)
 
@@ -191,7 +209,12 @@ contains
     end do
     do ip = 1, this%c2m_nrec
 #ifdef HAVE_MPI
-      this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
+      if (mesh%parallel_in_domains) then
+        this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
+      else
+        ! if there is not domain parallelization, all the points are in the process 1 (rank 0)
+        this%c2m_mf_order = 1
+      end if
 #endif
       if (this%c2m_mf_order(ip) == 0) then
         write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &

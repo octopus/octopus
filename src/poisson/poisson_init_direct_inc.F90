@@ -154,7 +154,10 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube)
     call poisson_libisf_get_dims(this%libisf_solver, this%cube)
     this%cube%parallel_in_domains = this%libisf_solver%datacode == "D"
-    if (this%der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+    !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
+    !! Poisson solver
+    this%cube%mpi_grp = mpi_world
+    if (this%cube%parallel_in_domains) then
       call mesh_cube_parallel_map_init(this%mesh_cube_map, this%der%mesh, this%cube)
     end if
     
