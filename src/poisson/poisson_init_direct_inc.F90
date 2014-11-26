@@ -153,7 +153,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   case(POISSON_LIBISF)
     call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube)
     call poisson_libisf_get_dims(this%libisf_solver, this%cube)
-    this%cube%parallel_in_domains = this%libisf_solver%datacode == "D"
+    this%cube%parallel_in_domains = this%libisf_solver%datacode == "D" .and. mpi_world%size > 1
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
     this%cube%mpi_grp = mpi_world
