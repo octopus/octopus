@@ -192,10 +192,10 @@ contains
                                  mesh%mpi_grp, cube_part_local, &
                                  this%c2m_nsend, this%c2m_nrec, cf_order, mf_order)
 
-   ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
+    ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
     SAFE_ALLOCATE(this%c2m_cf_order(1:this%c2m_nsend, 1:3))
     SAFE_ALLOCATE(this%c2m_mf_order(1:this%c2m_nrec))
-     do ip = 1, this%c2m_nsend
+    do ip = 1, this%c2m_nsend
       call index_to_coords(mesh%idx, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
 
