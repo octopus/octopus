@@ -565,7 +565,7 @@ contains
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true., &
                      need_partition=.not.der%mesh%parallel_in_domains)
-      if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+      if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
       end if
     end if
@@ -613,7 +613,7 @@ contains
     this%method = POISSON_NULL
 
     if (has_cube) then
-      if (this%der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+      if (this%cube%parallel_in_domains) then
         call mesh_cube_parallel_map_end(this%mesh_cube_map)
       end if
       call cube_end(this%cube)
