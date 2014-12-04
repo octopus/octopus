@@ -142,6 +142,7 @@ contains
       if (this%m2c_mf_order(ip) == 0) then
         write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
              mf_order(ip), " is not stored in partition ", mesh%vp%partno
+        call messages_fatal(1)
       end if
     end do
 
