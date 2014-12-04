@@ -1,4 +1,4 @@
-!! Copyright (C) 2012 M. Oliveira
+!! Copyright (C) 2012-2014 M. Oliveira, J. Alberdi-Rodriguez
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -135,17 +135,22 @@ contains
     ! Initialize all to 0, to detect possible errors
     this%m2c_mf_order = 0
         
-    do ip = 1, this%m2c_nsend
+    if (mesh%parallel_in_domains) then
+      do ip = 1, this%m2c_nsend
 #ifdef HAVE_MPI
-      this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
+        this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
 #endif
-      if (this%m2c_mf_order(ip) == 0) then
-        write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
-             mf_order(ip), " is not stored in partition ", mesh%vp%partno
-        call messages_fatal(1)
-      end if
-    end do
-
+        if (this%m2c_mf_order(ip) == 0) then
+          write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
+               mf_order(ip), " is not stored in partition ", mesh%vp%partno
+          call messages_fatal(1)
+        end if
+      end do
+    else
+      ! With no mesh parallelization the order is the returned one
+      this%m2c_mf_order(1:this%m2c_nsend) = mf_order(1:this%m2c_nsend)
+    end if
+   
     do ip = 1, this%m2c_nrec
       call index_to_coords(mesh%idx, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
@@ -208,20 +213,22 @@ contains
 
       this%c2m_cf_order(ip, 1:3) = lxyz(1:3)
     end do
-    do ip = 1, this%c2m_nrec
+    if (mesh%parallel_in_domains) then
+      do ip = 1, this%c2m_nrec
 #ifdef HAVE_MPI
-      if (mesh%parallel_in_domains) then
         this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-      else
-        ! if there is not domain parallelization, all the points are in the process 1 (rank 0)
-        this%c2m_mf_order = 1
-      end if
+      
 #endif
-      if (this%c2m_mf_order(ip) == 0) then
-        write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
-             mf_order(ip), " is not stored in partition ", mesh%vp%partno
-      end if
-    end do
+        if (this%c2m_mf_order(ip) == 0) then
+          write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
+               mf_order(ip), " is not stored in partition ", mesh%vp%partno
+        end if
+      end do
+    else
+      ! if there is not domain parallelization, all the points have the returned order
+      this%c2m_mf_order(1:this%c2m_nrec) = mf_order(1:this%c2m_nrec)
+    end if
+    
     SAFE_DEALLOCATE_P(mf_order)
     SAFE_DEALLOCATE_P(cf_order)
     SAFE_DEALLOCATE_A(cube_part_local)
