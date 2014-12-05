@@ -385,7 +385,7 @@ contains
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
     integer             :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
-    integer             :: i_energy, e_end, e_start, e_step, e_point, no_e
+    integer             :: i_energy, e_end, e_start, e_point
     logical             :: optimize(1:3)
     character(64)       :: filename, ref_filename, folder
     FLOAT               :: fdefault, w_max
@@ -445,7 +445,7 @@ contains
     !%End
     fdefault = units_from_atomic(units_inp%energy, w_max)
     call parse_float(datasets_check('ConvertEnergyMax'),fdefault, max_energy, units_inp%energy)
-    if( (max_energy > w_max)) then
+    if (max_energy > w_max) then
       write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
            units_from_atomic(units_inp%energy, max_energy)
       write(message(2),'(a)')'ConvertEnergyMax is too large.'
@@ -461,8 +461,6 @@ contains
     dw = M_TWO*M_PI / (dt * time_steps)
     e_start = int(min_energy / dw)
     e_end   = int(max_energy / dw)
-    no_e    = e_end - e_start + 1
-    e_step  = 1
     write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
          units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')' 
     write(message(2),'(a,f12.7,a)')'Frequency Step, dw:  ', units_from_atomic(units_out%energy, dw), &
@@ -489,7 +487,7 @@ contains
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
         write(filename, '(a,a,a,a)') trim(outp%iter_dir), trim(folder), trim(basename), ".obf"
-        if (mpi_world%size > 1) then
+        if (mesh%mpi_grp%size > 1) then
           ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
         else
           ii = i_space
@@ -512,7 +510,7 @@ contains
       call fftw_execute_dft(fft%planf, read_ft(1), out_fft(1))
 
       ! save densities
-      do i_energy = e_start+1, e_end+1, e_step
+      do i_energy = e_start+1, e_end+1
         write_point(i_space, i_energy) = DBLE(out_fft(i_energy))
       end do ! Energy
 
@@ -527,7 +525,7 @@ contains
 #endif
     
     ! write the output files
-    do i_energy = e_start+1, e_end+1, e_step
+    do i_energy = e_start+1, e_end+1
       call io_mkdir('wd.general')
       write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy-1,'/'
       write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
