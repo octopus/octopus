@@ -392,6 +392,7 @@ contains
     FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point(:), write_point(:,:)
     CMPLX, allocatable  :: out_fft(:)
     type(fft_t)         :: fft
+    type(profile_t), save :: prof_fftw, prof_io
 
     FLOAT   :: start_time          !< start time for the transform
     integer :: time_steps          !< number of time steps
@@ -493,7 +494,9 @@ contains
           ii = i_space
         end if
         ! Read the obf files, only one point per file
+        call profiling_in(prof_io,"TRANSFORM_READING")
         call io_binary_read(trim(filename), 1, read_point(1:1), ierr, offset = ii-1)
+        call profiling_out(prof_io)
         if (subtract_file) then
           read_ft(e_point) =  read_point(1) - read_rff(ii)
         else
@@ -507,7 +510,9 @@ contains
         end if
       end do ! Time
 
+      call profiling_in(prof_fftw, "CONVERT_FFTW")
       call fftw_execute_dft(fft%planf, read_ft(1), out_fft(1))
+      call profiling_out(prof_fftw)
 
       ! save densities
       do i_energy = e_start+1, e_end+1
