@@ -385,11 +385,11 @@ contains
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
     integer             :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
-    integer             :: i_energy, e_end, e_start, e_point
+    integer             :: i_energy, e_end, e_start, e_point, chunk_size, read_count
     logical             :: optimize(1:3)
     character(64)       :: filename, ref_filename, folder
     FLOAT               :: fdefault, w_max
-    FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point(:), write_point(:,:)
+    FLOAT, allocatable  :: read_ft(:), read_rff(:), read_point(:), write_point(:,:), read_point_tmp(:,:)
     CMPLX, allocatable  :: out_fft(:)
     type(fft_t)         :: fft
     type(profile_t), save :: prof_fftw, prof_io
@@ -419,7 +419,6 @@ contains
     start_time = M_ZERO
     SAFE_ALLOCATE(read_ft(1:e_point+1))
     SAFE_ALLOCATE(out_fft(1:e_point+1))
-    SAFE_ALLOCATE(read_point(1:1))
     SAFE_ALLOCATE(read_rff(1:mesh%np))
 
     !%Variable ConvertEnergyMin
@@ -431,6 +430,17 @@ contains
     !%End
     call parse_float(datasets_check('ConvertEnergyMin'), M_ZERO, min_energy, units_inp%energy)
 
+    !%Variable ConvertReadSize
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-convert
+    !%Description
+    !% How many points are read at once. For the parallel run has not been
+    !% yet tested, so it should be one. For the serial run, a number
+    !% of 100-1000 will speed-up the execution time by this factor.
+    !%End
+    call parse_integer(datasets_check('ConvertReadSize'), 1, chunk_size)
+    
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
     dt = dt * c_step
@@ -477,13 +487,16 @@ contains
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
     SAFE_ALLOCATE(write_point(1:mesh%np,e_point+1))
+    SAFE_ALLOCATE(read_point_tmp(1:chunk_size+1,1:e_point+1))
+    SAFE_ALLOCATE(read_point(1:chunk_size+1))
+    read_count = 0
 
     ! Space
     do i_space = 1, mesh%np
       ! Time
       e_point = 0
       do i_time = c_start, c_end, c_step
-         e_point = e_point + 1
+        e_point = e_point + 1
         ! Here, we always iterate folders
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
@@ -493,14 +506,21 @@ contains
         else
           ii = i_space
         end if
-        ! Read the obf files, only one point per file
-        call profiling_in(prof_io,"TRANSFORM_READING")
-        call io_binary_read(trim(filename), 1, read_point(1:1), ierr, offset = ii-1)
+        ! Read the obf files, in multiples of chunk_size
+        if (mod(i_space-1, chunk_size) == 0) then
+          call profiling_in(prof_io,"READING")
+          call io_binary_read(trim(filename), chunk_size, read_point(1:chunk_size+1), ierr, offset = ii-1)
+          read_point_tmp(1:chunk_size+1,e_point) = read_point(1:chunk_size+1)
+!!$          write(*,*) "read_points",read_point(1:chunk_size)
+          call profiling_out(prof_io)
+           if (i_time == c_start) read_count = 0
+        end if
+        if (i_time == c_start) read_count = read_count + 1
         call profiling_out(prof_io)
         if (subtract_file) then
           read_ft(e_point) =  read_point(1) - read_rff(ii)
         else
-          read_ft(e_point) = read_point(1)
+          read_ft(e_point) = read_point_tmp(read_count,e_point)
         end if
         if (ierr /= 0) then
           write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), ii, i_time
