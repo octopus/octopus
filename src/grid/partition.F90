@@ -348,9 +348,9 @@ contains
   end subroutine partition_get_global
 
   ! ---------------------------------------------------------
-  !> Given a list of _global_ indexes, return the partition number
+  !> Given a list of _global_ indices, return the partition number
   !! where those points are stored.
-  !! Note that this routine will accept global indexes equal to 0. In that
+  !! Note that this routine will accept global indices equal to 0. In that
   !! case it will return 0 as a partition number.
   subroutine partition_get_partition_number(partition, np, points, partno)
     type(partition_t), intent(in)  :: partition
@@ -437,7 +437,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(ipos)
 
-    !Send the global indexes of the points to the process that knows what is the corresponding partition
+    !Send the global indices of the points to the process that knows what is the corresponding partition
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
@@ -531,7 +531,7 @@ contains
   
   !---------------------------------------------------------
   !> Calculates the local vector of all partitions in parallel.
-  !! Local vector stores the global point indexes, that each partition
+  !! Local vector stores the global point indices that each partition
   !! has.
   subroutine partition_get_local(partition, rbuffer, np_local)
     type(partition_t),    intent(in)    :: partition

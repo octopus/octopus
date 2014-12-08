@@ -64,7 +64,7 @@ contains
   subroutine partition_transfer_init(this, np, global_index, mpi_grp_in, mpi_grp_out, part_out, nsend, nrec, order_in, order_out)
     type(partition_transfer_t), intent(out) :: this
     integer,                    intent(in)  :: np !< the number of local points in the input partition
-    integer,                    intent(in)  :: global_index(:) !< the global indexes of the points of the input partition
+    integer,                    intent(in)  :: global_index(:) !< the global indices of the points of the input partition
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_in
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_out
     integer,                    intent(in)  :: part_out(:) !< point -> partition

@@ -36,7 +36,7 @@
 !!
 !! \todo The coefficients should be calculated, and not hard-coded, in
 !! a subroutine similar to weights in the math module. It should also
-!! allos to get the coefficients to the gradient.
+!! allow getting the coefficients for the gradient.
 !! \todo This module should look like stencil_star, allowing for
 !! coefficients on non-uniform grids.
 ! ---------------------------------------------------------
@@ -145,6 +145,7 @@ contains
 
     POP_SUB(stencil_variational_extent)
   end function stencil_variational_extent
+
 end module stencil_variational_m
 
 !! Local Variables:

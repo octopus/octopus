@@ -435,7 +435,7 @@ contains
     call partition_init(mesh%bndry_partition, np_global, mesh%mpi_grp)
     call partition_get_local_size(mesh%bndry_partition, istart, np)
 
-    !Get the global indexes of the neighbours connected through the stencil
+    !Get the global indices of the neighbours connected through the stencil
     !Neighbours that are not inner points get a value of 0
     SAFE_ALLOCATE(neighbours_index(1:np*stencil%size))
     neighbours_index = 0
