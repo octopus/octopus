@@ -248,7 +248,7 @@ contains
     !% <tt>beta_density-</tt> is also printed.
     !%Option mesh_r 8192
     !% Outputs values of the coordinates over the grid. Files
-    !% will be in the <tt>exec/</tt> directory.
+    !% will be called <tt>mesh_r-</tt> followed by the direction.
     !%Option kinetic_energy_density 16384
     !% Outputs kinetic-energy density, defined as:
     !%
@@ -276,7 +276,7 @@ contains
     !%Option wfs_fourier 524288
     !% (Experimental) Outputs wavefunctions in Fourier space. This is
     !% only implemented for the ETSF file format output. The file will
-    !% be called <tt>static/wfs-pw-etsf.nc</tt>.  
+    !% be called <tt>wfs-pw-etsf.nc</tt>.  
     !%Option xc_density 1048576
     !% Outputs the XC density, which is the charge density that
     !% generates the XC potential. (This is <math>-1/4\pi</math> times
@@ -502,7 +502,7 @@ contains
     !% such as the density, forces, etc. requested by variable <tt>Output</tt>
     !% in the format specified by <tt>OutputHow</tt>
     !% This information is written while iterating GS or TD, according to 
-    !% <tt>OutputInterval</tt> and has nothing to do with the restart information.
+    !% <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
     call add_last_slash(outp%iter_dir)

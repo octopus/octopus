@@ -157,8 +157,8 @@ contains
       if(iand(sys%outp%what, C_OUTPUT_R) /= 0) then
 
         do i=1, sys%gr%mesh%sb%dim
-          write(fname, '(a,i1)') 'r-', i
-          call dio_function_output(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
+          write(fname, '(a,i1)') 'mesh_r-', i
+          call dio_function_output(sys%outp%how, STATIC_DIR, fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
             units_out%length, ierr, geo = sys%geo)
         end do
       end if
