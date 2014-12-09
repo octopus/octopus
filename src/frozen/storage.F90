@@ -21,14 +21,9 @@ module storage_m
     simulation_t,         &
     simulation_get
 
-  use interpolation_m, only: &
-    interpolation_t,         &
-    interpolation_init,      &
-    interpolation_eval,      &
-    interpolation_copy,      &
-    interpolation_end
+  use interpolation_frozen_m
 
-  use interpolation_m, only:    &
+  use interpolation_frozen_m, only:    &
     STORAGE_INTRP_OK=>INTRP_OK, &
     STORAGE_INTRP_OD=>INTRP_OD, &
     STORAGE_INTRP_NI=>INTRP_NI
@@ -75,7 +70,7 @@ module storage_m
   type, public :: storage_interpolation_t
     private
     type(storage_t), pointer :: self =>null()
-    type(interpolation_t)    :: intrp
+    type(interpolation_frozen_t)    :: intrp
   end type storage_interpolation_t
 
   interface operator(+)
@@ -369,7 +364,7 @@ contains
     PUSH_SUB(storage_interpolation_init)
     this%self=>that
     if(that%ndim>0)&
-      call interpolation_init(this%intrp, that%sim, that%storage, type=type, default=that%default)
+      call interpolation_frozen_init(this%intrp, that%sim, that%storage, type=type, default=that%default)
     POP_SUB(storage_interpolation_init)
     return
   end subroutine storage_interpolation_init
@@ -383,7 +378,7 @@ contains
     !
     PUSH_SUB(storage_interpolation_eval_1d)
     if(associated(this%self%sim))then
-      call interpolation_eval(this%intrp, x, val, ierr)
+      call interpolation_frozen_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default
     end if
@@ -400,7 +395,7 @@ contains
     !
     PUSH_SUB(storage_interpolation_eval_2d)
     if(associated(this%self%sim))then
-      call interpolation_eval(this%intrp, x, val, ierr)
+      call interpolation_frozen_eval(this%intrp, x, val, ierr)
     else
       val=this%self%default
     end if
@@ -415,7 +410,7 @@ contains
     !
     PUSH_SUB(storage_interpolation_copy)
     this%self=>that%self
-    call interpolation_copy(this%intrp, that%intrp)
+    call interpolation_frozen_copy(this%intrp, that%intrp)
     POP_SUB(storage_interpolation_copy)
     return
   end subroutine storage_interpolation_copy
@@ -425,7 +420,7 @@ contains
     type(storage_interpolation_t), intent(inout) :: this
     !
     PUSH_SUB(storage_interpolation_end)
-    call interpolation_end(this%intrp)
+    call interpolation_frozen_end(this%intrp)
     this%self=>null()
     POP_SUB(storage_interpolation_end)
     return

@@ -1,6 +1,6 @@
 #include "global.h"
 
-module interpolation_m
+module interpolation_frozen_m
 
   use global_m
   use messages_m
@@ -19,11 +19,11 @@ module interpolation_m
 
   private
   public ::                      &
-    interpolation_init,          &
-    interpolation_get_dimension, &
-    interpolation_eval,          &
-    interpolation_copy,          &
-    interpolation_end
+    interpolation_frozen_init,          &
+    interpolation_frozen_get_dimension, &
+    interpolation_frozen_eval,          &
+    interpolation_frozen_copy,          &
+    interpolation_frozen_end
 
   integer, public, parameter :: NONE    = 0
   integer, public, parameter :: NEAREST = 1
@@ -40,7 +40,7 @@ module interpolation_m
     real(kind=wp), dimension(:), pointer :: vals  =>null()
   end type intrp_t
 
-  type, public :: interpolation_t
+  type, public :: interpolation_frozen_t
     private
     integer                              :: type    = NONE
     integer                              :: nint    = 0
@@ -50,17 +50,17 @@ module interpolation_m
     type(basis_t),               pointer :: basis   =>null()
     type(intrp_t), dimension(:), pointer :: intr    =>null()
     real(kind=wp)                        :: default = 0.0_wp
-  end type interpolation_t
+  end type interpolation_frozen_t
 
-  interface interpolation_init
-    module procedure interpolation_init_1d
-    module procedure interpolation_init_2d
-  end interface interpolation_init
+  interface interpolation_frozen_init
+    module procedure interpolation_frozen_init_1d
+    module procedure interpolation_frozen_init_2d
+  end interface interpolation_frozen_init
 
-  interface interpolation_eval
-    module procedure interpolation_eval_1d
-    module procedure interpolation_eval_2d
-  end interface interpolation_eval
+  interface interpolation_frozen_eval
+    module procedure interpolation_frozen_eval_1d
+    module procedure interpolation_frozen_eval_2d
+  end interface interpolation_frozen_eval
 
 contains
 
@@ -89,7 +89,7 @@ contains
       case(3)
         call qshep_init(this%qshep, n, vals, mesh%x(1:n,1), mesh%x(1:n,2), mesh%x(1:n,3))
       case default
-        message(1)='Quadratic Shepard interpolation only works in two or three dimensions.'
+        message(1)='Quadratic Shepard interpolation_frozen only works in two or three dimensions.'
         call messages_fatal(1)
       end select
     end select
@@ -156,15 +156,15 @@ contains
   end subroutine intrp_end
 
   ! ---------------------------------------------------------
-  subroutine interpolation_init_common(this, sim, nint, basis, type, default)
-    type(interpolation_t),           intent(out) :: this
+  subroutine interpolation_frozen_init_common(this, sim, nint, basis, type, default)
+    type(interpolation_frozen_t),           intent(out) :: this
     type(simulation_t),      target, intent(in)  :: sim
     integer,                         intent(in)  :: nint
     type(basis_t), optional, target, intent(in)  :: basis
     integer,       optional,         intent(in)  :: type
     real(kind=wp), optional,         intent(in)  :: default
     !
-    PUSH_SUB(interpolation_init_common)
+    PUSH_SUB(interpolation_frozen_init_common)
     this%type=NEAREST
     if(present(type))this%type=type
     this%sim=>sim
@@ -183,30 +183,30 @@ contains
     end if
     this%default=0.0_wp
     if(present(default))this%default=default
-    POP_SUB(interpolation_init_common)
+    POP_SUB(interpolation_frozen_init_common)
     return
-  end subroutine interpolation_init_common
+  end subroutine interpolation_frozen_init_common
 
   ! ---------------------------------------------------------
-  subroutine interpolation_init_1d(this, sim, vals, basis, type, default)
-    type(interpolation_t),               intent(out) :: this
+  subroutine interpolation_frozen_init_1d(this, sim, vals, basis, type, default)
+    type(interpolation_frozen_t),               intent(out) :: this
     type(simulation_t),          target, intent(in)  :: sim
     real(kind=wp), dimension(:), target, intent(in)  :: vals
     type(basis_t),     optional, target, intent(in)  :: basis
     integer,           optional,         intent(in)  :: type
     real(kind=wp),     optional,         intent(in)  :: default
     !
-    PUSH_SUB(interpolation_init_1d)
-    call interpolation_init_common(this, sim, 1, basis, type, default)
+    PUSH_SUB(interpolation_frozen_init_1d)
+    call interpolation_frozen_init_common(this, sim, 1, basis, type, default)
     if(type>NONE)&
       call intrp_init(this%intr(1), this%mesh, vals, this%type)
-    POP_SUB(interpolation_init_1d)
+    POP_SUB(interpolation_frozen_init_1d)
     return
-  end subroutine interpolation_init_1d
+  end subroutine interpolation_frozen_init_1d
 
   ! ---------------------------------------------------------
-  subroutine interpolation_init_2d(this, sim, vals, basis, type, default)
-    type(interpolation_t),                 intent(out) :: this
+  subroutine interpolation_frozen_init_2d(this, sim, vals, basis, type, default)
+    type(interpolation_frozen_t),                 intent(out) :: this
     type(simulation_t),            target, intent(in)  :: sim
     real(kind=wp), dimension(:,:), target, intent(in)  :: vals
     type(basis_t),       optional, target, intent(in)  :: basis
@@ -215,20 +215,20 @@ contains
     !
     integer :: i
     !
-    PUSH_SUB(interpolation_init_2d)
-    call interpolation_init_common(this, sim, size(vals,dim=2), basis, type, default)
+    PUSH_SUB(interpolation_frozen_init_2d)
+    call interpolation_frozen_init_common(this, sim, size(vals,dim=2), basis, type, default)
     if(type>NONE)then
       do i = 1, this%nint
         call intrp_init(this%intr(i), this%mesh, vals(:,i), this%type)
       end do
     end if
-    POP_SUB(interpolation_init_2d)
+    POP_SUB(interpolation_frozen_init_2d)
     return
-  end subroutine interpolation_init_2d
+  end subroutine interpolation_frozen_init_2d
 
   ! ---------------------------------------------------------
-  function interpolation_nearest_index(this, x) result(n)
-    type(interpolation_t),        intent(in)  :: this
+  function interpolation_frozen_nearest_index(this, x) result(n)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     !
     integer :: n
@@ -237,81 +237,81 @@ contains
     integer,       dimension(MAX_DIM) :: ix
     integer                           :: i, dm
     !
-    PUSH_SUB(interpolation_nearest_index)
+    PUSH_SUB(interpolation_frozen_nearest_index)
     dm=this%mesh%sb%dim
     xp=(/x(1:dm),(0.0_wp, i=dm+1,MAX_DIM)/)
     call curvilinear_x2chi(this%mesh%sb, this%mesh%cv, xp, chi)
     ix(1:dm)=nint(chi(1:dm)/this%mesh%spacing(1:dm))
     ix(dm+1:MAX_DIM)=0
     n=index_from_coords(this%mesh%idx, ix)
-    POP_SUB(interpolation_nearest_index)
+    POP_SUB(interpolation_frozen_nearest_index)
     return
-  end function interpolation_nearest_index
+  end function interpolation_frozen_nearest_index
 
   ! ---------------------------------------------------------
-  elemental function interpolation_get_dimension(this) result(dim)
-    type(interpolation_t),  intent(in) :: this
+  elemental function interpolation_frozen_get_dimension(this) result(dim)
+    type(interpolation_frozen_t),  intent(in) :: this
     !
     integer :: dim
     !
     dim=this%nint
     return
-  end function interpolation_get_dimension
+  end function interpolation_frozen_get_dimension
 
   ! ---------------------------------------------------------
-  function interpolation_in_domain(this, x) result(in)
-    type(interpolation_t),        intent(in)  :: this
+  function interpolation_frozen_in_domain(this, x) result(in)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     !
     logical :: in
     !
     integer :: n
     !
-    PUSH_SUB(interpolation_in_domain)
+    PUSH_SUB(interpolation_frozen_in_domain)
     in=domain_in_domain(this%domain, x)
     if(in)then
-      n=interpolation_nearest_index(this, x)
+      n=interpolation_frozen_nearest_index(this, x)
       in=((0<n).and.(n<=size(this%intr(1)%vals)))
     end if
-    POP_SUB(interpolation_in_domain)
+    POP_SUB(interpolation_frozen_in_domain)
     return
-  end function interpolation_in_domain
+  end function interpolation_frozen_in_domain
 
   ! ---------------------------------------------------------
-  subroutine interpolation_nearest(this, x, val)
-    type(interpolation_t),        intent(in)  :: this
+  subroutine interpolation_frozen_nearest(this, x, val)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),  dimension(:), intent(out) :: val
     !
     real(kind=wp) :: tol, dlt
     integer       :: i, n, dm
     !
-    PUSH_SUB(interpolation_nearest)
+    PUSH_SUB(interpolation_frozen_nearest)
     dm=this%mesh%sb%dim
-    n=interpolation_nearest_index(this, x)
+    n=interpolation_frozen_nearest_index(this, x)
     tol=CNST(0.51)*sqrt(sum(this%mesh%spacing(1:dm)**2))
     dlt=sqrt(sum((x(1:dm)-this%mesh%x(n,1:dm))**2))
     ASSERT(dlt<tol)
     forall(i=1:this%nint)val(i)=this%intr(i)%vals(n)
-    POP_SUB(interpolation_nearest)
+    POP_SUB(interpolation_frozen_nearest)
     return
-  end subroutine interpolation_nearest
+  end subroutine interpolation_frozen_nearest
 
   ! ---------------------------------------------------------
-  subroutine interpolation_eval_internal(this, x, val, ierr)
-    type(interpolation_t),        intent(in)  :: this
+  subroutine interpolation_frozen_eval_internal(this, x, val, ierr)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),  dimension(:), intent(out) :: val
     integer,                      intent(out) :: ierr
     !
     integer :: i
     !
-    PUSH_SUB(interpolation_eval_internal)
-    if(interpolation_in_domain(this, x))then
+    PUSH_SUB(interpolation_frozen_eval_internal)
+    if(interpolation_frozen_in_domain(this, x))then
       ierr=INTRP_OK
       select case(this%type)
       case(NEAREST)
-        call interpolation_nearest(this, x, val)
+        call interpolation_frozen_nearest(this, x, val)
       case(QSHEP)
         do i = 1, this%nint
           call intrp_eval(this%intr(i), x, val(i))
@@ -324,13 +324,13 @@ contains
       val=this%default
       ierr=INTRP_OD
     end if
-    POP_SUB(interpolation_eval_internal)
+    POP_SUB(interpolation_frozen_eval_internal)
     return
-  end subroutine interpolation_eval_internal
+  end subroutine interpolation_frozen_eval_internal
 
   ! ---------------------------------------------------------
-  subroutine interpolation_eval_1d(this, x, val, ierr)
-    type(interpolation_t),        intent(in)  :: this
+  subroutine interpolation_frozen_eval_1d(this, x, val, ierr)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),                intent(out) :: val
     integer,                      intent(out) :: ierr
@@ -338,46 +338,46 @@ contains
     real(kind=wp), dimension(size(x)) :: y
     real(kind=wp), dimension(1)       :: tvl
     !
-    PUSH_SUB(interpolation_eval_1d)
+    PUSH_SUB(interpolation_frozen_eval_1d)
     if(associated(this%basis))then
       call basis_to_internal(this%basis, x, y)
-      call interpolation_eval_internal(this, y, tvl, ierr)
+      call interpolation_frozen_eval_internal(this, y, tvl, ierr)
     else
-      call interpolation_eval_internal(this, x, tvl, ierr)
+      call interpolation_frozen_eval_internal(this, x, tvl, ierr)
     end if
     val=tvl(1)
-    POP_SUB(interpolation_eval_1d)
+    POP_SUB(interpolation_frozen_eval_1d)
     return
-  end subroutine interpolation_eval_1d
+  end subroutine interpolation_frozen_eval_1d
 
   ! ---------------------------------------------------------
-  subroutine interpolation_eval_2d(this, x, val, ierr)
-    type(interpolation_t),        intent(in)  :: this
+  subroutine interpolation_frozen_eval_2d(this, x, val, ierr)
+    type(interpolation_frozen_t),        intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),  dimension(:), intent(out) :: val
     integer,                      intent(out) :: ierr
     !
     real(kind=wp), dimension(size(x)) :: y
     !
-    PUSH_SUB(interpolation_eval_2d)
+    PUSH_SUB(interpolation_frozen_eval_2d)
     if(associated(this%basis))then
       call basis_to_internal(this%basis, x, y)
-      call interpolation_eval_internal(this, y, val, ierr)
+      call interpolation_frozen_eval_internal(this, y, val, ierr)
     else
-      call interpolation_eval_internal(this, x, val, ierr)
+      call interpolation_frozen_eval_internal(this, x, val, ierr)
     end if
-    POP_SUB(interpolation_eval_2d)
+    POP_SUB(interpolation_frozen_eval_2d)
     return
-  end subroutine interpolation_eval_2d
+  end subroutine interpolation_frozen_eval_2d
 
   ! ---------------------------------------------------------
-  subroutine interpolation_copy(this, that)
-    type(interpolation_t),         intent(out) :: this
-    type(interpolation_t), target, intent(in)  :: that
+  subroutine interpolation_frozen_copy(this, that)
+    type(interpolation_frozen_t),         intent(out) :: this
+    type(interpolation_frozen_t), target, intent(in)  :: that
     !
     integer :: i
     !
-    PUSH_SUB(interpolation_copy)
+    PUSH_SUB(interpolation_frozen_copy)
     this%type  = that%type
     this%nint  = that%nint
     this%sim   =>that%sim
@@ -390,17 +390,17 @@ contains
         call intrp_copy(this%intr(i), that%intr(i))
       end do
     end if
-    POP_SUB(interpolation_copy)
+    POP_SUB(interpolation_frozen_copy)
     return
-  end subroutine interpolation_copy
+  end subroutine interpolation_frozen_copy
 
   ! ---------------------------------------------------------
-  subroutine interpolation_end(this)
-    type(interpolation_t), intent(inout) :: this
+  subroutine interpolation_frozen_end(this)
+    type(interpolation_frozen_t), intent(inout) :: this
     !
     integer :: i
     !
-    PUSH_SUB(interpolation_end)
+    PUSH_SUB(interpolation_frozen_end)
     this%type=0
     do i = 1, this%nint
       call intrp_end(this%intr(i))
@@ -410,11 +410,11 @@ contains
     end if
     nullify(this%sim, this%mesh, this%domain, this%basis, this%intr)
     this%nint=0
-    POP_SUB(interpolation_end)
+    POP_SUB(interpolation_frozen_end)
     return
-  end subroutine interpolation_end
+  end subroutine interpolation_frozen_end
 
-end module interpolation_m
+end module interpolation_frozen_m
 
 !! Local Variables:
 !! mode: f90

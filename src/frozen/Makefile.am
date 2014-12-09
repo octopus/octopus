@@ -26,7 +26,7 @@ libfrozen_a_SOURCES =            \
 	basis.F90                \
 	domain.F90               \
 	simulation.F90           \
-	interpolation.F90        \
+	interpolation_frozen.F90        \
 	storage.F90              \
 	interface_xc.F90         \
 	lda.F90                  \
@@ -97,8 +97,8 @@ igrid.o : igrid.F90
 basis.o : basis.F90
 domain.o : domain.F90
 simulation.o : simulation.F90 domain.o igrid.o
-interpolation.o : interpolation.F90 simulation.o domain.o basis.o
-storage.o : storage.F90 interpolation.o simulation.o
+interpolation_frozen.o : interpolation_frozen.F90 simulation.o domain.o basis.o
+storage.o : storage.F90 interpolation_frozen.o simulation.o
 
 interface_xc.o : interface_xc.F90 simulation.o
 lda.o : lda.F90 interface_xc.o
@@ -118,7 +118,7 @@ fio_simulation.o : fio_simulation.F90 fio_grid.o fio_geometry.o simulation.o
 #frozen_simul_box.o : frozen_simul_box.F90
 #frozen_grid.o : frozen_grid.F90
 #frozen_simulation.o : frozen_simulation.F90 fio_config.o fio_simulation.o simulation.o #domain.o basis.o
-#frozen_density.o : frozen_density.F90 frozen_geometry.o frozen_simulation.o fio_config.o iatom.o interpolation.o basis.o
+#frozen_density.o : frozen_density.F90 frozen_geometry.o frozen_simulation.o fio_config.o iatom.o interpolation_frozen.o basis.o
 #frozen_external.o : frozen_external.F90 frozen_density.o frozen_simulation.o fio_config.o fio_external.o storage.o
 #frozen_hartree.o : frozen_hartree.F90 frozen_simulation.o fio_config.o storage.o 
 #frozen_ionic.o : frozen_ionic.F90 frozen_density.o frozen_simulation.o fio_config.o storage.o

@@ -14,7 +14,7 @@ module fio_config_m
   use messages_m
   use profiling_m
 
-  use interpolation_m, only: NEAREST
+  use interpolation_frozen_m, only: NEAREST
   use io_m, only: io_open, io_close
   use json_parser_m, only: json_parser_t, json_parser_init, json_parser_end, &
     json_parser_parse, json_parser_error
