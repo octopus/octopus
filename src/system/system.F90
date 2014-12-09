@@ -116,9 +116,6 @@ contains
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 
-    !print the mesh information if it is required
-    call print_r()
-
     call profiling_out(prof)
     POP_SUB(system_init)
 
@@ -147,24 +144,6 @@ contains
 
       POP_SUB(system_init.parallel_init)
     end subroutine parallel_init
-
-    subroutine print_r()
-      integer :: i, ierr
-      character(len=80) :: fname
-
-      PUSH_SUB(system_init.print_r)
-
-      if(iand(sys%outp%what, C_OUTPUT_R) /= 0) then
-
-        do i=1, sys%gr%mesh%sb%dim
-          write(fname, '(a,i1)') 'mesh_r-', i
-          call dio_function_output(sys%outp%how, STATIC_DIR, fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
-            units_out%length, ierr, geo = sys%geo)
-        end do
-      end if
-
-      POP_SUB(system_init.print_r)
-    end subroutine print_r
 
   end subroutine system_init
 

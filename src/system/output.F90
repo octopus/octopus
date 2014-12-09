@@ -576,6 +576,9 @@ contains
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
+    integer :: idir, ierr
+    character(len=80) :: fname
+    
     PUSH_SUB(output_all)
 
     if(outp%what /= 0) then
@@ -583,6 +586,14 @@ contains
       call messages_info(1)
     endif
 
+    if(iand(outp%what, C_OUTPUT_R) /= 0) then
+      do idir = 1, gr%mesh%sb%dim
+        write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
+        call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
+          units_out%length, ierr, geo = geo)
+      end do
+    end if
+    
     call output_states(st, gr, geo, dir, outp)
     call output_hamiltonian(hm, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
