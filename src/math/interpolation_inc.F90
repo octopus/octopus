@@ -17,23 +17,28 @@
 !!
 !! $Id$
 
-R_TYPE function X(interpolator_interpolate)(this, values, position) result(interpolated_value)
-  type(interpolator_t), intent(inout) :: this
-  R_TYPE,               intent(in)    :: values(:)
-  FLOAT,                intent(in)    :: position(:)
-  
+R_TYPE function X(interpolation_point_evaluate)(this, values) result(evaluated_value)
+  type(interpolation_point_t), intent(inout) :: this
+  R_TYPE,                      intent(in)    :: values(:)
+
   type(qshep_t) :: interp
 
-  ASSERT(this%ndim == 3)
+  PUSH_SUB(X(interpolation_point_evaluate))
 
-  ASSERT(ubound(values, dim = 1) >= this%npoints)
-  ASSERT(ubound(position, dim = 1) >= this%ndim)
+  ASSERT(this%interpolation%ndim == 3)
 
-  call qshep_init(interp, this%npoints, values, this%points(:, 1), this%points(:, 2), this%points(:, 3))
-  interpolated_value = qshep_interpolate(interp, values, position)
+  ASSERT(ubound(values, dim = 1) >= this%interpolation%npoints)
+
+  call qshep_init(interp, this%interpolation%npoints, values, &
+    this%interpolation%points(:, 1), this%interpolation%points(:, 2), this%interpolation%points(:, 3))
+
+  evaluated_value = qshep_interpolate(interp, values, this%position)
+
   call qshep_end(interp)
 
-end function X(interpolator_interpolate)
+  POP_SUB(X(interpolation_point_evaluate))
+
+end function X(interpolation_point_evaluate)
 
 !! Local Variables:
 !! mode: f90
