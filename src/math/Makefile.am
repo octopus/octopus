@@ -60,7 +60,8 @@ libmath_a_SOURCES =                      \
 	fftw_low.c                       \
 	minimizer.F90                    \
         pnfft.F90                        \
-	qshep.F90
+	qshep.F90                        \
+	interpolator.F90
 
 noinst_HEADERS =                   \
 	fft_inc.F90                      \
@@ -75,7 +76,8 @@ noinst_HEADERS =                   \
 	symm_op_inc.F90                  \
 	matrix_inc.F90                   \
 	nfft_inc.F90                     \
-	pnfft_inc.F90
+	pnfft_inc.F90                    \
+	interpolator_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -118,3 +120,4 @@ matrix.o : matrix.F90 matrix_inc.F90
 compressed_sensing.o : compressed_sensing.F90 blas.o
 minimizer.o : minimizer.F90 lalg_basic.o
 qshep.o : qshep.F90
+interpolator.o : interpolator.F90 interpolator_inc.F90 qshep.o
