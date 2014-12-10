@@ -179,6 +179,8 @@ contains
     end if
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
+
+    ASSERT(all(partition%part(:) > 0))
     
     ! Each process writes a portion of the partition
     if (ierr == 0) then
@@ -262,12 +264,15 @@ contains
     else
       SAFE_ALLOCATE(part_global(1:1))
     end if
+
 #ifdef HAVE_MPI
-      ! All nodes need to know the result
-      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
+    ! All nodes need to know the result
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
 #endif
 
-    ! If reading was successfull, then scatter the result
+    ASSERT(all(part_global(:) > 0))
+
+    ! If reading was successful, then scatter the result
     if (ierr == 0) then
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_SCATTERV)
@@ -282,6 +287,8 @@ contains
 #endif
     SAFE_DEALLOCATE_A(scounts)
     SAFE_DEALLOCATE_A(sdispls)
+
+    ASSERT(all(partition%part(:) > 0))
     
     POP_SUB(partition_load)
   end subroutine partition_load
@@ -323,6 +330,8 @@ contains
       rdispls(ipart) = rdispls(ipart-1) + rcounts(ipart-1)
     end do
 
+    ASSERT(all(partition%part(1:partition%np_local) > 0))
+
     if (present(root)) then
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_GATHERV)
@@ -340,6 +349,8 @@ contains
       call mpi_debug_out(partition%mpi_grp%comm, C_MPI_GATHERV)
 #endif
     end if
+
+    ASSERT(all(part_global(:) > 0))
 
     SAFE_DEALLOCATE_A(rdispls)
     SAFE_DEALLOCATE_A(rcounts)
