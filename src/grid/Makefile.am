@@ -67,7 +67,8 @@ libgrid_a_SOURCES =       \
 	submesh.F90             \
 	symmetrizer.F90         \
 	transfer_table.F90      \
-	hilbert.c
+	hilbert.c               \
+	mesh_interpolation.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \
@@ -87,8 +88,8 @@ noinst_HEADERS =                   \
 	subarray_inc.F90           \
 	submesh_inc.F90            \
 	symmetrizer_inc.F90        \
-	batch_ops_inc.F90
-
+	batch_ops_inc.F90          \
+	mesh_interpolation_inc.F90 
 
 include $(srcdir)/../common-rules.make
 
@@ -138,3 +139,6 @@ subarray.o : subarray.F90 subarray_inc.F90 batch.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
+mesh_interpolation.o : mesh_interpolation.F90 mesh_interpolation_inc.F90 mesh.o
+
+
