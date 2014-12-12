@@ -66,10 +66,10 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
       c11 = values(mesh%idx%lxyz_inv(nmin(1), nmax(2), nmax(3)))*(CNST(1.0) - xd(1)) + &
         values(mesh%idx%lxyz_inv(nmax(1), nmax(2), nmax(3)))*xd(1)
 
-      c0 = c00*(1 - xd(2)) + c10*xd(2)
-      c1 = c01*(1 - xd(2)) + c11*xd(2)
+      c0 = c00*(CNST(1.0) - xd(2)) + c10*xd(2)
+      c1 = c01*(CNST(1.0) - xd(2)) + c11*xd(2)
       
-      interpolated_value = c0*(1 - xd(3)) - c1*xd(3)
+      interpolated_value = c0*(CNST(1.0) - xd(3)) - c1*xd(3)
 
     end subroutine interpolation_3d
 
