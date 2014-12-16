@@ -555,7 +555,7 @@ contains
           call mesh_check_dump_compatibility(mesh, restart%pwd, "grid", restart%mpi_grp, &
             grid_changed, grid_reordered, restart%map, ierr)
 
-          ! Check whether an error occurred. If so, stop the calculation, because at the moment we really need a compatible mesh.
+          ! Check whether an error occurred. In this case we cannot read.
           if (ierr /= 0) then
             if (ierr == -1) then
               message(1) = "Unable to check mesh compatibility: unable to read mesh fingerprint"
@@ -564,7 +564,9 @@ contains
               message(1) = "Mesh from current calculation is not compatible with mesh found in"
               message(2) = "'"//trim(restart%pwd)//"'."
             end if
-            call messages_fatal(2)
+            message(3) = "No restart information will be read."
+            call messages_warning(3)
+            ierr = 1
           end if
 
           ! Print some warnings in case the mesh is compatible, but changed.
