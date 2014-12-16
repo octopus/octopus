@@ -32,6 +32,7 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
   mesh => this%mesh
 
   ASSERT(mesh%sb%dim <= 3)
+  ASSERT(.not. mesh%parallel_in_domains)
 
   posrel(1:mesh%sb%dim) = (position(1:mesh%sb%dim) - mesh%sb%box_offset(1:mesh%sb%dim))/mesh%spacing(1:mesh%sb%dim)
 
@@ -61,11 +62,11 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
   case(2)
 
     ! bilinear interpolation: http://en.wikipedia.org/wiki/Bilinear_interpolation
-    interpolated_value = &
-      values(mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 0))*(CNST(1.0) - xd(1))*(CNST(1.0) - xd(2)) + &    
-      values(mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 0))*xd(1)*(CNST(1.0) - xd(2)) + &    
-      values(mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 0))*(CNST(1.0) - xd(1))*xd(2) + &    
-      values(mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 0))*xd(1)*xd(2)
+    c0 = values(mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 0))*(CNST(1.0) - xd(1)) + &
+      values(mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 0))*xd(1)
+    c1 = values(mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 0))*(CNST(1.0) - xd(1)) + &
+      values(mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 0))*xd(1)
+    interpolated_value = c0*(CNST(1.0) - xd(2)) + c1*xd(2)
 
   case(1)
     
