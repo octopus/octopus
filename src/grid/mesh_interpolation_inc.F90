@@ -117,7 +117,12 @@ subroutine X(mesh_interpolation_test)(mesh)
 
     calculated = sum(coeff(1:mesh%sb%dim)*xx(1:mesh%sb%dim))
     interpolated = mesh_interpolation_evaluate(interp, ff, xx)
-    call messages_write('Random point ')
+    call messages_write('Random point')
+#ifdef R_TREAL
+    call messages_write(' real')
+#else
+    call messages_write(' complex')
+#endif
     call messages_write(itest, fmt = '(i3)')
     call messages_write(' error:')
     call messages_write(abs(calculated - interpolated), fmt = '(e8.2)', align_left = .true.)

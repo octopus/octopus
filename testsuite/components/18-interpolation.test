@@ -1,0 +1,141 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id:$
+
+Test       : Interpolation
+Programs   : oct-test
+TestGroups : short-run, components
+Enabled    : Yes
+
+Precision : 1e-12
+Input: 18-interpolation.01-1d.inp
+
+match ; Interpolation point real  1; GREP(out, 'Random point real  1 error:', 28, 0) ; 0.0
+match ; Interpolation point real  2; GREP(out, 'Random point real  2 error:', 28, 0) ; 0.0
+match ; Interpolation point real  3; GREP(out, 'Random point real  3 error:', 28, 0) ; 0.0
+match ; Interpolation point real  4; GREP(out, 'Random point real  4 error:', 28, 0) ; 0.0
+match ; Interpolation point real  5; GREP(out, 'Random point real  5 error:', 28, 0) ; 0.0
+match ; Interpolation point real  6; GREP(out, 'Random point real  6 error:', 28, 0) ; 0.0
+match ; Interpolation point real  7; GREP(out, 'Random point real  7 error:', 28, 0) ; 0.0
+match ; Interpolation point real  8; GREP(out, 'Random point real  8 error:', 28, 0) ; 0.0
+match ; Interpolation point real  9; GREP(out, 'Random point real  9 error:', 28, 0) ; 0.0
+match ; Interpolation point real 10; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+match ; Interpolation point real 11; GREP(out, 'Random point real 11 error:', 28, 0) ; 0.0
+match ; Interpolation point real 12; GREP(out, 'Random point real 12 error:', 28, 0) ; 0.0
+match ; Interpolation point real 13; GREP(out, 'Random point real 13 error:', 28, 0) ; 0.0
+match ; Interpolation point real 14; GREP(out, 'Random point real 14 error:', 28, 0) ; 0.0
+match ; Interpolation point real 15; GREP(out, 'Random point real 15 error:', 28, 0) ; 0.0
+match ; Interpolation point real 16; GREP(out, 'Random point real 16 error:', 28, 0) ; 0.0
+match ; Interpolation point real 17; GREP(out, 'Random point real 17 error:', 28, 0) ; 0.0
+match ; Interpolation point real 18; GREP(out, 'Random point real 18 error:', 28, 0) ; 0.0
+match ; Interpolation point real 19; GREP(out, 'Random point real 19 error:', 28, 0) ; 0.0
+match ; Interpolation point real 20; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+
+match ; Interpolation point complex  1; GREP(out, 'Random point complex  1 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  2; GREP(out, 'Random point complex  2 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  3; GREP(out, 'Random point complex  3 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  4; GREP(out, 'Random point complex  4 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  5; GREP(out, 'Random point complex  5 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  6; GREP(out, 'Random point complex  6 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  7; GREP(out, 'Random point complex  7 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  8; GREP(out, 'Random point complex  8 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  9; GREP(out, 'Random point complex  9 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 10; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 11; GREP(out, 'Random point complex 11 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 12; GREP(out, 'Random point complex 12 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 13; GREP(out, 'Random point complex 13 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 14; GREP(out, 'Random point complex 14 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 15; GREP(out, 'Random point complex 15 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 16; GREP(out, 'Random point complex 16 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 17; GREP(out, 'Random point complex 17 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 18; GREP(out, 'Random point complex 18 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 19; GREP(out, 'Random point complex 19 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 20; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0
+
+Input: 18-interpolation.02-2d.inp
+
+match ; Interpolation point real  1; GREP(out, 'Random point real  1 error:', 28, 0) ; 0.0
+match ; Interpolation point real  2; GREP(out, 'Random point real  2 error:', 28, 0) ; 0.0
+match ; Interpolation point real  3; GREP(out, 'Random point real  3 error:', 28, 0) ; 0.0
+match ; Interpolation point real  4; GREP(out, 'Random point real  4 error:', 28, 0) ; 0.0
+match ; Interpolation point real  5; GREP(out, 'Random point real  5 error:', 28, 0) ; 0.0
+match ; Interpolation point real  6; GREP(out, 'Random point real  6 error:', 28, 0) ; 0.0
+match ; Interpolation point real  7; GREP(out, 'Random point real  7 error:', 28, 0) ; 0.0
+match ; Interpolation point real  8; GREP(out, 'Random point real  8 error:', 28, 0) ; 0.0
+match ; Interpolation point real  9; GREP(out, 'Random point real  9 error:', 28, 0) ; 0.0
+match ; Interpolation point real 10; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+match ; Interpolation point real 11; GREP(out, 'Random point real 11 error:', 28, 0) ; 0.0
+match ; Interpolation point real 12; GREP(out, 'Random point real 12 error:', 28, 0) ; 0.0
+match ; Interpolation point real 13; GREP(out, 'Random point real 13 error:', 28, 0) ; 0.0
+match ; Interpolation point real 14; GREP(out, 'Random point real 14 error:', 28, 0) ; 0.0
+match ; Interpolation point real 15; GREP(out, 'Random point real 15 error:', 28, 0) ; 0.0
+match ; Interpolation point real 16; GREP(out, 'Random point real 16 error:', 28, 0) ; 0.0
+match ; Interpolation point real 17; GREP(out, 'Random point real 17 error:', 28, 0) ; 0.0
+match ; Interpolation point real 18; GREP(out, 'Random point real 18 error:', 28, 0) ; 0.0
+match ; Interpolation point real 19; GREP(out, 'Random point real 19 error:', 28, 0) ; 0.0
+match ; Interpolation point real 20; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+
+match ; Interpolation point complex  1; GREP(out, 'Random point complex  1 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  2; GREP(out, 'Random point complex  2 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  3; GREP(out, 'Random point complex  3 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  4; GREP(out, 'Random point complex  4 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  5; GREP(out, 'Random point complex  5 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  6; GREP(out, 'Random point complex  6 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  7; GREP(out, 'Random point complex  7 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  8; GREP(out, 'Random point complex  8 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  9; GREP(out, 'Random point complex  9 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 10; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 11; GREP(out, 'Random point complex 11 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 12; GREP(out, 'Random point complex 12 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 13; GREP(out, 'Random point complex 13 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 14; GREP(out, 'Random point complex 14 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 15; GREP(out, 'Random point complex 15 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 16; GREP(out, 'Random point complex 16 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 17; GREP(out, 'Random point complex 17 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 18; GREP(out, 'Random point complex 18 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 19; GREP(out, 'Random point complex 19 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 20; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0
+
+
+Input: 18-interpolation.03-3d.inp
+
+match ; Interpolation point real  1; GREP(out, 'Random point real  1 error:', 28, 0) ; 0.0
+match ; Interpolation point real  2; GREP(out, 'Random point real  2 error:', 28, 0) ; 0.0
+match ; Interpolation point real  3; GREP(out, 'Random point real  3 error:', 28, 0) ; 0.0
+match ; Interpolation point real  4; GREP(out, 'Random point real  4 error:', 28, 0) ; 0.0
+match ; Interpolation point real  5; GREP(out, 'Random point real  5 error:', 28, 0) ; 0.0
+match ; Interpolation point real  6; GREP(out, 'Random point real  6 error:', 28, 0) ; 0.0
+match ; Interpolation point real  7; GREP(out, 'Random point real  7 error:', 28, 0) ; 0.0
+match ; Interpolation point real  8; GREP(out, 'Random point real  8 error:', 28, 0) ; 0.0
+match ; Interpolation point real  9; GREP(out, 'Random point real  9 error:', 28, 0) ; 0.0
+match ; Interpolation point real 10; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+match ; Interpolation point real 11; GREP(out, 'Random point real 11 error:', 28, 0) ; 0.0
+match ; Interpolation point real 12; GREP(out, 'Random point real 12 error:', 28, 0) ; 0.0
+match ; Interpolation point real 13; GREP(out, 'Random point real 13 error:', 28, 0) ; 0.0
+match ; Interpolation point real 14; GREP(out, 'Random point real 14 error:', 28, 0) ; 0.0
+match ; Interpolation point real 15; GREP(out, 'Random point real 15 error:', 28, 0) ; 0.0
+match ; Interpolation point real 16; GREP(out, 'Random point real 16 error:', 28, 0) ; 0.0
+match ; Interpolation point real 17; GREP(out, 'Random point real 17 error:', 28, 0) ; 0.0
+match ; Interpolation point real 18; GREP(out, 'Random point real 18 error:', 28, 0) ; 0.0
+match ; Interpolation point real 19; GREP(out, 'Random point real 19 error:', 28, 0) ; 0.0
+match ; Interpolation point real 20; GREP(out, 'Random point real 20 error:', 28, 0) ; 0.0
+
+match ; Interpolation point complex  1; GREP(out, 'Random point complex  1 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  2; GREP(out, 'Random point complex  2 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  3; GREP(out, 'Random point complex  3 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  4; GREP(out, 'Random point complex  4 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  5; GREP(out, 'Random point complex  5 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  6; GREP(out, 'Random point complex  6 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  7; GREP(out, 'Random point complex  7 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  8; GREP(out, 'Random point complex  8 error:', 31, 0) ; 0.0
+match ; Interpolation point complex  9; GREP(out, 'Random point complex  9 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 10; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 11; GREP(out, 'Random point complex 11 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 12; GREP(out, 'Random point complex 12 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 13; GREP(out, 'Random point complex 13 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 14; GREP(out, 'Random point complex 14 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 15; GREP(out, 'Random point complex 15 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 16; GREP(out, 'Random point complex 16 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 17; GREP(out, 'Random point complex 17 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 18; GREP(out, 'Random point complex 18 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 19; GREP(out, 'Random point complex 19 error:', 31, 0) ; 0.0
+match ; Interpolation point complex 20; GREP(out, 'Random point complex 20 error:', 31, 0) ; 0.0

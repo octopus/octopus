@@ -63,6 +63,10 @@ dist_share_DATA =                                  \
 	16-hartree_3d_libisf.01-libisf.inp         \
 	16-hartree_3d_libisf.02-libisf.inp         \
 	17-recipe.inp                              \
-        17-recipe.test
+        17-recipe.test                             \
+	18-interpolation.01-1d.inp                 \
+	18-interpolation.02-2d.inp                 \
+	18-interpolation.03-3d.inp                 \
+	18-interpolation.test
 
 CLEANFILES = *~ *.bak
