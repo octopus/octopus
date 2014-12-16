@@ -28,6 +28,7 @@ program oct_test
   use global_m
   use io_m
   use messages_m
+  use mesh_interpolation_m
   use mpi_m
   use parser_m
   use poisson_m
@@ -48,7 +49,8 @@ program oct_test
   integer, parameter ::              &
     HARTREE_TEST       =   1,        &
     DER_TEST           =   2,        &
-    ORT_TEST           =   3
+    ORT_TEST           =   3,        &
+    INTERPOLATION_TEST =   4
 
   integer, parameter :: &
     TEST_REAL    = 1,   &
@@ -78,6 +80,8 @@ program oct_test
   !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
   !%Option orthogonalization 3
   !% Tests the implementation of the orthogonalization routines.
+  !%Option interpolation 4
+  !% Test the interpolation routines.
   !%End
   call parse_integer('TestMode', HARTREE_TEST, test_mode)
   call datasets_init(1)
@@ -119,6 +123,8 @@ program oct_test
     call test_derivatives()
   case(ORT_TEST)
     call test_orthogonalization()
+  case(INTERPOLATION_TEST)
+    call test_interpolation()  
   end select
 
   call fft_all_end()
@@ -206,6 +212,35 @@ program oct_test
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
+
+  ! ---------------------------------------------------------
+
+  subroutine test_interpolation()
+    type(system_t) :: sys
+
+    PUSH_SUB(test_interpolation)
+
+    call system_init(sys)
+
+    call messages_write('Info: Testing real interpolation routines')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call dmesh_interpolation_test(sys%gr%mesh)
+
+    call messages_new_line()
+    call messages_write('Info: Testing complex interpolation routines')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call zmesh_interpolation_test(sys%gr%mesh)
+
+    call system_end(sys)
+
+    POP_SUB(test_interpolation)
+  end subroutine test_interpolation
 
 end program oct_test
 

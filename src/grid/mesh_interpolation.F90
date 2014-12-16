@@ -20,7 +20,10 @@
 #include "global.h"
 
 module mesh_interpolation_m
+  use c_pointer_m
   use global_m
+  use io_m
+  use loct_math_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -32,7 +35,9 @@ module mesh_interpolation_m
     mesh_interpolation_t,             &
     mesh_interpolation_init,          &
     mesh_interpolation_end,           &
-    mesh_interpolation_evaluate
+    mesh_interpolation_evaluate,      &
+    dmesh_interpolation_test,         &
+    zmesh_interpolation_test
 
   type mesh_interpolation_t
     private
@@ -72,7 +77,8 @@ contains
     POP_SUB(mesh_interpolation_end)
    
   end subroutine mesh_interpolation_end
- 
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "mesh_interpolation_inc.F90"
