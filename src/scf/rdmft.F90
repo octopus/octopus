@@ -190,13 +190,13 @@ contains
 
     call states_copy(psi2, st)
    
-    ! Localize unoccupied states by multiplying them with a gaussin exponential 
+    ! Localize unoccupied states by multiplying them with a gaussian exponential 
     do ip = 1, gr%mesh%np
       call index_to_coords(gr%mesh%idx, ip, ix)
       xp = ix(1)*gr%mesh%spacing(1)
       yp = ix(2)*gr%mesh%spacing(2)
       zp = ix(3)*gr%mesh%spacing(3)
-      do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterium here, this is specific to the H_2 dissociation
+      do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
         do jst = 1, geo%natoms
           psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2)
           psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(yp-geo%atom(jst)%x(2))**2)
@@ -221,7 +221,7 @@ contains
     write(message(1),'(a)') 'Initial minimization of occupation numbers'
     call messages_info(1)
    
-    ! Start the actual minimization, first step is minimizatio of occupation numbers
+    ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
     do iter = 1, rdm%max_iter
       write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter

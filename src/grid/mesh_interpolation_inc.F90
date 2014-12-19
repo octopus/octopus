@@ -77,7 +77,7 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
 
   end select
   
-  POP_SUB(X(interpolation_point_evaluate))
+  POP_SUB(X(mesh_interpolation_evaluate))
 
 end function X(mesh_interpolation_evaluate)
 
@@ -93,6 +93,8 @@ subroutine X(mesh_interpolation_test)(mesh)
   type(c_ptr)  :: random_gen_pointer
   type(mesh_interpolation_t) :: interp
   integer, parameter :: ntest_points = 20
+
+  PUSH_SUB(X(mesh_interpolation_test))
 
   SAFE_ALLOCATE(ff(1:mesh%np_part))
 
@@ -137,6 +139,7 @@ subroutine X(mesh_interpolation_test)(mesh)
 
   SAFE_DEALLOCATE_A(ff)
 
+  POP_SUB(X(mesh_interpolation_test))
 end subroutine X(mesh_interpolation_test)
 
 
@@ -144,5 +147,3 @@ end subroutine X(mesh_interpolation_test)
 !! mode: f90
 !! coding: utf-8
 !! End:
-
-
