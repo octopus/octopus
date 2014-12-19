@@ -196,7 +196,7 @@ contains
       xp = ix(1)*gr%mesh%spacing(1)
       yp = ix(2)*gr%mesh%spacing(2)
       zp = ix(3)*gr%mesh%spacing(3)
-      do ist = (st%qtot)/2+2, 5 ! we need to find a better criterium here, this is specific to the H_2 dissociation
+      do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterium here, this is specific to the H_2 dissociation
         do jst = 1, geo%natoms
           psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2)
           psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(yp-geo%atom(jst)%x(2))**2)
