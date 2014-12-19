@@ -1,4 +1,5 @@
 ExperimentalFeatures=yes
+TheoryLevel=rdmft
 CalculationMode = gs
 
 %Coordinates
@@ -9,7 +10,8 @@ CalculationMode = gs
 
 Radius = 6.5
 Spacing = 0.55
-Extrastates = 6
-TheoryLevel = RDMFT
+Extrastates = 4
+
+RDMConvEner=1e-2
 
 

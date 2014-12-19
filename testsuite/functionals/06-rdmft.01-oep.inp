@@ -1,4 +1,6 @@
 CalculationMode = gs
+XCFunctional=oep_x 
+FromScratch = yes
 
 %Coordinates
  'H' |  0.717157 | 0 | 0
@@ -9,11 +11,7 @@ FromScratch = yes
 
 Radius = 6.5
 Spacing = 0.55
-Extrastates = 6
-TheoryLevel = hartree_fock
+Extrastates = 4
 
-
-SmearingFunction = Fermi_dirac
-Smearing=0.5
 
 ConvRelDens = 1e-1
