@@ -93,7 +93,7 @@ contains
     rdm%occsum = M_ZERO
     rdm%scale_f = CNST(1e-2)
     rdm%maxFO = M_ZERO
-    rdm%iter = 1 !Why is this not M_ONE?
+    rdm%iter = 1 
     
 
     !%Variable RDMMaxIter
@@ -171,7 +171,6 @@ contains
     integer :: iter, icount, ip, ist, jst
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, xp, yp, zp 
     integer, allocatable :: ix(:)
-    type(states_t)   :: psi2 
     logical :: conv
     
     PUSH_SUB(scf_rdmft)
@@ -188,7 +187,6 @@ contains
     energy = M_ZERO 
     conv = .FALSE.
 
-    call states_copy(psi2, st)
    
     ! Localize unoccupied states by multiplying them with a gaussian exponential 
     do ip = 1, gr%mesh%np
@@ -198,25 +196,20 @@ contains
       zp = ix(3)*gr%mesh%spacing(3)
       do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
         do jst = 1, geo%natoms
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2)
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(yp-geo%atom(jst)%x(2))**2)
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.1*(zp-geo%atom(jst)%x(3))**2)
+          st%dpsi(ip,ist,1,1) = &
+           & st%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
         end do
       end do
       do ist = 6, st%nst
         do jst = 1, geo%natoms
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.2*(xp-geo%atom(jst)%x(1))**2)
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.2*(yp-geo%atom(jst)%x(2))**2)
-          psi2%dpsi(ip,ist,1,1) = psi2%dpsi(ip,ist,1,1)*exp(-0.2*(zp-geo%atom(jst)%x(3))**2)
+          st%dpsi(ip,ist,1,1) = &
+            &st%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
         end do
       end do
     end do
 
     ! Orthogonalize the resulting orbitals
-    psi2%d%orth_method = 1
-    call dstates_orthogonalization_full(psi2,gr%mesh,1)
-    call states_copy(st, psi2)
-    call states_end(psi2)
+    call dstates_orthogonalization_full(st,gr%mesh,1)
 
     write(message(1),'(a)') 'Initial minimization of occupation numbers'
     call messages_info(1)
@@ -320,11 +313,11 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 1000, theta, energy) 
+    call  multid_minimize(st%nst, 500, theta, energy) 
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 1000, theta, energy) 
+    call  multid_minimize(st%nst, 500, theta, energy) 
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -335,7 +328,7 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 1000, theta, energy) 
+        call  multid_minimize(st%nst, 500, theta, energy) 
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -343,7 +336,7 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 1000, theta, energy) 
+        call  multid_minimize(st%nst, 500, theta, energy) 
       end if
     end do
 
@@ -351,7 +344,7 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call  multid_minimize(st%nst, 1000, theta, energy) 
+      call  multid_minimize(st%nst, 500, theta, energy) 
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -435,7 +428,7 @@ contains
       end do
    
       if (iexit /= nst) then
-        write(message(1),'(a)') 'Did not manage to minimize the energy with respect to all occupation numbers for this mu'
+        write(message(1),'(a)') 'Did not manage to minimize the energy with respect to all occupation numbers for mu',rdm%mu
         write(message(2), '(a, i3, a)') 'Only', iexit, 'derivatives are below the tolerance' 
         call messages_info(2)
       end if
