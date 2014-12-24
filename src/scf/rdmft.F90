@@ -133,7 +133,7 @@ contains
     !% The default is 1.0e-6
     !%End
 
-    call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-6), rdm%conv_ener)
+    call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-5), rdm%conv_ener)
     
     
     POP_SUB(rdmft_init)
@@ -196,14 +196,14 @@ contains
       zp = ix(3)*gr%mesh%spacing(3)
       do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
         do jst = 1, geo%natoms
-          st%dpsi(ip,ist,1,1) = &
-           & st%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
+          st%dpsi(ip,1,ist,1) = &
+           & st%dpsi(ip,1,ist,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
         end do
       end do
       do ist = 6, st%nst
         do jst = 1, geo%natoms
-          st%dpsi(ip,ist,1,1) = &
-            &st%dpsi(ip,ist,1,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
+          st%dpsi(ip,1,ist,1) = &
+            &st%dpsi(ip,1,ist,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
         end do
       end do
     end do
@@ -244,7 +244,7 @@ contains
         rdm%iter = rdm%iter + 1
       end do
 
-      write(message(1),'(a,es15.8)') ' etot RDMFT after orbital minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(1),'(a,es15.5)') ' etot RDMFT after orbital minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
       if ((abs(energy_occ-energy)/abs(energy) < rdm%conv_ener).and.rdm%maxFO < rdm%toler) then
         conv = .TRUE.
@@ -258,8 +258,8 @@ contains
       call messages_info(1)
     else
       write(message(1),'(a,i3,a)')  'The calcualtion did not converged after', iter, 'iterations '
-      write(message(2),'(a,es15.8)') 'The energy difference between the last two iterations is ', abs(energy_occ-energy)
-      write(message(3),'(a,es15.8)') 'The maximal non-diagonal element of the Hermitian matrix F is', rdm%maxFO
+      write(message(2),'(a,es15.5)') 'The energy difference between the last two iterations is ', abs(energy_occ-energy)
+      write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is', rdm%maxFO
       call messages_info(3)
     end if
 
@@ -356,7 +356,7 @@ contains
       cycle
     end do
     if (icycle >= 50) then
-      write(message(1),'(a,1x,f11.6)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
+      write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
     endif
 
@@ -364,13 +364,13 @@ contains
       st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
     end do
     
-    write(message(1),'(a,1x,f11.6)') 'Occupations sum', rdm%occsum
-    write(message(2),'(a,es15.8)') ' etot RDMFT after occ minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    write(message(1),'(a,1x,f11.4)') 'Occupations sum', rdm%occsum
+    write(message(2),'(a,es15.5)') ' etot RDMFT after occ minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     write(message(3),'(a4,1x,a12)')'#st','Occupation'
     call messages_info(3)   
 
     do ist = 1, st%nst
-      write(message(ist),'(i4,3x,f11.6)') ist, st%occ(ist, 1)
+      write(message(ist),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
     end do
 
     call messages_info(st%nst)
