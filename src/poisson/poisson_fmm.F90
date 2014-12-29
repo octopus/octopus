@@ -161,9 +161,7 @@ contains
     !% $V_{self.int.}(i):=\int_{\Omega(i)}d\vec{r} \frac{\rho(\vec{r}(i))}{|\vec{r}-\vec{r}(i)|}$
     !%
     !% In the FMM version implemented into Octopus, a correction method
-    !% for $V_H(i)$ is used (see "A survey of the parallel performance and
-    !% the accuracy of Poisson solvers for electronic structure
-    !% calculations", by Pablo García-Risueño, Joseba Alberdi-Rodriguez, et al.)
+    !% for $V_H(i)$ is used (see García-Risueño et al., J. Comp. Chem. 35 427 (2014)).
     !% This method defines cells neighbouring cell $i$, which
     !% have volume $\Omega(i)/8$ (in 3D) and charge density obtained by
     !% interpolation. In the calculation of $V_H(i)$, in order to avoid
