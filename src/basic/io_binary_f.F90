@@ -131,7 +131,7 @@ contains
   ! ------------------------------------------------------
 
   subroutine io_binary_parallel_end(file_handle)
-    integer, intent(in) :: file_handle
+    integer, intent(inout) :: file_handle
 
     logical :: finalized
 
