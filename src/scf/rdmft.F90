@@ -102,7 +102,7 @@ contains
     !%Section SCF::RDMFT
     !%Description
     !% Even if the convergence criterion is not satisfied, the minimization will stop
-    !% after this number of iterations. The default is 400.
+    !% after this number of iterations.
     !%End 
     call parse_integer(datasets_check('RDMMaxIter'), 400, rdm%max_iter)
     
@@ -116,21 +116,20 @@ contains
     !% stopped when all derivatives of the energy wrt. each occupation number 
     !% are smaller than this criterion. The bisection for finding the correct mu that is needed
     !% for the occupation number minimization also stops according to this criterion.
-    !% This number gets stricter with more iterations. The default is 1.0e-1.
+    !% This number gets stricter with more iterations.
     !%End
 
     call parse_float(datasets_check('RDMTolerance'), CNST(1.0e-1), rdm%toler)
 
     !%Variable RDMConvEner
     !%Type float
-    !%Default 1e-6 Ha
+    !%Default 1e-5 Ha
     !%Section SCF::RDMFT
     !% Convergence criterion for stopping the overall minimization of the energy with
     !% respect to occupation numbers and the orbitals. The minimization of the 
     !% energy stops when the total energy difference between two subsequent 
     !% minimizations of the energy with respect to the occupation numbers and the
     !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
-    !% The default is 1.0e-6
     !%End
 
     call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-5), rdm%conv_ener)
