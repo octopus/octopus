@@ -143,6 +143,8 @@ contains
 
     PUSH_SUB(vibrations_symmetrize_dyn_matrix)
 
+    ! FIXME: enforce acoustic sum rule.
+    
     maxdiff = M_ZERO
     do imat = 1, this%num_modes
       do jmat = imat + 1, this%num_modes
@@ -167,7 +169,6 @@ contains
     type(vibrations_t), intent(inout) :: this
     type(geometry_t),   intent(in)    :: geo
 
-    FLOAT :: factor
     integer :: iatom, idir, jatom, jdir, imat, jmat
 
     PUSH_SUB(vibrations_normalize_dyn_matrix)
@@ -181,10 +182,9 @@ contains
           do jdir = 1, this%ndim
             
             jmat = vibrations_get_index(this, jatom, jdir)
-
-            factor = vibrations_norm_factor(this, geo, iatom, jatom)
             
-            this%dyn_matrix(jmat, imat) = this%dyn_matrix(jmat, imat) * factor
+            this%dyn_matrix(jmat, imat) = &
+              this%dyn_matrix(jmat, imat) * vibrations_norm_factor(this, geo, iatom, jatom)
 
           end do
         end do
@@ -203,7 +203,7 @@ contains
     integer,            intent(in) :: jatom
 
     vibrations_norm_factor = this%total_mass / &
-      (sqrt(species_weight(geo%atom(iatom)%spec)) * sqrt(species_weight(geo%atom(jatom)%spec)))
+      sqrt(species_weight(geo%atom(iatom)%spec) * species_weight(geo%atom(jatom)%spec))
 
   end function vibrations_norm_factor
 
@@ -266,6 +266,7 @@ contains
     this%normal_mode = this%dyn_matrix
     call lalg_eigensolve(this%num_modes, this%normal_mode, this%freq)
 
+    ! FIXME: why not remove total mass here and in norm_factor?
     this%freq(1:this%num_modes) = -this%freq(1:this%num_modes) / this%total_mass
 
     if(any(this%freq(1:this%num_modes) < -M_EPSILON)) then

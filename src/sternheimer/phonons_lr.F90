@@ -410,7 +410,7 @@ contains
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               end if
-
+              ! FIXME: consolidate these two cases above
 
               vib%dyn_matrix(vibrations_get_index(vib, jatom, jdir), vibrations_get_index(vib, iatom, idir)) = -ac
 
@@ -450,7 +450,7 @@ contains
             write(iunit_ir, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
           end do
 
-          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
+          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/ndim)
           write(iunit_ir, '(f17.8)') units_from_atomic(units_out%length, lir(ndim + 1))
         end do
       end do
