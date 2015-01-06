@@ -167,9 +167,8 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm  !< Hamiltonian
     type(output_t),       intent(in)    :: outp !< output
     
-    integer :: iter, icount, ip, ist, jst
-    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, xp, yp, zp 
-    integer, allocatable :: ix(:)
+    integer :: iter, icount, ip, ist, iatom
+    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg
     logical :: conv
     
     PUSH_SUB(scf_rdmft)
@@ -178,31 +177,22 @@ contains
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
     
-    SAFE_ALLOCATE(ix(1:3)) 
-    ix = M_ZERO 
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
-    conv = .FALSE.
-
+    conv = .false.
    
     ! Localize unoccupied states by multiplying them with a gaussian exponential 
     do ip = 1, gr%mesh%np
-      call index_to_coords(gr%mesh%idx, ip, ix)
-      xp = ix(1)*gr%mesh%spacing(1)
-      yp = ix(2)*gr%mesh%spacing(2)
-      zp = ix(3)*gr%mesh%spacing(3)
       do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
-        do jst = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = &
-           & st%dpsi(ip,1,ist,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
+        do iatom = 1, geo%natoms
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.1*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
         end do
       end do
       do ist = 6, st%nst
-        do jst = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = &
-            &st%dpsi(ip,1,ist,1)*exp(-0.1*(xp-geo%atom(jst)%x(1))**2-0.1*(yp-geo%atom(jst)%x(2))**2-0.1*(zp-geo%atom(jst)%x(3))**2)
+        do iatom = 1, geo%natoms
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.1*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
         end do
       end do
     end do
