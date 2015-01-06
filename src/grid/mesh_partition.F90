@@ -75,7 +75,7 @@ contains
   subroutine mesh_partition(mesh, lapl_stencil, vsize)
     type(mesh_t),      intent(inout)  :: mesh
     type(stencil_t),   intent(in)     :: lapl_stencil
-    integer,           intent(in)     :: vsize        !< number of partition to be created. Might
+    integer,           intent(in)     :: vsize        !< number of partitions to be created. Might
                                                       !! be different from the actual number of
                                                       !! domains
 
@@ -377,7 +377,7 @@ contains
       write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
       call messages_info(1)
 
-      ! Call to ParMETIS with no inbalance tolerance
+      ! Call to ParMETIS with no imbalance tolerance
 #ifdef HAVE_PARMETIS
       call oct_parmetis_v3_partkway(vtxdist(1), xadj(1), adjncy(1), & 
            1, mesh%mpi_grp%size, tpwgts(1), 1.05_4, & 
@@ -393,7 +393,6 @@ contains
     ASSERT(all(part(1:nv) > 0))
     ASSERT(all(part(1:nv) <= vsize))
     call partition_set(mesh%inner_partition, part)
-
 
     if (in_debug_mode .or. library == METIS) then
       SAFE_DEALLOCATE_A(xadj_global)
