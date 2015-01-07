@@ -70,7 +70,7 @@ contains
     !%Variable ComplexScaling
     !%Type flag
     !%Default none
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% (experimental) Global complex scaling. The options 
     !% allow to scale space and time coordinates in the Hamiltonian.
@@ -106,9 +106,9 @@ contains
       !%Variable ComplexScalingTheta
       !%Type float 
       !%Default 0.3
-      !%Section Hamiltonian
+      !%Section Hamiltonian::ComplexScaling
       !%Description
-      !% The spatial coordinate complex scaling angle \theta.
+      !% The spatial coordinate complex scaling angle \theta, in radians.
       !% Allowed values must be in the range 0 <= \theta < \pi/4. 
       !%End
       call parse_float(datasets_check('ComplexScalingTheta'), CNST(0.3), this%theta)
@@ -120,7 +120,7 @@ contains
     !%Variable ComplexScalingRotateSpectrum
     !%Type float
     !%Default 0.0
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% The order of occupation of eigenvalues is by
     !% real part unless otherwise specified.  This parameter 
@@ -133,7 +133,7 @@ contains
     !%Variable ComplexScalingPenalizationFactor
     !%Type float
     !%Default 2
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% Eigenstates eps will be ordered by
     !%  \Re(\epsilon) + penalizationfactor (\Im(\epsilon))^2
@@ -145,21 +145,21 @@ contains
     !%Variable ComplexScalingLocalizedStates
     !%Type integer
     !%Default 0
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% It will be assumed that this many localized states are present in the calculation.  Localized
     !% states will be occupied as ordered by real part of the energy.  Any remaining states will then
     !% be ordered by localization as measured.  Localization is measured by integrating the square
-    !% of each wavefunction within ComplexScalingLocalizationRadius.
+    !% of each wavefunction within <tt>ComplexScalingLocalizationRadius</tt>.
     !%End    
     call parse_integer(datasets_check('ComplexScalingLocalizedStates'), 0, this%nlocalizedstates)
 
     !%Variable ComplexScalingLocalizationThreshold
     !%Type float
-    !%Default 1
-    !%Section Hamiltonian
+    !%Default 1.0
+    !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% If the part of a state beyond ComplexScalingLocalizationRadius has a norm greater than this value,
+    !% If the part of a state beyond <tt>ComplexScalingLocalizationRadius</tt> has a norm greater than this value,
     !% the state will be considered a continuum state.
     !%End
     call parse_float(datasets_check('ComplexScalingLocalizationThreshold'), M_ONE, this%localizationthreshold)
@@ -167,7 +167,7 @@ contains
     !%Variable ComplexScalingAlpha
     !%Type float 
     !%Default 2*theta
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% The time coordinate complex scaling angle \alpha_r used to evolve 
     !% right states.  
@@ -181,7 +181,7 @@ contains
     !%Variable ComplexScalingAlphaLeft
     !%Type float 
     !%Default ComplexScalingAlpha
-    !%Section Hamiltonian
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% The time coordinate complex scaling angle \alpha_l used to evolve 
     !% left states.  
@@ -191,7 +191,7 @@ contains
     !%Variable ComplexScalingLocalizationRadius
     !%Type float
     !%Default 0.0
-    !%Section States
+    !%Section Hamiltonian::ComplexScaling
     !%Description
     !% Radius used to determine whether a state is a continuum state.
     !%End
