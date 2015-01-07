@@ -549,10 +549,11 @@ contains
 
 
   ! --------------------------------------------------------------------------
-  !> d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]])
+  !> d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]]) =
   !! for i  = j : 1 - [ri,[rj,Vnl]]
   !! for i != j : -(1/2) [ri,[rj,Vnl]]
   !! Ref: Eq. 3 from M Cardona and FH Pollak, Phys. Rev. 142, 530-543 (1966)
+  !! Except everything is times minus one, since our kdotp perturbation is d/d(ik)
   subroutine kdotp
     integer :: iatom
     R_TYPE, allocatable :: cpsi(:,:)
@@ -577,9 +578,9 @@ contains
 
     if(this%dir == this%dir2) then
       ! add delta_ij
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - f_out(ip, idim) + f_in_copy(ip, idim)
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in_copy(ip, idim)
     else
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = - M_HALF * f_out(ip, idim)
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = M_HALF * f_out(ip, idim)
     endif
 
     SAFE_DEALLOCATE_A(cpsi)
@@ -599,7 +600,7 @@ subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, i
   R_TYPE,              intent(out)   :: f_out(:)
   integer,             intent(in)    :: iatom, idir, jdir
 
-  ! FIX ME: may need to tell derivatives_oper not to apply boundary conditions
+  ! FIXME: may need to tell derivatives_oper not to apply boundary conditions
 
   R_TYPE, allocatable :: fin(:, :)
   R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
@@ -682,6 +683,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
       end do
     end do
     
+    ! This term applies only to matrix elements (iatom, idir; iatom, jdir)
     do imat = 1, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)

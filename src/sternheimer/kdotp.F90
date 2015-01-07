@@ -274,7 +274,6 @@ contains
       write(message(1),'(a,g12.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
 
-      ! TODO: use equality of mixed partials to calculate fewer of these
       if(calc_2nd_order) then
         ! by equality of mixed partial derivatives, kdotp_vars%lr2(idir, idir2) = kdotp_vars%lr2(idir2, idir)
         do idir2 = idir, pdim
