@@ -187,7 +187,7 @@ contains
     !% symmetry.
     !%
     !% The default is yes, unless symmetries are broken in one
-    !% direction by the SymmetryBreakDir block.
+    !% direction by the <tt>SymmetryBreakDir</tt> block.
     !% 
     !% Warning: For time propagation runs with an external field,
     !% time-reversal symmetry should not be used.
@@ -343,6 +343,7 @@ contains
 
       call kpoints_grid_copy(this%full, this%reduced)
 
+      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
 
       if(this%use_symmetries) then
 
@@ -371,7 +372,6 @@ contains
           ASSERT(all(symm_ops(ik, 1:num_symm_ops(ik)) <= symm%nops))
         end do
 
-        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
         
         this%num_symmetry_ops(1:this%reduced%npoints) = num_symm_ops(1:this%reduced%npoints)
@@ -380,6 +380,13 @@ contains
         
         SAFE_DEALLOCATE_A(num_symm_ops)
         SAFE_DEALLOCATE_A(symm_ops)
+
+      else
+
+        SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
+        this%num_symmetry_ops(1:this%reduced%npoints) = 1
+        this%symmetry_ops(1:this%reduced%npoints, 1) = 1
+        
       end if
       
       do ik = 1, this%full%npoints
