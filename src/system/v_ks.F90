@@ -552,7 +552,10 @@ contains
       if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
         call messages_not_implemented('ADSIC with MGGAs')
       end if
-      
+      if (st%d%ispin == SPINORS) then
+        call messages_not_implemented('ADSIC with non-collinear spin')      
+      end if
+
       SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
       SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
@@ -565,11 +568,13 @@ contains
         qsp(:) = qsp(:)+ st%occ(ist, :) * st%d%kweights(:)
       end do
 
-      do ispin = 1, st%d%nspin
-        rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-      end do
-
       if(cmplxscl) then
+        if (st%d%ispin /= UNPOLARIZED) then
+          call messages_not_implemented('ADSIC with spin-polarization and complex scaling')
+        end if
+
+        rho(:, 1) = ks%calc%density(:, 1) / qsp(1)
+
         SAFE_ALLOCATE(Imrho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE(Imvxc_sic(1:ks%gr%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE(zvh_sic(1:ks%gr%mesh%np))
@@ -603,12 +608,28 @@ contains
         SAFE_DEALLOCATE_P(zvh_sic)
         SAFE_DEALLOCATE_P(zrho_total)
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-          st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-          vxc_sic)
+        select case (st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)
+          do ispin = 1, st%d%nspin
+            if (qsp(ispin) == M_ZERO) cycle
+
+            rho = M_ZERO
+            vxc_sic = M_ZERO
+
+            rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+                 st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), qsp(ispin), &
+                 vxc_sic)
+
+            ks%calc%vxc = ks%calc%vxc - vxc_sic
+          end do
+
+        case (SPINORS)
+          !TODO
+        end select
+
         rho(:, 1) = ks%calc%total_density / st%qtot
         call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
-        ks%calc%vxc = ks%calc%vxc - vxc_sic
         forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
       end if
 
