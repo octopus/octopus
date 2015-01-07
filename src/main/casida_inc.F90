@@ -410,10 +410,11 @@ end subroutine X(casida_lr_hmat2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_forces)
+subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file, is_forces)
   type(casida_t),      intent(inout) :: cas
   type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(in)    :: st
+  type(v_ks_t),        intent(in)    :: ks
   type(mesh_t),        intent(in)    :: mesh
   R_TYPE,              intent(out)   :: matrix(:,:)
   FLOAT,               intent(in)    :: xc(:,:,:)
@@ -589,15 +590,15 @@ contains
     if(present(mtxel_vh)) then
       coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
       if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
+      if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
       if(abs(coeff_vh) > M_EPSILON) then
         if(qi /= saved%qi  .or.   qa /= saved%qa .or.  mu /= saved%mu) then
           saved%X(pot)(1:mesh%np) = M_ZERO
           if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
-
           saved%qi = qi
           saved%qa = qa
           saved%mu = mu
-      else
+        else
         endif
         ! value of pot is retained between calls
         mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
@@ -801,7 +802,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
-        call X(casida_get_matrix)(cas, hm, st, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
+        call X(casida_get_matrix)(cas, hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else
         cas%X(mat2) = M_ZERO

@@ -59,6 +59,7 @@ module casida_m
   use unit_m
   use unit_system_m
   use utils_m
+  use v_ks_m
   use phonons_lr_m
   use xc_m
   
@@ -672,6 +673,11 @@ contains
       else
         call xc_get_fxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, cas%fxc)
       endif
+
+      if (sys%ks%sic_type == SIC_ADSIC) then
+        call fxc_add_adsic(sys%ks, st, mesh, cas)
+      end if
+
     end if
 
     restart_filename = 'kernel'
@@ -682,11 +688,11 @@ contains
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
-        call dcasida_get_matrix(cas, hm, st, mesh, cas%dmat, cas%fxc, restart_filename)
+        call dcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
         cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
         call dcasida_solve(cas, st)
       else
-        call zcasida_get_matrix(cas, hm, st, mesh, cas%zmat, cas%fxc, restart_filename)
+        call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
         call zcasida_solve(cas, st)
       endif
@@ -755,6 +761,43 @@ contains
 
       POP_SUB(casida_work.solve_eps_diff)
     end subroutine solve_eps_diff
+
+    ! ---------------------------------------------------------
+    subroutine fxc_add_adsic(ks, st, mesh, cas)
+      type(v_ks_t),   intent(in)    :: ks
+      type(states_t), intent(in)    :: st
+      type(mesh_t),   intent(in)    :: mesh
+      type(casida_t), intent(inout) :: cas
+
+      FLOAT, allocatable :: rho(:, :)
+      FLOAT, allocatable :: fxc_sic(:,:,:)
+
+      PUSH_SUB(casida_work.fxc_add_adsic)
+
+      !Check spin and triplets
+      if (st%d%ispin /= UNPOLARIZED) then
+        message(1) = "Casida calculation with ADSIC not implemented for spin-polarized calculations."
+        call messages_fatal(1)
+      end if
+      if (cas%triplet) then
+        message(1) = "Casida calculation with ADSIC not implemented for triplet excitations."
+        call messages_fatal(1)
+      end if
+
+      SAFE_ALLOCATE(fxc_sic(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
+      fxc_sic = M_ZERO
+      rho = cas%rho/st%qtot
+
+      call xc_get_fxc(ks%xc, mesh, rho, 1, fxc_sic)
+
+      cas%fxc = cas%fxc - fxc_sic/st%qtot
+
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(fxc_sic)
+
+      POP_SUB(casida_work.fxc_add_adsic)
+    end subroutine fxc_add_adsic
 
   end subroutine casida_work
 
