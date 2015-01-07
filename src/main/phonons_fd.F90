@@ -65,6 +65,15 @@ contains
 
     PUSH_SUB(phonons_run)
 
+    ! Why not? The symmetries are computed only for the unperturbed geometry,
+    ! and are not valid when the atoms are displaced.
+    ! FIXME: implement instead use of symmetry over dynamical matrix to make things more efficient.
+    if(sys%st%symmetrize_density .or. sys%gr%sb%kpoints%use_symmetries) then
+      message(1) = "Cannot compute vibrational modes by finite differences when symmetry is being used."
+      message(2) = "Set KPointsUseSymmetries = no and SymmetrizeDensity = no, for gs run and this run."
+      call messages_fatal(2)
+    endif
+    
     call init_()
 
     ! load wavefunctions
@@ -155,6 +164,8 @@ contains
     forces = M_ZERO
     forces0 = M_ZERO
 
+    ! FIXME: why displace in + and -? Could just do + and take difference from undisplaced.
+    
     do iatom = 1, geo%natoms
       do alpha = 1, mesh%sb%dim
         imat = vibrations_get_index(vib, iatom, alpha)
