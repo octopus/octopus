@@ -243,7 +243,11 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                   if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
                 end do
 
-                ASSERT(iatom_symm <= geo%natoms)
+                if(iatom_symm > geo%natoms) then
+                  write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
+                  write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
+                  call messages_fatal(2)
+                endif
 
                 do idir = 1, gr%mesh%sb%dim
                   force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
