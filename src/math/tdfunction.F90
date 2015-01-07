@@ -162,7 +162,7 @@ contains
     !% 
     !% The function is a Gaussian:
     !%
-    !% <math> f(t) = F_0 exp( - (t-t_0)/(2\tau_0^2) ) </math>
+    !% <math> f(t) = F_0 exp( - (t-t_0)^2/(2\tau_0^2) ) </math>
     !%
     !% <math>F_0</math> = amplitude.
     !%
