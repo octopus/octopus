@@ -260,8 +260,6 @@ subroutine X(get_transition_densities) (cas, sys)
   R_TYPE, allocatable :: n0I(:)
   type(unit_t) :: fn_unit
 
-  if(.not. mpi_grp_is_root(mpi_world)) return
-
   PUSH_SUB(X(get_transition_densities))
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
@@ -1077,93 +1075,93 @@ subroutine X(casida_write)(cas, sys)
   integer :: iunit, ia, jb, idim, index
   R_TYPE  :: temp
   
-  if(.not.mpi_grp_is_root(mpi_world)) return
-
   PUSH_SUB(X(casida_write))
   
+  if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
-  call io_mkdir(CASIDA_DIR)
-  iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
+    call io_mkdir(CASIDA_DIR)
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
 
-  if(cas%type == CASIDA_EPS_DIFF) then
-    write(iunit, '(2a4)', advance='no') 'From', '  To'
-    if(cas%nik > 1) then
-      write(iunit, '(a7)', advance='no') 'Spin/k'
-    endif
-  else
-    write(iunit, '(6x)', advance='no')
-  endif
-  
-  write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
-  do idim = 1, cas%sb_dim
-    write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
-#ifdef R_TCOMPLEX
-    write(iunit, '(16x)', advance='no')
-#endif
-  enddo
-  write(iunit, '(1x,a15)') '<f>'
-  
-  do ia = 1, cas%n_pairs
-    if((cas%type == CASIDA_EPS_DIFF)) then
-      write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
+    if(cas%type == CASIDA_EPS_DIFF) then
+      write(iunit, '(2a4)', advance='no') 'From', '  To'
       if(cas%nik > 1) then
-        write(iunit, '(i7)', advance='no') cas%pair(cas%ind(ia))%kk
+        write(iunit, '(a7)', advance='no') 'Spin/k'
       endif
     else
-      write(iunit, '(i6)', advance='no') cas%ind(ia)
-    end if
-    write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
-      (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
-  end do
-  call io_close(iunit)
-  
-  if(cas%qcalc) call qcasida_write(cas)
-  
-  if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-    dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-    call io_mkdir(trim(dir_name))
-  endif
-  
-  do ia = 1, cas%n_pairs
+      write(iunit, '(6x)', advance='no')
+    endif
     
-    write(str,'(i5.5)') ia
+    write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
+    do idim = 1, cas%sb_dim
+      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
+#ifdef R_TCOMPLEX
+      write(iunit, '(16x)', advance='no')
+#endif
+    enddo
+    write(iunit, '(1x,a15)') '<f>'
     
-    ! output eigenvectors
-    if(cas%type /= CASIDA_EPS_DIFF) then
-      iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
-      ! First, a little header
-      write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
-        units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-      do idim = 1, cas%sb_dim
-        write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
-          units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
-      enddo
+    do ia = 1, cas%n_pairs
+      if((cas%type == CASIDA_EPS_DIFF)) then
+        write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
+        if(cas%nik > 1) then
+          write(iunit, '(i7)', advance='no') cas%pair(cas%ind(ia))%kk
+        endif
+      else
+        write(iunit, '(i6)', advance='no') cas%ind(ia)
+      end if
+      write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
+        (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
+    end do
+    call io_close(iunit)
+  
+    if(cas%qcalc) call qcasida_write(cas)
+  
+    if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+      dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
+      call io_mkdir(trim(dir_name))
+    endif
+    
+    do ia = 1, cas%n_pairs
       
-      ! this stuff should go BEFORE calculation of transition matrix elements!
-      ! make the largest component positive and real, to specify the phase
-      index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
-      temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
+      write(str,'(i5.5)') ia
       
-      do jb = 1, cas%n_pairs
-        write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
-      end do
-      
-      if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
-        call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
+      ! output eigenvectors
+      if(cas%type /= CASIDA_EPS_DIFF) then
+        iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+        ! First, a little header
+        write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
+          units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
+        do idim = 1, cas%sb_dim
+          write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+            units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
+        enddo
+        
+        ! this stuff should go BEFORE calculation of transition matrix elements!
+        ! make the largest component positive and real, to specify the phase
+        index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
+        temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
+        
+        do jb = 1, cas%n_pairs
+          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+        end do
+        
+        if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
+          call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
+        endif
+        call io_close(iunit)
       endif
-      call io_close(iunit)
-    endif
-    
-    if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-      iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
-      call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
-      call io_close(iunit)
-    endif
-  end do
+      
+      if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
+        iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
+        call io_close(iunit)
+      endif
+    end do
   
+  end if
   ! Calculate and write the transition densities
   call X(get_transition_densities)(cas, sys)
-  
+
   POP_SUB(X(casida_write))
 end subroutine X(casida_write)
 
