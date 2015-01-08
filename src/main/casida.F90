@@ -291,7 +291,7 @@ contains
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
     !% transition density for the many-body state <i>n</i> will be written to a file called
-    !% <tt>rho0n</tt> prefixed by the theory level.
+    !% <tt>rho_0n</tt> prefixed by the theory level. Format is set by <tt>OutputHow</tt>.
     !%
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
