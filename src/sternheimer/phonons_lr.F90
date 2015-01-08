@@ -368,52 +368,34 @@ contains
     !! as in Baroni et al. RMP 2001, Appendix B.
     subroutine build_ionic_dyn_matrix()
 
-      FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
-      integer :: katom
+      FLOAT :: term, xi(1:MAX_DIM), xj(1:MAX_DIM), r2
 
       PUSH_SUB(phonons_lr_run.build_ionic_dyn_matrix)
 
+      vib%dyn_matrix(:,:) = M_ZERO
+
       do iatom = 1, natoms
+        xi(1:ndim) = geo%atom(iatom)%x(1:ndim)
+
         do idir = 1, ndim
 
           do jatom = 1, natoms
+            if(iatom == jatom) cycle
+
             do jdir = 1, ndim         
 
-              xi(1:ndim) = geo%atom(iatom)%x(1:ndim)
+              xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
+              r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
 
-              !ion - ion
-              if( iatom == jatom) then 
+              term = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) &
+                /(r2**CNST(1.5))*(ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
-                ac = M_ZERO
-                do katom = 1, natoms
-                  if ( katom == iatom ) cycle
+              ! note: this accomplishes the sum over k for diagonal terms, using the j loop
+              vib%dyn_matrix(vibrations_get_index(vib, iatom, jdir), vibrations_get_index(vib, iatom, idir)) = &
+                vib%dyn_matrix(vibrations_get_index(vib, iatom, jdir), vibrations_get_index(vib, iatom, idir)) + term
 
-                  xk(1:ndim) = geo%atom(katom)%x(1:ndim)
-                  r2 = sum((xi(1:ndim) - xk(1:ndim))**2)
-
-                  ac = ac + species_zval(geo%atom(iatom)%spec) * &
-                            species_zval(geo%atom(katom)%spec) &
-                       /(r2**CNST(1.5)) *(&
-                       -ddelta(idir, jdir) + &
-                       (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
-                       )
-
-                end do
-
-              else ! iatom /= jatom
-
-                xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
-
-                r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
-                ac = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) &
-                     /(r2**CNST(1.5))*(&
-                     ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
-
-              end if
-              ! FIXME: consolidate these two cases above
-
-              vib%dyn_matrix(vibrations_get_index(vib, jatom, jdir), vibrations_get_index(vib, iatom, idir)) = -ac
-
+              vib%dyn_matrix(vibrations_get_index(vib, jatom, jdir), vibrations_get_index(vib, iatom, idir)) = &
+                vib%dyn_matrix(vibrations_get_index(vib, jatom, jdir), vibrations_get_index(vib, iatom, idir)) - term
             end do
           end do
         end do
