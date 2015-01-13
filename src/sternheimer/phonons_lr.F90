@@ -164,6 +164,12 @@ contains
       call messages_info(1)
 
       call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+      if(ierr /= 0) then
+        message(1) = "Unable to read kdotp wavefunctions."
+        message(2) = "Previous kdotp calculation required."
+        call messages_fatal(2)
+      end if
+
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
