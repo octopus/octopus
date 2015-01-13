@@ -135,7 +135,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, minst, maxst, ii, ierr
+    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
@@ -183,9 +183,6 @@ contains
           
             call zhamiltonian_apply_batch(hm, gr%der, rpsib, hrpsib, ik, set_bc = .false.)
 
-            minst = states_block_min(st, ib)
-            maxst = states_block_max(st, ib)
-            
             do ist = st%st_start, st%st_end
             
               do idim = 1, st%d%dim
@@ -325,9 +322,6 @@ contains
             
             call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), hpsib, ik)
             
-            minst = states_block_min(st, ib)
-            maxst = states_block_max(st, ib)
-            
             do ist = st%st_start, st%st_end
               
               do idim = 1, st%d%dim
@@ -400,9 +394,6 @@ contains
           call zhamiltonian_apply_batch(hm, gr%der, st%group%psib(ib, ik), vpsib, ik, set_bc = .false., &
             terms = TERM_NON_LOCAL_POTENTIAL)
 
-          minst = states_block_min(st, ib)
-          maxst = states_block_max(st, ib)
-            
           do ist = st%st_start, st%st_end
             
             do idim = 1, st%d%dim
