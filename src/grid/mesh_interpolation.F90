@@ -70,7 +70,7 @@ contains
 
 
   subroutine mesh_interpolation_end(this)
-    type(mesh_interpolation_t), intent(out)   :: this
+    type(mesh_interpolation_t), intent(inout)   :: this
 
     PUSH_SUB(mesh_interpolation_end)
     

@@ -75,6 +75,12 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
       values(mesh%idx%lxyz_inv(0 + nm(1), 0, 0))*(CNST(1.0) - xd(1)) + &
       values(mesh%idx%lxyz_inv(1 + nm(1), 0, 0))*xd(1)
 
+  case default
+    
+    ! this line is simply to suppress warnings about the result being uninitialized
+    interpolated_value = M_ZERO
+    call messages_not_implemented("mesh interpolation in dimensions other than 1,2,3")
+    
   end select
   
   POP_SUB(X(mesh_interpolation_evaluate))
@@ -86,7 +92,7 @@ end function X(mesh_interpolation_evaluate)
 subroutine X(mesh_interpolation_test)(mesh)
   type(mesh_t), intent(in) :: mesh
 
-  integer :: ip, iunit, idir, itest
+  integer :: ip, idir, itest
   FLOAT :: xx(1:MAX_DIM)
   R_TYPE :: coeff(1:MAX_DIM), calculated, interpolated
   R_TYPE, allocatable :: ff(:)
