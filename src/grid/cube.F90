@@ -544,7 +544,8 @@ contains
     logical :: found
 
     ! No PUSH/POP because it is a PURE function
-    
+
+    found = .false.
     do proc = 1, mpi_world%size
       !Compare XYZ index
       if ( all(xyz >= part(proc)%start_xyz) .and. all(xyz < part(proc)%end_xyz) ) then
