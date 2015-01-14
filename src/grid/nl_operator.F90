@@ -811,6 +811,8 @@ contains
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
       call dvec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
 #else
+      ! avoid appearance of using vol_pp uninitialized
+      vol_pp => mesh%vol_pp
       ASSERT(.false.)
 #endif
     else      

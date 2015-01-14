@@ -106,7 +106,8 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     
   end select
 
-  ! may get warning 'aa' is used uninitialized, but it is just to define which type
+  ! Avoid warning: 'aa' is used uninitialized; it is just to define which type
+  aa = R_TOTYPE(M_ZERO)
   call profiling_count_transfers(arrayb%nst_linear*this%npoints, aa)
 
   call profiling_out(prof)
