@@ -17,50 +17,48 @@
 !!
 !! $Id$
 
+! ---------------------------------------------------------
+!> Propagator specifically designed for the QOCT+TDDFT problem
+subroutine td_qoct_tddft_propagator(hm, xc, gr, st, tr, t, dt, ions, geo)
+  type(hamiltonian_t), intent(inout) :: hm
+  type(xc_t),          intent(in)    :: xc
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(propagator_t),  intent(inout) :: tr
+  FLOAT,               intent(in)    :: t, dt
+  type(ion_dynamics_t),            intent(inout) :: ions
+  type(geometry_t),                intent(inout) :: geo
+  
+  type(ion_state_t) :: ions_state
+  PUSH_SUB(td_qoct_tddft_propagator)
+  
+  if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
+    (.not.hamiltonian_oct_exchange(hm)) ) then
+    call vksinterp_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
+  end if
 
-  ! ---------------------------------------------------------
-  !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, xc, gr, st, tr, t, dt, ions, geo)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(xc_t),          intent(in)    :: xc
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(propagator_t),  intent(inout) :: tr
-    FLOAT,               intent(in)    :: t, dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
+  !move the ions to time 'time - dt/2'
+  if(ion_dynamics_ions_move(ions)) then
+    call ion_dynamics_save_state(ions, geo, ions_state)
+    call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = t - dt/M_TWO)
+  end if
 
-    type(ion_state_t) :: ions_state
-    PUSH_SUB(td_qoct_tddft_propagator)
-    
-    if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
-        (.not.hamiltonian_oct_exchange(hm)) ) then
-      call vksinterp_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
-    end if
+  call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
+  call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt, t - dt/M_TWO)
 
-    !move the ions to time 'time - dt/2'
-    if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_save_state(ions, geo, ions_state)
-      call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = t - dt/M_TWO)
-    end if
+  !restore to time 'time - dt'
+  if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
-    call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
-    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt, t - dt/M_TWO)
+  if(.not. hm%cmplxscl%space) then
+    call density_calc(st, gr, st%rho)
+  else
+    call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+  end if
 
-    !restore to time 'time - dt'
-    if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
-
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
-
-    POP_SUB(td_qoct_tddft_propagator)
-  end subroutine td_qoct_tddft_propagator
-  ! ---------------------------------------------------------
-
+  POP_SUB(td_qoct_tddft_propagator)
+end subroutine td_qoct_tddft_propagator
+! ---------------------------------------------------------
 
 !! Local Variables:
 !! mode: f90
