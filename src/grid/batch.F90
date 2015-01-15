@@ -277,17 +277,22 @@ contains
     type(batch_t), intent(in)   :: this
 
     integer :: ist
+    logical :: dpsi_all_assoc, zpsi_all_assoc
     
     ! no push_sub, called too frequently
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
     ok = ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok) then
+      ! ensure that either all real are associated, or all cplx are associated
+      dpsi_all_assoc = .true.
+      zpsi_all_assoc = .true.
       do ist = 1, this%nst_linear
-        ok = ok.and. &
-          (associated(this%states_linear(ist)%dpsi) .or. associated(this%states_linear(ist)%zpsi))
-      end do
-    end if
+        dpsi_all_assoc = dpsi_all_assoc .and. associated(this%states_linear(ist)%dpsi)
+        zpsi_all_assoc = zpsi_all_assoc .and. associated(this%states_linear(ist)%zpsi)
+      enddo
+      ok = ok .and. dpsi_all_assoc .neqv. zpsi_all_assoc
+   end if
 
   end function batch_is_ok
 
