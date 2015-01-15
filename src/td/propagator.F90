@@ -358,7 +358,9 @@ contains
 
     select case(tr%method)
     case(PROP_ETRS)
-    case(PROP_AETRS, PROP_CAETRS)
+    case(PROP_AETRS)
+    case(PROP_CAETRS)
+      call messages_experimental("CAETRS propagator")
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICOLSON)
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
@@ -377,6 +379,7 @@ contains
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call messages_fatal(3)
 #endif
+      call messages_experimental("Runge-Kutta 4 propagator")
     case(PROP_RUNGE_KUTTA2)
 #ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
@@ -391,6 +394,7 @@ contains
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call messages_fatal(3)
 #endif
+      call messages_experimental("Runge-Kutta 2 propagator")
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux
@@ -406,11 +410,14 @@ contains
       call messages_fatal(3)
 #endif
     case(PROP_MAGNUS)
+      call messages_experimental("Magnus propagator")
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
+      call messages_experimental("QOCT+TDDFT propagator")
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
+      call messages_experimental("explicit Runge-Kutta 4 propagator")
     case default
       call input_error('TDPropagator')
     end select

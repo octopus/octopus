@@ -2,6 +2,7 @@ CalculationMode = opt_control
 #CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
+ExperimentalFeatures = yes
 
 omega = 0.25
 
