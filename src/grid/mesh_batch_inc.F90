@@ -53,6 +53,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   ! This has to be set to zero by hand since NaN * 0 = NaN.
   dd(1:aa%nst, 1:bb%nst) = R_TOTYPE(CNST(0.0))
 
+  use_blas = .false.
+  
   select case(batch_status(aa))
   case(BATCH_NOT_PACKED)
     use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
@@ -140,7 +142,6 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     end if
 
   case(BATCH_CL_PACKED)
-    use_blas = .false.
     ASSERT(.not. mesh%use_curvilinear)
 #ifdef HAVE_OPENCL
 
@@ -198,6 +199,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     forall(ist = 1:aa%nst, jst = 1:bb%nst) dd(ist, jst) = mesh%volume_element*dd(ist, jst)
 
+  case default
+    ASSERT(.false.)
+    
   end select
 
   if(batch_status(aa) /= BATCH_CL_PACKED) then
