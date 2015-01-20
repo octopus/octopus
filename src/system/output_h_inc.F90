@@ -18,18 +18,20 @@
 !! $Id$
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(hm, der, dir, outp, geo, grp)
-    type(hamiltonian_t),   intent(in) :: hm
-    type(derivatives_t),   intent(in) :: der
-    character(len=*),      intent(in) :: dir
-    type(output_t),        intent(in) :: outp
-    type(geometry_t),      intent(in) :: geo
-    type(mpi_grp_t), optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp)
+    type(hamiltonian_t),       intent(in)    :: hm
+    type(states_t),            intent(inout) :: st
+    type(derivatives_t),       intent(inout) :: der
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
+    type(geometry_t),          intent(in)    :: geo
+    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, err, idir
     character(len=80) :: fname
     FLOAT, allocatable :: v0(:,:), nxc(:)
-    
+    FLOAT, allocatable :: current(:, :, :)
+
     PUSH_SUB(output_hamiltonian)
 
     if(iand(outp%what, C_OUTPUT_POTENTIAL) /= 0) then
@@ -126,7 +128,30 @@
       SAFE_DEALLOCATE_A(nxc)
     end if
 
-
+    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
+      if(states_are_complex(st)) then
+        ! calculate current first
+        SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
+        call current_calculate(outp%current_calculator, der, hm, geo, st, current)
+        do is = 1, hm%d%nspin
+          do idir = 1, der%mesh%sb%dim
+            if(st%d%nspin == 1) then
+              write(fname, '(2a)') 'current-', index2axis(idir)
+            else
+              write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
+            endif
+            call dio_function_output(outp%how, dir, fname, der%mesh, &
+              current(:, idir, is), (unit_one / units_out%time) * units_out%length**(1-der%mesh%sb%dim), err, &
+              is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          end do
+        end do
+        SAFE_DEALLOCATE_A(current)
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1)
+      endif
+    end if
+    
     POP_SUB(output_hamiltonian)
   end subroutine output_hamiltonian
 

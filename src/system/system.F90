@@ -105,7 +105,7 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
-    call output_init(sys%gr%sb, sys%st%nst, sys%outp)
+    call output_init(sys%outp, sys%gr%sb, sys%st%nst)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
     call states_lead_densities_init(sys%st, sys%gr)
@@ -158,7 +158,9 @@ contains
 
     call poisson_end(psolver)
     call v_ks_end(sys%ks, sys%gr)
-
+    
+    call output_end(sys%outp)
+    
     if(associated(sys%st)) then
       call states_lead_densities_end(sys%st, sys%gr)
       call states_end(sys%st)

@@ -23,6 +23,7 @@ module output_m
   use basins_m
   use cube_function_m
   use cube_m
+  use current_m
   use datasets_m
   use density_m
   use derivatives_m
@@ -86,6 +87,7 @@ module output_m
     output_t,            &
     output_bgw_t,        &
     output_init,         &
+    output_end,          &
     output_states,       &
     doutput_modelmb,     &
     zoutput_modelmb,     &
@@ -131,7 +133,7 @@ module output_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
-
+    type(current_t)    :: current_calculator
   end type output_t
 
   integer, parameter, public ::              &
@@ -169,10 +171,10 @@ module output_m
 
 contains
 
-  subroutine output_init(sb, nst, outp)
+  subroutine output_init(outp, sb, nst)
+    type(output_t),       intent(out) :: outp
     type(simul_box_t),    intent(in)  :: sb
     integer,              intent(in)  :: nst
-    type(output_t),       intent(out) :: outp
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -562,9 +564,23 @@ contains
       outp%how  = ior(outp%how,  C_OUTPUT_HOW_BINARY)
     endif
 
+    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
+      call current_init(outp%current_calculator)
+    end if
+
     POP_SUB(output_init)
   end subroutine output_init
 
+  ! ---------------------------------------------------------
+
+  subroutine output_end(outp)
+    type(output_t),       intent(out) :: outp
+
+    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
+      call current_end(outp%current_calculator)
+    end if
+
+  end subroutine output_end
 
   ! ---------------------------------------------------------
   subroutine output_all(outp, gr, geo, st, hm, ks, dir)
@@ -595,7 +611,7 @@ contains
     end if
     
     call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
+    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 

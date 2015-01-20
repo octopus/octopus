@@ -30,7 +30,6 @@ subroutine output_states(st, gr, geo, dir, outp)
   type(unit_t) :: fn_unit
   FLOAT, allocatable :: dtmp(:), elf(:,:)
   CMPLX, allocatable :: ztmp(:)
-  FLOAT, allocatable :: current(:, :, :)
 
   PUSH_SUB(output_states)
 
@@ -71,30 +70,6 @@ subroutine output_states(st, gr, geo, dir, outp)
       end do
     end do
     SAFE_DEALLOCATE_A(dtmp)
-  end if
-
-  if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
-    if(states_are_complex(st)) then
-      fn_unit = (unit_one / units_out%time) * units_out%length**(1-gr%mesh%sb%dim)
-      ! calculate current first
-      SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-      call states_calc_quantities(gr%der, st, paramagnetic_current = current)
-      do is = 1, st%d%nspin
-        do idir = 1, gr%mesh%sb%dim
-          if(st%d%nspin == 1) then
-            write(fname, '(2a)') 'current-', index2axis(idir)
-          else
-            write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
-          endif
-          call dio_function_output(outp%how, dir, fname, gr%mesh, &
-            current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
-        end do
-      end do
-      SAFE_DEALLOCATE_A(current)
-    else
-      message(1) = 'No current density output for real states since it is identically zero.'
-      call messages_warning(1)
-    endif
   end if
 
   if(iand(outp%what, C_OUTPUT_WFS) /= 0) then
