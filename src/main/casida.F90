@@ -162,6 +162,7 @@ contains
 
     ! call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true).
     call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+    call calc_mode_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
   end subroutine casida_run_init

@@ -28,6 +28,7 @@ module calc_mode_m
        calc_mode_t,                     &
        calc_mode_init,                  &
        calc_mode_set_parallelization,   &
+       calc_mode_unset_parallelization, &
        calc_mode_parallel_mask,         &
        calc_mode_default_parallel_mask, &
        calc_mode_set_scalapack_compat,  &
@@ -78,6 +79,17 @@ contains
     if(default) this%def_par_mask = ibset(this%def_par_mask, par - 1)
     
   end subroutine calc_mode_set_parallelization
+
+  ! -----------------------------------------------------
+  !> Remove a parallelization strategy from the list of possible ones.
+  !> It will also be removed from the default.
+  subroutine calc_mode_unset_parallelization(par)
+    integer, intent(in) :: par
+    
+    this%par_mask = ibclr(this%par_mask, par - 1)
+    this%def_par_mask = ibclr(this%def_par_mask, par - 1)
+    
+  end subroutine calc_mode_unset_parallelization
   
   ! -----------------------------------------------------
   
