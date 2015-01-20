@@ -293,8 +293,12 @@ contains
           call input_error('ParallelizationStrategy')
         end if
 
+        if(mc%par_strategy /= iand(mc%par_strategy, parallel_mask)) then
+          message(1) = "Parallelization strategies unavailable for this run mode are being discarded."
+          call messages_warning(1)
+        endif
         mc%par_strategy = iand(mc%par_strategy, parallel_mask)
-
+        
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
           message(2) = "Please select a ParallelizationStrategy compatible with"
