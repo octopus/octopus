@@ -177,6 +177,8 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
+!> Casida: \vec{d}_k = \sum_{cv} \vec{d}_{cv} x_{cv} \sqrt{\frac{\epsilon_c - \epsilon_v}{\omega_k}}
+!> others: \vec{d}_k = \sum_{cv} \vec{d}_{cv} x_{cv}
 R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: ia
@@ -189,18 +191,18 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
     if(cas%type == CASIDA_EPS_DIFF) then
-      zz = sqrt(TOFLOAT(cas%el_per_state)) * xx(ia)
+      zz = xx(ia)
     else if(cas%type == CASIDA_CASIDA) then
       do jb = 1, cas%n_pairs
-        zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%X(mat)(jb, ia)
+        zz = zz + xx(jb) * cas%X(mat)(jb, ia) / sqrt(cas%s(jb))
       end do
-      zz = (M_ONE/sqrt(cas%w(ia))) * zz
+      zz = zz / sqrt(cas%w(ia))
     else ! TAMM_DANCOFF, VARIATIONAL, PETERSILKA
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * cas%X(mat)(jb, ia)
       end do
-      if(cas%nik == 1) zz = sqrt(M_TWO) * zz
     endif
+    zz = sqrt(TOFLOAT(cas%el_per_state)) * zz
   end if
 
   POP_SUB(X(transition_matrix_element))
@@ -985,7 +987,7 @@ subroutine X(casida_solve)(cas, st)
 
   FLOAT :: temp
   integer :: ia, jb
-  type(states_pair_t), pointer :: p, q
+  type(states_pair_t), pointer :: p
 
   PUSH_SUB(X(casida_solve))
 
@@ -996,6 +998,12 @@ subroutine X(casida_solve)(cas, st)
     ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
   endif
 
+  if(cas%type == CASIDA_CASIDA) then
+    do ia = 1, cas%n_pairs
+      cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) )
+    end do
+  endif
+      
   ! all processors with the exception of the first are done
   if (mpi_grp_is_root(cas%mpi_grp)) then
 
@@ -1005,12 +1013,10 @@ subroutine X(casida_solve)(cas, st)
       temp = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
       
       do jb = ia, cas%n_pairs
-        q => cas%pair(jb)
-        
         ! FIXME: need the equivalent of this stuff for forces too.
         if(cas%type == CASIDA_CASIDA) then
-          cas%X(mat)(ia, jb) = M_TWO * sqrt(temp) * cas%X(mat(ia, jb)) * &
-            sqrt(st%eigenval(q%a, q%kk) - st%eigenval(q%i, q%kk))
+          cas%X(mat)(ia, jb) = M_TWO * cas%X(mat(ia, jb)) &
+            / sqrt(cas%s(ia) * cas%s(jb))
         endif
         if(jb /= ia) cas%X(mat)(jb, ia) = R_CONJ(cas%X(mat)(ia, jb)) ! the matrix is Hermitian
       end do
@@ -1051,14 +1057,6 @@ subroutine X(casida_solve)(cas, st)
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
     
-    ! And let us now get the S matrix...
-    if(cas%type == CASIDA_CASIDA) then
-      do ia = 1, cas%n_pairs
-        cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
-                                                 st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) )
-      end do
-    endif
-      
   end if
     
   POP_SUB(X(casida_solve))
