@@ -45,7 +45,8 @@ module calc_mode_m
 contains
     
   ! ----------------------------------------------------------
-
+  !> Set domains and kpoints as possible parallelization strategies.
+  !> Set domains as default parallelization strategy.
   subroutine calc_mode_init()
     ! no push_sub because this routine is called before everything
     ! is fully initialized for the debugging stack
@@ -67,7 +68,8 @@ contains
   end subroutine calc_mode_end
   
   ! -----------------------------------------------------
-  
+  !> Add a parallelization strategy to the list of possible ones.
+  !> Make it default also if default = .true.
   subroutine calc_mode_set_parallelization(par, default)
     integer, intent(in) :: par
     logical, intent(in) :: default

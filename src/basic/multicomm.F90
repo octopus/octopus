@@ -258,7 +258,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine strategy()
-      integer :: jj,  par_mask
+      integer :: jj
 
       PUSH_SUB(multicomm_init.strategy)
 
@@ -287,22 +287,20 @@ contains
 
      if(base_grp%size > 1) then
 
-        par_mask = parallel_mask
-
         call parse_integer(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')
         end if
 
-        mc%par_strategy = iand(mc%par_strategy, par_mask)
+        mc%par_strategy = iand(mc%par_strategy, parallel_mask)
 
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
           message(2) = "Please select a ParallelizationStrategy compatible with"
           jj = 2
           do ii = 1, n_par_types
-            if(iand(par_mask, 2**(ii - 1)) /= 0) then
+            if(iand(parallel_mask, 2**(ii - 1)) /= 0) then
               jj = jj + 1
               write(message(jj), '(2a)') "  -> ", par_types(ii)
             end if
