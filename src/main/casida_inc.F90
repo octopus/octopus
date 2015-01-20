@@ -985,7 +985,8 @@ subroutine X(casida_solve)(cas, st)
   type(casida_t), intent(inout) :: cas
   type(states_t), intent(in)    :: st
 
-  FLOAT :: temp
+  FLOAT :: eig_diff
+  FLOAT, allocatable :: occ_diffs(:)
   integer :: ia, jb
   type(states_pair_t), pointer :: p
 
@@ -1000,32 +1001,48 @@ subroutine X(casida_solve)(cas, st)
 
   if(cas%type == CASIDA_CASIDA) then
     do ia = 1, cas%n_pairs
-      cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) )
+      cas%s(ia) = cas%el_per_state / ( &
+        ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) ) &
+        * ( st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
     end do
   endif
       
   ! all processors with the exception of the first are done
   if (mpi_grp_is_root(cas%mpi_grp)) then
 
+    if(cas%type /= CASIDA_CASIDA) then
+      SAFE_ALLOCATE(occ_diffs(cas%n_pairs))
+      do ia = 1, cas%n_pairs
+        occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
+          / cas%el_per_state
+      enddo
+    endif
+
     ! complete the matrix
     do ia = 1, cas%n_pairs
       p => cas%pair(ia)
-      temp = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
+      eig_diff = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
       
       do jb = ia, cas%n_pairs
         ! FIXME: need the equivalent of this stuff for forces too.
         if(cas%type == CASIDA_CASIDA) then
           cas%X(mat)(ia, jb) = M_TWO * cas%X(mat(ia, jb)) &
             / sqrt(cas%s(ia) * cas%s(jb))
+        else
+          cas%X(mat)(ia, jb) = cas%X(mat(ia, jb)) * sqrt(occ_diffs(ia) * occ_diffs(jb))
         endif
         if(jb /= ia) cas%X(mat)(jb, ia) = R_CONJ(cas%X(mat)(ia, jb)) ! the matrix is Hermitian
       end do
       if(cas%type == CASIDA_CASIDA) then
-        cas%X(mat)(ia, ia) = temp**2 + cas%X(mat)(ia, ia)
+        cas%X(mat)(ia, ia) = eig_diff**2 + cas%X(mat)(ia, ia)
       else
-        cas%X(mat)(ia, ia) = cas%X(mat)(ia, ia) + temp
+        cas%X(mat)(ia, ia) = eig_diff + cas%X(mat)(ia, ia)
       endif
     end do
+
+    if(cas%type /= CASIDA_CASIDA) then
+      SAFE_DEALLOCATE_A(occ_diffs)
+    endif
     
     message(1) = "Info: Diagonalizing matrix for resonance energies."
     call messages_info(1)
