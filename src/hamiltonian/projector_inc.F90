@@ -334,9 +334,9 @@ end subroutine X(project_sphere)
 
 !------------------------------------------------------------------------------
 !> This function calculates |cpsi> += [x, V_nl] |psi>
-subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
+subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
   type(projector_t), target, intent(in)     :: pj
-  type(grid_t),              intent(in)     :: gr
+  type(mesh_t),              intent(in)     :: mesh
   integer,                   intent(in)     :: dim
   integer,                   intent(in)     :: idir
   integer,                   intent(in)     :: ik
@@ -373,7 +373,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     end if
 
     ! x V_nl |psi>
-    call X(project_sphere)(gr%mesh, pj, dim, lpsi, xplpsi)
+    call X(project_sphere)(mesh, pj, dim, lpsi, xplpsi)
     do idim = 1, dim
       xplpsi(1:ns, idim) = smx(1:ns, idir) * xplpsi(1:ns, idim)
     end do
@@ -382,7 +382,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     do idim = 1, dim
       lpsi(1:ns, idim) = smx(1:ns, idir) * lpsi(1:ns, idim)
     end do
-    call X(project_sphere)(gr%mesh, pj, dim, lpsi, pxlpsi)
+    call X(project_sphere)(mesh, pj, dim, lpsi, pxlpsi)
     
     ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
     if(associated(pj%phase)) then
