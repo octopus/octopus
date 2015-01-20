@@ -460,7 +460,7 @@ contains
 
     if(ks%calculate_current) then
       call states_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, ks%gr, hm, geo, st, st%current)
+      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
     end if
 
     nullify(ks%calc%hf_st) 
