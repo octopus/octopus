@@ -596,7 +596,6 @@ contains
           saved%qi = qi
           saved%qa = qa
           saved%mu = mu
-        else
         endif
         ! value of pot is retained between calls
         mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
@@ -613,7 +612,7 @@ contains
 
     if(cas%herm_conj) then
       if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
-      if(present(mtxel_xc)) mtxel_vh = R_CONJ(mtxel_xc)
+      if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
     endif
 
     SAFE_DEALLOCATE_A(rho_i)
