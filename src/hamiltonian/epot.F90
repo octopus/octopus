@@ -1071,7 +1071,7 @@ contains
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
       spec => geo%atom(iatom)%spec
-      if (.not. species_is_ps(spec)) cycle
+      if (.not. species_represents_real_atom(spec)) cycle
       zi = species_zval(geo%atom(iatom)%spec)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
@@ -1136,7 +1136,7 @@ contains
           gg2 = sum(gg(1:sb%dim)**2)
           
           ! g=0 must be removed from the sum
-          if(gg2 == M_ZERO) cycle
+          if(gg2 < M_EPSILON) cycle
 
           gx = -CNST(0.25)*gg2/alpha**2
 
