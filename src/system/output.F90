@@ -574,11 +574,15 @@ contains
   ! ---------------------------------------------------------
 
   subroutine output_end(outp)
-    type(output_t),       intent(out) :: outp
+    type(output_t), intent(inout) :: outp
 
+    PUSH_SUB(output_end)
+    
     if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
       call current_end(outp%current_calculator)
     end if
+
+    POP_SUB(output_end)
 
   end subroutine output_end
 

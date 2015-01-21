@@ -104,7 +104,7 @@ contains
     !%Option poisson 3
     !% Obtain the current from solving the Poisson equation from the continuity equation. (Experimental)
     !%Option poisson_correction 4
-    !% Obtain the current from the hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
+    !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
     call parse_integer(datasets_check('CurrentDensity'), CURRENT_GRADIENT, this%method)
