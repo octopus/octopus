@@ -354,3 +354,4 @@ end subroutine propagator_qmr_prec
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
+!! End:
