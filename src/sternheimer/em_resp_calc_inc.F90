@@ -766,9 +766,9 @@ end subroutine X(post_orthogonalize)
 
 
 ! --------------------------------------------------------- 
-! <\psi|d/dk|\psi> cannot be calculated from kdotp perturbation which gives only diagonal matrix elements
+! <\psi|-i d/dk|\psi> cannot be calculated from kdotp perturbation which gives only diagonal matrix elements
 ! but it can be approximated for large cells along the lines of the "single-point Berry phase":
-! <\psi|d/dk|\psi> =~ (L/2 \pi) Im <\psi|exp(-2 \pi i x / L)|\psi>
+! <\psi|-i d/dk|\psi> =~ (L/2 \pi) Im <\psi|exp(2 \pi i x / L)|\psi> ( =~ <\psi|x|\psi> )
 subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
   type(system_t),      intent(in)  :: sys
   FLOAT,               intent(out) :: dl_eig(:,:,:) !< (ist, ik, idir)
@@ -795,7 +795,7 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
           forall(ip = 1:sys%gr%mesh%np) &
-            integrand(ip) = exp(-M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+            integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
             (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         enddo
