@@ -123,7 +123,7 @@ contains
 
     !%Variable RDMConvEner
     !%Type float
-    !%Default 1e-5 Ha
+    !%Default 1e-6 Ha
     !%Section SCF::RDMFT
     !% Convergence criterion for stopping the overall minimization of the energy with
     !% respect to occupation numbers and the orbitals. The minimization of the 
@@ -132,7 +132,7 @@ contains
     !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
     !%End
 
-    call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-5), rdm%conv_ener)
+    call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-6), rdm%conv_ener)
     
     
     POP_SUB(rdmft_init)
@@ -183,16 +183,16 @@ contains
     energy = M_ZERO 
     conv = .false.
    
-    ! Localize unoccupied states by multiplying them with a gaussian exponential 
+
     do ip = 1, gr%mesh%np
-      do ist = int((st%qtot)/2)+2, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
+      do ist = int((st%qtot)/2)+1, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
         do iatom = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.1*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.2*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
         end do
       end do
       do ist = 6, st%nst
         do iatom = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.1*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.15*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
         end do
       end do
     end do
@@ -235,7 +235,7 @@ contains
 
       write(message(1),'(a,es15.5)') ' etot RDMFT after orbital minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
-      if ((abs(energy_occ-energy)/abs(energy) < rdm%conv_ener).and.rdm%maxFO < rdm%toler) then
+      if ((abs(energy_occ-energy)/abs(energy) < rdm%conv_ener).and.rdm%maxFO < 1.d3*rdm%conv_ener) then
         conv = .TRUE.
         exit
       endif
@@ -243,12 +243,12 @@ contains
     end do
    
     if(conv) then 
-      write(message(1),'(a,i3,a)')  'The calcualtion converged after',iter,'iterations'
+      write(message(1),'(a,i3,a)')  'The calcualtion converged after ',iter,' iterations'
       call messages_info(1)
     else
-      write(message(1),'(a,i3,a)')  'The calcualtion did not converged after', iter, 'iterations '
+      write(message(1),'(a,i3,a)')  'The calcualtion did not converged after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'The energy difference between the last two iterations is ', abs(energy_occ-energy)
-      write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is', rdm%maxFO
+      write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
     end if
 
@@ -302,11 +302,11 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 500, theta, energy) 
+    call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 500, theta, energy) 
+    call  multid_minimize(st%nst, 1000, theta, energy) 
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -317,7 +317,7 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 500, theta, energy) 
+        call  multid_minimize(st%nst, 1000, theta, energy) 
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -325,7 +325,7 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 500, theta, energy) 
+        call  multid_minimize(st%nst, 1000, theta, energy) 
       end if
     end do
 
@@ -333,7 +333,7 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call  multid_minimize(st%nst, 500, theta, energy) 
+      call  multid_minimize(st%nst, 1000, theta, energy) 
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -417,8 +417,8 @@ contains
       end do
    
       if (iexit /= nst) then
-        write(message(1),'(a)') 'Did not manage to minimize the energy with respect to all occupation numbers for mu',rdm%mu
-        write(message(2), '(a, i3, a)') 'Only', iexit, 'derivatives are below the tolerance' 
+        write(message(1),'(a,f11.4)') 'Did not manage to minimize the energy with respect to all occupation numbers for mu ',rdm%mu
+        write(message(2), '(a, i3, a)') 'Only ', iexit, ' derivatives are below the tolerance' 
         call messages_info(2)
       end if
 
@@ -525,7 +525,7 @@ contains
     else
       do ist = 1, st%nst
         do jst = 1, ist - 1
-          FO(jst, ist) = -( lambda(jst, ist) - lambda(ist ,jst))
+          FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
         end do
       end do
       rdm%maxFO = maxval(abs(FO))
@@ -585,6 +585,7 @@ contains
     g_x = M_ZERO
     g_h = M_ZERO
     rho = M_ZERO    
+    rho_tot = M_ZERO    
     pot = M_ZERO
     dpsi = M_ZERO
     dpsi2 = M_ZERO
