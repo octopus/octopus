@@ -147,7 +147,6 @@ contains
     PUSH_SUB(current_calculate)
 
     ! spin not implemented or tested
-    ASSERT(st%d%nspin == 1)
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
