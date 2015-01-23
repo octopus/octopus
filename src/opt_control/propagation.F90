@@ -562,7 +562,7 @@ contains
     type(target_t),                    intent(inout) :: tg
     type(controlfunction_t),           intent(in)    :: par
     type(controlfunction_t),           intent(inout) :: par_chi
-    type(opt_control_state_t), target, intent(inout) :: qcchi
+    type(opt_control_state_t),         intent(inout) :: qcchi
     type(oct_prop_t),                  intent(inout) :: prop_chi
     type(oct_prop_t),                  intent(inout) :: prop_psi
 
@@ -734,16 +734,16 @@ contains
   !
   ! ----------------------------------------------------------
   subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, geo, st, qtildehalf)
-    integer, intent(in)                        :: iter
-    type(grid_t), intent(inout)                :: gr
-    type(v_ks_t), intent(inout)                :: ks
-    type(hamiltonian_t), intent(inout)         :: hm
-    type(td_t), intent(inout)                  :: td
-    type(target_t), intent(inout)              :: tg
-    type(controlfunction_t), intent(in)        :: par_chi
-    type(geometry_t), intent(in)               :: geo
-    type(states_t), intent(inout)              :: st
-    FLOAT, intent(in), optional                :: qtildehalf(:, :)
+    integer,                 intent(in)    :: iter
+    type(grid_t),            intent(inout) :: gr
+    type(v_ks_t),            intent(inout) :: ks
+    type(hamiltonian_t),     intent(inout) :: hm
+    type(td_t),              intent(inout) :: td
+    type(target_t),          intent(inout) :: tg
+    type(controlfunction_t), intent(in)    :: par_chi
+    type(geometry_t),        intent(in)    :: geo
+    type(states_t),          intent(inout) :: st
+    FLOAT,         optional, intent(in)    :: qtildehalf(:, :)
 
     type(states_t) :: inh
     integer :: j, iatom, idim
@@ -918,15 +918,15 @@ contains
   !!
   !! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
   subroutine update_field(iter, cp, gr, hm, geo, qcpsi, qcchi, cpp, dir)
-    integer, intent(in)        :: iter
-    type(controlfunction_t), intent(inout) :: cp
-    type(grid_t), intent(inout)   :: gr
-    type(hamiltonian_t), intent(in) :: hm
-    type(geometry_t),        intent(in)    :: geo
+    integer,                   intent(in)    :: iter
+    type(controlfunction_t),   intent(inout) :: cp
+    type(grid_t),              intent(inout) :: gr
+    type(hamiltonian_t),       intent(in)    :: hm
+    type(geometry_t),          intent(in)    :: geo
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(opt_control_state_t), intent(inout) :: qcchi
-    type(controlfunction_t), intent(in) :: cpp
-    character(len=1),intent(in) :: dir
+    type(controlfunction_t),   intent(in)    :: cpp
+    character(len=1),          intent(in)    :: dir
 
     CMPLX :: d1, pol(MAX_DIM)
     CMPLX, allocatable  :: dl(:), dq(:)
