@@ -140,7 +140,7 @@ module casida_m
   type casida_save_pot_t
     integer :: qi                    !< previous mtxel calculated in K_term
     integer :: qa                    !< previous mtxel calculated in K_term
-    integer :: mu                    !< previous mtxel calculated in K_term
+    integer :: qk                    !< previous mtxel calculated in K_term
     FLOAT,   pointer  :: dpot(:)     !< previous exchange potential calculated in K_term
     CMPLX,   pointer  :: zpot(:)     !< previous exchange potential calculated in K_term    
   end type casida_save_pot_t

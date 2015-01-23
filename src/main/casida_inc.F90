@@ -553,7 +553,7 @@ contains
     R_TYPE,                  optional, intent(out)   :: mtxel_vh
     R_TYPE,                  optional, intent(out)   :: mtxel_xc
 
-    integer :: pi, qi, kk, pa, qa, mu
+    integer :: pi, qi, pa, qa, pk, qk
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
     FLOAT :: coeff_vh
     type(profile_t), save :: prof
@@ -564,27 +564,27 @@ contains
     if(cas%herm_conj) then
       pi = qq%i
       pa = qq%a
-      kk = qq%kk
+      pk = qq%kk
 
       qi = pp%i
       qa = pp%a
-      mu = pp%kk
+      qk = pp%kk
     else
       pi = pp%i
       pa = pp%a
-      kk = pp%kk
+      pk = pp%kk
 
       qi = qq%i
       qa = qq%a
-      mu = qq%kk
+      qk = qq%kk
     endif
 
     SAFE_ALLOCATE(rho_i(1:mesh%np))
     SAFE_ALLOCATE(rho_j(1:mesh%np))
     SAFE_ALLOCATE(integrand(1:mesh%np))
 
-    call X(casida_get_rho)(st, mesh, pa, pi, kk, rho_i)
-    call X(casida_get_rho)(st, mesh, qi, qa, mu, rho_j)
+    call X(casida_get_rho)(st, mesh, pa, pi, pk, rho_i)
+    call X(casida_get_rho)(st, mesh, qi, qa, qk, rho_j)
 
     !  first the Hartree part
     if(present(mtxel_vh)) then
@@ -592,12 +592,12 @@ contains
       if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
       if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
       if(abs(coeff_vh) > M_EPSILON) then
-        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  mu /= saved%mu) then
+        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
           saved%X(pot)(1:mesh%np) = M_ZERO
           if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
           saved%qi = qi
           saved%qa = qa
-          saved%mu = mu
+          saved%qk = qk
         endif
         ! value of pot is retained between calls
         mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
@@ -608,7 +608,7 @@ contains
     end if
 
     if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, kk, mu)
+      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
       mtxel_xc = X(mf_integrate)(mesh, integrand)
     endif
 
@@ -967,7 +967,7 @@ subroutine X(casida_save_pot_init)(this, mesh)
   SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
   this%qi = -1
   this%qa = -1
-  this%mu = -1
+  this%qk = -1
 
 end subroutine X(casida_save_pot_init)
     
