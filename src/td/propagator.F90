@@ -128,8 +128,7 @@ module propagator_m
   type(propagator_t),      pointer, private :: tr_p
   type(states_t),          pointer, private :: st_p
   type(xc_t),              pointer, private :: xc_p
-  integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
-  type(states_t),          private :: st_op
+  integer,                 private :: ik_op, ist_op, dim_op
   FLOAT,                   private :: t_op, dt_op
   FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
   logical :: move_ions_op
