@@ -572,7 +572,7 @@ contains
     else
       pi = pp%i
       pa = pp%a
-      kk = qq%kk
+      kk = pp%kk
 
       qi = qq%i
       qa = qq%a
