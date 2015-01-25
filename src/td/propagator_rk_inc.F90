@@ -133,7 +133,7 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
       velt = vel0t
     end if
   end if
-  
+
   call f_psi(time-dt)
   if(propagate_chi) call f_chi(time-dt)
   if(ion_dynamics_ions_move(ions)) call f_ions(time-dt)
@@ -178,7 +178,7 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
       velt = vel0t + M_HALF * velkt
     end if
   end if
-  
+
   call f_psi(time-M_HALF*dt)
   if(propagate_chi) call f_chi(time-M_HALF*dt)
   if(ion_dynamics_ions_move(ions)) call f_ions(time-M_HALF*dt)
@@ -310,7 +310,11 @@ contains
 
     if( hm%theory_level /= INDEPENDENT_PARTICLES) call hamiltonian_set_oct_exchange(hm, stphi, gr%mesh)
     call prepare_inh()
+    call hamiltonian_adjoint(hm)
     call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi, tau)
+    call hamiltonian_not_adjoint(hm)
+
+
     call apply_inh()
     if( hm%theory_level /= INDEPENDENT_PARTICLES) call hamiltonian_remove_oct_exchange(hm)
     if(ion_dynamics_ions_move(ions)) call hamiltonian_remove_inh(hm)
