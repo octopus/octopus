@@ -35,6 +35,7 @@ module opt_control_m
   use lasers_m
   use loct_m
   use loct_math_m
+  use math_m
   use mesh_m
   use minimizer_m
   use opt_control_global_m

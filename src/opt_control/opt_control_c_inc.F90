@@ -92,7 +92,7 @@
         x_ = x
         do j = 1, n
           index_ = j
-          call loct_numerical_derivative(x(j), dx, dfn(j), abserr(j), opt_control_function_forward)
+          call numder_ridders(x(j), dx, dfn(j), abserr(j), opt_control_function_forward)
         end do
 
         write(message(1), '(70(''#''))')

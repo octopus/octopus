@@ -75,7 +75,8 @@ module math_m
     pad_pow2,                   &
     log2,                       &
     is_prime,                   &
-     generate_rotation_matrix
+    generate_rotation_matrix,   &
+    numder_ridders
 
   ! ------------------------------------------------------------------------------
   !> This is the common interface to a simple-minded polynomical interpolation
@@ -1320,6 +1321,66 @@ contains
     POP_SUB(sort_complex)
   end subroutine sort_complex
 
+  ! ---------------------------------------------------------
+  !> Numerical derivative (Ridder's algorithm).
+  !!
+  !! This is an alternative to "loct_numerical_derivative" (which
+  !! is just an interface to the GSL numerical derivative). This version
+  !! is an implementation of Ridder's algorithm [C. J. F. Ridders, Adv.
+  !! Eng. Software 4, 75 (1982); also described in Numerical Recipes].
+  !! It is more precise, but also typically more expensive, than  the
+  !! simpler 4-point algorithm implemented in the GSL library.
+  subroutine numder_ridders(x, h, res, err, f)
+    implicit none
+    real(8), intent(in)  :: x, h
+    real(8), intent(out) :: res, err
+    interface
+      subroutine f(x, fx)
+        implicit none
+        real(8), intent(in)    :: x
+        real(8), intent(inout) :: fx
+      end subroutine f
+    end interface
+
+    real(8) :: con = CNST(1.4), &
+               big = CNST(1.0e30), &
+               safe = M_TWO
+    integer :: ntab = 20, i, j
+    real(8) :: errt, fac, hh, fx1, fx2
+    real(8), allocatable :: a(:, :)
+
+    if(h == M_ZERO) then
+      message(1) = "h must be nonzero in loct_numerical_derivative_ridders"
+      call messages_fatal(1)
+    end if
+
+    allocate(a(ntab, ntab))
+ 
+    hh = h
+    call f(x+hh, fx1)
+    call f(x-hh, fx2)
+    a(1,1) = (fx1-fx2) / (M_TWO*hh)
+    err = big
+    do i = 2, ntab
+      hh = hh / con
+      call f(x+hh, fx1)
+      call f(x-hh, fx2)
+      a(1,i) = (fx1-fx2) / (CNST(2.0)*hh)
+      fac = con**2
+      do j = 2, i
+        a(j,i) = (a(j-1,i)*fac-a(j-1,i-1)) / (fac-CNST(1.0))
+        fac = con**2*fac
+        errt = max(abs(a(j,i)-a(j-1,i)),abs(a(j,i)-a(j-1,i-1)))
+        if (errt .le. err) then
+          err = errt
+          res = a(j,i)
+        endif
+      end do
+      if ( abs(a(i,i)-a(i-1,i-1) ) .ge. safe*err)return
+    end do
+
+    deallocate(a)
+  end subroutine numder_ridders
 
 
 #include "undef.F90"
