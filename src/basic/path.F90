@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: io.F90 7723 2011-04-18 23:22:55Z dstrubbe $
+!! $Id$
 
 #include "global.h"
 
