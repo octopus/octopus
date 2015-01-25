@@ -230,6 +230,7 @@
 
     integer :: ii, is, err
     character(len=256) :: filename
+    !type(mpi_grp_t) :: mpi_grp
     CMPLX, allocatable :: zv_old(:)
     PUSH_SUB(vksinterp_dump)
 
@@ -243,9 +244,10 @@
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
         if (cmplxscl) then
           zv_old = vksinterp%v_old(1:gr%mesh%np, is, ii) + M_zI * vksinterp%Imv_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp=.true.)
         else
-          call drestart_write_mesh_function(restart, filename, gr%mesh, vksinterp%v_old(1:gr%mesh%np, is, ii), err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, vksinterp%v_old(1:gr%mesh%np, is, ii), &
+               err, use_mpi_grp=.true.)
         end if
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity

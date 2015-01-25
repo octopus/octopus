@@ -20,21 +20,31 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr)
+subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, use_mpi_grp)
   type(restart_t),  intent(in)  :: restart
   character(len=*), intent(in)  :: filename
   type(mesh_t),     intent(in)  :: mesh
   R_TYPE,           intent(in)  :: ff(:)
   integer,          intent(out) :: ierr
+  logical, optional, intent(in)  :: use_mpi_grp
+
+  logical         :: use_mpi_grp_
+
+  use_mpi_grp_ = optional_default(use_mpi_grp, .false.)
 
   PUSH_SUB(X(restart_write_mesh_function))
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
   ASSERT(restart%has_mesh)
-
-  call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
+  if (use_mpi_grp_) then
+    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
+         is_tmp=.true., grp=restart%mpi_grp)
+  else
+    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
+         is_tmp=.true.)
   ! all restart files are in atomic units
+  end if
 
   if (ierr /= 0) then
     message(1) = "Unable to write restart function to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
