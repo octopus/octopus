@@ -155,6 +155,51 @@ void FC_FUNC_(oct_getcwd, OCT_GETCWD)
   TO_F_STR1(s, name);
 }
 
+void FC_FUNC_(oct_realpath, OCT_GETCWD)
+     (STR_F_TYPE fnam, STR_F_TYPE rnam STR_ARG2)
+{
+  char *fn=NULL, *rn=NULL;
+  TO_C_STR1(fnam, fn);
+  rn=realpath(fn, NULL);
+  if(rn!=NULL){
+    TO_F_STR2(rn, rnam);
+  }else{
+    TO_F_STR2("", rnam);
+  }
+  free(fn);
+  return;
+}
+
+void FC_FUNC_(oct_dirname, OCT_GETCWD)
+     (STR_F_TYPE fnam, STR_F_TYPE dnam STR_ARG2)
+{
+  char *fn=NULL, *dn=NULL;
+  TO_C_STR1(fnam, fn);
+  dn=dirname(fn);
+  if(dn!=NULL){
+    TO_F_STR2(dn, dnam);
+  }else{
+    TO_F_STR2("", dnam);
+  }
+  free(fn);
+  return;
+}
+
+void FC_FUNC_(oct_basename, OCT_GETCWD)
+     (STR_F_TYPE fnam, STR_F_TYPE bnam STR_ARG2)
+{
+  char *fn=NULL, *bn=NULL;
+  TO_C_STR1(fnam, fn);
+  bn=basename(fn);
+  if(bn!=NULL){
+    TO_F_STR2(bn, bnam);
+  }else{
+    TO_F_STR2("", bnam);
+  }
+  free(fn);
+  return;
+}
+
 void FC_FUNC_(oct_getenv, OCT_GETENV)
   (STR_F_TYPE var, STR_F_TYPE value STR_ARG2)
 {

@@ -35,6 +35,7 @@ libbasic_a_SOURCES =     \
 	io.F90           \
 	io_binary.c      \
 	kinds.F90        \
+	path.F90         \
 	json.F90         \
 	json_parser.F90  \
 	mpi_lib.F90      \
@@ -126,6 +127,7 @@ write_iter.o : write_iter.F90 c_pointer.o
 io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
 io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
 kinds.o : kinds.F90
+path.o : path.F90 loct.o messages.o profiling.o global.o
 json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
 json_parser.o : json_parser.F90 json.o kinds.o io.o messages.o profiling.o global.o
 

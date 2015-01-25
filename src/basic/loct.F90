@@ -30,6 +30,9 @@ module loct_m
     loct_gettimeofday,       &
     loct_nanosleep,          &
     loct_getcwd,             &
+    loct_dirname,            &
+    loct_basename,           &
+    loct_realpath,           &
     loct_sysname,            &
     loct_search_file_lr,     &
     loct_mkdir,              &
@@ -100,6 +103,27 @@ module loct_m
       character(len=*), intent(out) :: name
     end subroutine oct_getcwd
   end interface loct_getcwd
+
+  interface loct_realpath
+    subroutine oct_realpath(fnam, rnam)
+      character(len=*), intent(in)  :: fnam
+      character(len=*), intent(out) :: rnam
+    end subroutine oct_realpath
+  end interface
+
+  interface loct_dirname
+    subroutine oct_dirname(fnam, dnam)
+      character(len=*), intent(in)  :: fnam
+      character(len=*), intent(out) :: dnam
+    end subroutine oct_dirname
+  end interface
+
+  interface loct_basename
+     subroutine oct_basename(fnam, dnam)
+       character(len=*), intent(in)  :: fnam
+       character(len=*), intent(out) :: dnam
+     end subroutine oct_basename
+  end interface
 
 
   ! ---------------------------------------------------------
