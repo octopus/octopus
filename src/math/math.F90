@@ -1326,7 +1326,7 @@ contains
   !!
   !! This is an alternative to "loct_numerical_derivative" (which
   !! is just an interface to the GSL numerical derivative). This version
-  !! is an implementation of Ridder's algorithm [C. J. F. Ridders, Adv.
+  !! is an implementation of Ridders algorithm [C. J. F. Ridders, Adv.
   !! Eng. Software 4, 75 (1982); also described in Numerical Recipes].
   !! It is more precise, but also typically more expensive, than  the
   !! simpler 4-point algorithm implemented in the GSL library.

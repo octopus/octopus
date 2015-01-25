@@ -131,7 +131,7 @@
     j1 = M_ZERO
     do ik = 1, psi%d%nik
       do ist = psi%st_start, psi%st_end
-        j1 = j1 + psi%occ(ist, ik) * &
+        j1 = j1 + &
           abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, ik), &
               tg%st%zpsi(:, :, ist, ik)))**2
       end do
