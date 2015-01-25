@@ -703,6 +703,12 @@ contains
       call messages_fatal(1)
       return
     end if
+    call json_get(json, "type", this%type, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "type" from species data object.'
+      call messages_fatal(1)
+      return
+    end if
     call json_get(json, "z_val", this%z_val, ierr)
     if(ierr/=JSON_OK)then
       message(1) = 'Could not read "z_val" from species data object.'
@@ -737,6 +743,7 @@ contains
     PUSH_SUB(species_create_data_object)
     call json_init(json)
     call json_set(json, "label", trim(adjustl(this%label)))
+    call json_set(json, "type", this%type)
     call json_set(json, "z_val", this%z_val)
     call json_set(json, "def_rsize", this%def_rsize)
     POP_SUB(species_create_data_object)
