@@ -111,9 +111,13 @@ contains
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
     any_non_spherical = .false.
     do iatom = 1, geo%natoms
-      any_non_spherical = any_non_spherical .or. species_type(geo%atom(iatom)%spec) == SPEC_USDEF .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB .or. species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY &
-        .or. species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE
+      any_non_spherical = any_non_spherical                       .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_USDEF          .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB     .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE      .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_FROZEN
+      if(any_non_spherical)exit
     enddo
     if(any_non_spherical) then
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
