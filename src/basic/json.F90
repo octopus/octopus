@@ -14,10 +14,12 @@ module json_m
 
   public :: json_isdef
   public :: json_init
+  public :: json_copy
   public :: json_end
 
   public :: scan
   public :: json_len
+  public :: json_hash
   public :: json_string
   public :: json_write
   public :: json_get
@@ -161,13 +163,13 @@ module json_m
     type(json_table_node_t), dimension(:), pointer :: table =>null()
   end type json_object_t
 
-!!$  type, public :: json_iterator_t
-!!$    private
-!!$    integer                               :: type  = JSON_UNDEF_TYPE
-!!$    type(json_string_iterator_t), pointer :: jsitr =>null()
-!!$    type(json_array_iterator_t),  pointer :: jaitr =>null()
-!!$    type(json_object_iterator_t), pointer :: joitr =>null()
-!!$  end type json_iterator_t
+  type, public :: json_iterator_t
+    private
+    integer                               :: type  = JSON_UNDEF_TYPE
+    type(json_string_iterator_t), pointer :: jsitr =>null()
+    type(json_array_iterator_t),  pointer :: jaitr =>null()
+    type(json_object_iterator_t), pointer :: joitr =>null()
+  end type json_iterator_t
 
   type, public :: json_t
     private
@@ -242,6 +244,22 @@ module json_m
     module procedure json_json_object_init
   end interface json_init
 
+  interface json_copy
+    module procedure json_null_copy
+    module procedure json_logical_copy
+    module procedure json_integer_copy
+    module procedure json_real_copy
+    module procedure json_string_iterator_copy
+    module procedure json_string_copy
+    module procedure json_array_iterator_copy
+    module procedure json_array_copy
+    module procedure json_member_copy
+    module procedure json_object_iterator_copy
+    module procedure json_object_copy
+    module procedure json_value_copy
+    module procedure json_json_copy
+  end interface json_copy
+
   interface json_end
     module procedure json_null_end
     module procedure json_logical_end
@@ -269,6 +287,17 @@ module json_m
     module procedure json_object_value_len
     module procedure json_json_len
   end interface json_len
+
+  interface json_hash
+    !module procedure json_null_hash
+    !module procedure json_logical_hash
+    !module procedure json_integer_hash
+    !module procedure json_real_hash
+    module procedure json_string_hash
+    module procedure json_array_hash
+    module procedure json_object_hash
+    !module procedure json_json_hash
+  end interface json_hash
 
   interface json_string
     module procedure json_null_string
@@ -382,7 +411,9 @@ module json_m
   end interface json_extend
 
   interface json_pop
+    module procedure json_string_pop
     module procedure json_array_pop
+    module procedure json_object_pop
   end interface json_pop
 
   interface json_next
@@ -412,15 +443,15 @@ module json_m
 
 contains
 
-  subroutine json_write_string(string, unit)
-    character(len=*),  intent(in) :: string
+  subroutine json_write_string(this, unit)
+    character(len=*),  intent(in) :: this
     integer, optional, intent(in) :: unit
     !
     PUSH_SUB(json_write_string)
     if(present(unit))then
-      write(unit=unit, fmt="(a)", advance="no") string
+      write(unit=unit, fmt="(a)", advance="no") this
     else
-      write(unit=*, fmt="(a)", advance="no") string
+      write(unit=*, fmt="(a)", advance="no") this
     end if
     POP_SUB(json_write_string)
     return
@@ -439,12 +470,12 @@ contains
     return
   end subroutine json_write_line
 
-  elemental function json_null_isdef(this) result(is)
+  elemental function json_null_isdef(this) result(that)
     type(json_null_t), intent(in) :: this
     !
-    logical :: is
+    logical :: that
     !
-    is=(this%type==JSON_NULL_TYPE)
+    that=(this%type==JSON_NULL_TYPE)
     return
   end function json_null_isdef
 
@@ -455,6 +486,14 @@ contains
     return
   end subroutine json_null_init
 
+  elemental subroutine json_null_copy(this, that)
+    type(json_null_t), intent(inout) :: this
+    type(json_null_t), intent(in)    :: that
+    !
+    this%type=that%type
+    return
+  end subroutine json_null_copy
+
   elemental subroutine json_null_end(this)
     type(json_null_t), intent(inout) :: this
     !
@@ -462,23 +501,22 @@ contains
     return
   end subroutine json_null_end
 
-  elemental function json_null_len(this) result(len)
+  elemental function json_null_len(this) result(that)
     type(json_null_t), intent(in) :: this
     !
-    integer :: len
+    integer :: that
     !
-    len=4
+    that=4
     return
   end function json_null_len
 
-  elemental function json_null_equal(this_1, this_2) result(eqv)
-    type(json_null_t), intent(in) :: this_1
-    type(json_null_t), intent(in) :: this_2
+  elemental function json_null_equal(this, that) result(eqv)
+    type(json_null_t), intent(in) :: this
+    type(json_null_t), intent(in) :: that
     !
     logical :: eqv
     !
-    eqv=.false.
-    if(json_null_isdef(this_1).and.json_null_isdef(this_2))eqv=.true.
+    eqv=(json_null_isdef(this).and.json_null_isdef(that))
     return
   end function json_null_equal
 
@@ -487,7 +525,8 @@ contains
     integer,           intent(out) :: ierr
     !
     ierr=JSON_UNDEF_ERROR
-    if(json_null_isdef(this))ierr=JSON_OK
+    if(json_null_isdef(this))&
+      ierr=JSON_OK
     return
   end subroutine json_null_get
 
@@ -496,7 +535,8 @@ contains
     type(json_string_t), intent(inout) :: string
     !
     PUSH_SUB(json_null_string)
-    if(json_null_isdef(this))call json_string_extend_char(string, "null")
+    if(json_null_isdef(this))&
+      call json_string_extend_char(string, "null")
     POP_SUB(json_null_string)
     return
   end subroutine json_null_string
@@ -506,7 +546,8 @@ contains
     integer, optional, intent(in) :: unit
     !
     PUSH_SUB(json_null_write)
-    if(json_null_isdef(this)) call json_write_string("null", unit)
+    if(json_null_isdef(this))&
+      call json_write_string("null", unit)
     POP_SUB(json_null_write)
     return
   end subroutine json_null_write
@@ -529,6 +570,15 @@ contains
     return
   end subroutine json_logical_init
 
+  elemental subroutine json_logical_copy(this, that)
+    type(json_logical_t), intent(inout) :: this
+    type(json_logical_t), intent(in)    :: that
+    !
+    this%type=that%type
+    this%value=that%value
+    return
+  end subroutine json_logical_copy
+
   elemental subroutine json_logical_end(this)
     type(json_logical_t), intent(inout) :: this
     !
@@ -550,15 +600,15 @@ contains
     return
   end function json_logical_len
 
-  elemental function json_logical_equal(this_1, this_2) result(eqv)
-    type(json_logical_t), intent(in) :: this_1
-    type(json_logical_t), intent(in) :: this_2
+  elemental function json_logical_equal(this, that) result(eqv)
+    type(json_logical_t), intent(in) :: this
+    type(json_logical_t), intent(in) :: that
     !
     logical :: eqv
     !
     eqv=.false.
-    if(json_logical_isdef(this_1).and.json_logical_isdef(this_2))&
-      eqv=(this_1%value.eqv.this_2%value)
+    if(json_logical_isdef(this).and.json_logical_isdef(that))&
+      eqv=(this%value.eqv.that%value)
     return
   end function json_logical_equal
 
@@ -644,6 +694,15 @@ contains
     return
   end subroutine json_integer_init_json_string
 
+  elemental subroutine json_integer_copy(this, that)
+    type(json_integer_t), intent(inout) :: this
+    type(json_integer_t), intent(in)    :: that
+    !
+    this%type=that%type
+    this%value=that%value
+    return
+  end subroutine json_integer_copy
+
   elemental subroutine json_integer_end(this)
     type(json_integer_t), intent(inout) :: this
     !
@@ -670,15 +729,15 @@ contains
     return
   end function json_integer_len
 
-  elemental function json_integer_equal(this_1, this_2) result(eqv)
-    type(json_integer_t), intent(in) :: this_1
-    type(json_integer_t), intent(in) :: this_2
+  elemental function json_integer_equal(this, that) result(eqv)
+    type(json_integer_t), intent(in) :: this
+    type(json_integer_t), intent(in) :: that
     !
     logical :: eqv
     !
     eqv=.false.
-    if(json_integer_isdef(this_1).and.json_integer_isdef(this_2))&
-      eqv=(this_1%value==this_2%value)
+    if(json_integer_isdef(this).and.json_integer_isdef(that))&
+      eqv=(this%value==this%value)
     return
   end function json_integer_equal
 
@@ -770,6 +829,15 @@ contains
     return
   end subroutine json_real_init_json_string
 
+  elemental subroutine json_real_copy(this, that)
+    type(json_real_t), intent(inout) :: this
+    type(json_real_t), intent(in)    :: that
+    !
+    this%type=that%type
+    this%value=that%value
+    return
+  end subroutine json_real_copy
+
   elemental subroutine json_real_end(this)
     type(json_real_t), intent(inout) :: this
     !
@@ -791,15 +859,15 @@ contains
     return
   end function json_real_len
 
-  elemental function json_real_equal(this_1, this_2) result(eqv)
-    type(json_real_t), intent(in) :: this_1
-    type(json_real_t), intent(in) :: this_2
+  elemental function json_real_equal(this, that) result(eqv)
+    type(json_real_t), intent(in) :: this
+    type(json_real_t), intent(in) :: that
     !
     logical :: eqv
     !
     eqv=.false.
-    if(json_real_isdef(this_1).and.json_real_isdef(this_2))&
-      eqv=abs(this_1%value-this_2%value)<2.0_wp*spacing(max(abs(this_1%value),abs(this_2%value)))
+    if(json_real_isdef(this).and.json_real_isdef(that))&
+      eqv=abs(this%value-that%value)<2.0_wp*spacing(max(abs(this%value),abs(that%value)))
     return
   end function json_real_equal
 
@@ -872,7 +940,7 @@ contains
     type(json_string_t), target,  intent(in)  :: string
     !
     PUSH_SUB(json_string_iterator_init)
-    this%value=>null()
+    call json_string_iterator_end(this)
     if(json_string_isdef(string))then
       this%pos=1
       this%len=string%len
@@ -882,12 +950,27 @@ contains
     return
   end subroutine json_string_iterator_init
 
+  subroutine json_string_iterator_copy(this, that)
+    type(json_string_iterator_t), intent(inout) :: this
+    type(json_string_iterator_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_string_iterator_copy)
+    call json_string_iterator_end(this)
+    if(json_string_iterator_isdef(that))then
+      this%pos=that%pos
+      this%len=that%len
+      this%value=>that%value
+    end if
+    POP_SUB(json_string_iterator_copy)
+    return
+  end subroutine json_string_iterator_copy
+
   elemental subroutine json_string_iterator_end(this)
     type(json_string_iterator_t), intent(inout) :: this
     !
     this%pos=0
     this%len=0
-    this%value=>null()
+    nullify(this%value)
     return
   end subroutine json_string_iterator_end
 
@@ -918,7 +1001,7 @@ contains
     PUSH_SUB(json_string_init)
     this%len=0
     this%size=JSON_STRING_INIT_LEN
-    SAFE_ALLOCATE(this%value(1:this%size))
+    SAFE_ALLOCATE(this%value(this%size))
     this%type=JSON_STRING_TYPE
     if(present(value))&
       call json_string_extend_char(this, value)
@@ -926,13 +1009,30 @@ contains
     return
   end subroutine json_string_init
 
+  subroutine json_string_copy(this, that)
+    type(json_string_t), intent(inout) :: this
+    type(json_string_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_string_copy)
+    call json_string_end(this)
+    if(json_string_isdef(that))then
+      this%type=that%type
+      this%len=that%len
+      this%size=that%size
+      SAFE_ALLOCATE(this%value(that%size))
+      this%value(1:that%len)=that%value(1:that%len)
+    end if
+    POP_SUB(json_string_copy)
+    return
+  end subroutine json_string_copy
+
   subroutine json_string_end(this)
     type(json_string_t), intent(inout) :: this
     !
     PUSH_SUB(json_string_end)
     this%type=JSON_UNDEF_TYPE
     SAFE_DEALLOCATE_P(this%value)
-    this%value=>null()
+    nullify(this%value)
     this%size=0
     this%len=0
     POP_SUB(json_string_end)
@@ -953,7 +1053,7 @@ contains
       if(this%size<int(JSON_STRING_GROWTH_FACTOR*need))then
         n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(JSON_STRING_GROWTH_FACTOR)),1)
         this%size=ceiling((JSON_STRING_GROWTH_FACTOR**n)*real(this%size,kind=wp))
-        SAFE_ALLOCATE(buff(1:this%size))
+        SAFE_ALLOCATE(buff(this%size))
         forall(i=1:this%len)buff(i)=this%value(i)
         SAFE_DEALLOCATE_P(this%value)
         this%value=>buff
@@ -972,20 +1072,20 @@ contains
     return
   end function json_string_len
 
-  elemental function json_string_equal(this_1, this_2) result(eqv)
-    type(json_string_t), intent(in) :: this_1
-    type(json_string_t), intent(in) :: this_2
+  elemental function json_string_equal(this, that) result(eqv)
+    type(json_string_t), intent(in) :: this
+    type(json_string_t), intent(in) :: that
     !
     logical :: eqv
     !
     integer :: i
     !
     eqv=.false.
-    if(json_string_isdef(this_1).and.json_string_isdef(this_2))then
-      if(this_1%len==this_2%len)then
+    if(json_string_isdef(this).and.json_string_isdef(that))then
+      if(this%len==that%len)then
         eqv=.true.
-        do i = 1, this_1%len
-          if(this_1%value(i)/=this_2%value(i))then
+        do i = 1, this%len
+          if(this%value(i)/=that%value(i))then
             eqv=.false.
             exit
           end if
@@ -994,6 +1094,23 @@ contains
     end if
     return
   end function json_string_equal
+
+  !Daniel J. Bernstein Hash Function
+  elemental function json_string_hash(this, size) result(hash)
+    type(json_string_t), intent(in) :: this
+    integer,   optional, intent(in) :: size
+    !
+    integer :: hash
+    !
+    integer :: i
+    !
+    hash=5381
+    do i = 1, this%len
+      hash = ieor(33*hash, iachar(this%value(i)))
+    end do
+    if(present(size))hash=modulo(hash, size)+1
+    return
+  end function json_string_hash
 
   pure function json_string_scan_char_string(string, set, back) result(i)
     character(len=*),    intent(in) :: string
@@ -1100,7 +1217,6 @@ contains
         if(escape)call json_string_append(string, backslash)
         call json_string_append(string, char)
       end do
-      call json_string_extend_string(string, this)
       call json_string_append(string, '"')
     end if
     POP_SUB(json_string_string)
@@ -1184,6 +1300,16 @@ contains
     return
   end subroutine json_string_get_char
 
+  elemental subroutine json_string_pop(this, char)
+    type(json_string_t), intent(inout) :: this
+    character,           intent(out)   :: char
+    !
+    char=this%value(this%len)
+    this%value(this%len)=""
+    this%len=this%len-1
+    return
+  end subroutine json_string_pop
+
   subroutine json_string_append(this, char)
     type(json_string_t), intent(inout) :: this
     character,           intent(in)    :: char
@@ -1238,16 +1364,28 @@ contains
     type(json_array_t), target,  intent(in)  :: array
     !
     PUSH_SUB(json_array_iterator_init)
-    this%node=>null()
+    nullify(this%node)
     if(json_array_isdef(array).and.(array%size>0)) this%node=>array%head
     POP_SUB(json_array_iterator_init)
     return
   end subroutine json_array_iterator_init
 
+  subroutine json_array_iterator_copy(this, that)
+    type(json_array_iterator_t), intent(inout) :: this
+    type(json_array_iterator_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_array_iterator_copy)
+    call json_array_iterator_end(this)
+    if(json_array_iterator_isdef(that))&
+      this%node=>that%node
+    POP_SUB(json_array_iterator_copy)
+    return
+  end subroutine json_array_iterator_copy
+
   elemental subroutine json_array_iterator_end(this)
     type(json_array_iterator_t), intent(inout) :: this
     !
-    this%node=>null()
+    nullify(this%node)
     return
   end subroutine json_array_iterator_end
 
@@ -1578,6 +1716,33 @@ contains
     return
   end subroutine json_array_init_string
 
+  recursive subroutine json_array_copy(this, that)
+    type(json_array_t), intent(inout) :: this
+    type(json_array_t), intent(in)    :: that
+    !
+    type(json_array_iterator_t) :: iter
+    type(json_value_t), pointer :: oval, ival
+    integer                     :: ierr
+    !
+    PUSH_SUB(json_array_copy)
+    call json_array_end(this)
+    if(json_array_isdef(that))then
+      call json_array_init(this)
+      call json_array_iterator_init(iter, that)
+      do
+        nullify(oval, ival)
+        call json_array_iterator_next_value(iter, ival, ierr)
+        if(ierr/=JSON_OK)exit
+        SAFE_ALLOCATE(oval)
+        call json_value_copy(oval, ival)
+        call json_array_append_value(this, oval)
+      end do
+      call json_array_iterator_end(iter)
+    end if
+    POP_SUB(json_array_copy)
+    return
+  end subroutine json_array_copy
+
   recursive subroutine json_array_end(this)
     type(json_array_t), target, intent(inout) :: this
     !
@@ -1625,9 +1790,9 @@ contains
     return
   end function json_array_len
 
-  recursive function json_array_equal(this_1, this_2) result(eqv)
-    type(json_array_t), intent(in) :: this_1
-    type(json_array_t), intent(in) :: this_2
+  recursive function json_array_equal(this, that) result(eqv)
+    type(json_array_t), intent(in) :: this
+    type(json_array_t), intent(in) :: that
     !
     logical :: eqv
     !
@@ -1637,11 +1802,11 @@ contains
     !
     PUSH_SUB(json_array_equal)
     eqv=.false.
-    if(json_array_isdef(this_1).and.json_array_isdef(this_2))then
-      if(this_1%size==this_2%size)then
+    if(json_array_isdef(this).and.json_array_isdef(that))then
+      if(this%size==that%size)then
         eqv=.true.
-        call json_array_iterator_init(iter_1, this_1)
-        call json_array_iterator_init(iter_2, this_2)
+        call json_array_iterator_init(iter_1, this)
+        call json_array_iterator_init(iter_2, that)
         do
           call json_array_iterator_next_value(iter_1, value_1, ierr_1)
           call json_array_iterator_next_value(iter_2, value_2, ierr_2)
@@ -1654,13 +1819,30 @@ contains
             exit
           end if
         end do
+        call json_array_iterator_end(iter_1)
+        call json_array_iterator_end(iter_2)
       end if
-      call json_array_iterator_end(iter_1)
-      call json_array_iterator_end(iter_2)
     end if
     POP_SUB(json_array_equal)
     return
   end function json_array_equal
+
+  function json_array_hash(this, size) result(hash)
+    type(json_array_t), intent(in) :: this
+    integer,  optional, intent(in) :: size
+    !
+    integer :: hash
+    !
+    type(json_string_t) :: string
+    !
+    PUSH_SUB(json_array_hash)
+    call json_init(string)
+    call json_array_string(this, string)
+    hash=json_string_hash(string, size)
+    call json_end(string)
+    POP_SUB(json_array_hash)
+    return
+  end function json_array_hash
 
   recursive subroutine json_array_string(this, string)
     type(json_array_t),  intent(in)    :: this
@@ -2617,36 +2799,62 @@ contains
     return
   end subroutine json_member_init
 
+  recursive subroutine json_member_copy(this, that)
+    type(json_member_t), intent(inout) :: this
+    type(json_member_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_member_copy)
+    call json_member_end(this)
+    if(json_member_isdef(that))then
+      this%type=that%type
+      SAFE_ALLOCATE(this%ident)
+      call json_string_copy(this%ident, that%ident)
+      SAFE_ALLOCATE(this%value)
+      call json_value_copy(this%value, that%value)
+    end if
+    POP_SUB(json_member_copy)
+    return
+  end subroutine json_member_copy
+
   recursive subroutine json_member_end(this)
     type(json_member_t), intent(inout) :: this
     !
     PUSH_SUB(json_member_end)
-    if(associated(this%ident))then
+    if(json_member_isdef(this))then
       call json_string_end(this%ident)
       SAFE_DEALLOCATE_P(this%ident)
-    end if
-    this%ident=>null()
-    if(associated(this%value))then
+      nullify(this%ident)
       call json_value_end(this%value)
       SAFE_DEALLOCATE_P(this%value)
+      nullify(this%value)
+      this%type=JSON_UNDEF_TYPE
     end if
-    this%value=>null()
-    this%type=JSON_UNDEF_TYPE
     POP_SUB(json_member_end)
     return
   end subroutine json_member_end
 
-  recursive function json_member_equal(this_1, this_2) result(eqv)
-    type(json_member_t), intent(in) :: this_1
-    type(json_member_t), intent(in) :: this_2
+  elemental function json_member_len(this) result(len)
+    type(json_member_t), intent(in) :: this
+    !
+    integer :: len
+    !
+    len=0
+    if(associated(this%value))&
+      len=json_value_len(this%value)
+    return
+  end function json_member_len
+
+  recursive function json_member_equal(this, that) result(eqv)
+    type(json_member_t), intent(in) :: this
+    type(json_member_t), intent(in) :: that
     !
     logical :: eqv
     !
     PUSH_SUB(json_member_equal)
     eqv=.false.
-    if(json_member_isdef(this_1).and.json_member_isdef(this_2))then
-      eqv=json_string_equal(this_1%ident, this_2%ident)
-      eqv=eqv.and.json_value_equal(this_1%value, this_2%value)
+    if(json_member_isdef(this).and.json_member_isdef(that))then
+      if(json_string_equal(this%ident, that%ident))&
+        eqv=json_value_equal(this%value, that%value)
     end if
     POP_SUB(json_member_equal)
     return
@@ -2745,6 +2953,21 @@ contains
     POP_SUB(json_object_iterator_init)
     return
   end subroutine json_object_iterator_init
+
+  subroutine json_object_iterator_copy(this, that)
+    type(json_object_iterator_t), intent(inout) :: this
+    type(json_object_iterator_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_object_iterator_copy)
+    call json_object_iterator_end(this)
+    if(json_object_iterator_isdef(that))then
+       this%pos=that%pos
+       this%node=>that%node
+       this%table=>that%table
+    end if
+    POP_SUB(json_object_iterator_copy)
+    return
+  end subroutine json_object_iterator_copy
 
   elemental subroutine json_object_iterator_end(this)
     type(json_object_iterator_t), intent(inout) :: this
@@ -3012,12 +3235,41 @@ contains
     PUSH_SUB(json_object_init)
     this%used=0
     this%size=JSON_TABLE_INIT_LEN
-    SAFE_ALLOCATE(this%table(1:this%size))
-    forall(i=1:this%size)this%table(i)%head=>null()
+    SAFE_ALLOCATE(this%table(this%size))
+    do i = 1, this%size
+      nullify(this%table(i)%head)
+    end do
     this%type=JSON_OBJECT_TYPE
     POP_SUB(json_object_init)
     return
   end subroutine json_object_init
+
+  recursive subroutine json_object_copy(this, that)
+    type(json_object_t), intent(inout) :: this
+    type(json_object_t), intent(in)    :: that
+    !
+    type(json_object_iterator_t) :: iter
+    type(json_member_t), pointer :: ombr, imbr
+    integer                      :: ierr
+    !
+    PUSH_SUB(json_object_copy)
+    call json_object_end(this)
+    if(json_object_isdef(that))then
+      call json_object_init(this)
+      call json_object_iterator_init(iter, that)
+      do
+        nullify(ombr, imbr)
+        call json_object_iterator_next_member(iter, imbr, ierr)
+        if(ierr/=JSON_OK)exit
+        SAFE_ALLOCATE(ombr)
+        call json_member_copy(ombr, imbr)
+        call json_object_set_member(this, ombr)
+      end do
+      call json_object_iterator_end(iter)
+    end if
+    POP_SUB(json_object_copy)
+    return
+  end subroutine json_object_copy
 
   recursive subroutine json_object_end(this)
     type(json_object_t), target, intent(inout) :: this
@@ -3094,7 +3346,7 @@ contains
       buff%used=0
       n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(JSON_TABLE_GROWTH_FACTOR)),1)
       buff%size=ceiling((JSON_TABLE_GROWTH_FACTOR**n)*real(this%size,kind=wp))
-      SAFE_ALLOCATE(buff%table(1:buff%size))
+      SAFE_ALLOCATE(buff%table(buff%size))
       forall(i=1:buff%size)buff%table(i)%head=>null()
       do i = 1, this%size
         do
@@ -3115,9 +3367,9 @@ contains
     return
   end subroutine json_object_reallocate
 
-  recursive function json_object_equal(this_1, this_2) result(eqv)
-    type(json_object_t), intent(in) :: this_1
-    type(json_object_t), intent(in) :: this_2
+  recursive function json_object_equal(this, that) result(eqv)
+    type(json_object_t), intent(in) :: this
+    type(json_object_t), intent(in) :: that
     !
     logical :: eqv
     !
@@ -3128,14 +3380,15 @@ contains
     !
     PUSH_SUB(json_object_equal)
     eqv=.false.
-    if(json_object_isdef(this_1).and.json_object_isdef(this_2))then
-      if(this_1%used==this_2%used)then
+    if(json_object_isdef(this).and.json_object_isdef(that))then
+      if(this%used==that%used)then
         eqv=.true.
-        call json_object_iterator_init(iter, this_1)
-        call json_object_iterator_next_member(iter, member, ierr)
-        do while(ierr==JSON_OK)
-          value=>null()
-          call json_object_get_value(this_2, member%ident, value, ierr=ierr)
+        call json_object_iterator_init(iter, this)
+        do
+          nullify(member, value)
+          call json_object_iterator_next_member(iter, member, ierr)
+          if(ierr/=JSON_OK)exit
+          call json_object_get_value(that, member%ident, value, ierr)
           if(ierr/=JSON_OK)then
             eqv=.false.
             exit
@@ -3144,29 +3397,29 @@ contains
             eqv=.false.
             exit
           end if
-          call json_object_iterator_next_member(iter, member, ierr)
         end do
+        call json_object_iterator_end(iter)
+        nullify(member, value)
       end if
-      call json_object_iterator_end(iter)
     end if
     POP_SUB(json_object_equal)
     return
   end function json_object_equal
 
-  !Daniel J. Bernstein Hash Function
-  elemental function json_object_hash(string, size) result(hash)
-    type(json_string_t), intent(in) :: string
-    integer,             intent(in) :: size
+  function json_object_hash(this, size) result(hash)
+    type(json_object_t), intent(in) :: this
+    integer,   optional, intent(in) :: size
     !
     integer :: hash
     !
-    integer :: i
+    type(json_string_t) :: string
     !
-    hash=5381
-    do i = 1, string%len
-      hash = ieor(33*hash, iachar(string%value(i)))
-    end do
-    hash=modulo(hash, size)+1
+    PUSH_SUB(json_object_hash)
+    call json_init(string)
+    call json_object_string(this, string)
+    hash=json_string_hash(string, size)
+    call json_end(string)
+    POP_SUB(json_object_hash)
     return
   end function json_object_hash
 
@@ -3174,22 +3427,26 @@ contains
     type(json_object_t), target, intent(in)    :: this
     type(json_string_t),         intent(inout) :: string
     !
-    type(json_member_node_t), pointer :: node
-    integer                           :: i
+    type(json_object_iterator_t) :: iter
+    type(json_member_t), pointer :: member
+    integer                      :: ierr
     !
     PUSH_SUB(json_object_string)
     if(json_object_isdef(this))then
       call json_string_append(string, "{")
-      do i = 1, this%size
-        node=>this%table(i)%head
-        do while(associated(node))
-          call json_member_string(node%member, string)
-          if(.not.associated(node%next))exit
-          node=>node%next
+      call json_object_iterator_init(iter, this)
+      call json_object_iterator_next_member(iter, member, ierr)
+      if(ierr==JSON_OK)then
+        call json_member_string(member, string)
+        do
+          call json_object_iterator_next_member(iter, member, ierr)
+          if(ierr/=JSON_OK)exit
           call json_string_append(string, ",")
+          call json_member_string(member, string)
         end do
-      end do
-      call json_string_append(string, "}")
+        call json_object_iterator_end(iter)
+        call json_string_append(string, "}")
+      end if
     end if
     POP_SUB(json_object_string)
     return
@@ -3237,6 +3494,30 @@ contains
     return
   end subroutine json_object_write
 
+  subroutine json_object_pop(this, member)
+    type(json_object_t),          intent(inout) :: this
+    type(json_member_t), pointer, intent(out)   :: member
+    !
+    type(json_member_node_t), pointer :: node
+    integer                           :: i
+    !
+    PUSH_SUB(json_object_pop)
+    member=>null()
+    do i = 1, this%size
+      if(associated(this%table(i)%head))then
+        node=>this%table(i)%head
+        this%table(i)%head=>node%next
+        this%used=this%used-1
+        member=>node%member
+        SAFE_DEALLOCATE_P(node)
+        node=>null()
+        exit
+      end if
+    end do
+    POP_SUB(json_object_pop)
+    return
+  end subroutine json_object_pop
+
   subroutine json_object_set_member(this, member)
     type(json_object_t),         intent(inout) :: this
     type(json_member_t), target, intent(in)    :: member
@@ -3247,7 +3528,7 @@ contains
     PUSH_SUB(json_object_set_member)
     if(json_member_isdef(member))then
       call json_object_reallocate(this)
-      n=json_object_hash(member%ident, this%size)
+      n=json_string_hash(member%ident, this%size)
       if(associated(this%table(n)%head))then
         node=>this%table(n)%head
         do
@@ -3258,6 +3539,7 @@ contains
             exit
           end if
           if(associated(node%next))then
+
             node=>node%next
           else
             SAFE_ALLOCATE(node%next)
@@ -3514,7 +3796,7 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this).and.json_string_isdef(name))then
       ierr=JSON_KEY_ERROR
-      node=>this%table(json_object_hash(name, this%size))%head
+      node=>this%table(json_string_hash(name, this%size))%head
       do while(associated(node))
         if(json_string_equal(node%member%ident, name))then
           if(json_value_isdef(node%member%value))value=>node%member%value
@@ -3883,6 +4165,42 @@ contains
     return
   end subroutine json_value_init_object
 
+  recursive subroutine json_value_copy(this, that)
+    type(json_value_t), intent(inout) :: this
+    type(json_value_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_value_copy)
+    call json_value_end(this)
+    if(json_value_isdef(that))then
+      this%type=that%type
+      select case(that%type)
+      case(JSON_NULL_TYPE)
+        SAFE_ALLOCATE(this%jnull)
+        call json_null_copy(this%jnull, that%jnull)
+      case(JSON_LOGICAL_TYPE)
+        SAFE_ALLOCATE(this%logical)
+        call json_logical_copy(this%logical, that%logical)
+      case(JSON_INTEGER_TYPE)
+        SAFE_ALLOCATE(this%integer)
+        call json_integer_copy(this%integer, that%integer)
+      case(JSON_REAL_TYPE)
+        SAFE_ALLOCATE(this%real)
+        call json_real_copy(this%real, that%real)
+      case(JSON_STRING_TYPE)
+        SAFE_ALLOCATE(this%string)
+        call json_string_copy(this%string, that%string)
+      case(JSON_ARRAY_TYPE)
+        SAFE_ALLOCATE(this%array)
+        call json_array_copy(this%array, that%array)
+      case(JSON_OBJECT_TYPE)
+        SAFE_ALLOCATE(this%object)
+        call json_object_copy(this%object, that%object)
+      end select
+    end if
+    POP_SUB(json_value_copy)
+    return
+  end subroutine json_value_copy
+
   recursive subroutine json_value_end(this)
     type(json_value_t), intent(inout) :: this
     !
@@ -3948,31 +4266,31 @@ contains
     return
   end function json_value_len
 
-  recursive function json_value_equal(this_1, this_2) result(eqv)
-    type(json_value_t), intent(in) :: this_1
-    type(json_value_t), intent(in) :: this_2
+  recursive function json_value_equal(this, that) result(eqv)
+    type(json_value_t), intent(in) :: this
+    type(json_value_t), intent(in) :: that
     !
     logical :: eqv
     !
     PUSH_SUB(json_value_equal)
     eqv=.false.
-    if(json_value_isdef(this_1).and.json_value_isdef(this_2))then
-      if(this_1%type==this_2%type)then
-        select case(this_1%type)
+    if(json_value_isdef(this).and.json_value_isdef(that))then
+      if(this%type==that%type)then
+        select case(this%type)
         case(JSON_NULL_TYPE)
-          eqv=json_null_equal(this_1%jnull, this_2%jnull)
+          eqv=json_null_equal(this%jnull, that%jnull)
         case(JSON_LOGICAL_TYPE)
-          eqv=json_logical_equal(this_1%logical, this_2%logical)
+          eqv=json_logical_equal(this%logical, that%logical)
         case(JSON_INTEGER_TYPE)
-          eqv=json_integer_equal(this_1%integer, this_2%integer)
+          eqv=json_integer_equal(this%integer, that%integer)
         case(JSON_REAL_TYPE)
-          eqv=json_real_equal(this_1%real, this_2%real)
+          eqv=json_real_equal(this%real, that%real)
         case(JSON_STRING_TYPE)
-          eqv=json_string_equal(this_1%string, this_2%string)
+          eqv=json_string_equal(this%string, that%string)
         case(JSON_ARRAY_TYPE)
-          eqv=json_array_equal(this_1%array, this_2%array)
+          eqv=json_array_equal(this%array, that%array)
         case(JSON_OBJECT_TYPE)
-          eqv=json_object_equal(this_1%object, this_2%object)
+          eqv=json_object_equal(this%object, that%object)
         end select
       end if
     end if
@@ -4145,63 +4463,74 @@ contains
     return
   end subroutine json_value_write
 
-!!$  elemental function json_iterator_isdef(this) result(is)
-!!$    type(json_iterator_t), intent(in) :: this
-!!$    !
-!!$    logical :: is
-!!$    !
-!!$    is=.false.
-!!$    select case(this%type)
-!!$    case(JSON_STRING_TYPE)
-!!$      if(associated(this%jsitr))&
-!!$        is=json_string_iterator_isdef(this%jsitr)
-!!$    case(JSON_ARRAY_TYPE)
-!!$      if(associated(this%jaitr))&
-!!$        is=json_array_iterator_isdef(this%jaitr)
-!!$    case(JSON_OBJECT_TYPE)
-!!$      if(associated(this%joitr))&
-!!$        is=json_object_iterator_isdef(this%joitr)
-!!$    end select
-!!$    P!OP_SUB()
-!!$    return
-!!$  end function json_iterator_isdef
-!!$
-!!$  subroutine json_iterator_init_string(this, string)
-!!$    type(json_iterator_t), intent(out) :: this
-!!$    type(json_string_t),   intent(in)  :: string
-!!$    !
-!!$    this%type=JSON_STRING_TYPE
-!!$    S!AFE_ALLOCATE(this%jsitr)
-!!$    call json_string_iterator_init(this%jsitr, string)
-!!$    P!OP_SUB()
-!!$    eturn
-!!$  end subroutine json_iterator_init_string
-!!$
-!!$  elemental subroutine json_iterator_end(this)
-!!$    type(json_iterator_t), intent(inout) :: this
-!!$    !
-!!$    select case(this%type)
-!!$    case(JSON_STRING_TYPE)
-!!$      if(associated(this%jsitr))then
-!!$        call json_string_iterator_end(this%jsitr)
-!!$        S!AFE_DEALLOCATE_P(this%jsitr)
-!!$      end if
-!!$    case(JSON_ARRAY_TYPE)
-!!$      if(associated(this%jaitr))then
-!!$        call json_array_iterator_end(this%jaitr)
-!!$        S!AFE_DEALLOCATE_P(this%jaitr)
-!!$      end if
-!!$    case(JSON_OBJECT_TYPE)
-!!$      if(associated(this%joitr))then
-!!$        call json_object_iterator_end(this%joitr)
-!!$        S!AFE_DEALLOCATE_P(this%joitr)
-!!$      end if
-!!$    end select
-!!$    this%type=JSON_UNDEF_TYPE
-!!$    P!OP_SUB()
-!!$    return
-!!$  end subroutine json_iterator_end
-!!$
+  elemental function json_iterator_isdef(this) result(is)
+    type(json_iterator_t), intent(in) :: this
+    !
+    logical :: is
+    !
+    is=(this%type/=JSON_UNDEF_TYPE)
+    return
+  end function json_iterator_isdef
+
+  subroutine json_iterator_init_string(this, string)
+    type(json_iterator_t), intent(out) :: this
+    type(json_string_t),   intent(in)  :: string
+    !
+    PUSH_SUB(json_iterator_init_string)
+    this%type=JSON_STRING_TYPE
+    SAFE_ALLOCATE(this%jsitr)
+    call json_string_iterator_init(this%jsitr, string)
+    POP_SUB(json_iterator_init_string)
+    return
+  end subroutine json_iterator_init_string
+
+  subroutine json_iterator_init_array(this, array)
+    type(json_iterator_t), intent(out) :: this
+    type(json_array_t),    intent(in)  :: array
+    !
+    PUSH_SUB(json_iterator_init_array)
+    this%type=JSON_ARRAY_TYPE
+    SAFE_ALLOCATE(this%jaitr)
+    call json_array_iterator_init(this%jaitr, array)
+    POP_SUB(json_iterator_init_array)
+    return
+  end subroutine json_iterator_init_array
+
+  subroutine json_iterator_init_object(this, object)
+    type(json_iterator_t), intent(out) :: this
+    type(json_object_t),   intent(in)  :: object
+    !
+    PUSH_SUB(json_iterator_init_object)
+    this%type=JSON_OBJECT_TYPE
+    SAFE_ALLOCATE(this%jaitr)
+    call json_object_iterator_init(this%joitr, object)
+    POP_SUB(json_iterator_init_object)
+    return
+  end subroutine json_iterator_init_object
+
+  subroutine json_iterator_end(this)
+    type(json_iterator_t), intent(inout) :: this
+    !
+    PUSH_SUB(json_iterator_end)
+    select case(this%type)
+    case(JSON_STRING_TYPE)
+      call json_string_iterator_end(this%jsitr)
+      SAFE_DEALLOCATE_P(this%jsitr)
+      nullify(this%jsitr)
+    case(JSON_ARRAY_TYPE)
+      call json_array_iterator_end(this%jaitr)
+      SAFE_DEALLOCATE_P(this%jaitr)
+      nullify(this%jaitr)
+    case(JSON_OBJECT_TYPE)
+      call json_object_iterator_end(this%joitr)
+      SAFE_DEALLOCATE_P(this%joitr)
+      nullify(this%joitr)
+    end select
+    this%type=JSON_UNDEF_TYPE
+    POP_SUB(json_iterator_end)
+    return
+  end subroutine json_iterator_end
+
 !!$    subroutine json_iterator_next_value(this, that, ierr)
 !!$  JSON_UNDEF_TYPE
 !!$  JSON_STRING_TYPE
@@ -4251,6 +4580,27 @@ contains
     return
   end subroutine json_json_object_init
 
+  subroutine json_json_copy(this, that)
+    type(json_t), intent(inout) :: this
+    type(json_t), intent(in)    :: that
+    !
+    PUSH_SUB(json_json_copy)
+    call json_json_end(this)
+    if(json_json_isdef(that))then
+      this%type=that%type
+      select case(that%type)
+      case(JSON_ARRAY_TYPE)
+        SAFE_ALLOCATE(this%array)
+        call json_array_copy(this%array, that%array)
+      case(JSON_OBJECT_TYPE)
+        SAFE_ALLOCATE(this%object)
+        call json_object_copy(this%object, that%object)
+      end select
+    end if
+    POP_SUB(json_json_copy)
+    return
+  end subroutine json_json_copy
+
   subroutine json_json_end(this)
     type(json_t), intent(inout) :: this
     !
@@ -4286,21 +4636,21 @@ contains
     return
   end function json_json_len
 
-  function json_json_equal(this_1, this_2) result(eqv)
-    type(json_t), intent(in) :: this_1
-    type(json_t), intent(in) :: this_2
+  function json_json_equal(this, that) result(eqv)
+    type(json_t), intent(in) :: this
+    type(json_t), intent(in) :: that
     !
     logical :: eqv
     !
     PUSH_SUB(json_json_equal)
     eqv=.false.
-    if(json_json_isdef(this_1).and.json_json_isdef(this_2))then
-      if(this_1%type==this_2%type)then
-        select case(this_1%type)
+    if(json_json_isdef(this).and.json_json_isdef(that))then
+      if(this%type==that%type)then
+        select case(this%type)
         case(JSON_ARRAY_TYPE)
-          eqv=json_array_equal(this_1%array, this_2%array)
+          eqv=json_array_equal(this%array, that%array)
         case(JSON_OBJECT_TYPE)
-          eqv=json_object_equal(this_1%object, this_2%object)
+          eqv=json_object_equal(this%object, that%object)
         end select
       end if
     end if
