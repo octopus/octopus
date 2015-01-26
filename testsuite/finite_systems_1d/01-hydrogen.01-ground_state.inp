@@ -2,7 +2,7 @@
 # $Id$
 #
 # This test calculates a one-dimensional model for Hydrogen, considering
-# a soft-Coulomb nuclueus-electron interaction. It calculates the ground-state
+# a soft-Coulomb nucleus-electron interaction. It calculates the ground-state
 # in a first run, and then the first nine excited states in the "unocc" mode.
 # It is about the simplest thing one can do with octopus...
 #
