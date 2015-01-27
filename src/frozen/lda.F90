@@ -6,9 +6,9 @@ module lda_m
   use messages_m
   use profiling_m
 
-  use json_m,       only: json_object_t
-  use kinds_m,      only: wp
-  use simulation_m, only: simulation_t
+  use json_m,  only: json_object_t
+  use kinds_m, only: wp
+
 
   use interface_xc_m, only:   &
     interface_xc_t,           &
@@ -37,7 +37,7 @@ module lda_m
   type, public :: lda_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(simulation_t),  pointer :: sim    =>null()
+    integer                      :: ndim   = 0
     type(interface_xc_t)         :: funct
   end type lda_t
 
@@ -50,21 +50,21 @@ contains
     !
     PUSH_SUB(lda_init)
     this%config=>config
-    this%sim=>null()
+    this%ndim=0
     call interface_xc_init(this%funct, config)
     POP_SUB(lda_init)
     return
   end subroutine lda_init
 
   ! ---------------------------------------------------------
-  subroutine lda_start(this, sim)
-    type(lda_t),                intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: sim
+  subroutine lda_start(this, ndim)
+    type(lda_t), intent(inout) :: this
+    integer,     intent(in)    :: ndim
     !
     PUSH_SUB(lda_start)
-    ASSERT(.not.associated(this%sim))
-    this%sim=>sim
-    call interface_xc_start(this%funct, sim)
+    ASSERT(this%ndim==0)
+    this%ndim=ndim
+    call interface_xc_start(this%funct, this%ndim)
     POP_SUB(lda_start)
     return
   end subroutine lda_start
@@ -118,12 +118,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lda_copy(this, that)
-    type(lda_t), intent(out) :: this
-    type(lda_t), intent(in)  :: that
+    type(lda_t), intent(inout) :: this
+    type(lda_t), intent(in)    :: that
     !
     PUSH_SUB(lda_copy)
+    call lda_end(this)
     this%config=>that%config
-    this%sim=>that%sim
+    this%ndim=that%ndim
     call interface_xc_copy(this%funct, that%funct)
     POP_SUB(lda_copy)
     return
@@ -135,7 +136,8 @@ contains
     !
     PUSH_SUB(lda_end)
     call interface_xc_end(this%funct)
-    nullify(this%sim, this%config)
+    this%ndim=0
+    nullify(this%config)
     POP_SUB(lda_end)
     return
   end subroutine lda_end

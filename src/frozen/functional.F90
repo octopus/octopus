@@ -6,15 +6,29 @@ module functional_m
   use messages_m
   use profiling_m
 
-  use grid_m,          only: grid_t
+  use derivatives_m,   only: derivatives_t
   use json_m,          only: JSON_OK, json_object_t, json_get
   use kinds_m,         only: wp
   use mesh_m,          only: mesh_t
   use mesh_function_m, only: dmf_integrate
-  use simulation_m,    only: simulation_t, simulation_get
-  use XC_F90(lib_m)
 
-  use interface_xc_m
+  use interface_xc_m, only: &
+    XC_UNKNOWN,             &   
+    XC_NONE
+
+  use interface_xc_m, only:  &
+    XC_EXCHANGE,             &
+    XC_CORRELATION,          &
+    XC_EXCHANGE_CORRELATION, &
+    XC_KINETIC              
+
+  use interface_xc_m, only:  &
+    XC_FAMILY_LDA,           &
+    XC_FAMILY_GGA,           &
+    XC_FAMILY_MGGA,          &
+    XC_FAMILY_LCA,           &
+    XC_FAMILY_OEP,           &
+    XC_FAMILY_HYB_GGA
 
   use gga_m, only:       &
     gga_t,               &
@@ -72,12 +86,16 @@ module functional_m
   type, public :: functional_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(simulation_t),  pointer :: sim    =>null()
     type(mesh_t),        pointer :: mesh   =>null()
     type(lda_t),         pointer :: lda    =>null()
     type(gga_t),         pointer :: gga    =>null()
     integer                      :: family = XC_NONE ! LDA, GGA, etc.
   end type functional_t
+
+  interface functional_start
+    module procedure functional_start_mesh
+    module procedure functional_start_der
+  end interface functional_start
 
   interface functional_get_energy
     module procedure functional_get_energy_from_exc
@@ -95,7 +113,7 @@ contains
     !
     PUSH_SUB(functional_init)
     this%config=>config
-    nullify(this%sim, this%mesh)
+    nullify(this%mesh)
     call json_get(this%config, "family", this%family, ierr)
     if(ierr/=JSON_OK)this%family=XC_NONE
     print *, "***: functional_init: ", this%family
@@ -121,25 +139,43 @@ contains
   end subroutine functional_init
 
   ! ---------------------------------------------------------
-  subroutine functional_start(this, sim)
-    type(functional_t),         intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: sim
+  subroutine functional_start_mesh(this, mesh)
+    type(functional_t),   intent(inout) :: this
+    type(mesh_t), target, intent(in)    :: mesh
     !
-    type(grid_t), pointer :: grid
-    !
-    PUSH_SUB(functional_start)
-    ASSERT(.not.associated(this%sim))
-    this%sim=>sim
-    nullify(grid)
-    call simulation_get(this%sim, grid)
-    ASSERT(associated(grid))
-    this%mesh=>grid%fine%mesh
+    PUSH_SUB(functional_start_mesh)
+    ASSERT(.not.associated(this%mesh))
+    this%mesh=>mesh
     if(this%family>XC_NONE)then
       select case(this%family)
       case(XC_FAMILY_LDA)
-        call lda_start(this%lda, sim)
+        ASSERT(associated(this%lda))
+        call lda_start(this%lda, mesh%sb%dim)
+      case default
+        call functional_end(this)
+        ASSERT(.false.)
+      end select
+    end if
+    POP_SUB(functional_start_mesh)
+    return
+  end subroutine functional_start_mesh
+
+  ! ---------------------------------------------------------
+  subroutine functional_start_der(this, der)
+    type(functional_t),          intent(inout) :: this
+    type(derivatives_t), target, intent(in)    :: der
+    !
+    PUSH_SUB(functional_start_der)
+    ASSERT(.not.associated(this%mesh))
+    this%mesh=>der%mesh
+    if(this%family>XC_NONE)then
+      select case(this%family)
+      case(XC_FAMILY_LDA)
+        ASSERT(associated(this%lda))
+        call lda_start(this%lda, this%mesh%sb%dim)
       case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-        call gga_start(this%gga, sim)
+        ASSERT(associated(this%gga))
+        call gga_start(this%gga, der)
       !case(XC_FAMILY_MGGA)
       !case(XC_FAMILY_LCA)
       !case(XC_FAMILY_OEP)
@@ -148,9 +184,9 @@ contains
         ASSERT(.false.)
       end select
     end if
-    POP_SUB(functional_start)
+    POP_SUB(functional_start_der)
     return
-  end subroutine functional_start
+  end subroutine functional_start_der
 
   ! ---------------------------------------------------------
   elemental function functional_get_kind(this) result(kind)
@@ -199,17 +235,7 @@ contains
     real(kind=wp), dimension(size(density,dim=1)) :: exc
     !
     PUSH_SUB(functional_get_energy_from_density)
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      call lda_get_exc(this%lda, density, exc)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_get_exc(this%gga, density, exc)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
-    !case(XC_FAMILY_OEP)
-    case default
-      ASSERT(.false.)
-    end select
+    call functional_get_exc(this, density, exc)
     energy=functional_get_energy_from_exc(this, density, exc)
     POP_SUB(functional_get_energy_from_density)
     return
@@ -310,12 +336,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine functional_copy(this, that)
-    type(functional_t), intent(out) :: this
-    type(functional_t), intent(in)  :: that
+    type(functional_t), intent(inout) :: this
+    type(functional_t), intent(in)    :: that
     !
     PUSH_SUB(functional_copy)
+    call functional_end(this)
     this%config=>that%config
-    this%sim=>that%sim
     this%mesh=>that%mesh
     this%family=that%family
     select case(this%family)
@@ -353,7 +379,7 @@ contains
     !case(XC_FAMILY_OEP)
     end select
     this%family=XC_NONE
-    nullify(this%gga, this%lda, this%mesh, this%sim, this%config)
+    nullify(this%gga, this%lda, this%mesh, this%config)
     POP_SUB(functional_end)
     return
   end subroutine functional_end

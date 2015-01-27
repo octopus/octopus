@@ -8,6 +8,7 @@ module basis_m
 
   use json_m,  only: JSON_OK, json_object_t, json_len, json_get
   use kinds_m, only: wp, operator(.equal.)
+  use space_m, only: space_t
 
   implicit none
 
@@ -24,7 +25,7 @@ module basis_m
     basis_copy,        &
     basis_end
 
-  integer,       parameter :: ndim = 3
+  integer,       parameter :: ndim = MAX_DIM
   real(kind=wp), parameter :: eps  = epsilon(1.0_wp)
 
   type, private :: translation_t
@@ -80,7 +81,7 @@ contains
     this%do=.false.
     this%n=0
     if(present(r))then
-      if(any(r>eps))then
+      if(any(abs(r)>eps))then
         this%do=.true.
         this%n=size(r)
         SAFE_ALLOCATE(this%r(this%n))
@@ -107,17 +108,17 @@ contains
   end function translation_equal
 
   ! ---------------------------------------------------------
-  subroutine translation_copy(this_out, this_in)
-    type(translation_t), intent(out) :: this_out
-    type(translation_t), intent(in)  :: this_in
+  subroutine translation_copy(this, that)
+    type(translation_t), intent(out) :: this
+    type(translation_t), intent(in)  :: that
     !
     PUSH_SUB(translation_copy)
-    call translation_init(this_out)
-    if(this_in%do)then
-      this_out%n=this_in%n
-      SAFE_ALLOCATE(this_out%r(this_out%n))
-      this_out%r=this_in%r
-      this_out%do=.true.
+    call translation_init(this)
+    if(that%do)then
+      this%n=that%n
+      SAFE_ALLOCATE(this%r(this%n))
+      this%r=that%r
+      this%do=.true.
     end if
     POP_SUB(translation_copy)
     return
@@ -238,21 +239,21 @@ contains
   end function rotations_equal
 
   ! ---------------------------------------------------------
-  subroutine rotations_copy(this_out, this_in)
-    type(rotations_t), intent(out) :: this_out
-    type(rotations_t), intent(in)  :: this_in
+  subroutine rotations_copy(this, that)
+    type(rotations_t), intent(out) :: this
+    type(rotations_t), intent(in)  :: that
     !
     integer :: i
     !
     PUSH_SUB(rotations_copy)
-    call rotations_init(this_out)
-    if(this_in%do)then
-      this_out%n=this_in%n
-      SAFE_ALLOCATE(this_out%r(this_out%n))
-      do i = 1, this_out%n
-        call rotation_copy(this_out%r(i), this_in%r(i))
+    call rotations_init(this)
+    if(that%do)then
+      this%n=that%n
+      SAFE_ALLOCATE(this%r(this%n))
+      do i = 1, this%n
+        call rotation_copy(this%r(i), that%r(i))
       end do
-      this_out%do=.true.
+      this%do=.true.
     end if
     POP_SUB(rotations_copy)
     return
@@ -278,57 +279,92 @@ contains
   end subroutine rotations_end
 
   ! ---------------------------------------------------------
-  subroutine basis_init_array(this, r, theta)
+  subroutine basis_init_array(this, space, r, theta)
     type(basis_t),                         intent(out) :: this
+    type(space_t),               optional, intent(in)  :: space
     real(kind=wp), dimension(:), optional, intent(in)  :: r
     real(kind=wp), dimension(:), optional, intent(in)  :: theta
     !
     PUSH_SUB(basis_init_array)
-    ASSERT(size(r)==size(theta))
-    call translation_init(this%trn, r)
-    call rotations_init(this%rot, theta)
+    this%dim=ndim
+    if(present(space))this%dim=min(space%dim,this%dim)
+    if(present(r))then
+      if(this%dim<size(r))then
+        call translation_init(this%trn, r(1:this%dim))
+      else
+        call translation_init(this%trn, r)
+      end if
+    else
+      call translation_init(this%trn)
+    end if
+    if(present(theta))then
+      if(this%dim<size(theta))then
+        call rotations_init(this%rot, theta(1:this%dim))
+      else
+        call rotations_init(this%rot, theta)
+      end if
+    else
+      call rotations_init(this%rot)
+    end if
     this%do=(this%trn%do.or.this%rot%do)
     POP_SUB(basis_init_array)
     return
   end subroutine basis_init_array
 
   ! ---------------------------------------------------------
-  subroutine basis_init_json(this, config)
-    type(basis_t),       intent(out) :: this
-    type(json_object_t), intent(in)  :: config
+  subroutine basis_init_json(this, space, config)
+    type(basis_t),           intent(out) :: this
+    type(space_t), optional, intent(in)  :: space
+    type(json_object_t),     intent(in)  :: config
     !
     real(kind=wp), allocatable, dimension(:) :: r, theta
     !
-    integer :: n, ierr
+    integer :: nr, nt, ierr
     !
     PUSH_SUB(basis_init_json)
     call json_get(config, "dim", this%dim, ierr)
-    if(ierr/=JSON_OK)this%dim=ndim
-    n=json_len(config, "r")
-    if(n>0)then
-      SAFE_ALLOCATE(r(max(n,this%dim)))
-      call json_get(config, "r", r, ierr)
-      if(ierr/=JSON_OK)r=0.0_wp
-      if(n<this%dim)r(n+1:)=0.0_wp
-    end if
-    n=json_len(config, "theta")
-    if(n>0)then
-      SAFE_ALLOCATE(theta(max(n,this%dim)))
-      call json_get(config, "theta", theta, ierr)
-      if(ierr/=JSON_OK)theta=0.0_wp
-      if(n<this%dim)theta(n+1:)=0.0_wp
-    end if
-    if(allocated(r))then
-      if(allocated(theta))then
-        call basis_init_array(this, r(1:this%dim), theta(1:this%dim))
+    if(present(space))then
+      if(ierr==JSON_OK)then
+        ASSERT(this%dim<=space%dim)
       else
-        call basis_init_array(this, r(1:this%dim))
+        this%dim=space%dim
       end if
     else
-      if(allocated(theta))then
-        call basis_init_array(this, theta=theta(1:this%dim))
+      if(ierr/=JSON_OK)this%dim=ndim
+    end if
+    nr=json_len(config, "r")
+    if(nr>0)then
+      SAFE_ALLOCATE(r(nr))
+      r=0.0_wp
+      call json_get(config, "r", r, ierr)
+      if(ierr/=JSON_OK)then
+        nr=0
+        SAFE_DEALLOCATE_A(r)
+      end if
+    end if
+    nt=json_len(config, "theta")
+    if(nt>0)then
+      SAFE_ALLOCATE(theta(nt))
+      theta=0.0_wp
+      call json_get(config, "theta", theta, ierr)
+      if(ierr/=JSON_OK)then
+        nt=0
+        SAFE_DEALLOCATE_A(theta)
+      end if
+    end if
+    nr=min(nr,this%dim)
+    nt=min(nt,this%dim)
+    if(nr>0)then
+      if(nt>0)then
+        call basis_init_array(this, space, r(1:nr), theta(1:nt))
       else
-        call basis_init_array(this)
+        call basis_init_array(this, space, r(1:nr))
+      end if
+    else
+      if(nt>0)then
+        call basis_init_array(this, space, theta=theta(1:nt))
+      else
+        call basis_init_array(this, space)
       end if
     end if
     POP_SUB(basis_init_json)
@@ -445,16 +481,16 @@ contains
   end subroutine basis_to_external
 
   ! ---------------------------------------------------------
-  subroutine basis_copy(this_out, this_in)
-    type(basis_t), intent(out) :: this_out
-    type(basis_t), intent(in)  :: this_in
+  subroutine basis_copy(this, that)
+    type(basis_t), intent(out) :: this
+    type(basis_t), intent(in)  :: that
     !
     PUSH_SUB(basis_copy)
-    call basis_init_array(this_out)
-    if(this_in%do)then
-      call translation_copy(this_out%trn, this_in%trn)
-      call rotations_copy(this_out%rot, this_in%rot)
-      this_out%do=.true.
+    call basis_init_array(this)
+    if(that%do)then
+      call translation_copy(this%trn, that%trn)
+      call rotations_copy(this%rot, that%rot)
+      this%do=.true.
     end if
     POP_SUB(basis_copy)
     return

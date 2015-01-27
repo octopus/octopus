@@ -8,13 +8,47 @@ module interface_xc_m
 
   use XC_F90(lib_m)
 
-  use json_m,       only: JSON_OK, json_object_t, json_get
-  use kinds_m,      only: wp
-  use simulation_m, only: simulation_t, simulation_get_ndim
+  use json_m,  only: JSON_OK, json_object_t, json_get
+  use kinds_m, only: wp
+
+  use XC_F90(lib_m), only: &
+    XC_POLARIZED,          &
+    XC_UNPOLARIZED
+
+  use XC_F90(lib_m), only:   &
+    XC_EXCHANGE,             &
+    XC_CORRELATION,          &
+    XC_EXCHANGE_CORRELATION, &
+    XC_KINETIC              
+
+  use XC_F90(lib_m), only: &
+    XC_FAMILY_LDA,         &
+    XC_FAMILY_GGA,         &
+    XC_FAMILY_MGGA,        &
+    XC_FAMILY_LCA,         &
+    XC_FAMILY_OEP,         &
+    XC_FAMILY_HYB_GGA
 
   implicit none
 
   private
+  public ::         &
+    XC_POLARIZED,   &
+    XC_UNPOLARIZED
+
+  public ::                  &
+    XC_EXCHANGE,             &
+    XC_CORRELATION,          &
+    XC_EXCHANGE_CORRELATION, &
+    XC_KINETIC              
+
+  public ::            &
+    XC_FAMILY_LDA,     &
+    XC_FAMILY_GGA,     &
+    XC_FAMILY_MGGA,    &
+    XC_FAMILY_LCA,     &
+    XC_FAMILY_OEP,     &
+    XC_FAMILY_HYB_GGA
 
   public ::                      &
     interface_xc_init,           &
@@ -47,8 +81,8 @@ module interface_xc_m
   type, public :: interface_xc_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(simulation_t),  pointer :: sim    =>null()
     integer                      :: id     = XC_NONE ! identifier
+    integer                      :: ndim   = 0
     integer                      :: nspin  = 0
     integer                      :: spin   = XC_NONE ! XC_UNPOLARIZED | XC_POLARIZED
     integer                      :: kind   = XC_NONE ! exchange, correlation, or exchange-correlation
@@ -68,12 +102,11 @@ contains
     !
     PUSH_SUB(interface_xc_init)
     this%config=>config
-    this%sim=>null()
     call json_get(this%config, "functional", this%id, ierr)
     if(ierr/=JSON_OK)this%id=XC_NONE
     ASSERT(this%id>XC_UNKNOWN)
     if(this%id>XC_NONE)then
-      call json_get(this%config, "SpinComponents", this%nspin, ierr)
+      call json_get(this%config, "nspin", this%nspin, ierr)
       if(ierr/=JSON_OK)this%nspin=1
       ASSERT(this%nspin>0)
       this%spin=XC_UNPOLARIZED
@@ -84,20 +117,19 @@ contains
   end subroutine interface_xc_init
 
   ! ---------------------------------------------------------
-  subroutine interface_xc_start(this, sim)
-    type(interface_xc_t),       intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: sim
+  subroutine interface_xc_start(this, ndim)
+    type(interface_xc_t), intent(inout) :: this
+    integer,              intent(in)    :: ndim
     !
     real(kind=wp) :: rtmp
-    integer       :: ndim, itmp, ierr
+    integer       :: itmp, ierr
     !
     PUSH_SUB(interface_xc_start)
-    ASSERT(.not.associated(this%sim))
-    this%sim=>sim
+    ASSERT(this%ndim==0)
+    this%ndim=ndim
     call XC_F90(func_init)(this%conf, this%info, this%id, this%spin)
     this%kind=XC_F90(info_kind)(this%info)
     this%flags=XC_F90(info_flags)(this%info)
-    ndim=simulation_get_ndim(this%sim)
     if(iand(this%flags,xc_flags_nd(ndim))==0)then
       write(unit=message(1), fmt="(a,i1.1,a2)") "Cannot use the specified functional in ", ndim, "D."
       call messages_fatal(1)
@@ -516,10 +548,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine interface_xc_copy(this, that)
-    type(interface_xc_t), intent(out) :: this
-    type(interface_xc_t), intent(in)  :: that
+    type(interface_xc_t), intent(inout) :: this
+    type(interface_xc_t), intent(in)    :: that
     !
     PUSH_SUB(interface_xc_copy)
+    call interface_xc_end(this)
     ASSERT(.false.)
     POP_SUB(interface_xc_copy)
     return
@@ -536,8 +569,9 @@ contains
     this%kind=XC_NONE
     this%spin=XC_NONE
     this%nspin=0
+    this%ndim=0
     this%id=XC_NONE
-    nullify(this%sim, this%config)
+    nullify(this%config)
     POP_SUB(interface_xc_end)
     return
   end subroutine interface_xc_end

@@ -3,7 +3,6 @@
 module gga_m
 
   use global_m
-  use XC_F90(lib_m)
   use messages_m
   use profiling_m
 
@@ -11,9 +10,25 @@ module gga_m
   use grid_m,        only: grid_t
   use json_m,        only: json_object_t
   use kinds_m,       only: wp
-  use simulation_m,  only: simulation_t, simulation_get
 
-  use interface_xc_m
+  use interface_xc_m, only: &
+    XC_NONE,                &
+    XC_POLARIZED,           &
+    XC_UNPOLARIZED
+
+  use interface_xc_m, only:    &
+    interface_xc_t,            &
+    interface_xc_init,         &
+    interface_xc_start,        &
+    interface_xc_is_polarized, &
+    interface_xc_get_nspin,    &
+    interface_xc_get_kind,     &
+    interface_xc_density,      &
+    interface_xc_gga_exc,      &
+    interface_xc_gga_vxc,      &
+    interface_xc_gga_exc_vxc,  &
+    interface_xc_copy,         &
+    interface_xc_end
 
   implicit none
 
@@ -31,7 +46,6 @@ module gga_m
   type, public :: gga_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(simulation_t),  pointer :: sim    =>null()
     type(derivatives_t), pointer :: der    =>null()
     integer                      :: spin   = XC_NONE ! XC_UNPOLARIZED | XC_POLARIZED
     integer                      :: nspin  = 0
@@ -48,7 +62,7 @@ contains
     !
     PUSH_SUB(gga_init)
     this%config=>config
-    nullify(this%sim, this%der)
+    nullify(this%der)
     call interface_xc_init(this%funct, config)
     this%nspin=interface_xc_get_nspin(this%funct)
     this%spin=XC_UNPOLARIZED
@@ -59,21 +73,15 @@ contains
   end subroutine gga_init
 
   ! ---------------------------------------------------------
-  subroutine gga_start(this, sim)
-    type(gga_t),                intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: sim
-    !
-    type(grid_t), pointer :: grid
+  subroutine gga_start(this, der)
+    type(gga_t),                 intent(inout) :: this
+    type(derivatives_t), target, intent(in)    :: der
     !
     PUSH_SUB(gga_start)
-    ASSERT(.not.associated(this%sim))
-    this%sim=>sim
-    nullify(grid)
-    call simulation_get(this%sim, grid)
-    ASSERT(associated(grid))
-    this%der=>grid%fine%der
+    ASSERT(.not.associated(this%der))
+    this%der=>der
     this%ndim=this%der%mesh%sb%dim
-    call interface_xc_start(this%funct, sim)
+    call interface_xc_start(this%funct, this%ndim)
     POP_SUB(gga_start)
     return
   end subroutine gga_start
@@ -178,12 +186,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine gga_copy(this, that)
-    type(gga_t), intent(out) :: this
-    type(gga_t), intent(in)  :: that
+    type(gga_t), intent(inout) :: this
+    type(gga_t), intent(in)    :: that
     !
     PUSH_SUB(gga_copy)
+    call gga_end(this)
     this%config=>that%config
-    this%sim=>that%sim
     this%der=>that%der
     this%spin=that%spin
     this%nspin=that%nspin
@@ -202,7 +210,7 @@ contains
     this%ndim=0
     this%nspin=0
     this%spin=XC_NONE
-    nullify(this%der, this%sim, this%config)
+    nullify(this%der, this%config)
     POP_SUB(gga_end)
     return
   end subroutine gga_end
