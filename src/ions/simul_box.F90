@@ -724,7 +724,7 @@ contains
         end do
         call parse_block_end(blk)
 
-        messages(1) = "Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok."
+        message(1) = "Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok."
         call messages_warning(1)
       end if
 
