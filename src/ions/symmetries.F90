@@ -190,7 +190,7 @@ contains
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
-      ! we have to fix things for low-dimensional systems
+      ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
       do idir = dim + 1, 3
         lattice(idir, idir) = M_ONE
       end do
@@ -198,6 +198,7 @@ contains
       forall(iatom = 1:geo%natoms)
         !this has to be fixed for non-orthogonal cells. So does everything else!
         position(1:3, iatom) = M_HALF
+        ! this should be matmul(rlattice_inverse, geo atom x)
         position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)/(M_TWO*lsize(1:dim4syms)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall

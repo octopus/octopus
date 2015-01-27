@@ -141,6 +141,7 @@ module simul_box_m
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: volume_element                      !< the volume element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
+    FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
 
     type(kpoints_t) :: kpoints                   !< the k-points
 
@@ -454,7 +455,7 @@ contains
 
       sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
-        sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -486,7 +487,7 @@ contains
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
-        else
+        else if ((parse_isdef(datasets_check('Lsize'))) /= 0) then
           call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1), units_inp%length)
           if(sb%lsize(1)  ==  -M_ONE) then
             call input_error('Lsize')
@@ -494,6 +495,9 @@ contains
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
+        else
+          message(1) = "Lsize was not found in input file. Continuing anyway."
+          call messages_warning(1)
         end if
       else
         ! if not a compatible box-shape
@@ -705,7 +709,7 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%</tt>
       !%
-      !% Note: This version of Octopus does not support non-orthogonal cells.
+      !% Note: This version of Octopus should support non-orthogonal cells.
       !%End
       sb%rlattice_primitive = M_ZERO
       forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
@@ -718,21 +722,27 @@ contains
         end do
         call parse_block_end(blk)
 
-        call messages_not_implemented('Non-orthogonal cells support')
-
       end if
+
+! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
+      if (parse_isdef(datasets_check('Lsize')) == 0) then
+        sb%lsize(:) = M_ZERO
+        sb%lsize(1:sb%dim) = M_HALF
+      end if
+
     end if
 
     sb%rlattice = M_ZERO
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
+      sb%lsize(idim) = sb%lsize(idim) * norm
       forall(jdim = 1:sb%dim)
         sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end forall
     end do
 
-    ! this has to be updated for non-orthogonal grids
+    ! this has to be updated for non-orthogonal grids - looks ok 26 Jan 2015
     select case(sb%dim)
     case(3)
       cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
@@ -750,10 +760,16 @@ contains
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
-    sb%klattice = M_ZERO
-    forall(idim = 1:sb%dim, jdim = 1:sb%dim)
-      sb%klattice(jdim, idim) = sb%klattice_primitive(jdim, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
-    end forall
+    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%volume_element, sb%dim)
+    sb%klattice = sb%klattice * M_TWO*M_PI
+
+    sb%metric = M_ZERO
+    sb%metric = matmul(sb%klattice_primitive, transpose(sb%klattice_primitive))
+
+    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
+    ! klattice_primitive is the B matrix, with no 2 pi factor included
+    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
+    ! metric is the F matrix of Chelikowski
 
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
