@@ -30,6 +30,8 @@ module symmetries_m
   use species_m
   use symm_op_m
   use spglib_f08
+  use lalg_adv_m
+
 
   implicit none
 
@@ -81,17 +83,18 @@ module symmetries_m
 
 contains
   
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, lsize)
+  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice)
     type(symmetries_t),  intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
     FLOAT,               intent(in)  :: rlattice(:, :)
-    FLOAT,               intent(in)  :: lsize(:)
 
     integer :: max_size, fullnops, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
+    real(8) :: volume, determinant
     real(8) :: lattice(1:3, 1:3)
+    real(8) :: klattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
@@ -186,7 +189,13 @@ contains
 
     else
 
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)  / maxval(abs(rlattice(1:periodic_dim, 1:periodic_dim)))     ! transpose!!
+      ! why is this normalized here? There is no reason to not give the full lattice vectors!
+      ! you may need to transpose this in principle for the C order in spglib.
+      ! Not too important anyway to get the space group etc...
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)  / maxval(abs(rlattice(1:periodic_dim, 1:periodic_dim))) 
+      klattice = lattice
+      determinant = lalg_determinant(periodic_dim, klattice, .true.)
+      
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
@@ -198,8 +207,9 @@ contains
       forall(iatom = 1:geo%natoms)
         !this has to be fixed for non-orthogonal cells. So does everything else!
         position(1:3, iatom) = M_HALF
-        ! this should be matmul(rlattice_inverse, geo atom x)
-        position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)/(M_TWO*lsize(1:dim4syms)) + M_HALF
+        ! position here contains reduced coordinates
+        ! this should be matmul(klattice, geo atom x)
+        position(1:dim4syms, iatom) = matmul (klattice, geo%atom(iatom)%x(1:dim4syms)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
@@ -310,6 +320,8 @@ contains
 
       SAFE_DEALLOCATE_A(rotation)
       SAFE_DEALLOCATE_A(translation)
+      SAFE_DEALLOCATE_A(position)
+      SAFE_DEALLOCATE_A(typs)
 
     end if
 

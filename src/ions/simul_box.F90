@@ -193,7 +193,7 @@ contains
 
     call simul_box_check_atoms_are_too_close(geo, sb)
 
-    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%lsize)
+    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice)
 
     ! we need k-points for periodic systems or for open boundaries
     only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)

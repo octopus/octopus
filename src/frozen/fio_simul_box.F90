@@ -57,7 +57,7 @@ contains
     ASSERT(.not.this%mr_flag)
     nullify(this%hr_area%radius, this%hr_area%interp%posi, this%hr_area%interp%ww)
     ASSERT(this%periodic_dim==0)
-    call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice, this%lsize)
+    call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice)
     call kpoints_init(this%kpoints, this%symm, this%dim, this%rlattice, this%klattice, .true.)
     POP_SUB(fio_simul_box_init)
     return
