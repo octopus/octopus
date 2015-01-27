@@ -761,10 +761,10 @@ contains
       end do
     end select
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
-
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%volume_element, sb%dim)
     sb%klattice = sb%klattice * M_TWO*M_PI
+
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
     sb%metric = M_ZERO
     sb%metric = matmul(sb%klattice_primitive, transpose(sb%klattice_primitive))
