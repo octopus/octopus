@@ -6,17 +6,16 @@ module output_fio_m
   use messages_m
   use profiling_m
 
-  use restart_m
   use epot_m,        only: epot_t
   use geometry_m,    only: geometry_t, geometry_create_data_object
   use grid_m,        only: grid_t
   use hamiltonian_m, only: hamiltonian_t
   use io_m,          only: io_open, io_close
-  use json_m,        only: json_init, json_object_t, json_array_t, json_set, json_append, json_write, json_end
+  use json_m,        only: json_object_t, json_array_t
+  use json_m,        only: json_init, json_set, json_append, json_write, json_end
   use kinds_m,       only: wp
   use mesh_m,        only: mesh_t
   use simul_box_m,   only: simul_box_t
-  use simulation_m,  only: simulation_t
   use space_m,       only: space_create_data_object
   use states_m,      only: states_t
 
@@ -34,9 +33,9 @@ contains
     type(json_object_t), intent(out) :: config
     !
     !This routine is not compatible anymore with the current restart machinery and should be rewritten.
-    !I am thus commenting some lines that prevent compilation.
     call json_init(config)
-    !call json_set(config, "dir", "../"//trim(restart_loaddir)//GS_DIR)
+    call json_set(config, "dir", "./restart/"//GS_DIR)
+    call json_set(config, "file", "mesh")
     return
   end subroutine fio_simul_box_create_config
 
@@ -46,10 +45,10 @@ contains
     type(json_object_t), intent(out) :: config
     !
     !This routine is not compatible anymore with the current restart machinery and should be rewritten.
-    !I am thus commenting some lines that prevent compilation.
     call json_init(config)
-    !call json_set(config, "dir", "../"//trim(restart_loaddir)//GS_DIR)
+    call json_set(config, "dir", "./restart/"//GS_DIR)
     call json_set(config, "spacing", this%spacing)
+    call json_set(config, "file", "mesh")
     return
   end subroutine fio_mesh_create_config
 
@@ -100,8 +99,8 @@ contains
     !
     nullify(list)
     call json_init(config)
-    call json_set(config, "dir", "./")
-    call json_set(config, "SpinComponents", this%d%nspin)
+    call json_set(config, "dir", "./"//STATIC_DIR)
+    call json_set(config, "nspin", this%d%nspin)
     SAFE_ALLOCATE(list)
     call json_init(list)
     do isp = 1, this%d%nspin
@@ -164,7 +163,8 @@ contains
     type(json_object_t), intent(out) :: config
     !
     call json_init(config)
-    call json_set(config, "dir", "./")
+    call json_set(config, "dir", "./"//STATIC_DIR)
+    call json_set(config, "file", "v0.obf")
     return
   end subroutine fio_external_create_config
 
