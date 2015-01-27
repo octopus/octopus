@@ -726,12 +726,12 @@ contains
 
         message(1) = "Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok."
         call messages_warning(1)
-      end if
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
-      if (parse_isdef(datasets_check('Lsize')) == 0) then
-        sb%lsize(:) = M_ZERO
-        sb%lsize(1:sb%dim) = M_HALF
+        if (parse_isdef(datasets_check('Lsize')) == 0) then
+          sb%lsize(:) = M_ZERO
+          sb%lsize(1:sb%dim) = M_HALF
+        end if
       end if
 
     end if
@@ -746,7 +746,6 @@ contains
       end forall
     end do
 
-    ! this has to be updated for non-orthogonal grids - looks ok 26 Jan 2015
     select case(sb%dim)
     case(3)
       cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
@@ -810,6 +809,7 @@ contains
         if(.not. geo%reduced_coordinates) then
           !convert the position to the orthogonal space
           xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+! TODO : change to klattice not primitive, and remove line below
           xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
         else
           ! in this case coordinates are already in reduced space
@@ -826,7 +826,7 @@ contains
         end do
         ASSERT(all(xx(1:pd) >= M_ZERO))
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
-
+! TODO : change to rlattice not primitive, and remove line above
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
       end if
@@ -868,8 +868,9 @@ contains
 
     if (simul_box_is_periodic(sb)) then
       if(.not. geo%reduced_coordinates) then
-        !convert the position to the orthogonal space
+        !convert the position to the orthogonal space - does this mean reduced coordinates?
         xx(1:pd) = matmul(ratom(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+!TODO: change previous line to klattice (not prim) and remove next line
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
       else
         ! in this case coordinates are already in reduced space
@@ -887,6 +888,7 @@ contains
       ASSERT(all(xx(1:pd) >= M_ZERO))
       xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
+!TODO: change next line to rlattice (not prim) and remove previous line
       ratom(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
     end if

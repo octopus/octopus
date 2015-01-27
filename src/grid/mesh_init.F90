@@ -1123,6 +1123,7 @@ contains
 
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
+! TODO: in non orthogonal cells this is missing a geometrical factor
     forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
     jj(sb%dim + 1:MAX_DIM) = 0
 
