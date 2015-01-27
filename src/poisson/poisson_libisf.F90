@@ -98,6 +98,8 @@ contains
  
     PUSH_SUB(poisson_libisf_init)
     
+    call f_lib_initialize()
+
     ! Free BC
     this%geocode = "F" 
     this%isf_order = 16
@@ -126,9 +128,6 @@ contains
         this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
     call pkernel_set(this%kernel,.false.)
 
-    ! Do not output the malloc.prc ISF profiling file
-    call f_set_status(output_level=0,iproc=mpi_world%rank)
-
     POP_SUB(poisson_libisf_init)
 #endif
   end subroutine poisson_libisf_init
@@ -143,7 +142,7 @@ contains
     PUSH_SUB(poisson_libisf_end)
 
 #ifdef HAVE_LIBISF
-    call pkernel_free(this%kernel, subname)
+    call pkernel_free(this%kernel)
 #endif
     
     POP_SUB(poisson_libisf_end)
