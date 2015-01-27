@@ -135,7 +135,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr
+    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
@@ -162,7 +162,7 @@ contains
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-
+        ispin = states_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -194,7 +194,7 @@ contains
               do idim = 1, st%d%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) &
+                  current(ip, idir, ispin) = current(ip, idir, ispin) &
                     - st%d%kweights(ik)*st%occ(ist, ik)&
                     *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
                 end do
@@ -218,6 +218,7 @@ contains
     case(CURRENT_GRADIENT)
 
       do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
         do ist = st%st_start, st%st_end
           
           call states_get_state(st, der%mesh, ist, ik, psi)
@@ -254,7 +255,7 @@ contains
             do idim = 1, st%d%dim
               !$omp parallel do
               do ip = 1, der%mesh%np
-                current(ip, idir, 1) = current(ip, idir, 1) + &
+                current(ip, idir, ispin) = current(ip, idir, ispin) + &
                   st%d%kweights(ik)*st%occ(ist, ik)*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
               end do
               !$omp end parallel do
@@ -286,8 +287,10 @@ contains
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
-      call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, 1), symmfield_vector = symmcurrent)
-      current(1:der%mesh%np, 1:der%mesh%sb%dim, 1) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
+      do ispin = 1, st%d%nspin
+        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent)
+        current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
+      end do
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmcurrent)
     end if
@@ -310,6 +313,7 @@ contains
         SAFE_ALLOCATE(potential(1:der%mesh%np_part))
         SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim))
 
+        ASSERT(st%d%nspin == 1)
         ASSERT(st%d%dim == 1)
 
         do ik = st%d%kpt%start, st%d%kpt%end
@@ -365,6 +369,8 @@ contains
       type(batch_t) :: vpsib
 
       PUSH_SUB(current_calculate.calc_current_poisson_correction)
+
+      ASSERT(st%d%nspin == 1)
       
       SAFE_ALLOCATE(charge(1:der%mesh%np))
       SAFE_ALLOCATE(potential(1:der%mesh%np_part))
@@ -376,6 +382,7 @@ contains
       current = CNST(0.0)
 
       do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -431,7 +438,7 @@ contains
               do idim = 1, st%d%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) &
+                  current(ip, idir, ispin) = current(ip, idir, ispin) &
                     - st%d%kweights(ik)*st%occ(ist, ik)&
                     *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
                 end do
