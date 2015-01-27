@@ -497,7 +497,9 @@ contains
           sb%lsize(1:sb%dim) = sb%lsize(1)
         else
           message(1) = "Lsize was not found in input file. Continuing anyway."
-          call messages_warning(1)
+          message(2) = " NOTE that non-orthogonal unit cells are not working yet."
+          message(3) = " You have been warned"
+          call messages_warning(3)
         end if
       else
         ! if not a compatible box-shape
@@ -722,6 +724,8 @@ contains
         end do
         call parse_block_end(blk)
 
+        messages(1) = "Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok."
+        call messages_warning(1)
       end if
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
