@@ -1,29 +1,85 @@
 #include "global.h"
+#include "util.h"
+
+!PAIR: PAIR_TEMPLATE_NAME
+
+!PAIR: PAIR_FRST_TEMPLATE_NAME
+!PAIR: PAIR_FRST_TYPE_NAME
+!PAIR: PAIR_FRST_TYPE_MODULE_NAME
+
+!PAIR: PAIR_SCND_TEMPLATE_NAME
+!PAIR: PAIR_SCND_TYPE_NAME
+!PAIR: PAIR_SCND_TYPE_MODULE_NAME
+
+!PAIR: PAIR_INCLUDE_PREFIX
+!PAIR: PAIR_INCLUDE_HEADER
+!PAIR: PAIR_INCLUDE_BODY
+
+#if defined(PAIR_FRST_TEMPLATE_NAME)
+#if !defined(PAIR_FRST_TYPE_NAME)
+#define PAIR_FRST_TYPE_NAME DECORATE(PAIR_FRST_TEMPLATE_NAME,t)
+#endif
+#if !defined(PAIR_FRST_TYPE_MODULE_NAME)
+#define PAIR_FRST_TYPE_MODULE_NAME DECORATE(PAIR_FRST_TEMPLATE_NAME,m)
+#endif
+#else
+#error "'PAIR_FRST_TEMPLATE_NAME' must be defined"
+#endif
+
+#if defined(PAIR_SCND_TEMPLATE_NAME)
+#if !defined(PAIR_SCND_TYPE_NAME)
+#define PAIR_SCND_TYPE_NAME DECORATE(PAIR_SCND_TEMPLATE_NAME,t)
+#endif
+#if !defined(PAIR_SCND_TYPE_MODULE_NAME)
+#define PAIR_SCND_TYPE_MODULE_NAME DECORATE(PAIR_SCND_TEMPLATE_NAME,m)
+#endif
+#else
+#error "'PAIR_SCND_TEMPLATE_NAME' must be defined"
+#endif
+
+#undef IPAIR_TMPL_PREFIX
+#undef IPAIR_TMPL_NAME
+#define IPAIR_TMPL_PREFIX DECORATE(PAIR_FRST_TEMPLATE_NAME,PAIR_SCND_TEMPLATE_NAME)
+#if defined(PAIR_TEMPLATE_NAME)
+#define IPAIR_TMPL_NAME PAIR_TEMPLATE_NAME
+#else
+#define IPAIR_TMPL_NAME IPAIR_TMPL_PREFIX
+#endif
+
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+#undef SINGLE_TYPE_MODULE_NAME
+#undef SINGLE_INCLUDE_PREFIX
+#undef SINGLE_INCLUDE_HEADER
+#undef SINGLE_INCLUDE_BODY
+
+#define SINGLE_TEMPLATE_NAME PAIR_FRST_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_FRST_TYPE_NAME
+#define SINGLE_INCLUDE_PREFIX
+#include "tsingle.F90"
+#undef SINGLE_INCLUDE_PREFIX
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+
+#define SINGLE_TEMPLATE_NAME PAIR_SCND_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_SCND_TYPE_NAME
+#define SINGLE_INCLUDE_PREFIX
+#include "tsingle.F90"
+#undef SINGLE_INCLUDE_PREFIX
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+
+#undef FRST
+#undef SCND
+#define FRST PAIR_FRST_TEMPLATE_NAME
+#define SCND PAIR_SCND_TEMPLATE_NAME
+
+#undef TEMPLATE_PREFIX
+#define TEMPLATE_PREFIX IPAIR_TMPL_NAME
 #include "template.h"
 
-#ifdef MODULE_TYPE_1
-#ifdef MODULE_IMPLEMENT_OPS
-#define MODULE_INVOCATION_1 use MODULE_TYPE_1, only: operator(==), operator(/=), first_t=>TYPE_1
-#else
-#define MODULE_INVOCATION_1 use MODULE_TYPE_1, only: first_t=>TYPE_1
-#endif
-#define ITYPE_1 type(first_t)
-#else
-#define MODULE_INVOCATION_1
-#define ITYPE_1 TYPE_1
-#endif
-
-#ifdef MODULE_TYPE_2
-#ifdef MODULE_IMPLEMENT_OPS
-#define MODULE_INVOCATION_2 use MODULE_TYPE_2, only: operator(==), operator(/=), second_t=>TYPE_2
-#else
-#define MODULE_INVOCATION_2 use MODULE_TYPE_2, only: second_t=>TYPE_2
-#endif
-#define ITYPE_2 type(second_t)
-#else
-#define MODULE_INVOCATION_2
-#define ITYPE_2 TYPE_2
-#endif
+#if !defined(PAIR_INCLUDE_PREFIX)
+#if !defined(PAIR_INCLUDE_HEADER) && !defined(PAIR_INCLUDE_BODY)
 
 module TEMPLATE(pair_m)
 
@@ -31,158 +87,300 @@ module TEMPLATE(pair_m)
   use messages_m
   use profiling_m
 
-  MODULE_INVOCATION_1
-  MODULE_INVOCATION_2
+  use PAIR_FRST_TYPE_MODULE_NAME, only: &
+    PAIR_FRST_TYPE_NAME
+
+  use PAIR_SCND_TYPE_MODULE_NAME, only: &
+    PAIR_SCND_TYPE_NAME
 
   implicit none
 
   private
 
-#ifdef MODULE_IMPLEMENT_OPS
-  public ::       &
-    operator(==), &
-    operator(/=)
-#endif
-
   public ::                    &
+    TEMPLATE(pair_t),          &
     TEMPLATE(pair_init),       &
-    TEMPLATE(pair_get_first),  &
-    TEMPLATE(pair_get_second), &
-    TEMPLATE(pair_set_first),  &
-    TEMPLATE(pair_set_second), &
+    TEMPLATE(pair_associated), &
+    TEMPLATE(pair_get),        &
+    TEMPLATE(pair_set),        &
     TEMPLATE(pair_copy),       &
     TEMPLATE(pair_end)
 
-#ifdef MODULE_IMPLEMENT_OPS
-  interface operator(==)
-    module procedure TEMPLATE(pair_equal)
-  end interface operator(==)
-
-  interface operator(/=)
-    module procedure TEMPLATE(pair_not_equal)
-  end interface operator(/=)
 #endif
+#if !defined(PAIR_INCLUDE_BODY)
+#define SINGLE_INCLUDE_HEADER
+#define SINGLE_TEMPLATE_NAME PAIR_FRST_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_FRST_TYPE_NAME
+#include "tsingle.F90"
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+#define SINGLE_TEMPLATE_NAME PAIR_SCND_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_SCND_TYPE_NAME
+#include "tsingle.F90"
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+#undef SINGLE_INCLUDE_HEADER
+#define TEMPLATE_PREFIX IPAIR_TMPL_NAME
+#include "template.h"
 
-  type, public :: TEMPLATE(pair_t)
+  interface TEMPLATE(pair_get)
+    module procedure INTERNAL(pair_get_frst)
+    module procedure INTERNAL(pair_get_scnd)
+    module procedure INTERNAL(pair_get_both)
+  end interface TEMPLATE(pair_get)
+
+  interface TEMPLATE(pair_set)
+    module procedure INTERNAL(pair_set_null)
+    module procedure INTERNAL(pair_set_frst)
+    module procedure INTERNAL(pair_set_scnd)
+    module procedure INTERNAL(pair_set_both)
+  end interface TEMPLATE(pair_set)
+
+  interface TEMPLATE(pair_associated)
+    module procedure INTERNAL(pair_associated)
+    module procedure INTERNAL(pair_pair_frst_associated)
+    module procedure INTERNAL(pair_pair_scnd_associated)
+    module procedure INTERNAL(pair_pair_associated)
+  end interface TEMPLATE(pair_associated)
+
+  type :: TEMPLATE(pair_t)
     private
-    ITYPE_1, pointer :: a =>null()
-    ITYPE_2, pointer :: b =>null()
+    type(EXTERNAL(FRST,single_t)) :: frst
+    type(EXTERNAL(SCND,single_t)) :: scnd
   end type TEMPLATE(pair_t)
+
+#endif
+#if !defined(PAIR_INCLUDE_HEADER) && !defined(PAIR_INCLUDE_BODY)
 
 contains
 
+#endif
+#if !defined(PAIR_INCLUDE_HEADER)
+#define SINGLE_INCLUDE_BODY
+#define SINGLE_TEMPLATE_NAME PAIR_FRST_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_FRST_TYPE_NAME
+#include "tsingle.F90"
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+#define SINGLE_TEMPLATE_NAME PAIR_SCND_TEMPLATE_NAME
+#define SINGLE_TYPE_NAME PAIR_SCND_TYPE_NAME
+#include "tsingle.F90"
+#undef SINGLE_TEMPLATE_NAME
+#undef SINGLE_TYPE_NAME
+#undef SINGLE_INCLUDE_BODY
+#define TEMPLATE_PREFIX IPAIR_TMPL_NAME
+#include "template.h"
+
   ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_init)(this, a, b)
-    type(TEMPLATE(pair_t)), intent(out) :: this
-    ITYPE_1,        target, intent(in)  :: a
-    ITYPE_2,        target, intent(in)  :: b
+  subroutine TEMPLATE(pair_init)(this, first, second)
+    type(TEMPLATE(pair_t)),              intent(out) :: this
+    type(PAIR_FRST_TYPE_NAME), optional, intent(in)  :: first
+    type(PAIR_SCND_TYPE_NAME), optional, intent(in)  :: second
     !
     PUSH_SUB(TEMPLATE(pair_init))
-    this%a=>a
-    this%b=>b
+    call EXTERNAL(FRST,single_init)(this%frst, first)
+    call EXTERNAL(SCND,single_init)(this%scnd, second)
     POP_SUB(TEMPLATE(pair_init))
     return
   end subroutine TEMPLATE(pair_init)
 
-#ifdef MODULE_IMPLEMENT_OPS
   ! -----------------------------------------------------
-  elemental function TEMPLATE(pair_equal)(this, that) result(eqv)
+  elemental function INTERNAL(pair_frst_associated)(this) result(eqv)
+    type(TEMPLATE(pair_t)), intent(in) :: this
+    !
+    logical :: eqv
+    !
+    eqv=EXTERNAL(FRST,single_associated)(this%frst)
+    return
+  end function INTERNAL(pair_frst_associated)
+  
+  ! -----------------------------------------------------
+  elemental function INTERNAL(pair_scnd_associated)(this) result(eqv)
+    type(TEMPLATE(pair_t)), intent(in) :: this
+    !
+    logical :: eqv
+    !
+    eqv=EXTERNAL(SCND,single_associated)(this%scnd)
+    return
+  end function INTERNAL(pair_scnd_associated)
+  
+  ! -----------------------------------------------------
+  elemental function INTERNAL(pair_associated)(this) result(eqv)
+    type(TEMPLATE(pair_t)), intent(in) :: this
+    !
+    logical :: eqv
+    !
+    eqv=(INTERNAL(pair_frst_associated)(this).and.&
+      INTERNAL(pair_scnd_associated)(this))
+    return
+  end function INTERNAL(pair_associated)
+  
+  ! -----------------------------------------------------
+  elemental function INTERNAL(pair_pair_frst_associated)(this, that) result(eqv)
+    type(TEMPLATE(pair_t)),        intent(in) :: this
+    type(EXTERNAL(FRST,single_t)), intent(in) :: that
+    !
+    logical :: eqv
+    !
+    eqv=.false.
+    if(INTERNAL(pair_frst_associated)(this))&
+      eqv=EXTERNAL(FRST,single_associated)(this%frst, that)
+    return
+  end function INTERNAL(pair_pair_frst_associated)
+
+  ! -----------------------------------------------------
+  elemental function INTERNAL(pair_pair_scnd_associated)(this, that) result(eqv)
+    type(TEMPLATE(pair_t)),        intent(in) :: this
+    type(EXTERNAL(SCND,single_t)), intent(in) :: that
+    !
+    logical :: eqv
+    !
+    eqv=.false.
+    if(INTERNAL(pair_scnd_associated)(this))&
+      eqv=EXTERNAL(SCND,single_associated)(this%scnd, that)
+    return
+  end function INTERNAL(pair_pair_scnd_associated)
+
+  ! -----------------------------------------------------
+  elemental function INTERNAL(pair_pair_associated)(this, that) result(eqv)
     type(TEMPLATE(pair_t)), intent(in) :: this
     type(TEMPLATE(pair_t)), intent(in) :: that
     !
     logical :: eqv
     !
-    eqv=((this%a==that%a).and.(this%b==that%b))
+    eqv=.false.
+    if(INTERNAL(pair_associated)(this).and.INTERNAL(pair_associated)(that))&
+      eqv=(EXTERNAL(FRST,single_associated)(this%frst, that%frst).and.&
+      EXTERNAL(SCND,single_associated)(this%scnd, that%scnd))
     return
-  end function TEMPLATE(pair_equal)
-  
-  ! -----------------------------------------------------
-  elemental function TEMPLATE(pair_not_equal)(this, that) result(neqv)
-    type(TEMPLATE(pair_t)), intent(in) :: this
-    type(TEMPLATE(pair_t)), intent(in) :: that
-    !
-    logical :: neqv
-    !
-    neqv=((this%a/=that%a).or.(this%b/=that%b))
-    return
-  end function TEMPLATE(pair_not_equal)
-#endif
+  end function INTERNAL(pair_pair_associated)
 
   ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_get_first)(this, that)
-    type(TEMPLATE(pair_t)), intent(in) :: this
-    ITYPE_1,               pointer     :: that
+  subroutine INTERNAL(pair_get_frst)(this, that)
+    type(TEMPLATE(pair_t)),     intent(in) :: this
+    type(PAIR_FRST_TYPE_NAME), pointer     :: that
     !
-    PUSH_SUB(TEMPLATE(pair_get_first))
-    that=>null()
-    if(associated(this%a))&
-      that=>this%a
-    POP_SUB(TEMPLATE(pair_get_first))
+    PUSH_SUB(INTERNAL(pair_get_frst))
+    call EXTERNAL(FRST,single_get)(this%frst, that)
+    POP_SUB(INTERNAL(pair_get_frst))
     return
-  end subroutine TEMPLATE(pair_get_first)
+  end subroutine INTERNAL(pair_get_frst)
 
   ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_get_second)(this, that)
-    type(TEMPLATE(pair_t)), intent(in) :: this
-    ITYPE_2,               pointer     :: that
+  subroutine INTERNAL(pair_get_scnd)(this, that)
+    type(TEMPLATE(pair_t)),     intent(in) :: this
+    type(PAIR_SCND_TYPE_NAME), pointer     :: that
     !
-    PUSH_SUB(TEMPLATE(pair_get_second))
-    that=>null()
-    if(associated(this%b))&
-      that=>this%b
-    POP_SUB(TEMPLATE(pair_get_second))
+    PUSH_SUB(INTERNAL(pair_get_scnd))
+    ASSERT(INTERNAL(pair_frst_associated)(this))
+    call EXTERNAL(SCND,single_get)(this%scnd, that)
+    POP_SUB(INTERNAL(pair_get_scnd))
     return
-  end subroutine TEMPLATE(pair_get_second)
+  end subroutine INTERNAL(pair_get_scnd)
 
   ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_set_first)(this, that)
+  subroutine INTERNAL(pair_get_both)(this, frst, scnd)
+    type(TEMPLATE(pair_t)),     intent(in) :: this
+    type(PAIR_FRST_TYPE_NAME), pointer     :: frst
+    type(PAIR_SCND_TYPE_NAME), pointer     :: scnd
+    !
+    PUSH_SUB(INTERNAL(pair_get_both))
+    call EXTERNAL(FRST,single_get)(this%frst, frst)
+    call EXTERNAL(SCND,single_get)(this%scnd, scnd)
+    POP_SUB(INTERNAL(pair_get_both))
+    return
+  end subroutine INTERNAL(pair_get_both)
+
+  ! -----------------------------------------------------
+  subroutine INTERNAL(pair_set_null)(this)
     type(TEMPLATE(pair_t)), intent(inout) :: this
-    ITYPE_1,        target, intent(in)    :: that
     !
-    PUSH_SUB(TEMPLATE(pair_set_first))
-    this%a=>that
-    POP_SUB(TEMPLATE(pair_set_first))
+    PUSH_SUB(INTERNAL(pair_set_null))
+    call EXTERNAL(FRST,single_set)(this%frst)
+    call EXTERNAL(SCND,single_set)(this%scnd)
+    POP_SUB(INTERNAL(pair_set_null))
     return
-  end subroutine TEMPLATE(pair_set_first)
+  end subroutine INTERNAL(pair_set_null)
 
   ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_set_second)(this, that)
+  subroutine INTERNAL(pair_set_frst)(this, that)
+    type(TEMPLATE(pair_t)),    intent(inout) :: this
+    type(PAIR_FRST_TYPE_NAME), intent(in)    :: that
+    !
+    PUSH_SUB(INTERNAL(pair_set_frst))
+    call EXTERNAL(FRST,single_set)(this%frst, that)
+    POP_SUB(INTERNAL(pair_set_frst))
+    return
+  end subroutine INTERNAL(pair_set_frst)
+
+  ! -----------------------------------------------------
+  subroutine INTERNAL(pair_set_scnd)(this, that)
+    type(TEMPLATE(pair_t)),    intent(inout) :: this
+    type(PAIR_SCND_TYPE_NAME), intent(in)    :: that
+    !
+    PUSH_SUB(INTERNAL(pair_set_scnd))
+    ASSERT(INTERNAL(pair_frst_associated)(this))
+    call EXTERNAL(SCND,single_set)(this%scnd, that)
+    POP_SUB(INTERNAL(pair_set_scnd))
+    return
+  end subroutine INTERNAL(pair_set_scnd)
+
+  ! -----------------------------------------------------
+  subroutine INTERNAL(pair_set_both)(this, frst, scnd)
+    type(TEMPLATE(pair_t)),    intent(inout) :: this
+    type(PAIR_FRST_TYPE_NAME), intent(in)    :: frst
+    type(PAIR_SCND_TYPE_NAME), intent(in)    :: scnd
+    !
+    PUSH_SUB(INTERNAL(pair_set_both))
+    call EXTERNAL(FRST,single_set)(this%frst, frst)
+    call EXTERNAL(SCND,single_set)(this%scnd, scnd)
+    POP_SUB(INTERNAL(pair_set_both))
+    return
+  end subroutine INTERNAL(pair_set_both)
+
+  ! -----------------------------------------------------
+  subroutine TEMPLATE(pair_copy)(this, that)
     type(TEMPLATE(pair_t)), intent(inout) :: this
-    ITYPE_2,        target, intent(in)    :: that
-    !
-    PUSH_SUB(TEMPLATE(pair_set_second))
-    this%b=>that
-    POP_SUB(TEMPLATE(pair_set_second))
-    return
-  end subroutine TEMPLATE(pair_set_second)
-
-  ! -----------------------------------------------------
-  subroutine TEMPLATE(pair_copy)(this_out, this_in)
-    type(TEMPLATE(pair_t)), intent(out) :: this_out
-    type(TEMPLATE(pair_t)), intent(in)  :: this_in
+    type(TEMPLATE(pair_t)), intent(in)    :: that
     !
     PUSH_SUB(TEMPLATE(pair_copy))
-    this_out%a=>this_in%a
-    this_out%b=>this_in%b
+    call EXTERNAL(FRST,single_copy)(this%frst, that%frst)
+    call EXTERNAL(SCND,single_copy)(this%scnd, that%scnd)
     POP_SUB(TEMPLATE(pair_copy))
     return
   end subroutine TEMPLATE(pair_copy)
 
   ! -----------------------------------------------------
-  elemental subroutine TEMPLATE(pair_end)(this)
+  subroutine TEMPLATE(pair_end)(this)
     type(TEMPLATE(pair_t)), intent(inout) :: this
     !
-    nullify(this%a, this%b)
+    PUSH_SUB(TEMPLATE(pair_end))
+    call EXTERNAL(FRST,single_end)(this%frst)
+    call EXTERNAL(SCND,single_end)(this%scnd)
+    POP_SUB(TEMPLATE(pair_end))
     return
   end subroutine TEMPLATE(pair_end)
 
+#endif
+
+#if !defined(PAIR_INCLUDE_HEADER) && !defined(PAIR_INCLUDE_BODY)
+
 end module TEMPLATE(pair_m)
 
-#undef ITYPE_2
-#undef MODULE_INVOCATION_2
-#undef ITYPE_1
-#undef MODULE_INVOCATION_1
+#endif
+#endif
+
+#undef FRST
+#undef SCND
+
+#undef IPAIR_TMPL_PREFIX
+#undef IPAIR_TMPL_NAME
+
+#undef TEMPLATE_PREFIX
 
 !! Local Variables:
 !! mode: f90
 !! End:
+
+
+

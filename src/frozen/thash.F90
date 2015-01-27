@@ -1,39 +1,129 @@
 #include "global.h"
+#include "util.h"
+
+!HASH: HASH_TEMPLATE_NAME
+!
+!HASH: HASH_INITIAL_SIZE
+!HASH: HASH_GROWTH_FACTOR
+!
+!HASH: HASH_KEY_TEMPLATE_NAME
+!HASH: HASH_KEY_TYPE_NAME
+!HASH: HASH_KEY_TYPE_MODULE_NAME
+!
+!HASH: HASH_KEY_FUNCTION_NAME
+!HASH: HASH_KEY_FUNCTION_MODULE_NAME
+!
+!HASH: HASH_VAL_TEMPLATE_NAME
+!HASH: HASH_VAL_TYPE_NAME
+!HASH: HASH_VAL_TYPE_MODULE_NAME
+
+#if defined(HASH_KEY_TEMPLATE_NAME)
+#if !defined(HASH_KEY_TYPE_NAME)
+#define HASH_KEY_TYPE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,t)
+#endif
+#if !defined(HASH_KEY_TYPE_MODULE_NAME)
+#define HASH_KEY_TYPE_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,m)
+#endif
+#if !defined(HASH_KEY_FUNCTION_NAME)
+#define HASH_KEY_FUNCTION_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,hash)
+#endif
+#if !defined(HASH_KEY_FUNCTION_MODULE_NAME)
+#define HASH_KEY_FUNCTION_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,m)
+#endif
+#else
+#error "'HASH_KEY_TEMPLATE_NAME' must be defined"
+#endif
+
+#if defined(HASH_VAL_TEMPLATE_NAME)
+#if !defined(HASH_VAL_TYPE_NAME)
+#define HASH_VAL_TYPE_NAME DECORATE(HASH_VAL_TEMPLATE_NAME,t)
+#endif
+#if !defined(HASH_VAL_TYPE_MODULE_NAME)
+#define HASH_VAL_TYPE_MODULE_NAME DECORATE(HASH_VAL_TEMPLATE_NAME,m)
+#endif
+#else
+#error "'HASH_VAL_TEMPLATE_NAME' must be defined"
+#endif
+
+#if !defined(HASH_INITIAL_SIZE)
+#define HASH_INITIAL_SIZE 7
+#endif
+#if !defined(HASH_GROWTH_FACTOR)
+#define HASH_GROWTH_FACTOR 1.5
+#endif
+
+#undef IHASH_TMPL_PREFIX
+#undef IHASH_TMPL_NAME
+#define IHASH_TMPL_PREFIX DECORATE(HASH_KEY_TEMPLATE_NAME,HASH_VAL_TEMPLATE_NAME)
+#if defined(HASH_TEMPLATE_NAME)
+#define IHASH_TMPL_NAME HASH_TEMPLATE_NAME
+#else
+#define IHASH_TMPL_NAME IHASH_TMPL_PREFIX
+#endif
+
+#undef PAIR_BASE_NAME
+#undef PAIR_TEMPLATE_NAME
+#undef PAIR_FRST_TEMPLATE_NAME
+#undef PAIR_FRST_TYPE_NAME
+#undef PAIR_FRST_TYPE_MODULE_NAME
+#undef PAIR_SCND_TEMPLATE_NAME
+#undef PAIR_SCND_TYPE_NAME
+#undef PAIR_SCND_TYPE_MODULE_NAME
+#undef PAIR_INCLUDE_PREFIX
+#undef PAIR_INCLUDE_HEADER
+#undef PAIR_INCLUDE_BODY
+
+#undef LIST_TEMPLATE_NAME
+#undef LIST_TYPE_NAME
+#undef LIST_TYPE_MODULE_NAME
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_INCLUDE_HEADER
+#undef LIST_INCLUDE_BODY
+
+#undef DARR_TEMPLATE_NAME
+#undef DARR_TYPE_NAME
+#undef DARR_TYPE_MODULE_NAME
+#undef DARR_INCLUDE_PREFIX
+#undef DARR_INCLUDE_HEADER
+#undef DARR_INCLUDE_BODY
+
+#define PAIR_FRST_TEMPLATE_NAME HASH_KEY_TEMPLATE_NAME
+#define PAIR_FRST_TYPE_NAME HASH_KEY_TYPE_NAME
+#define PAIR_SCND_TEMPLATE_NAME HASH_VAL_TEMPLATE_NAME
+#define PAIR_SCND_TYPE_NAME HASH_VAL_TYPE_NAME
+#define PAIR_INCLUDE_PREFIX
+#include "tpair.F90"
+#undef PAIR_INCLUDE_PREFIX
+#undef PAIR_FRST_TEMPLATE_NAME
+#undef PAIR_FRST_TYPE_NAME
+#undef PAIR_SCND_TEMPLATE_NAME
+#undef PAIR_SCND_TYPE_NAME
+
+#define LIST_TEMPLATE_NAME DECORATE(IHASH_TMPL_PREFIX,pair)
+#define LIST_INCLUDE_PREFIX
+#include "tlist.F90"
+#undef LIST_INCLUDE_PREFIX
+
+#define DARR_TEMPLATE_NAME DECORATE(IHASH_TMPL_PREFIX,pair_list)
+#define DARR_INCLUDE_PREFIX
+#include "tdarr.F90"
+#undef DARR_INCLUDE_PREFIX
+
+#undef PAIR
+#undef LIST
+#undef DARR
+#define PAIR DECORATE(IHASH_TMPL_PREFIX,pair)
+#define LIST DECORATE(IHASH_TMPL_PREFIX,pair_list)
+#define DARR DECORATE(IHASH_TMPL_PREFIX,pair_list_darr)
+
+#undef TEMPLATE_PREFIX
+#define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
 
-#ifdef MODULE_TYPE_KEY
-#define MODULE_INVOCATION_KEY use MODULE_TYPE_KEY, only: operator(==), key_t=>TYPE_KEY, HASH_FUNCTION
-#define ITYPE_KEY type(key_t)
-#else
-#define MODULE_INVOCATION_KEY
-#define ITYPE_KEY TYPE_KEY
-#endif
+#if !defined(HASH_INCLUDE_PREFIX)
+#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
 
-#ifdef MODULE_TYPE_VAL
-#define MODULE_INVOCATION_VAL use MODULE_TYPE_VAL, only: val_t=>TYPE_VAL
-#define ITYPE_VAL type(val_t)
-#else
-#define MODULE_INVOCATION_VAL
-#define ITYPE_VAL TYPE_VAL
-#endif
-
-#define MODULE_TYPE_1 MODULE_TYPE_KEY
-#define TYPE_1 TYPE_KEY
-#define MODULE_TYPE_2 MODULE_TYPE_VAL
-#define TYPE_2 TYPE_VAL
-#include "tpair.F90"
-#undef MODULE_TYPE_1
-#undef TYPE_1
-#undef MODULE_TYPE_2
-#undef TYPE_2
-
-#define MODULE_TYPE TEMPLATE(pair_m)
-#define TYPE TEMPLATE(pair_t)
-#include "tlist.F90"
-#undef MODULE_TYPE
-#undef TYPE
-
-module TEMPLATE(table_m)
+module TEMPLATE(hash_m)
 
   use global_m
   use messages_m
@@ -41,348 +131,674 @@ module TEMPLATE(table_m)
 
   use kinds_m, only: wp
 
-  MODULE_INVOCATION_KEY
-  MODULE_INVOCATION_VAL
+  use HASH_KEY_TYPE_MODULE_NAME, only: &
+    operator(==),                      &
+    HASH_KEY_TYPE_NAME
 
-  use TEMPLATE(pair_m), only:                     &
-    pair_t          => TEMPLATE(pair_t),          &
-    pair_init       => TEMPLATE(pair_init),       &
-    pair_get_first  => TEMPLATE(pair_get_first),  &
-    pair_get_second => TEMPLATE(pair_get_second), &
-    pair_set_second => TEMPLATE(pair_set_second), &
-    pair_end        => TEMPLATE(pair_end)
+  use HASH_KEY_FUNCTION_MODULE_NAME, only: &
+    HASH_KEY_FUNCTION_NAME
 
-  use TEMPLATE(list_m), only:         &
-    list_t    => TEMPLATE(list_t),    &
-    list_init => TEMPLATE(list_init), &
-    list_push => TEMPLATE(list_push), &
-    list_pop  => TEMPLATE(list_pop),  &
-    list_copy => TEMPLATE(list_copy), &
-    list_end  => TEMPLATE(list_end)
-
-  use TEMPLATE(list_m), only:                           &
-    list_iterator_t    => TEMPLATE(list_iterator_t),    &
-    list_iterator_init => TEMPLATE(list_iterator_init), &
-    list_iterator_next => TEMPLATE(list_iterator_next), &
-    list_iterator_end  => TEMPLATE(list_iterator_end)
+  use HASH_VAL_TYPE_MODULE_NAME, only: &
+    HASH_VAL_TYPE_NAME
 
   implicit none
 
   private
-  public ::               &
-    TEMPLATE(table_init), &
-    TEMPLATE(table_len),  &
-    TEMPLATE(table_pop),  &
-    TEMPLATE(table_set),  &
-    TEMPLATE(table_get),  &
-    TEMPLATE(table_copy), &
-    TEMPLATE(table_end)
+  public ::                &
+    TEMPLATE(hash_t),      &
+    TEMPLATE(hash_len),    &
+    TEMPLATE(hash_init),   &
+    TEMPLATE(hash_next),   &
+    TEMPLATE(hash_pop),    &
+    TEMPLATE(hash_set),    &
+    TEMPLATE(hash_get),    &
+    TEMPLATE(hash_del),    &
+    TEMPLATE(hash_extend), &
+    TEMPLATE(hash_copy),   &
+    TEMPLATE(hash_end)
     
+  public ::                     &
+    TEMPLATE(HASH_OK),          &
+    TEMPLATE(HASH_KEY_ERROR),   &
+    TEMPLATE(HASH_EMPTY_ERROR)
 
-  real(kind=wp), parameter :: TABLE_GROWTH_FACTOR = 1.5_wp
-  integer,       parameter :: TABLE_INIT_LEN      = 127
+  public ::                    &
+    TEMPLATE(hash_iterator_t)
 
-  integer, public, parameter :: TABLE_KEY_OK    = 0
-  integer, public, parameter :: TABLE_KEY_ERROR =-1
+#endif
+#if !defined(HASH_INCLUDE_BODY)
+#define PAIR_FRST_TEMPLATE_NAME HASH_KEY_TEMPLATE_NAME
+#define PAIR_FRST_TYPE_NAME HASH_KEY_TYPE_NAME
+#define PAIR_SCND_TEMPLATE_NAME HASH_VAL_TEMPLATE_NAME
+#define PAIR_SCND_TYPE_NAME HASH_VAL_TYPE_NAME
+#define PAIR_INCLUDE_HEADER
+#include "tpair.F90"
+#undef PAIR_INCLUDE_HEADER
+#undef PAIR_FRST_TEMPLATE_NAME
+#undef PAIR_FRST_TYPE_NAME
+#undef PAIR_SCND_TEMPLATE_NAME
+#undef PAIR_SCND_TYPE_NAME
+#define LIST_INCLUDE_HEADER
+#include "tlist.F90"
+#undef LIST_INCLUDE_HEADER
+#define DARR_INCLUDE_HEADER
+#include "tdarr.F90"
+#undef DARR_INCLUDE_HEADER
+#define PAIR DECORATE(IHASH_TMPL_PREFIX,pair)
+#define LIST DECORATE(IHASH_TMPL_PREFIX,pair_list)
+#define DARR DECORATE(IHASH_TMPL_PREFIX,pair_list_darr)
+#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#include "template.h"
 
-  type, public :: TEMPLATE(table_t)
+  real(kind=wp), parameter :: INTERNAL(HASH_FACTOR) = DECORATE(HASH_GROWTH_FACTOR,wp)
+  integer,       parameter :: INTERNAL(HASH_SIZE)   = HASH_INITIAL_SIZE
+
+  integer, parameter :: TEMPLATE(HASH_OK)          = 0
+  integer, parameter :: TEMPLATE(HASH_KEY_ERROR)   =-1
+  integer, parameter :: TEMPLATE(HASH_EMPTY_ERROR) =-2
+
+  type :: TEMPLATE(hash_t)
     private
-    integer                             :: size  = 0
-    integer                             :: used  = 0
-    type(list_t), dimension(:), pointer :: table =>null()
-  end type TEMPLATE(table_t)
+    integer                :: size = 0
+    integer                :: used = 0
+    type(EXTERNAL(DARR,t)) :: data
+  end type TEMPLATE(hash_t)
+
+  type :: TEMPLATE(hash_iterator_t)
+    private
+    type(TEMPLATE(hash_t)), pointer :: hash =>null()
+    type(EXTERNAL(DARR,iterator_t)) :: itrd
+    type(EXTERNAL(LIST,iterator_t)) :: itrl
+  end type TEMPLATE(hash_iterator_t)
+
+  interface TEMPLATE(hash_init)
+    module procedure INTERNAL(hash_init)
+    module procedure INTERNAL(hash_iterator_init)
+  end interface TEMPLATE(hash_init)
+
+  interface TEMPLATE(hash_next)
+    module procedure INTERNAL(hash_iterator_next_item)
+    module procedure INTERNAL(hash_iterator_next_key)
+    module procedure INTERNAL(hash_iterator_next_val)
+  end interface TEMPLATE(hash_next)
+
+  interface TEMPLATE(hash_pop)
+    module procedure INTERNAL(hash_pop_item)
+    module procedure INTERNAL(hash_pop_key)
+    module procedure INTERNAL(hash_pop_val)
+  end interface TEMPLATE(hash_pop)
+
+  interface TEMPLATE(hash_copy)
+    module procedure INTERNAL(hash_copy)
+    module procedure INTERNAL(hash_iterator_copy)
+  end interface TEMPLATE(hash_copy)
+
+  interface TEMPLATE(hash_end)
+    module procedure INTERNAL(hash_end)
+    module procedure INTERNAL(hash_iterator_end)
+  end interface TEMPLATE(hash_end)
+
+#endif
+#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
 
 contains
 
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_init)(this, size)
-    type(TEMPLATE(table_t)), intent(out) :: this
-    integer,       optional, intent(in)  :: size
-    !
-    integer :: i
-    !
-    PUSH_SUB(TEMPLATE(table_init))
-    this%used=0
-    this%size=TABLE_INIT_LEN
-    if(present(size))this%size=size
-    SAFE_ALLOCATE(this%table(this%size))
-    do i=1, this%size
-      call list_init(this%table(i))
-    end do
-    POP_SUB(TEMPLATE(table_init))
-    return
-  end subroutine TEMPLATE(table_init)
+#endif
+#if !defined(HASH_INCLUDE_HEADER)
+#define PAIR_FRST_TEMPLATE_NAME HASH_KEY_TEMPLATE_NAME
+#define PAIR_FRST_TYPE_NAME HASH_KEY_TYPE_NAME
+#define PAIR_SCND_TEMPLATE_NAME HASH_VAL_TEMPLATE_NAME
+#define PAIR_SCND_TYPE_NAME HASH_VAL_TYPE_NAME
+#define PAIR_INCLUDE_BODY
+#include "tpair.F90"
+#undef PAIR_INCLUDE_BODY
+#undef PAIR_FRST_TEMPLATE_NAME
+#undef PAIR_FRST_TYPE_NAME
+#undef PAIR_SCND_TEMPLATE_NAME
+#undef PAIR_SCND_TYPE_NAME
+#define LIST_INCLUDE_BODY
+#include "tlist.F90"
+#undef LIST_INCLUDE_BODY
+#define DARR_INCLUDE_BODY
+#include "tdarr.F90"
+#undef DARR_INCLUDE_BODY
+#define PAIR DECORATE(IHASH_TMPL_PREFIX,pair)
+#define LIST DECORATE(IHASH_TMPL_PREFIX,pair_list)
+#define DARR DECORATE(IHASH_TMPL_PREFIX,pair_list_darr)
+#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#include "template.h"
 
   ! ---------------------------------------------------------
-  elemental function TEMPLATE(table_len)(this) result(len)
-    type(TEMPLATE(table_t)), intent(in) :: this
+  elemental function TEMPLATE(hash_len)(this) result(len)
+    type(TEMPLATE(hash_t)), intent(in) :: this
     !
     integer :: len
     !
     len=this%used
     return
-  end function TEMPLATE(table_len)
+  end function TEMPLATE(hash_len)
 
   ! ---------------------------------------------------------
-  subroutine table_reallocate(this)
-    type(TEMPLATE(table_t)), intent(inout) :: this
+  elemental function INTERNAL(hash_calc_size)(this) result(that)
+    integer, intent(in) :: this
     !
-    type(TEMPLATE(table_t)) :: buff
-    type(pair_t),   pointer :: pair
-    ITYPE_KEY,      pointer :: key
-    real(kind=wp)           :: need
-    integer                 :: i, n
+    integer :: that
     !
-    PUSH_SUB(TEMPLATE(table_reallocate))
-    need=real(this%used+1, kind=wp)
-    if(this%size<int(TABLE_GROWTH_FACTOR*need))then
-      n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(TABLE_GROWTH_FACTOR)),1)
-      call TEMPLATE(table_init)(buff, ceiling((TABLE_GROWTH_FACTOR**n)*real(this%size,kind=wp)))
-      pair=>null()
-      do i = 1, this%size
-        do
-          call list_pop(this%table(i), pair)
-          if(.not.associated(pair))exit
-          call pair_get_first(pair, key)
-          n=HASH_FUNCTION(key, buff%size)
-          call list_push(buff%table(n), pair)
-          buff%used=buff%used+1
-          this%used=this%used-1
-          pair=>null()
-        end do
-        call list_end(this%table(i))
-      end do
-      ASSERT(this%used==0)
-      call TEMPLATE(table_end)(this)
-      this%size=buff%size
-      this%used=buff%used
-      this%table=>buff%table
-    end if
-    POP_SUB(TEMPLATE(table_reallocate))
+    that=int(ceiling(INTERNAL(HASH_FACTOR)*real(this,kind=wp)))
     return
-  end subroutine table_reallocate
+  end function INTERNAL(hash_calc_size)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_pop)(this, key, val)
-    type(TEMPLATE(table_t)), intent(inout) :: this
-    ITYPE_KEY,              pointer        :: key
-    ITYPE_VAL,              pointer        :: val
+  subroutine INTERNAL(hash_rehash)(this)
+    type(TEMPLATE(hash_t)), intent(inout) :: this
     !
-    type(pair_t), pointer :: pair
-    integer               :: i
+    type(HASH_KEY_TYPE_NAME), pointer :: pkey
+    type(EXTERNAL(LIST,t))            :: list
+    type(EXTERNAL(LIST,t)),   pointer :: plst
+    type(EXTERNAL(PAIR,t)),   pointer :: pair
     !
-    PUSH_SUB(TEMPLATE(table_pop))
-    nullify(key, val)
+    PUSH_SUB(INTERNAL(hash_rehash))
+    if(this%size<INTERNAL(hash_calc_size)(this%used))then
+      call EXTERNAL(LIST,init)(list)
+      do
+        nullify(pair)
+        call INTERNAL(hash_pop_pair)(this, pair)
+        if(.not.associated(pair))exit
+        call EXTERNAL(LIST,push)(list, pair)
+      end do
+      this%size=INTERNAL(hash_calc_size)(this%size)
+      call EXTERNAL(DARR,realloc)(this%data, this%size)
+      do
+        nullify(pkey, plst, pair)
+        call EXTERNAL(LIST,pop)(list, pair)
+        if(.not.associated(pair))exit
+        call EXTERNAL(PAIR,get)(pair, pkey)
+        ASSERT(associated(pkey))
+        call INTERNAL(hash_get_list)(this, pkey, plst)
+        call EXTERNAL(LIST,push)(plst, pair)
+        this%used=this%used+1
+      end do
+      call EXTERNAL(LIST,end)(list)
+      nullify(pkey, plst, pair)
+    end if
+    POP_SUB(INTERNAL(hash_rehash))
+    return
+  end subroutine INTERNAL(hash_rehash)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_init)(this, size)
+    type(TEMPLATE(hash_t)), intent(out) :: this
+    integer,      optional, intent(in)  :: size
+    !
+    type(EXTERNAL(LIST,t)), pointer :: plst
+    integer                         :: indx
+    !
+    PUSH_SUB(INTERNAL(hash_init))
+    ASSERT(INTERNAL(HASH_SIZE)>1)
+    ASSERT(INTERNAL(HASH_FACTOR)>1.0_wp)
+    this%size=INTERNAL(HASH_SIZE)
+    if(present(size))this%size=max(size,this%size)
+    call EXTERNAL(DARR,init)(this%data, this%size)
+    do indx=1, this%size
+      nullify(plst)
+      SAFE_ALLOCATE(plst)
+      call EXTERNAL(LIST,init)(plst)
+      call EXTERNAL(DARR,set)(this%data, indx, plst)
+    end do
+    POP_SUB(INTERNAL(hash_init))
+    return
+  end subroutine INTERNAL(hash_init)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_pop_pair)(this, pair)
+    type(TEMPLATE(hash_t)),  intent(inout) :: this
+    type(EXTERNAL(PAIR,t)), pointer        :: pair
+    !
+    type(EXTERNAL(LIST,t)), pointer :: plst
+    integer                         :: indx
+    !
+    PUSH_SUB(INTERNAL(hash_pop_pair))
+    nullify(pair)
     if(this%used>0)then
-      pair=>null()
-      do i = 1, this%size
-        call list_pop(this%table(i), pair)
+      do indx = 1, this%size
+        nullify(pair, plst)
+        call EXTERNAL(DARR,get)(this%data, indx, plst)
+        call EXTERNAL(LIST,pop)(plst, pair)
         if(associated(pair))then
           this%used=this%used-1
-          call pair_get_first(pair, key)
-          call pair_get_second(pair, val)
-          call pair_end(pair)
-          SAFE_DEALLOCATE_P(pair)
           exit
         end if
-        pair=>null()
       end do
+      ASSERT(associated(pair))
+      ASSERT(this%used>=0)
     end if
-    POP_SUB(TEMPLATE(table_pop))
+    POP_SUB(INTERNAL(hash_pop_pair))
     return
-  end subroutine TEMPLATE(table_pop)
+  end subroutine INTERNAL(hash_pop_pair)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_set)(this, key, val)
-    type(TEMPLATE(table_t)), intent(inout) :: this
-    ITYPE_KEY,               intent(in)    :: key
-    ITYPE_VAL,               intent(in)    :: val
+  subroutine INTERNAL(hash_pop_item)(this, key, val, ierr)
+    type(TEMPLATE(hash_t)),    intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME), pointer        :: key
+    type(HASH_VAL_TYPE_NAME), pointer        :: val
+    integer,         optional, intent(out)   :: ierr
     !
-    type(pair_t), pointer :: pair
-    integer               :: n
+    type(EXTERNAL(PAIR,t)), pointer :: pair
+    integer                         :: jerr
     !
-    PUSH_SUB(TEMPLATE(table_set))
-    call table_reallocate(this)
-    n=HASH_FUNCTION(key, this%size)
-    call table_list_get_pair(this%table(n), key, pair)
+    PUSH_SUB(INTERNAL(hash_pop_item))
+    jerr=TEMPLATE(HASH_EMPTY_ERROR)
+    nullify(key, val, pair)
+    call INTERNAL(hash_pop_pair)(this, pair)
     if(associated(pair))then
-      call pair_set_second(pair, val)
+      call EXTERNAL(PAIR,get)(pair, key)
+      call EXTERNAL(PAIR,get)(pair, val)
+      call EXTERNAL(PAIR,end)(pair)
+      SAFE_DEALLOCATE_P(pair)
+      jerr=TEMPLATE(HASH_OK)
+    end if
+    nullify(pair)
+    if(present(ierr))ierr=jerr
+    POP_SUB(INTERNAL(hash_pop_item))
+    return
+  end subroutine INTERNAL(hash_pop_item)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_pop_key)(this, key, ierr)
+    type(TEMPLATE(hash_t)),    intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME), pointer        :: key
+    integer,         optional, intent(out)   :: ierr
+    !
+    type(HASH_VAL_TYPE_NAME), pointer :: val
+    !
+    PUSH_SUB(INTERNAL(hash_pop_key))
+    nullify(key, val)
+    call INTERNAL(hash_pop_item)(this, key, val, ierr)
+    nullify(val)
+    POP_SUB(INTERNAL(hash_pop_key))
+    return
+  end subroutine INTERNAL(hash_pop_key)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_pop_val)(this, val, ierr)
+    type(TEMPLATE(hash_t)),    intent(inout) :: this
+    type(HASH_VAL_TYPE_NAME), pointer        :: val
+    integer,         optional, intent(out)   :: ierr
+    !
+    type(HASH_KEY_TYPE_NAME), pointer :: key
+    !
+    PUSH_SUB(INTERNAL(hash_pop_val))
+    nullify(key, val)
+    call INTERNAL(hash_pop_item)(this, key, val, ierr)
+    nullify(key)
+    POP_SUB(INTERNAL(hash_pop_val))
+    return
+  end subroutine INTERNAL(hash_pop_val)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_get_list)(this, key, list)
+    type(TEMPLATE(hash_t)),   intent(in) :: this
+    type(HASH_KEY_TYPE_NAME), intent(in) :: key
+    type(EXTERNAL(LIST,t)),  pointer     :: list
+    !
+    integer :: ipos
+    !
+    PUSH_SUB(INTERNAL(hash_get_list))
+    nullify(list)
+    ipos=modulo(HASH_KEY_FUNCTION_NAME(key), this%size)+1
+    call EXTERNAL(DARR,get)(this%data, ipos, list)
+    ASSERT(associated(list))
+    POP_SUB(INTERNAL(hash_get_list))
+    return
+  end subroutine INTERNAL(hash_get_list)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_get_list_pair)(this, key, list, pair)
+    type(TEMPLATE(hash_t)),   intent(in) :: this
+    type(HASH_KEY_TYPE_NAME), intent(in) :: key
+    type(EXTERNAL(LIST,t)),  pointer     :: list
+    type(EXTERNAL(PAIR,t)),  pointer     :: pair
+    !
+    type(HASH_KEY_TYPE_NAME), pointer :: pkey
+    type(EXTERNAL(LIST,iterator_t))   :: iter
+    !
+    PUSH_SUB(INTERNAL(hash_get_list_pair))
+    call INTERNAL(hash_get_list)(this, key, list)
+    call EXTERNAL(LIST,init)(iter, list)
+    do
+      nullify(pair, pkey)
+      call EXTERNAL(LIST,next)(iter, pair)
+      if(.not.associated(pair))exit
+      call EXTERNAL(PAIR,get)(pair, pkey)
+      ASSERT(associated(pkey))
+      if(key==pkey)exit
+    end do
+    call EXTERNAL(LIST,end)(iter)
+    nullify(pkey)
+    POP_SUB(INTERNAL(hash_get_list_pair))
+    return
+  end subroutine INTERNAL(hash_get_list_pair)
+
+  ! ---------------------------------------------------------
+  subroutine TEMPLATE(hash_set)(this, key, val)
+    type(TEMPLATE(hash_t)),   intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME), intent(in)    :: key
+    type(HASH_VAL_TYPE_NAME), intent(in)    :: val
+    !
+    type(EXTERNAL(LIST,t)), pointer :: list
+    type(EXTERNAL(PAIR,t)), pointer :: pair
+    !
+    PUSH_SUB(TEMPLATE(hash_set))
+    nullify(list, pair)
+    call INTERNAL(hash_get_list_pair)(this, key, list, pair)
+    if(associated(pair))then
+      call EXTERNAL(PAIR,set)(pair, val)
     else
       SAFE_ALLOCATE(pair)
-      call pair_init(pair, key, val)
-      call list_push(this%table(n), pair)
+      call EXTERNAL(PAIR,init)(pair, key, val)
+      call EXTERNAL(LIST,push)(list, pair)
       this%used=this%used+1
+      call INTERNAL(hash_rehash)(this)
     end if
-    POP_SUB(TEMPLATE(table_set))
+    nullify(list, pair)
+    POP_SUB(TEMPLATE(hash_set))
     return
-  end subroutine TEMPLATE(table_set)
+  end subroutine TEMPLATE(hash_set)
 
   ! ---------------------------------------------------------
-  subroutine table_list_get_pair(this, key, pair)
-    type(list_t),          intent(in) :: this
-    ITYPE_KEY,     target, intent(in) :: key
-    type(pair_t), pointer             :: pair
+  subroutine TEMPLATE(hash_get)(this, key, val, ierr)
+    type(TEMPLATE(hash_t)),    intent(in)  :: this
+    type(HASH_KEY_TYPE_NAME),  intent(in)  :: key
+    type(HASH_VAL_TYPE_NAME), pointer      :: val
+    integer,         optional, intent(out) :: ierr
     !
-    type(list_iterator_t) :: iter
-    ITYPE_KEY,    pointer :: k
+    type(EXTERNAL(LIST,t)), pointer :: list
+    type(EXTERNAL(PAIR,t)), pointer :: pair
+    integer                         :: n, i, jerr
     !
-    PUSH_SUB(TEMPLATE(table_list_get_pair))
-    nullify(k, pair)
-    call list_iterator_init(iter, this)
-    do
-      call list_iterator_next(iter, pair)
-      if(.not.associated(pair))exit
-      call pair_get_first(pair, k)
-      if(k==key)exit
-      nullify(k, pair)
-    end do
-    call list_iterator_end(iter)
-    POP_SUB(TEMPLATE(table_list_get_pair))
-    return
-  end subroutine table_list_get_pair
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_get)(this, key, val, ierr)
-    type(TEMPLATE(table_t)), intent(in)  :: this
-    ITYPE_KEY ,              intent(in)  :: key
-    ITYPE_VAL,              pointer      :: val
-    integer,       optional, intent(out) :: ierr
-    !
-    type(pair_t), pointer :: pair
-    integer               :: n
-    !
-    PUSH_SUB(TEMPLATE(table_get))
-    val=>null()
-    if(present(ierr))ierr=TABLE_KEY_ERROR
-    n=HASH_FUNCTION(key, this%size)
-    call table_list_get_pair(this%table(n), key, pair)
+    PUSH_SUB(TEMPLATE(hash_get))
+    jerr=TEMPLATE(HASH_KEY_ERROR)
+    nullify(val, list, pair)
+    call INTERNAL(hash_get_list_pair)(this, key, list, pair)
     if(associated(pair))then
-      if(present(ierr))ierr=TABLE_KEY_OK
-      call pair_get_second(pair, val)
+      call EXTERNAL(PAIR,get)(pair, val)
+      jerr=TEMPLATE(HASH_OK)
     end if
-    POP_SUB(TEMPLATE(table_get))
+    nullify(list, pair)
+    if(present(ierr))ierr=jerr
+    POP_SUB(TEMPLATE(hash_get))
     return
-  end subroutine TEMPLATE(table_get)
+  end subroutine TEMPLATE(hash_get)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_copy)(this_out, this_in)
-    type(TEMPLATE(table_t)), intent(out) :: this_out
-    type(TEMPLATE(table_t)), intent(in)  :: this_in
+  subroutine INTERNAL(hash_del_pair)(this, key, pair)
+    type(TEMPLATE(hash_t)),   intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME), intent(in)    :: key
+    type(EXTERNAL(PAIR,t)),  pointer        :: pair
     !
-    integer :: i
+    type(EXTERNAL(LIST,t)), pointer :: list
+    integer                         :: indx
     !
-    PUSH_SUB(TEMPLATE(table_copy))
-    call TEMPLATE(table_init)(this_out, this_in%size)
-    do i = 1, this_out%size
-      call list_copy(this_out%table(i), this_in%table(i))
-    end do
-    this_out%used=this_in%used
-    POP_SUB(TEMPLATE(table_copy))
+    PUSH_SUB(INTERNAL(hash_del_pair))
+    nullify(pair, list)
+    call INTERNAL(hash_get_list_pair)(this, key, list, pair)
+    if(associated(pair))then
+      indx=EXTERNAL(LIST,index)(list, pair)
+      if(indx>0)then
+        nullify(pair)
+        call EXTERNAL(LIST,del)(list, indx, pair)
+      end if
+    end if
+    nullify(list)
+    POP_SUB(INTERNAL(hash_del_pair))
     return
-  end subroutine TEMPLATE(table_copy)
+  end subroutine INTERNAL(hash_del_pair)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(table_end)(this)
-    type(TEMPLATE(table_t)), intent(inout) :: this
+  subroutine TEMPLATE(hash_del)(this, key, val, ierr)
+    type(TEMPLATE(hash_t)),    intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME),  intent(in)    :: key
+    type(HASH_VAL_TYPE_NAME), pointer        :: val
+    integer,         optional, intent(out)   :: ierr
     !
-    type(pair_t), pointer :: pair
-    integer               :: i
+    type(EXTERNAL(PAIR,t)), pointer :: pair
+    integer                         :: jerr
     !
-    PUSH_SUB(TEMPLATE(table_end))
-    pair=>null()
-    do i = 1, this%size
-      do
-        call list_pop(this%table(i), pair)
-        if(.not.associated(pair))exit
-        call pair_end(pair)
-        SAFE_DEALLOCATE_P(pair)
-        this%used=this%used-1
-        pair=>null()
-      end do
-      call list_end(this%table(i))
+    PUSH_SUB(TEMPLATE(hash_del))
+    jerr=TEMPLATE(HASH_KEY_ERROR)
+    nullify(val, pair)
+    call INTERNAL(hash_del_pair)(this, key, pair)
+    if(associated(pair))then
+      call EXTERNAL(PAIR,get)(pair, val)
+      call EXTERNAL(PAIR,end)(pair)
+      SAFE_DEALLOCATE_P(pair)
+      this%used=this%used-1
+      jerr=TEMPLATE(HASH_OK)
+    end if
+    nullify(pair)
+    if(present(ierr))ierr=jerr
+    POP_SUB(TEMPLATE(hash_del))
+    return
+  end subroutine TEMPLATE(hash_del)
+
+  ! ---------------------------------------------------------
+  subroutine TEMPLATE(hash_extend)(this, that)
+    type(TEMPLATE(hash_t)), intent(inout) :: this
+    type(TEMPLATE(hash_t)), intent(in)    :: that
+    !
+    type(TEMPLATE(hash_iterator_t))   :: iter
+    type(HASH_KEY_TYPE_NAME), pointer :: key
+    type(HASH_VAL_TYPE_NAME), pointer :: val
+    integer                           :: ierr
+    !
+    PUSH_SUB(TEMPLATE(hash_extend))
+    call INTERNAL(hash_iterator_init)(iter, that)
+    do
+      nullify(key, val)
+      call INTERNAL(hash_iterator_next_item)(iter, key, val, ierr)
+      if(ierr/=TEMPLATE(HASH_OK))exit
+      call TEMPLATE(hash_set)(this, key, val)
     end do
-    SAFE_DEALLOCATE_P(this%table)
-    this%table=>null()
+    nullify(key, val)
+    call INTERNAL(hash_iterator_end)(iter)
+    POP_SUB(TEMPLATE(hash_extend))
+    return
+  end subroutine TEMPLATE(hash_extend)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_copy)(this, that)
+    type(TEMPLATE(hash_t)), intent(inout) :: this
+    type(TEMPLATE(hash_t)), intent(in)    :: that
+    !
+    PUSH_SUB(INTERNAL(hash_copy))
+    call INTERNAL(hash_purge)(this)
+    call TEMPLATE(hash_extend)(this, that)
+    POP_SUB(INTERNAL(hash_copy))
+    return
+  end subroutine INTERNAL(hash_copy)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_purge)(this)
+    type(TEMPLATE(hash_t)), intent(inout) :: this
+    !
+    type(HASH_KEY_TYPE_NAME), pointer :: pkey
+    type(HASH_VAL_TYPE_NAME), pointer :: pval
+    integer                           :: ierr
+    !
+    PUSH_SUB(INTERNAL(hash_purge))
+    do
+      nullify(pkey, pval)
+      call INTERNAL(hash_pop_item)(this, pkey, pval, ierr)
+      if(ierr/=TEMPLATE(HASH_OK))exit
+    end do
+    nullify(pkey, pval)
     ASSERT(this%used==0)
-    this%size=0
-    POP_SUB(TEMPLATE(table_end))
+    POP_SUB(INTERNAL(hash_purge))
     return
-  end subroutine TEMPLATE(table_end)
+  end subroutine INTERNAL(hash_purge)
 
-!!$  ! ---------------------------------------------------------
-!!$  subroutine table_iterator_init(this, table)
-!!$    type(table_iterator_t), intent(out) :: this
-!!$    type(table_t), target,  intent(in)  :: table
-!!$    !
-!!$    integer :: i
-!!$    !
-!!$    call json_object_iterator_nullify(this)
-!!$    if(object%used>0)then
-!!$      this%size=object%size
-!!$      this%table=>object%table
-!!$      do i = 1, object%size
-!!$        if(associated(object%table(i)%head))then
-!!$          this%pos=i
-!!$          this%node=>object%table(i)%head
-!!$          exit
-!!$        end if
-!!$      end do
-!!$    end if
-!!$    return
-!!$  end subroutine json_object_iterator_init
-!!$
-!!$  ! ---------------------------------------------------------
-!!$  subroutine table_iterator_next(this, val)
-!!$    type(json_object_iterator_t), target, intent(inout) :: this
-!!$    type(json_member_t),         pointer, intent(out)   :: member
-!!$    !
-!!$    integer :: i
-!!$    !
-!!$    member=>null()
-!!$    if(associated(this%node))then
-!!$      member=>this%node%member
-!!$      if(associated(this%node%next))then
-!!$        this%node=>this%node%next
-!!$      else
-!!$        this%node=>null()
-!!$        do i = this%pos+1, this%size
-!!$          if(associated(this%table(i)%head))then
-!!$            this%pos=i
-!!$            this%node=>this%table(i)%head
-!!$            exit
-!!$          end if
-!!$        end do
-!!$      end if
-!!$    end if
-!!$    return
-!!$  end subroutine table_iterator_next
-!!$
-!!$  ! ---------------------------------------------------------
-!!$  elemental subroutine table_iterator_copy(this)
-!!$    type(json_object_iterator_t), intent(inout) :: this
-!!$    !
-!!$    this%pos=0
-!!$    this%node=>null()
-!!$    this%table=>null()
-!!$    return
-!!$  end subroutine table_iterator_copy
-!!$
-!!$  ! ---------------------------------------------------------
-!!$  elemental subroutine table_iterator_end(this)
-!!$    type(json_object_iterator_t), intent(inout) :: this
-!!$    !
-!!$    this%pos=0
-!!$    this%node=>null()
-!!$    this%table=>null()
-!!$    return
-!!$  end subroutine table_iterator_end
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_end)(this)
+    type(TEMPLATE(hash_t)), intent(inout) :: this
+    !
+    PUSH_SUB(INTERNAL(hash_end))
+    call INTERNAL(hash_purge)(this)
+    call EXTERNAL(DARR,end)(this%data)
+    this%size=0
+    POP_SUB(INTERNAL(hash_end))
+    return
+  end subroutine INTERNAL(hash_end)
 
-end module TEMPLATE(table_m)
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_init)(this, that)
+    type(TEMPLATE(hash_iterator_t)), intent(out) :: this
+    type(TEMPLATE(hash_t)),  target, intent(in)  :: that
+    !
+    type(EXTERNAL(LIST,t)), pointer :: plst
+    integer                         :: ierr
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_init))
+    nullify(plst)
+    call INTERNAL(hash_iterator_end)(this)
+    if(that%used>0)then
+      this%hash=>that
+      call EXTERNAL(DARR,init)(this%itrd, that%data)
+      call EXTERNAL(DARR,next)(this%itrd, plst, ierr)
+      ASSERT(ierr==EXTERNAL(DARR,OK))
+      ASSERT(associated(plst))
+      call EXTERNAL(LIST,init)(this%itrl, plst)
+      nullify(plst)
+    end if
+    POP_SUB(INTERNAL(hash_iterator_init))
+    return
+  end subroutine INTERNAL(hash_iterator_init)
 
-#undef ITYPE_VAL
-#undef MODULE_INVOCATION_VAL
-#undef ITYPE_KEY
-#undef MODULE_INVOCATION_KEY
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_next_pair)(this, that)
+    type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
+    type(EXTERNAL(PAIR,t)),         pointer        :: that
+    !
+    type(EXTERNAL(LIST,t)), pointer :: plst
+    integer                         :: ierr
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_next_pair))
+    nullify(that, plst)
+    if(associated(this%hash))then
+      do
+        nullify(that)
+        call EXTERNAL(LIST,next)(this%itrl, that)
+        if(associated(that))exit
+        nullify(that)
+        call EXTERNAL(LIST,end)(this%itrl)
+        call EXTERNAL(DARR,next)(this%itrd, plst, ierr)
+        if(ierr/=EXTERNAL(DARR,OK))exit
+        ASSERT(associated(plst))
+        call EXTERNAL(LIST,init)(this%itrl, plst)
+        nullify(plst)
+      end do
+    end if
+    POP_SUB(INTERNAL(hash_iterator_next_pair))
+    return
+  end subroutine INTERNAL(hash_iterator_next_pair)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_next_item)(this, key, val, ierr)
+    type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME),       pointer        :: key
+    type(HASH_VAL_TYPE_NAME),       pointer        :: val
+    integer,               optional, intent(out)   :: ierr
+    !
+    type(EXTERNAL(PAIR,t)), pointer :: pair
+    integer                         :: jerr
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_next_item))
+    nullify(key, val, pair)
+    jerr=TEMPLATE(HASH_EMPTY_ERROR)
+    call INTERNAL(hash_iterator_next_pair)(this, pair)
+    if(associated(pair))then
+      call EXTERNAL(PAIR,get)(pair, key)
+      call EXTERNAL(PAIR,get)(pair, val)
+      jerr=TEMPLATE(HASH_OK)
+    end if
+    if(present(ierr))ierr=jerr
+    POP_SUB(INTERNAL(hash_iterator_next_item))
+    return
+  end subroutine INTERNAL(hash_iterator_next_item)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_next_key)(this, that, ierr)
+    type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
+    type(HASH_KEY_TYPE_NAME),       pointer        :: that
+    integer,               optional, intent(out)   :: ierr
+    !
+    type(HASH_VAL_TYPE_NAME), pointer :: pval
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_next_key))
+    nullify(that, pval)
+    call INTERNAL(hash_iterator_next_item)(this, that, pval, ierr)
+    nullify(pval)
+    POP_SUB(INTERNAL(hash_iterator_next_key))
+    return
+  end subroutine INTERNAL(hash_iterator_next_key)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_next_val)(this, that, ierr)
+    type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
+    type(HASH_VAL_TYPE_NAME),       pointer        :: that
+    integer,               optional, intent(out)   :: ierr
+    !
+    type(HASH_KEY_TYPE_NAME), pointer :: pkey
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_next_val))
+    nullify(that, pkey)
+    call INTERNAL(hash_iterator_next_item)(this, pkey, that, ierr)
+    nullify(pkey)
+    POP_SUB(INTERNAL(hash_iterator_next_val))
+    return
+  end subroutine INTERNAL(hash_iterator_next_val)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_copy)(this, that)
+    type(TEMPLATE(hash_iterator_t)), intent(out) :: this
+    type(TEMPLATE(hash_iterator_t)), intent(in)  :: that
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_copy))
+    this%hash=>that%hash
+    call EXTERNAL(DARR,copy)(this%itrd, that%itrd)
+    call EXTERNAL(LIST,copy)(this%itrl, that%itrl)
+    POP_SUB(INTERNAL(hash_iterator_copy))
+    return
+  end subroutine INTERNAL(hash_iterator_copy)
+
+  ! ---------------------------------------------------------
+  elemental subroutine INTERNAL(hash_iterator_end)(this)
+    type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
+    !
+    nullify(this%hash)
+    call EXTERNAL(DARR,end)(this%itrd)
+    call EXTERNAL(LIST,end)(this%itrl)
+    return
+  end subroutine INTERNAL(hash_iterator_end)
+
+#endif
+#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
+
+end module TEMPLATE(hash_m)
+
+#endif
+#endif
+
+#undef PAIR
+#undef LIST
+#undef DARR
+
+#undef LIST_TEMPLATE_NAME
+#undef DARR_TEMPLATE_NAME
+
+#undef IHASH_TMPL_PREFIX
+#undef IHASH_TMPL_NAME
+
+#undef TEMPLATE_PREFIX
 
 !! Local Variables:
 !! mode: f90
