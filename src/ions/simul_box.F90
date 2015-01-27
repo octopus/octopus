@@ -724,8 +724,9 @@ contains
         end do
         call parse_block_end(blk)
 
-        message(1) = "Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok."
-        call messages_warning(1)
+        message(1) = 'Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok.'
+        call messages_warning (1)
+        call messages_experimental('Non orthogonal unit cells')
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
         if (parse_isdef(datasets_check('Lsize')) == 0) then
