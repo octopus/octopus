@@ -29,10 +29,10 @@ libfrozen_a_SOURCES =		\
 	functional.F90		\
 	basis.F90		\
 	strng.F90		\
-	domain.F90		#\
+	domain.F90		\
 	simulation.F90		\
 	intrpl.F90		\
-	storage.F90		\
+	storage.F90		#\
 	bgeom.F90		\
 	bdnst.F90		\
 	bstts.F90		\
@@ -87,7 +87,6 @@ noinst_HEADERS =		\
 	util.h			\
 	template.h		\
 	tsingle.F90		\
-	tdarr.F90		\
 	tpair.F90		\
 	tlist.F90		\
 	thash.F90		\
@@ -109,9 +108,10 @@ functional.o : functional.F90 gga.o lda.o interface_xc.o
 basis.o : basis.F90
 strng.o : strng.F90
 domain.o : domain.F90
-# simulation.o : simulation.F90 domain.o igrid.o
-# intrpl.o : intrpl.F90 simulation.o domain.o #basis.o
-# storage.o : storage.F90 intrpl.o simulation.o
+simulation.o : simulation.F90 domain.o igrid.o
+intrpl.o : intrpl.F90 simulation.o domain.o basis.o
+storage.o : storage.F90 intrpl.o simulation.o basis.o
+
 # bgeom.o : bgeom.F90 strng.o basis.o 
 # bdnst.o : bdnst.F90 simulation.o storage.o strng.o 
 # bstts.o : bstts.F90 bdnst.o simulation.o
@@ -141,10 +141,10 @@ domain.o : domain.F90
 
 # frozen_geom.o : frozen_geom.F90 bgeom.o
 # frozen_simulation.o : fio_simulation.F90 frozen_geom.o simulation.o
-# frozen_density.o : frozen_density.F90 bdnst.o
+# frozen_density.o : frozen_density.F90 fio_density.o bdnst.o
 # frozen_states.o : frozen_states.F90 frozen_density.o fio_states.o bstts.o
 # frozen_system.o : frozen_system.F90 frozen_states.o fio_system.o bsyst.o
-# frozen_external.o : frozen_external.F90 bepot.o #frozen_system.o fio_external.o 
+# frozen_external.o : frozen_external.F90 fio_external.o bepot.o
 # #frozen_ionic.o : frozen_ionic.F90 frozen_density.o frozen_grid.o
 # #frozen_kinetic.o : frozen_kinetic.F90 frozen_system.o functional.o #frozen_grid.o
 # frozen_hamiltonian.o : frozen_hamiltonian.F90 frozen_external.o frozen_system.o fio_hamiltonian.o bhmlt.o

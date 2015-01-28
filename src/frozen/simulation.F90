@@ -1,156 +1,216 @@
 #include "global.h"
 
+#undef HASH_TEMPLATE_NAME
+#undef HASH_KEY_TEMPLATE_NAME
+#undef HASH_KEY_TYPE_NAME
+#undef HASH_KEY_TYPE_MODULE_NAME
+#undef HASH_KEY_FUNCTION_NAME
+#undef HASH_KEY_FUNCTION_MODULE_NAME
+#undef HASH_VAL_TEMPLATE_NAME
+#undef HASH_VAL_TYPE_NAME
+#undef HASH_VAL_TYPE_MODULE_NAME
+#undef HASH_INCLUDE_PREFIX
+#undef HASH_INCLUDE_HEADER
+#undef HASH_INCLUDE_BODY
+
+#define HASH_TEMPLATE_NAME simulation
+#define HASH_KEY_TEMPLATE_NAME json
+#define HASH_KEY_TYPE_NAME json_object_t
+#define HASH_VAL_TEMPLATE_NAME simulation
+
+#define HASH_INCLUDE_PREFIX
+#include "thash.F90"
+#undef HASH_INCLUDE_PREFIX
+
 module simulation_m
 
   use global_m
   use messages_m
   use profiling_m
 
-  use basis_m,     only: basis_t
-  use domain_m,    only: domain_t, domain_init, domain_copy, domain_end
-  use geometry_m,  only: geometry_t
-  use igrid_m,     only: grid_t, grid_init, grid_copy, grid_end
-  use json_m,      only: JSON_OK, json_object_t, json_get
-  use mesh_m,      only: mesh_t 
-  use simul_box_m, only: simul_box_t
-  use space_m,     only: space_t
+  use json_m,  only: operator(==), json_hash
+  use kinds_m, only: wp
+
+  use domain_m, only: domain_t, domain_init, domain_copy, domain_end
+  use json_m,   only: json_object_t, json_get
+
+  use space_m, only: &
+    space_t
+
+  use geometry_m, only: &
+    geometry_t
+
+  use simul_box_m, only: &
+    simul_box_t
+
+  use mesh_m, only: &
+    mesh_t
+
+  use igrid_m, only: &
+    grid_t,          &
+    grid_get
 
   implicit none
 
   private
-  public ::              &
-    simulation_init,     &
-    simulation_start,    &
-    simulation_extend,   &
-    simulation_get,      &
-    simulation_get_ndim, &
-    simulation_copy,     &
+  public ::           &
+    simulation_init,  &
+    simulation_start, &
+    simulation_get,   &
+    simulation_set,   &
+    simulation_copy,  &
     simulation_end
   
+#define HASH_INCLUDE_HEADER
+#include "thash.F90"
+#undef HASH_INCLUDE_HEADER
+
   type, public :: simulation_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(geometry_t),    pointer :: geo    =>null()
     type(space_t),       pointer :: space  =>null()
+    type(geometry_t),    pointer :: geo    =>null()
     type(grid_t),        pointer :: gr     =>null()
-    logical                      :: init   = .false.
-    logical                      :: start  = .false.
-    logical                      :: alloc  = .false.
     type(domain_t)               :: domain
+    type(simulation_hash_t)      :: hash
   end type simulation_t
 
+  type, public :: simulation_iterator_t
+    private
+    type(simulation_t),      pointer :: self =>null()
+    type(simulation_hash_iterator_t) :: iter
+  end type simulation_iterator_t
+
   interface simulation_init
-    module procedure simulation_init_grid
-    module procedure simulation_init_config
+    module procedure simulation_init_start
+    module procedure simulation_init_build
+    module procedure simulation_iterator_init
   end interface simulation_init
+
+  interface simulation_set
+    module procedure simulation_set_space
+    module procedure simulation_set_geometry
+    module procedure simulation_set_grid
+  end interface simulation_set
 
   interface simulation_get
     module procedure simulation_get_config
-    module procedure simulation_get_simul_box
-    module procedure simulation_get_grid
-    module procedure simulation_get_mesh
+    module procedure simulation_get_space
     module procedure simulation_get_geometry
+    module procedure simulation_get_simul_box
+    module procedure simulation_get_mesh
+    module procedure simulation_get_grid
     module procedure simulation_get_domain
   end interface simulation_get
 
+  interface simulation_next
+    module procedure simulation_iterator_next_config_simulation
+    module procedure simulation_iterator_next_config
+    module procedure simulation_iterator_next_simulation
+  end interface simulation_next
+
+  interface simulation_copy
+    module procedure simulation_copy_simulation
+    module procedure simulation_iterator_copy
+  end interface simulation_copy
+
+  interface simulation_end
+    module procedure simulation_end_simulation
+    module procedure simulation_iterator_end
+  end interface simulation_end
+
+  integer, parameter :: SIMULATION_OK          = SIMULATION_HASH_OK
+  integer, parameter :: SIMULATION_KEY_ERROR   = SIMULATION_HASH_KEY_ERROR
+  integer, parameter :: SIMULATION_EMPTY_ERROR = SIMULATION_HASH_EMPTY_ERROR
+
 contains
 
-  ! ---------------------------------------------------------
-  subroutine simulation_init_common(this, geo, space)
-    type(simulation_t),       intent(out) :: this
-    type(geometry_t), target, intent(in)  :: geo
-    type(space_t),    target, intent(in)  :: space
-    !
-    PUSH_SUB(simulation_init_common)
-    this%config=>null()
-    this%geo=>geo
-    this%space=>space
-    this%gr=>null()
-    this%init=.true.
-    this%start=.false.
-    this%alloc=.false.
-    POP_SUB(simulation_init_common)
-    return
-  end subroutine simulation_init_common
+#define HASH_INCLUDE_BODY
+#include "thash.F90"
+#undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine simulation_init_grid(this, geo, space, grid)
-    type(simulation_t),   intent(out) :: this
-    type(geometry_t),     intent(in)  :: geo
-    type(space_t),        intent(in)  :: space
-    type(grid_t), target, intent(in)  :: grid
-    !
-    PUSH_SUB(simulation_init_grid)
-    call simulation_init_common(this, geo, space)
-    this%gr=>grid
-    this%alloc=.false.
-    POP_SUB(simulation_init_grid)
-    return
-  end subroutine simulation_init_grid
-
-  ! ---------------------------------------------------------
-  subroutine simulation_init_config(this, geo, space, config)
+  subroutine simulation_init_start(this, config)
     type(simulation_t),          intent(out) :: this
-    type(geometry_t),            intent(in)  :: geo
-    type(space_t),               intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(simulation_init_config)
-    call simulation_init_common(this, geo, space)
+    PUSH_SUB(simulation_init_start)
+    nullify(this%config, this%gr)
     this%config=>config
-    this%alloc=.true.
-    POP_SUB(simulation_init_config)
+    call simulation_hash_init(this%hash)
+    POP_SUB(simulation_init_start)
     return
-  end subroutine simulation_init_config
+  end subroutine simulation_init_start
 
   ! ---------------------------------------------------------
-  subroutine simulation_start(this)
-    type(simulation_t), intent(inout) :: this
+  subroutine simulation_init_build(this, that, config)
+    type(simulation_t),  intent(inout) :: this
+    type(simulation_t),  intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
     !
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    PUSH_SUB(simulation_init_build)
+    ASSERT(associated(this%config))
+    call simulation_hash_set(this%hash, config, that)
+    POP_SUB(simulation_init_build)
+    return
+  end subroutine simulation_init_build
+
+  ! ---------------------------------------------------------
+  subroutine simulation_start(this, grid, geo, space)
+    type(simulation_t),       intent(inout) :: this
+    type(grid_t),     target, intent(in)    :: grid
+    type(geometry_t), target, intent(in)    :: geo
+    type(space_t),    target, intent(in)    :: space
     !
     PUSH_SUB(simulation_start)
-    ASSERT(this%init)
-    ASSERT(.not.this%start)
-    this%start=.true.
-    if(this%alloc)then
-      ASSERT(.not.associated(this%gr))
-      SAFE_ALLOCATE(this%gr)
-      call json_get(this%config, "grid", cnfg, ierr)
-      ASSERT(ierr==JSON_OK)
-      call grid_init(this%gr, this%geo, cnfg)
-      nullify(cnfg)
-    end if
+    ASSERT(associated(this%config))
+    ASSERT(.not.associated(this%gr))
+    ASSERT(.not.associated(this%geo))
+    ASSERT(.not.associated(this%space))
+    this%gr=>grid
+    this%geo=>geo
+    this%space=>space
+    ASSERT(this%gr%sb%dim==this%space%dim)
     call domain_init(this%domain, this%gr%sb, this%geo)
     POP_SUB(simulation_start)
     return
   end subroutine simulation_start
 
   ! ---------------------------------------------------------
-  subroutine simulation_extend(this, that, basis)
-    type(simulation_t),           intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: that
-    type(basis_t),      optional, intent(in)    :: basis
+  subroutine simulation_set_space(this, that)
+    type(simulation_t),    intent(inout) :: this
+    type(space_t), target, intent(in)    :: that
     !
-    PUSH_SUB(simulation_extend)
-    ASSERT(this%init)
-    ASSERT(.not.this%start)
-    ASSERT(this%alloc)
-    !call simul_box_extend(this%gr%sb, that, basis)
-    POP_SUB(simulation_extend)
+    PUSH_SUB(simulation_set_space)
+    ASSERT(.not.associated(this%space))
+    this%space=>that
+    POP_SUB(simulation_set_space)
     return
-  end subroutine simulation_extend
+  end subroutine simulation_set_space
 
   ! ---------------------------------------------------------
-  elemental function simulation_get_ndim(this) result(that)
-    type(simulation_t),   target, intent(in) :: this
+  subroutine simulation_set_geometry(this, that)
+    type(simulation_t),       intent(inout) :: this
+    type(geometry_t), target, intent(in)    :: that
     !
-    integer :: that
-    !
-    that=this%space%dim
+    PUSH_SUB(simulation_set_geometry)
+    ASSERT(.not.associated(this%geo))
+    this%geo=>that
+    POP_SUB(simulation_set_geometry)
     return
-  end function simulation_get_ndim
+  end subroutine simulation_set_geometry
+
+  ! ---------------------------------------------------------
+  subroutine simulation_set_grid(this, that)
+    type(simulation_t),   intent(inout) :: this
+    type(grid_t), target, intent(in)    :: that
+    !
+    PUSH_SUB(simulation_set_grid)
+    ASSERT(.not.associated(this%gr))
+    this%gr=>that
+    POP_SUB(simulation_set_grid)
+    return
+  end subroutine simulation_set_grid
 
   ! ---------------------------------------------------------
   subroutine simulation_get_config(this, that)
@@ -158,7 +218,7 @@ contains
     type(json_object_t), pointer             :: that
     !
     PUSH_SUB(simulation_get_config)
-    that=>null()
+    nullify(that)
     if(associated(this%config))&
       that=>this%config
     POP_SUB(simulation_get_config)
@@ -166,43 +226,17 @@ contains
   end subroutine simulation_get_config
 
   ! ---------------------------------------------------------
-  subroutine simulation_get_simul_box(this, that)
+  subroutine simulation_get_space(this, that)
     type(simulation_t), target, intent(in) :: this
-    type(simul_box_t), pointer             :: that
+    type(space_t),     pointer             :: that
     !
-    PUSH_SUB(simulation_get_simul_box)
-    that=>null()
-    if(associated(this%gr))&
-      that=>this%gr%sb
-    POP_SUB(simulation_get_simul_box)
+    PUSH_SUB(simulation_get_space)
+    nullify(that)
+    if(associated(this%space))&
+      that=>this%space
+    POP_SUB(simulation_get_space)
     return
-  end subroutine simulation_get_simul_box
-
-  ! ---------------------------------------------------------
-  subroutine simulation_get_grid(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(grid_t),      pointer             :: that
-    !
-    PUSH_SUB(simulation_get_grid)
-    that=>null()
-    if(associated(this%gr))&
-      that=>this%gr
-    POP_SUB(simulation_get_grid)
-    return
-  end subroutine simulation_get_grid
-
-  ! ---------------------------------------------------------
-  subroutine simulation_get_mesh(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(mesh_t),      pointer             :: that
-    !
-    PUSH_SUB(simulation_get_mesh)
-    that=>null()
-    if(associated(this%gr))&
-      that=>this%gr%mesh
-    POP_SUB(simulation_get_mesh)
-    return
-  end subroutine simulation_get_mesh
+  end subroutine simulation_get_space
 
   ! ---------------------------------------------------------
   subroutine simulation_get_geometry(this, that)
@@ -210,12 +244,51 @@ contains
     type(geometry_t),  pointer             :: that
     !
     PUSH_SUB(simulation_get_geometry)
-    that=>null()
+    nullify(that)
     if(associated(this%geo))&
       that=>this%geo
     POP_SUB(simulation_get_geometry)
     return
   end subroutine simulation_get_geometry
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_simul_box(this, that)
+    type(simulation_t), target, intent(in) :: this
+    type(simul_box_t), pointer             :: that
+    !
+    PUSH_SUB(simulation_get_simul_box)
+    nullify(that)
+    if(associated(this%gr))&
+      call grid_get(this%gr, that)
+    POP_SUB(simulation_get_simul_box)
+    return
+  end subroutine simulation_get_simul_box
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_mesh(this, that)
+    type(simulation_t), target, intent(in) :: this
+    type(mesh_t),      pointer             :: that
+    !
+    PUSH_SUB(simulation_get_mesh)
+    nullify(that)
+    if(associated(this%gr))&
+      call grid_get(this%gr, that)
+    POP_SUB(simulation_get_mesh)
+    return
+  end subroutine simulation_get_mesh
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_grid(this, that)
+    type(simulation_t), target, intent(in) :: this
+    type(grid_t),      pointer             :: that
+    !
+    PUSH_SUB(simulation_get_grid)
+    nullify(that)
+    if(associated(this%gr))&
+      that=>this%gr
+    POP_SUB(simulation_get_grid)
+    return
+  end subroutine simulation_get_grid
 
   ! ---------------------------------------------------------
   subroutine simulation_get_domain(this, that)
@@ -229,52 +302,111 @@ contains
   end subroutine simulation_get_domain
 
   ! ---------------------------------------------------------
-  subroutine simulation_copy(this, that)
-    type(simulation_t), intent(out) :: this
-    type(simulation_t), intent(in)  :: that
+  subroutine simulation_copy_simulation(this, that)
+    type(simulation_t), intent(inout) :: this
+    type(simulation_t), intent(in)    :: that
     !
-    PUSH_SUB(simulation_copy)
+    PUSH_SUB(simulation_copy_simulation)
     this%config=>that%config
+    this%space=>that%space
     this%geo=>that%geo
-    this%init=that%init
-    this%alloc=that%alloc
-    if(this%alloc)then
-      this%gr=>null()
-      if(associated(this%gr))then
-        SAFE_ALLOCATE(this%gr)
-        call grid_copy(this%gr, that%gr)
-      end if
-    else
-      this%gr=>that%gr
-    end if
+    this%gr=>that%gr
     call domain_copy(this%domain, that%domain)
-    POP_SUB(simulation_copy)
+    call simulation_hash_copy(this%hash, that%hash)
+    POP_SUB(simulation_copy_simulation)
     return
-  end subroutine simulation_copy
+  end subroutine simulation_copy_simulation
 
   ! ---------------------------------------------------------
-  subroutine simulation_end(this)
+  subroutine simulation_end_simulation(this)
     type(simulation_t), intent(inout) :: this
     !
-    PUSH_SUB(simulation_end)
+    PUSH_SUB(simulation_end_simulation)
+    nullify(this%config, this%space, this%geo, this%gr)
     call domain_end(this%domain)
-    if(this%init)then
-      if(this%alloc)then
-        if(associated(this%gr))then
-          call grid_end(this%gr)
-          SAFE_DEALLOCATE_P(this%gr)
-        end if
-      end if
-      nullify(this%gr)
-      this%alloc=.false.
-      this%init=.false.
-    end if
-    nullify(this%config, this%geo)
-    POP_SUB(simulation_end)
+    call simulation_hash_end(this%hash)
+    POP_SUB(simulation_end_simulation)
     return
-  end subroutine simulation_end
+  end subroutine simulation_end_simulation
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_init(this, that)
+    type(simulation_iterator_t), intent(out) :: this
+    type(simulation_t),  target, intent(in)  :: that
+    !
+    PUSH_SUB(simulation_iterator_init)
+    this%self=>that
+    call simulation_hash_init(this%iter, that%hash)
+    POP_SUB(simulation_iterator_init)
+    return
+  end subroutine simulation_iterator_init
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_next_config_simulation(this, config, sim, ierr)
+    type(simulation_iterator_t), intent(inout) :: this
+    type(json_object_t),        pointer        :: config
+    type(simulation_t),         pointer        :: sim
+    integer,           optional, intent(out)   :: ierr
+    !
+    PUSH_SUB(simulation_iterator_next_config_simulation)
+    call simulation_hash_next(this%iter, config, sim, ierr)
+    POP_SUB(simulation_iterator_next_config_simulation)
+    return
+  end subroutine simulation_iterator_next_config_simulation
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_next_config(this, that, ierr)
+    type(simulation_iterator_t), intent(inout) :: this
+    type(json_object_t),        pointer        :: that
+    integer,           optional, intent(out)   :: ierr
+    !
+    PUSH_SUB(simulation_iterator_next_config)
+    call simulation_hash_next(this%iter, that, ierr)
+    POP_SUB(simulation_iterator_next_config)
+    return
+  end subroutine simulation_iterator_next_config
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_next_simulation(this, that, ierr)
+    type(simulation_iterator_t), intent(inout) :: this
+    type(simulation_t),         pointer        :: that
+    integer,           optional, intent(out)   :: ierr
+    !
+    PUSH_SUB(simulation_iterator_next_simulation)
+    call simulation_hash_next(this%iter, that, ierr)
+    POP_SUB(simulation_iterator_next_simulation)
+    return
+  end subroutine simulation_iterator_next_simulation
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_copy(this, that)
+    type(simulation_iterator_t), intent(inout) :: this
+    type(simulation_iterator_t), intent(in)    :: that
+    !
+    PUSH_SUB(simulation_iterator_copy)
+    this%self=>that%self
+    call simulation_hash_copy(this%iter, that%iter)
+    POP_SUB(simulation_iterator_copy)
+    return
+  end subroutine simulation_iterator_copy
+
+  ! ---------------------------------------------------------
+  subroutine simulation_iterator_end(this)
+    type(simulation_iterator_t), intent(inout) :: this
+    !
+    PUSH_SUB(simulation_iterator_end)
+    nullify(this%self)
+    call simulation_hash_end(this%iter)
+    POP_SUB(simulation_iterator_end)
+    return
+  end subroutine simulation_iterator_end
 
 end module simulation_m
+
+#undef HASH_TEMPLATE_NAME
+#undef HASH_KEY_TEMPLATE_NAME
+#undef HASH_KEY_TYPE_NAME
+#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90
