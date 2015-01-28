@@ -366,9 +366,7 @@ contains
     end do
     nullify(value)
     ASSERT(this%used==0)
-    print *, "darr deallocate"
     SAFE_DEALLOCATE_P(this%data)
-    print *, "darr nullify"
     nullify(this%data)
     this%size=0
     POP_SUB(INTERNAL(darr_end))

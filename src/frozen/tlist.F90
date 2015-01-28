@@ -102,21 +102,6 @@ module TEMPLATE(list_m)
     type(INTERNAL(node_t)), pointer :: node =>null()
   end type TEMPLATE(list_iterator_t)
 
-  interface INTERNAL(node_associated)
-    module procedure INTERNAL(node_associated)
-    module procedure INTERNAL(node_node_associated)
-  end interface INTERNAL(node_associated)
-
-  interface INTERNAL(node_set)
-    module procedure INTERNAL(node_set_data)
-    module procedure INTERNAL(node_set_next)
-  end interface INTERNAL(node_set)
-
-  interface INTERNAL(node_get)
-    module procedure INTERNAL(node_get_data)
-    module procedure INTERNAL(node_get_next)
-  end interface INTERNAL(node_get)
-
   interface TEMPLATE(list_init)
     module procedure INTERNAL(list_init)
     module procedure INTERNAL(list_iterator_init_list)
@@ -163,71 +148,26 @@ contains
   end subroutine INTERNAL(node_init)
 
   ! -----------------------------------------------------
-  elemental function INTERNAL(node_associated)(this) result(eqv)
-    type(INTERNAL(node_t)), intent(in) :: this
-    !
-    logical :: eqv
-    !
-    eqv=associated(this%next)
-    return
-  end function INTERNAL(node_associated)
-  
-  ! -----------------------------------------------------
-  elemental function INTERNAL(node_node_associated)(this, that) result(eqv)
-    type(INTERNAL(node_t)),         intent(in) :: this
-    type(INTERNAL(node_t)), target, intent(in) :: that
-    !
-    logical :: eqv
-    !
-    eqv=associated(this%next, that)
-    return
-  end function INTERNAL(node_node_associated)
-
-  ! -----------------------------------------------------
-  subroutine INTERNAL(node_set_data)(this, that)
+  subroutine INTERNAL(node_set)(this, that)
     type(INTERNAL(node_t)), intent(inout) :: this
     type(LIST_TYPE_NAME),   intent(in)    :: that
     !
-    PUSH_SUB(INTERNAL(node_set_data))
+    PUSH_SUB(INTERNAL(node_set))
     call EXTERNAL(single_set)(this%data, that)
-    POP_SUB(INTERNAL(node_set_data))
+    POP_SUB(INTERNAL(node_set))
     return
-  end subroutine INTERNAL(node_set_data)
+  end subroutine INTERNAL(node_set)
 
   ! -----------------------------------------------------
-  subroutine INTERNAL(node_set_next)(this, that)
-    type(INTERNAL(node_t)),  intent(inout) :: this
-    type(INTERNAL(node_t)), pointer        :: that
-    !
-    PUSH_SUB(INTERNAL(node_set_next))
-    this%next=>that
-    POP_SUB(INTERNAL(node_set_next))
-    return
-  end subroutine INTERNAL(node_set_next)
-
-  ! -----------------------------------------------------
-  subroutine INTERNAL(node_get_data)(this, that)
+  subroutine INTERNAL(node_get)(this, that)
     type(INTERNAL(node_t)), intent(in) :: this
     type(LIST_TYPE_NAME),  pointer     :: that
     !
-    PUSH_SUB(INTERNAL(node_get_data))
+    PUSH_SUB(INTERNAL(node_get))
     call EXTERNAL(single_get)(this%data, that)
-    POP_SUB(INTERNAL(node_get_data))
+    POP_SUB(INTERNAL(node_get))
     return
-  end subroutine INTERNAL(node_get_data)
-
-  ! -----------------------------------------------------
-  subroutine INTERNAL(node_get_next)(this, that)
-    type(INTERNAL(node_t)),  intent(in) :: this
-    type(INTERNAL(node_t)), pointer     :: that
-    !
-    PUSH_SUB(INTERNAL(node_get_next))
-    nullify(that)
-    if(associated(this%next))&
-      that=>this%next
-    POP_SUB(INTERNAL(node_get_next))
-    return
-  end subroutine INTERNAL(node_get_next)
+  end subroutine INTERNAL(node_get)
 
   ! -----------------------------------------------------
   subroutine INTERNAL(node_copy)(this, that)
@@ -442,7 +382,7 @@ contains
   ! ---------------------------------------------------------
   subroutine TEMPLATE(list_push)(this, that)
     type(TEMPLATE(list_t)), intent(inout) :: this
-    type(LIST_TYPE_NAME),  pointer        :: that
+    type(LIST_TYPE_NAME),   intent(in)    :: that
     !
     type(INTERNAL(node_t)), pointer :: node
     !
@@ -639,7 +579,7 @@ contains
     if(present(ierr))ierr=TEMPLATE(LIST_EMPTY_ERROR)
     if(associated(this%node))then
       if(present(ierr))ierr=TEMPLATE(LIST_OK)
-      call INTERNAL(node_get)(this%node, next)
+      next=>this%node%next
       that=>this%node
       this%node=>next
       nullify(next)

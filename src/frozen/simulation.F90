@@ -31,7 +31,6 @@ module simulation_m
   use json_m,  only: operator(==), json_hash
   use kinds_m, only: wp
 
-  use domain_m, only: domain_t, domain_init, domain_copy, domain_end
   use json_m,   only: json_object_t, json_get
 
   use space_m, only: &
@@ -49,6 +48,13 @@ module simulation_m
   use igrid_m, only: &
     grid_t,          &
     grid_get
+
+  use domain_m, only: &
+    domain_t,         &
+    domain_init,      &
+    domain_start,     &
+    domain_copy,      &
+    domain_end
 
   implicit none
 
@@ -137,6 +143,7 @@ contains
     PUSH_SUB(simulation_init_start)
     nullify(this%config, this%gr)
     this%config=>config
+    call domain_init(this%domain)
     call simulation_hash_init(this%hash)
     POP_SUB(simulation_init_start)
     return
@@ -150,6 +157,7 @@ contains
     !
     PUSH_SUB(simulation_init_build)
     ASSERT(associated(this%config))
+    call domain_init(this%domain, that%domain)
     call simulation_hash_set(this%hash, config, that)
     POP_SUB(simulation_init_build)
     return
@@ -171,7 +179,7 @@ contains
     this%geo=>geo
     this%space=>space
     ASSERT(this%gr%sb%dim==this%space%dim)
-    call domain_init(this%domain, this%gr%sb, this%geo)
+    call domain_start(this%domain, this%gr%sb, this%geo)
     POP_SUB(simulation_start)
     return
   end subroutine simulation_start
