@@ -902,8 +902,9 @@ contains
     write(iunit, '(a)') 'end'
 
     call io_close(iunit)
-    call cube_end(cube)
+
     call X(cube_function_free_RS)(cube, cf)
+    call cube_end(cube)
 
     POP_SUB(X(io_function_output_global).out_dx)
   end subroutine out_dx
@@ -961,8 +962,9 @@ contains
     end do
 
     call io_close(iunit)
-    call cube_end(cube)
+
     call X(cube_function_free_RS)(cube, cf)
+    call cube_end(cube)
 
     POP_SUB(X(io_function_output_global).out_cube)
   end subroutine out_cube
@@ -1078,8 +1080,9 @@ contains
     write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID', mesh%sb%dim, 'D'
 
     call io_close(iunit)
-    call cube_end(cube)
+
     call X(cube_function_free_RS)(cube, cf)
+    call cube_end(cube)
 
     POP_SUB(X(io_function_output_global).out_xcrysden)
   end subroutine out_xcrysden
@@ -1106,8 +1109,8 @@ contains
     call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
       units_from_atomic(units_out%length, mesh%spacing), .true., unit)
 
-    call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)
+    call cube_end(cube)
 
     POP_SUB(X(io_function_output_global).out_netcdf)
   end subroutine out_netcdf
@@ -1287,8 +1290,8 @@ contains
      
     call X(out_cf_vtk)(filename, ierr, cf, cube, dk(:), unit)
 
-    call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)
+    call cube_end(cube)
 
     POP_SUB(X(io_function_output_global).out_vtk)
   end subroutine out_vtk
