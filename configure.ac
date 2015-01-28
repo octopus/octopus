@@ -99,18 +99,13 @@ ACX_ARCH
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
-dnl In particular, the code can be compiled in single-precision, in debug mode,
+dnl In particular, the code can be compiled in debug mode,
 dnl and with OpenMP threads.
 
 dnl these are the --enable/--disable possible in octopus
-AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single-precision]))
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
-
-if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
-  SINGLE_PRECISION=1
-fi
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
@@ -233,12 +228,6 @@ dnl mpi
 AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
 
 dnl debug mode
-if test "${SINGLE_PRECISION}"; then
-  AC_DEFINE(SINGLE_PRECISION, 1, [octopus compiled in single precision])
-  MYEXT="${MYEXT}_single"
-fi
-
-dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
   AC_DEFINE(NDEBUG, yes, [octopus compiled without debug mode])
 fi
@@ -250,8 +239,7 @@ EXEEXT="${MYEXT}${EXEEXT}"
 dnl can turn off build of utilities
 AC_ARG_ENABLE(utils, AS_HELP_STRING([--disable-utils], [Build utilities]))
 
-dnl we only generate the utilities if single precision is off
-if test \( -z "${SINGLE_PRECISION}" \) -a \( x"$enable_utils" != x"no" \); then
+if test x"$enable_utils" != x"no"; then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
   msg="+ utilities"
 else
