@@ -40,6 +40,7 @@ module rdmft_m
   use parser_m
   use poisson_m
   use profiling_m
+  use simul_box_m
   use states_m
   use states_calc_m
   use unit_m
@@ -74,10 +75,14 @@ contains
 
     PUSH_SUB(rdmft_init)  
 
-    if(st%nst < st%qtot + 3) then   
+    if(st%nst < st%qtot + 1) then   
       message(1) = "Too few states to run RDMFT calculation"
-      message(2) = "Number of states should be at least the number of electrons plus three"
+      message(2) = "Number of states should be at least the number of electrons plus one"
       call messages_fatal(2)
+    endif
+   
+    if (states_are_complex(st)) then
+      call messages_not_implemented("Complex states for RDMFT")
     endif
 
     SAFE_ALLOCATE(rdm%eone(1:st%nst))
@@ -177,6 +182,10 @@ contains
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
     
+    if (simul_box_is_periodic(gr%sb)) then
+      call messages_not_implemented("Periodic system calculations for RDMFT")
+    endif
+
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
@@ -560,7 +569,7 @@ contains
     type(hamiltonian_t),  intent(in) :: hm
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in) :: gr
-    FLOAT,                intent(out):: lambda(1:st%nst, 1:st%nst)
+    FLOAT,                intent(out):: lambda(:,:) !< (1:st%nst, 1:st%nst)
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:)
@@ -594,7 +603,7 @@ contains
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
-                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+                             terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
       do kst = 1, ist
         call states_get_state(st, gr%mesh, kst, 1, dpsi2)
         lambda(kst, ist) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
@@ -751,8 +760,8 @@ contains
     !Total energy calculation without nuclei interaction  
     do ist = 1, st%nst
       energy = energy + occ(ist)*rdm%eone(ist) &
-                     & + M_HALF*occ(ist)*V_h(ist) & 
-                     & + occ(ist)*V_x(ist)
+                      + M_HALF*occ(ist)*V_h(ist) & 
+                      + occ(ist)*V_x(ist)
     end do
     
     SAFE_DEALLOCATE_A(V_h)
@@ -809,7 +818,7 @@ contains
       dpsi2 = M_ZERO      
       call states_get_state(st, gr%mesh, ist, 1, dpsi2)
       
-      do jst = 1, ist
+      do jst = 1, ist - 1
         dpsi = M_ZERO      
         call states_get_state(st, gr%mesh, jst, 1, dpsi)
         rho(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
@@ -817,8 +826,9 @@ contains
         rdm%exchange(ist, jst) = dmf_dotp(gr%mesh,rho, pot)
         rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
       end do
+      rdm%exchange(ist, ist) =rdm%hartree(ist, ist)
     end do
-
+    
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(pot)
     SAFE_DEALLOCATE_A(rho)
