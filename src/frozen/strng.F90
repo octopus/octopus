@@ -250,7 +250,7 @@ contains
 
   ! ---------------------------------------------------------
   elemental subroutine strng_get_char(this, i, value, ierr)
-    type(strng_t),    intent(in)  :: this
+    type(strng_t),     intent(in)  :: this
     integer,           intent(in)  :: i
     character,         intent(out) :: value
     integer, optional, intent(out) :: ierr
@@ -267,8 +267,9 @@ contains
   end subroutine strng_get_char
 
   ! ---------------------------------------------------------
-  elemental subroutine strng_get_strng(this, value, ierr)
-    type(strng_t),    intent(in)  :: this
+  !elemental
+  pure subroutine strng_get_strng(this, value, ierr)
+    type(strng_t),     intent(in)  :: this
     character(len=*),  intent(out) :: value
     integer, optional, intent(out) :: ierr
     !
