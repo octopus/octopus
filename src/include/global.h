@@ -120,29 +120,16 @@
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
 
-#if defined(SINGLE_PRECISION)
-#  define REAL_PRECISION 4
-#  define FLOAT     	 real(4)
-#  define MPI_FLOAT 	 MPI_REAL
-#  define MPI_2FLOAT     MPI_2REAL
-#  define CMPLX     	 complex(4)
-#  define MPI_CMPLX 	 MPI_COMPLEX
-#  define PREC(x)   	 s ## x
-#  define ZPREC(x)   	 c ## x
-#  define CNST(x)   	 x ## _4
-#  define XC_F90(x)      xc_s_f90_ ## x
-#else
-#  define REAL_PRECISION 8
-#  define FLOAT          real(8)
-#  define MPI_FLOAT 	 MPI_DOUBLE_PRECISION
-#  define MPI_2FLOAT     MPI_2DOUBLE_PRECISION
-#  define CMPLX     	 complex(8)
-#  define MPI_CMPLX 	 MPI_DOUBLE_COMPLEX
-#  define PREC(x)   	 d ## x
-#  define ZPREC(x)   	 z ## x
-#  define CNST(x)   	 x ## _8
-#  define XC_F90(x)      xc_f90_ ## x
-#endif
+#define REAL_PRECISION 8
+#define FLOAT          real(8)
+#define MPI_FLOAT 	 MPI_DOUBLE_PRECISION
+#define MPI_2FLOAT     MPI_2DOUBLE_PRECISION
+#define CMPLX     	 complex(8)
+#define MPI_CMPLX 	 MPI_DOUBLE_COMPLEX
+#define PREC(x)   	 d ## x
+#define ZPREC(x)   	 z ## x
+#define CNST(x)   	 x ## _8
+#define XC_F90(x)      xc_f90_ ## x
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)
 #define   TOCMPLX(x, y) cmplx(x, y, REAL_PRECISION)
