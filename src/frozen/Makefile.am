@@ -28,8 +28,8 @@ libfrozen_a_SOURCES =		\
 	gga.F90			\
 	functional.F90		\
 	basis.F90		\
-	strng.F90		#\
-	domain.F90		\
+	strng.F90		\
+	domain.F90		#\
 	simulation.F90		\
 	intrpl.F90		\
 	storage.F90		\
@@ -44,7 +44,7 @@ libfrozen_a_SOURCES =		\
 	bmodl.F90		\
 	bhndl.F90		\
 	bcnfg.F90		\
-	fio_geometry.F90	\
+	fio_geom.F90		\
 	fio_simul_box.F90	\
 	fio_curvilinear.F90	\
 	fio_mesh.F90		\
@@ -58,6 +58,8 @@ libfrozen_a_SOURCES =		\
 	fio_model.F90		\
 	fio_handle.F90		\
 	fio_config.F90		\
+	frozen_geom.F90		\
+	frozen_simulation.F90	\
 	frozen_density.F90	\
 	frozen_states.F90	\
 	frozen_system.F90	\
@@ -73,20 +75,10 @@ libfrozen_a_SOURCES =		\
 	ssys_model.F90		\
 	ssys_handle.F90		\
 	ssys_config.F90		#\
-	atom_value.F90           #\
-	basis.F90                \
-	interface_xc.F90         \
-	lda.F90                  \
-	gga.F90                  \
-	functional.F90           \
-	fio_geometrical.F90      \
-	frozen_geometry.F90      \
 	frozen_kinetic.F90       \
-	frozen_config.F90        \
 	frozen_tnadd.F90         \
 	frozen_ionic.F90         \
 	frozen_simul_box.F90     \
-	frozen_geometry.F90      \
 	solver.F90               \
 	hartree.F90              \
 	frozen_parse.F90         
@@ -98,9 +90,7 @@ noinst_HEADERS =		\
 	tpair.F90		\
 	tlist.F90		\
 	thash.F90		\
-	tdict.F90		#\
-	tgeometry.F90		\
-	tcontainer.F90
+	tdict.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -117,8 +107,7 @@ functional.o : functional.F90 gga.o lda.o interface_xc.o
 
 basis.o : basis.F90
 strng.o : strng.F90
-#atom_value.o : atom_value.F90
-# domain.o : domain.F90
+domain.o : domain.F90
 # simulation.o : simulation.F90 domain.o igrid.o
 # intrpl.o : intrpl.F90 simulation.o domain.o #basis.o
 # storage.o : storage.F90 intrpl.o simulation.o
@@ -134,9 +123,9 @@ strng.o : strng.F90
 # bhndl.o : bhndl.F90 bmodl.o
 # bcnfg.o : bcnfg.F90 bhmlt.o intrpl.o
 
-# fio_geometry.o : fio_geometry.F90 bgeom.o
-# fio_simul_box.o : fio_simul_box.F90 fio_geometry.o
-# fio_curvilinear.o : fio_curvilinear.F90 fio_simul_box.o 
+# fio_geom.o : fio_geom.F90 bgeom.o
+# fio_simul_box.o : fio_simul_box.F90 fio_geom.o
+# fio_curvilinear.o : fio_curvilinear.F90 fio_simul_box.o
 # fio_mesh.o : fio_mesh.F90 fio_simul_box.o imesh.o
 # fio_grid.o : fio_grid.F90 fio_curvilinear.o fio_mesh.o igrid.o
 # fio_simulation.o : fio_simulation.F90 fio_grid.o simulation.o
@@ -149,14 +138,15 @@ strng.o : strng.F90
 # fio_handle.o : fio_handle.F90 fio_model.o bhndl.o
 # fio_config.o : fio_config.F90 bcnfg.o 
 
-# #frozen_geometry.o : frozen_geometry.F90 fio.o iatom.o
+# frozen_geom.o : frozen_geom.F90 bgeom.o
+# frozen_simulation.o : fio_simulation.F90 frozen_geom.o simulation.o
 # frozen_density.o : frozen_density.F90 bdnst.o
 # frozen_states.o : frozen_states.F90 frozen_density.o fio_states.o bstts.o
 # frozen_system.o : frozen_system.F90 frozen_states.o fio_system.o bsyst.o
 # frozen_external.o : frozen_external.F90 bepot.o #frozen_system.o fio_external.o 
 # #frozen_ionic.o : frozen_ionic.F90 frozen_density.o frozen_grid.o
 # #frozen_kinetic.o : frozen_kinetic.F90 frozen_system.o functional.o #frozen_grid.o
-# frozen_hamiltonian.o : frozen_hamiltonian.F90 frozen_external.o frozen_system.o bhmlt.o
+# frozen_hamiltonian.o : frozen_hamiltonian.F90 frozen_external.o frozen_system.o fio_hamiltonian.o bhmlt.o
 # frozen_model.o : frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_model.o bmodl.o
 # frozen_handle.o : frozen_handle.F90 frozen_model.o fio_handle.o bhndl.o
 # frozen_config.o : frozen_config.F90 bcnfg.o
