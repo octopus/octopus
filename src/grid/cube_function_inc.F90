@@ -232,10 +232,11 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
   if(.not. cf%in_device_memory) then
 
-
     ASSERT(associated(cf%X(rs)))
 
+    !$omp parallel workshare
     cf%X(rs) = M_ZERO
+    !$omp end parallel workshare
 
     ASSERT(associated(mesh%cube_map%map))
     ASSERT(mesh%sb%dim <= 3)
