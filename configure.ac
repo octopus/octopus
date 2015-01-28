@@ -414,6 +414,7 @@ AC_CONFIG_FILES([Makefile
   share/recipes/en/Makefile
   share/recipes/es/Makefile
   share/recipes/it/Makefile
+  share/recipes/eu/Makefile
   share/util/Makefile
   share/opencl/Makefile
   build/Makefile

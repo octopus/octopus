@@ -19,8 +19,6 @@
 ##
 ## $Id$
 
-SUBDIRS = en es it eu
+tm2dir = $(pkgdatadir)/recipes/eu
 
-tm2dir = $(pkgdatadir)/recipes
-
-dist_tm2_DATA = disclaimer.txt
+dist_tm2_DATA = txipiroiak_bere_tintan.txt
