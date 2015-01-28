@@ -21,6 +21,7 @@
 
 !> This module contains routines to multiply blocks of states by
 !! blocks of states and general dense matrices.
+!! THESE ROUTINES ARE DEPRECATED, THEY SHOULD NOT BE USED BY NEW CODE.
 
 module states_block_m
   use batch_m

@@ -39,7 +39,6 @@ module em_resp_calc_m
   use poisson_m
   use profiling_m
   use states_m
-  use states_block_m
   use states_dim_m
   use sternheimer_m
   use symmetrizer_m
