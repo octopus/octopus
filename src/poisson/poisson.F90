@@ -221,10 +221,6 @@ contains
 
     default_solver = POISSON_FFT
 
-#ifndef SINGLE_PRECISION
-    if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
-#endif
-
     if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
 
 #ifdef HAVE_CLAMDFFT
