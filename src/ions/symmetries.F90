@@ -189,12 +189,10 @@ contains
 
     else
 
-      ! why is this normalized here? There is no reason to not give the full lattice vectors!
-      ! you may need to transpose this in principle for the C order in spglib.
-      ! Not too important anyway to get the space group etc...
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)  / maxval(abs(rlattice(1:periodic_dim, 1:periodic_dim))) 
+      ! get inverse matrix to extract reduced coordinates for spglib
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
       klattice = lattice
-      determinant = lalg_determinant(periodic_dim, klattice, .true.)
+      determinant = lalg_determinant(3, klattice, .true.)
       
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
