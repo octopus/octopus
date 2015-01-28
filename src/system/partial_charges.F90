@@ -110,7 +110,7 @@ contains
     this%options%bader_opt = this%options%bader_neargrid
     this%options%quit_opt = this%options%quit_known
     this%options%refine_edge_itrs = -1
-    this%options%bader_flag = .TRUE.
+    this%options%bader_flag = .true.
     this%options%voronoi_flag = .false.
     this%options%dipole_flag = .false.
     this%options%ldos_flag = .false.
@@ -125,12 +125,13 @@ contains
 
   !----------------------------------------------
 
-  subroutine partial_charges_calculate(this, mesh, st, geo, charges)
+  subroutine partial_charges_calculate(this, mesh, st, geo, bader_charges, voronoi_charges)
     type(partial_charges_t),    intent(in)    :: this
     type(mesh_t),     intent(in)    :: mesh
     type(states_t),   intent(in)    :: st
     type(geometry_t), intent(in)    :: geo
-    FLOAT,            intent(out)   :: charges(:)
+    FLOAT, optional,  intent(out)   :: bader_charges(:)
+    FLOAT, optional,  intent(out)   :: voronoi_charges(:)
 
     integer :: idir, iatom, ix, iy, iz
     FLOAT :: vol
@@ -237,12 +238,25 @@ contains
         end do
       end do
     end do
-    
-    call bader_calc(bdr,ions,charge,this%options)
 
-    do iatom = 1, geo%natoms
-      charges(iatom) = bdr%ionchg(iatom)
-    end do
+    if(present(bader_charges)) then
+      
+      call bader_calc(bdr, ions, charge, this%options)
+      
+      do iatom = 1, geo%natoms
+        bader_charges(iatom) = bdr%ionchg(iatom)
+      end do
+    end if
+
+    if(present(voronoi_charges)) then
+      
+      call voronoi(vor, ions, charge)
+      
+      do iatom = 1, geo%natoms
+        voronoi_charges(iatom) = vor%vorchg(iatom)
+      end do
+    end if
+
 
     SAFE_DEALLOCATE_A(ions%r_car)
     SAFE_DEALLOCATE_A(ions%r_dir)
