@@ -30,9 +30,9 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, use
 
   logical         :: use_mpi_grp_
 
-  use_mpi_grp_ = optional_default(use_mpi_grp, .false.)
-
   PUSH_SUB(X(restart_write_mesh_function))
+
+  use_mpi_grp_ = optional_default(use_mpi_grp, .false.)
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
