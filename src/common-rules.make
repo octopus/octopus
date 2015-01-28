@@ -28,8 +28,8 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/ions 	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
-	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
+	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/xc      	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/system   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/hamiltonian \
@@ -65,8 +65,8 @@ octopus_LIBS = \
 	$(top_builddir)/src/system/libsystem.a           \
 	$(top_builddir)/src/hamiltonian/libhamiltonian.a \
 	$(top_builddir)/src/xc/libxc.a                   \
-	$(top_builddir)/src/frozen/libfrozen.a           \
 	$(top_builddir)/src/states/libstates.a           \
+	$(top_builddir)/src/frozen/libfrozen.a           \
 	$(top_builddir)/src/poisson/libpoisson.a         \
 	$(top_builddir)/src/grid/libgrid.a               \
 	$(top_builddir)/src/ions/libions.a               \
