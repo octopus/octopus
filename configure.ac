@@ -364,6 +364,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/newuoa/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
+  external_libs/bader/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile

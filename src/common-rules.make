@@ -39,6 +39,7 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer         \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bader     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.5.2/src
 
 AM_CPPFLAGS = \
@@ -84,7 +85,8 @@ core_LIBS = \
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
 	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
-	$(top_builddir)/external_libs/bpdn/libbpdn.a
+	$(top_builddir)/external_libs/bpdn/libbpdn.a \
+	$(top_builddir)/external_libs/bader/libbader.a
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@
