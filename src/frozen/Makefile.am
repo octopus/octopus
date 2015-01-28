@@ -32,7 +32,7 @@ libfrozen_a_SOURCES =		\
 	domain.F90		\
 	simulation.F90		\
 	intrpl.F90		\
-	storage.F90		#\
+	storage.F90		\
 	bgeom.F90		\
 	bdnst.F90		\
 	bstts.F90		\
@@ -43,7 +43,7 @@ libfrozen_a_SOURCES =		\
 	bhmlt.F90		\
 	bmodl.F90		\
 	bhndl.F90		\
-	bcnfg.F90		\
+	bcnfg.F90		#\
 	fio_geom.F90		\
 	fio_simul_box.F90	\
 	fio_curvilinear.F90	\
@@ -113,17 +113,17 @@ simulation.o : simulation.F90 domain.o igrid.o
 intrpl.o : intrpl.F90 simulation.o domain.o basis.o
 storage.o : storage.F90 intrpl.o simulation.o basis.o
 
-# bgeom.o : bgeom.F90 strng.o basis.o 
-# bdnst.o : bdnst.F90 simulation.o storage.o strng.o 
-# bstts.o : bstts.F90 bdnst.o simulation.o
-# bsyst.o : bsyst.F90 bstts.o simulation.o bgeom.o 
-# bterm.o : bterm.F90 bsyst.o
-# bpotn.o : bpotn.F90 bsyst.o storage.o 
-# bepot.o : bepot.F90 bpotn.o 
-# bhmlt.o : bhmlt.F90 bpotn.o bterm.o bsyst.o 
-# bmodl.o : bmodl.F90 bhmlt.o bsyst.o simulation.o
-# bhndl.o : bhndl.F90 bmodl.o
-# bcnfg.o : bcnfg.F90 bhmlt.o intrpl.o
+bgeom.o : bgeom.F90 strng.o basis.o 
+bdnst.o : bdnst.F90 simulation.o storage.o strng.o 
+bstts.o : bstts.F90 bdnst.o simulation.o
+bsyst.o : bsyst.F90 bstts.o simulation.o bgeom.o 
+bterm.o : bterm.F90 bsyst.o
+bpotn.o : bpotn.F90 bsyst.o storage.o 
+bepot.o : bepot.F90 bpotn.o 
+bhmlt.o : bhmlt.F90 bpotn.o bterm.o bsyst.o 
+bmodl.o : bmodl.F90 bhmlt.o bsyst.o simulation.o
+bhndl.o : bhndl.F90 bmodl.o
+bcnfg.o : bcnfg.F90 bhmlt.o intrpl.o
 
 # fio_geom.o : fio_geom.F90 bgeom.o
 # fio_simul_box.o : fio_simul_box.F90 fio_geom.o
