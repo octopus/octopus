@@ -1098,7 +1098,7 @@ contains
         call write_dipole(iunit, dipole)
       end if
 
-qq      if(mpi_grp_is_root(mpi_world)) then
+      if(mpi_grp_is_root(mpi_world)) then
         if(scf%max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
