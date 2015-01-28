@@ -20,6 +20,7 @@
 #include "global.h"
 
 module scf_m
+  use partial_charges_m
   use berry_m
   use datasets_m
   use density_m
@@ -104,6 +105,7 @@ module scf_m
     logical :: lcao_restricted
     logical :: calc_force
     logical :: calc_dipole
+    logical :: calc_partial_charges
     type(mix_t) :: smix
     type(eigensolver_t) :: eigens
     integer :: mixdim1
@@ -369,6 +371,17 @@ contains
     !%End
     call parse_logical(datasets_check('SCFCalculateDipole'), .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
+
+    !%Variable SCFCalculatePartialCharges
+    !%Type logical
+    !%Section SCF
+    !%Description
+    !% (Experimental) This variable controls whether partial charges
+    !% are calculated dipole is calculated at the end of a
+    !% self-consistent iteration. The default is no.
+    !%End
+    call parse_logical(datasets_check('SCFCalculatePartialCharges'), .false., scf%calc_partial_charges)
+    if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) rmin = CNST(100.0)
@@ -1026,8 +1039,10 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
+      type(partial_charges_t) :: partial_charges
       integer :: iunit, idir, iatom, ii
       FLOAT:: rr(1:3), ff(1:3), torque(1:3)
+      FLOAT, allocatable :: charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1123,14 +1138,36 @@ contains
               torque(1:3) = torque(1:3) + dcross_product(rr, ff)
             end do
             
-          write(iunit,'(a14, 10f15.6)') ' Total torque', &
-            (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
-
+            write(iunit,'(a14, 10f15.6)') ' Total torque', &
+              (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
+            
           end if
+
+          write(iunit,'(1x)')
 
         end if
 
+        if(scf%calc_partial_charges) then
+          SAFE_ALLOCATE(charges(1:geo%natoms))
+          
+          call partial_charges_init(partial_charges)
+          call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, charges)
+          call partial_charges_end(partial_charges)
+
+          write(iunit,'(a)') 'Partial ionic charges'
+          write(iunit,'(a)') ' Ion             Bader charge'
+
+          do iatom = 1, geo%natoms
+            write(iunit,'(i4,a10,f15.3)') iatom, trim(species_label(geo%atom(iatom)%spec)), charges(iatom)
+              
+          end do
+
+          SAFE_DEALLOCATE_A(charges)
+          
+        end if
+
         call io_close(iunit)
+          
       end if
 
       POP_SUB(scf_run.scf_write_static)
