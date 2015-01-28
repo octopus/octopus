@@ -1273,7 +1273,6 @@ contains
     end do
 
     ! Around xx, we call some GSL sophisticated search algorithm to find the minimum.
-#ifndef SINGLE_PRECISION
     ! First, we get the value of the function at the extremes of the interval
     xa = max(xx-energy_step_, aa)
     xb = min(xx+energy_step_, bb)
@@ -1289,10 +1288,6 @@ contains
     else
       call loct_1dminimize(xa, xb, xx, hsfunction, ierr)
     end if
-#else
-    message(1) = "FIXME: cannot work in single-precision."
-    call messages_fatal(1)
-#endif
 
     if(ierr /= 0) then
       write(message(1),'(a,f14.6,a)') 'spectrum_hsfunction_min: The maximum at', xx,' was not properly converged.'

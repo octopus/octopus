@@ -487,12 +487,8 @@ contains
     omega = min_w
     min_w1 = min_w - 2*dw
     min_w2 = min_w + 2*dw
-  #ifndef SINGLE_PRECISION
     call loct_1dminimize(min_w1, min_w2, omega, ft2, ierr)
-  #else
-    message(1) = "FIXME: cannot work in single-precision."
-    call messages_fatal(1)
-  #endif
+
     if(ierr /= 0) then
       write(message(1),'(a)') 'Could not find a maximum.'
       write(message(2),'(a)')
