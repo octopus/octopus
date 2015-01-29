@@ -161,14 +161,14 @@ contains
   !----------------------------------------------
 
   subroutine partial_charges_calculate(this, mesh, st, geo, bader_charges, voronoi_charges)
-    type(partial_charges_t),    intent(in)    :: this
-    type(mesh_t),     intent(in)    :: mesh
-    type(states_t),   intent(in)    :: st
-    type(geometry_t), intent(in)    :: geo
-    FLOAT, optional,  intent(out)   :: bader_charges(:)
-    FLOAT, optional,  intent(out)   :: voronoi_charges(:)
+    type(partial_charges_t), intent(in)    :: this
+    type(mesh_t),            intent(in)    :: mesh
+    type(states_t),          intent(in)    :: st
+    type(geometry_t),        intent(in)    :: geo
+    FLOAT, optional,         intent(out)   :: bader_charges(:)
+    FLOAT, optional,         intent(out)   :: voronoi_charges(:)
 
-    integer :: idir, iatom, ix, iy, iz
+    integer :: idir, iatom, ix, iy, iz, ip
     FLOAT :: vol
     type(ions_obj)   :: ions
     type(charge_obj) :: charge
@@ -178,6 +178,7 @@ contains
     type(voronoi_obj) :: vor
     real(q2) :: dlat(1:3), dcar(1:3)
     FLOAT    :: offset(MAX_DIM)
+    FLOAT, allocatable :: total_density(:)
 
     PUSH_SUB(partial_charges_calculate)
 
@@ -185,7 +186,16 @@ contains
     call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(density_cube)
     call dcube_function_alloc_RS(cube, density_cube)
-    call dmesh_to_cube(mesh, st%rho(:, 1), cube, density_cube)
+
+    SAFE_ALLOCATE(total_density(1:mesh%np))
+    
+    do ip = 1, mesh%np
+      total_density(ip) = sum(st%rho(ip, 1:st%d%nspin))
+    end do
+
+    call dmesh_to_cube(mesh, total_density, cube, density_cube)
+
+    SAFE_DEALLOCATE_A(total_density)
 
     ions%nions = geo%natoms
 
