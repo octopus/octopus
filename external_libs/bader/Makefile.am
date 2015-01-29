@@ -35,16 +35,16 @@ libbader_a_SOURCES =           \
 	results_mod.f90        \
 	voronoi_mod.f90        
 
-chgcar_mod.o: matrix_mod.o charge_mod.o
-io_mod.o: chgcar_mod.o cube_mod.o
-bader_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o io_mod.o
-voronoi_mod.o: io_mod.o
+bader_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o io_mod.o chgcar_mod.o
+charge_mod.o: kind_mod.o matrix_mod.o ions_mod.o
+chgcar_mod.o: kind_mod.o matrix_mod.o ions_mod.o charge_mod.o options_mod.o
 cube_mod.o: kind_mod.o charge_mod.o
-results_mod.o: chgcar_mod.o bader_mod.o
-multipole_mod.o: io_mod.o bader_mod.o
-matrix_mod.o: kind_mod.o
-charge_mod.o: matrix_mod.o
-options_mod.o: kind_mod.o
+io_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o chgcar_mod.o cube_mod.o
 ions_mod.o: kind_mod.o
+matrix_mod.o: kind_mod.o
+multipole_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o io_mod.o chgcar_mod.o bader_mod.o
+options_mod.o: kind_mod.o
+results_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o chgcar_mod.o cube_mod.o bader_mod.o voronoi_mod.o
+voronoi_mod.o: io_mod.o matrix_mod.o ions_mod.o charge_mod.o options_mod.o io_mod.o
 
 CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
