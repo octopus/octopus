@@ -1144,33 +1144,38 @@ contains
           end if
 
           write(iunit,'(1x)')
-
-        end if
-
-        if(scf%calc_partial_charges) then
-          SAFE_ALLOCATE(bader_charges(1:geo%natoms))
-          SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
           
-          call partial_charges_init(partial_charges)
-          call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, bader_charges, voronoi_charges)
-          call partial_charges_end(partial_charges)
+        end if
+      end if
 
+      if(scf%calc_partial_charges) then
+        SAFE_ALLOCATE(bader_charges(1:geo%natoms))
+        SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
+        
+        call partial_charges_init(partial_charges)
+        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, bader_charges, voronoi_charges)
+        call partial_charges_end(partial_charges)
+        
+        if(mpi_grp_is_root(mpi_world)) then
+          
           write(iunit,'(a)') 'Partial ionic charges'
           write(iunit,'(a)') ' Ion                     Bader         Voronoi'
-
+          
           do iatom = 1, geo%natoms
             write(iunit,'(i4,a10,2f16.3)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
               bader_charges(iatom), voronoi_charges(iatom)
-              
+            
           end do
-
-          SAFE_DEALLOCATE_A(bader_charges)
-          SAFE_DEALLOCATE_A(voronoi_charges)
           
         end if
-
+        
+        SAFE_DEALLOCATE_A(bader_charges)
+        SAFE_DEALLOCATE_A(voronoi_charges)
+        
+      end if
+      
+      if(mpi_grp_is_root(mpi_world)) then
         call io_close(iunit)
-          
       end if
 
       POP_SUB(scf_run.scf_write_static)

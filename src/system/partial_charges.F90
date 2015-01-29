@@ -179,8 +179,10 @@ contains
     real(q2) :: dlat(1:3), dcar(1:3)
     FLOAT    :: offset(MAX_DIM)
     FLOAT, allocatable :: total_density(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(partial_charges_calculate)
+    call profiling_in(prof, 'PARTIAL_CHARGES')
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -193,7 +195,7 @@ contains
       total_density(ip) = sum(st%rho(ip, 1:st%d%nspin))
     end do
 
-    call dmesh_to_cube(mesh, total_density, cube, density_cube)
+    call dmesh_to_cube(mesh, total_density, cube, density_cube, local = .true.)
 
     SAFE_DEALLOCATE_A(total_density)
 
@@ -307,10 +309,13 @@ contains
     SAFE_DEALLOCATE_A(ions%r_dir)
     SAFE_DEALLOCATE_A(ions%ion_chg)
     SAFE_DEALLOCATE_A(ions%atomic_num)
+    SAFE_DEALLOCATE_A(ions%r_lat)
+    SAFE_DEALLOCATE_A(charge%rho)
 
     call dcube_function_free_RS(cube, density_cube)
     call cube_end(cube)
 
+    call profiling_out(prof)
     POP_SUB(partial_charges_calculate)
 
   end subroutine partial_charges_calculate
