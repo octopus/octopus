@@ -52,9 +52,9 @@ MODULE voronoi_mod
 
     CALL SYSTEM_CLOCK(t1,cr,count_max)
 
-    WRITE(*,'(/,2x,A)') 'CALCULATING VORONOI CHARGE DISTRIBUTION'
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'CALCULATING VORONOI CHARGE DISTRIBUTION'
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
 
     ALLOCATE(vor%vorchg(ions%nions))
 
@@ -68,7 +68,7 @@ MODULE voronoi_mod
       r_lat(1)=REAL(n1,q2)
       IF ((n1*10/chg%npts(1)) > tenths_done) THEN
         tenths_done=(n1*10/chg%npts(1))
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END IF
       DO n2=1,chg%npts(2)
         r_lat(2)=REAL(n2,q2)
@@ -108,22 +108,21 @@ MODULE voronoi_mod
     END DO
 
     CALL SYSTEM_CLOCK(t2,cr,count_max)
-    WRITE(*,'(/,A12,F7.2,A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(/,A12,F7.2,A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
-    WRITE(*,*) ''
-    WRITE(*,*) 'VORONOI ANALYSIS RESULT'
-    WRITE(*,556) '#','X','Y','Z','CHARGE','ATOMIC VOL'
+    !WRITE(*,*) ''
+    !WRITE(*,*) 'VORONOI ANALYSIS RESULT'
+    !WRITE(*,556) '#','X','Y','Z','CHARGE','ATOMIC VOL'
     556 FORMAT(4X,1A1,9X,1A1,2(11X,1A1),8X,1A6,6X,1A10)
 
-    WRITE(*,'(A)') '  ----------------------------------------------------------------------'
+    !WRITE(*,'(A)') '  ----------------------------------------------------------------------'
     DO i=1,ions%nions
-       WRITE(*,777) i,ions%r_car(i,:),vor%vorchg(i),ionvol(i)
+       !WRITE(*,777) i,ions%r_car(i,:),vor%vorchg(i),ionvol(i)
        777 FORMAT(1I5,4F12.4,3X,1F12.4)
     END DO
-    WRITE(*,'(A)') '  -----------------------------------------------------------------------'
+    !WRITE(*,'(A)') '  -----------------------------------------------------------------------'
 
-    WRITE(*,'(2x,A,2X,1F12.5)')  '         NUMBER OF ELECTRONS: ', &
-    &                                        SUM(vor%vorchg(1:ions%nions))
+    !WRITE(*,'(2x,A,2X,1F12.5)')  '         NUMBER OF ELECTRONS: ', &    &                                        SUM(vor%vorchg(1:ions%nions))
 
     DEALLOCATE(ionvol)
     

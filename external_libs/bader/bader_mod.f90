@@ -87,9 +87,9 @@ MODULE bader_mod
 
     CALL SYSTEM_CLOCK(t1,cr,count_max)
     
-    WRITE(*,'(/,2x,A)')   'CALCULATING BADER CHARGE DISTRIBUTION'
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)')   'CALCULATING BADER CHARGE DISTRIBUTION'
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
 
     ! copy bader variable from opts
     bdr%tol = opts%badertol
@@ -137,7 +137,7 @@ MODULE bader_mod
     DO n1=1,chgval%npts(1)
       IF ((n1*10/chgval%npts(1)) > tenths_done) THEN
         tenths_done = (n1*10/chgval%npts(1))
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END IF
       DO n2=1,chgval%npts(2)
         DO n3=1,chgval%npts(3)
@@ -186,7 +186,7 @@ MODULE bader_mod
         END DO
       END DO
     END DO
-    WRITE(*,*) ''
+    !WRITE(*,*) ''
 
     IF (opts%vac_flag) THEN
       DO n1=1,chgval%npts(1)
@@ -203,24 +203,24 @@ MODULE bader_mod
 
 !    IF(opts%refine_edge_itrs == -1 .OR. opts%refine_edge_itrs == -2) THEN
     IF(opts%refine_edge_itrs <= 0) THEN
-      WRITE(*,'(/,2x,A)') 'REFINING AUTOMATICALLY'
+      !WRITE(*,'(/,2x,A)') 'REFINING AUTOMATICALLY'
       DO
-        WRITE(*,'(2x,A,I2)') 'ITERATION:',ref_itrs
+        !WRITE(*,'(2x,A,I2)') 'ITERATION:',ref_itrs
         CALL refine_edge(bdr,chgtemp,opts,ions,ref_itrs)
         IF (bdr%refine_edge_itrs == 0) EXIT
         ref_itrs = ref_itrs + 1
       END DO
     ELSEIF (opts%refine_edge_itrs > 0) THEN
-      WRITE(*,'(/,2x,A)') 'REFINING EDGE'
+      !WRITE(*,'(/,2x,A)') 'REFINING EDGE'
       DO i=1,opts%refine_edge_itrs
-        WRITE(*,'(2x,A,I2)') 'ITERATION:',i
+        !WRITE(*,'(2x,A,I2)') 'ITERATION:',i
         CALL refine_edge(bdr,chgtemp,opts,ions,i)
       END DO
     ENDIF
 
     ! Weight method of Yu and Trinkle
     IF (opts%refine_edge_itrs == -3) THEN
-      WRITE(*,'(/,2x,A)') 'REFINING USING THE WEIGHT METHOD OF YU AND TRINKLE'
+      !WRITE(*,'(/,2x,A)') 'REFINING USING THE WEIGHT METHOD OF YU AND TRINKLE'
       ALLOCATE(chgval%weight(chgval%npts(1),chgval%npts(2),chgval%npts(3)))
       ! allocate space for weight values
       DO n1=1,chgval%npts(1)
@@ -264,7 +264,7 @@ MODULE bader_mod
     DEALLOCATE(bdr%path)
 
     CALL SYSTEM_CLOCK(t2,cr,count_max)
-    WRITE(*,'(/,1A12,1F10.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(/,1A12,1F10.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE bader_calc
@@ -284,7 +284,7 @@ MODULE bader_mod
     REAL(q2) :: sum_top, sum_bottom, length, facet_a, R_
     REAL(q2) :: new_weight, current_weight, wn
 
-!    write(*,*), ' bnum',bdr%bnum
+!    !write(*,*), ' bnum',bdr%bnum
 
     DO i = 1,bdr%bnum
     ! i is the current basin
@@ -324,7 +324,7 @@ MODULE bader_mod
         END DO
       END DO
 
-      WRITE(*,'(2x,A,6x,1I8)') 'Volnum = ',i,'EDGE POINTS:',num_edge
+      !WRITE(*,'(2x,A,6x,1I8)') 'Volnum = ',i,'EDGE POINTS:',num_edge
 
       num_change = 1
       mycount = 1
@@ -370,7 +370,7 @@ MODULE bader_mod
                       R_ = dim(rho_val(chgval, pn(1), pn(2), pn(3)), rho_val(chgval,p(1),p(2),p(3)))
                       wn = chgval%weight(pn(1),pn(2),pn(3))%w(i) ! neighbor weight
                       sum_top = sum_top + facet_a*length*R_*wn
-                      !write(*,*) 'sum_top', sum_top
+                      !!write(*,*) 'sum_top', sum_top
                       sum_bottom = sum_bottom + facet_a*length*R_
                     END DO
                   END DO
@@ -396,9 +396,9 @@ MODULE bader_mod
           END DO
         END DO
 
-        WRITE(*,'(2x,A,6x,1I8)') 'Weight change', num_change
-        WRITE(*,'(2x,A,6x,1I8)') 'Zero weight left', mycount
-        WRITE(*,'(2x,A,6x,1I8)') 'Iteration', iter
+        !WRITE(*,'(2x,A,6x,1I8)') 'Weight change', num_change
+        !WRITE(*,'(2x,A,6x,1I8)') 'Zero weight left', mycount
+        !WRITE(*,'(2x,A,6x,1I8)') 'Iteration', iter
 
       END DO 
     END DO
@@ -437,12 +437,12 @@ MODULE bader_mod
     bdr%pnum = 1
     bdr%path(bdr%pnum,:) = p
     IF (is_max(chg,p)) THEN
-      write(*,*) '   max found (init)'
+      !write(*,*) '   max found (init)'
       RETURN
     END IF
     r = REAL(p,q2)
 
-!    write(*,*) 'max: ',p
+!    !write(*,*) 'max: ',p
     DO
       cp = rho_val(chg,p(1),p(2),p(3))
       CALL step_offgrid(bdr,chg,r)
@@ -483,16 +483,16 @@ MODULE bader_mod
     REAL(q2),DIMENSION(3) :: grad,dr_car,dr_lat
     REAL(q2) :: rho
 
-!    write(*,'(A,3F12.4)') '   r_before: ',r
+!    !write(*,'(A,3F12.4)') '   r_before: ',r
     grad = rho_grad(chg,r,rho)
-!    write(*,'(A,3F12.4)') '   rho_grad: ',grad
-!db    write(*,'(A,F12.4)') '   stepsize: ',bdr%stepsize
+!    !write(*,'(A,3F12.4)') '   rho_grad: ',grad
+!db    !write(*,'(A,F12.4)') '   stepsize: ',bdr%stepsize
     dr_car = grad*bdr%stepsize/SQRT(SUM(grad*grad))
-!db    write(*,'(A,3F12.4)') '     dr_car: ',dr_car
+!db    !write(*,'(A,3F12.4)') '     dr_car: ',dr_car
     CALL matrix_vector(chg%car2lat,dr_car,dr_lat)
-!db    write(*,'(A,3F12.4)') '     dr_lat: ',dr_lat
+!db    !write(*,'(A,3F12.4)') '     dr_lat: ',dr_lat
     r = r+dr_lat
-!db    write(*,'(A,3F12.4)') '    r_after: ',r
+!db    !write(*,'(A,3F12.4)') '    r_after: ',r
 
   RETURN
   END SUBROUTINE step_offgrid
@@ -581,10 +581,10 @@ MODULE bader_mod
 
     bdr%pnum=1
     bdr%path(bdr%pnum,:)=p
-!    write(*,*) p 
+!    !write(*,*) p 
     DO
       CALL step_neargrid(bdr,chg,p)
-!      IF (pout) write(*,'(3I4)') p
+!      IF (pout) !write(*,'(3I4)') p
       ! if we didn't move, we're at a maximum
       IF (ALL(p == bdr%path(bdr%pnum,:))) EXIT
       ! otherwise, add point to path
@@ -596,7 +596,7 @@ MODULE bader_mod
 !
 !GH: change this to be a known point (all neighbor points assigned)
       IF (opts%quit_opt==opts%quit_known .AND. bdr%known(p(1),p(2),p(3))==2) THEN
-!        IF (pout) write(*,*) 'quitting at known point' 
+!        IF (pout) !write(*,*) 'quitting at known point' 
         EXIT
       END IF
     END DO
@@ -695,7 +695,7 @@ MODULE bader_mod
           END DO
         END DO
       END DO
-      WRITE(*,'(2x,A,6x,1I8)') 'EDGE POINTS:',num_edge
+      !WRITE(*,'(2x,A,6x,1I8)') 'EDGE POINTS:',num_edge
     END IF
 
     IF((opts%refine_edge_itrs==-1 .OR. opts%refine_edge_itrs==-3) .AND. ref_itrs>1) THEN
@@ -738,7 +738,7 @@ MODULE bader_mod
           END DO
         END DO
       END DO
-      WRITE(*,'(2x,A,3x,1I8)') 'CHECKED POINTS:', num_check
+      !WRITE(*,'(2x,A,3x,1I8)') 'CHECKED POINTS:', num_check
 
       ! make the surrounding points unkown
       DO n1 = 1,chg%npts(1)
@@ -781,7 +781,7 @@ MODULE bader_mod
             END IF
             path_volnum = bdr%volnum(p(1),p(2),p(3))
             IF (path_volnum<0 .OR. path_volnum>bdr%bnum) THEN
-              WRITE(*,*) 'ERROR: should be no new maxima in edge refinement'
+              !WRITE(*,*) 'ERROR: should be no new maxima in edge refinement'
             END IF
             bdr%volnum(n1,n2,n3) = path_volnum
             IF (ABS(bvolnum) /= path_volnum) THEN
@@ -799,7 +799,7 @@ MODULE bader_mod
       END DO
     END DO
  
-    WRITE(*,'(2x,A,1I8)') 'REASSIGNED POINTS:',num_reassign
+    !WRITE(*,'(2x,A,1I8)') 'REASSIGNED POINTS:',num_reassign
 
     ! flag to indicate that we are done refining
     IF ((opts%refine_edge_itrs==-1 .OR. opts%refine_edge_itrs==-3) .AND. num_reassign==0) THEN
@@ -871,9 +871,9 @@ MODULE bader_mod
 
     CALL SYSTEM_CLOCK(t1, cr, count_max)
 
-    WRITE(*,'(/,2x,A)') 'CALCULATING MINIMUM DISTANCES TO ATOMS'
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'CALCULATING MINIMUM DISTANCES TO ATOMS'
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
 
 !   Store the minimum distance and the vector
     ALLOCATE(bdr%minsurfdist(ions%nions))
@@ -883,7 +883,7 @@ MODULE bader_mod
     DO n1 = 1,chg%npts(1)
       IF ((n1*10/chg%npts(1)) > tenths_done) THEN
         tenths_done = (n1*10/chg%npts(1))
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END IF
       DO n2 = 1,chg%npts(2)
         DO n3 = 1,chg%npts(3)
@@ -914,7 +914,7 @@ MODULE bader_mod
     END DO
 
     CALL SYSTEM_CLOCK(t2,cr,count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ', (t2-t1)/REAL(cr,q2), ' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ', (t2-t1)/REAL(cr,q2), ' SECONDS'
 
   RETURN
   END SUBROUTINE bader_mindist
@@ -937,9 +937,9 @@ MODULE bader_mod
     
     CALL SYSTEM_CLOCK(t1, cr,count_max)
 
-    WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUMES'
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUMES'
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
 
     tmp = chg
     atomnum = 0
@@ -948,11 +948,11 @@ MODULE bader_mod
     DO badercur = 1,bdr%nvols
       DO WHILE ((badercur*10/bdr%nvols) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       ENDDO
       IF(bdr%volchg(badercur) > bdr%tol) THEN
         atomnum = atomnum+1
-        WRITE(atomfilename,'(A4,I4.4,A4)') "Bvol",atomnum,".dat"
+        !WRITE(atomfilename,'(A4,I4.4,A4)') "Bvol",atomnum,".dat"
         tmp%rho = 0._q2
 !        WHERE (bdr%volnum == badercur) tmp%rho = chg%rho
         ! Replace for ifort/x86_32
@@ -970,7 +970,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2,cr,count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_all_bader
@@ -1000,9 +1000,9 @@ MODULE bader_mod
 
     tmp=chg
 
-    WRITE(*,'(/,2x,A)') 'WRITING ATOMIC VOLUMES '
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING ATOMIC VOLUMES '
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
     tenths_done = 0
     mab = MAXVAL(bdr%nnion)
     mib = MINVAL(bdr%nnion)
@@ -1021,10 +1021,10 @@ MODULE bader_mod
       sc = sc + cc
       DO WHILE ((ik*10/(mab-mib+1)) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END DO
       IF (cc == 0) CYCLE
-      WRITE(atomfilename,'(A4,I4.4,A4)') "BvAt",ik,".dat"
+      !WRITE(atomfilename,'(A4,I4.4,A4)') "BvAt",ik,".dat"
 
       tmp%rho = 0._q2
       DO b=1,cc
@@ -1044,7 +1044,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2, cr, count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_all_atom
@@ -1071,9 +1071,9 @@ MODULE bader_mod
 
     tmp=chg
 
-    WRITE(*,'(/,2x,A)') 'WRITING SELECTED ATOMIC VOLUMES '
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING SELECTED ATOMIC VOLUMES '
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
     tenths_done = 0
     sc = 0
 
@@ -1091,10 +1091,10 @@ MODULE bader_mod
       sc = sc + cc
       DO WHILE ((i*10/opts%selanum) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END DO
       IF (cc == 0) CYCLE
-      WRITE(atomfilename,'(A4,I4.4,A4)') "BvAt",ik,".dat"
+      !WRITE(atomfilename,'(A4,I4.4,A4)') "BvAt",ik,".dat"
 
       tmp%rho = 0._q2
       DO b = 1,cc
@@ -1115,7 +1115,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2, cr, count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_sel_atom
@@ -1144,14 +1144,14 @@ MODULE bader_mod
 !   Set temporary density to zero at start
     tmp%rho = 0._q2
 
-    WRITE(*,'(/,2x,A)') 'WRITING SUM OVER SELECTED ATOMIC VOLUMES '
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING SUM OVER SELECTED ATOMIC VOLUMES '
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
     tenths_done = 0
     sc = 0
 
 !   Here we only need name one file
-    WRITE(atomfilename,'(A)') "BvAt_summed.dat"
+    !WRITE(atomfilename,'(A)') "BvAt_summed.dat"
 
 !   Loop over number of selected atoms (opts%selanum)
     DO i = 1,opts%sumanum
@@ -1168,7 +1168,7 @@ MODULE bader_mod
       sc = sc + cc
       DO WHILE ((i*10/opts%sumanum) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END DO
       IF (cc == 0) CYCLE
       DO b = 1,cc
@@ -1190,7 +1190,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2, cr, count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_sum_atom
@@ -1229,9 +1229,9 @@ MODULE bader_mod
       END IF
     END DO
 
-    WRITE(*,'(/,2x,A)') 'WRITING SELECTED BADER VOLUMES '
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING SELECTED BADER VOLUMES '
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
     tenths_done = 0
 
     tmp%rho = 0._q2
@@ -1239,11 +1239,11 @@ MODULE bader_mod
     DO i = 1,opts%selbnum
       DO WHILE ((i*10/opts%selbnum) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END DO
 
       bvolnum = opts%selbvol(i)
-      WRITE(atomfilename,'(A4,I4.4,A4)') "B_weight",bvolnum,".dat"
+      !WRITE(atomfilename,'(A4,I4.4,A4)') "B_weight",bvolnum,".dat"
       tmp%rho = 0._q2
 !      WHERE (bdr%volnum == volsig(bvolnum,2)) tmp%rho = chg%rho
       DO n1 = 1,chg%npts(1)
@@ -1261,7 +1261,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2, cr, count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_sel_bader
@@ -1300,18 +1300,18 @@ MODULE bader_mod
       END IF
     END DO
     
-    WRITE(*,'(/,2x,A)') 'WRITING SELECTED BADER VOLUMES '
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING SELECTED BADER VOLUMES '
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
     tenths_done = 0
 
     tmp%rho = 0._q2
-    WRITE(atomfilename,'(A15)') "Bvol_summed.dat"
+    !WRITE(atomfilename,'(A15)') "Bvol_summed.dat"
 
     DO i = 1,opts%sumbnum
       DO WHILE ((i*10/opts%sumbnum) > tenths_done)
         tenths_done = tenths_done+1
-        WRITE(*,'(A,$)') '**'
+        !WRITE(*,'(A,$)') '**'
       END DO
 
       bvolnum = opts%sumbvol(i)
@@ -1330,7 +1330,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
     
     CALL SYSTEM_CLOCK(t2, cr, count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
   
   RETURN
   END SUBROUTINE write_sum_bader
@@ -1354,9 +1354,9 @@ MODULE bader_mod
     
     CALL SYSTEM_CLOCK(t1,cr,count_max)
 
-    WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUMES'
-    WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
-    WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
+    !WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUMES'
+    !WRITE(*,'(2x,A)')   '               0  10  25  50  75  100'
+    !WRITE(*,'(2x,A,$)') 'PERCENT DONE:  **'
 
     tmp=chg
     atomnum=0
@@ -1365,7 +1365,7 @@ MODULE bader_mod
     DO badercur=1,bdr%nvols
     IF(bdr%volchg(badercur) > bdr%tol) THEN
         atomnum = atomnum+1
-        WRITE(atomfilename,'(A4,I4.4,A4)') "Bvol",atomnum,".dat"
+        !WRITE(atomfilename,'(A4,I4.4,A4)') "Bvol",atomnum,".dat"
         tmp%rho = 0._q2
 !        WHERE (bdr%volnum == badercur) tmp%rho = chg%rho
         ! Replace for ifort/x86_32
@@ -1384,7 +1384,7 @@ MODULE bader_mod
     DEALLOCATE(tmp%rho)
 
     CALL SYSTEM_CLOCK(t2,cr,count_max)
-    WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
+    !WRITE(*,'(2/,1A12,1F7.2,1A8)') 'RUN TIME: ',(t2-t1)/REAL(cr,q2),' SECONDS'
 
   RETURN
   END SUBROUTINE write_bader_weight
@@ -1406,7 +1406,7 @@ MODULE bader_mod
     REAL(q2):: vol
     INTEGER :: n1, n2, n3
 
-    WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUME INDEX TO BvIndex.dat'
+    !WRITE(*,'(/,2x,A)') 'WRITING BADER VOLUME INDEX TO BvIndex.dat'
 
     tmp = chg
 !GH: to be compatible with ifort/x86_32
@@ -1456,7 +1456,7 @@ MODULE bader_mod
     REAL(q2):: vol
     INTEGER :: n1, n2, n3
 
-    WRITE(*,'(/,2x,A)') 'WRITING BADER ATOMIC INDEX TO AtIndex.dat'
+    !WRITE(*,'(/,2x,A)') 'WRITING BADER ATOMIC INDEX TO AtIndex.dat'
 
     tmp = chg
     DO n1 = 1,chg%npts(1)
@@ -1552,9 +1552,8 @@ MODULE bader_mod
     mab=MAXVAL(bdr%nnion)
     mib=MINVAL(bdr%nnion)
     OPEN(100,FILE='AVF.dat',STATUS='replace',ACTION='write')
-    WRITE(100,'(A)') '   Atom                     Volume(s)'
-    WRITE(100,'(A,A)') '  --------------------------------------------------------',&
-    &                  '----------------'
+    !WRITE(100,'(A)') '   Atom                     Volume(s)'
+    !WRITE(100,'(A,A)') '  --------------------------------------------------------',&    &                  '----------------'
     DO i = mib,mab
       cc = 0
       rck = 0
@@ -1569,55 +1568,49 @@ MODULE bader_mod
         END IF
       END DO 
       IF (cc == 0) CYCLE
-      WRITE(100,'(2X,1I4,2X,A,2X,10000I5)') i,' ... ',rck(1:cc)
+      !WRITE(100,'(2X,1I4,2X,A,2X,10000I5)') i,' ... ',rck(1:cc)
     END DO
-    WRITE(100,'(A,A)') '  --------------------------------------------------------',&
-    &                  '----------------'
+    !WRITE(100,'(A,A)') '  --------------------------------------------------------',&    &                  '----------------'
     CLOSE(100)
     
-    WRITE(*,'(/,A41)') 'WRITING BADER ATOMIC CHARGES TO ACF.dat'
-    WRITE(*,'(A41,/)') 'WRITING BADER VOLUME CHARGES TO BCF.dat'
+    !WRITE(*,'(/,A41)') 'WRITING BADER ATOMIC CHARGES TO ACF.dat'
+    !WRITE(*,'(A41,/)') 'WRITING BADER VOLUME CHARGES TO BCF.dat'
 
     OPEN(100,FILE='ACF.dat',STATUS='replace',ACTION='write')
-    WRITE(100,555) '#','X','Y','Z','CHARGE','MIN DIST','ATOMIC VOL'
+    !WRITE(100,555) '#','X','Y','Z','CHARGE','MIN DIST','ATOMIC VOL'
     555 FORMAT(4X,1A,9X,1A1,2(11X,1A1),8X,1A6,5X,1A8,4X,1A10)
-    WRITE(100,'(A,A)') ' ----------------------------------------------------------------',&
-    &                  '----------------'
+    !WRITE(100,'(A,A)') ' ----------------------------------------------------------------',&    &                  '----------------'
     sum_ionchg = SUM(bdr%ionchg)
     ne = SUM(bdr%volchg(1:bdr%nvols)) + bdr%vacchg
     DO i = 1,ions%nions
-      WRITE(100,'(1I5,7F12.4)') i,ions%r_car(i,:),bdr%ionchg(i),bdr%minsurfdist(i),bdr%ionvol(i)
+      !WRITE(100,'(1I5,7F12.4)') i,ions%r_car(i,:),bdr%ionchg(i),bdr%minsurfdist(i),bdr%ionvol(i)
     END DO
-    WRITE(100,'(A,A)') ' ----------------------------------------------------------------',&
-    &                  '----------------'
-    WRITE(100,'(4X,A,9X,1F12.4)') 'VACUUM CHARGE:',bdr%vacchg
-    WRITE(100,'(4X,A,9X,1F12.4)') 'VACUUM VOLUME:',bdr%vacvol
-    WRITE(100,'(4X,A,2X,1F12.4)')  'NUMBER OF ELECTRONS: ',ne
+    !WRITE(100,'(A,A)') ' ----------------------------------------------------------------',&    &                  '----------------'
+    !WRITE(100,'(4X,A,9X,1F12.4)') 'VACUUM CHARGE:',bdr%vacchg
+    !WRITE(100,'(4X,A,9X,1F12.4)') 'VACUUM VOLUME:',bdr%vacvol
+    !WRITE(100,'(4X,A,2X,1F12.4)')  'NUMBER OF ELECTRONS: ',ne
     CLOSE(100)
 
     bdimsig = 0
     OPEN(200,FILE='BCF.dat',STATUS='replace',ACTION='write')
 
-    WRITE(200,556) '#','X','Y','Z','CHARGE','ATOM','DISTANCE'
+    !WRITE(200,556) '#','X','Y','Z','CHARGE','ATOM','DISTANCE'
     556 FORMAT(4X,1A1,9X,1A1,2(11X,1A1),8X,1A6,5X,1A4,4X,1A8)
     
-    WRITE(200,'(A,A)') '  ----------------------------------------------------------',&
-    &              '---------------'
+    !WRITE(200,'(A,A)') '  ----------------------------------------------------------',&    &              '---------------'
     DO i = 1,bdr%nvols
         IF (bdr%volchg(i) > bdr%tol) THEN
            bdimsig = bdimsig+1
-           WRITE(200,777) bdimsig,bdr%volpos_car(i,:),bdr%volchg(i), &
-           &              bdr%nnion(i),bdr%iondist(i)
+           !WRITE(200,777) bdimsig,bdr%volpos_car(i,:),bdr%volchg(i), &           &              bdr%nnion(i),bdr%iondist(i)
            777 FORMAT(1I5,4F12.4,3X,1I5,1F12.4)
         END IF
     END DO
-    WRITE(200,'(A,A)') '  ----------------------------------------------------------',&
-    &              '---------------'
+    !WRITE(200,'(A,A)') '  ----------------------------------------------------------',&    &              '---------------'
     CLOSE(200)
 
-    WRITE(*,'(2x,A,6X,1I8)')       'NUMBER OF BADER MAXIMA FOUND: ',bdr%nvols
-    WRITE(*,'(2x,A,6X,1I8)')       '    SIGNIFICANT MAXIMA FOUND: ',bdimsig
-    WRITE(*,'(2x,A,2X,1F12.5)')  '         NUMBER OF ELECTRONS: ', ne
+    !WRITE(*,'(2x,A,6X,1I8)')       'NUMBER OF BADER MAXIMA FOUND: ',bdr%nvols
+    !WRITE(*,'(2x,A,6X,1I8)')       '    SIGNIFICANT MAXIMA FOUND: ',bdimsig
+    !WRITE(*,'(2x,A,2X,1F12.5)')  '         NUMBER OF ELECTRONS: ', ne
 
   RETURN
   END SUBROUTINE bader_output
