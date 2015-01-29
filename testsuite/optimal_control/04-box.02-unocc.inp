@@ -5,7 +5,7 @@
 # V(x) = -5*step(x+5)*step(5-x)
 # are calculated. 
 
-CalculationMode = gs
+CalculationMode = unocc
 
 ExperimentalFeatures = yes
 
@@ -29,3 +29,4 @@ TheoryLevel = independent_particles
 %
 
 EigenSolver = cg_new
+ExtraStates = 5

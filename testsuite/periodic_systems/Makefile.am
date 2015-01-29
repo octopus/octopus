@@ -29,7 +29,9 @@ dist_share_DATA =                                \
 	02-cosine_potential.02-unocc.inp         \
 	02-cosine_potential.test                 \
 	03-sodium_chain.01-ground_state.inp      \
-	03-sodium_chain.02-ground_state_disp.inp \
+	03-sodium_chain.02-unocc.inp             \
+	03-sodium_chain.03-ground_state_disp.inp \
+	03-sodium_chain.04-unocc_disp.inp        \
 	03-sodium_chain.test                     \
 	04-silicon.test                          \
 	04-silicon.01-gs.inp                     \

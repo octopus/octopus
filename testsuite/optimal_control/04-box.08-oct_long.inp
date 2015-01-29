@@ -4,10 +4,6 @@
 CalculationMode = opt_control
 ExperimentalFeatures = yes
 
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
-
 # ------------------
 # TD RUN Parameters
 # ------------------
@@ -61,9 +57,6 @@ freq = 0.0
 
 Dimensions = 1
 fromScratch = yes
-
-
-
 
 BoxShape = sphere
 Spacing = 0.4

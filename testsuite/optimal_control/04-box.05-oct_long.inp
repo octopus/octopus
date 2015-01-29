@@ -4,10 +4,6 @@
 CalculationMode = opt_control
 ExperimentalFeatures = yes
 
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
-
 # ------------------
 # TD RUN Parameters
 # ------------------
@@ -35,12 +31,11 @@ OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
 0 | 1
 %
-
-
-OCTScheme  = oct_algorithm_zbr98
+OCTScheme  = oct_algorithm_wg05
 OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 80
+
 
 #----------------------------
 # Laser field = Initial guess
@@ -48,7 +43,6 @@ gamma2 = 80
 
 ampl = 0.06
 freq = 0.157
-
 %TDExternalFields
 electric_field | 1 | 0 | 0 | freq | "envelope_function"
 %
@@ -73,3 +67,4 @@ TheoryLevel = independent_particles
 %Coordinates
 "Box1D" | 0
 %
+

@@ -4,10 +4,6 @@
 CalculationMode = opt_control
 ExperimentalFeatures = yes
 
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
-
 # ------------------
 # TD RUN Parameters
 # ------------------
@@ -35,11 +31,8 @@ OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
 0 | 1
 %
-OCTScheme  = oct_algorithm_wg05
+OCTScheme  = oct_algorithm_zr98
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
-
 
 #----------------------------
 # Laser field = Initial guess
