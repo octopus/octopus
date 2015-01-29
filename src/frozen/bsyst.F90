@@ -58,6 +58,7 @@ module bsyst_m
     states_init   => bstts_init,   &
     states_start  => bstts_start,  &
     states_update => bstts_update, &
+    states_stop   => bstts_stop,   &
     states_get    => bstts_get,    &
     states_copy   => bstts_copy,   &
     states_end    => bstts_end
@@ -69,6 +70,7 @@ module bsyst_m
     bsyst_init,   &
     bsyst_start,  &
     bsyst_update, &
+    bsyst_stop,   &
     bsyst_set,    &
     bsyst_get,    &
     bsyst_copy,   &
@@ -214,6 +216,18 @@ contains
     POP_SUB(bsyst_update)
     return
   end subroutine bsyst_update
+
+  ! ---------------------------------------------------------
+  subroutine bsyst_stop(this)
+    type(bsyst_t), intent(inout) :: this
+    !
+    PUSH_SUB(bsyst_stop)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call states_stop(this%st)
+    POP_SUB(bsyst_stop)
+    return
+  end subroutine bsyst_stop
 
   ! ---------------------------------------------------------
   subroutine bsyst_set_simulation(this, that)

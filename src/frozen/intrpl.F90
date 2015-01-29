@@ -6,7 +6,6 @@ module intrpl_m
   use messages_m
   use profiling_m
 
-  use basis_m,       only: basis_t, basis_to_internal
   use curvilinear_m, only: curvilinear_x2chi
   use domain_m,      only: domain_t, domain_in_domain
   use grid_m,        only: grid_t
@@ -22,11 +21,10 @@ module intrpl_m
   implicit none
 
   private
-  public ::                      &
+  public ::               &
     intrpl_init,          &
     intrpl_inited,        &
     intrpl_get_dimension, &
-    intrpl_set,           &
     intrpl_eval,          &
     intrpl_copy,          &
     intrpl_end
@@ -51,7 +49,6 @@ module intrpl_m
     type(simulation_t),              pointer :: sim     =>null()
     type(mesh_t),                    pointer :: mesh    =>null()
     type(domain_t),                  pointer :: domain  =>null()
-    type(basis_t),                   pointer :: basis   =>null()
     integer                                  :: type    = NONE
     integer                                  :: nint    = 0
     real(kind=wp)                            :: default = 0.0_wp
@@ -63,10 +60,6 @@ module intrpl_m
     module procedure intrpl_init_2d
     module procedure intrpl_init_null
   end interface intrpl_init
-
-  interface intrpl_set
-    module procedure intrpl_set_basis
-  end interface intrpl_set
 
   interface intrpl_eval
     module procedure intrpl_eval_1d
@@ -166,9 +159,10 @@ contains
   end subroutine intrp_end
 
   ! ---------------------------------------------------------
-  subroutine intrpl_init_common(this, sim, type, default)
+  subroutine intrpl_init_common(this, sim, ndim, type, default)
     type(intrpl_t),             intent(out) :: this
     type(simulation_t), target, intent(in)  :: sim
+    integer,                    intent(in)  :: ndim
     integer,          optional, intent(in)  :: type
     real(kind=wp),    optional, intent(in)  :: default
     !
@@ -180,13 +174,13 @@ contains
     ASSERT(.not.associated(this%mesh))
     ASSERT(.not.associated(this%domain))
     this%sim=>sim
+    this%nint=ndim
     call simulation_get(sim, grid)
     ASSERT(associated(grid))
     this%mesh=>grid%mesh
     nullify(grid)
     call simulation_get(sim, this%domain)
     ASSERT(associated(this%domain))
-    nullify(this%basis)
     this%type=NEAREST
     if(present(type))this%type=type
     if(this%type>NONE)then
@@ -207,8 +201,7 @@ contains
     real(kind=wp),             optional, intent(in)  :: default
     !
     PUSH_SUB(intrpl_init_1d)
-    this%nint=1
-    call intrpl_init_common(this, sim, type, default)
+    call intrpl_init_common(this, sim, 1, type, default)
     if(this%type>NONE)&
       call intrp_init(this%intr(1), this%mesh, vals, this%type)
     POP_SUB(intrpl_init_1d)
@@ -226,8 +219,8 @@ contains
     integer :: i
     !
     PUSH_SUB(intrpl_init_2d)
-    this%nint=size(vals,dim=2)
-    call intrpl_init_common(this, sim, type, default)
+    call intrpl_init_common(this, sim, size(vals,dim=2), type, default)
+    ASSERT(this%nint>0)
     if(this%type>NONE)then
       do i = 1, this%nint
         call intrp_init(this%intr(i), this%mesh, vals(:,i), this%type)
@@ -242,7 +235,7 @@ contains
     type(intrpl_t),          intent(out) :: this
     real(kind=wp), optional, intent(in)  :: default
     !
-    nullify(this%mesh, this%domain, this%basis)
+    nullify(this%mesh, this%domain)
     this%type=NONE
     this%nint=0
     this%default=0.0_wp
@@ -269,11 +262,12 @@ contains
     !
     real(kind=wp), dimension(MAX_DIM) :: xp, chi
     integer,       dimension(MAX_DIM) :: ix
-    integer                           :: i, dm
+    integer                           :: dm
     !
     PUSH_SUB(intrpl_nearest_index)
     dm=this%mesh%sb%dim
-    xp=(/x(1:dm),(0.0_wp, i=dm+1,MAX_DIM)/)
+    xp(1:dm)=x(1:dm)
+    xp(dm+1:MAX_DIM)=0.0_wp
     call curvilinear_x2chi(this%mesh%sb, this%mesh%cv, xp, chi)
     ix(1:dm)=nint(chi(1:dm)/this%mesh%spacing(1:dm))
     ix(dm+1:MAX_DIM)=0
@@ -291,17 +285,6 @@ contains
     dim=this%nint
     return
   end function intrpl_get_dimension
-
-  ! ---------------------------------------------------------
-  subroutine intrpl_set_basis(this, that)
-    type(intrpl_t),        intent(inout) :: this
-    type(basis_t), target, intent(in)    :: that
-    !
-    PUSH_SUB(intrpl_set_basis)
-    this%basis=>that
-    POP_SUB(intrpl_set_basis)
-    return
-  end subroutine intrpl_set_basis
 
   ! ---------------------------------------------------------
   function intrpl_in_domain(this, x) result(in)
@@ -336,7 +319,7 @@ contains
     PUSH_SUB(intrpl_nearest)
     dm=this%mesh%sb%dim
     n=intrpl_nearest_index(this, x)
-    tol=CNST(0.51)*sqrt(sum(this%mesh%spacing(1:dm)**2))
+    tol=0.51_wp*sqrt(sum(this%mesh%spacing(1:dm)**2))
     dlt=sqrt(sum((x(1:dm)-this%mesh%x(n,1:dm))**2))
     ASSERT(dlt<tol)
     forall(i=1:this%nint)val(i)=this%intr(i)%vals(n)
@@ -382,17 +365,11 @@ contains
     real(kind=wp),                intent(out) :: val
     integer,                      intent(out) :: ierr
     !
-    real(kind=wp), dimension(size(x)) :: y
-    real(kind=wp), dimension(1)       :: tvl
+    real(kind=wp), dimension(1) :: tvl
     !
     PUSH_SUB(intrpl_eval_1d)
     if(this%type>NONE)then
-      if(associated(this%basis))then
-        call basis_to_internal(this%basis, x, y)
-        call intrpl_eval_internal(this, y, tvl, ierr)
-      else
-        call intrpl_eval_internal(this, x, tvl, ierr)
-      end if
+      call intrpl_eval_internal(this, x, tvl, ierr)
       val=tvl(1)
     else
       val=this%default
@@ -409,16 +386,9 @@ contains
     real(kind=wp),  dimension(:), intent(out) :: val
     integer,                      intent(out) :: ierr
     !
-    real(kind=wp), dimension(size(x)) :: y
-    !
     PUSH_SUB(intrpl_eval_md)
     if(this%type>NONE)then
-      if(associated(this%basis))then
-        call basis_to_internal(this%basis, x, y)
-        call intrpl_eval_internal(this, y, val, ierr)
-      else
-        call intrpl_eval_internal(this, x, val, ierr)
-      end if
+      call intrpl_eval_internal(this, x, val, ierr)
     else
       val=this%default
       ierr=INTRPL_NI
@@ -438,7 +408,6 @@ contains
     this%sim   =>that%sim
     this%mesh  =>that%mesh
     this%domain=>that%domain
-    this%basis =>that%basis
     this%type  = that%type
     this%nint  = that%nint
     this%default=that%default
@@ -468,7 +437,7 @@ contains
     this%default=0.0_wp
     this%nint=0
     this%type=NONE
-    nullify(this%basis, this%domain, this%mesh, this%sim)
+    nullify(this%domain, this%mesh, this%sim)
     POP_SUB(intrpl_end)
     return
   end subroutine intrpl_end

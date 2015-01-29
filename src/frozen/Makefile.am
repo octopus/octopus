@@ -43,8 +43,7 @@ libfrozen_a_SOURCES =		\
 	bhmlt.F90		\
 	bmodl.F90		\
 	bhndl.F90		\
-	bcnfg.F90		#\
-	fio_geom.F90		\
+	bcnfg.F90		\
 	fio_simul_box.F90	\
 	fio_curvilinear.F90	\
 	fio_mesh.F90		\
@@ -57,9 +56,7 @@ libfrozen_a_SOURCES =		\
 	fio_hamiltonian.F90	\
 	fio_model.F90		\
 	fio_handle.F90		\
-	fio_config.F90		\
-	frozen_geom.F90		\
-	frozen_simulation.F90	\
+	fio_config.F90		#\
 	frozen_density.F90	\
 	frozen_states.F90	\
 	frozen_system.F90	\
@@ -78,7 +75,6 @@ libfrozen_a_SOURCES =		\
 	frozen_kinetic.F90       \
 	frozen_tnadd.F90         \
 	frozen_ionic.F90         \
-	frozen_simul_box.F90     \
 	solver.F90               \
 	hartree.F90              \
 	frozen_parse.F90         
@@ -125,23 +121,20 @@ bmodl.o : bmodl.F90 bhmlt.o bsyst.o simulation.o
 bhndl.o : bhndl.F90 bmodl.o
 bcnfg.o : bcnfg.F90 bhmlt.o intrpl.o
 
-# fio_geom.o : fio_geom.F90 bgeom.o
-# fio_simul_box.o : fio_simul_box.F90 fio_geom.o
-# fio_curvilinear.o : fio_curvilinear.F90 fio_simul_box.o
-# fio_mesh.o : fio_mesh.F90 fio_simul_box.o imesh.o
-# fio_grid.o : fio_grid.F90 fio_curvilinear.o fio_mesh.o igrid.o
-# fio_simulation.o : fio_simulation.F90 fio_grid.o simulation.o
-# fio_density.o : fio_density.F90 fio_simulation.o bdnst.o
-# fio_states.o : fio_states.F90 fio_density.o bstts.o
-# fio_system.o : fio_system.F90 fio_states.o bsyst.o
-# fio_external.o : fio_external.F90 fio_simulation.o bepot.o
-# fio_hamiltonian.o : fio_hamiltonian.F90 fio_external.o bhmlt.o
-# fio_model.o : fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o bmodl.o
-# fio_handle.o : fio_handle.F90 fio_model.o bhndl.o
-# fio_config.o : fio_config.F90 bcnfg.o 
+fio_simul_box.o : fio_simul_box.F90 bgeom.o
+fio_curvilinear.o : fio_curvilinear.F90 fio_simul_box.o bgeom.o
+fio_mesh.o : fio_mesh.F90 fio_simul_box.o imesh.o
+fio_grid.o : fio_grid.F90 fio_curvilinear.o fio_mesh.o igrid.o
+fio_simulation.o : fio_simulation.F90 fio_grid.o simulation.o
+fio_density.o : fio_density.F90 fio_simulation.o bdnst.o
+fio_states.o : fio_states.F90 fio_density.o bstts.o
+fio_system.o : fio_system.F90 fio_states.o bsyst.o
+fio_external.o : fio_external.F90 fio_simulation.o bepot.o
+fio_hamiltonian.o : fio_hamiltonian.F90 fio_external.o fio_system.o bhmlt.o
+fio_model.o : fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o bmodl.o
+fio_handle.o : fio_handle.F90 fio_model.o bhndl.o
+fio_config.o : fio_config.F90 bcnfg.o 
 
-# frozen_geom.o : frozen_geom.F90 bgeom.o
-# frozen_simulation.o : fio_simulation.F90 frozen_geom.o simulation.o
 # frozen_density.o : frozen_density.F90 fio_density.o bdnst.o
 # frozen_states.o : frozen_states.F90 frozen_density.o fio_states.o bstts.o
 # frozen_system.o : frozen_system.F90 frozen_states.o fio_system.o bsyst.o

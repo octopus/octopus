@@ -43,9 +43,9 @@ module bdnst_m
     storage_update,        &
     storage_stop,          &
     storage_eval,          &
+    storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
-    storage_get_storage,   &
     storage_copy,          &
     storage_end
 
@@ -56,18 +56,14 @@ module bdnst_m
   implicit none
 
   private
-  public ::                    &
-    bdnst_init,              &
-    bdnst_start,             &
-    bdnst_update,            &
-    bdnst_stop,              &
-    bdnst_eval,              &
-    bdnst_get,               &
-    bdnst_get_size,          &
-    bdnst_get_nspin,         &
-    bdnst_get_density,       &
-    bdnst_get_total_density, &
-    bdnst_copy,              &
+  public ::       &
+    bdnst_init,   &
+    bdnst_start,  &
+    bdnst_update, &
+    bdnst_stop,   &
+    bdnst_eval,   &
+    bdnst_get,    &
+    bdnst_copy,   &
     bdnst_end
 
 #define HASH_INCLUDE_HEADER
@@ -103,15 +99,12 @@ module bdnst_m
   end interface bdnst_init
 
   interface bdnst_get
+    module procedure bdnst_get_info
     module procedure bdnst_get_config
     module procedure bdnst_get_simulation
-    module procedure bdnst_get_storage
-  end interface bdnst_get
-
-  interface bdnst_get_density
     module procedure bdnst_get_density_1d
     module procedure bdnst_get_density_2d
-  end interface bdnst_get_density
+  end interface bdnst_get
 
   interface bdnst_next
     module procedure bdnst_iterator_next_config_bdnst
@@ -207,8 +200,8 @@ contains
     nullify(prho, trho)
     call storage_update(this%data)
     if(bdnst_get_nspin(this)>1)then
-      call storage_get_storage(this%data, prho)
-      call storage_get_storage(this%total, trho)
+      call storage_get(this%data, prho)
+      call storage_get(this%total, trho)
       trho=sum(prho, dim=2)
       call storage_update(this%total)
       nullify(prho, trho)
@@ -252,6 +245,19 @@ contains
   end function bdnst_get_nspin
 
   ! ---------------------------------------------------------
+  elemental subroutine bdnst_get_info(this, size, nspin)
+    type(bdnst_t),     intent(in)  :: this
+    integer, optional, intent(out) :: size
+    integer, optional, intent(out) :: nspin
+    !
+    if(present(size))&
+      size=bdnst_get_size(this)
+    if(present(nspin))&
+      nspin=bdnst_get_nspin(this)
+    return
+  end subroutine bdnst_get_info
+
+  ! ---------------------------------------------------------
   subroutine bdnst_get_config(this, that)
     type(bdnst_t),        target, intent(in) :: this
     type(json_object_t), pointer             :: that
@@ -289,12 +295,15 @@ contains
   end subroutine bdnst_get_storage
 
   ! ---------------------------------------------------------
-  subroutine bdnst_get_density_1d(this, that)
-    type(bdnst_t),                intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
+  subroutine bdnst_get_density_1d(this, that, total)
+    type(bdnst_t),                          intent(in) :: this
+    real(kind=wp),           dimension(:), pointer     :: that
+    real(kind=wp), optional, dimension(:), pointer     :: total
     !
     PUSH_SUB(bdnst_get_density_1d)
-    call storage_get_storage(this%data, that)
+    call storage_get(this%data, that)
+    if(present(total))&
+      call bdnst_get_total_density(this, total)
     POP_SUB(bdnst_get_density_1d)
     return
   end subroutine bdnst_get_density_1d
@@ -305,7 +314,7 @@ contains
     real(kind=wp), dimension(:,:), pointer     :: that
     !
     PUSH_SUB(density_get_bdnst_2d)
-    call storage_get_storage(this%data, that)
+    call storage_get(this%data, that)
     POP_SUB(bdnst_get_density_2d)
     return
   end subroutine bdnst_get_density_2d
@@ -316,7 +325,7 @@ contains
     real(kind=wp), dimension(:), pointer     :: that
     !
     PUSH_SUB(bdnst_get_total_density)
-    call storage_get_storage(this%total, that)
+    call storage_get(this%total, that)
     POP_SUB(bdnst_get_total_density)
     return
   end subroutine bdnst_get_total_density
@@ -519,13 +528,14 @@ contains
   end subroutine bdnst_iterator_end
 
   ! ---------------------------------------------------------
-  subroutine bdnst_intrpl_init(this, that)
+  subroutine bdnst_intrpl_init(this, that, type)
     type(bdnst_intrpl_t),  intent(out) :: this
     type(bdnst_t), target, intent(in)  :: that
+    integer,     optional, intent(in)  :: type
     !
     PUSH_SUB(bdnst_intrpl_init)
     this%self=>that
-    call storage_init(this%intrp, that%data)
+    call storage_init(this%intrp, that%data, type)
     POP_SUB(bdnst_intrpl_init)
     return
   end subroutine bdnst_intrpl_init
@@ -575,17 +585,6 @@ contains
     POP_SUB(bdnst_intrpl_eval_2d)
     return
   end subroutine bdnst_intrpl_eval_2d
-
-!!$  ! ---------------------------------------------------------
-!!$  subroutine bdnst_intrpl_set(this, that)
-!!$    type(bdnst_intrpl_t), intent(inout) :: this
-!!$    type(basis_t),                 intent(in)    :: that
-!!$    !
-!!$    P!USH_SUB(bdnst_intrpl_set)
-!!$    call storage_intrpl_set(this%intrp, that)
-!!$    P!OP_SUB(bdnst_intrpl_set)
-!!$    return
-!!$  end subroutine bdnst_intrpl_set
 
   ! ---------------------------------------------------------
   subroutine bdnst_intrpl_copy(this, that)

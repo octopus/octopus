@@ -42,6 +42,7 @@ module bhndl_m
     model_init   => bmodl_init,   &
     model_start  => bmodl_start,  &
     model_update => bmodl_update, &
+    model_stop   => bmodl_stop,   &
     model_get    => bmodl_get,    &
     model_copy   => bmodl_copy,   &
     model_end    => bmodl_end
@@ -54,6 +55,7 @@ module bhndl_m
     bhndl_init,   &
     bhndl_start,  &
     bhndl_update, &
+    bhndl_stop,   &
     bhndl_next,   &
     bhndl_get,    &
     bhndl_copy,   &
@@ -77,7 +79,8 @@ module bhndl_m
   end type bhndl_iterator_t
 
   interface bhndl_init
-    module procedure bhndl_init_bhndl
+    module procedure bhndl_init_begin
+    module procedure bhndl_init_finish
     module procedure bhndl_iterator_init
   end interface bhndl_init
 
@@ -113,7 +116,7 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  recursive subroutine bhndl_init_bhndl(this, config)
+  recursive subroutine bhndl_init_begin(this, config)
     type(bhndl_t),               intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
@@ -121,7 +124,7 @@ contains
     type(json_array_t),  pointer :: list
     integer                      :: ierr
     !
-    PUSH_SUB(bhndl_init_bhndl)
+    PUSH_SUB(bhndl_init_begin)
     this%config=>config
     nullify(cnfg, list)
     call json_get(this%config, "model", cnfg, ierr)
@@ -132,9 +135,9 @@ contains
     if(ierr==JSON_OK)call bhndl_init_hash(this%hash, this%model, list)
     nullify(list)
     call model_init(this%model)
-    POP_SUB(bhndl_init_bhndl)
+    POP_SUB(bhndl_init_begin)
     return
-  end subroutine bhndl_init_bhndl
+  end subroutine bhndl_init_begin
 
   ! ---------------------------------------------------------
   recursive subroutine bhndl_init_hash(this, model, list)
@@ -164,6 +167,30 @@ contains
     POP_SUB(bhndl_init_hash)
     return
   end subroutine bhndl_init_hash
+
+  ! ---------------------------------------------------------
+  recursive subroutine bhndl_init_finish(this, grid)
+    type(bhndl_t),          intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
+    !
+    type(bhndl_iterator_t) :: iter
+    type(bhndl_t), pointer :: hndl
+    integer                :: ierr
+    !
+    PUSH_SUB(bhndl_init_finish)
+    call bhndl_init(iter, this)
+    do
+      nullify(hndl)
+      call bhndl_next(iter, hndl, ierr)
+      if(ierr/=BHNDL_OK)exit
+      call bhndl_init(hndl)
+    end do
+    call bhndl_end(iter)
+    nullify(hndl)
+    call model_init(this%model)
+    POP_SUB(bhndl_init_finish)
+    return
+  end subroutine bhndl_init_finish
 
   ! ---------------------------------------------------------
   recursive subroutine bhndl_start(this, grid)
@@ -208,9 +235,32 @@ contains
     call bhndl_end(iter)
     nullify(hndl)
     call model_update(this%model)
-    POP_SUB(bhndl_update_hash)
+    POP_SUB(bhndl_update)
     return
   end subroutine bhndl_update
+
+  ! ---------------------------------------------------------
+  recursive subroutine bhndl_stop(this)
+    type(bhndl_t), intent(inout) :: this
+    !
+    type(bhndl_iterator_t) :: iter
+    type(bhndl_t), pointer :: hndl
+    integer                :: ierr
+    !
+    PUSH_SUB(bhndl_stop)
+    call bhndl_init(iter, this)
+    do
+      nullify(hndl)
+      call bhndl_next(iter, hndl, ierr)
+      if(ierr/=BHNDL_HASH_OK)exit
+      call bhndl_stop(hndl)
+    end do
+    call bhndl_end(iter)
+    nullify(hndl)
+    call model_stop(this%model)
+    POP_SUB(bhndl_stop)
+    return
+  end subroutine bhndl_stop
 
   ! ---------------------------------------------------------
   subroutine bhndl_get_config(this, that)
@@ -227,7 +277,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bhndl_get_model(this, that)
-    type(bhndl_t), target, intent(in) :: this
+    type(bhndl_t),  target, intent(in) :: this
     type(model_t), pointer             :: that
     !
     PUSH_SUB(bhndl_get_model)

@@ -13,9 +13,6 @@ module storage_m
   use kinds_m,      only: wp
   use mesh_m,       only: mesh_t
 
-  use basis_m, only: &
-    basis_t
-
   use simulation_m, only: &
     simulation_t,         &
     simulation_get
@@ -26,7 +23,6 @@ module storage_m
   use intrpl_m, only: &
     intrpl_t,         &
     intrpl_eval,      &
-    intrpl_set,       &
     intrpl_copy,      &
     intrpl_end
 
@@ -49,11 +45,9 @@ module storage_m
     storage_stop,          &
     storage_eval,          &
     !storage_conform,       &
-    storage_set,           &
     storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
-    storage_get_storage,   &
     storage_copy,          &
     storage_end
 
@@ -77,14 +71,6 @@ module storage_m
     type(intrpl_t)           :: intrp
   end type storage_intrpl_t
 
-!!$  interface operator(+)
-!!$    module procedure storage_add
-!!$  end interface operator(+)
-!!$
-!!$  interface operator(-)
-!!$    module procedure storage_sub
-!!$  end interface operator(-)
-
   interface storage_init
     module procedure storage_init_simple
     module procedure storage_init_copy
@@ -96,19 +82,11 @@ module storage_m
     module procedure storage_intrpl_eval_md
   end interface storage_eval
 
-  interface storage_set
-    module procedure storage_intrpl_set
-  end interface storage_set
-
   interface storage_get
     module procedure storage_get_sim
-    !module procedure storage_get_storage
-  end interface storage_get
-
-  interface storage_get_storage
     module procedure storage_get_storage_1d
     module procedure storage_get_storage_md
-  end interface storage_get_storage
+  end interface storage_get
 
   interface storage_copy
     module procedure storage_copy_storage
@@ -213,44 +191,6 @@ contains
     return
   end subroutine storage_stop
 
-!!$  ! ---------------------------------------------------------
-!!$  function storage_add(this, that) result(resl)
-!!$    type(storage_t), intent(in) :: this
-!!$    type(storage_t), intent(in) :: that
-!!$    !
-!!$    type(storage_t) :: resl
-!!$    !
-!!$    P!USH_SUB(storage_add)
-!!$    A!SSERT(this%ndim==that%ndim)
-!!$    A!SSERT(associated(this%grid, that%grid))
-!!$    A!SSERT(associated(this%mesh, that%mesh))
-!!$    call storage_init_copy(resl, this)
-!!$    resl%data(1:this%mesh%np,:)=this%data(1:this%mesh%np,:)+that%data(1:that%mesh%np,:)
-!!$    resl%default=this%default+that%default
-!!$    call storage_update(resl)
-!!$    P!OP_SUB(storage_add)
-!!$    return
-!!$  end function storage_add
-!!$
-!!$  ! ---------------------------------------------------------
-!!$  function storage_sub(this, that) result(resl)
-!!$    type(storage_t), intent(in) :: this
-!!$    type(storage_t), intent(in) :: that
-!!$    !
-!!$    type(storage_t) :: resl
-!!$    !
-!!$    P!USH_SUB(storage_sub)
-!!$    A!SSERT(this%ndim==that%ndim)
-!!$    A!SSERT(associated(this%grid, that%grid))
-!!$    A!SSERT(associated(this%mesh, that%mesh))
-!!$    call storage_init_copy(resl, this)
-!!$    resl%data(1:this%mesh%np,:)=this%data(1:this%mesh%np,:)-that%data(1:that%mesh%np,:)
-!!$    resl%default=this%default-that%default
-!!$    call storage_update(resl)
-!!$    P!OP_SUB(storage_sub)
-!!$    return
-!!$  end function storage_sub
-
   ! ---------------------------------------------------------
   elemental function storage_get_size(this) result(that)
     type(storage_t), intent(in) :: this
@@ -288,52 +228,6 @@ contains
     return
   end subroutine storage_get_sim
 
-!!$  ! ---------------------------------------------------------
-!!$  subroutine storage_get_storage(this, that)
-!!$    type(storage_t), intent(inout) :: this !Intent should only be in problems in dmultigrid_*2*
-!!$    type(storage_t), intent(inout) :: that
-!!$    !
-!!$    integer :: i
-!!$    !
-!!$    P!USH_SUB(storage_get_storage)
-!!$    A!SSERT(associated(this%config))
-!!$    A!SSERT(associated(this%grid))
-!!$    A!SSERT(associated(this%mesh))
-!!$    A!SSERT(allocated(this%data))
-!!$    if(associated(that%config))then
-!!$      if(associated(that%grid))then
-!!$        A!SSERT(this%ndim==that%ndim)
-!!$        A!SSERT(associated(this%grid,that%grid))
-!!$        A!SSERT(associated(that%mesh))
-!!$        A!SSERT(allocated(that%data))
-!!$      else
-!!$        A!SSERT(.not.associated(that%mesh))
-!!$        A!SSERT(.not.allocated(that%data))
-!!$        call storage_start(that, this%grid, this%ndim, this%fine)
-!!$      end if
-!!$      if(this%fine.eqv.that%fine)then
-!!$        that%data(1:this%mesh%np,:)=this%data(1:that%mesh%np,:)
-!!$      else
-!!$        if(this%fine)then
-!!$          do i = 1, this%ndim
-!!$            call dmultigrid_fine2coarse(that%grid%fine%tt, that%grid%fine%der, that%mesh, &
-!!$              this%data(:,i), that%data(:,i), that%method)
-!!$          end do
-!!$        else
-!!$          do i = 1, this%ndim
-!!$            call dmultigrid_coarse2fine(that%grid%fine%tt, that%grid%der, that%mesh, &
-!!$              this%data(:,i), that%data(:,i), that%order)
-!!$          end do
-!!$        end if
-!!$      end if
-!!$      call storage_update(that)
-!!$    else
-!!$      call storage_copy(that, this)
-!!$    end if
-!!$    P!OP_SUB(storage_get_storage)
-!!$    return
-!!$  end subroutine storage_get_storage
-
   ! ---------------------------------------------------------
   subroutine storage_get_storage_1d(this, that)
     type(storage_t),              target, intent(in) :: this
@@ -362,52 +256,6 @@ contains
     POP_SUB(storage_get_storage_md)
     return
   end subroutine storage_get_storage_md
-
-!!$  ! ---------------------------------------------------------
-!!$  subroutine storage_set_storage(this, that)
-!!$    type(storage_t), intent(inout) :: this
-!!$    type(storage_t), intent(inout) :: that !intent should only be in problems in dmultigrid_*2*
-!!$    !
-!!$    integer :: i
-!!$    !
-!!$    P!USH_SUB(storage_set_storage)
-!!$    A!SSERT(associated(that%config))
-!!$    A!SSERT(associated(that%grid))
-!!$    A!SSERT(associated(that%mesh))
-!!$    A!SSERT(allocated(that%data))
-!!$    if(associated(this%config))then
-!!$      if(associated(this%grid))then
-!!$        A!SSERT(this%ndim==that%ndim)
-!!$        A!SSERT(associated(this%grid,that%grid))
-!!$        A!SSERT(associated(this%mesh))
-!!$        A!SSERT(allocated(this%data))
-!!$      else
-!!$        A!SSERT(.not.associated(this%mesh))
-!!$        A!SSERT(.not.allocated(this%data))
-!!$        call storage_start(this, that%grid, that%ndim, that%fine)
-!!$      end if
-!!$      if(that%fine.eqv.this%fine)then
-!!$        this%data(1:this%mesh%np,:)=that%data(1:that%mesh%np,:)
-!!$      else
-!!$        if(that%fine)then
-!!$          do i = 1, this%ndim
-!!$            call dmultigrid_fine2coarse(this%grid%fine%tt, this%grid%fine%der, this%mesh, &
-!!$              that%data(:,i), this%data(:,i), this%method)
-!!$          end do
-!!$        else
-!!$          do i = 1, this%ndim
-!!$            call dmultigrid_coarse2fine(this%grid%fine%tt, this%grid%der, this%mesh, &
-!!$              that%data(:,i), this%data(:,i), this%order)
-!!$          end do
-!!$        end if
-!!$      end if
-!!$      call storage_update(this)
-!!$    else
-!!$      call storage_copy(this, that)
-!!$    end if
-!!$    P!OP_SUB(storage_set_storage)
-!!$    return
-!!$  end subroutine storage_set_storage
 
   ! ---------------------------------------------------------
   elemental function storage_conform(this, that) result(rslt)
@@ -443,6 +291,7 @@ contains
         this%ndim=that%ndim
         this%default=that%default
         if(associated(that%mesh))then
+          this%sim =>that%sim
           this%mesh=>that%mesh
           SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
         end if
@@ -464,7 +313,7 @@ contains
     SAFE_DEALLOCATE_A(this%data)
     this%default=0.0_wp
     this%ndim=0
-    nullify(this%mesh)
+    nullify(this%mesh, this%sim)
     POP_SUB(storage_end_storage)
     return
   end subroutine storage_end_storage
@@ -508,17 +357,6 @@ contains
     POP_SUB(storage_intrpl_eval_md)
     return
   end subroutine storage_intrpl_eval_md
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_set(this, that)
-    type(storage_intrpl_t), intent(inout) :: this
-    type(basis_t),          intent(in)    :: that
-    !
-    PUSH_SUB(storage_intrpl_set)
-    call intrpl_set(this%intrp, that)
-    POP_SUB(storage_intrpl_set)
-    return
-  end subroutine storage_intrpl_set
 
   ! ---------------------------------------------------------
   subroutine storage_intrpl_copy(this, that)

@@ -36,24 +36,24 @@ module bstts_m
   use simulation_m, only: &
     simulation_t
 
-  use bdnst_m, only:                      &
-    density_t         => bdnst_t,         &
-    density_init      => bdnst_init,      &
-    density_start     => bdnst_start,     &
-    density_update    => bdnst_update,    &
-    density_get       => bdnst_get,       &
-    density_get_size  => bdnst_get_size,  &
-    density_get_nspin => bdnst_get_nspin, &
-    density_copy      => bdnst_copy,      &
-    density_end       => bdnst_end
+  use bdnst_m, only:                &
+    density_t      => bdnst_t,      &
+    density_init   => bdnst_init,   &
+    density_start  => bdnst_start,  &
+    density_update => bdnst_update, &
+    density_stop   => bdnst_stop,   &
+    density_get    => bdnst_get,    &
+    density_copy   => bdnst_copy,   &
+    density_end    => bdnst_end
 
   implicit none
 
   private
-  public ::            &
+  public ::           &
     bstts_init,       &
     bstts_start,      &
     bstts_update,     &
+    bstts_stop,       &
     bstts_set,        &
     bstts_get,        &
     bstts_get_charge, &
@@ -156,6 +156,18 @@ contains
     return
   end subroutine bstts_update
 
+  ! ---------------------------------------------------------
+  subroutine bstts_stop(this)
+    type(bstts_t), intent(inout) :: this
+    !
+    PUSH_SUB(bstts_stop)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call density_stop(this%density)
+    POP_SUB(bstts_stop)
+    return
+  end subroutine bstts_stop
+    
   ! ---------------------------------------------------------
   elemental subroutine bstts_set_charge(this, that)
     type(bstts_t), intent(inout) :: this

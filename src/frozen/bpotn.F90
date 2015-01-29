@@ -43,7 +43,6 @@ module bpotn_m
     storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
-    storage_get_storage,   &
     storage_copy,          &
     storage_end
 
@@ -334,7 +333,7 @@ contains
     real(kind=wp), dimension(:), pointer     :: that
     !
     PUSH_SUB(bpotn_get_potential_1d)
-    call storage_get_storage(this%data, that)
+    call storage_get(this%data, that)
     POP_SUB(bpotn_get_potential_1d)
     return
   end subroutine bpotn_get_potential_1d
@@ -345,7 +344,7 @@ contains
     real(kind=wp), dimension(:,:), pointer     :: that
     !
     PUSH_SUB(bpotn_get_potential_md)
-    call storage_get_storage(this%data, that)
+    call storage_get(this%data, that)
     POP_SUB(bpotn_get_potential_md)
     return
   end subroutine bpotn_get_potential_md
@@ -510,17 +509,6 @@ contains
     POP_SUB(bpotn_intrpl_get)
     return
   end subroutine bpotn_intrpl_get
-
-!!$  ! ---------------------------------------------------------
-!!$  subroutine bpotn_intrpl_set(this, that)
-!!$    type(bpotn_intrpl_t), intent(inout) :: this
-!!$    type(basis_t),                             intent(in)    :: that
-!!$    !
-!!$    P1USH_SUB(bpotn_intrpl_set)
-!!$    call storage_intrpl_set(this%intrp, that)
-!!$    P1OP_SUB(bpotn_intrpl_set)
-!!$    return
-!!$  end subroutine bpotn_intrpl_set
 
   ! ---------------------------------------------------------
   subroutine bpotn_intrpl_copy(this, that)

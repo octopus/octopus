@@ -59,6 +59,7 @@ module bmodl_m
     system_init   => bsyst_init,      &
     system_start  => bsyst_start,     &
     system_update => bsyst_update,    &
+    system_stop   => bsyst_stop,      &
     system_get    => bsyst_get,       &
     system_copy   => bsyst_copy,      &
     system_end    => bsyst_end
@@ -68,6 +69,7 @@ module bmodl_m
     hamiltonian_init   => bhmlt_init,      &
     hamiltonian_start  => bhmlt_start,     &
     hamiltonian_update => bhmlt_update,    &
+    hamiltonian_stop   => bhmlt_stop,      &
     hamiltonian_copy   => bhmlt_copy,      &
     hamiltonian_end    => bhmlt_end
 
@@ -78,6 +80,7 @@ module bmodl_m
     bmodl_init,   &
     bmodl_start,  &
     bmodl_update, &
+    bmodl_stop,   &
     bmodl_get,    &
     bmodl_copy,   &
     bmodl_end
@@ -91,7 +94,7 @@ module bmodl_m
     type(json_object_t), pointer :: config =>null()
     type(simulation_t)           :: sim
     type(system_t)               :: sys
-    type(hamiltonian_t)                :: hm
+    type(hamiltonian_t)          :: hm
     type(bmodl_hash_t)           :: hash
   end type bmodl_t
 
@@ -226,6 +229,17 @@ contains
     POP_SUB(bmodl_update)
     return
   end subroutine bmodl_update
+
+  ! ---------------------------------------------------------
+  subroutine bmodl_stop(this)
+    type(bmodl_t), intent(inout) :: this
+    !
+    PUSH_SUB(bmodl_stop)
+    call system_stop(this%sys)
+    call hamiltonian_stop(this%hm)
+    POP_SUB(bmodl_stop)
+    return
+  end subroutine bmodl_stop
 
   ! ---------------------------------------------------------
   subroutine bmodl_get_config(this, that)
