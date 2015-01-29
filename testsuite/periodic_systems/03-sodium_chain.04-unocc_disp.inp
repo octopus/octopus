@@ -6,15 +6,9 @@ Units = ev_angstrom
 Dimensions = 3
 PeriodicDimensions = 1
 
-%CalculationMode
-   gs   |  unocc                     
-  "gs_" | "unocc_"
-%
+CalculationMode = unocc                     
 
-unocc_FromScratch = yes
-%unocc_RestartOptions
- restart_gs | "gs_restart"
-%
+FromScratch = yes
 
 %Species
   "Na"  | 23.0 | spec_ps_psf | 11 | 2 | 2
@@ -43,8 +37,8 @@ BoxShape = parallelepiped
 0.1 | 0.785662 | 0.000000| 0.000000
 %
 
-unocc_LCAOStart = lcao_none
+LCAOStart = lcao_none
 
-unocc_ExtraStates = 1
+ExtraStates = 1
 
 ExperimentalFeatures = yes

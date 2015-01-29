@@ -15,7 +15,7 @@ FromScratch = yes
 %
 
 %Coordinates
-  "Na" |   0.0 | 0.0 | 0.0 
+  "Na" |  -1.99932905 | 0.0 | 0.0 
 %
 
 BoxShape = parallelepiped
@@ -36,7 +36,5 @@ BoxShape = parallelepiped
 0.2 | 0.628529 | 0.000000| 0.000000
 0.1 | 0.785662 | 0.000000| 0.000000
 %
-
-SymmetrizeDensity = yes
 
 ExperimentalFeatures = yes

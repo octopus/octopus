@@ -14,8 +14,10 @@ Enabled    : Yes
 # It is a replication of the calculation presented in Table I of
 # [J. Javanainen, J. H. Eberly and Q. Su, Phys. Rev. A 38, 3430 (1998)].
 # The numbers provided in that Table should match the values that octopus
-# prints in the excited_states_static/eigenvalues file.
+# prints in the static/eigenvalues file.
 
 Input: 01-hydrogen.01-ground_state.inp
-match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20)    ; -0.66978603
-match ; 10th state   ; GREP(excited_states_static/eigenvalues, '10   --', 12) ; -0.017727
+match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; -0.66978603
+
+Input: 01-hydrogen.02-excited_state.inp
+match ; 10th state   ; GREP(static/eigenvalues, '10   --', 12) ; -0.017727

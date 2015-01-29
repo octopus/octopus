@@ -6,7 +6,7 @@ Units = ev_angstrom
 Dimensions = 3
 PeriodicDimensions = 1
 
-CalculationMode = gs
+CalculationMode = unocc                     
 
 FromScratch = yes
 
@@ -36,7 +36,10 @@ BoxShape = parallelepiped
 0.2 | 0.628529 | 0.000000| 0.000000
 0.1 | 0.785662 | 0.000000| 0.000000
 %
-
 SymmetrizeDensity = yes
+
+LCAOStart = lcao_none
+
+ExtraStates = 1
 
 ExperimentalFeatures = yes
