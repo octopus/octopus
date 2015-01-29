@@ -1,17 +1,12 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-
 Dimensions = 1
 fromScratch = yes
 
 CalculationMode = opt_control
 
 ExperimentalFeatures = yes
-
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
 
 # ------------------
 # Grid
@@ -71,27 +66,14 @@ OCTDoubleCheck = no
 # Laser field = Initial guess
 #-----------------------------
 
-
-ampl = 0.06
+ampl = 0.01
 freq = 0.157
 
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | freq | "envelope_function"
+  electric_field | 1 | 0 | 0 | freq | "envelope_function" 
 %
 
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
-"octlaserenvelope" | tdf_from_expr | "1.0 / ((sin(t*pi/stime))+0.000001)"
 %
 
-%OCTLaserEnvelope
-"octlaserenvelope"
-%
-
-#----------------------------
-# Output
-#-----------------------------
-
-Output = wfs
-OutputHow = axis_x
-TDOutput = laser + td_occup 

@@ -5,17 +5,9 @@
 #  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 # are calculated. 
 
-%CalculationMode
-gs              | unocc
-"ground_state_" | "excited_states_"
-1               | 2
-%
+CalculationMode = gs
 
 ExperimentalFeatures = yes
-
-%excited_states_RestartOptions 
- restart_gs | "ground_state_restart"
-%
 
 Dimensions = 1
 fromScratch = yes
@@ -38,5 +30,3 @@ TheoryLevel = independent_particles
 
 EigenSolverTolerance = 1.0e-6
 ConvRelDens = 1.0e-7
-
-excited_states_ExtraStates = 1

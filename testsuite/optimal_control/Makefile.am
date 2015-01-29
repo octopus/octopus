@@ -23,9 +23,10 @@ sharedir = $(pkgdatadir)/testsuite/optimal_control
 
 dist_share_DATA = \
 	01-asym_doublewell.01-ground_state.inp \
-	01-asym_doublewell.02-oct_run.inp      \
+	01-asym_doublewell.02-unocc.inp        \
 	01-asym_doublewell.03-oct_run.inp      \
 	01-asym_doublewell.04-oct_run.inp      \
+	01-asym_doublewell.05-oct_run.inp      \
 	01-asym_doublewell.test                \
 	02-sym_doublewell.01-ground_state.inp  \
 	02-sym_doublewell.02-unocc.inp         \
@@ -47,8 +48,9 @@ dist_share_DATA = \
 	04-box.08-oct_long.inp                 \
 	04-box.test                            \
 	05-adw.01-ground_state.inp             \
-	05-adw.02-filter_fixed.inp             \
-	05-adw.03-filter_indirect.inp          \
+	05-adw.02-unocc.inp                    \
+	05-adw.03-filter_fixed.inp             \
+	05-adw.04-filter_indirect.inp          \
 	05-adw.test                            \
 	06-zbr98.test                          \
 	06-zbr98.01-ground_state.inp           \

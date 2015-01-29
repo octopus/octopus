@@ -1,5 +1,3 @@
-# -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Dimensions = 1
 fromScratch = yes
@@ -8,9 +6,6 @@ CalculationMode = opt_control
 
 ExperimentalFeatures = yes
 
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
 
 # ------------------
 # Grid
@@ -57,10 +52,14 @@ OCTEps = 0.000001
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_gstransformation
-%OCTTargetTransformStates
-0 | 1
+
+OCTTargetOperator = oct_tg_userdefined
+xf=2.0
+%OCTTargetUserdefined
+   1 | 1 | 1 | "exp(-(x-xf)^2)"
 %
+
+
 
 OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = no

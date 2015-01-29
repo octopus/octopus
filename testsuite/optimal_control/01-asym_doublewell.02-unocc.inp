@@ -5,7 +5,7 @@
 #  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 # are calculated. 
 
-CalculationMode = gs
+CalculationMode = unocc
 
 ExperimentalFeatures = yes
 
@@ -13,9 +13,8 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-#Spacing = 0.12
-Spacing = 0.24
-Radius =  8.0
+Spacing = 0.3
+Radius =  10.0
 
 TheoryLevel = independent_particles
 
@@ -29,4 +28,7 @@ TheoryLevel = independent_particles
 "AWD1D" | 0
 %
 
+EigenSolverTolerance = 1.0e-6
 ConvRelDens = 1.0e-7
+
+ExtraStates = 1

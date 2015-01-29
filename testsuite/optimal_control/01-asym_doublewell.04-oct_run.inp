@@ -1,14 +1,13 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
 
 Dimensions = 1
 fromScratch = yes
 
 CalculationMode = opt_control
 
-%RestartOptions
- restart_gs | "ground_state_restart"
-%
 ExperimentalFeatures = yes
-
 
 # ------------------
 # Grid
@@ -55,14 +54,10 @@ OCTEps = 0.000001
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
-
-OCTTargetOperator = oct_tg_userdefined
-xf=2.0
-%OCTTargetUserdefined
-   1 | 1 | 1 | "exp(-(x-xf)^2)"
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
 %
-
-
 
 OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = no
@@ -72,14 +67,27 @@ OCTDoubleCheck = no
 # Laser field = Initial guess
 #-----------------------------
 
-ampl = 0.01
+
+ampl = 0.06
 freq = 0.157
 
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | freq | "envelope_function" 
+  electric_field | 1 | 0 | 0 | freq | "envelope_function"
 %
 
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
+"octlaserenvelope" | tdf_from_expr | "1.0 / ((sin(t*pi/stime))+0.000001)"
 %
 
+%OCTLaserEnvelope
+"octlaserenvelope"
+%
+
+#----------------------------
+# Output
+#-----------------------------
+
+Output = wfs
+OutputHow = axis_x
+TDOutput = laser + td_occup 

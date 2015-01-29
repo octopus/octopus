@@ -15,8 +15,10 @@ Enabled    : Yes
 # V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 #
 Input: 05-adw.01-ground_state.inp
-match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061585
-match ; 2nd state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061585
+
+Input: 05-adw.02-unocc.inp
+match ; 2nd state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.463839
 
 # Now we run an OCT run identical (or almost, the numerical parameters
 # are slightly different) to the one described in section 5.1.1, and
@@ -26,7 +28,7 @@ match ; 2nd state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -
 # It runs for only two iterations (which is enough to test that the
 # implementation is working), but if it is continued it replicates
 # nicely the results given in Fig. 2.
-Input: 05-adw.02-filter_fixed.inp
+Input: 05-adw.03-filter_fixed.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.00063234
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57906033
 
@@ -35,6 +37,6 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.579060
 # however if the run is continued it reproduces nicely the result 
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
-Input: 05-adw.03-filter_indirect.inp
+Input: 05-adw.04-filter_indirect.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16377508
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.42440804

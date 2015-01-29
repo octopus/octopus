@@ -5,10 +5,6 @@ CalculationMode = opt_control
 
 ExperimentalFeatures = yes
 
-%RestartOptions
- restart_gs | "excited_states_restart"
-%
-
 Dimensions = 1
 fromScratch = yes
 
