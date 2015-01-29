@@ -46,6 +46,7 @@ module td_write_m
   use mpi_debug_m
   use mpi_lib_m
   use parser_m
+  use partial_charges_m
   use pert_m
   use profiling_m
   use restart_m
@@ -98,7 +99,8 @@ module td_write_m
     OUT_EIGS        = 15, &
     OUT_ION_CH      = 16, &
     OUT_TOTAL_CURRENT = 17, &
-    OUT_MAX         = 17
+    OUT_PARTIAL_CHARGES = 18, &
+    OUT_MAX         = 18
   
   type td_write_t
     private
@@ -111,6 +113,7 @@ module td_write_m
     type(states_t) :: gs_st    
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
+    type(partial_charges_t) :: partial_charges
   end type td_write_t
 
 contains
@@ -232,6 +235,8 @@ contains
     !% C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
     !%Option total_current 65536
     !% Output the total current.
+    !%Option partial_charges 131072
+    !% Bader and Voronoi partial charges. The output file is called 'td.general/partial_charges'.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -254,6 +259,7 @@ contains
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
     if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
     if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -488,13 +494,26 @@ contains
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/ion_ch")))
 
       if(writ%out(OUT_TOTAL_CURRENT)%write) then
-        call v_ks_calculate_current(ks, .true.)
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.false., time = iter*dt)
         call write_iter_init(writ%out(OUT_TOTAL_CURRENT)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_current")))
       end if
+
+      if(writ%out(OUT_PARTIAL_CHARGES)%write) then
+        call write_iter_init(writ%out(OUT_PARTIAL_CHARGES)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/partial_charges")))
+      end if
+      
+    end if
+    
+    if(writ%out(OUT_TOTAL_CURRENT)%write) then
+      call v_ks_calculate_current(ks, .true.)
+      call v_ks_calc(ks, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
 
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
+      call partial_charges_init(writ%partial_charges)
+    end if
+      
     POP_SUB(td_write_init)
   end subroutine td_write_init
 
@@ -523,6 +542,10 @@ contains
 
     if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
       call states_end(writ%gs_st)
+    end if
+
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
+      call partial_charges_end(writ%partial_charges)
     end if
 
     POP_SUB(td_write_end)
@@ -596,6 +619,9 @@ contains
 
     if(writ%out(OUT_TOTAL_CURRENT)%write) &
       call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
+
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) &
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, writ%partial_charges, gr%fine%mesh, st, geo, iter)
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -2115,6 +2141,59 @@ contains
 
     POP_SUB(td_write_total_current)
   end subroutine td_write_total_current
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_partial_charges(out_partial_charges, partial_charges, mesh, st, geo, iter)
+    type(c_ptr),             intent(inout) :: out_partial_charges
+    type(partial_charges_t), intent(in)    :: partial_charges
+    type(mesh_t),            intent(in)    :: mesh
+    type(states_t),          intent(in)    :: st
+    type(geometry_t),        intent(in)    :: geo
+    integer,                 intent(in)    :: iter
+
+    integer :: idir, ispin
+    character(len=50) :: aux
+    FLOAT, allocatable :: bader_charges(:), voronoi_charges(:)
+
+    PUSH_SUB(td_write_partial_charges)
+
+    if(iter == 0) then
+
+      call td_write_print_header_init(out_partial_charges)
+      
+      ! first line: column names
+      call write_iter_header_start(out_partial_charges)
+      
+      do idir = 1, geo%natoms
+        write(aux, '(a11,i3,a1)') 'bader(atom=', idir, ')'
+        call write_iter_header(out_partial_charges, aux)
+      end do
+
+      do idir = 1, geo%natoms
+        write(aux, '(a13,i3,a1)') 'voronoi(atom=', idir, ')'
+        call write_iter_header(out_partial_charges, aux)
+      end do
+      
+      call write_iter_nl(out_partial_charges)
+
+      call td_write_print_header_end(out_partial_charges)
+    end if
+    
+    call write_iter_start(out_partial_charges)
+
+    SAFE_ALLOCATE(bader_charges(1:geo%natoms))
+    SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
+
+    call partial_charges_calculate(partial_charges, mesh, st, geo, bader_charges, voronoi_charges)
+
+    call write_iter_double(out_partial_charges, bader_charges, geo%natoms)
+    call write_iter_double(out_partial_charges, voronoi_charges, geo%natoms)
+
+    call write_iter_nl(out_partial_charges)
+
+    POP_SUB(td_write_partial_charges)
+  end subroutine td_write_partial_charges
 
 
   ! ---------------------------------------------------------
