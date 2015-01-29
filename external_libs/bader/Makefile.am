@@ -29,7 +29,6 @@ libbader_a_SOURCES =           \
         io_mod.f90             \
         ions_mod.f90           \
 	kind_mod.f90           \
-	main.f90               \
 	matrix_mod.f90         \
 	multipole_mod.f90      \
 	options_mod.f90        \
@@ -39,7 +38,6 @@ libbader_a_SOURCES =           \
 chgcar_mod.o: matrix_mod.o charge_mod.o
 io_mod.o: chgcar_mod.o cube_mod.o
 bader_mod.o: kind_mod.o matrix_mod.o options_mod.o ions_mod.o charge_mod.o io_mod.o
-main.o: voronoi_mod.o multipole_mod.o
 voronoi_mod.o: io_mod.o
 cube_mod.o: kind_mod.o charge_mod.o
 results_mod.o: chgcar_mod.o bader_mod.o

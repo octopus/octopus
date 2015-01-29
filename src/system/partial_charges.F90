@@ -19,6 +19,41 @@
 
 #include "global.h"
 
+! This module is an interface to use the routines of the Bader program,
+! located in external_libs/bader/.
+!
+!-----------------------------------------------------------------------------------!
+! Bader charge density analysis program
+! Version 0.28a (07/12/12)
+!
+! Authors:
+!   Wenjie Tang, Andri Arnaldsson, Samuel T. Chill, and Graeme Henkelman
+!
+! Authors of the multipole code:
+!   Sebastien Lebegue <Sebastien.Lebegue@crm2.uhp-nancy.fr>
+!   Angyan Janos <Janos.Angyan@crm2.uhp-nancy.fr>
+!   Emmanuel Aubert <emmanuel.aubert@crm2.uhp-nancy.fr>
+!
+! Contributers:
+!   Johannes Voss (DTU), Erik McNellis (FHI), Matthew Dyer (Liverpool),
+!   Sören Wohlthat (Sydney)
+!
+! Based on algorithms described in the following publications:
+!
+!   A fast and robust algorithm for Bader decomposition of charge density
+!   G. Henkelman, A. Arnaldsson, and H. Jonsson
+!   Comput. Mater. Sci. 36, 254-360 (2006).
+!
+!   An improved grid-based algorithm for Bader charge allocation
+!   E. Sanville, S. Kenny, R. Smith, and G. Henkelman
+!   J. Comput. Chem. 28, 899-908 (2007).
+!
+!   A grid-based Bader analysis algorithm without lattice bias
+!   W. Tang, E. Sanville, and G. Henkelman
+!   J. Phys.: Condens. Matter 21, 084204 (2009)
+!
+!-----------------------------------------------------------------------------------!
+
 module partial_charges_m
   use batch_m
   use batch_ops_m
@@ -60,7 +95,7 @@ module partial_charges_m
   use unit_system_m
   use varinfo_m
 
-  ! this modules comes from the bader program
+  ! these modules comes from the bader program
 
   use charge_mod
   use ions_mod
