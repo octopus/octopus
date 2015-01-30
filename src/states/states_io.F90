@@ -174,7 +174,8 @@ contains
 
     integer :: idir, ist, ik, ns, is
     integer, allocatable :: iunit(:)
-    FLOAT   :: factor(MAX_DIM), kpoint(1:MAX_DIM)
+    FLOAT   :: kpoint(1:MAX_DIM)
+    FLOAT   :: red_kpoint(1:MAX_DIM)
     logical :: grace_mode, gnuplot_mode
     character(len=80) :: filename    
 
@@ -208,12 +209,6 @@ contains
 
     SAFE_ALLOCATE(iunit(0:ns-1))
 
-    ! define the scaling factor to output k_i/G_i, instead of k_i
-    do idir = 1, sb%dim
-      factor(idir) = M_ONE
-      if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
-    end do
-
     if (gnuplot_mode) then
       do is = 0, ns-1
         if (ns > 1) then
@@ -239,13 +234,16 @@ contains
       do ist = 1, nst
         do ik = 1, st%d%nik, ns
           do is = 0, ns - 1
-            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
+            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                                 absolute_coordinates=.true.)
+            red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                                     absolute_coordinates=.false.)
             write(iunit(is),'(1x)',advance='no')
             do idir = 1, sb%dim
               write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
             enddo
             do idir = 1, sb%dim
-              write(iunit(is),'(f14.8)',advance='no') kpoint(idir) / factor(idir)
+              write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
             enddo
             write(iunit(is),'(3x,f14.8)') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           end do
@@ -284,13 +282,16 @@ contains
       ! k_x, k_y, k_z, e_1, e_2, ..., e_n
       do ik = 1, st%d%nik, ns
         do is = 0, ns-1
-          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is))
+          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                               absolute_coordinates=.true.)
+          red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                                   absolute_coordinates=.false.)
           write(iunit(is),'(1x)',advance='no')
           do idir = 1, sb%dim
             write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
           enddo
           do idir = 1, sb%dim
-            write(iunit(is),'(f14.8)',advance='no') kpoint(idir) / factor(idir)
+            write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
           enddo
           write(iunit(is),'(3x)',advance='no')
           do ist = 1, nst
@@ -671,7 +672,6 @@ contains
 
     integer :: iunit, idir
     FLOAT :: maxdos
-    FLOAT :: factor(MAX_DIM)
     character(len=100) :: str_tmp
 
     PUSH_SUB(states_write_fermi_energy)
@@ -679,12 +679,6 @@ contains
     call states_fermi(st, mesh)
 
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
-
-    ! define the scaling factor to output k_i/G_i, instead of k_i
-    do idir = 1, sb%dim
-      factor(idir) = M_ONE
-      if (sb%klattice(idir, idir) /= M_ZERO) factor(idir) = sb%klattice(idir, idir)
-    end do
 
     ! write Fermi energy in a format that can be used together 
     ! with bands.dat
@@ -702,11 +696,11 @@ contains
       message(4) = trim(message(4)) // trim(str_tmp)
     enddo
     do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints) / factor(idir))
+      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
       message(2) = trim(message(2)) // trim(str_tmp)
       write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
       message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints) / factor(idir))
+      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
       message(4) = trim(message(4)) // trim(str_tmp)
     enddo
     write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)

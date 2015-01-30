@@ -596,6 +596,7 @@ contains
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(MAX_DIM)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
+    logical :: non_orthogonal_axes = .false.
 
     PUSH_SUB(derivatives_make_discretization)
 
@@ -604,6 +605,18 @@ contains
 
     message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
     call messages_info(1)
+
+    non_orthogonal_axes = abs(mesh%sb%rlattice_primitive(1,2))+&
+                          abs(mesh%sb%rlattice_primitive(1,3))+&
+                          abs(mesh%sb%rlattice_primitive(2,3))+&
+                          abs(mesh%sb%rlattice_primitive(2,1))+&
+                          abs(mesh%sb%rlattice_primitive(3,1))+&
+                          abs(mesh%sb%rlattice_primitive(3,2)) > 1.d-10
+    if (non_orthogonal_axes) then
+      message(1) = 'Info: non-orthogonal axes detected for derivatives discretization.'
+      message(2) = '  Need off-diagonal points in stencil - STAR will not work'
+      call messages_info(2)
+    end if
 
     ! use to generate power lookup table
     pow_max = maxval(pol)
@@ -621,8 +634,11 @@ contains
           forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
         else
           forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
+          ! TODO : this internal if clause is inefficient - the condition is determined globally
+          if (non_orthogonal_axes) x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
 
+! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
         forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
 
         ! calculate powers

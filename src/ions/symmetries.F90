@@ -192,7 +192,7 @@ contains
       ! get inverse matrix to extract reduced coordinates for spglib
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
       klattice = lattice
-      determinant = lalg_determinant(3, klattice, .true.)
+      determinant = lalg_determinant(3, klattice, invert=.true.)
       
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
