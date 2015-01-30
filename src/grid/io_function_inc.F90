@@ -540,17 +540,11 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 
   call io_mkdir(dir, is_tmp=is_tmp)
 
-! Define the format; check if code is single precision or double precision
+! Define the format
 !  FIXME: this may need to be expanded for MAX_DIM > 3
-#if defined(SINGLE_PRECISION)
-  mformat    = '(4es15.6E3)'
-  mformat2   = '(i12,5es15.6E3)'
-  mfmtheader = '(a,a7,5a15)'
-#else
   mformat    = '(4es23.14E3)'
   mformat2   = '(i12,5es34.24E3)'
   mfmtheader = '(a,a10,5a23)'
-#endif
 
   if(how <= 0) then
     message(1) = "Internal error: cannot call io_function with outp%how <= 0."
@@ -1378,11 +1372,7 @@ end function X(interpolate_isolevel)
                                            - int(cube%rs_n_global(3)/2)* spacing(3)
     write(iunit, '(1a,3f12.6)') 'SPACING ', spacing(1), spacing(2), spacing(3)
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
-#if defined(SINGLE_PRECISION)
-    write(iunit, '(1a)') 'SCALARS scalar_field float 1'
-#else
     write(iunit, '(1a)') 'SCALARS scalar_field double 1'
-#endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
@@ -1482,30 +1472,15 @@ end function X(interpolate_isolevel)
 
     dim_min = 3 - sb_dim + 1
 
-#if defined(SINGLE_PRECISION)
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "rdata", NF90_FLOAT, dim_data_id(dim_min:3), data_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-#else
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
-#endif
 #if defined(R_TCOMPLEX)
-#if defined(SINGLE_PRECISION)
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "idata", NF90_FLOAT, dim_data_id(dim_min:3), data_im_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-
-#else
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id(dim_min:3), data_im_id)
       call ncdf_error('nf90_def_var', status, filename, ierr)
     end if
-#endif
 #endif
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
@@ -1535,6 +1510,7 @@ end function X(interpolate_isolevel)
     ! end definitions
     status = nf90_enddef (ncid)
 
+    ! FIXME: needs explicit casts to single-precision. Why single-precision anyway?
     ! data
     pos(:,:) = M_ZERO
     pos(1, 1:sb_dim) = &

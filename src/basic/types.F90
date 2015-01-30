@@ -48,11 +48,7 @@ module types_m
     module procedure types_not_equal
   end interface operator(/=)
 
-#ifdef SINGLE_PRECISION
-  integer :: sizes(4) = (/4, 8, 4, 1/)
-#else
   integer :: sizes(4) = (/8, 16, 4, 1/)
-#endif
   
 contains
   

@@ -88,11 +88,7 @@ void write_iter_header_work(write_iter *w, const char *s)
 
 /* Functions called from FORTRAN */
 void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
-#ifdef SINGLE_PRECISION
-		 (void **v, const fint *i, const float  *d, STR_F_TYPE fname STR_ARG1)
-#else
 		 (void **v, const fint *i, const double *d, STR_F_TYPE fname STR_ARG1)
-#endif
 {
 	write_iter *w;
 	w = (write_iter *)malloc(sizeof(write_iter));

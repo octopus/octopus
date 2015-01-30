@@ -343,8 +343,6 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   R_TYPE,               intent(out) :: f_out(:)   !< (npoints_out)
 
   real(8) :: pp(MAX_DIM)
-  R_DOUBLE, pointer :: rf_in(:)
-  real(8),  pointer :: rx_in(:, :)
   integer :: ip
   type(qshep_t) :: interp
 #ifndef R_TCOMPLEX
@@ -353,30 +351,20 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
 
   PUSH_SUB(X(mf_interpolate_points))
 
-#ifdef SINGLE_PRECISION
-  SAFE_ALLOCATE(rx_in(1:npoints_in, 1:ndim))
-  rx_in = x_in
-  SAFE_ALLOCATE(rf_in(1:npoints_in))
-  rf_in = f_in
-#else
-  rx_in => x_in
-  rf_in => f_in
-#endif
-
   select case(ndim)
   case(2)
-    call qshep_init(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2))
+    call qshep_init(interp, npoints_in, f_in, x_in(:, 1), x_in(:, 2))
     do ip = 1, npoints_out
       pp(1:2)   = x_out(ip, 1:2)
-      f_out(ip) = qshep_interpolate(interp, rf_in, pp(1:2))
+      f_out(ip) = qshep_interpolate(interp, f_in, pp(1:2))
     end do
     call qshep_end(interp)
 
   case(3)
-    call qshep_init(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2), rx_in(:, 3))
+    call qshep_init(interp, npoints_in, f_in, x_in(:, 1), x_in(:, 2), x_in(:, 3))
     do ip = 1, npoints_out
       pp(1:3)   = x_out(ip, 1:3)
-      f_out(ip) = qshep_interpolate(interp, rf_in, pp(1:3))
+      f_out(ip) = qshep_interpolate(interp, f_in, pp(1:3))
     end do
     call qshep_end(interp)
 
@@ -386,18 +374,13 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
     call messages_fatal(1)
 #else
     call spline_init(interp1d)
-    call spline_fit(npoints_in, R_REAL(rx_in(:, 1)), rf_in, interp1d)
+    call spline_fit(npoints_in, R_REAL(x_in(:, 1)), f_in, interp1d)
     do ip = 1, npoints_out
       f_out(ip) = spline_eval(interp1d, x_out(ip, 1))
     end do
     call spline_end(interp1d)
 #endif
   end select
-
-#ifdef SINGLE_PRECISION
-  SAFE_DEALLOCATE_P(rf_in)
-  SAFE_DEALLOCATE_P(rx_in)
-#endif
 
   POP_SUB(X(mf_interpolate_points))
 end subroutine X(mf_interpolate_points)
