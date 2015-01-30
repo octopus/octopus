@@ -86,7 +86,8 @@ external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
 	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a \
-	$(top_builddir)/external_libs/bader/libbader.a
+	$(top_builddir)/external_libs/bader/libbader.a \
+	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@

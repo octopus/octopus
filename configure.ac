@@ -348,6 +348,8 @@ ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
+ACX_YAML
+
 AC_SUBST(FCEXTRALIBS)
 
 ACX_OCTOPUS_COMPILATION_INFO
@@ -365,6 +367,9 @@ AC_CONFIG_FILES([Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
   external_libs/bader/Makefile
+  external_libs/yaml-0.1.4/Makefile
+  external_libs/yaml-0.1.4/include/Makefile
+  external_libs/yaml-0.1.4/src/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
