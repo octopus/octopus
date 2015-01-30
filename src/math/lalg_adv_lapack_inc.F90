@@ -18,14 +18,8 @@
 !!
 !! $Id$
 
-#if defined(SINGLE_PRECISION)
-#  define DLAPACK(x) s ## x
-#  define ZLAPACK(x) c ## x
-#else
 #  define DLAPACK(x) d ## x
 #  define ZLAPACK(x) z ## x
-#endif
-
 
 ! ---------------------------------------------------------
 !> Auxiliary functions.

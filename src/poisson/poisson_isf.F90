@@ -219,7 +219,6 @@ contains
     logical,             intent(in)    :: all_nodes
 
     integer :: i_cnf
-    real(8), pointer :: rhop(:,:,:)
     type(cube_function_t) :: rho_cf
     
     PUSH_SUB(poisson_isf_solve)
@@ -250,21 +249,9 @@ contains
 
     if(i_cnf == SERIAL) then
 
-#ifdef SINGLE_PRECISION
-      SAFE_ALLOCATE(rhop(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
-      rhop = rho_cf%dRS
-#else
-      rhop => rho_cf%dRS
-#endif
-
       call psolver_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3),    &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
-        real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
-
-#ifdef SINGLE_PRECISION
-      rho_cf%dRS = rhop
-      SAFE_DEALLOCATE_P(rhop)
-#endif
+        real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rho_cf%dRS)
 
 #if defined(HAVE_MPI)
     else

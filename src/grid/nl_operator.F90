@@ -163,10 +163,10 @@ contains
     !%Variable OperateDouble
     !%Type integer
     !%Section Execution::Optimization
+    !%Default optimized
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for real functions.
-    !% By default the optimized version is used (except in single-precision build).
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
@@ -176,21 +176,17 @@ contains
     !%Variable OperateComplex
     !%Type integer
     !%Section Execution::Optimization
+    !%Default optimized
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for complex functions. 
-    !% By default the optimized version is used (except in single-precision build).
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
     !% This version is optimized using vector primitives (if available).
     !%End
 
-#ifndef SINGLE_PRECISION
-    default = OP_VEC
-#else
     default = OP_FORTRAN
-#endif
 
     call parse_integer(datasets_check('OperateDouble'),  default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')

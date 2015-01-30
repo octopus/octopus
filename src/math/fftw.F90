@@ -20,11 +20,7 @@
 
 #include "global.h"
 
-#if defined(SINGLE_PRECISION)
-#  define DFFTW(x) sfftw_ ## x
-#else
 #  define DFFTW(x) dfftw_ ## x
-#endif
 
 module fftw_m
   use c_pointer_m

@@ -19,11 +19,7 @@
 
 #include "global.h"
 
-#if defined(SINGLE_PRECISION)
-#  define PDFFT(x) dpfftf_ ## x
-#else
 #  define PDFFT(x) dpfft_ ## x
-#endif
 
 !> The includes for the PFFT
 module pfft_params_m
