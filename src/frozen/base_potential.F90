@@ -192,7 +192,7 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     ASSERT(associated(that%sim))
-    call base_potential_init_start(this, that%sys, that%config)
+    call base_potential_init_begin(this, that%sys, that%config)
     call base_potential_start(this, that%sim)
     POP_SUB(base_potential_init_copy)
     return
