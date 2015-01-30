@@ -78,7 +78,7 @@ contains
     nullify(sim)
     call frozen_external_get(this, potn)
     ASSERT(associated(potn))
-    call frozen_external_get(this, size=np)
+!    call frozen_external_get(this, size=np)
     SAFE_ALLOCATE(x(space%dim))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)

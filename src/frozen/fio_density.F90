@@ -62,7 +62,7 @@ contains
     nullify(dnst)
     call fio_density_get(this, dnst)
     ASSERT(associated(dnst))
-    call fio_density_get(this, size=np)
+!    call fio_density_get(this, size=np)
     call path_join(dir, file, fpth)
     call io_binary_read(fpth, np, dnst(:,ispin), ierr, offset=0)
     if(ierr/=0)then
@@ -94,7 +94,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call json_get(cnfg, "files", list, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_density_get(this, nspin=nspin)
+!    call fio_density_get(this, nspin=nspin)
     ASSERT(json_len(list)==nspin)
     isp=0
     call json_init(iter, list)

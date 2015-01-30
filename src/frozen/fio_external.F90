@@ -57,7 +57,7 @@ contains
     nullify(potn)
     call fio_external_get(this, potn)
     ASSERT(associated(potn))
-    call fio_external_get(this, size=np)
+!    call fio_external_get(this, size=np)
     call path_join(dir, file, fpth)
     call io_binary_read(fpth, np, potn, ierr, offset=0)
     if(ierr/=0)then
