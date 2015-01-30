@@ -12,20 +12,17 @@ module base_config_m
   use json_m,        only: json_object_t, json_array_t
   use json_m,        only: json_isdef, json_init, json_set, json_get
 
-  use base_hamiltonian_m, only: HMLT_TYPE
+  use base_hamiltonian_m, only: &
+    HMLT_TYPE_HMLT
+
+  use base_handle_m, only: &
+    HNDL_TYPE_NONE
 
   implicit none
 
   private
   public ::            &
     base_config_parse
-
-  integer, parameter, public :: NONE_TYPE = 0
-  integer, parameter, public :: FNIO_TYPE = 1
-  integer, parameter, public :: FRZN_TYPE = 2
-  integer, parameter, public :: MAIN_TYPE = 3
-
-  integer, parameter, public :: NAME_LEN = 63
 
   integer, parameter :: default_ndim  = 3
   integer, parameter :: default_nspin = 1
@@ -217,7 +214,7 @@ contains
     type(json_object_t), intent(out) :: this
     !
     call json_init(this)
-    call json_set(this, "type", HMLT_TYPE)
+    call json_set(this, "type", HMLT_TYPE_HMLT)
     return
   end subroutine base_config_parse_hamiltonian
 
@@ -260,7 +257,7 @@ contains
     PUSH_SUB(base_config_parse)
     nullify(cnfg, list)
     call json_init(this)
-    call json_set(this, "type", NONE_TYPE)
+    call json_set(this, "type", HNDL_TYPE_NONE)
     call json_set(this, "name", "base")
     call json_set(this, "interpolation", NEAREST)
     SAFE_ALLOCATE(cnfg)

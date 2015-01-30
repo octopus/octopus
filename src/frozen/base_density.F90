@@ -137,8 +137,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density_init_begin(this, config)
-    type(base_density_t),       target, intent(out) :: this
-    type(json_object_t), target, intent(in)  :: config
+    type(base_density_t), target, intent(out) :: this
+    type(json_object_t),  target, intent(in)  :: config
     !
     integer :: nspin, ierr
     !

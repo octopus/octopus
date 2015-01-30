@@ -54,7 +54,7 @@ module base_potential_m
     BASE_POTENTIAL_INTRPL_OD => STORAGE_INTRPL_OD, &
     BASE_POTENTIAL_INTRPL_NI => STORAGE_INTRPL_NI
 
-  use simulation_m, only:  &
+  use simulation_m, only: &
     simulation_t
 
   use base_system_m, only:     &
@@ -63,18 +63,15 @@ module base_potential_m
   implicit none
 
   private
-  public ::                    &
-    base_potential_init,       &
-    base_potential_start,      &
-    base_potential_update,     &
-    base_potential_stop,       &
-    base_potential_eval,       &
-    base_potential_get_size,   &
-    base_potential_get_nspin,  &
-    base_potential_get,        &
-    base_potential_set_energy, &
-    base_potential_get_energy, &
-    base_potential_copy,       &
+  public ::                &
+    base_potential_init,   &
+    base_potential_start,  &
+    base_potential_update, &
+    base_potential_stop,   &
+    base_potential_eval,   &
+    base_potential_set,    &
+    base_potential_get,    &
+    base_potential_copy,   &
     base_potential_end
 
   public ::                   &
@@ -115,6 +112,10 @@ module base_potential_m
     module procedure base_potential_iterator_init
     module procedure base_potential_intrpl_init
   end interface base_potential_init
+
+  interface base_potential_set
+    module procedure base_potential_set_energy
+  end interface base_potential_set
 
   interface base_potential_get
     module procedure base_potential_get_info
@@ -249,6 +250,15 @@ contains
   end subroutine base_potential_stop
 
   ! ---------------------------------------------------------
+  elemental subroutine base_potential_set_energy(this, that)
+    type(base_potential_t), intent(inout) :: this
+    real(kind=wp),          intent(in)    :: that
+    !
+    this%energy=that
+    return
+  end subroutine base_potential_set_energy
+
+  ! ---------------------------------------------------------
   elemental function base_potential_get_size(this) result(np)
     type(base_potential_t), intent(in) :: this
     !
@@ -365,15 +375,6 @@ contains
     POP_SUB(base_potential_get_potential_md)
     return
   end subroutine base_potential_get_potential_md
-
-  ! ---------------------------------------------------------
-  elemental subroutine base_potential_set_energy(this, that)
-    type(base_potential_t), intent(inout) :: this
-    real(kind=wp),          intent(in)    :: that
-    !
-    this%energy=that
-    return
-  end subroutine base_potential_set_energy
 
   ! ---------------------------------------------------------
   subroutine base_potential_copy_potential(this, that)

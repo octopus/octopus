@@ -51,6 +51,8 @@ module fio_handle_m
     fio_handle_copy,   &
     fio_handle_end
 
+  integer, public, parameter :: HNDL_TYPE_FNIO = 1
+
 contains
 
   ! ---------------------------------------------------------
@@ -60,15 +62,18 @@ contains
     !
     type(json_object_t), pointer :: cnfg
     type(fio_model_t),   pointer :: modl
-    integer                      :: ierr
+    integer                      :: type, ierr
     !
     PUSH_SUB(fio_handle_init)
     nullify(cnfg, modl)
     call handle_init(this, config)
+    call fio_handle_get(this, type)
+    ASSERT(type==HNDL_TYPE_FNIO)
     call fio_handle_get(this, modl)
     ASSERT(associated(modl))
     call json_get(config, "model", cnfg, ierr)
-    if(ierr==JSON_OK)call fio_model_init(modl, cnfg)
+    ASSERT(ierr==JSON_OK)
+    call fio_model_init(modl, cnfg)
     nullify(cnfg, modl)
     call handle_init(this)
     POP_SUB(fio_handle_init)
@@ -81,17 +86,14 @@ contains
     type(mpi_grp_t),    intent(in)    :: mpi_grp
     !
     type(fio_model_t), pointer :: modl
-    type(fio_grid_t),  pointer :: grid
     !
     PUSH_SUB(fio_handle_start)
-    nullify(modl, grid)
+    nullify(modl)
     call fio_handle_get(this, modl)
     ASSERT(associated(modl))
-    call fio_model_start(modl, grid, mpi_grp)
-    ASSERT(associated(grid))
+    call fio_model_start(modl, mpi_grp)
     nullify(modl)
-    call handle_start(this, grid)
-    nullify(grid)
+    call handle_start(this)
     POP_SUB(fio_handle_start)
     return
   end subroutine fio_handle_start
@@ -107,8 +109,8 @@ contains
     call fio_handle_get(this, modl)
     ASSERT(associated(modl))
     call fio_model_update(modl)
-    call handle_update(this)
     nullify(modl)
+    call handle_update(this)
     POP_SUB(fio_handle_update)
     return
   end subroutine fio_handle_update
@@ -121,10 +123,10 @@ contains
     !
     PUSH_SUB(fio_handle_stop)
     nullify(modl)
+    call handle_stop(this)
     call fio_handle_get(this, modl)
     ASSERT(associated(modl))
     call fio_model_stop(modl)
-    call handle_stop(this)
     nullify(modl)
     POP_SUB(fio_handle_stop)
     return
@@ -138,13 +140,14 @@ contains
     type(fio_model_t), pointer :: omdl, imdl
     !
     PUSH_SUB(fio_handle_copy)
-    call handle_copy(this, that)
     nullify(omdl, imdl)
+    call handle_copy(this, that)
     call fio_handle_get(that, imdl)
     ASSERT(associated(imdl))
     call fio_handle_get(this, omdl)
     ASSERT(associated(omdl))
     call fio_model_copy(omdl, imdl)
+    nullify(omdl, imdl)
     POP_SUB(fio_handle_copy)
     return
   end subroutine fio_handle_copy

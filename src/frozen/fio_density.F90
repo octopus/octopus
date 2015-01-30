@@ -15,34 +15,34 @@ module fio_density_m
   use fio_simulation_m, only: &
     fio_simulation_t
 
-  use base_density_m, only:                                          &
-    fio_density_t                 => base_density_t,                 &
-    fio_density_init              => base_density_init,              &
-    fio_density_start             => base_density_start,             &
-    fio_density_stop              => base_density_stop,              &
-    fio_density_eval              => base_density_eval,              &
-    fio_density_get               => base_density_get,               &
-    fio_density_copy              => base_density_copy,              &
-    fio_density_end               => base_density_end
+  use base_density_m, only:                  &
+    fio_density_t     => base_density_t,     &
+    fio_density_init  => base_density_init,  &
+    fio_density_start => base_density_start, &
+    fio_density_stop  => base_density_stop,  &
+    fio_density_eval  => base_density_eval,  &
+    fio_density_get   => base_density_get,   &
+    fio_density_copy  => base_density_copy,  &
+    fio_density_end   => base_density_end
 
-  use base_density_m, only:                                      &
+  use base_density_m, only:                        &
     fio_density_intrpl_t => base_density_intrpl_t
 
   implicit none
 
   private
-  public ::                        &
-    fio_density_t,                 &
-    fio_density_init,              &
-    fio_density_start,             &
-    fio_density_update,            &
-    fio_density_stop,              &
-    fio_density_eval,              &
-    fio_density_get,               &
-    fio_density_copy,              &
+  public ::             &
+    fio_density_t,      &
+    fio_density_init,   &
+    fio_density_start,  &
+    fio_density_update, &
+    fio_density_stop,   &
+    fio_density_eval,   &
+    fio_density_get,    &
+    fio_density_copy,   &
     fio_density_end
 
-  public ::                      &
+  public ::               &
     fio_density_intrpl_t
 
 contains

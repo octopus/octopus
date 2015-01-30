@@ -1,15 +1,5 @@
 #include "global.h"
 
-#undef SUBTEMPLATE_NAME
-#undef SUBTEMPLATE_TYPE
-#undef TEMPLATE_NAME
-#undef TEMPLATE_TYPE
-#define TEMPLATE_NAME frozen
-#define SUBTEMPLATE_NAME fio
-#include "tbase_density.F90"
-#undef SUBTEMPLATE_NAME
-#undef TEMPLATE_NAME
-
 module frozen_density_m
 
   use global_m
@@ -17,128 +7,132 @@ module frozen_density_m
   use profiling_m
 
   use json_m,  only: JSON_OK, json_object_t, json_get
+  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_end
   use kinds_m, only: wp
   use mesh_m,  only: mesh_t
+  use space_m, only: space_t
 
-  use frozen_simulation_m, only: &
-    simulation_t
+  use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
 
-  use frozen_simulation_m, only:             &
-    simulation_get => frozen_simulation_get
+  use fio_density_m, only: &
+    fio_density_t,         &
+    fio_density_init,      &
+    fio_density_eval,      &
+    fio_density_get,       &
+    fio_density_end
 
-  use frozen_base_density_m, only:                     &
-    base_density_update => frozen_base_density_update
+  use fio_density_m, only: &
+    fio_density_intrpl_t
 
-  use frozen_base_density_m, only:                                             &
-    frozen_density_t                 => frozen_base_density_t,                 &
-    frozen_density_init              => frozen_base_density_init,              &
-    frozen_density_start             => frozen_base_density_start,             &
-    frozen_density_extend            => frozen_base_density_extend,            &
-    frozen_density_get               => frozen_base_density_get,               &
-    frozen_density_get_size          => frozen_base_density_get_size,          &
-    frozen_density_get_nspin         => frozen_base_density_get_nspin,         &
-    frozen_density_get_density       => frozen_base_density_get_density,       &
-    frozen_density_get_total_density => frozen_base_density_get_total_density, &
-    frozen_density_copy              => frozen_base_density_copy,              &
-    frozen_density_end               => frozen_base_density_end
+  use simulation_m, only:                    &
+    frozen_simulation_t   => simulation_t,   &
+    frozen_simulation_get => simulation_get
 
-  use frozen_base_density_m, only:                                               &
-    frozen_density_interpolation_t    => frozen_base_density_interpolation_t,    &
-    frozen_density_interpolation_init => frozen_base_density_interpolation_init, &
-    frozen_density_interpolation_eval => frozen_base_density_interpolation_eval, &
-    frozen_density_interpolation_copy => frozen_base_density_interpolation_copy, &
-    frozen_density_interpolation_end  => frozen_base_density_interpolation_end
-
-  use fio_m, only:      &
-    sub_t   => fio_t,   &
-    sub_get => fio_get
-
-  use fio_m, only:                                &
-    interpolation_t    => fio_interpolation_t,    &
-    interpolation_init => fio_interpolation_init, &
-    interpolation_eval => fio_interpolation_eval, &
-    interpolation_end  => fio_interpolation_end
-
-  use fio_density_m, only:          &
-    sub_density_t => fio_density_t
+  use base_density_m, only:                     &
+    frozen_density_t     => base_density_t,     &
+    frozen_density_init  => base_density_init,  &
+    frozen_density_start => base_density_start, &
+    frozen_density_stop  => base_density_stop,  &
+    frozen_density_get   => base_density_get,   &
+    frozen_density_copy  => base_density_copy,  &
+    frozen_density_end   => base_density_end
 
   implicit none
 
   private
-  public ::                           &
-    frozen_density_t,                 &
-    frozen_density_init,              &
-    frozen_density_start,             &
-    frozen_density_extend,            &
-    frozen_density_update,            &
-    frozen_density_get,               &
-    frozen_density_get_size,          &
-    frozen_density_get_nspin,         &
-    frozen_density_get_density,       &
-    frozen_density_get_total_density, &
-    frozen_density_copy,              &
+  public ::                &
+    frozen_density_t,      &
+    frozen_density_init,   &
+    frozen_density_start,  &
+    frozen_density_update, &
+    frozen_density_stop,   &
+    frozen_density_get,    &
+    frozen_density_copy,   &
     frozen_density_end
-
-  public ::                            &
-    frozen_density_interpolation_t,    &
-    frozen_density_interpolation_init, &
-    frozen_density_interpolation_eval, &
-    frozen_density_interpolation_copy, &
-    frozen_density_interpolation_end
-
-  interface frozen_density_update
-    module procedure base_density_update
-    module procedure frozen_density_update_build
-  end interface frozen_density_update
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_density_update_build(this, that)
-    type(frozen_density_t), intent(inout) :: this
-    type(sub_t),            intent(in)    :: that
+  subroutine  frozen_density_update_intrpl(this, intrpl, config)
+    type(frozen_density_t),     intent(inout) :: this
+    type(fio_density_intrpl_t), intent(in)    :: intrpl
+    type(json_object_t),        intent(in)    :: config
     !
-    real(kind=wp), dimension(:,:),   pointer :: density
-    real(kind=wp), dimension(:), allocatable :: rho
-    type(simulation_t),              pointer :: sim
+    real(kind=wp), dimension(:,:),   pointer :: dnst
+    real(kind=wp), dimension(:), allocatable :: x, rho
+    type(frozen_simulation_t),       pointer :: sim
+    type(space_t),                   pointer :: space
     type(mesh_t),                    pointer :: mesh
-    type(sub_density_t),             pointer :: srho
-    type(interpolation_t)                    :: intrp
-    integer                                  :: i
+    type(basis_t)                            :: basis
+    integer                                  :: indx, np, nspin
     !
-    nullify(density, sim, mesh, srho)
-    call frozen_density_get_density(this, density)
-    ASSERT(associated(density))
+    PUSH_SUB(frozen_density_update_intrpl)
+    nullify(dnst, sim, space, mesh)
     call frozen_density_get(this, sim)
     ASSERT(associated(sim))
-    call simulation_get(sim, mesh)
+    call frozen_simulation_get(sim, space)
+    ASSERT(associated(space))
+    call basis_init(basis, space, config)
+    call frozen_simulation_get(sim, mesh)
     ASSERT(associated(mesh))
-    SAFE_ALLOCATE(rho(frozen_density_get_nspin(this)))
-    call sub_get(that, srho)
-    ASSERT(associated(srho))
-    call interpolation_init(intrp, that, srho)
-    do i = 1, frozen_density_get_size(this)
-      call interpolation_eval(intrp, mesh%x(i,:), rho)
-      density(i,:)=density(i,:)+rho
+    nullify(sim)
+    call frozen_density_get(this, dnst)
+    ASSERT(associated(dnst))
+    call frozen_density_get(this, size=np, nspin=nspin)
+    ASSERT(nspin>0)
+    SAFE_ALLOCATE(x(space%dim))
+    SAFE_ALLOCATE(rho(nspin))
+    do indx = 1, np
+      call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
+      call fio_density_eval(intrpl, x, rho)
+      dnst(indx,:)=dnst(indx,:)+rho
     end do
-    call interpolation_end(intrp)
-    nullify(density, sim, mesh, srho)
     SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(x)
+    nullify(dnst, space, mesh)
+    call basis_end(basis)
+    POP_SUB(frozen_density_update_intrpl)
     return
-  end subroutine frozen_density_update_build
+  end subroutine frozen_density_update_intrpl
+
+  ! ---------------------------------------------------------
+  subroutine frozen_density_update(this, that, config)
+    type(frozen_density_t), intent(inout) :: this
+    type(fio_density_t),    intent(in)    :: that
+    type(json_object_t),    intent(in)    :: config
+    !
+    type(json_object_t), pointer :: cnfg
+    type(json_array_t),  pointer :: list
+    type(json_array_iterator_t)  :: iter
+    type(fio_density_intrpl_t)   :: intrp
+    integer                      :: type, ierr
+    !
+    PUSH_SUB(frozen_density_update)
+    nullify(cnfg, list)
+    call json_get(config, "type", type, ierr)
+    if(ierr==JSON_OK)then
+      call fio_density_init(intrp, that, type)
+    else
+      call fio_density_init(intrp, that)
+    end if
+    call json_get(config, "positions", list, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_init(iter, list)
+    do
+       nullify(cnfg)
+       call json_next(iter, cnfg, ierr)
+       if(ierr/=JSON_OK)exit
+       call frozen_density_update_intrpl(this, intrp, cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg, list)
+    call fio_density_end(intrp)
+    POP_SUB(frozen_density_update)
+    return
+  end subroutine frozen_density_update
 
 end module frozen_density_m
-
-#define TEMPLATE_NAME frozen
-#define SUBTEMPLATE_NAME fio
-#include "tgeo.F90"
-#include "tstates.F90"
-#include "tsystem.F90"
-#include "tterm.F90"
-#include "tpotential.F90"
-#undef SUBTEMPLATE_NAME
-#undef TEMPLATE_NAME
-
+ 
 !! Local Variables:
 !! mode: f90
 !! End:

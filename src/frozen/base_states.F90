@@ -49,16 +49,14 @@ module base_states_m
   implicit none
 
   private
-  public ::                 &
-    base_states_init,       &
-    base_states_start,      &
-    base_states_update,     &
-    base_states_stop,       &
-    base_states_set,        &
-    base_states_get,        &
-    base_states_get_charge, &
-    base_states_set_charge, &
-    base_states_copy,       &
+  public ::             &
+    base_states_init,   &
+    base_states_start,  &
+    base_states_update, &
+    base_states_stop,   &
+    base_states_set,    &
+    base_states_get,    &
+    base_states_copy,   &
     base_states_end
 
 #define HASH_INCLUDE_HEADER
@@ -86,10 +84,12 @@ module base_states_m
   end interface base_states_init
 
   interface base_states_set
+    module procedure base_states_set_charge
     module procedure base_states_set_simulation
   end interface base_states_set
 
   interface base_states_get
+    module procedure base_states_get_info
     module procedure base_states_get_config
     module procedure base_states_get_simulation
     module procedure base_states_get_density
@@ -215,6 +215,16 @@ contains
     that=this%charge
     return
   end function base_states_get_charge
+    
+  ! ---------------------------------------------------------
+  elemental subroutine base_states_get_info(this, charge)
+    type(base_states_t),     intent(in)  :: this
+    real(kind=wp), optional, intent(out) :: charge
+    !
+    if(present(charge))&
+      charge=base_states_get_charge(this)
+    return
+  end subroutine base_states_get_info
     
   ! ---------------------------------------------------------
   subroutine base_states_get_config(this, that)

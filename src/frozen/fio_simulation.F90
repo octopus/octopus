@@ -6,12 +6,14 @@ module fio_simulation_m
   use messages_m
   use profiling_m
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use mpi_m,   only: mpi_grp_t
-  use space_m, only: space_t
+  use geometry_m, only: geometry_t
+  use json_m,     only: JSON_OK, json_object_t, json_get
+  use mpi_m,      only: mpi_grp_t
+  use space_m,    only: space_t
 
-  use base_geom_m, only:       &
-    fio_geom_t => base_geom_t
+  use base_geom_m, only:           &
+    fio_geom_t   => base_geom_t,   &
+    fio_geom_get => base_geom_get
 
   use fio_grid_m, only: &
     fio_grid_t,         &
@@ -22,11 +24,14 @@ module fio_simulation_m
     fio_grid_end
 
   use simulation_m, only: &
-    simulation_set
+    simulation_set,       &
+    simulation_start,     &
+    simulation_end
 
   use simulation_m, only:                   &
     fio_simulation_t    => simulation_t,    &
     fio_simulation_init => simulation_init, &
+    fio_simulation_copy => simulation_copy, &
     fio_simulation_get  => simulation_get
 
   implicit none
@@ -44,14 +49,13 @@ module fio_simulation_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_simulation_start(this, grid, geom, space, mpi_grp)
+  subroutine fio_simulation_start(this, geom, mpi_grp)
     type(fio_simulation_t), intent(inout) :: this
-    type(fio_grid_t),      pointer        :: grid
     type(fio_geom_t),       intent(in)    :: geom
-    type(space_t),          intent(in)    :: space
     type(mpi_grp_t),        intent(in)    :: mpi_grp
     !
     type(json_object_t), pointer :: scfg, gcfg
+    type(fio_grid_t),    pointer :: grid
     integer                      :: ierr
     !
     PUSH_SUB(fio_simulation_start)
@@ -63,7 +67,8 @@ contains
     SAFE_ALLOCATE(grid)
     call fio_grid_init(grid, geom, gcfg)
     call fio_grid_start(grid, mpi_grp, gcfg)
-    nullify(scfg, gcfg)
+    call simulation_set(this, grid)
+    nullify(grid, scfg, gcfg)
     POP_SUB(fio_simulation_start)
     return
   end subroutine fio_simulation_start
@@ -83,28 +88,6 @@ contains
     return
   end subroutine fio_simulation_stop
   
-  ! ---------------------------------------------------------
-  subroutine fio_simulation_copy(this, that)
-    type(fio_simulation_t), intent(inout) :: this
-    type(fio_simulation_t), intent(in)    :: that
-    !
-    type(fio_grid_t), pointer :: ogrd, igrd
-    !
-    PUSH_SUB(fio_simulation_copy)
-    nullify(ogrd, igrd)
-    call fio_simulation_end(this)
-    call fio_simulation_get(that, igrd)
-    if(associated(igrd))then
-      SAFE_ALLOCATE(ogrd)
-      call fio_grid_copy(ogrd, igrd)
-    end if
-    nullify(igrd)
-    call simulation_set(this, ogrd)
-    nullify(ogrd)
-    POP_SUB(fio_simulation_copy)
-    return
-  end subroutine fio_simulation_copy
-
   ! ---------------------------------------------------------
   subroutine fio_simulation_end(this)
     type(fio_simulation_t), intent(inout) :: this

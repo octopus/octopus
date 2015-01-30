@@ -67,6 +67,7 @@ module base_handle_m
   type, public :: base_handle_t
     private
     type(json_object_t), pointer :: config =>null()
+    integer                      :: type
     type(model_t)                :: model
     type(base_handle_hash_t)     :: hash
   end type base_handle_t
@@ -91,6 +92,7 @@ module base_handle_m
   end interface base_handle_next
 
   interface base_handle_get
+    module procedure base_handle_get_type
     module procedure base_handle_get_config
     module procedure base_handle_get_model
   end interface base_handle_get
@@ -104,6 +106,10 @@ module base_handle_m
     module procedure base_handle_end_handle
     module procedure base_handle_iterator_end
   end interface base_handle_end
+
+  integer, public, parameter :: HNDL_TYPE_NONE = 0
+
+  integer, public, parameter :: HNDL_NAME_LEN = 63
 
   integer, public, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_HASH_OK
   integer, public, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
@@ -126,6 +132,8 @@ contains
     PUSH_SUB(base_handle_init_begin)
     this%config=>config
     nullify(cnfg)
+    call json_get(this%config, "type", this%type, ierr)
+    if(ierr/=JSON_OK)this%type=HNDL_TYPE_NONE
     call json_get(this%config, "model", cnfg, ierr)
     if(ierr==JSON_OK)call model_init(this%model, cnfg)
     nullify(cnfg)
@@ -187,6 +195,17 @@ contains
     POP_SUB(base_handle_stop)
     return
   end subroutine base_handle_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_type(this, that)
+    type(base_handle_t), intent(in)  :: this
+    integer,             intent(out) :: that
+    !
+    PUSH_SUB(base_handle_get_type)
+    that=this%type
+    POP_SUB(base_handle_get_type)
+    return
+  end subroutine base_handle_get_type
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_config(this, that)

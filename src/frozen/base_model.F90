@@ -197,8 +197,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_model_start(this, grid)
-    type(base_model_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
+    type(base_model_t),     intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
     !
     type(geom_t),     pointer :: geom
     type(geometry_t), pointer :: geo

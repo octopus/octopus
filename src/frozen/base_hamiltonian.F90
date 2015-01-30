@@ -86,16 +86,16 @@ module base_hamiltonian_m
   implicit none
 
   private
-  public ::                &
-    base_hamiltonian_init,            &
-    base_hamiltonian_start,           &
-    base_hamiltonian_update,          &
-    base_hamiltonian_stop,            &
-    base_hamiltonian_get,             &
-    base_hamiltonian_setn,            &
-    base_hamiltonian_getn,            &
-    base_hamiltonian_deln,            &
-    base_hamiltonian_copy,            &
+  public ::                  &
+    base_hamiltonian_init,   &
+    base_hamiltonian_start,  &
+    base_hamiltonian_update, &
+    base_hamiltonian_stop,   &
+    base_hamiltonian_get,    &
+    base_hamiltonian_setn,   &
+    base_hamiltonian_getn,   &
+    base_hamiltonian_deln,   &
+    base_hamiltonian_copy,   &
     base_hamiltonian_end
 
 #define HASH_TEMPLATE_NAME base_hamiltonian
@@ -116,19 +116,19 @@ module base_hamiltonian_m
 #undef DICT_INCLUDE_HEADER
 #undef DICT_TEMPLATE_NAME
 
-  integer, parameter :: NAME_LEN = 63
+  integer, parameter :: HMLT_NAME_LEN = 63
 
-  integer, public, parameter :: NONE_TYPE = 0
-  integer, public, parameter :: TERM_TYPE = 1
-  integer, public, parameter :: POTN_TYPE = 2
-  integer, public, parameter :: HMLT_TYPE = 3
+  integer, public, parameter :: HMLT_TYPE_NONE = 0
+  integer, public, parameter :: HMLT_TYPE_TERM = 1
+  integer, public, parameter :: HMLT_TYPE_POTN = 2
+  integer, public, parameter :: HMLT_TYPE_HMLT = 3
   
   type, private :: hterm_t
     private
     type(term_t),             pointer :: term =>null()
     type(potential_t),        pointer :: potn =>null()
     type(base_hamiltonian_t), pointer :: hmlt =>null()
-    integer                           :: type = NONE_TYPE
+    integer                           :: type = HMLT_TYPE_NONE
   end type hterm_t
 
   type, public :: base_hamiltonian_t
@@ -234,8 +234,8 @@ contains
     type(term_t), target, intent(in)    :: that
     !
     PUSH_SUB(hterm_init_term)
-    ASSERT(this%type==NONE_TYPE)
-    this%type=TERM_TYPE
+    ASSERT(this%type==HMLT_TYPE_NONE)
+    this%type=HMLT_TYPE_TERM
     this%term=>that
     POP_SUB(hterm_init_term)
     return
@@ -247,8 +247,8 @@ contains
     type(potential_t), target, intent(in)    :: that
     !
     PUSH_SUB(hterm_init_potn)
-    ASSERT(this%type==NONE_TYPE)
-    this%type=POTN_TYPE
+    ASSERT(this%type==HMLT_TYPE_NONE)
+    this%type=HMLT_TYPE_POTN
     this%potn=>that
     POP_SUB(hterm_init_potn)
     return
@@ -260,8 +260,8 @@ contains
     type(base_hamiltonian_t), target, intent(in)    :: that
     !
     PUSH_SUB(hterm_init_hmlt)
-    ASSERT(this%type==NONE_TYPE)
-    this%type=HMLT_TYPE
+    ASSERT(this%type==HMLT_TYPE_NONE)
+    this%type=HMLT_TYPE_HMLT
     this%hmlt=>that
     POP_SUB(hterm_init_hmlt)
     return
@@ -274,11 +274,11 @@ contains
     !
     PUSH_SUB(hterm_start)
     select case(this%type)
-    case(NONE_TYPE)
-    case(TERM_TYPE)
-    case(POTN_TYPE)
+    case(HMLT_TYPE_NONE)
+    case(HMLT_TYPE_TERM)
+    case(HMLT_TYPE_POTN)
       call potential_start(this%potn, sim)
-    case(HMLT_TYPE)
+    case(HMLT_TYPE_HMLT)
       call base_hamiltonian_start(this%hmlt, sim)
     case default
       message(1)="Unknown Hamiltonian term type."
@@ -296,11 +296,11 @@ contains
     !
     PUSH_SUB(hterm_update)
     select case(this%type)
-    case(NONE_TYPE)
-    case(TERM_TYPE)
-    case(POTN_TYPE)
+    case(HMLT_TYPE_NONE)
+    case(HMLT_TYPE_TERM)
+    case(HMLT_TYPE_POTN)
       call potential_update(this%potn)
-    case(HMLT_TYPE)
+    case(HMLT_TYPE_HMLT)
       call base_hamiltonian_update(this%hmlt)
     case default
       message(1)="Unknown Hamiltonian term type."
@@ -316,11 +316,11 @@ contains
     !
     PUSH_SUB(hterm_stop)
     select case(this%type)
-    case(NONE_TYPE)
-    case(TERM_TYPE)
-    case(POTN_TYPE)
+    case(HMLT_TYPE_NONE)
+    case(HMLT_TYPE_TERM)
+    case(HMLT_TYPE_POTN)
       call potential_stop(this%potn)
-    case(HMLT_TYPE)
+    case(HMLT_TYPE_HMLT)
       call base_hamiltonian_stop(this%hmlt)
     case default
       message(1)="Unknown Hamiltonian term type."
@@ -336,7 +336,7 @@ contains
     type(term_t), pointer     :: that
     !
     PUSH_SUB(hterm_get_term)
-    ASSERT(this%type==TERM_TYPE)
+    ASSERT(this%type==HMLT_TYPE_TERM)
     ASSERT(associated(this%term))
     that=>this%term
     POP_SUB(hterm_get_term)
@@ -349,7 +349,7 @@ contains
     type(potential_t), pointer     :: that
     !
     PUSH_SUB(hterm_get_potn)
-    ASSERT(this%type==POTN_TYPE)
+    ASSERT(this%type==HMLT_TYPE_POTN)
     ASSERT(associated(this%potn))
     that=>this%potn
     POP_SUB(hterm_get_potn)
@@ -362,7 +362,7 @@ contains
     type(base_hamiltonian_t), pointer     :: that
     !
     PUSH_SUB(hterm_get_hmlt)
-    ASSERT(this%type==HMLT_TYPE)
+    ASSERT(this%type==HMLT_TYPE_HMLT)
     ASSERT(associated(this%hmlt))
     that=>this%hmlt
     POP_SUB(hterm_get_hmlt)
@@ -378,11 +378,11 @@ contains
     call hterm_end(this)
     this%type=that%type
     select case(this%type)
-    case(TERM_TYPE)
+    case(HMLT_TYPE_TERM)
       this%term=>that%term
-    case(POTN_TYPE)
+    case(HMLT_TYPE_POTN)
       this%potn=>that%potn
-    case(HMLT_TYPE)
+    case(HMLT_TYPE_HMLT)
       this%hmlt=>that%hmlt
     end select
     POP_SUB(hterm_copy)
@@ -394,7 +394,7 @@ contains
     type(hterm_t), intent(inout) :: this
     !
     nullify(this%term,this%potn,this%hmlt)
-    this%type=NONE_TYPE
+    this%type=HMLT_TYPE_NONE
     return
   end subroutine hterm_end
 
@@ -405,13 +405,11 @@ contains
     type(json_object_t), target, intent(in)  :: config
     !
     PUSH_SUB(base_hamiltonian_init_hamiltonian)
-    print *, "enter base_hamiltonian_init_hamiltonian"
     this%config=>config
     this%sys=>sys
     nullify(this%sim)
     call hterm_dict_init(this%dict)
     call base_hamiltonian_hash_init(this%hash)
-    print *, "exit  base_hamiltonian_init_hamiltonian"
     POP_SUB(base_hamiltonian_init_hamiltonian)
     return
   end subroutine base_hamiltonian_init_hamiltonian
@@ -437,22 +435,17 @@ contains
     type(hterm_t),      pointer :: htrm
     integer                     :: ierr
     !
-    character(len=NAME_LEN) :: name
-    !
     PUSH_SUB(base_hamiltonian_start)
-    print *, "enter base_hamiltonian_start"
     this%sim=>sim
     call hterm_dict_init(iter, this%dict)
     do
       nullify(htrm)
-      call hterm_dict_next(iter, name, htrm, ierr)
+      call hterm_dict_next(iter, htrm, ierr)
       if(ierr/=HTERM_DICT_OK)exit
-      print *, "base_hamiltonian_start: ", name
       call hterm_start(htrm, sim)
     end do
     call hterm_dict_end(iter)
     nullify(htrm)
-    print *, "exit  base_hamiltonian_start"
     POP_SUB(base_hamiltonian_start)
     return
   end subroutine base_hamiltonian_start
@@ -759,10 +752,10 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     type(base_hamiltonian_t), intent(in)    :: that
     !
-    type(hterm_dict_iterator_t) :: iter
-    type(hterm_t),      pointer :: ihtr, ohtr
-    character(len=NAME_LEN)     :: name
-    integer                     :: ierr
+    type(hterm_dict_iterator_t)  :: iter
+    type(hterm_t),       pointer :: ihtr, ohtr
+    character(len=HMLT_NAME_LEN) :: name
+    integer                      :: ierr
     !
     PUSH_SUB(base_hamiltonian_copy_hamiltonian)
     call base_hamiltonian_end(this)

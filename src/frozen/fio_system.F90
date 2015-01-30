@@ -6,10 +6,6 @@ module fio_system_m
   use messages_m
   use profiling_m
 
-  use space_m, only: space_t, space_init, space_copy, space_end
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
   use fio_states_m, only: &
     fio_states_t,         &
     fio_states_update

@@ -18,14 +18,14 @@ module fio_config_m
   use parser_m,      only: block_t, parse_block_string, parse_block_integer
 
   use base_hamiltonian_m, only: &
-    POTN_TYPE,                  &
-    HMLT_TYPE
-
-  use base_config_m, only: &
-    FNIO_TYPE
+    HMLT_TYPE_POTN,             &
+    HMLT_TYPE_HMLT
 
   use base_config_m, only:             &
     config_parse => base_config_parse
+
+  use fio_handle_m, only: &
+    HNDL_TYPE_FNIO
 
   implicit none
 
@@ -386,7 +386,7 @@ contains
     integer                     :: type, ierr
     !
     call json_get(that, "type", type, ierr)
-    if(ierr/=JSON_OK)type=POTN_TYPE
+    if(ierr/=JSON_OK)type=HMLT_TYPE_POTN
     call json_set(this, "type", type)
     call json_get(that, "dir", idir, ierr)
     if(ierr/=JSON_OK)idir=input_static_dir
@@ -409,7 +409,7 @@ contains
     !
     nullify(ocfg, icfg)
     call json_get(that, "type", type, ierr)
-    if(ierr/=JSON_OK)type=HMLT_TYPE
+    if(ierr/=JSON_OK)type=HMLT_TYPE_HMLT
     call json_set(this, "type", type)
     call json_get(this, "external", ocfg, ierr)
     if(ierr/=JSON_OK)then
@@ -499,7 +499,7 @@ contains
     nullify(cnfg)
     call config_parse(this)
     call json_set(this, "name", "fio")
-    call json_set(this, "type", FNIO_TYPE)
+    call json_set(this, "type", HNDL_TYPE_FNIO)
     call parse_block_string(block, line, icol, dirname)
     call fio_config_parse_read(that, dirname)
     call json_get(this, "model", cnfg, ierr)

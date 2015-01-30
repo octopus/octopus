@@ -88,7 +88,7 @@ module simulation_m
   end type simulation_iterator_t
 
   interface simulation_init
-    module procedure simulation_init_start
+    module procedure simulation_init_begin
     module procedure simulation_init_build
     module procedure simulation_iterator_init
   end interface simulation_init
@@ -136,18 +136,18 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine simulation_init_start(this, config)
+  subroutine simulation_init_begin(this, config)
     type(simulation_t),          intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(simulation_init_start)
+    PUSH_SUB(simulation_init_begin)
     nullify(this%config, this%gr)
     this%config=>config
     call domain_init(this%domain)
     call simulation_hash_init(this%hash)
-    POP_SUB(simulation_init_start)
+    POP_SUB(simulation_init_begin)
     return
-  end subroutine simulation_init_start
+  end subroutine simulation_init_begin
 
   ! ---------------------------------------------------------
   subroutine simulation_init_build(this, that, config)
@@ -165,17 +165,21 @@ contains
 
   ! ---------------------------------------------------------
   subroutine simulation_start(this, grid, geo, space)
-    type(simulation_t),       intent(inout) :: this
-    type(grid_t),     target, intent(in)    :: grid
-    type(geometry_t), target, intent(in)    :: geo
-    type(space_t),    target, intent(in)    :: space
+    type(simulation_t),             intent(inout) :: this
+    type(grid_t), optional, target, intent(in)    :: grid
+    type(geometry_t),       target, intent(in)    :: geo
+    type(space_t),          target, intent(in)    :: space
     !
     PUSH_SUB(simulation_start)
     ASSERT(associated(this%config))
-    ASSERT(.not.associated(this%gr))
     ASSERT(.not.associated(this%geo))
     ASSERT(.not.associated(this%space))
-    this%gr=>grid
+    if(present(grid))then
+      ASSERT(.not.associated(this%gr))
+      this%gr=>grid
+    else
+      ASSERT(associated(this%gr))
+    end if
     this%geo=>geo
     this%space=>space
     ASSERT(this%gr%sb%dim==this%space%dim)

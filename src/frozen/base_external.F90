@@ -7,7 +7,6 @@ module base_external_m
   use profiling_m
 
   use atom_m,    only: atom_t, atom_classical_t
-  use json_m,    only: json_object_t
   use kinds_m,   only: wp
   use species_m, only: species_zval
 
@@ -25,22 +24,21 @@ module base_external_m
     system_get => base_system_get
 
   use base_potential_m, only:                        &
-    POTENTIAL_INTRPL_OK => BASE_POTENTIAL_INTRPL_OK, &
-    potential_eval      => base_potential_eval,      &
-    potential_get       => base_potential_get
+    POTENTIAL_INTRPL_OK => BASE_POTENTIAL_INTRPL_OK
 
-  use base_potential_m, only:                              &
-    base_external_t          => base_potential_t,          &
-    base_external_init       => base_potential_init,       &
-    base_external_start      => base_potential_start,      &
-    base_external_update     => base_potential_update,     &
-    base_external_stop       => base_potential_stop,       &
-    base_external_set_energy => base_potential_set_energy, &
-    base_external_get        => base_potential_get,        &
-    base_external_get_size   => base_potential_get_size,   &
-    base_external_get_energy => base_potential_get_energy, &
-    base_external_copy       => base_potential_copy,       &
-    base_external_end        => base_potential_end
+  use base_potential_m, only:              &
+    potential_eval => base_potential_eval
+
+  use base_potential_m, only:                      &
+    base_external_t      => base_potential_t,      &
+    base_external_init   => base_potential_init,   &
+    base_external_start  => base_potential_start,  &
+    base_external_update => base_potential_update, &
+    base_external_stop   => base_potential_stop,   &
+    base_external_set    => base_potential_set,    &
+    base_external_get    => base_potential_get,    &
+    base_external_copy   => base_potential_copy,   &
+    base_external_end    => base_potential_end
 
   use base_potential_m, only:                          &
     base_external_intrpl_t => base_potential_intrpl_t
@@ -48,21 +46,19 @@ module base_external_m
   implicit none
 
   private
-  public ::                      &
-    base_external_t,             &
-    base_external_init,          &
-    base_external_start,         &
-    base_external_update,        &
-    base_external_stop,          &
-    base_external_eval,          &
-    base_external_set_energy,    &
-    base_external_get,           &
-    base_external_get_size,      &
-    base_external_get_energy,    &
-    base_external_copy,          &
+  public ::               &
+    base_external_t,      &
+    base_external_init,   &
+    base_external_start,  &
+    base_external_update, &
+    base_external_stop,   &
+    base_external_eval,   &
+    base_external_set,    &
+    base_external_get,    &
+    base_external_copy,   &
     base_external_end
 
-  public ::                      &
+  public ::                 &
     base_external_intrpl_t
 
 contains
@@ -129,17 +125,17 @@ contains
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),                intent(out) :: v
     !
-    type(base_external_t), pointer :: ep
-    integer                :: ierr
+    type(base_external_t), pointer :: epot
+    integer                        :: ierr
     !
     PUSH_SUB(base_external_eval)
-    nullify(ep)
+    nullify(epot)
     call potential_eval(this, x, v, ierr)
     if(ierr/=POTENTIAL_INTRPL_OK)then
-      call potential_get(this, ep)
-      ASSERT(associated(ep))
-      call base_external_classical(ep, x, v)
-      nullify(ep)
+      call base_external_get(this, epot)
+      ASSERT(associated(epot))
+      call base_external_classical(epot, x, v)
+      nullify(epot)
     end if
     POP_SUB(base_external_intrpl_eval)
     return

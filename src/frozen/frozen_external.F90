@@ -1,16 +1,5 @@
 #include "global.h"
 
-#undef SUBTEMPLATE_NAME
-#undef SUBTEMPLATE_TYPE
-#undef TEMPLATE_NAME
-#undef TEMPLATE_TYPE
-#define TEMPLATE_NAME frozen
-#define SUBTEMPLATE_NAME fio
-#include "texternal_potential.F90"
-#undef SUBTEMPLATE_NAME
-#undef TEMPLATE_TYPE
-#undef TEMPLATE_NAME
-
 module frozen_external_m
 
   use global_m
@@ -18,121 +7,126 @@ module frozen_external_m
   use profiling_m
 
   use json_m,  only: JSON_OK, json_object_t, json_get
+  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_end
   use kinds_m, only: wp
   use mesh_m,  only: mesh_t
+  use space_m, only: space_t
 
-  use frozen_simulation_m, only:             &
-    simulation_t   !=> frozen_simulation_t,   &
+  use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
 
-  use frozen_simulation_m, only:             &
-    simulation_get => frozen_simulation_get
+  use fio_external_m, only: &
+    fio_external_t,         &
+    fio_external_init,      &
+    fio_external_eval,      &
+    fio_external_end
 
-  use frozen_external_potential_m, only:                           &
-    external_potential_update => frozen_external_potential_update
+  use fio_external_m, only: &
+    fio_external_intrpl_t
 
-  use frozen_external_potential_m, only:                                      &
-    frozen_external_t             => frozen_external_potential_t,             &
-    frozen_external_init          => frozen_external_potential_init,          &
-    frozen_external_start         => frozen_external_potential_start,         &
-    frozen_external_extend        => frozen_external_potential_extend,        &
-    frozen_external_get           => frozen_external_potential_get,           &
-    frozen_external_get_size      => frozen_external_potential_get_size,      &
-    frozen_external_get_energy    => frozen_external_potential_get_energy,    &
-    frozen_external_get_potential => frozen_external_potential_get_potential, &
-    frozen_external_copy          => frozen_external_potential_copy,          &
-    frozen_external_end           => frozen_external_potential_end
+  use simulation_m, only:                    &
+    frozen_simulation_t   => simulation_t,   &
+    frozen_simulation_get => simulation_get
 
-  use frozen_external_potential_m, only:                                                &
-    frozen_external_interpolation_t    => frozen_external_potential_interpolation_t,    &
-    frozen_external_interpolation_init => frozen_external_potential_interpolation_init, &
-    frozen_external_interpolation_eval => frozen_external_potential_interpolation_eval, &
-    frozen_external_interpolation_copy => frozen_external_potential_interpolation_copy, &
-    frozen_external_interpolation_end  => frozen_external_potential_interpolation_end
-
-  use fio_m, only:      &
-    sub_t   => fio_t,   &
-    sub_get => fio_get
-
-  use fio_m, only:                                &
-    interpolation_t    => fio_interpolation_t,    &
-    interpolation_init => fio_interpolation_init, &
-    interpolation_eval => fio_interpolation_eval, &
-    interpolation_end  => fio_interpolation_end
-
-  use fio_external_m, only:           &
-    sub_external_t => fio_external_t
+  use base_external_m, only:                      &
+    frozen_external_t     => base_external_t,     &
+    frozen_external_init  => base_external_init,  &
+    frozen_external_start => base_external_start, &
+    frozen_external_stop  => base_external_stop,  &
+    frozen_external_get   => base_external_get,   &
+    frozen_external_copy  => base_external_copy,  &
+    frozen_external_end   => base_external_end
 
   implicit none
 
   private
-  public ::                        &
-    frozen_external_t,             &
-    frozen_external_init,          &
-    frozen_external_start,         &
-    frozen_external_extend,        &
-    frozen_external_update,        &
-    frozen_external_get,           &
-    frozen_external_get_size,      &
-    frozen_external_get_energy,    &
-    frozen_external_get_potential, &
-    frozen_external_copy,          &
+  public ::                 &
+    frozen_external_t,      &
+    frozen_external_init,   &
+    frozen_external_start,  &
+    frozen_external_update, &
+    frozen_external_stop,   &
+    frozen_external_get,    &
+    frozen_external_copy,   &
     frozen_external_end
-
-  public ::                             &
-    frozen_external_interpolation_t,    &
-    frozen_external_interpolation_init, &
-    frozen_external_interpolation_eval, &
-    frozen_external_interpolation_copy, &
-    frozen_external_interpolation_end
-
-  interface frozen_external_update
-    module procedure frozen_external_update_build
-    module procedure frozen_external_update_finalize
-  end interface frozen_external_update
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_external_update_build(this, that)
-    type(frozen_external_t), intent(inout) :: this
-    type(sub_t),             intent(in)    :: that
+  subroutine  frozen_external_update_intrpl(this, intrpl, config)
+    type(frozen_external_t),     intent(inout) :: this
+    type(fio_external_intrpl_t), intent(in)    :: intrpl
+    type(json_object_t),         intent(in)    :: config
     !
-    real(kind=wp), dimension(:), pointer :: potential
-    type(simulation_t),          pointer :: sim
-    type(mesh_t),                pointer :: mesh
-    type(sub_external_t),        pointer :: ep
-    type(interpolation_t)                :: intrp
-    real(kind=wp)                        :: pot
-    integer                              :: i, ierr
+    real(kind=wp), dimension(:),     pointer :: potn
+    real(kind=wp), dimension(:), allocatable :: x
+    type(frozen_simulation_t),       pointer :: sim
+    type(space_t),                   pointer :: space
+    type(mesh_t),                    pointer :: mesh
+    type(basis_t)                            :: basis
+    real(kind=wp)                            :: pot
+    integer                                  :: indx, np
     !
-    nullify(potential, sim, mesh, ep)
-    call frozen_external_get_potential(this, potential)
-    ASSERT(associated(potential))
+    PUSH_SUB(frozen_external_update_intrpl)
+    nullify(potn, sim, space, mesh)
     call frozen_external_get(this, sim)
     ASSERT(associated(sim))
-    call simulation_get(sim, mesh)
+    call frozen_simulation_get(sim, space)
+    ASSERT(associated(space))
+    call basis_init(basis, space, config)
+    call frozen_simulation_get(sim, mesh)
     ASSERT(associated(mesh))
-    call sub_get(that, ep)
-    ASSERT(associated(ep))
-    print *, "***: frozen_external_update_build: interpolation_init"
-    call interpolation_init(intrp, that, ep)
-    do i = 1, frozen_external_get_size(this)
-      call interpolation_eval(intrp, mesh%x(i,:), pot)
-      potential(i)=potential(i)+pot
+    nullify(sim)
+    call frozen_external_get(this, potn)
+    ASSERT(associated(potn))
+    call frozen_external_get(this, size=np)
+    SAFE_ALLOCATE(x(space%dim))
+    do indx = 1, np
+      call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
+      call fio_external_eval(intrpl, x, pot)
+      potn(indx)=potn(indx)+pot
     end do
-    print *, "***: frozen_external_update_build: interpolation_end"
-    call interpolation_end(intrp)
-    nullify(potential, sim, mesh, ep)
+    SAFE_DEALLOCATE_A(x)
+    nullify(potn, space, mesh)
+    call basis_end(basis)
+    POP_SUB(frozen_external_update_intrpl)
     return
-  end subroutine frozen_external_update_build
+  end subroutine frozen_external_update_intrpl
 
   ! ---------------------------------------------------------
-  subroutine frozen_external_update_finalize(this)
+  subroutine frozen_external_update(this, that, config)
     type(frozen_external_t), intent(inout) :: this
+    type(fio_external_t),    intent(in)    :: that
+    type(json_object_t),     intent(in)    :: config
     !
-    call external_potential_update(this)
+    type(json_object_t), pointer :: cnfg
+    type(json_array_t),  pointer :: list
+    type(json_array_iterator_t)  :: iter
+    type(fio_external_intrpl_t)  :: intrp
+    integer                      :: type, ierr
+    !
+    PUSH_SUB(frozen_external_update)
+    nullify(cnfg, list)
+    call json_get(config, "type", type, ierr)
+    if(ierr==JSON_OK)then
+      call fio_external_init(intrp, that, type)
+    else
+      call fio_external_init(intrp, that)
+    end if
+    call json_get(config, "positions", list, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_init(iter, list)
+    do
+       nullify(cnfg)
+       call json_next(iter, cnfg, ierr)
+       if(ierr/=JSON_OK)exit
+       call frozen_external_update_intrpl(this, intrp, cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg, list)
+    call fio_external_end(intrp)
+    POP_SUB(frozen_external_update)
     return
-  end subroutine frozen_external_update_finalize
+  end subroutine frozen_external_update
 
 end module frozen_external_m
 

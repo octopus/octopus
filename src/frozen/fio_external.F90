@@ -11,17 +11,15 @@ module fio_external_m
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
-  use base_external_m, only:                                &
-    fio_external_t          => base_external_t,             &
-    fio_external_init       => base_external_init,          &
-    fio_external_start      => base_external_start,         &
-    fio_external_stop       => base_external_stop,          &
-    fio_external_eval       => base_external_eval,          &
-    fio_external_get        => base_external_get,           &
-    fio_external_get_size   => base_external_get_size,      &
-    fio_external_get_energy => base_external_get_energy,    &
-    fio_external_copy       => base_external_copy,          &
-    fio_external_end        => base_external_end
+  use base_external_m, only:                   &
+    fio_external_t     => base_external_t,     &
+    fio_external_init  => base_external_init,  &
+    fio_external_start => base_external_start, &
+    fio_external_stop  => base_external_stop,  &
+    fio_external_eval  => base_external_eval,  &
+    fio_external_get   => base_external_get,   &
+    fio_external_copy  => base_external_copy,  &
+    fio_external_end   => base_external_end
 
   use base_external_m, only:                         &
     fio_external_intrpl_t => base_external_intrpl_t
@@ -29,20 +27,18 @@ module fio_external_m
   implicit none
 
   private
-  public ::                     &
-    fio_external_t,             &
-    fio_external_init,          &
-    fio_external_start,         &
-    fio_external_update,        &
-    fio_external_stop,          &
-    fio_external_eval,          &
-    fio_external_get,           &
-    fio_external_get_size,      &
-    fio_external_get_energy,    &
-    fio_external_copy,          &
+  public ::              &
+    fio_external_t,      &
+    fio_external_init,   &
+    fio_external_start,  &
+    fio_external_update, &
+    fio_external_stop,   &
+    fio_external_eval,   &
+    fio_external_get,    &
+    fio_external_copy,   &
     fio_external_end
 
-  public ::                       &
+  public ::                &
     fio_external_intrpl_t
 
 contains
@@ -61,7 +57,7 @@ contains
     nullify(potn)
     call fio_external_get(this, potn)
     ASSERT(associated(potn))
-    np=fio_external_get_size(this)
+    call fio_external_get(this, size=np)
     call path_join(dir, file, fpth)
     call io_binary_read(fpth, np, potn, ierr, offset=0)
     if(ierr/=0)then

@@ -10,28 +10,26 @@ module fio_states_m
     fio_density_t,         &
     fio_density_update
 
-  use base_states_m, only:                           &
-    fio_states_t          => base_states_t,          &
-    fio_states_init       => base_states_init,       &
-    fio_states_start      => base_states_start,      &
-    fio_states_stop       => base_states_stop,       &
-    fio_states_get        => base_states_get,        &
-    fio_states_get_charge => base_states_get_charge, &
-    fio_states_copy       => base_states_copy,       &
-    fio_states_end        => base_states_end
+  use base_states_m, only:                 &
+    fio_states_t     => base_states_t,     &
+    fio_states_init  => base_states_init,  &
+    fio_states_start => base_states_start, &
+    fio_states_stop  => base_states_stop,  &
+    fio_states_get   => base_states_get,   &
+    fio_states_copy  => base_states_copy,  &
+    fio_states_end   => base_states_end
 
   implicit none
 
   private
-  public ::                &
-    fio_states_t,          &
-    fio_states_init,       &
-    fio_states_start,      &
-    fio_states_update,     &
-    fio_states_stop,       &
-    fio_states_get,        &
-    fio_states_get_charge, &
-    fio_states_copy,       &
+  public ::            &
+    fio_states_t,      &
+    fio_states_init,   &
+    fio_states_start,  &
+    fio_states_update, &
+    fio_states_stop,   &
+    fio_states_get,    &
+    fio_states_copy,   &
     fio_states_end
 
 contains

@@ -88,29 +88,25 @@ contains
   end subroutine fio_model_init
 
   ! ---------------------------------------------------------
-  subroutine fio_model_start(this, grid, mpi_grp)
+  subroutine fio_model_start(this, mpi_grp)
     type(fio_model_t), intent(inout) :: this
-    type(fio_grid_t), pointer        :: grid
     type(mpi_grp_t),   intent(in)    :: mpi_grp
     !
     type(fio_simulation_t), pointer :: sim
     type(fio_system_t),     pointer :: sys
     type(fio_geom_t),       pointer :: geom
-    type(space_t),          pointer :: space
     !
     PUSH_SUB(fio_model_start)
-    nullify(sim, sys, geom, space)
+    nullify(sim, sys, geom)
     call fio_model_get(this, sys)
     ASSERT(associated(sys))
-    call fio_system_get(sys, space)
-    ASSERT(associated(space))
     call fio_system_get(sys, geom)
     ASSERT(associated(geom))
     nullify(sys)
     call fio_model_get(this, sim)
     ASSERT(associated(sim))
-    call fio_simulation_start(sim, grid, geom, space, mpi_grp)
-    nullify(geom, space)
+    call fio_simulation_start(sim, geom, mpi_grp)
+    nullify(sim, geom)
     POP_SUB(fio_model_start)
     return
   end subroutine fio_model_start
