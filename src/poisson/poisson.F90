@@ -440,14 +440,6 @@ contains
         call messages_experimental('FMM Poisson solver')
       end if
 
-      if (this%method == POISSON_LIBISF) then
-#ifdef HAVE_LIBISF
-        call messages_experimental('LIBISF Poisson solver')
-#else
-        message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
-        call messages_fatal(1)
-#endif
-      end if
     end select
 
     call messages_print_stress(stdout)

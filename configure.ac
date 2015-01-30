@@ -52,6 +52,7 @@ case $enable_mpi in
     enable_mpi=yes
     ;;
 esac
+AM_CONDITIONAL(USE_MPI, test "$enable_mpi" = "yes")
 
 if test x"$enable_mpi" == x"yes"; then
   octopus_default_cc=mpicc
@@ -332,8 +333,9 @@ ACX_LIBFM
 dnl check for PFFT
 ACX_PFFT
 
-dnl check for ISF included from version 1.7-dev.27 of BigDFT
+dnl check for ISF included from version 1.7.6 of BigDFT
 ACX_ISF
+AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
 
 dnl check for PNFFT
 ACX_PNFFT
@@ -370,6 +372,10 @@ AC_CONFIG_FILES([Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile
+  external_libs/isf/Makefile
+  external_libs/isf/flib/Makefile
+  external_libs/isf/wrappers/Makefile
+  external_libs/isf/src/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
@@ -427,5 +433,9 @@ AC_CONFIG_FILES([Makefile
   testsuite/photo_electron/Makefile
   testsuite/complex_scaling/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
+
+dnl if test x"$ac_build_libyaml" != x"skip" ; then
+dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])
+dnl fi
 
 AC_OUTPUT

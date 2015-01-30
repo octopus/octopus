@@ -40,6 +40,8 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bader     \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/flib  \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/src   \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.5.2/src
 
 AM_CPPFLAGS = \
@@ -86,8 +88,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
 	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a \
-	$(top_builddir)/external_libs/bader/libbader.a \
-	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+	$(top_builddir)/external_libs/bader/libbader.a 
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@
@@ -98,6 +99,14 @@ if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis.a
   external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.a
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
+endif
+
+if COMPILE_ISF
+  external_LIBS += \
+	$(top_builddir)/external_libs/isf/src/libisf.a \
+	$(top_builddir)/external_libs/isf/wrappers/libwrappers.a \
+	$(top_builddir)/external_libs/isf/flib/libflib-1.a \
+	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 endif
 
 if COMPILE_NEWUOA

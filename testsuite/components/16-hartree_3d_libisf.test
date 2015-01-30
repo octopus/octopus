@@ -2,7 +2,6 @@
 # $Id$
 
 Test       : Hartree LIBISF
-Options    : libisf
 Programs   : oct-test; oct-test_mpi
 TestGroups : short-run, components
 Enabled    : Yes
