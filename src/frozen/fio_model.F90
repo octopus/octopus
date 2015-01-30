@@ -13,9 +13,9 @@ module fio_model_m
   use fio_grid_m, only: &
     fio_grid_t
 
-  use bgeom_m, only:           &
-    fio_geom_t   => bgeom_t,   &
-    fio_geom_get => bgeom_get
+  use base_geom_m, only:           &
+    fio_geom_t   => base_geom_t,   &
+    fio_geom_get => base_geom_get
 
   use fio_simulation_m, only: &
     fio_simulation_t,         &
@@ -33,6 +33,9 @@ module fio_model_m
     fio_system_copy,      &
     fio_system_end
 
+  use fio_external_m, only: &
+    fio_external_t
+
   use fio_hamiltonian_m, only: &
     fio_hamiltonian_t,         &
     fio_hamiltonian_init,      &
@@ -42,9 +45,9 @@ module fio_model_m
     fio_hamiltonian_copy,      &
     fio_hamiltonian_end
 
-  use bmodl_m, only:              &
-    fio_model_t    => bmodl_t,    &
-    fio_model_get  => bmodl_get
+  use base_model_m, only:              &
+    fio_model_t    => base_model_t,    &
+    fio_model_get  => base_model_get
 
   implicit none
 
@@ -72,7 +75,6 @@ contains
     integer                          :: ierr
     !
     PUSH_SUB(fio_model_init)
-    print *, "enter fio_model_init"
     nullify(cnfg, hml, sys)
     call fio_model_get(this, hml)
     ASSERT(associated(hml))
@@ -81,7 +83,6 @@ contains
     call json_get(config, "hamiltonian", cnfg, ierr)
     if(ierr==JSON_OK)call fio_hamiltonian_init(hml, sys, cnfg)
     nullify(cnfg, hml, sys)
-    print *, "exit fio_model_init"
     POP_SUB(fio_model_init)
     return
   end subroutine fio_model_init
@@ -139,9 +140,7 @@ contains
   subroutine fio_model_stop(this)
     type(fio_model_t), intent(inout) :: this
     !
-    type(fio_simulation_t),  pointer :: sim
-    type(fio_system_t),      pointer :: sys
-    type(fio_hamiltonian_t), pointer :: hml
+    type(fio_simulation_t), pointer :: sim
     !
     PUSH_SUB(fio_model_stop)
     nullify(sim)

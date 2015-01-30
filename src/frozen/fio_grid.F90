@@ -14,8 +14,8 @@ module fio_grid_m
     fio_grid_t   => grid_t,   &
     fio_grid_get => grid_get
 
-  use bgeom_m, only:       &
-    fio_geom_t => bgeom_t
+  use base_geom_m, only:       &
+    fio_geom_t => base_geom_t
 
   use fio_simul_box_m, only: &
     fio_simul_box_t,         &

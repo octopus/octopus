@@ -35,16 +35,16 @@
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
 
-#define HASH_TEMPLATE_NAME bgeom
+#define HASH_TEMPLATE_NAME base_geom
 #define HASH_KEY_TEMPLATE_NAME json
 #define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME bgeom
+#define HASH_VAL_TEMPLATE_NAME base_geom
 
 #define HASH_INCLUDE_PREFIX
 #include "thash.F90"
 #undef HASH_INCLUDE_PREFIX
 
-module bgeom_m
+module base_geom_m
 
   use global_m
   use messages_m
@@ -100,18 +100,18 @@ module bgeom_m
   implicit none
 
   private
-  public ::      &
-    bgeom_init,  &
-    bgeom_next,  &
-    bgeom_get,   &
-    bgeom_copy,  &
-    bgeom_end
+  public ::          &
+    base_geom_init,  &
+    base_geom_next,  &
+    base_geom_get,   &
+    base_geom_copy,  &
+    base_geom_end
 
 #define HASH_INCLUDE_HEADER
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
 
-  type, public :: bgeom_t
+  type, public :: base_geom_t
     private
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
@@ -119,40 +119,45 @@ module bgeom_m
     type(geometry_t)             :: igeo
     type(atom_list_t)            :: list
     type(species_dict_t)         :: dict
-    type(bgeom_hash_t)           :: hash
-  end type bgeom_t
+    type(base_geom_hash_t)       :: hash
+  end type base_geom_t
 
-  type, public :: bgeom_iterator_t
+  type, public :: base_geom_iterator_t
     private
-    type(atom_list_iterator_t)    :: aitr
-    type(species_dict_iterator_t) :: sitr
-    type(bgeom_hash_iterator_t)   :: hitr
-  end type bgeom_iterator_t
+    type(atom_list_iterator_t)      :: aitr
+    type(species_dict_iterator_t)   :: sitr
+    type(base_geom_hash_iterator_t) :: hitr
+  end type base_geom_iterator_t
 
-  interface bgeom_init
-    module procedure bgeom_init_begin
-    module procedure bgeom_init_build
-    module procedure bgeom_init_finish
-    module procedure bgeom_iterator_init
-  end interface bgeom_init
+  interface base_geom_init
+    module procedure base_geom_init_begin
+    module procedure base_geom_init_build
+    module procedure base_geom_init_finish
+    module procedure base_geom_iterator_init
+  end interface base_geom_init
 
-  interface bgeom_next
-    module procedure bgeom_iterator_next_atom
-    module procedure bgeom_iterator_next_species
-    module procedure bgeom_iterator_next_geom
-    module procedure bgeom_iterator_next_geometry
-  end interface bgeom_next
+  interface base_geom_next
+    module procedure base_geom_iterator_next_atom
+    module procedure base_geom_iterator_next_species
+    module procedure base_geom_iterator_next_geom
+    module procedure base_geom_iterator_next_geometry
+  end interface base_geom_next
 
-  interface bgeom_get
-    module procedure bgeom_get_config
-    module procedure bgeom_get_space
-    module procedure bgeom_get_geometry
-  end interface bgeom_get
+  interface base_geom_get
+    module procedure base_geom_get_config
+    module procedure base_geom_get_space
+    module procedure base_geom_get_geometry
+  end interface base_geom_get
 
-  interface bgeom_end
-    module procedure bgeom_end_bgeom
-    module procedure bgeom_iterator_end
-  end interface bgeom_end
+  interface base_geom_copy
+    module procedure base_geom_copy_geom
+    module procedure base_geom_iterator_copy
+  end interface base_geom_copy
+
+  interface base_geom_end
+    module procedure base_geom_end_geom
+    module procedure base_geom_iterator_end
+  end interface base_geom_end
 
   integer, public :: GEOM_OK = 0
 
@@ -165,8 +170,8 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine bgeom_build_geom(this, geo, basis)
-    type(bgeom_t),           intent(inout) :: this
+  subroutine base_geom_build_geom(this, geo, basis)
+    type(base_geom_t),       intent(inout) :: this
     type(geometry_t),        intent(in)    :: geo
     type(basis_t), optional, intent(in)    :: basis
     !
@@ -174,7 +179,7 @@ contains
     type(species_t), pointer :: spec
     integer                  :: indx
     !
-    PUSH_SUB(bgeom_build_geom)
+    PUSH_SUB(base_geom_build_geom)
     ASSERT(this%space==geo%space)
     do indx=1,geo%natoms
       SAFE_ALLOCATE(atom)
@@ -188,22 +193,22 @@ contains
       spec=geo%species(indx)
       call species_dict_set(this%dict, species_label(spec), spec)
     end do
-    POP_SUB(bgeom_build_geom)
+    POP_SUB(base_geom_build_geom)
     return
-  end subroutine bgeom_build_geom
+  end subroutine base_geom_build_geom
 
   ! ---------------------------------------------------------
-  subroutine bgeom_build_geometry(this, geo, space)
-    type(bgeom_t),         intent(inout) :: this
+  subroutine base_geom_build_geometry(this, geo, space)
+    type(base_geom_t),     intent(inout) :: this
     type(geometry_t),      intent(out)   :: geo
     type(space_t), target, intent(in)    :: space
     !
-    type(bgeom_iterator_t)   :: iter
-    type(atom_t),    pointer :: atom
-    type(species_t), pointer :: spec
-    integer                  :: indx, ierr
+    type(base_geom_iterator_t) :: iter
+    type(atom_t),      pointer :: atom
+    type(species_t),   pointer :: spec
+    integer                    :: indx, ierr
     !
-    PUSH_SUB(bgeom_build_geometry)
+    PUSH_SUB(base_geom_build_geometry)
     !call geometry_end(geo)
     geo%natoms=atom_list_len(this%list)
     ASSERT(geo%natoms>0)
@@ -212,24 +217,24 @@ contains
     geo%nspecies=species_dict_len(this%dict)
     ASSERT(geo%nspecies>0)
     SAFE_ALLOCATE(geo%species(geo%nspecies))
-    call bgeom_init(iter, this)
+    call base_geom_init(iter, this)
     do indx=1, geo%nspecies
       nullify(spec)
-      call bgeom_next(iter, spec, ierr)
+      call base_geom_next(iter, spec, ierr)
       ASSERT(ierr==0)
       call species_set_index(spec, indx)
       geo%species(indx)=spec
     end do
     do indx=1, geo%natoms
       nullify(atom, spec)
-      call bgeom_next(iter, atom, ierr)
+      call base_geom_next(iter, atom, ierr)
       ASSERT(ierr==0)
       call species_dict_get(this%dict, atom_get_label(atom), spec, ierr)
       ASSERT(ierr==SPECIES_DICT_OK)
       geo%atom(indx)=atom
       call atom_set_species(geo%atom(indx), geo%species(species_index(spec)))
     end do
-    call bgeom_end(iter)
+    call base_geom_end(iter)
     nullify(atom, spec)
     geo%ncatoms=0
     geo%catom=>null()
@@ -242,33 +247,33 @@ contains
     nullify(geo%ionic_interaction_type)
     nullify(geo%ionic_interaction_parameter)
     geo%reduced_coordinates=.false.
-    POP_SUB(bgeom_build_geometry)
+    POP_SUB(base_geom_build_geometry)
     return
-  end subroutine bgeom_build_geometry
+  end subroutine base_geom_build_geometry
 
   ! ---------------------------------------------------------
-  subroutine bgeom_init_begin(this, space, config)
-    type(bgeom_t),               intent(out) :: this
+  subroutine base_geom_init_begin(this, space, config)
+    type(base_geom_t),           intent(out) :: this
     type(space_t),       target, intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(bgeom_init_begin)
+    PUSH_SUB(base_geom_init_begin)
     this%config=>config
     this%space=>space
     nullify(this%pgeo)
     call geometry_init_from_data_object(this%igeo, this%space, config)
     call atom_list_init(this%list)
     call species_dict_init(this%dict, DICT_INIT_LEN)
-    call bgeom_hash_init(this%hash)
-    call bgeom_build_geom(this, this%igeo)
-    POP_SUB(bgeom_init_begin)
+    call base_geom_hash_init(this%hash)
+    call base_geom_build_geom(this, this%igeo)
+    POP_SUB(base_geom_init_begin)
     return
-  end subroutine bgeom_init_begin
+  end subroutine base_geom_init_begin
 
   ! ---------------------------------------------------------
-  subroutine bgeom_init_build(this, that, config)
-    type(bgeom_t),       intent(inout) :: this
-    type(bgeom_t),       intent(in)    :: that
+  subroutine base_geom_init_build(this, that, config)
+    type(base_geom_t),   intent(inout) :: this
+    type(base_geom_t),   intent(in)    :: that
     type(json_object_t), intent(in)    :: config
     !
     type(geometry_t),    pointer :: geo
@@ -278,10 +283,10 @@ contains
     type(basis_t)                :: base
     integer                      :: ierr
     !
-    PUSH_SUB(bgeom_init_build)
+    PUSH_SUB(base_geom_init_build)
     nullify(geo, cnfg, list)
-    call bgeom_hash_set(this%hash, config, that)
-    call bgeom_get(that, geo)
+    call base_geom_hash_set(this%hash, config, that)
+    call base_geom_get(that, geo)
     ASSERT(associated(geo))
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -292,74 +297,74 @@ contains
         call json_next(iter, cnfg, ierr)
         if(ierr/=JSON_OK)exit
         call basis_init(base, this%space, cnfg)
-        call bgeom_build_geom(this, geo, base)
+        call base_geom_build_geom(this, geo, base)
         call basis_end(base)
       end do
       call json_end(iter)
       nullify(cnfg)
     else
-      call bgeom_build_geom(this, geo)
+      call base_geom_build_geom(this, geo)
     end if
-    POP_SUB(bgeom_init_build)
+    POP_SUB(base_geom_init_build)
     return
-  end subroutine bgeom_init_build
+  end subroutine base_geom_init_build
 
   ! ---------------------------------------------------------
-  subroutine bgeom_init_finish(this)
-    type(bgeom_t), target, intent(inout) :: this
+  subroutine base_geom_init_finish(this)
+    type(base_geom_t), target, intent(inout) :: this
     !
-    PUSH_SUB(bgeom_init_finish)
-    if(bgeom_hash_len(this%hash)>0)then
+    PUSH_SUB(base_geom_init_finish)
+    if(base_geom_hash_len(this%hash)>0)then
       SAFE_ALLOCATE(this%pgeo)
-      call bgeom_build_geometry(this, this%pgeo, this%space)
+      call base_geom_build_geometry(this, this%pgeo, this%space)
     else
       this%pgeo=>this%igeo
     end if
-    POP_SUB(bgeom_init_finish)
+    POP_SUB(base_geom_init_finish)
     return
-  end subroutine bgeom_init_finish
+  end subroutine base_geom_init_finish
 
   ! ---------------------------------------------------------
-  subroutine bgeom_get_config(this, that)
-    type(bgeom_t),        target, intent(in) :: this
+  subroutine base_geom_get_config(this, that)
+    type(base_geom_t),    target, intent(in) :: this
     type(json_object_t), pointer             :: that
     !
-    PUSH_SUB(bgeom_get_config)
+    PUSH_SUB(base_geom_get_config)
     nullify(that)
     if(associated(this%config))&
       that=>this%config
-    POP_SUB(bgeom_get_config)
+    POP_SUB(base_geom_get_config)
     return
-  end subroutine bgeom_get_config
+  end subroutine base_geom_get_config
 
   ! ---------------------------------------------------------
-  subroutine bgeom_get_space(this, that)
-    type(bgeom_t),  target, intent(in) :: this
-    type(space_t), pointer             :: that
+  subroutine base_geom_get_space(this, that)
+    type(base_geom_t), target, intent(in) :: this
+    type(space_t),    pointer             :: that
     !
-    PUSH_SUB(bgeom_get_space)
+    PUSH_SUB(base_geom_get_space)
     nullify(that)
     if(associated(this%space))&
       that=>this%space
-    POP_SUB(bgeom_get_space)
+    POP_SUB(base_geom_get_space)
     return
-  end subroutine bgeom_get_space
+  end subroutine base_geom_get_space
 
   ! ---------------------------------------------------------
-  subroutine bgeom_get_geometry(this, that)
-    type(bgeom_t),     target, intent(in) :: this
+  subroutine base_geom_get_geometry(this, that)
+    type(base_geom_t), target, intent(in) :: this
     type(geometry_t), pointer             :: that
     !
-    PUSH_SUB(bgeom_get_geometry)
+    PUSH_SUB(base_geom_get_geometry)
     nullify(that)
     if(associated(this%pgeo))&
       that=>this%pgeo
-    POP_SUB(bgeom_get_geometry)
+    POP_SUB(base_geom_get_geometry)
     return
-  end subroutine bgeom_get_geometry
+  end subroutine base_geom_get_geometry
 
   ! ---------------------------------------------------------
-  subroutine bgeom_list_copy(this, that)
+  subroutine base_geom_list_copy(this, that)
     type(atom_list_t), intent(inout) :: this
     type(atom_list_t), intent(in)    :: that
     !
@@ -367,8 +372,8 @@ contains
     type(atom_t),      pointer :: oatm, iatm
     integer                    :: ierr
     !
-    PUSH_SUB(bgeom_list_copy)
-    call bgeom_list_end(this)
+    PUSH_SUB(base_geom_list_copy)
+    call base_geom_list_end(this)
     call atom_list_init(iter, that)
     do
       nullify(oatm, iatm)
@@ -380,12 +385,12 @@ contains
     end do
     call atom_list_end(iter)
     nullify(oatm, iatm)
-    POP_SUB(bgeom_list_copy)
+    POP_SUB(base_geom_list_copy)
     return
-  end subroutine bgeom_list_copy
+  end subroutine base_geom_list_copy
 
   ! ---------------------------------------------------------
-  subroutine bgeom_dict_copy(this, that)
+  subroutine base_geom_dict_copy(this, that)
     type(species_dict_t), intent(inout) :: this
     type(species_dict_t), intent(in)    :: that
     !
@@ -393,8 +398,8 @@ contains
     type(species_t),      pointer :: ospc, ispc
     integer                       :: ierr
     !
-    PUSH_SUB(bgeom_dict_copy)
-    call bgeom_dict_end(this)
+    PUSH_SUB(base_geom_dict_copy)
+    call base_geom_dict_end(this)
     call species_dict_init(iter, that)
     do
       nullify(ospc, ispc)
@@ -406,16 +411,16 @@ contains
     end do
     call species_dict_end(iter)
     nullify(ospc, ispc)
-    POP_SUB(bgeom_dict_copy)
+    POP_SUB(base_geom_dict_copy)
     return
-  end subroutine bgeom_dict_copy
+  end subroutine base_geom_dict_copy
 
   ! ---------------------------------------------------------
-  subroutine bgeom_copy(this, that)
-    type(bgeom_t), target, intent(inout) :: this
-    type(bgeom_t), target, intent(in)    :: that
+  subroutine base_geom_copy_geom(this, that)
+    type(base_geom_t), target, intent(inout) :: this
+    type(base_geom_t), target, intent(in)    :: that
     !
-    PUSH_SUB(bgeom_copy)
+    PUSH_SUB(base_geom_copy_geom)
     this%config=>that%config
     this%space=>that%space
     call geometry_copy(this%igeo, that%igeo)
@@ -425,15 +430,15 @@ contains
       SAFE_ALLOCATE(this%pgeo)
       call geometry_copy(this%pgeo, that%pgeo)
     end if
-    call bgeom_list_copy(this%list, that%list)
-    call bgeom_dict_copy(this%dict, that%dict)
-    call bgeom_hash_copy(this%hash, that%hash)
-    POP_SUB(bgeom_copy)
+    call base_geom_list_copy(this%list, that%list)
+    call base_geom_dict_copy(this%dict, that%dict)
+    call base_geom_hash_copy(this%hash, that%hash)
+    POP_SUB(base_geom_copy_geom)
     return
-  end subroutine bgeom_copy
+  end subroutine base_geom_copy_geom
 
   ! ---------------------------------------------------------
-  subroutine bgeom_list_end(this)
+  subroutine base_geom_list_end(this)
     type(atom_list_t), intent(inout) :: this
     !
     type(atom_t), pointer :: atom
@@ -448,10 +453,10 @@ contains
     end do
     call atom_list_end(this)
     return
-  end subroutine bgeom_list_end
+  end subroutine base_geom_list_end
 
   ! ---------------------------------------------------------
-  subroutine bgeom_dict_end(this)
+  subroutine base_geom_dict_end(this)
     type(species_dict_t), intent(inout) :: this
     !
     type(species_t), pointer :: spec
@@ -466,117 +471,119 @@ contains
     end do
     call species_dict_end(this)
     return
-  end subroutine bgeom_dict_end
+  end subroutine base_geom_dict_end
 
   ! ---------------------------------------------------------
-  subroutine bgeom_end_bgeom(this)
-    type(bgeom_t), target, intent(inout) :: this
+  subroutine base_geom_end_geom(this)
+    type(base_geom_t), target, intent(inout) :: this
     !
-    PUSH_SUB(bgeom_end_bgeom)
+    PUSH_SUB(base_geom_end_bgeom)
     nullify(this%config, this%space)
-    if(.not.associated(this%pgeo, this%igeo))then
-      call geometry_end(this%pgeo)
-      SAFE_DEALLOCATE_P(this%pgeo)
+    if(associated(this%pgeo))then
+      if(.not.associated(this%pgeo, this%igeo))then
+        call geometry_end(this%pgeo)
+        SAFE_DEALLOCATE_P(this%pgeo)
+      end if
     end if
     nullify(this%pgeo)
     call geometry_end(this%igeo)
-    call bgeom_list_end(this%list)
-    call bgeom_dict_end(this%dict)
-    call bgeom_hash_end(this%hash)
-    POP_SUB(bgeom_end_bgeom)
+    call base_geom_list_end(this%list)
+    call base_geom_dict_end(this%dict)
+    call base_geom_hash_end(this%hash)
+    POP_SUB(base_geom_end_geom)
     return
-  end subroutine bgeom_end_bgeom
+  end subroutine base_geom_end_geom
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_init(this, that)
-    type(bgeom_iterator_t), intent(out) :: this
-    type(bgeom_t),          intent(in)  :: that
+  subroutine base_geom_iterator_init(this, that)
+    type(base_geom_iterator_t), intent(out) :: this
+    type(base_geom_t),          intent(in)  :: that
     !
-    PUSH_SUB(bgeom_iterator_init)
+    PUSH_SUB(base_geom_iterator_init)
     call atom_list_init(this%aitr, that%list)
     call species_dict_init(this%sitr, that%dict)
-    call bgeom_hash_init(this%hitr, that%hash)
-    POP_SUB(bgeom_iterator_init)
+    call base_geom_hash_init(this%hitr, that%hash)
+    POP_SUB(base_geom_iterator_init)
     return
-  end subroutine bgeom_iterator_init
+  end subroutine base_geom_iterator_init
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_next_atom(this, atom, ierr)
-    type(bgeom_iterator_t), intent(inout) :: this
-    type(atom_t),          pointer        :: atom
-    integer,      optional, intent(out)   :: ierr
+  subroutine base_geom_iterator_next_atom(this, atom, ierr)
+    type(base_geom_iterator_t), intent(inout) :: this
+    type(atom_t),              pointer        :: atom
+    integer,          optional, intent(out)   :: ierr
     !
-    PUSH_SUB(bgeom_iterator_next_atom)
+    PUSH_SUB(base_geom_iterator_next_atom)
     call atom_list_next(this%aitr, atom, ierr)
-    POP_SUB(bgeom_iterator_next_atom)
+    POP_SUB(base_geom_iterator_next_atom)
     return
-  end subroutine bgeom_iterator_next_atom
+  end subroutine base_geom_iterator_next_atom
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_next_species(this, spec, ierr)
-    type(bgeom_iterator_t), intent(inout) :: this
-    type(species_t),       pointer        :: spec
-    integer,      optional, intent(out)   :: ierr
+  subroutine base_geom_iterator_next_species(this, spec, ierr)
+    type(base_geom_iterator_t), intent(inout) :: this
+    type(species_t),           pointer        :: spec
+    integer,          optional, intent(out)   :: ierr
     !
-    PUSH_SUB(bgeom_iterator_next_species)
+    PUSH_SUB(base_geom_iterator_next_species)
     call species_dict_next(this%sitr, spec, ierr)
-    POP_SUB(bgeom_iterator_next_species)
+    POP_SUB(base_geom_iterator_next_species)
     return
-  end subroutine bgeom_iterator_next_species
+  end subroutine base_geom_iterator_next_species
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_next_geom(this, geom, ierr)
-    type(bgeom_iterator_t), intent(inout) :: this
-    type(bgeom_t),         pointer        :: geom
-    integer,      optional, intent(out)   :: ierr
+  subroutine base_geom_iterator_next_geom(this, geom, ierr)
+    type(base_geom_iterator_t), intent(inout) :: this
+    type(base_geom_t),         pointer        :: geom
+    integer,          optional, intent(out)   :: ierr
     !
-    PUSH_SUB(bgeom_iterator_next_geom)
-    call bgeom_hash_next(this%hitr, geom, ierr)
-    POP_SUB(bgeom_iterator_next_geom)
+    PUSH_SUB(base_geom_iterator_next_geom)
+    call base_geom_hash_next(this%hitr, geom, ierr)
+    POP_SUB(base_geom_iterator_next_geom)
     return
-  end subroutine bgeom_iterator_next_geom
+  end subroutine base_geom_iterator_next_geom
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_next_geometry(this, geo, ierr)
-    type(bgeom_iterator_t), intent(inout) :: this
-    type(geometry_t),      pointer        :: geo
-    integer,      optional, intent(out)   :: ierr
+  subroutine base_geom_iterator_next_geometry(this, geo, ierr)
+    type(base_geom_iterator_t), intent(inout) :: this
+    type(geometry_t),          pointer        :: geo
+    integer,          optional, intent(out)   :: ierr
     !
-    type(bgeom_t), pointer :: geom
+    type(base_geom_t), pointer :: geom
     !
-    PUSH_SUB(bgeom_iterator_next_geometry)
+    PUSH_SUB(base_geom_iterator_next_geometry)
     nullify(geo, geom)
-    call bgeom_hash_next(this%hitr, geom, ierr)
-    call bgeom_get(geom, geo)
+    call base_geom_hash_next(this%hitr, geom, ierr)
+    call base_geom_get(geom, geo)
     nullify(geom)
-    POP_SUB(bgeom_iterator_next_geometry)
+    POP_SUB(base_geom_iterator_next_geometry)
     return
-  end subroutine bgeom_iterator_next_geometry
+  end subroutine base_geom_iterator_next_geometry
 
   ! ---------------------------------------------------------
-  subroutine bgeom_iterator_copy(this, that)
-    type(bgeom_iterator_t), intent(out) :: this
-    type(bgeom_iterator_t), intent(in)  :: that
+  subroutine base_geom_iterator_copy(this, that)
+    type(base_geom_iterator_t), intent(out) :: this
+    type(base_geom_iterator_t), intent(in)  :: that
     !
-    PUSH_SUB(bgeom_iterator_copy)
+    PUSH_SUB(base_geom_iterator_copy)
     call atom_list_copy(this%aitr, that%aitr)
     call species_dict_copy(this%sitr, that%sitr)
-    call bgeom_hash_copy(this%hitr, that%hitr)
-    POP_SUB(bgeom_iterator_copy)
+    call base_geom_hash_copy(this%hitr, that%hitr)
+    POP_SUB(base_geom_iterator_copy)
     return
-  end subroutine bgeom_iterator_copy
+  end subroutine base_geom_iterator_copy
 
   ! ---------------------------------------------------------
-  elemental subroutine bgeom_iterator_end(this)
-    type(bgeom_iterator_t), intent(inout) :: this
+  elemental subroutine base_geom_iterator_end(this)
+    type(base_geom_iterator_t), intent(inout) :: this
     !
     call atom_list_end(this%aitr)
     call species_dict_end(this%sitr)
-    call bgeom_hash_end(this%hitr)
+    call base_geom_hash_end(this%hitr)
     return
-  end subroutine bgeom_iterator_end
+  end subroutine base_geom_iterator_end
 
-end module bgeom_m
+end module base_geom_m
 
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME

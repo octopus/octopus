@@ -34,10 +34,6 @@ module storage_m
   implicit none
 
   private
-!!$  public ::      &
-!!$    operator(+), &
-!!$    operator(-)
-
   public ::                &
     storage_init,          &
     storage_start,         &

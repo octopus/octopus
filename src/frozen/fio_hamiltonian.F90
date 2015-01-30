@@ -8,16 +8,16 @@ module fio_hamiltonian_m
 
   use json_m, only: JSON_OK, json_object_t, json_get
 
-  use bhmlt_m, only:                &
-    hamiltonian_setn => bhmlt_setn, &
-    hamiltonian_getn => bhmlt_getn, &
-    hamiltonian_deln => bhmlt_deln
+  use base_hamiltonian_m, only:                &
+    hamiltonian_setn => base_hamiltonian_setn, &
+    hamiltonian_getn => base_hamiltonian_getn, &
+    hamiltonian_deln => base_hamiltonian_deln
 
-  use bhmlt_m, only:                        &
-    fio_hamiltonian_t      => bhmlt_t,      &
-    fio_hamiltonian_start  => bhmlt_start,  &
-    fio_hamiltonian_stop   => bhmlt_stop,   &
-    fio_hamiltonian_get    => bhmlt_get
+  use base_hamiltonian_m, only:                       &
+    fio_hamiltonian_t     => base_hamiltonian_t,      &
+    fio_hamiltonian_start => base_hamiltonian_start,  &
+    fio_hamiltonian_stop  => base_hamiltonian_stop,   &
+    fio_hamiltonian_get   => base_hamiltonian_get
 
   use fio_external_m, only: &
     fio_external_t,         &
@@ -36,6 +36,7 @@ module fio_hamiltonian_m
 
   private
   public ::                 &
+    hamiltonian_get_epot, &
     fio_hamiltonian_t,      &
     fio_hamiltonian_init,   &
     fio_hamiltonian_start,  &
@@ -50,6 +51,15 @@ module fio_hamiltonian_m
   end interface !fio_hamiltonian_get
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_get_epot(this, that)
+    type(fio_hamiltonian_t),    intent(in) :: this
+    type(fio_external_t), pointer     :: that
+    !
+    call fio_hamiltonian_get(this, that)
+    return
+  end subroutine hamiltonian_get_epot
 
   ! ---------------------------------------------------------
   subroutine fio_hamiltonian_init(this, sys, config)
@@ -67,7 +77,7 @@ contains
     if(ierr==JSON_OK)then
       SAFE_ALLOCATE(epot)
       call fio_external_init(epot, sys, cnfg)
-      call hamiltonian_setn(this, "external", epot)
+      call hamiltonian_setn(this, "fio_external", epot)
     end if
     POP_SUB(fio_hamiltonian_init)
     return
@@ -81,7 +91,7 @@ contains
     !
     PUSH_SUB(fio_hamiltonian_update)
     nullify(epot)
-    call fio_hamiltonian_get_external(this, epot)
+    call fio_hamiltonian_get(this, epot)
     ASSERT(associated(epot))
     call fio_external_update(epot)
     POP_SUB(fio_hamiltonian_update)
@@ -94,7 +104,7 @@ contains
     type(fio_external_t),   pointer     :: that
     !
     PUSH_SUB(fio_hamiltonian_get_external)
-    call hamiltonian_getn(this, "external", that)
+    call hamiltonian_getn(this, "fio_external", that)
     POP_SUB(fio_hamiltonian_get_external)
     return
   end subroutine fio_hamiltonian_get_external
@@ -113,7 +123,7 @@ contains
     if(associated(iept))then
       SAFE_ALLOCATE(oept)
       call fio_external_copy(oept, iept)
-      call hamiltonian_setn(this, "external", oept)
+      call hamiltonian_setn(this, "fio_external", oept)
     end if
     POP_SUB(fio_hamiltonian_copy)
     return
@@ -127,7 +137,7 @@ contains
     !
     PUSH_SUB(fio_hamiltonian_end)
     nullify(epot)
-    call hamiltonian_deln(this, "external", epot)
+    call hamiltonian_deln(this, "fio_external", epot)
     if(associated(epot))then
       call fio_external_end(epot)
       SAFE_DEALLOCATE_P(epot)

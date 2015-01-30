@@ -14,14 +14,14 @@ module fio_system_m
     fio_states_t,         &
     fio_states_update
 
-  use bsyst_m, only:                 &
-    fio_system_t     => bsyst_t,     &
-    fio_system_init  => bsyst_init,  &
-    fio_system_start => bsyst_start, &
-    fio_system_stop  => bsyst_stop,  &
-    fio_system_get   => bsyst_get,   &
-    fio_system_copy  => bsyst_copy,  &
-    fio_system_end   => bsyst_end
+  use base_system_m, only:                 &
+    fio_system_t     => base_system_t,     &
+    fio_system_init  => base_system_init,  &
+    fio_system_start => base_system_start, &
+    fio_system_stop  => base_system_stop,  &
+    fio_system_get   => base_system_get,   &
+    fio_system_copy  => base_system_copy,  &
+    fio_system_end   => base_system_end
 
   implicit none
 

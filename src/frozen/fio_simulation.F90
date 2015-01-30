@@ -10,8 +10,8 @@ module fio_simulation_m
   use mpi_m,   only: mpi_grp_t
   use space_m, only: space_t
 
-  use bgeom_m, only:       &
-    fio_geom_t => bgeom_t
+  use base_geom_m, only:       &
+    fio_geom_t => base_geom_t
 
   use fio_grid_m, only: &
     fio_grid_t,         &

@@ -17,13 +17,15 @@ module fio_config_m
   use loct_m,        only: loct_dir_exists
   use parser_m,      only: block_t, parse_block_string, parse_block_integer
 
-  use bhmlt_m, only: &
-    POTN_TYPE,       &
+  use base_hamiltonian_m, only: &
+    POTN_TYPE,                  &
     HMLT_TYPE
 
-  use bcnfg_m, only: &
-    FNIO_TYPE,       &
-    bcnfg_parse
+  use base_config_m, only: &
+    FNIO_TYPE
+
+  use base_config_m, only:             &
+    config_parse => base_config_parse
 
   implicit none
 
@@ -495,7 +497,7 @@ contains
     !
     PUSH_SUB(fio_config_parse)
     nullify(cnfg)
-    call bcnfg_parse(this)
+    call config_parse(this)
     call json_set(this, "name", "fio")
     call json_set(this, "type", FNIO_TYPE)
     call parse_block_string(block, line, icol, dirname)

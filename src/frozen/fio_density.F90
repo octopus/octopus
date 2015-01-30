@@ -15,34 +15,34 @@ module fio_density_m
   use fio_simulation_m, only: &
     fio_simulation_t
 
-  use bdnst_m, only:                  &
-    fio_density_t     => bdnst_t,     &
-    fio_density_init  => bdnst_init,  &
-    fio_density_start => bdnst_start, &
-    fio_density_stop  => bdnst_stop,  &
-    fio_density_eval  => bdnst_eval,  &
-    fio_density_get   => bdnst_get,   &
-    fio_density_copy  => bdnst_copy,  &
-    fio_density_end   => bdnst_end
+  use base_density_m, only:                                          &
+    fio_density_t                 => base_density_t,                 &
+    fio_density_init              => base_density_init,              &
+    fio_density_start             => base_density_start,             &
+    fio_density_stop              => base_density_stop,              &
+    fio_density_eval              => base_density_eval,              &
+    fio_density_get               => base_density_get,               &
+    fio_density_copy              => base_density_copy,              &
+    fio_density_end               => base_density_end
 
-  use bdnst_m, only:                        &
-    fio_density_intrpl_t => bdnst_intrpl_t
+  use base_density_m, only:                                      &
+    fio_density_intrpl_t => base_density_intrpl_t
 
   implicit none
 
   private
-  public ::             &
-    fio_density_t,      &
-    fio_density_init,   &
-    fio_density_start,  &
-    fio_density_update, &
-    fio_density_stop,   &
-    fio_density_eval,   &
-    fio_density_get,    &
-    fio_density_copy,   &
+  public ::                        &
+    fio_density_t,                 &
+    fio_density_init,              &
+    fio_density_start,             &
+    fio_density_update,            &
+    fio_density_stop,              &
+    fio_density_eval,              &
+    fio_density_get,               &
+    fio_density_copy,              &
     fio_density_end
 
-  public ::               &
+  public ::                      &
     fio_density_intrpl_t
 
 contains
@@ -54,29 +54,24 @@ contains
     character(len=*),    intent(in)    :: file
     integer,             intent(in)    :: ispin
     !
-    real(kind=wp), dimension(:,:), pointer :: density
+    real(kind=wp), dimension(:,:), pointer :: dnst
     character(len=MAX_PATH_LEN)            :: fpth
-    integer                                :: np, ierr, i
+    integer                                :: np, ierr
     !
     PUSH_SUB(fio_density_read)
-    nullify(density)
-    call fio_density_get(this, density)
-    ASSERT(associated(density))
+    nullify(dnst)
+    call fio_density_get(this, dnst)
+    ASSERT(associated(dnst))
     call fio_density_get(this, size=np)
     call path_join(dir, file, fpth)
-    print *, trim(adjustl(fpth))
-    call io_binary_read(fpth, np, density(:,ispin), ierr, offset=0)
+    call io_binary_read(fpth, np, dnst(:,ispin), ierr, offset=0)
     if(ierr/=0)then
       call fio_density_end(this)
       message(1)="Could not read the density file: '"//trim(adjustl(fpth))//"'"
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr
       call messages_fatal(2)
     end if
-    do i=1, np
-      if(abs(density(1,ispin))>1.0e-16)&
-        print *, density(1,ispin)
-    end do
-    nullify(density)
+    nullify(dnst)
     POP_SUB(fio_density_read)
     return
   end subroutine fio_density_read

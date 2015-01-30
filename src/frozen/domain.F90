@@ -18,9 +18,6 @@ module domain_m
   use messages_m
   use profiling_m
 
-  !use json_m,   only: operator(==), json_object_t, json_list
-  !use kinds_m,  only: wp
-
   use kinds_m,     only: wp
   use geometry_m,  only: geometry_t
   use simul_box_m, only: simul_box_t, simul_box_in_box

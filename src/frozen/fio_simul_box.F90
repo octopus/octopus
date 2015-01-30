@@ -19,9 +19,9 @@ module fio_simul_box_m
     simul_box_load,        &
     simul_box_lookup_init
 
-  use bgeom_m, only:           &
-    fio_geom_t   => bgeom_t,   &
-    fio_geom_get => bgeom_get
+  use base_geom_m, only:           &
+    fio_geom_t   => base_geom_t,   &
+    fio_geom_get => base_geom_get
 
   use simul_box_m, only:                  &
     fio_simul_box_t    => simul_box_t,    &

@@ -24,9 +24,9 @@ module fio_curvilinear_m
     fio_curvilinear_copy => curvilinear_copy, &
     fio_curvilinear_end  => curvilinear_end
 
-  use bgeom_m, only:           &
-    fio_geom_t   => bgeom_t,   &
-    fio_geom_get => bgeom_get
+  use base_geom_m, only:           &
+    fio_geom_t   => base_geom_t,   &
+    fio_geom_get => base_geom_get
 
   use fio_simul_box_m, only: &
     fio_simul_box_t

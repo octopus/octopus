@@ -9,20 +9,23 @@ module fio_handle_m
   use json_m, only: JSON_OK, json_object_t, json_get
   use mpi_m,  only: mpi_grp_t
 
-  use bhndl_m, only:               &
-    handle_init   => bhndl_init,   &
-    handle_start  => bhndl_start,  &
-    handle_update => bhndl_update, & 
-    handle_stop   => bhndl_stop,   &
-    handle_copy   => bhndl_copy,   &
-    handle_end    => bhndl_end
+  use base_handle_m, only:               &
+    handle_init   => base_handle_init,   &
+    handle_start  => base_handle_start,  &
+    handle_update => base_handle_update, & 
+    handle_stop   => base_handle_stop,   &
+    handle_copy   => base_handle_copy,   &
+    handle_end    => base_handle_end
 
-  use bhndl_m, only:               &
-    fio_handle_t    => bhndl_t,    &
-    fio_handle_get  => bhndl_get
+  use base_handle_m, only:               &
+    fio_handle_t    => base_handle_t,    &
+    fio_handle_get  => base_handle_get
 
   use fio_grid_m, only: &
     fio_grid_t
+
+  use fio_external_m, only: &
+    fio_external_t
 
   use fio_model_m, only: &
     fio_model_t,         &
@@ -128,14 +131,13 @@ contains
   end subroutine fio_handle_stop
 
   ! ---------------------------------------------------------
-  recursive subroutine fio_handle_copy(this, that)
+  subroutine fio_handle_copy(this, that)
     type(fio_handle_t), intent(inout) :: this
     type(fio_handle_t), intent(in)    :: that
     !
     type(fio_model_t), pointer :: omdl, imdl
     !
     PUSH_SUB(fio_handle_copy)
-    call fio_handle_end(this)
     call handle_copy(this, that)
     nullify(omdl, imdl)
     call fio_handle_get(that, imdl)
