@@ -447,16 +447,22 @@ void parse_putsym_int(char *s, int i)
 {
   symrec *rec = putsym(s, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, (double)i, 0);
+  rec->def = 1;
+  rec->used = 1;
 }
 
 void parse_putsym_double(char *s, double d)
 {
   symrec *rec =  putsym(s, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, d, 0);
+  rec->def = 1;
+  rec->used = 1;
 }
 
 void parse_putsym_complex(char *s, gsl_complex c)
 {
   symrec *rec =  putsym(s, S_CMPLX);
-  rec->value.c = c;	
+  rec->value.c = c;
+  rec->def = 1;
+  rec->used = 1;
 }

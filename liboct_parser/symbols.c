@@ -53,6 +53,7 @@ symrec *putsym (char *sym_name, symrec_type sym_type)
   str_tolower(ptr->name);
   
   ptr->def  = 0;
+  ptr->used = 0;
   ptr->type = sym_type;
   GSL_SET_COMPLEX(&ptr->value.c, 0, 0); /* set value to 0 even if fctn.  */
   ptr->next = (struct symrec *)sym_table;
@@ -65,8 +66,10 @@ symrec *getsym (char *sym_name)
   symrec *ptr;
   for (ptr = sym_table; ptr != (symrec *) 0;
        ptr = (symrec *)ptr->next)
-    if (strcasecmp(ptr->name,sym_name) == 0)
+    if (strcasecmp(ptr->name,sym_name) == 0){
+      ptr->used = 1;
       return ptr;
+    }
   return (symrec *) 0;
 }
 
@@ -195,6 +198,7 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
   for (i = 0; arith_fncts[i].fname != 0; i++){
     ptr = putsym (arith_fncts[i].fname, S_FNCT);
     ptr->def = 1;
+    ptr->used = 1;
     ptr->nargs = arith_fncts[i].nargs;
     ptr->value.fnctptr = arith_fncts[i].fnctptr;
   }
@@ -203,6 +207,7 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
   for (i = 0; arith_cnts[i].fname != 0; i++){
     ptr = putsym(arith_cnts[i].fname, S_CMPLX);
     ptr->def = 1;
+    ptr->used = 1;
     GSL_SET_COMPLEX(&ptr->value.c, arith_cnts[i].re, arith_cnts[i].im);
   }
 }
@@ -251,10 +256,11 @@ void sym_end_table()
   sym_table = NULL;
 }
 
-void sym_output_table()
+void sym_output_table(int only_unused)
 {
   symrec *ptr;
   for(ptr = sym_table; ptr != NULL; ptr = ptr->next){
+    if(only_unused && ptr->used == 1) continue;
     printf("%s", ptr->name);
     switch(ptr->type){
     case S_CMPLX:

@@ -34,6 +34,7 @@ typedef struct symrec{
   char *name;                  /* name of symbol */
   symrec_type type;            /* type of symbol: either VAR or FNCT */
   int def;                     /* has this symbol been defined */
+  int used;                    /* this symbol has been used before */
 
   int nargs;                   /* if type==FNCT contains the number of arguments of the function */
 
@@ -60,7 +61,7 @@ void sym_wrong_arg(symrec *sym);
 void sym_init_table(void);
 void sym_clear_reserved(void);
 void sym_end_table(void);
-void sym_output_table(void);
+void sym_output_table(int only_unused);
 char *str_tolower(char *in);
 
 #endif
