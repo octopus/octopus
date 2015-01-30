@@ -72,7 +72,6 @@ contains
     type(rdm_t),           intent(inout)    :: rdm
     type(states_t),        intent(inout)    :: st
 
-
     PUSH_SUB(rdmft_init)  
 
     if(st%nst < st%qtot + 1) then   
@@ -181,9 +180,15 @@ contains
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
-    
+
+    ! problem is about k-points for exchange
     if (simul_box_is_periodic(gr%sb)) then
       call messages_not_implemented("Periodic system calculations for RDMFT")
+    endif
+
+    ! exchange routine needs all states on each processor currently
+    if(st%parallel_in_states) then
+      call messages_not_implemented("RDMFT parallel in states")
     endif
 
     energy_old = CNST(1.0e20)
@@ -252,10 +257,10 @@ contains
     end do
    
     if(conv) then 
-      write(message(1),'(a,i3,a)')  'The calcualtion converged after ',iter,' iterations'
+      write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
       call messages_info(1)
     else
-      write(message(1),'(a,i3,a)')  'The calcualtion did not converged after ', iter, ' iterations '
+      write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'The energy difference between the last two iterations is ', abs(energy_occ-energy)
       write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
@@ -645,7 +650,7 @@ contains
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       call dhamiltonian_apply(hm, gr%der, dpsi, hpsi, ist, 1, &
-                            & terms = TERM_OTHERS)
+                              terms = TERM_OTHERS)
       do kst = 1, st%nst
         call states_get_state(st, gr%mesh, kst, 1, dpsi2)
         g_x(ist,kst) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
@@ -792,7 +797,7 @@ contains
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
-                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+                              terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
       rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
     end do
     
@@ -802,7 +807,7 @@ contains
       rho = M_ZERO
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       rho(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
-      call dpoisson_solve(psolver, pot , rho, all_nodes = .false.)
+      call dpoisson_solve(psolver, pot, rho, all_nodes = .false.)
       
       do jst = 1, ist
         call states_get_state(st, gr%mesh, jst, 1, dpsi)

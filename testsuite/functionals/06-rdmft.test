@@ -6,12 +6,11 @@ Programs   : octopus; octopus_mpi
 TestGroups : long-run, functionals
 Enabled    : Yes
 
-Processors: 1
-# not implemented in parallel
+Processors: 4
+
 Input: 06-rdmft.01-oep.inp
 match ; OEP energy                    ; GREP(static/info, 'Total       =', 20)   ; -1.23959074
 match ; OEP eigenvalue                ; GREP(static/info, '  1   --', 13) ;   -0.633895
-
 
 Input: 06-rdmft.02-gs.inp
 Precision : 1e-5
