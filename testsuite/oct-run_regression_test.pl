@@ -61,8 +61,6 @@ sub set_precision{
   my $p = $_[0];
   if($p ne "default"){
     $precnum = 1.0*$p;
-  }elsif($_[1] =~ m/_single/){
-    $precnum = 0.001
   } else {
     $precnum = 0.0001
   }
@@ -171,7 +169,7 @@ if (! -d $tempdirpath) { mkdir $tempdirpath; }
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
-  set_precision("default", $octopus_exe);
+  set_precision("default");
   $test_succeeded = 1;
 
   $pwd = get_env("PWD");
@@ -371,7 +369,7 @@ foreach my $octopus_exe (@executables){
       }
 
       elsif ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1, $command) ;
+	set_precision($1);
       }
 
       elsif ( $_ =~ /^match/ ) {
