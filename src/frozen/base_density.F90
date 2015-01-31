@@ -245,7 +245,8 @@ contains
   end function base_density_get_nspin
 
   ! ---------------------------------------------------------
-  elemental subroutine base_density_get_info(this, size, nspin)
+  !elemental 
+  subroutine base_density_get_info(this, size, nspin)
     type(base_density_t), intent(in)  :: this
     integer,    optional, intent(out) :: size
     integer,    optional, intent(out) :: nspin
