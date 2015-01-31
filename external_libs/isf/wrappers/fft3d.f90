@@ -409,7 +409,8 @@ END SUBROUTINE fft_1d_ctoc
 subroutine FFT(n1,n2,n3,nd1,nd2,nd3,z,i_sign,inzee)
 
    use module_fft_sg
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
    !!!$      interface
    !!!!$        integer ( kind=4 ) function omp_get_num_threads ( )
    !!!!$        end function omp_get_num_threads
@@ -427,6 +428,10 @@ subroutine FFT(n1,n2,n3,nd1,nd2,nd3,z,i_sign,inzee)
    integer, dimension(n_factors) :: after,now,before
    real(kind=8), allocatable, dimension(:,:,:) :: zw  
    real(kind=8), dimension(:,:), allocatable :: trig
+   integer :: ic,i,ntrig, nfft, npr, iam, inzet, j
+   integer :: jompa, jomb, jompb, mb, jj, inzeep
+   integer :: lot, lotomp, ma, m, n, mm, nn
+
 
    if (max(n1,n2,n3).gt.nfft_max) then
       write(*,*) 'One of the dimensions:',n1,n2,n3,' is bigger than ',nfft_max
@@ -712,7 +717,8 @@ END SUBROUTINE FFT
 subroutine FFT_for(n1,n2,n3,n1f,n3f,nd1,nd2,nd3,nd1f,nd3f,x0,z1,z3,inzee)
 
    use module_fft_sg
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
 
    !!!!!!!$      interface
    !!!!!!$        integer ( kind=4 ) function omp_get_num_threads ( )
@@ -724,8 +730,18 @@ subroutine FFT_for(n1,n2,n3,n1f,n3f,nd1,nd2,nd3,nd1f,nd3f,x0,z1,z3,inzee)
    !!!!!!!!$      end interface
 
    !Arguments
-   integer, intent(in) :: n1,n2,n3,n1f,n3f
-   integer, intent(in) :: nd1,nd2,nd3,nd1f,nd3f
+   integer, intent(in) :: n1
+   integer, intent(in) :: n2 
+   integer, intent(in) :: n3
+   integer, intent(in) :: n1f
+   integer, intent(in) :: n3f
+
+   integer, intent(in) :: nd1
+   integer, intent(in) :: nd2
+   integer, intent(in) :: nd3
+   integer, intent(in) :: nd1f
+   integer, intent(in) :: nd3f
+
    integer, intent(inout) :: inzee
    real(kind=8), intent(in) :: x0(n1,n2,n3)
    real(kind=8), intent(out) :: z3(2,nd1*nd2*nd3f,2)
@@ -734,7 +750,11 @@ subroutine FFT_for(n1,n2,n3,n1f,n3f,nd1,nd2,nd3,nd1f,nd3f,x0,z1,z3,inzee)
    real(kind=8), allocatable, dimension(:,:,:) :: zw  
    integer, dimension(n_factors) :: after,now,before
    real(kind=8), dimension(:,:), allocatable :: trig
-   integer::mm,nffta,i_sign=1
+   ! integer::mm,nffta,i_sign=1
+   ! integer :: ntrig, i, npr, iam, inzet, m
+   ! real(kind=8) :: lot, nn
+   integer :: ic,i,ntrg, nfft, npr, mm, iam, inzet, m, n, j, nn, ntrig
+   integer :: jompa, lot, jompb, mb, jj, inzeep, i_sign, nffta, lotomp, ma
 
    if (max(n1,n2,n3).gt.nfft_max) then
       write(*,*) 'Dimension bigger than ', nfft_max
@@ -1134,7 +1154,8 @@ END SUBROUTINE fft_for
 subroutine FFT_back(n1,n2,n3,n1b,n3f,n3b,nd1,nd2,nd3,nd1b,nd3f,nd3b,y,z1,z3,inzee)
 
    use module_fft_sg
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
 
    !!!!!!!$      interface
    !!!!!!!$        integer ( kind=4 ) function omp_get_num_threads ( )
@@ -1151,10 +1172,14 @@ subroutine FFT_back(n1,n2,n3,n1b,n3f,n3b,nd1,nd2,nd3,nd1b,nd3f,nd3b,y,z1,z3,inze
    real(kind=8),intent(out) :: y(n1,n2,n3)
    real(kind=8),intent(inout) :: z3(2,nd1*nd2*nd3b,2)
    real(kind=8)                :: z1(2,nd1b*nd2*nd3,2) ! work array
+   integer, intent(inout) :: inzee
    !Local variables
    real(kind=8), allocatable, dimension(:,:,:) :: zw  
    real(kind=8), dimension(:,:), allocatable :: trig
    integer, dimension(n_factors) :: after,now,before
+   integer :: ic,i,ntrig, nfft, npr, mm, iam, inzet, m, n, j
+   integer :: jompa, lot, jompb, mb, jj, inzeep, i_sign
+   integer ::  nn, lotomp, ma
 
    i_sign=-1
    if (max(n1,n2,n3).gt.1024) stop '1024'
@@ -1604,13 +1629,17 @@ END SUBROUTINE fft_back
 subroutine ctrig_sg(n,ntrig,trig,after,before,now,i_sign,ic)
 
    use module_fft_sg
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
 
    ! Arguments
    integer :: n,i_sign,ic
    real(kind=8), dimension(2,ntrig) :: trig
    integer, dimension(n_factors) :: after,now,before
    ! Local variables
+   integer :: i,ntrig, nfft, npr, mm, iam, inzet, m, j
+   integer :: jompa, lot, jompb, mb, jj, inzeep, itt, nh
+   real(kind=8) ::  nn, lotomp, ma, twopi, angle, trigc, trigs
 
    do i=1,ndata
       if (n.eq.ij_data(1,i)) then
@@ -1681,15 +1710,36 @@ END SUBROUTINE ctrig_sg
 subroutine fftstp_sg(mm,nfft,m,nn,n,zin,zout,ntrig,trig,after,now,before,i_sign)
 
    !use module_fft_sg, except_this_one_A => fftstp_sg
-
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
 
    ! Arguments
-   integer :: mm,nfft,m,nn,n,after,before,i_sign
+   integer :: mm
+   integer :: nfft
+   integer :: m
+   integer :: nn
+   integer :: n
+   real(kind=8) :: zin(2,mm,m)
+   real(kind=8) :: zout(2,nn,n)
+   integer :: ntrig
    real(kind=8), intent(in) :: trig(2,ntrig)
-   real(kind=8) :: zin(2,mm,m),zout(2,nn,n)
+   integer :: after
+   integer :: now
+   integer :: before
+   integer :: i_sign
+
    ! Local variables
-   integer :: atn,atb
+   integer :: atn,atb, ia, nin1, nout1, nin2, nin3, nin4, nout2, nin5
+   integer :: nin6, nout3, nout4, nin7, nout5, nout6, nout7, nin8, nout8
+   integer :: ic,i, npr, iam, inzet, j, ib, ias
+   integer :: jompa, lot, jompb, mb, jj, inzeep, itrig, itt
+   real(kind=8) ::  lotomp, rt2i, cos2, cos4, cos6, sin2, sin4, sin6, bb
+   real(kind=8) :: s, r1, r2, s1, s2, r3, s3, r4, s4, r5, s5, r, r25, r6, r7, s6, s7
+   real(kind=8) :: r34, s25, s34, cr2, r8, rp2, ur1, s8, rp3, rp4, ui1, ap, rm2, ur2, am
+   real(kind=8) :: ui2, bp, rm3, rm4, sp2, sp3, sp4, bm, ci2, cp, ur3, sm2, sm3, ui3, sm4
+   real(kind=8) :: vr1, vr2, cm, vi1, vi2, cr3, dp1, vr3, vi3, ur4, dm, vr4, ui4, vi4, ci3
+   real(kind=8) :: cr4, ci4, cr5, ci5, cr6, ci6, cr7, ci7, cr8, ci8
+
    atn=after*now
    atb=after*before
 
@@ -3255,9 +3305,35 @@ END SUBROUTINE fftstp_sg
 subroutine fftrot_sg(mm,nfft,m,nn,n,zin,zout,ntrig,trig,after,now,before,i_sign)
 
    !n(c) use module_fft_sg
-   implicit real(kind=8) (a-h,o-z)
+   implicit none
+   !implicit real(kind=8) (a-h,o-z)
+   
+   integer :: mm
+   integer :: nfft
+   integer :: m
+   integer :: nn
+   integer :: n
+   real(kind=8) :: zin
+   real(kind=8) :: zout
+   integer :: ntrig
+   real(kind=8) :: trig
+   integer :: after
+   integer :: now
+   integer :: before
+   integer :: i_sign
 
-   integer :: after,before,atn,atb
+   integer :: atn, atb
+   ! Local variables
+   integer :: ia, nin1, nout1, nin2, nin3, nin4, nout2, nin5
+   integer :: nin6, nout3, nout4, nin7, nout5, nout6, nout7, nin8, nout8
+   integer :: ic,i, npr, iam, inzet, j, ib, ias
+   integer :: jompa, lot, jompb, mb, jj, inzeep, itrig, itt
+   real(kind=8) ::  lotomp, rt2i, cos2, cos4, cos6, sin2, sin4, sin6, bb
+   real(kind=8) :: s, r1, r2, s1, s2, r3, s3, r4, s4, r5, s5, r, r25, r6, r7, s6, s7
+   real(kind=8) :: r34, s25, s34, cr2, r8, rp2, ur1, s8, rp3, rp4, ui1, ap, rm2, ur2, am
+   real(kind=8) :: ui2, bp, rm3, rm4, sp2, sp3, sp4, bm, ci2, cp, ur3, sm2, sm3, ui3, sm4
+   real(kind=8) :: vr1, vr2, cm, vi1, vi2, cr3, dp1, vr3, vi3, ur4, dm, vr4, ui4, vi4, ci3
+   real(kind=8) :: cr4, ci4, cr5, ci5, cr6, ci6, cr7, ci7, cr8, ci8
    dimension trig(2,ntrig),zin(2,mm,m),zout(2,n,nn)
 
    atn=after*now

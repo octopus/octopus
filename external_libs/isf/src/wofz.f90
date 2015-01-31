@@ -54,9 +54,19 @@
 !!  THE COMPLEX ERROR-FUNCTION, ACM TRANS. MATH. SOFTWARE.
 SUBROUTINE WOFZ (XI, YI, U, V, FLAG)
 
-  IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+  implicit none
+  !IMPLICIT DOUBLE PRECISION (A-H, O-Z)
 
-  LOGICAL A, B, FLAG
+  real(kind=8), intent(in)      :: xi
+  real(kind=8), intent(in)      :: yi
+  real(kind=8), intent(out)     :: u
+  real(kind=8), intent(out)     :: v
+  logical, intent(out)          :: flag
+  LOGICAL A, B
+  real(kind=8) :: factor, rmaxreal, rmaxexp, rmaxgoni, xabs, yabs, x, y, qrho, xabsq
+  real(kind=8) :: xquad, yquad, h, h2, kapn, j, xsum, ysum, xaux, u1, qlambda, rx, v1
+  real(kind=8) :: daux, ry, u2, sx, v2, sy, tx, ty, c, w1
+  integer :: i, n, nu, np1
   PARAMETER (FACTOR   = 1.12837916709551257388D0,&
        RMAXREAL = 0.5D+154,RMAXEXP  = 708.503061461606D0,&
        RMAXGONI = 3.53711887601422D+15)
