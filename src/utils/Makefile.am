@@ -30,7 +30,6 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spe
                  oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength \
 		 oct-dielectric-function \
-		 oct-liquid \
 		 oct-photoelectron_spectrum \
 		 oct-convert \
      oct-local_multipoles
@@ -153,13 +152,6 @@ oct_center_geom_LDADD            = $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
-oct_liquid_SOURCES = liquid.F90
-oct_liquid_LDADD                 = $(top_builddir)/src/ions/libions.a \
-                                   $(top_builddir)/src/species/libspecies.a \
-                                   $(top_builddir)/src/math/libmath.a \
-                                   $(top_builddir)/src/basic/libbasic.a \
-                                   $(other_LIBS)
-
 oct_convert_SOURCES = convert.F90
 oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
@@ -209,7 +201,6 @@ phonon_spectrum.o : phonon_spectrum.F90
 centergeom.o : centergeom.F90 
 help.o : help.F90 
 dielectric_function.o : dielectric_function.F90
-liquid.o : liquid.F90
 photoelectron_spectrum.o : photoelectron_spectrum.F90
 convert.o : convert.F90
 local_write.o : local_write.F90
