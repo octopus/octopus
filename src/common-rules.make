@@ -40,9 +40,9 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bader     \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/flib  \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/src   \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.5.2/src
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.5.2/src \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/src \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/isf/flib
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
