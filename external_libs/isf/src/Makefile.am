@@ -22,7 +22,8 @@ SOURCES_MOD = PSolver_Main.f90 createKernel.f90
 
 #AM_FCFLAGS = -I$(top_builddir)/includes -I. -I$(srcdir) 
 AM_FCFLAGS = -I../wrappers -I../flib -I.  
-AM_CPPFLAGS = -I. -I$(top_builddir) 
+AM_CPPFLAGS = -I. 
+#-I$(top_builddir) 
 AM_LDFLAGS = -L$(top_builddir)/src
 LIBS += @LIBS_EXT_DEPS@
 

@@ -98,7 +98,8 @@ modules = yaml_strings.mod \
 CLEANFILES = $(modules) *.mod $(mpi_include) memstatus.yaml
 
 #AM_FCFLAGS = -I$(srcdir) $(mpi_inc) @LIBABINIT_INCLUDE@ @MPI_INCLUDE@
-AM_FCFLAGS = -I. -I$(srcdir) $(mpi_inc) 
+AM_FCFLAGS = -I. 
+#-I$(srcdir) $(mpi_inc) 
 #@MPI_INCLUDE@
 AM_CFLAGS = @LIB_YAML_CFLAGS@
 
