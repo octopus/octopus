@@ -32,11 +32,9 @@ module poisson_libisf_m
   use parser_m
   use profiling_m
 
-#ifdef HAVE_LIBISF
   !! From BigDFT
   use poisson_solver
   use dynamic_memory
-#endif
 
   implicit none
 
@@ -51,9 +49,7 @@ module poisson_libisf_m
 
   type poisson_libisf_t
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
-#ifdef HAVE_LIBISF
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
-#endif
     !> Indicates the boundary conditions (BC) of the problem:
     !!            'F' free BC, isolated systems.
     !!                The program calculates the solution as if the given density is
@@ -93,7 +89,6 @@ contains
     type(cube_t),           intent(inout) :: cube
     FLOAT, optional,        intent(in)    :: soft_coulb_param
 
-#ifdef HAVE_LIBISF
     logical data_is_parallel
  
     PUSH_SUB(poisson_libisf_init)
@@ -129,7 +124,6 @@ contains
     call pkernel_set(this%kernel,.false.)
 
     POP_SUB(poisson_libisf_init)
-#endif
   end subroutine poisson_libisf_init
 
   
@@ -141,9 +135,7 @@ contains
 
     PUSH_SUB(poisson_libisf_end)
 
-#ifdef HAVE_LIBISF
     call pkernel_free(this%kernel)
-#endif
     
     POP_SUB(poisson_libisf_end)
   end subroutine poisson_libisf_end
@@ -156,7 +148,6 @@ contains
     FLOAT,               intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
 
-#ifdef HAVE_LIBISF
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
     double precision :: hartree_energy !<  Hartree energy 
@@ -191,7 +182,6 @@ contains
     call dcube_function_free_RS(cube, cf)
 
     POP_SUB(poisson_libisf_parallel_solve)
-#endif
   end subroutine poisson_libisf_parallel_solve
 
   !-----------------------------------------------------------------
@@ -202,7 +192,6 @@ contains
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
 
-#ifdef HAVE_LIBISF
     type(cube_function_t) :: cf
     double precision :: hartree_energy !<  Hartree energy
     
@@ -244,14 +233,12 @@ contains
     call dcube_function_free_RS(cube, cf)
 
     POP_SUB(poisson_libisf_global_solve)
-#endif
   end subroutine poisson_libisf_global_solve
 
   subroutine poisson_libisf_get_dims(this, cube) 
     type(poisson_libisf_t), intent(inout) :: this
     type(cube_t), intent(inout) :: cube
 
-#ifdef HAVE_LIBISF
     !>    ixc         eXchange-Correlation code. Indicates the XC functional to be used 
     !!                for calculating XC energies and potential. 
     !!                ixc=0 indicates that no XC terms are computed. The XC functional codes follow
@@ -313,7 +300,6 @@ contains
     cube%fs_istart(3)   = this%localnscatterarr(5)
 
     POP_SUB(poisson_libisf_get_dims)
-#endif
   end subroutine poisson_libisf_get_dims
   
 end module poisson_libisf_m
