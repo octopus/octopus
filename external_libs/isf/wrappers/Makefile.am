@@ -47,7 +47,8 @@ interface_dgemmsy_fake.o: linalg.o
 mpi.o: $(mpi_include)
 
 
-AM_FCFLAGS = -I$(top_builddir)/includes 
+#AM_FCFLAGS = -I$(top_builddir)/includes 
+AM_FCFLAGS = -I../flib
 modules = module_fft_sg.mod \
 	wrapper_linalg.mod \
 	wrapper_mpi.mod
@@ -55,10 +56,5 @@ modules = module_fft_sg.mod \
 CLEANFILES = $(modules) mpif.h
 
 # Copy modules in a common include directory.
-all: all-am insmod
-check: check-am insmod
-insmod: $(modules)
-	test -e "$(top_builddir)/includes" || $(INSTALL) -d -m 755 $(top_builddir)/includes
-	for mod in "$(modules)" ; do \
-	  $(INSTALL) -m 644  $$mod $(top_builddir)/includes ; \
-	done
+all: all-am 
+

@@ -138,10 +138,5 @@ mpif.h:
 
 
 # Copy modules in a common include directory.
-all: all-am insmod
-check: check-am insmod
-insmod: $(modules)
-	test -e "$(top_builddir)/includes" || $(INSTALL) -d -m 755 $(top_builddir)/includes
-	for mod in "$(modules)" ; do \
-	  $(INSTALL) -m 644  $$mod $(top_builddir)/includes ; \
-	done
+all: all-am 
+
