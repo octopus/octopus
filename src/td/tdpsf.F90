@@ -34,10 +34,15 @@ module tdpsf_m
 
   implicit none
 
-!  private
+  private
+  
   public ::                             &
+    tdpsf_t,                            &
     tdpsf_init,                         &                
-    tdpsf_filter_out
+    tdpsf_filter_out,                   &
+    tdpsf_end,                          &
+    tdpsf_X_to_K,                       &
+    tdpsf_K_to_X
 
   integer, parameter ::   &
     PLUS           =  1,  &   
