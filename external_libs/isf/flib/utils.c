@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #ifndef HAVE_STRNDUP
 char* strndup(const char *src, size_t len);
