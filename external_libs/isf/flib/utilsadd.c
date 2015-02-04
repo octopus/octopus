@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+void FC_FUNC_(call_external_f, CALL_EXTERNAL_F)(void * ext);
+
 void FC_FUNC_(call_external_c, CALL_EXTERNAL_C)(void *callback(),void *address())
 {
   //  *address=0;

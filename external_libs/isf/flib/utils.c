@@ -15,13 +15,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_TIME_H
 #include <time.h>
-#endif
 
 #ifndef HAVE_STRNDUP
 char* strndup(const char *src, size_t len);
