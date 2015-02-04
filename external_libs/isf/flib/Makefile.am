@@ -10,11 +10,11 @@ flib_noinst = libflib-1.a
 
 # Source code.
 #if HAVE_FC_FLUSH
-flush_files = flush.f90
-flush_object= flush.o
+#flush_files = flush.f90
+#flush_object= flush.o
 #else
-#flush_files = flush_fake.f90
-#flush_object= flush_fake.o
+flush_files = flush_fake.f90
+flush_object= flush_fake.o
 #endif
 if USE_MPI
 mpi_source =
