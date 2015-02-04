@@ -32,7 +32,8 @@ module wrapper_MPI
   logical, parameter :: have_mpi2 = .false. !< Flag to use in the code to switch between MPI1 and MPI2
 #endif
 
-  include 'mpif.h'      !< MPI definitions and datatypes for density and wavefunctions
+  !> MPI definitions and datatypes for density and wavefunctions
+  #include "mpif.h"
 
   logical :: mpi_thread_funneled_is_supported=.false. !< Control the OMP_NESTED based overlap, checked by bigdft_mpi_init below
 

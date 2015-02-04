@@ -56,7 +56,7 @@ mpi.o: $(mpi_include)
 	@rm -f $*_oct.f90
 
 #AM_FCFLAGS = -I$(top_builddir)/includes 
-AM_FCFLAGS = -I../flib -I$(srcdir)
+AM_FCFLAGS = -I../flib -I.
 modules = module_fft_sg.mod \
 	wrapper_linalg.mod \
 	wrapper_mpi.mod
