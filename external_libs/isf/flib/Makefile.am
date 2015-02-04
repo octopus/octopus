@@ -62,7 +62,7 @@ GETADD_INCLUDES = getadd-c-inc.f90
 NOOMP_INCLUDES = remove_omp-inc.f90 halt_omp-inc.f90
 
 EXTRA_DIST = $(DYN_INCLUDES) $(YAML_INCLUDES) $(STRINGS_INCLUDES) $(ERR_INCLUDES) \
-	$(DICT_INCLUDES) $(GETADD_INCLUDES) $(F_MALLOC_INCLUDES) $(NOOMP_INCLUDES)
+	$(DICT_INCLUDES) $(GETADD_INCLUDES) $(F_MALLOC_INCLUDES) $(NOOMP_INCLUDES) f_utils.inc
 
 # Module files.
 # if CAPITALIZE
@@ -118,7 +118,7 @@ f_malloc.o: dictionaries.o $(F_MALLOC_INCLUDES)
 dynamic_memory.o: getadd.o yaml_strings.o yaml_output.o yaml_parse.o mem_profiling.o f_malloc.o $(DYN_INCLUDES)
 mem_profiling.o: yaml_output.o $(mpi_include) yaml_parse.o
 f_lib_highlev.o: dictionaries.o yaml_output.o dynamic_memory.o yaml_parse.o time.o
-f_utils.o: dictionaries.o yaml_strings.o
+f_utils.o: dictionaries.o yaml_strings.o f_utils.inc
 getadd.o: yaml_strings.o $(GETADD_INCLUDES)
 $(flush_object): yaml_output.o dictionaries.o
 
