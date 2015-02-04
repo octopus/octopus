@@ -42,7 +42,7 @@ contains
     !local variables
     logical :: unit_is_open
     integer :: ierr,ierr_recl
-    integer(kind=recl_kind) :: recl_file
+    integer :: recl_file
 
     !in case of any error, the value is set to recl_max
     recl=recl_max
@@ -52,7 +52,7 @@ contains
     inquire(unit=unt,opened=unit_is_open,iostat=ierr)
     if (ierr == 0 .and. .not. unit_is_open) then
        !inquire the record length for the unit
-       !inquire(unit=unt,recl=recl_file,iostat=ierr_recl) ! Does not work with Path64
+       inquire(unit=unt,recl=recl_file,iostat=ierr_recl)
     end if
     if (ierr_recl == 0) then
        recl=int(min(int(recl_max,kind=recl_kind),recl_file))
