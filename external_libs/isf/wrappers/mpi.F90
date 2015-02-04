@@ -771,7 +771,7 @@ contains
     real(kind=8), dimension(:), allocatable :: copybuf
 
     !Here we have a performance penalty by copying all buffer, instead of
-    !just the send part, but I don't see how to get buffer(displs(me))
+    !just the send part, but I don`t see how to get buffer(displs(me))
     copybuf = f_malloc(sum(counts),id='copybuf')
 
     call dcopy(sum(counts),buffer,1,copybuf,1) 
