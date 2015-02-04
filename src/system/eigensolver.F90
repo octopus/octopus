@@ -68,7 +68,7 @@ module eigensolver_m
     FLOAT   :: tolerance
     integer :: es_maxiter
 
-    type(eigen_arpack_t) :: arpack !< arpack solver !!!
+    type(eigen_arpack_t) :: arpack
     integer :: arnoldi_vectors
     FLOAT   :: current_rel_dens_error !< for the arpack solver it is important to base precision on how well density is converged
     FLOAT   :: imag_time
@@ -309,8 +309,7 @@ contains
     !%Option arpack 12
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
     !%Option feast 13
-    !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST
-    !% package.
+    !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST package.
     !%End
 
     if(st%parallel_in_states) then
@@ -386,8 +385,8 @@ contains
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
-#if defined(HAVE_ARPACK) 
     case(RS_ARPACK) 
+#if defined(HAVE_ARPACK) 
 
       !%Variable EigensolverArnoldiVectors 
       !%Type integer 
@@ -416,10 +415,19 @@ contains
       !Some default values 
       default_iter = 500  ! empirical value based upon experience
       default_tol = M_ZERO ! default is machine precision   
-#endif 
+#else
+      message(1) = "You cannot use Eigensolver = arpack, since the code was not compiled with this option."
+      call messages_fatal(1)
+#endif
+
     case(RS_FEAST)
+#ifdef HAVE_FEAST
       call messages_experimental("FEAST eigensolver")
       call feast_init(eigens%feast, gr, st%nst)
+#else
+      message(1) = "You cannot use Eigensolver = feast, since the code was not compiled with this option."
+      call messages_fatal(1)
+#endif
 
     case default
       call input_error('Eigensolver')
@@ -762,15 +770,6 @@ contains
 #include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
-
-  !#if defined(HAVE_ARPACK) 
-  !#include "undef.F90" 
-  !#include "real.F90" 
-  !#include "eigen_arpack_inc.F90" 
-  !#include "undef.F90" 
-  !#include "complex.F90" 
-  !#include "eigen_arpack_inc.F90" 
-  !#endif 
 
 end module eigensolver_m
 
