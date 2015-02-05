@@ -202,8 +202,9 @@ contains
     end if
     call partition_get_global(partition, part_global, 0)
     
-    !Only the root node writes
-    if (partition%mpi_grp%rank == 0) then
+    !Only the global root process writes. Otherwise, at least two
+    !processes might be writing to the same file, the same data
+    if (mpi_world%rank == 0) then
       call io_binary_write(filename, partition%np_global, part_global, err)
       if (err /= 0) ierr = ierr + 4
     end if
