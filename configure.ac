@@ -356,6 +356,11 @@ AC_SUBST(FCEXTRALIBS)
 
 ACX_OCTOPUS_COMPILATION_INFO
 
+#  external_libs/isf/Makefile
+#  external_libs/isf/src/Makefile
+#  external_libs/isf/flib/Makefile
+#  external_libs/isf/wrappers/Makefile
+
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile
   external_libs/metis-5.1/Makefile
@@ -372,10 +377,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile
-#  external_libs/isf/Makefile
-#  external_libs/isf/src/Makefile
-#  external_libs/isf/flib/Makefile
-#  external_libs/isf/wrappers/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
