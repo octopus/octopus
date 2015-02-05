@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : XC 2D
-Programs   : octopus; octopus_single; octopus_mpi
+Programs   : octopus; octopus_mpi
 TestGroups : short-run, functionals
 Enabled    : Yes
 

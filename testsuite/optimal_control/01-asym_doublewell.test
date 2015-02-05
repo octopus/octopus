@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Asymmetric Double Well
-Programs   : octopus; octopus_single; octopus_mpi
+Programs   : octopus; octopus_mpi
 TestGroups : short-run, optimal_control
 Enabled    : Yes
 

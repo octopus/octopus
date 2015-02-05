@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Symmetric Double Well
-Programs   : octopus; octopus_single; octopus_mpi
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, optimal_control
 Enabled    : Yes
 
