@@ -161,6 +161,10 @@ tests="$1"
 echo "*****************************"
 echo "  Running octopus testsuite  "
 echo "*****************************"
+if [ -n "$test_groups" ]; then
+echo "For test groups: $test_groups"
+fi
+echo ""
 
 # Check for 'preserve working directories' flag.
 if [ "$cleanup" == "yes" ]; then
@@ -253,6 +257,9 @@ if [ -n "$directory" ]; then
 else
     [ "$local_run" == "yes" ] && testsuite=$(pwd)
 fi
+
+# remove any '/' characters so directories (with tab-completion) work as group names
+test_groups=`echo $test_groups | tr -d '/'`
 
 testfiles=`find_tests "$test_groups"`
 
