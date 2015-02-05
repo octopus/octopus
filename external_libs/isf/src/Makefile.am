@@ -19,6 +19,7 @@ modules = poisson_solver.mod
 
 CLEANFILES = $(modules) $(psolver_dynamic_library) $(psolver_library_soname)
 SOURCES_MOD = PSolver_Main.f90 createKernel.f90
+noinst_HEADERS = $(SOURCES_MOD)
 
 #AM_FCFLAGS = -I$(top_builddir)/includes -I. -I$(srcdir) 
 AM_FCFLAGS = -I../wrappers -I../flib -I.  
