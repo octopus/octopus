@@ -186,7 +186,7 @@ contains
     !% This version is optimized using vector primitives (if available).
     !%End
 
-    default = OP_FORTRAN
+    default = OP_VEC
 
     call parse_integer(datasets_check('OperateDouble'),  default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')
