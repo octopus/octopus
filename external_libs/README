@@ -1,0 +1,8 @@
+$Id$
+
+ISF library taken from the BigDFT 1.7.6 version
+(http://bigdft.org/Wiki/), with the license GPLv2, created by
+L.Genovese, T. Deutsch, S. Goedecker, A. Neelov and G. Beylkin
+
+The license information about YAML 0.1.4 can be found in
+yaml-0.1.4/LICENSE, copyright by Kirill Simonov
