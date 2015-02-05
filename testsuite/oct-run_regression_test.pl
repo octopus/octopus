@@ -38,7 +38,6 @@ Usage: oct-run_regression_test.pl [options]
     -v        verbose
     -h        this usage
     -D        name of the directory where to look for the executables   
-    -s        exec suffix for the executables
     -f        filename of testsuite [required]
     -p        preserve working directories
     -l        copy output log to current directory
@@ -86,7 +85,7 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhD:c:f:s:pm");
+getopts("nlvhD:c:f:pm");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -117,10 +116,6 @@ opendir(EXEC_DIRECTORY, $exec_directory) ||
  die255("ERROR: Could not open the directory $exec_directory to look for executables");
 @octopus_execs = grep { /^oct/ } readdir(EXEC_DIRECTORY);
 closedir(EXEC_DIRECTORY);
-
-# determine exec suffix
-$exec_suffix = "";
-if($opt_s)  { $exec_suffix = $opt_s; }
 
 $aexec = get_env("EXEC");
 $global_np = get_env("OCT_TEST_MPI_NPROCS");
@@ -419,7 +414,6 @@ sub find_executables {
     if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
       my $i = 0;
       foreach my $program (split(/;/, $1)) {
-	$program =  "$program$exec_suffix";
 	$program =~ s/^\s+//;
 	foreach my $x (@octopus_execs) {
 	  $valid = $program cmp $x;
