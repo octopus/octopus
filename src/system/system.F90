@@ -108,7 +108,6 @@ contains
     call output_init(sys%outp, sys%gr%sb, sys%st%nst)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
-    call states_lead_densities_init(sys%st, sys%gr)
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
@@ -162,7 +161,6 @@ contains
     call output_end(sys%outp)
     
     if(associated(sys%st)) then
-      call states_lead_densities_end(sys%st, sys%gr)
       call states_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
     end if
