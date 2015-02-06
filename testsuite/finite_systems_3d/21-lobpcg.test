@@ -2,10 +2,7 @@
 # $Id$
 
 Test       : LOBPCG
-Options    : scalapack
-Programs   : octopus_mpi
-Options    : 
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
