@@ -402,15 +402,6 @@ contains
     !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
     !%Option mask 2
     !% A mask is applied to the wavefunctions at the boundaries.
-    !%Option exact 3
-    !% NOT WORKING YET!
-    !% An exactly absorbing scheme is used for open boundaries. This feature
-    !% comes from transport calculation and assumes that on <tt>OpenBoundariesNLeads</tt>
-    !% sides there is a lead connected. No outgoing density is reflected within the leads,
-    !% but some minor reflection will occur on the corners of the box.
-    !% This is due to the setup of semi-infinite finite width leads connected to the sides.
-    !% Warning: This scheme works only with the special Crank-Nicolson propagator and has
-    !% quadratic scaling with time. It may be tuned with the parameter <tt>OpenBoundariesMaxMemCoeffs</tt>.
     !%End
     call parse_integer('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
@@ -555,48 +546,6 @@ contains
 
       POP_SUB(hamiltonian_init.init_abs_boundaries)
     end subroutine init_abs_boundaries
-
-    subroutine read_potential(fname, mesh, pot, potname, il)
-      character(len=256),    intent(in)  :: fname
-      type(mesh_t), pointer, intent(in)  :: mesh
-      FLOAT,                 intent(out) :: pot(:)
-      character(len=*),      intent(in)  :: potname
-      integer,               intent(in)  :: il
-
-      integer :: ierr
-
-      PUSH_SUB(hamiltonian_init.read_potential)
-
-      ! first try obf format
-      call dio_function_input(trim(fname)//'.obf', mesh, pot, ierr)
-      if(ierr == 0) then
-        message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
-                     //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.obf'//'.'
-        call messages_info(1)
-      else  ! try ncdf format
-        call dio_function_input(trim(fname)//'.ncdf', mesh, pot, ierr)
-        if(ierr == 0) then
-          message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
-                     //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.ncdf'//'.'
-          call messages_info(1)
-        end if
-      end if
-      if (ierr /= 0) then
-        ! Reading potential failed.
-        message(1) = 'Could not read '//trim(potname)//' potential from the file'
-        message(2) = trim(fname)
-        message(3) = 'for the '//trim(LEAD_NAME(il))//' lead.'
-        message(4) = 'Please include'
-        message(5) = ''
-        message(6) = '  Output = potential'
-        message(7) = ''
-        message(8) = 'in your periodic run. Octopus now assumes zero potential for'
-        message(9) = trim(potname)//' in the leads. This is most likely not what you want.'
-        call messages_warning(9)
-        pot(:) = M_ZERO
-      end if
-      POP_SUB(hamiltonian_init.read_potential)
-    end subroutine read_potential
 
   end subroutine hamiltonian_init
 

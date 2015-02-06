@@ -312,7 +312,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose, kpts_dont_matter)
+  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
@@ -323,8 +323,6 @@ contains
     logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
-    logical,          optional, intent(in)    :: kpts_dont_matter !< don`t check k-points match with current calculation
-      !! for td transport; they have been set to zero in simul_box_init, and won`t match regardless due to box size
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo, iread_tmp
@@ -541,8 +539,7 @@ contains
         kpoint(1:gr%sb%dim) = &
           kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
         ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
-        if ((.not. optional_default(kpts_dont_matter, .false.)) .and. &
-          any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
+        if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
           ! write only once for each k-point so as not to be too verbose
           if (ist == 1) then
             write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik

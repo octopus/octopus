@@ -74,23 +74,6 @@ module simul_box_m
     BOX_USDEF      = 77
   !< BOX_USDEF shares a number with other 'user_defined' input file options.
 
-  integer, parameter, public :: &
-    LEFT      = 1,              & !< Lead indices,
-    RIGHT     = 2,              & !! L=1, R=2.
-    BOTTOM    = 3,              & !! for 2D open system
-    TOP       = 4,              & !! 
-    REAR      = 5,              & !! for 3D open system
-    FRONT     = 6,              & !!
-    BEFORE    = 7,              & !! for 4D open system
-    AFTER     = 8,              & !!
-    TRANS_DIR = 1                 !! Transport is in x-direction.
-
-  integer, public :: NLEADS  !< Number of leads.
-
-  !> the lead-names of the open boundaries, maximum 4D
-  character(len=6), dimension(2*4), parameter, public :: LEAD_NAME = &
-    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front ', 'before', 'after '/)
-
   type, public :: interp_t
     integer          :: nn, order  !< interpolation points and order
     FLOAT,   pointer :: ww(:)      !< weights
