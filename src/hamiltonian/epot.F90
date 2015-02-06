@@ -92,7 +92,6 @@ module epot_m
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
                                                 !< plus the potential from static electric fields
     FLOAT,             pointer :: Imvpsl(:)     !< cmplxscl: imaginary part of vpsil          
-    FLOAT,             pointer :: vpsl_lead(:, :) !< (np, NLEADS) the local part of the leads
     type(projector_t), pointer :: proj(:)       !< non-local projectors
     logical                    :: non_local
     integer                    :: natoms
@@ -187,13 +186,6 @@ contains
     if(cmplxscl) then
       SAFE_ALLOCATE(ep%Imvpsl(1:gr%mesh%np))
       ep%Imvpsl(1:gr%mesh%np) = M_ZERO
-    end if
-    
-
-    nullify(ep%vpsl_lead)
-    if (gr%ob_grid%open_boundaries) then
-      SAFE_ALLOCATE(ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS))
-      ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS) = M_ZERO
     end if
     
     ep%classical_pot = 0
@@ -524,7 +516,6 @@ contains
     SAFE_DEALLOCATE_P(ep%fii)
 
     SAFE_DEALLOCATE_P(ep%vpsl)
-    SAFE_DEALLOCATE_P(ep%vpsl_lead)
     SAFE_DEALLOCATE_P(ep%Imvpsl)!cmplxscl
 
     if(ep%classical_pot > 0) then

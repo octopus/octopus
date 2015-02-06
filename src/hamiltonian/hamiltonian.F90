@@ -49,8 +49,6 @@ module hamiltonian_m
   use mpi_m
   use mpi_lib_m
   use opencl_m
-  use ob_interface_m
-  use ob_lead_m
   use octcl_kernel_m
   use opencl_m
   use parser_m
@@ -153,9 +151,6 @@ module hamiltonian_m
     FLOAT :: ab_width             !< width of the absorbing boundary
     FLOAT :: ab_height            !< height of the absorbing boundary
     FLOAT, pointer :: ab_pot(:)   !< where we store the ab potential
-
-    !> Open boundaries.
-    type(lead_t) :: lead(2*MAX_DIM)
 
     !> Spectral range
     FLOAT :: spectral_middle_point
@@ -475,15 +470,6 @@ contains
       call init_phase()
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
-    if(gr%ob_grid%open_boundaries) then
-      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        message(1) = 'Open-boundary calculations for interacting electrons are'
-        message(2) = 'not yet possible.'
-        call messages_fatal(2)
-      end if
-      call init_lead_h()
-    end if
-
     !%Variable StatesPack
     !%Type logical
     !%Default yes
@@ -571,141 +557,6 @@ contains
       POP_SUB(hamiltonian_init.init_abs_boundaries)
     end subroutine init_abs_boundaries
 
-
-    ! ---------------------------------------------------------
-    !> Calculate the blocks of the lead Hamiltonian and read the potential
-    !! of the lead unit cell.
-    subroutine init_lead_h
-      integer               :: np, np_part, il, is
-      integer               :: irow, diag, offdiag
-      character(len=256)    :: fname, fmt, static_dir
-      character(len=6)      :: name
-      type(mesh_t), pointer :: mesh
-      logical               :: t_inv
-
-      PUSH_SUB(hamiltonian_init.init_lead_h)
-
-      ! Read potential of the leads. We try v0 (for non-interacting electrons)
-      ! (Octopus binary and NetCDF format). If DFT (without pseudopotentials)
-      ! is used we try to read vh and vks. If one is not existing a warning
-      ! is written and a zero potential is assumed.
-      ! \todo: spinors
-      do il = 1, NLEADS
-        np      = gr%intf(il)%np_uc
-        np_part = gr%intf(il)%np_part_uc
-        static_dir = gr%ob_grid%lead(il)%info%static_dir
-        mesh => gr%ob_grid%lead(il)%mesh
-        call lead_init_pot(hm%lead(il), np, np_part, hm%d%nspin)
-
-        name = 'v0'
-        fname = trim(static_dir)//'/'//trim(name)
-        call read_potential(fname, mesh, hm%lead(il)%v0(:), trim(name), il)
-        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          name = 'vh'
-          fname = trim(static_dir)//'/'//trim(name)
-          call read_potential(fname, mesh, hm%lead(il)%vh(:), trim(name), il)
-          ! not sure if this is correct as the potentials are only output up to is=2 in output_h_inc.F90
-          do is = 1, hm%d%ispin
-            if(hm%d%ispin == 1) then
-              write(name, '(a)') 'vks'
-            else
-              write(name, '(a,i1)') 'vks-sp', is
-            endif
-            fname = trim(static_dir)//'/'//trim(name)
-            call read_potential(fname, mesh, hm%lead(il)%vks(:, is), trim(name), il)
-          end do
-        else
-          do is = 1, hm%d%ispin
-            hm%lead(il)%vks(:, is) = hm%lead(il)%v0(:)
-          end do
-          hm%lead(il)%vh(:)     = M_ZERO
-        end if
-      end do
-
-      ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
-      ! First check if we can reduce the size of the interface.
-      ! If there is no dependence in transport direction in the Kohn-Sham
-      ! potential then it is possible to reduce the size of the unit cell
-      ! to the size of the interface itself.
-      do il = 1, NLEADS
-        t_inv = .true.
-        do ispin = 1, hm%d%nspin
-          ! \todo generalize to find the smallest periodicity of the leads
-          t_inv = t_inv.and.is_lead_transl_inv(gr%der%lapl, hm%lead(il)%vks(:, ispin), gr%intf(il))
-        end do
-        if (t_inv) then
-          if(in_debug_mode) then ! write some info
-            write(message(1), '(a,2i8)') 'Reallocate lead unit cell from ', gr%intf(il)%np_uc
-            call messages_info(1)
-          end if
-          ! resize array
-          ! so delete the old array intf%index
-          call interface_end(gr%intf(il))
-          ! then re-initialize interface
-          ! \todo generalize to find the smallest periodicity of the leads
-          call interface_init(gr%der, gr%intf(il), il, gr%ob_grid%lead(il)%sb%lsize, &
-                              derivatives_stencil_extent(gr%der, (il+1)/2))
-          np = gr%intf(il)%np_uc
-          np_part =  gr%intf(il)%np_part_uc
-          call lead_init_kin(hm%lead(il), np, np_part, st%d%dim)
-          call lead_resize(gr%intf(il), hm%lead(il), st%d%dim, hm%d%nspin)
-          if(in_debug_mode) then ! write some info
-            write(message(1), '(a,2i8)') 'to ', gr%intf(il)%np_uc
-            call messages_info(1)
-          end if
-        end if
-      end do
-
-      do il = 1, NLEADS
-        np = gr%intf(il)%np_uc
-        do ispin = 1, hm%d%nspin
-          call lead_diag(gr%der%lapl, hm%lead(il)%vks(:, ispin), &
-            gr%intf(il), hm%lead(il)%h_diag(:, :, ispin))
-          ! In debug mode write the diagonal block to a file.
-          if(in_debug_mode) then
-            call io_mkdir('debug/open_boundaries')
-            write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
-              trim(LEAD_NAME(il)), '-', ispin, '.real'
-            diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
-            do irow = 1, np
-              write(diag, fmt) real(hm%lead(il)%h_diag(:, irow, ispin))
-            end do
-            call io_close(diag)
-            write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
-              trim(LEAD_NAME(il)), '-', ispin, '.imag'
-            diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-            write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
-            do irow = 1, np
-              write(diag, fmt) aimag(hm%lead(il)%h_diag(:, irow, ispin))
-            end do
-            call io_close(diag)
-          end if
-        end do
-        call lead_offdiag(gr%der%lapl, gr%intf(il), hm%lead(il)%h_offdiag(:, :))
-        if(in_debug_mode) then
-          write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
-            trim(LEAD_NAME(il)), '.real'
-          offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
-          do irow = 1, np
-            write(offdiag, fmt) real(hm%lead(il)%h_offdiag(:, irow))
-          end do
-          call io_close(offdiag)
-          write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
-            trim(LEAD_NAME(il)), '.imag'
-          offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-          write(fmt, '(a,i6,a)') '(', np, 'e24.16)'
-          do irow = 1, np
-            write(offdiag, fmt) aimag(hm%lead(il)%h_offdiag(:, irow))
-          end do
-          call io_close(offdiag)
-        end if
-      end do
-
-      POP_SUB(hamiltonian_init.init_lead_h)
-    end subroutine init_lead_h
-
     subroutine read_potential(fname, mesh, pot, potname, il)
       character(len=256),    intent(in)  :: fname
       type(mesh_t), pointer, intent(in)  :: mesh
@@ -789,12 +640,6 @@ contains
     nullify(hm%geo)
 
     SAFE_DEALLOCATE_P(hm%ab_pot)
-
-    if(gr%ob_grid%open_boundaries) then
-      do il = 1, NLEADS
-        call lead_end(hm%lead(il))
-      end do
-    end if
 
     call states_dim_end(hm%d) 
     if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
@@ -1230,13 +1075,6 @@ contains
     integer :: np
 
     PUSH_SUB(hamiltonian_epot_generate)
-
-    if (st%open_boundaries) then
-      np = gr%ob_grid%lead(LEFT)%mesh%np
-      this%ep%vpsl_lead(1:np, LEFT) = this%lead(LEFT)%v0(1:np)
-      np = gr%ob_grid%lead(RIGHT)%mesh%np
-      this%ep%vpsl_lead(1:np, RIGHT) = this%lead(RIGHT)%v0(1:np)
-    end if
 
     this%geo => geo
     call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
