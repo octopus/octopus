@@ -22,7 +22,6 @@
 module xc_m
   use cube_m
   use cube_function_m
-  use datasets_m
   use derivatives_m
   use global_m
   use grid_m
@@ -212,10 +211,10 @@ contains
       !% Use the OEP equation to obtain the XC potential. This is the "correct" way
       !% to do it within DFT.
       !%End
-      call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
+      call parse_integer('MGGAimplementation', 1, xcs%mGGA_implementation)
       if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
         call input_error('xcs%mGGA_implementation')
-
+      
 
       call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
 
@@ -227,7 +226,7 @@ contains
       !% If true, when evaluating the XC functional, a term including the (paramagnetic or total) current
       !% is added to the kinetic-energy density such as to make it gauge-independent.
       !%End
-      call parse_logical(datasets_check('XCUseGaugeIndependentKED'), .true., xcs%use_gi_ked)
+      call parse_logical('XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
 
     end if
 
@@ -254,7 +253,7 @@ contains
       end if
 
       ! The description of this variable can be found in file src/xc/functionals_list.F90
-      call parse_integer(datasets_check('XCFunctional'), default, val)
+      call parse_integer('XCFunctional', default, val)
 
       c_id = val / 1000
       x_id = val - c_id*1000
@@ -272,7 +271,7 @@ contains
       !% The same functional defined by <tt>XCFunctional</tt>.
       !%End
 
-      call parse_integer(datasets_check('XCKernel'), default, val)
+      call parse_integer('XCKernel', default, val)
 
       if( -1 == val ) then
         ck_id = c_id
@@ -293,7 +292,7 @@ contains
       !% <math>1 - \alpha / 4 \pi</math>. 
       !%End
 
-      call parse_float(datasets_check('XCKernelLRCAlpha'), M_ZERO, xcs%kernel_lrc_alpha)
+      call parse_float('XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
       if(abs(xcs%kernel_lrc_alpha) > M_EPSILON) &
         call messages_experimental("Long-range correction to kernel")
 
@@ -311,7 +310,7 @@ contains
       !%Option long_range_x 1
       !% The correction is applied to the exchange potential.
       !%End
-      call parse_integer(datasets_check('XCDensityCorrection'), LR_NONE, xcs%xc_density_correction)
+      call parse_integer('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
       if(xcs%xc_density_correction /= LR_NONE) then 
         call messages_experimental('XC density correction')
@@ -327,7 +326,7 @@ contains
         !% the cutoff must be given by the XCDensityCorrectionCutoff
         !% variable.
         !%End
-        call parse_logical(datasets_check('XCDensityCorrectionOptimize'), .true., xcs%xcd_optimize_cutoff)
+        call parse_logical('XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
 
         !%Variable XCDensityCorrectionCutoff
         !%Type float
@@ -336,7 +335,7 @@ contains
         !%Description
         !% The value of the cutoff applied to the XC density. The default value is 0.
         !%End
-        call parse_float(datasets_check('XCDensityCorrectionCutoff'), CNST(0.0), xcs%xcd_ncutoff)
+        call parse_float('XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
 
         !%Variable XCDensityCorrectionMinimum
         !%Type logical
@@ -349,7 +348,7 @@ contains
         !% for details). This is required for atoms or small
         !% molecules, but may cause numerical problems.
         !%End
-        call parse_logical(datasets_check('XCDensityCorrectionMinimum'), .true., xcs%xcd_minimum)
+        call parse_logical('XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
 
         !%Variable XCDensityCorrectionNormalize
         !%Type logical
@@ -360,7 +359,7 @@ contains
         !% normalized to reproduce the exact boundary conditions of
         !% the XC potential.
         !%End
-        call parse_logical(datasets_check('XCDensityCorrectionNormalize'), .true., xcs%xcd_normalize)
+        call parse_logical('XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
   
       end if
 

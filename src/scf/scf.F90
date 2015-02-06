@@ -22,7 +22,6 @@
 module scf_m
   use partial_charges_m
   use berry_m
-  use datasets_m
   use density_m
   use eigensolver_m
   use energy_calc_m
@@ -138,7 +137,7 @@ contains
     !% 0 means just do LCAO (or read from restart), compute the eigenvalues and energy,
     !% and stop, without updating the wavefunctions or density.
     !%End
-    call parse_integer(datasets_check('MaximumIter'), 200, scf%max_iter)
+    call parse_integer('MaximumIter', 200, scf%max_iter)
 
     !%Variable MaximumIterBerry
     !%Type integer
@@ -151,7 +150,7 @@ contains
     !% has not been achieved. -1 means unlimited.
     !%End
     if(associated(hm%vberry)) then
-      call parse_integer(datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
+      call parse_integer('MaximumIterBerry', 10, scf%max_iter_berry)
       if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
     end if
 
@@ -166,7 +165,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call parse_float(datasets_check('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
+    call parse_float('ConvAbsDens', M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
@@ -180,7 +179,7 @@ contains
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
     !%End
-    call parse_float(datasets_check('ConvRelDens'), CNST(1e-5), scf%conv_rel_dens)
+    call parse_float('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -193,7 +192,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call parse_float(datasets_check('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
+    call parse_float('ConvAbsEv', M_ZERO, scf%conv_abs_ev)
     scf%conv_abs_ev = units_to_atomic(units_inp%energy, scf%conv_abs_ev)
 
     !%Variable ConvRelEv
@@ -208,7 +207,7 @@ contains
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End
-    call parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
+    call parse_float('ConvRelEv', M_ZERO, scf%conv_rel_ev)
 
     call messages_obsolete_variable("ConvAbsForce", "ConvForce")
     call messages_obsolete_variable("ConvRelForce", "ConvForce")
@@ -224,7 +223,7 @@ contains
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8.
     !%End
-    call parse_float(datasets_check('ConvForce'), optional_default(conv_force, M_ZERO), scf%conv_abs_force)
+    call parse_float('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force)
     scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
 
     if(scf%max_iter < 0 .and. &
@@ -245,7 +244,7 @@ contains
     !% If true, the calculation will not be considered converged unless all states have
     !% individual errors less than <tt>EigensolverTolerance</tt>.
     !%End
-    call parse_logical(datasets_check('ConvEigenError'), .false., scf%conv_eigen_error)
+    call parse_logical('ConvEigenError', .false., scf%conv_eigen_error)
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
@@ -280,7 +279,7 @@ contains
     if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
     if(associated(hm%vberry)) mixdefault = MIXPOT
 
-    call parse_integer(datasets_check('MixField'), mixdefault, scf%mix_field)
+    call parse_integer('MixField', mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
@@ -333,7 +332,7 @@ contains
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).
     !%End
-    call parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
+    call parse_logical('SCFinLCAO', .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       call messages_experimental('SCFinLCAO')
       message(1) = 'Info: SCF restricted to LCAO subspace.'
@@ -355,7 +354,7 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
+    call parse_logical('SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -368,7 +367,7 @@ contains
     !% The single-point Berry`s phase approximation is used for
     !% periodic directions.
     !%End
-    call parse_logical(datasets_check('SCFCalculateDipole'), .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
+    call parse_logical('SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
@@ -379,7 +378,7 @@ contains
     !% are calculated dipole is calculated at the end of a
     !% self-consistent iteration. The default is no.
     !%End
-    call parse_logical(datasets_check('SCFCalculatePartialCharges'), .false., scf%calc_partial_charges)
+    call parse_logical('SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
@@ -395,7 +394,7 @@ contains
     !% The default is half the minimum distance between two atoms
     !% in the input coordinates, or 100 a.u. if there is only one atom.
     !%End
-    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
+    call parse_float('LocalMagneticMomentsSphereRadius', &
       units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)
     ! this variable is also used in td/td_write.F90
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)

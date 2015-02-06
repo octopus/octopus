@@ -20,7 +20,6 @@
 #include "global.h"
 
 module rdmft_m
-  use datasets_m
   use density_m
   use eigensolver_m
   use energy_m
@@ -109,7 +108,7 @@ contains
     !% Even if the convergence criterion is not satisfied, the minimization will stop
     !% after this number of iterations.
     !%End 
-    call parse_integer(datasets_check('RDMMaxIter'), 400, rdm%max_iter)
+    call parse_integer('RDMMaxIter', 400, rdm%max_iter)
     
 
     !%Variable RDMTolerance
@@ -124,7 +123,7 @@ contains
     !% This number gets stricter with more iterations.
     !%End
 
-    call parse_float(datasets_check('RDMTolerance'), CNST(1.0e-1), rdm%toler)
+    call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
 
     !%Variable RDMConvEner
     !%Type float
@@ -137,7 +136,7 @@ contains
     !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
     !%End
 
-    call parse_float(datasets_check('RDMConvEner'), CNST(1.0e-6), rdm%conv_ener)
+    call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
     
     
     POP_SUB(rdmft_init)
