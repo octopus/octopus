@@ -429,7 +429,6 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/linear_response/Makefile
   testsuite/optimal_control/Makefile
-  testsuite/open_systems/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile
   testsuite/complex_scaling/Makefile])
