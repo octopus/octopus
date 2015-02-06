@@ -29,7 +29,6 @@ SUBDIRS = \
 	linear_response  \
 	optimal_control  \
 	periodic_systems \
-	open_systems     \
         photo_electron   \
         complex_scaling
 
