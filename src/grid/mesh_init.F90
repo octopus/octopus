@@ -23,7 +23,6 @@ module mesh_init_m
   use checksum_interface_m
   use cube_m
   use curvilinear_m
-  use datasets_m
   use geometry_m
   use global_m
   use hypercube_m
@@ -531,7 +530,7 @@ contains
     !% grid in two of the dimensions.
     !%End
 
-    call parse_integer(datasets_check('MeshOrder'), ORDER_BLOCKS, order)
+    call parse_integer('MeshOrder', ORDER_BLOCKS, order)
 
     select case(order)
     case(ORDER_BLOCKS)
@@ -579,19 +578,7 @@ contains
         do idir = 1, nn
           call parse_block_integer(blk, 0, idir - 1, bsize(idir))
         end do
-      end if
-
-      ! When using open boundaries we need to have a mesh block-size of 1
-      if (parse_block(datasets_check('OpenBoundaries'), blk) == 0) then
-        if (any(bsize > 1)) then
-          message(1) = 'When in transport mode, the block-ordering'
-          message(2) = 'of the mesh points cannot be chosen freely.'
-          message(3) = 'All the values of MeshBlockSize have to be'
-          message(4) = 'initialized with the value 1.'
-          call messages_fatal(4)
-        end if
-      end if
-
+      end if 
       ! first we fill the points in the inner mesh
       iin = 0
       ien = mesh%np_global
@@ -808,7 +795,7 @@ contains
     !%Description
     !% Directory where <tt>Octopus</tt> can read or write the mesh partition.
     !%End
-    call parse_string(datasets_check('MeshPartitionDir'), "restart/partition", partition_dir)
+    call parse_string('MeshPartitionDir', "restart/partition", partition_dir)
 
     call messages_obsolete_variable('MeshPartitionFromScratch', 'MeshPartitionRead')
 
@@ -820,7 +807,7 @@ contains
     !% If set to yes (the default), <tt>Octopus</tt> will try to use the mesh
     !% partition from a previous run, if available, in directory <tt>MeshPartitionDir</tt>.
     !%End
-    call parse_logical(datasets_check('MeshPartitionRead'), .true., read_partition)
+    call parse_logical('MeshPartitionRead', .true., read_partition)
 
     ierr = -1
     if (read_partition) then
@@ -853,7 +840,7 @@ contains
       !% Gives the possibility to change the partition nodes.
       !% Afterward, it crashes.
       !%End
-      call parse_integer(datasets_check('MeshPartitionVirtualSize'), mesh%mpi_grp%size, vsize)
+      call parse_integer('MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
       
       if (vsize /= mesh%mpi_grp%size) then
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
@@ -884,7 +871,7 @@ contains
       !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
       !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
       !%End
-      call parse_logical(datasets_check('MeshPartitionWrite'), .true., write_partition)
+      call parse_logical('MeshPartitionWrite', .true., write_partition)
 
       if (mpi_grp_is_root(mesh%mpi_grp)) then
         call io_mkdir(trim(partition_dir), is_tmp = .true., parents=.true.)
@@ -910,7 +897,6 @@ contains
     if (has_virtual_partition) then  
       call profiling_end()
       call print_date("Calculation ended on ")
-      call datasets_end()
       write(message(1),'(a)') "Execution has ended"
       write(message(2),'(a)') "If you want to run your system, you don`t have to use MeshPartitionVirtualSize"
       call messages_warning(2)
@@ -928,7 +914,7 @@ contains
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End
-    call parse_logical(datasets_check('MeshUseTopology'), .false., use_topo)
+    call parse_logical('MeshUseTopology', .false., use_topo)
 
     if(use_topo) then
       ! this should be integrated in vec_init
@@ -1032,7 +1018,7 @@ contains
     !% nor print the partition information, such as local points,
     !% no. of neighbours, ghost points and boundary points.
     !%End
-    call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
+    call parse_logical('PartitionPrint', .true., partition_print)
     
     if (partition_print) then
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)

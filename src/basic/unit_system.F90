@@ -30,7 +30,6 @@
 !! 1 au_[mass] = 5.485799110e-4 u
 !!
 module unit_system_m
-  use datasets_m
   use global_m
   use io_m
   use messages_m
@@ -151,17 +150,17 @@ contains
     !% Same as <tt>Units</tt>, but only refers to output values.
     !%End
 
-    if(parse_isdef(datasets_check('Units')) /= 0) then
-      call parse_integer(datasets_check('Units'), UNITS_ATOMIC, cc)
+    if(parse_isdef('Units') /= 0) then
+      call parse_integer('Units', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('Units')
       cinp = cc
       cout = cc
     else
       ! note that we check the value is valid for the 'Units' variable
-      call parse_integer(datasets_check('UnitsInput'), UNITS_ATOMIC, cc)
+      call parse_integer('UnitsInput', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsInput')
       cinp = cc
-      call parse_integer(datasets_check('UnitsOutput'), UNITS_ATOMIC, cc)
+      call parse_integer('UnitsOutput', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsOutput')
       cout = cc
     end if

@@ -24,7 +24,6 @@ module exponential_m
   use batch_ops_m
   use blas_m
   use cube_function_m
-  use datasets_m
   use derivatives_m
   use global_m
   use hardware_m
@@ -126,7 +125,7 @@ contains
     !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
     !%End
-    call parse_integer(datasets_check('TDExponentialMethod'), EXP_TAYLOR, te%exp_method)
+    call parse_integer('TDExponentialMethod', EXP_TAYLOR, te%exp_method)
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
@@ -143,7 +142,7 @@ contains
       !% make sure that this value is not too big, or else the evolution will be
       !% wrong.
       !%End
-      call parse_float(datasets_check('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
+      call parse_float('TDLanczosTol', CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
 
     case default
@@ -161,7 +160,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call parse_integer(datasets_check('TDExpOrder'), 4, te%exp_order)
+      call parse_integer('TDExpOrder', 4, te%exp_order)
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
     end if

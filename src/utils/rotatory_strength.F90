@@ -21,7 +21,6 @@
 
 program rotational_strength
   use command_line_m
-  use datasets_m
   use global_m
   use io_m
   use messages_m
@@ -43,7 +42,6 @@ program rotational_strength
   call getopt_end()
 
   call messages_init()
-  call datasets_init(1)
   call io_init()
   call unit_system_init()
 
@@ -62,7 +60,6 @@ program rotational_strength
   call io_close(in_file); call io_close(out_file)
 
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 end program rotational_strength

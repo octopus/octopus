@@ -22,7 +22,6 @@
 module linear_solver_m
   use batch_m
   use batch_ops_m
-  use datasets_m
   use derivatives_m
   use global_m
   use grid_m
@@ -157,10 +156,10 @@ contains
       endif
     endif
 
-    if (parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
-      call parse_integer(datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
+    if (parse_isdef(trim(prefix)//"LinearSolver") /= 0 ) then 
+      call parse_integer(trim(prefix)//"LinearSolver", defsolver_, fsolver)
     else
-      call parse_integer(datasets_check("LinearSolver"), defsolver_, fsolver)
+      call parse_integer("LinearSolver", defsolver_, fsolver)
     end if
 
     ! set up pointer for dot product and norm in QMR solvers
@@ -179,10 +178,10 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    if (parse_isdef(datasets_check(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
-      call parse_integer(datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+    if (parse_isdef(trim(prefix)//"LinearSolverMaxIter") /= 0) then 
+      call parse_integer(trim(prefix)//"LinearSolverMaxIter", 1000, this%max_iter)
     else
-      call parse_integer(datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
+      call parse_integer("LinearSolverMaxIter", 1000, this%max_iter)
     end if
 
     write(message(1),'(a)') 'Linear Solver'

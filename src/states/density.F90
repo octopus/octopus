@@ -27,7 +27,6 @@ module density_m
   use cl
 #endif
   use comm_m
-  use datasets_m
   use derivatives_m
   use global_m
   use grid_m

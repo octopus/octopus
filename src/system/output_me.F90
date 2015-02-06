@@ -20,7 +20,6 @@
 #include "global.h"
 
 module output_me_m
-  use datasets_m
   use derivatives_m
   use geometry_m
   use global_m
@@ -101,7 +100,7 @@ contains
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%End
 
-    call parse_integer(datasets_check('OutputMatrixElements'), 0, this%what)
+    call parse_integer('OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call input_error('OutputMatrixElements')
     end if
@@ -120,7 +119,7 @@ contains
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
-      call parse_integer(datasets_check('OutputMEMultipoles'), 1, this%ks_multipoles)
+      call parse_integer('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     POP_SUB(output_me_init)

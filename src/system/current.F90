@@ -23,7 +23,6 @@ module current_m
   use batch_m
   use batch_ops_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use gauge_field_m
   use geometry_m
@@ -107,7 +106,7 @@ contains
     !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
-    call parse_integer(datasets_check('CurrentDensity'), CURRENT_GRADIENT, this%method)
+    call parse_integer('CurrentDensity', CURRENT_GRADIENT, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT) &
       call messages_experimental("CurrentDensity /= gradient")

@@ -23,7 +23,6 @@ module multigrid_m
   use boundaries_m
   use curvilinear_m
   use derivatives_m
-  use datasets_m
   use geometry_m
   use global_m
   use parser_m
@@ -102,7 +101,7 @@ contains
     !% Calculate the optimal number of levels for the grid.
     !%End
 
-    call parse_integer(datasets_check('MultigridLevels'), 0, n_levels)
+    call parse_integer('MultigridLevels', 0, n_levels)
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3

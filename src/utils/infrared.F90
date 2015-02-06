@@ -22,7 +22,6 @@
   program infrared
     use batch_m
     use command_line_m
-    use datasets_m
     use geometry_m
     use global_m
     use io_m
@@ -59,16 +58,15 @@
 
     call messages_init()
 
-    call datasets_init(1)
     call io_init()
 
     call unit_system_init()
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)
-    call parse_float(datasets_check('PropagationSpectrumStartTime'),  M_ZERO, start_time, units_inp%time)
-    call parse_float(datasets_check('PropagationSpectrumEndTime'),  -M_ONE, end_time, units_inp%time)
-    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), &
+    call parse_integer('TDMaximumIter', 1500, max_iter)
+    call parse_float('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_float('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_float('PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
@@ -121,7 +119,6 @@
     SAFE_DEALLOCATE_A(time)
 
     call io_end()
-    call datasets_end()
     call messages_end()
     call global_end()
 

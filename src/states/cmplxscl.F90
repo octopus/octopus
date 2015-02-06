@@ -20,7 +20,6 @@
 #include "global.h"
 
 module cmplxscl_m
-  use datasets_m
   use global_m
   use opencl_m
   use parser_m
@@ -90,7 +89,7 @@ contains
     !% right states and t-> t e^{i \alpha_l} for left states.
     !% J. Bengtsson, E. Lindroth, and S. Selstø, Phys. Rev. A 85, 013419 (2012).
     !%End
-    call parse_integer(datasets_check('ComplexScaling'), CMPLXSCL_NONE, cmplxscl_flags)
+    call parse_integer('ComplexScaling', CMPLXSCL_NONE, cmplxscl_flags)
     if(.not.varinfo_valid_option('ComplexScaling', cmplxscl_flags, is_flag = .true.)) then
       call input_error('ComplexScaling')
     end if
@@ -111,7 +110,7 @@ contains
       !% The spatial coordinate complex scaling angle \theta, in radians.
       !% Allowed values must be in the range 0 <= \theta < \pi/4. 
       !%End
-      call parse_float(datasets_check('ComplexScalingTheta'), CNST(0.3), this%theta)
+      call parse_float('ComplexScalingTheta', CNST(0.3), this%theta)
       if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call input_error('ComplexScalingTheta')
     else
       this%theta = M_ZERO
@@ -128,7 +127,7 @@ contains
     !% occupations, thus customizing the sorting scheme.
     !% The spectrum is rotated back afterwards.
     !%End
-    call parse_float(datasets_check('ComplexScalingRotateSpectrum'), M_ZERO, this%rotatespectrumangle)
+    call parse_float('ComplexScalingRotateSpectrum', M_ZERO, this%rotatespectrumangle)
 
     !%Variable ComplexScalingPenalizationFactor
     !%Type float
@@ -138,7 +137,7 @@ contains
     !% Eigenstates eps will be ordered by
     !%  \Re(\epsilon) + penalizationfactor (\Im(\epsilon))^2
     !%End
-    call parse_float(datasets_check('ComplexScalingPenalizationFactor'), M_TWO, this%penalizationfactor)
+    call parse_float('ComplexScalingPenalizationFactor', M_TWO, this%penalizationfactor)
 
 
 
@@ -152,7 +151,7 @@ contains
     !% be ordered by localization as measured.  Localization is measured by integrating the square
     !% of each wavefunction within <tt>ComplexScalingLocalizationRadius</tt>.
     !%End    
-    call parse_integer(datasets_check('ComplexScalingLocalizedStates'), 0, this%nlocalizedstates)
+    call parse_integer('ComplexScalingLocalizedStates', 0, this%nlocalizedstates)
 
     !%Variable ComplexScalingLocalizationThreshold
     !%Type float
@@ -162,7 +161,7 @@ contains
     !% If the part of a state beyond <tt>ComplexScalingLocalizationRadius</tt> has a norm greater than this value,
     !% the state will be considered a continuum state.
     !%End
-    call parse_float(datasets_check('ComplexScalingLocalizationThreshold'), M_ONE, this%localizationthreshold)
+    call parse_float('ComplexScalingLocalizationThreshold', M_ONE, this%localizationthreshold)
 
     !%Variable ComplexScalingAlpha
     !%Type float 
@@ -173,9 +172,9 @@ contains
     !% right states.  
     !%End
     if(this%time .and. this%space) then
-      call parse_float(datasets_check('ComplexScalingAlpha'), M_TWO*this%theta, this%alphaR)
+      call parse_float('ComplexScalingAlpha', M_TWO*this%theta, this%alphaR)
     else
-      call parse_float(datasets_check('ComplexScalingAlpha'), M_ZERO, this%alphaR)
+      call parse_float('ComplexScalingAlpha', M_ZERO, this%alphaR)
     end if
 
     !%Variable ComplexScalingAlphaLeft
@@ -186,7 +185,7 @@ contains
     !% The time coordinate complex scaling angle \alpha_l used to evolve 
     !% left states.  
     !%End
-    call parse_float(datasets_check('ComplexScalingAlphaLeft'), this%alphaR, this%alphaL)
+    call parse_float('ComplexScalingAlphaLeft', this%alphaR, this%alphaL)
 
     !%Variable ComplexScalingLocalizationRadius
     !%Type float
@@ -195,8 +194,7 @@ contains
     !%Description
     !% Radius used to determine whether a state is a continuum state.
     !%End
-    call parse_float(datasets_check('ComplexScalingLocalizationRadius'), &
-      M_ZERO, this%localizationradius)
+    call parse_float('ComplexScalingLocalizationRadius', M_ZERO, this%localizationradius)
 
     if (this%space .or. this%time) then
       call messages_print_stress(stdout, "Complex Scaling")

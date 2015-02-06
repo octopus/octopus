@@ -21,7 +21,6 @@
 
 program photoelectron_spectrum
   use command_line_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_binary_m
@@ -65,8 +64,6 @@ program photoelectron_spectrum
 
   call global_init(is_serial = .true.)
   
-  call datasets_init(1)
-
   call messages_init()
   
   call io_init()
@@ -230,7 +227,6 @@ program photoelectron_spectrum
   call messages_info(1)
 
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
   

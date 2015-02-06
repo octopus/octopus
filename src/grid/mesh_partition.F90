@@ -21,7 +21,6 @@
 
 module mesh_partition_m
   use curvilinear_m
-  use datasets_m
   use global_m
   use hypercube_m
   use index_m
@@ -144,7 +143,7 @@ contains
 #ifdef HAVE_PARMETIS
     default = PARMETIS
 #endif
-    call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
+    call parse_integer('MeshPartitionPackage', default, library)
 
 #if !defined(HAVE_METIS)
     if(library == METIS) then
@@ -175,7 +174,7 @@ contains
     !% partition. This in principle should give a better partition, but
     !% it is slower and requires more memory.
     !%End
-    call parse_integer(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
+    call parse_integer('MeshPartitionStencil', STAR, stencil_to_use)
 
     if (stencil_to_use == STAR) then
       call stencil_star_get_lapl(stencil, mesh%sb%dim, order = 1)
@@ -341,7 +340,7 @@ contains
       !%Option graph 2
       !% Graph partitioning (called 'k-way' by METIS).
       !%End
-      call parse_integer(datasets_check('MeshPartition'), default_method, method)
+      call parse_integer('MeshPartition', default_method, method)
 
       SAFE_ALLOCATE(part_global(1:nv_global))
 

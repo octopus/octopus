@@ -20,7 +20,6 @@
 #include "global.h"
 
 module gcm_m
-  use datasets_m
   use density_m
   use energy_calc_m
   use excited_states_m
@@ -86,7 +85,7 @@ contains
     !% ground-state calculation. Supply a list of names of the directories in which the
     !% results of each calculation was saved.
     !%End
-    if(parse_block(datasets_check('GCMSlaterDeterminants'), blk) /= 0) then
+    if(parse_block('GCMSlaterDeterminants', blk) /= 0) then
       write(message(1),'(a)') 'If you run in "CalculationMode = gcm" mode, then you must'
       write(message(2),'(a)') 'supply also a "GCMSlaterDeterminants" block.'
       call messages_fatal(2)

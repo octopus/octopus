@@ -24,7 +24,6 @@ module eigen_arpack_m
 
   use batch_m
   use comm_m
-  use datasets_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -83,7 +82,7 @@ contains
     ! Documentation for this variable is written in grid/cmplxscl.
     rotate_spectrum_angle = M_ZERO
 
-    call parse_float(datasets_check('ComplexScalingRotateSpectrum'), M_ZERO, rotate_spectrum_angle)
+    call parse_float('ComplexScalingRotateSpectrum', M_ZERO, rotate_spectrum_angle)
     call messages_print_var_value(stdout, "ComplexScalingRotateSpectrum", rotate_spectrum_angle)
 
     !%Variable ArpackInitialTolerance
@@ -98,7 +97,7 @@ contains
     !% parameter is ignored if given a non-positive value (default).
     !% In that case EigenSolverTolerance is used always.
     !%End 
-    call parse_float(datasets_check('ArpackInitialTolerance'), M_ZERO, this%initial_tolerance)
+    call parse_float('ArpackInitialTolerance', M_ZERO, this%initial_tolerance)
     
     if(this%initial_tolerance > M_ZERO) then
       call messages_print_var_value(stdout, "ArpackInitialTolerance", this%initial_tolerance)
@@ -118,7 +117,7 @@ contains
     !% Use Parallel ARPACK. Default is true if parallel in domains. Code must have been built with
     !% PARPACK support. Only relevant if <tt>Eigensolver = arpack</tt>.
     !%End 
-    call parse_logical(datasets_check('EigensolverParpack'), use_parpack, this%use_parpack)
+    call parse_logical('EigensolverParpack', use_parpack, this%use_parpack)
     call messages_print_var_value(stdout, "EigensolverParpack", this%use_parpack)
     
 #endif
@@ -132,7 +131,7 @@ contains
     !% See the ARPACK documentation for more details. It will default to  
     !% twice the number of eigenvectors (which is the number of states) 
     !%End 
-    call parse_integer(datasets_check('EigensolverArnoldiVectors'), 2*nst, this%arnoldi_vectors) 
+    call parse_integer('EigensolverArnoldiVectors', 2*nst, this%arnoldi_vectors) 
     if(this%arnoldi_vectors - nst < M_TWO) call input_error('EigensolverArnoldiVectors') 
     call messages_print_var_value(stdout, "EigensolverArnoldiVectors", this%arnoldi_vectors)
     
@@ -150,7 +149,7 @@ contains
     !% 'LI' -> want eigenvalues of largest imaginary part.
     !% 'SI' -> want eigenvalues of smallest imaginary part.
     !%End 
-    call parse_string(datasets_check('EigensolverArpackSort'), "SR", this%sort)
+    call parse_string('EigensolverArpackSort', 'SR', this%sort)
     if(this%sort /= "LM"  .and. &
        this%sort /= "SM"  .and. &
        this%sort /= "LR"  .and. &
@@ -174,7 +173,7 @@ contains
     !%Option calc 1
     !% resid = H*psi - epsilon*psi.
     !%End
-    call parse_integer(datasets_check('EigensolverArpackInitialResid'), 2, this%init_resid)
+    call parse_integer('EigensolverArpackInitialResid', 2, this%init_resid)
     if(.not.varinfo_valid_option('EigensolverArpackInitialResid', this%init_resid))&
        call input_error('EigensolverArpackInitialResid')
     call messages_print_var_option(stdout, "EigensolverArpackInitialResid", this%init_resid)

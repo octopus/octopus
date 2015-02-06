@@ -22,7 +22,6 @@
 module io_function_m
   use cube_function_m
   use cube_m
-  use datasets_m
   use geometry_m
   use global_m
   use index_m
@@ -201,7 +200,7 @@ contains
     !%Option vtk 2097152
     !% Generates output VTK legacy format (<tt>http://www.vtk.org/VTK/img/file-formats.pdf</tt>).
     !%End
-    call parse_integer(datasets_check('OutputHow'), 0, how)
+    call parse_integer('OutputHow', 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
       call input_error('OutputHow')
     end if

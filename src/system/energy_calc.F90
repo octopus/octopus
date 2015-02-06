@@ -23,7 +23,6 @@ module energy_calc_m
   use batch_m
   use berry_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use energy_m
   use gauge_field_m

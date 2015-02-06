@@ -22,7 +22,6 @@
 module double_grid_m
 
   use curvilinear_m
-  use datasets_m
   use geometry_m
   use global_m
   use math_m
@@ -92,7 +91,7 @@ contains
     !% pseudopotentials. This is experimental, especially in parallel.
     !%End
     if (sb%dim == 3) then 
-      call parse_logical(datasets_check('DoubleGrid'), .false., this%use_double_grid)
+      call parse_logical('DoubleGrid', .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
     end if
@@ -108,7 +107,7 @@ contains
     !% an odd number. Low-order interpolation schemes are not
     !% recommended. The default is to use 9th-order interpolation.
     !%End
-    call parse_integer(datasets_check('DoubleGridOrder'), 9, this%order)
+    call parse_integer('DoubleGridOrder', 9, this%order)
     
     ASSERT(mod(this%order,2) == 1)
     

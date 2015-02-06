@@ -23,7 +23,6 @@
 
 module smear_m
   use cmplxscl_m
-  use datasets_m
   use global_m
   use kpoints_m
   use loct_math_m
@@ -113,7 +112,7 @@ contains
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
     else
-      call parse_integer(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
+      call parse_integer('SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
       call messages_print_var_option(stdout, 'SmearingFunction', this%method)
     endif
@@ -129,7 +128,7 @@ contains
     !%End
     this%dsmear = CNST(1e-14)
     if(this%method /= SMEAR_SEMICONDUCTOR .and. this%method /= SMEAR_FIXED_OCC) then
-      call parse_float(datasets_check('Smearing'), CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
+      call parse_float('Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
     call messages_obsolete_variable("ElectronicTemperature", "Smearing")
@@ -162,7 +161,7 @@ contains
       !%Description
       !% Sets the order of the Methfessel-Paxton smearing function.
       !%End
-      call parse_integer(datasets_check('SmearingMPOrder'), 1, this%MP_n)
+      call parse_integer('SmearingMPOrder', 1, this%MP_n)
     end if
 
     POP_SUB(smear_init)

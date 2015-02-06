@@ -20,7 +20,6 @@
 #include "global.h"
 
 module ode_solver_m
-  use datasets_m
   use global_m
   use parser_m
   use messages_m

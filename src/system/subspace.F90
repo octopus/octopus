@@ -29,7 +29,6 @@ module subspace_m
   use clamdblas
 #endif
   use comm_m
-  use datasets_m
   use derivatives_m
   use global_m
   use grid_m
@@ -121,7 +120,7 @@ contains
 #endif
       end if
 
-      call parse_integer(datasets_check('SubspaceDiagonalization'), default, this%method)
+      call parse_integer('SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call input_error('SubspaceDiagonalization')
     endif

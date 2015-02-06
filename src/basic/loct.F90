@@ -272,12 +272,11 @@ contains
 
   end function loct_isinstringlist
 
-  subroutine loct_rm_status_files(current_label)
-    character(len=*), intent(in) :: current_label
+  subroutine loct_rm_status_files()
 
-    call loct_rm('exec/'//trim(current_label)//'oct-status-running')
-    call loct_rm('exec/'//trim(current_label)//'oct-status-finished')
-    call loct_rm('exec/'//trim(current_label)//'oct-status-aborted')
+    call loct_rm('exec/oct-status-running')
+    call loct_rm('exec/oct-status-finished')
+    call loct_rm('exec/oct-status-aborted')
 
   end subroutine loct_rm_status_files
 

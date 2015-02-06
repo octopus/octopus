@@ -25,7 +25,6 @@ module derivatives_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use datasets_m
   use global_m
   use lalg_adv_m
   use lalg_basic_m
@@ -191,16 +190,16 @@ contains
     !% The star, plus a number of off-axis points.
     !%End
     if(use_curvilinear) then
-      call parse_integer(datasets_check('DerivativesStencil'), DER_STARPLUS, der%stencil_type)
+      call parse_integer('DerivativesStencil', DER_STARPLUS, der%stencil_type)
     else
-      call parse_integer(datasets_check('DerivativesStencil'), DER_STAR, der%stencil_type)
+      call parse_integer('DerivativesStencil', DER_STAR, der%stencil_type)
     endif
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_float(datasets_check('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
+      call parse_float('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -223,7 +222,7 @@ contains
     !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+<i>n</i> with <i>n</i> being 12
     !% in 2D and 44 in 3D.
     !%End
-    call parse_integer(datasets_check('DerivativesOrder'), 4, der%order)
+    call parse_integer('DerivativesOrder', 4, der%order)
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationOfDerivatives
@@ -238,7 +237,7 @@ contains
     !% Communication is based on non-blocking point-to-point communication. This is the default.
     !%End
     
-    call parse_integer(datasets_check('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
+    call parse_integer('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call input_error('ParallelizationOfDerivatives')

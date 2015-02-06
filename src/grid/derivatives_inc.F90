@@ -700,7 +700,7 @@ subroutine X(derivatives_test)(this)
   real(8) :: stime, etime
   character(len=7) :: type
 
-  call parse_logical(datasets_check('StatesPack'), .true., packstates)
+  call parse_logical('StatesPack', .true., packstates)
 
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
@@ -728,9 +728,9 @@ subroutine X(derivatives_test)(this)
 
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
 
-  call parse_integer(datasets_check('TestMinBlockSize'), 1, blocksize)
-  call parse_integer(datasets_check('TestMaxBlockSize'), 128, max_blocksize)
-  call parse_integer(datasets_check('TestRepetitions'), 10, times)
+  call parse_integer('TestMinBlockSize', 1, blocksize)
+  call parse_integer('TestMaxBlockSize', 128, max_blocksize)
+  call parse_integer('TestRepetitions', 10, times)
 
   do 
 

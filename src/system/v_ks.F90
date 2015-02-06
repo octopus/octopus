@@ -22,7 +22,6 @@
 module v_ks_m
   use berry_m
   use current_m
-  use datasets_m
   use density_m
   use derivatives_m
   use energy_m
@@ -166,7 +165,7 @@ contains
     !%Option rdmft 7 
     !% (Not fully implemented) Reduced Density Matrix functional theory
     !%End
-    call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
+    call parse_integer('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
 
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
@@ -221,7 +220,7 @@ contains
         !% Average-density SIC.
         !% C. Legrand et al. J. Phys. B 35, 1115 (2002). 
         !%End
-        call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
+        call parse_integer('SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
 
         ! Perdew-Zunger corrections

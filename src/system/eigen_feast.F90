@@ -20,7 +20,6 @@
 module eigen_feast_m
 
   use batch_m
-  use datasets_m ! parse block and such
   use global_m
   use grid_m
   use hamiltonian_m
@@ -73,7 +72,7 @@ contains
     !% will perform per SCF step.  Must be >= 0.  0 means that only
     !% one iteration will be done.  Default is 20.
     !%End     
-    call parse_integer(datasets_check('FeastMaxIter'), 20, this%maxiter)
+    call parse_integer('FeastMaxIter', 20, this%maxiter)
 
     call linear_solver_init(this%linear_solver, gr, "FEAST", .false., LS_QMR_SYMMETRIC)
 
@@ -88,7 +87,7 @@ contains
     !%
     !% Note: Contour must have negative orientation!
     !%End
-    if(parse_block(datasets_check('FeastContour'), blk) == 0) then
+    if(parse_block('FeastContour', blk) == 0) then
       ncontourpts = parse_block_n(blk)
       SAFE_ALLOCATE(this%Zedge(1:ncontourpts))
       SAFE_ALLOCATE(this%Nedge(1:ncontourpts))

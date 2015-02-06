@@ -90,8 +90,7 @@
     end if
 
     !No variable description, as it is already in ps.F90
-    call parse_float(datasets_check('SpeciesProjectorSphereThreshold'), &
-      CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_float('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpeciesProjectorSphereThreshold')
     ps%has_long_range = .true.
     ps%is_separated = .false.

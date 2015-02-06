@@ -23,7 +23,6 @@ program xyzanim
   use command_line_m
   use global_m
   use messages_m
-  use datasets_m
   use loct_m
   use parser_m
   use io_m
@@ -51,7 +50,6 @@ program xyzanim
   call getopt_end()
 
   call messages_init()
-  call datasets_init(1)
   call io_init()
   call unit_system_init()
 
@@ -66,7 +64,7 @@ program xyzanim
   !% Sampling rate of the animation. The animation will be constructed using
   !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
   !%End
-  call parse_integer(datasets_check('AnimationSampling'), 100, sampling)
+  call parse_integer('AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call messages_fatal(1)
@@ -79,7 +77,7 @@ program xyzanim
   !%Description
   !% If true, each iteration written will be in a separate file.
   !%End
-  call parse_logical(datasets_check('AnimationMultiFiles'), .false., multifiles)
+  call parse_logical('AnimationMultiFiles', .false., multifiles)
 
   call space_init(space)
   call geometry_init(geo, space)
@@ -120,7 +118,6 @@ program xyzanim
   call io_close(coords_unit)
 
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 

@@ -23,7 +23,6 @@ module modelmb_density_matrix_m
 
   use batch_m
   use comm_m
-  use datasets_m
   use global_m
   use grid_m
   use hypercube_m
@@ -107,7 +106,7 @@ contains
     call messages_obsolete_variable('DensityMatrixtoCalc', 'DensitytoCalc')
     call messages_obsolete_variable('DensitiestoCalc', 'DensitytoCalc')
 
-    if(parse_block(datasets_check('DensitytoCalc'), blk)/=0) then
+    if(parse_block('DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
      call messages_fatal(1)
     end if

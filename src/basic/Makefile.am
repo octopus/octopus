@@ -30,7 +30,6 @@ libbasic_a_SOURCES =     \
 	mpi.F90          \
 	global.F90       \
 	parser.F90       \
-	datasets.F90     \
 	messages.F90     \
 	io.F90           \
 	io_binary.c      \
@@ -115,14 +114,13 @@ loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profi
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
-datasets.o : datasets.F90 parser.o c_pointer.o mpi.o
-messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o datasets.o unit.o
+messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o  unit.o
 papi_f.o : papi_f.F90
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
 
 command_line.o : command_line.F90 messages.o profiling.o
-io.o : io.F90 mpi.o messages.o parser.o loct.o global.o datasets.o 
-unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o datasets.o  varinfo.o
+io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  
+unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o   varinfo.o
 write_iter.o : write_iter.F90 c_pointer.o
 io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
 io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
@@ -135,8 +133,8 @@ opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o par
 octcl_kernel.o : octcl_kernel.F90 opencl.o c_pointer.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
-topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
-multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o datasets.o profiling.o
+topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o  profiling.o
+multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o  profiling.o
 distributed.o: distributed.F90 multicomm.o profiling.o
 calc_mode.o : calc_mode.F90 multicomm.o messages.o
 blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o profiling.o messages.o global.o
@@ -147,7 +145,7 @@ iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o loct_pointer.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
 
-space.o : space.F90 json.o datasets.o parser.o messages.o
+space.o : space.F90 json.o parser.o messages.o
 
 openscad.o : openscad.F90 io.o messages.o profiling.o global.o polyhedron.o
 polyhedron.o : messages.o profiling.o global.o

@@ -22,7 +22,6 @@
 program octopus
   use calc_mode_m
   use command_line_m
-  use datasets_m
   use global_m
   use io_m
   use loct_m
@@ -37,8 +36,8 @@ program octopus
 
   implicit none
 
-  character*256 :: config_str
-  integer :: ns, inp_calc_mode, ierr
+  character(len=256) :: config_str
+  integer :: inp_calc_mode, ierr
   type(block_t) :: blk
 
   call getopt_init(ierr)
@@ -110,81 +109,49 @@ program octopus
   !% Invert the Kohn-Sham equations (experimental).
   !%Option recipe 99
   !% Prints out a tasty recipe.
-  !%
-  !% May also be used as a block for multi-dataset mode. The first line is a list of calculation modes,
-  !% the second is labels (optional; default is <tt>dsXX_</tt> where XX=01, 02, ...), and the third is the
-  !% order for the runs (optional; default is the order listed). The labels will be used as prefixes for
-  !% the output directories such as <tt>restart</tt>, <tt>static</tt>, <tt>td...</tt> etc., and can also
-  !% be used as prefixes to variables to indicate that they apply only to the calculation for that dataset.
-  !%
-  !% Example:
-  !% <pre>%CalculationMode
-  !%  gs              | unocc
-  !%  "ground_state_" | "excited_states_"
-  !%  1               | 2
-  !% %
-  !% excited_states_RestartDir = "ground_state_restart"
-  !% excited_states_ExtraStates = 9
-  !% </pre>
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
-    call datasets_init(inp_calc_mode, blk)
-  else
-    call parse_integer('CalculationMode', CM_GS, inp_calc_mode)
-    if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
-    call datasets_init(inp_calc_mode)
+    call messages_write('The datasets mode has been deprecated,', new_line = .true.)
+    call messages_write('please use several Octopus runs.')
+    call messages_fatal()
   end if
+
+  call parse_integer('CalculationMode', CM_GS, inp_calc_mode)
+  if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
 
   ! Now we can initialize the I/O
   call io_init()
 
-  ! loop over all datasets
-  datasets: do ns = 1, no_datasets
-
-    ! set system label
-    current_dataset = dataset_run_order(ns)
-    current_label = trim(dataset_label(current_dataset))
-    call calc_mode_init()
-
-    ! datasets have to be available before calling the _init() functions below
-    call io_init_datasets()
-
-    ! now we declare octopus as running
-    call io_switch_status('running')
-
-    call profiling_init()
-
-    call print_header()
-
-    if(no_datasets > 1) then
-      message(1) = 'Info: Multi-Dataset Mode'
-      message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
-      call messages_info(2, stress = .true.)
-    end if
-
-    ! now we really start
-    call run_init(dataset_runmode(current_dataset))
-    call run()
-    call run_end()
-    
+  call calc_mode_init()
+  
+  ! now we declare octopus as running
+  call io_switch_status('running')
+  
+  call profiling_init()
+  
+  call print_header()
+  
+  ! now we really start
+  call run_init(inp_calc_mode)
+  call run()
+  call run_end()
+  
 #if defined(HAVE_MPI)
-    ! wait for all processors to finish
-    call MPI_Barrier(mpi_world%comm, mpi_err)
+  ! wait for all processors to finish
+  call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+  
+  ! run finished successfully
+  call io_switch_status('finished')
+  call io_end()
+  
+  call profiling_end()
+  
+  call calc_mode_end()
+  
+  call print_date("Calculation ended on ")
+  call print_walltime()
 
-    ! run finished successfully
-    call io_switch_status('finished')
-    call io_end()
-
-    call profiling_end()
-
-    call calc_mode_end()
-    
-    call print_date("Calculation ended on ")
-    call print_walltime()
-  end do datasets
-
-  call datasets_end()
   call messages_end()
   call global_end()
 

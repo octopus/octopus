@@ -21,7 +21,6 @@
 
 module run_m
   use casida_m
-  use datasets_m
   use em_resp_m
   use epot_m
   use fft_m
@@ -124,7 +123,7 @@ contains
     !% information.
     !%End
 
-    call parse_logical(datasets_check('fromScratch'), .false., fromScratch)
+    call parse_logical('FromScratch', .false., fromScratch)
 
     call profiling_in(calc_mode_prof, "CALC_MODE")
 
@@ -212,7 +211,7 @@ contains
     !% mainly because it is simple and useful for testing purposes.
     !%End
     
-    call parse_integer(datasets_check('ResponseMethod'), LR, get_resp_method)
+    call parse_integer('ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call input_error('ResponseMethod')

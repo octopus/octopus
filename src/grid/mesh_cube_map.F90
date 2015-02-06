@@ -23,7 +23,6 @@ module mesh_cube_map_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use datasets_m
   use global_m
   use index_m
   use messages_m

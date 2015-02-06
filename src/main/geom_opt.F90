@@ -20,7 +20,6 @@
 #include "global.h"
 
 module geom_opt_m
-  use datasets_m
   use density_m
   use energy_calc_m
   use epot_m
@@ -218,7 +217,7 @@ contains
       !% freedom of the optimization by using the translational
       !% invariance. The default is no.
       !%End
-      call parse_logical(datasets_check('GOCenter'), .false.,  center)
+      call parse_logical('GOCenter', .false.,  center)
 
       if(center) then
         g_opt%fixed_atom = 1
@@ -266,7 +265,7 @@ contains
       !% (Experimental) The FIRE algorithm.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P.Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
+      call parse_integer('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -280,7 +279,7 @@ contains
       !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
       !% this criterion is ignored. The default is 0.001 H/b (0.051 eV/A).
       !%End
-      call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
+      call parse_float('GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
       
       !%Variable GOMinimumMove
       !%Type float
@@ -300,7 +299,7 @@ contains
       else
         default_toldr = -M_ONE
       endif
-      call parse_float(datasets_check('GOMinimumMove'), default_toldr, g_opt%toldr, units_inp%length)
+      call parse_float('GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       
@@ -315,10 +314,10 @@ contains
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
-        call parse_float(datasets_check('GOStep'), default_step, g_opt%step)
+        call parse_float('GOStep', default_step, g_opt%step)
       else
         default_step = CNST(50.0)
-        call parse_float(datasets_check('GOStep'), default_step, g_opt%step, unit = units_inp%time)
+        call parse_float('GOStep', default_step, g_opt%step, unit = units_inp%time)
       endif
 
       !%Variable GOLineTol
@@ -329,7 +328,7 @@ contains
       !% that use the forces. The default value is 0.1.
       !% WARNING: in some weird units.
       !%End
-      call parse_float(datasets_check('GOLineTol'), CNST(0.1), g_opt%line_tol)
+      call parse_float('GOLineTol', CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer
@@ -338,7 +337,7 @@ contains
       !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations. The default is 200.
       !%End
-      call parse_integer(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
+      call parse_integer('GOMaxIter', 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
@@ -362,7 +361,7 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call parse_integer(datasets_check('GOObjective'), MINWHAT_ENERGY, g_opt%what2minimize)
+      call parse_integer('GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 

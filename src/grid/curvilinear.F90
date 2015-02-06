@@ -23,7 +23,6 @@ module curvilinear_m
   use curv_briggs_m
   use curv_gygi_m
   use curv_modine_m
-  use datasets_m
   use geometry_m
   use global_m
   use lalg_adv_m
@@ -100,7 +99,7 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
     !%End
-    call parse_integer(datasets_check('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
+    call parse_integer('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 

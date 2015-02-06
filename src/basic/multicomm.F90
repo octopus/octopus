@@ -49,7 +49,6 @@
 !! index is parallelized.
 
 module multicomm_m
-  use datasets_m
   use global_m
   use io_m
   use loct_m
@@ -210,7 +209,7 @@ contains
       !%Option fill -1
       !% Replaced by the value required to complete the number of processors.
       !%End
-      if(parse_block(datasets_check('ParallelizationGroupRanks'), blk) == 0) then
+      if(parse_block('ParallelizationGroupRanks', blk) == 0) then
         call read_block(blk)
         call parse_block_end(blk)
       else
@@ -225,7 +224,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization. The default is 0.
       !%End
-      call parse_integer(datasets_check('ParallelizationNumberSlaves'), 0, num_slaves)
+      call parse_integer('ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
@@ -287,7 +286,7 @@ contains
 
      if(base_grp%size > 1) then
 
-        call parse_integer(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
+        call parse_integer('ParallelizationStrategy', default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')

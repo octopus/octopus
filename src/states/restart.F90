@@ -22,7 +22,6 @@
 
 module restart_m
   use batch_m
-  use datasets_m
   use global_m
   use index_m
   use io_m
@@ -210,7 +209,7 @@ contains
     info(RESTART_PROJ)%tag = "GS for TDOutput"
 
     ! Default flags and directories (flags not yet used)
-    info(:)%basedir = trim(current_label)//'restart'
+    info(:)%basedir = 'restart'
     info(:)%flags = 0
 
     info(RESTART_GS)%dir = GS_DIR
@@ -347,9 +346,9 @@ contains
     !% Read the SCF mixing information.
     !%End
     set = .false.
-    if(parse_block(datasets_check('RestartOptions'), blk) == 0) then
+    if(parse_block('RestartOptions', blk) == 0) then
 
-      default_basedir = trim(current_label)//'restart'
+      default_basedir = 'restart'
 
       do iline = 1, parse_block_n(blk)
         n_cols = parse_block_cols(blk,iline-1)
@@ -433,7 +432,7 @@ contains
       !% option and write some restart information anyway.
       !%End
 
-      call parse_logical(datasets_check('RestartWrite'), .true., restart_write)
+      call parse_logical('RestartWrite', .true., restart_write)
       restart%skip = .not. restart_write
 
       if(restart%skip) then

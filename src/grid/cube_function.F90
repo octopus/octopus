@@ -24,7 +24,6 @@ module cube_function_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use datasets_m
   use fft_m
   use global_m
   use index_m

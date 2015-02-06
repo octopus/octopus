@@ -25,7 +25,6 @@ program oct_local_multipoles
   use box_m
   use box_union_m
   use command_line_m
-  use datasets_m
   use geometry_m
   use global_m
   use hamiltonian_m
@@ -77,7 +76,6 @@ program oct_local_multipoles
 
   call messages_experimental("oct-local_multipoles utility")
 
-  call datasets_init(1)
   call io_init()
   call profiling_init()
  
@@ -99,7 +97,6 @@ program oct_local_multipoles
   call profiling_end()
   call io_end()
   call print_date("Calculation ended on ")
-  call datasets_end()
   call messages_end()
   call global_end()
 
@@ -134,7 +131,7 @@ contains
     !%Description
     !% The folder name where the density used as input file is.
     !%End
-    call parse_string(datasets_check('LDFolder'), folder_default, folder)
+    call parse_string('LDFolder', folder_default, folder)
 
     ! Check if the folder is finished by an /
     if (index(folder, '/', .true.) /= len_trim(folder)) then
@@ -155,7 +152,7 @@ contains
       aux = trim(folder(4:len_trim(folder)-1))
       read(aux,'(I10.0)')iter
       default_dt = M_ZERO
-      call parse_float(datasets_check('TDTimeStep'), default_dt, dt, unit = units_inp%time)
+      call parse_float('TDTimeStep', default_dt, dt, unit = units_inp%time)
       if (dt <= M_ZERO) then
         write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
         write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -174,7 +171,7 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_string(datasets_check('LDFilename'), 'density', filename)
+    call parse_string('LDFilename', 'density', filename)
     if ( filename == " " ) filename = ""
     ! Delete the extension if present
     length = len_trim(filename)
@@ -192,7 +189,7 @@ contains
     !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% Recommended values: 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
-    call parse_float(datasets_check('LDBaderThreshold'), CNST(0.01), BaderThreshold)
+    call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -201,7 +198,7 @@ contains
     !%Description
     !% Controls if the calculation of the local domains is desired at each iteration.
     !%End
-    call parse_logical(datasets_check('LDUpdate'), .false., ldupdate)
+    call parse_logical('LDUpdate', .false., ldupdate)
 
     !%Variable LDOverWrite                                                                                             
     !%Type logical                                                                                                     
@@ -210,7 +207,7 @@ contains
     !%Description                                                                                                      
     !% Controls to over-write existing files.                                                                          
     !%End                                                                                                              
-    call parse_logical(datasets_check('LDOverWrite'), .true., ldoverwrite)                       
+    call parse_logical('LDOverWrite', .true., ldoverwrite)                       
 
     !%Variable LDRadiiFile
     !%Type string
@@ -220,7 +217,7 @@ contains
     !% Full path for the radii file. If set, def_rsize will be reset to the new values. 
     !% This file should have the same format as share/PP/default.
     !%End
-    call parse_string(datasets_check('LDRadiiFile'), 'default', radiifile)
+    call parse_string('LDRadiiFile', 'default', radiifile)
 
     if(trim(radiifile) /= "default") then
       n_spec_def = max(0, loct_number_of_lines(radiifile))
@@ -252,10 +249,10 @@ contains
     end if
 
     ! Documentation in convert.F90. Variable names changed to avoid conflict with convert utility.
-    call parse_logical(datasets_check('LDIterateFolder'), .false., iterate)
-    call parse_integer(datasets_check('LDStart'), iter, l_start)
-    call parse_integer(datasets_check('LDEnd'), iter, l_end)
-    call parse_integer(datasets_check('LDStep'), 1, l_step)
+    call parse_logical('LDIterateFolder', .false., iterate)
+    call parse_integer('LDStart', iter, l_start)
+    call parse_integer('LDEnd', iter, l_end)
+    call parse_integer('LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
@@ -354,7 +351,7 @@ contains
 
     ! First, find out if there is a LocalDomains block.
     local%nd = 0
-    if(parse_block(datasets_check('LocalDomains'), blk) == 0) then
+    if(parse_block('LocalDomains', blk) == 0) then
       local%nd = parse_block_n(blk)
     end if
 
@@ -595,12 +592,12 @@ contains
       if (any(lcl%dshape(:) == BADER)) then
         call add_dens_to_ion_x(ff2,sys%geo)
         call basins_init(basins, sys%gr%mesh)
-        call parse_float(datasets_check('LDBaderThreshold'), CNST(0.01), BaderThreshold)
+        call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
         call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-        call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
+        call parse_logical('LDExtraWrite', .false., extra_write)
         call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
         if (extra_write) then
-          call parse_integer(datasets_check('LDOutputHow'), 0, how)
+          call parse_integer('LDOutputHow', 0, how)
           if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
             call input_error('LDOutputHow')
           end if
@@ -688,10 +685,10 @@ contains
     !% Writes additional information to files, when computing local multipoles. For 
     !% example, it writes coordinates of each local domain.
     !%End
-    call parse_logical(datasets_check('LDExtraWrite'), .false., extra_write)
+    call parse_logical('LDExtraWrite', .false., extra_write)
 
     if (extra_write) then
-      call parse_integer(datasets_check('LDOutputHow'), 0, how)
+      call parse_integer('LDOutputHow', 0, how)
       if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
         call input_error('LDOutputHow')
       end if

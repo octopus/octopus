@@ -20,7 +20,6 @@
 #include "global.h"
 
 module symmetrizer_m
-  use datasets_m
   use global_m
   use messages_m
   use mesh_m

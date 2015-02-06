@@ -27,7 +27,6 @@ module batch_ops_m
   use cl
 #endif
   use octcl_kernel_m
-  use datasets_m
   use global_m
   use hardware_m
   use lalg_adv_m

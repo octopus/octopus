@@ -21,7 +21,6 @@
 
 module eigensolver_m
   use batch_m
-  use datasets_m
   use derivatives_m
   use eigen_arpack_m
   use eigen_cg_m
@@ -318,7 +317,7 @@ contains
       default_es = RS_CG
     endif
 
-    call parse_integer(datasets_check('Eigensolver'), default_es, eigens%es_type)
+    call parse_integer('Eigensolver', default_es, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -351,7 +350,7 @@ contains
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
-      call parse_float(datasets_check('EigensolverImaginaryTime'), CNST(10.0), eigens%imag_time)
+      call parse_float('EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
@@ -368,7 +367,7 @@ contains
       !% minimizations. The default is 5.
       !%End
 
-      call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
+      call parse_integer('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
 
       !%Variable EigensolverSaveMemory
       !%Type logical
@@ -381,7 +380,7 @@ contains
       !% performance. This is especially useful for GPUs. The default is no.
       !%End
 
-      call parse_logical(datasets_check('EigensolverSaveMemory'), .false., eigens%save_mem)
+      call parse_logical('EigensolverSaveMemory', .false., eigens%save_mem)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -398,7 +397,7 @@ contains
       !% See the ARPACK documentation for more details. It will default to  
       !% twice the number of eigenvectors (which is the number of states) 
       !%End 
-      call parse_integer(datasets_check('EigensolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
+      call parse_integer('EigensolverArnoldiVectors', 2*st%nst, eigens%arnoldi_vectors) 
       if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigensolverArnoldiVectors') 
 
       eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
@@ -449,7 +448,7 @@ contains
     !% This is the tolerance for the eigenvectors. The default is 1e-6
     !% except for the ARPACK solver for which it is 0.
     !%End
-    call parse_float(datasets_check('EigensolverTolerance'), default_tol, eigens%tolerance)
+    call parse_float('EigensolverTolerance', default_tol, eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -461,7 +460,7 @@ contains
     !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
     !% increase it if you know what you are doing).
     !%End
-    call parse_integer(datasets_check('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
+    call parse_integer('EigensolverMaxIter', default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then

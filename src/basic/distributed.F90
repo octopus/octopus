@@ -20,7 +20,6 @@
 #include "global.h"
 
 module distributed_m
-  use datasets_m
   use global_m
   use io_m
   use loct_m

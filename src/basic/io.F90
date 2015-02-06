@@ -20,7 +20,6 @@
 #include "global.h"
 
 module io_m
-  use datasets_m
   use global_m
   use loct_m
   use messages_m
@@ -35,7 +34,6 @@ module io_m
     io_open,             &
     io_mkdir,            &
     io_init,             &
-    io_init_datasets,    &
     io_end,              &
     io_status,           &
     io_dump_file,        &
@@ -65,6 +63,9 @@ contains
     logical, optional, intent(in) :: defaults
 
     character(len=128) :: filename
+    character(len=256) :: node_hook
+    logical :: file_exists, mpi_debug_hook
+    integer :: sec, usec
 
     ! cannot use push/pop before initializing io
 
@@ -151,17 +152,6 @@ contains
       call io_mkdir('debug')
     end if
 
-  end subroutine io_init
-
-
-  ! ---------------------------------------------------------
-  !> In this routine we should put all initializations of io
-  !! that require the current_label dataset.
-  subroutine io_init_datasets()
-    character(len=256) :: node_hook
-    logical :: file_exists, mpi_debug_hook
-    integer :: sec, usec
-
     if(conf%debug_level >= 99) then
       !wipe out debug trace files from previous runs to start fresh rather than appending
       call delete_debug_trace()
@@ -216,8 +206,7 @@ contains
       end if
     end if
 
-  end subroutine io_init_datasets
-
+  end subroutine io_init
 
   ! ---------------------------------------------------------
   subroutine io_end()
@@ -291,12 +280,7 @@ contains
       ! we do not change absolute path names
       wpath = trim(path)
     else
-      if(is_tmp_) then
-        ! the current label is not added to the path for tmp files
-        write(wpath, '(3a)') trim(work_dir), "/", trim(path)
-      else
-        write(wpath, '(4a)') trim(work_dir), "/", trim(current_label), trim(path)
-      end if
+      write(wpath, '(3a)') trim(work_dir), "/", trim(path)
     end if
 
     POP_SUB(io_workpath)
@@ -563,10 +547,10 @@ contains
     ! only root node is taking care of file I/O
     if(mpi_grp_is_root(mpi_world)) then 
       ! remove possible leftovers first before we switch to new status
-      call loct_rm_status_files(current_label)
+      call loct_rm_status_files()
 
       ! create empty status file 
-      iunit = io_open('exec/'//trim(current_label)//'oct-status-'//trim(status), &
+      iunit = io_open('exec/oct-status-'//trim(status), &
         action='write', status='unknown', is_tmp=.true.)
       call io_close(iunit)
     end if

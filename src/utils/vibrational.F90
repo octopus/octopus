@@ -22,7 +22,6 @@
   program vibrational
     use batch_m
     use command_line_m
-    use datasets_m
     use geometry_m
     use global_m
     use io_m
@@ -58,7 +57,6 @@
 
     call messages_init()
 
-    call datasets_init(1)
     call io_init()
 
     call unit_system_init()
@@ -79,7 +77,7 @@
     !% default is 10.
     !%End
 
-    call parse_integer(datasets_check('PropagationSpectrumTimeStepFactor'), 10, skip)
+    call parse_integer('PropagationSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call input_error('PropagationSpectrumTimeStepFactor')
 
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
@@ -187,7 +185,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_float(datasets_check('VibrationalSpectrumTime'), ntime*deltat, vaftime)
+    call parse_float('VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 
@@ -265,7 +263,6 @@
     SAFE_DEALLOCATE_A(time)
 
     call io_end()
-    call datasets_end()
     call messages_end()
     call global_end()
 

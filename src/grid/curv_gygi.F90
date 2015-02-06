@@ -23,7 +23,6 @@
 !! F. Gygi and G. Galli, PRB 52 R2229 (1996).
 
 module curv_gygi_m
-  use datasets_m
   use geometry_m
   use global_m
   use loct_pointer_m
@@ -83,7 +82,7 @@ contains
     !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys.
     !% Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
+    call parse_float('CurvGygiA', M_HALF, cv%A)
 
     !%Variable CurvGygiAlpha
     !%Type float
@@ -97,7 +96,7 @@ contains
     !% It must be larger than zero.
     !%End
 
-    call parse_float(datasets_check('CurvGygiAlpha'), M_TWO, cv%alpha, units_inp%length)
+    call parse_float('CurvGygiAlpha', M_TWO, cv%alpha, units_inp%length)
     !%Variable CurvGygiBeta
     !%Type float
     !%Default 4.0 a.u.
@@ -107,7 +106,7 @@ contains
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
     !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_float(datasets_check('CurvGygiBeta'), M_FOUR, cv%beta, units_inp%length)
+    call parse_float('CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
     if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')

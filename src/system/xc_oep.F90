@@ -22,7 +22,6 @@
 
 module xc_oep_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use global_m
   use grid_m
@@ -113,7 +112,7 @@ contains
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !%End
     call messages_obsolete_variable('OEP_Level', 'OEPLevel')
-    call parse_integer(datasets_check('OEPLevel'), XC_OEP_KLI, oep%level)
+    call parse_integer('OEPLevel', XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call input_error('OEP_level')
 
     if(oep%level /= XC_OEP_NONE) then
@@ -132,7 +131,7 @@ contains
         !% equation in the full OEP procedure. The default is 1.0.
         !%End
         call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
-        call parse_float(datasets_check('OEPMixing'), M_ONE, oep%mixing)
+        call parse_float('OEPMixing', M_ONE, oep%mixing)
       end if
 
      ! this routine is only prepared for finite systems

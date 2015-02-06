@@ -21,7 +21,6 @@
 
 module mesh_cube_parallel_map_m
   use cube_m
-  use datasets_m
   use global_m
   use index_m
   use mesh_m

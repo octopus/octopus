@@ -20,7 +20,6 @@
 #include "global.h"
 
 module invert_ks_m
-  use datasets_m 
   use density_m
   use eigensolver_m 
   use global_m
@@ -177,7 +176,7 @@ contains
       !% Name of the file that contains the density used as the target in the 
       !% inversion of the KS equations.
       !%End
-      call parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
+      call parse_string('InvertKSTargetDensity', "target_density.dat", filename)
 
       iunit = io_open(filename, action='read', status='old')
 

@@ -22,7 +22,6 @@
 module pert_m
   use batch_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use epot_m
   use geometry_m
@@ -146,7 +145,7 @@ contains
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call parse_integer(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+      call parse_integer('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call input_error('MagneticGaugeCorrection')
 
@@ -167,8 +166,7 @@ contains
       !% the k.p perturbation, which is due to non-local pseudopotentials.
       !%End
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
-      call parse_logical(datasets_check('KdotPUseNonLocalPseudopotential'), &
-        .true., this%use_nonlocalpps)
+      call parse_logical('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
     endif
 
     POP_SUB(pert_init)

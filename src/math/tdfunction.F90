@@ -26,7 +26,6 @@
 !!--------------------------------------------------------------
 module tdfunction_m
   use c_pointer_m
-  use datasets_m
   use fft_m
   use global_m
   use io_m
@@ -220,7 +219,7 @@ contains
     !% Explained above.
     !%End
     ierr = -3
-    if(parse_block(datasets_check('TDFunctions'), blk) /= 0) then
+    if(parse_block('TDFunctions', blk) /= 0) then
       ierr = -1
       POP_SUB(tdf_read)
       return

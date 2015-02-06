@@ -21,7 +21,6 @@
 
 program harmonic_spectrum
   use command_line_m
-  use datasets_m
   use fft_m
   use global_m
   use io_m
@@ -67,7 +66,6 @@ program harmonic_spectrum
   call global_init(is_serial = .true.)
   call messages_init()
 
-  call datasets_init(1)
   call io_init()
   call unit_system_init()
   call fft_all_init()
@@ -121,7 +119,6 @@ program harmonic_spectrum
 
 
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 end program harmonic_spectrum

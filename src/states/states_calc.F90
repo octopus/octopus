@@ -35,7 +35,6 @@ module states_calc_m
 #endif
   use cmplxscl_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use geometry_m
   use global_m
@@ -316,8 +315,7 @@ contains
     !% A state j with energy E_j will be considered degenerate with a state
     !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
     !%End
-    call parse_float(datasets_check('DegeneracyThreshold'), &
-       units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
+    call parse_float('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
     degen_thres = units_to_atomic(units_inp%energy, degen_thres)
 
     ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 

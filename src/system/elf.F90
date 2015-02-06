@@ -23,7 +23,6 @@ module elf_m
   use cube_function_m
   use cube_m
   use density_m
-  use datasets_m
   use derivatives_m
   use fft_m
   use fourier_space_m
@@ -62,7 +61,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call parse_logical(datasets_check('ELFWithCurrentTerm'), .true., with_current_term)
+    call parse_logical('ELFWithCurrentTerm', .true., with_current_term)
 
     POP_SUB(elf_init)
   end subroutine elf_init

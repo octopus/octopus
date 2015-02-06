@@ -20,7 +20,6 @@
 #include "global.h"
 
 module states_restart_m
-  use datasets_m
   use global_m
   use grid_m
   use io_m
@@ -1017,7 +1016,7 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals.
     !%End
-    if(parse_block(datasets_check('UserDefinedStates'), blk) == 0) then
+    if(parse_block('UserDefinedStates', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 

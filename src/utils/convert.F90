@@ -22,7 +22,6 @@
 program oct_convert
   use calc_mode_m
   use command_line_m
-  use datasets_m
   use fft_m
   use fftw_m
   use geometry_m
@@ -59,7 +58,6 @@ program oct_convert
   call calc_mode_init()
   call messages_init()
 
-  call datasets_init(1)
   call io_init()
   call profiling_init()
   call messages_experimental("oct-convert utility")
@@ -79,7 +77,6 @@ program oct_convert
   call profiling_end()
   call io_end()
   call print_date("Calculation ended on ")
-  call datasets_end()
   call messages_end()
   call global_end()
 
@@ -116,7 +113,7 @@ contains
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files it should be one space ' '.
     !%End
-    call parse_string(datasets_check('ConvertFilename'), 'density', basename)
+    call parse_string('ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -134,7 +131,7 @@ contains
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_logical(datasets_check('ConvertIterateFolder'), .true., iterate_folder)
+    call parse_logical('ConvertIterateFolder', .true., iterate_folder)
 
     if (iterate_folder) then
       folder_default  = 'td.'
@@ -150,7 +147,7 @@ contains
     !%Description
     !% The folder name where the input files are.
     !%End
-    call parse_string(datasets_check('ConvertFolder'), folder_default, folder)
+    call parse_string('ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
     !%Variable ConvertStart
@@ -160,7 +157,7 @@ contains
     !%Description
     !% The starting number of the filename or folder.
     !%End
-    call parse_integer(datasets_check('ConvertStart'), c_start_default, c_start)
+    call parse_integer('ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -169,7 +166,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_integer(datasets_check('ConvertEnd'), 1, c_end)
+    call parse_integer('ConvertEnd', 1, c_end)
 
     !%Variable ConvertStep
     !%Type integer
@@ -178,7 +175,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_integer(datasets_check('ConvertStep'), 1, c_step)
+    call parse_integer('ConvertStep', 1, c_step)
 
     !%Variable ConvertSubtractFilename
     !%Type string
@@ -188,7 +185,7 @@ contains
     !% Input filename. The file which is going to subtracted to rest of the files.
     !% specified in <tt>OutputHow</tt>.
     !%End
-    call parse_string(datasets_check('ConvertSubtractFilename'), 'density', ref_name)
+    call parse_string('ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
     ! Delete the extension if present
     length = len_trim(ref_name)
@@ -205,7 +202,7 @@ contains
     !%Description
     !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_logical(datasets_check('ConvertSubtract'), .false., subtract_file)
+    call parse_logical('ConvertSubtract', .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -214,7 +211,7 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_string(datasets_check('ConvertSubtractFolder'), '.', ref_folder)
+    call parse_string('ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
     !%Variable ConvertTransform
@@ -224,7 +221,7 @@ contains
     !%Description
     !% Decides if the input files are going to be transformed via Fourier Transform.
     !%End
-    call parse_logical(datasets_check('ConvertTransform'), .false., fourier_trans)
+    call parse_logical('ConvertTransform', .false., fourier_trans)
 
     ! Compute Fourier transform 
     if (fourier_trans) then
@@ -405,7 +402,7 @@ contains
 
     ! set default time_step as dt from TD section
     fdefault = M_ZERO
-    call parse_float(datasets_check('TDTimeStep'), fdefault, dt, unit = units_inp%time)
+    call parse_float('TDTimeStep', fdefault, dt, unit = units_inp%time)
     if (dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -428,7 +425,7 @@ contains
     !%Description
     !% The starting number of the filename.
     !%End
-    call parse_float(datasets_check('ConvertEnergyMin'), M_ZERO, min_energy, units_inp%energy)
+    call parse_float('ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
 
     !%Variable ConvertReadSize
     !%Type integer
@@ -439,7 +436,7 @@ contains
     !% yet tested, so it should be one. For the serial run, a number
     !% of 100-1000 will speed-up the execution time by this factor.
     !%End
-    call parse_integer(datasets_check('ConvertReadSize'), 1, chunk_size)
+    call parse_integer('ConvertReadSize', 1, chunk_size)
     
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
@@ -455,7 +452,7 @@ contains
     !% The last number of the filename.
     !%End
     fdefault = units_from_atomic(units_inp%energy, w_max)
-    call parse_float(datasets_check('ConvertEnergyMax'),fdefault, max_energy, units_inp%energy)
+    call parse_float('ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
     if (max_energy > w_max) then
       write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
            units_from_atomic(units_inp%energy, max_energy)

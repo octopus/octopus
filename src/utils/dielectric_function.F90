@@ -21,7 +21,6 @@
 
 program dielectric_function
   use batch_m
-  use datasets_m
   use command_line_m
   use geometry_m
   use global_m
@@ -61,7 +60,6 @@ program dielectric_function
 
   call messages_init()
 
-  call datasets_init(1)
   call io_init()
 
   call unit_system_init()
@@ -74,7 +72,7 @@ program dielectric_function
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
+  if(parse_block('GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
@@ -234,7 +232,6 @@ program dielectric_function
   call geometry_end(geo)
   call space_end(space)
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 

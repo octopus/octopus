@@ -20,7 +20,6 @@
 #include "global.h"
 
 module sparskit_m
-  use datasets_m
   use global_m
   use parser_m
   use messages_m
@@ -116,7 +115,7 @@ contains
     !%Option sk_dqgmres 10
     !% Direct versions of the Quasi-Generalized Minimum Residual method
     !%End
-    call parse_integer(datasets_check('SPARSKITSolver'), SK_BCG, sk%solver_type)
+    call parse_integer('SPARSKITSolver', SK_BCG, sk%solver_type)
     if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
       call input_error('SPARSKITSolver')
     end if
@@ -130,7 +129,7 @@ contains
     !% This variable determines what size the solver will use 
     !% for the subspace.
     !%End
-    call parse_integer(datasets_check('SPARSKITKrylovSubspaceSize'), 15, sk%krylov_size)
+    call parse_integer('SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
 
     ! preconditioner not implemented
     sk%preconditioning = 0
@@ -143,7 +142,7 @@ contains
     !% This variable controls the maximum number of iteration steps that
     !% will be performed by the (iterative) linear solver.
     !%End
-    call parse_integer(datasets_check('SPARSKITMaxIter'),          5000, sk%maxiter)
+    call parse_integer('SPARSKITMaxIter', 5000, sk%maxiter)
     
     !%Variable SPARSKITIterOut
     !%Type integer
@@ -153,7 +152,7 @@ contains
     !% Determines how often status info of the solver is printed.
     !% If <= 0, will never be printed.
     !%End
-    call parse_integer(datasets_check('SPARSKITIterOut'),            -1, sk%iter_out)
+    call parse_integer('SPARSKITIterOut', -1, sk%iter_out)
 
     !%Variable SPARSKITRelTolerance
     !%Type float
@@ -164,7 +163,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_float(datasets_check('SPARSKITRelTolerance'), CNST(1e-8), sk%rel_tolerance)
+    call parse_float('SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
     
     !%Variable SPARSKITAbsTolerance
     !%Type float
@@ -175,7 +174,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_float(datasets_check('SPARSKITAbsTolerance'), CNST(1e-10), sk%abs_tolerance)
+    call parse_float('SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
 
     !%Variable SPARSKITVerboseSolver
     !%Type logical
@@ -184,7 +183,7 @@ contains
     !%Description
     !% When set to yes, the SPARSKIT solver will write more detailed output.
     !%End
-    call parse_logical(datasets_check('SPARSKITVerboseSolver'), .false., sk%verbose)
+    call parse_logical('SPARSKITVerboseSolver', .false., sk%verbose)
 
     ! size of the problem
     if(is_complex) then

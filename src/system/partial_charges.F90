@@ -60,7 +60,6 @@ module partial_charges_m
   use comm_m
   use cube_m
   use cube_function_m
-  use datasets_m
   use derivatives_m
   use gauge_field_m
   use geometry_m

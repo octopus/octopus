@@ -21,7 +21,6 @@
 
 program centergeom
   use command_line_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_m
@@ -48,7 +47,6 @@ program centergeom
 
   call messages_init()
 
-  call datasets_init(1)
   call io_init()
   call unit_system_init()
 
@@ -64,7 +62,6 @@ program centergeom
   call space_end(space)
 
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 end program centergeom

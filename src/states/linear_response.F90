@@ -21,7 +21,6 @@
 
 module linear_response_m
   use comm_m
-  use datasets_m
   use global_m
   use grid_m
   use lalg_basic_m

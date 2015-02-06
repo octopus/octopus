@@ -22,7 +22,6 @@
 program oct_test
   use calc_mode_m
   use command_line_m
-  use datasets_m
   use derivatives_m
   use fft_m
   use global_m
@@ -84,7 +83,6 @@ program oct_test
   !% Test the interpolation routines.
   !%End
   call parse_integer('TestMode', HARTREE_TEST, test_mode)
-  call datasets_init(1)
 
   call messages_obsolete_variable('TestDerivatives', 'TestType')
   call messages_obsolete_variable('TestOrthogonalization', 'TestType')
@@ -132,7 +130,6 @@ program oct_test
   call profiling_end()
   call io_end()
   call print_date("Calculation ended on ")
-  call datasets_end()
   call messages_end()
   call calc_mode_end()
   call global_end()

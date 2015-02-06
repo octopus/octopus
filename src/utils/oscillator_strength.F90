@@ -20,7 +20,6 @@
 #include "global.h"
 
 module oscillator_strength_m
-  use datasets_m
   use global_m
   use io_m
   use kick_m
@@ -1118,7 +1117,6 @@ end module oscillator_strength_m
 ! ---------------------------------------------------------
 program oscillator_strength
   use command_line_m
-  use datasets_m
   use global_m
   use io_m
   use messages_m
@@ -1164,7 +1162,6 @@ program oscillator_strength
   ! Initialize stuff
   call global_init(is_serial = .true.)
   call io_init(defaults = .true.)
-  call datasets_init(1)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
@@ -1179,7 +1176,6 @@ program oscillator_strength
   end select
 
   call io_end()
-  call datasets_end()
   call global_end()
 
 end program oscillator_strength

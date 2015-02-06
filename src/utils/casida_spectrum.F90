@@ -22,7 +22,6 @@
 
 program casida_spectrum
   use command_line_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_m
@@ -57,13 +56,12 @@ program casida_spectrum
   call getopt_end()
 
   call messages_init()
-  call datasets_init(1)
   call io_init()
   call unit_system_init()
   call space_init(cs%space)
 
   ! Reads the spin components. This is read here, as well as in states_init.
-  call parse_integer(datasets_check('SpinComponents'), 1, cs%ispin)
+  call parse_integer('SpinComponents', 1, cs%ispin)
   if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call input_error('SpinComponents')
   cs%ispin = min(2, cs%ispin)
 
@@ -74,9 +72,9 @@ program casida_spectrum
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumBroadening'), CNST(0.005), cs%br, units_inp%energy)
+  call parse_float('CasidaSpectrumBroadening', CNST(0.005), cs%br, units_inp%energy)
 
-  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumBroadening'), cs%br, unit = units_out%energy)
+  call messages_print_var_value(stdout, 'CasidaSpectrumBroadening', cs%br, unit = units_out%energy)
 
   !%Variable CasidaSpectrumEnergyStep
   !%Type float
@@ -85,9 +83,9 @@ program casida_spectrum
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_float(datasets_check('CasidaSpectrumEnergyStep'), CNST(0.001), cs%energy_step, units_inp%energy)
+  call parse_float('CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
 
-  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumEnergyStep'), cs%energy_step, unit = units_out%energy)
+  call messages_print_var_value(stdout, 'CasidaSpectrumEnergyStep', cs%energy_step, unit = units_out%energy)
 
   !%Variable CasidaSpectrumMinEnergy
   !%Type float
@@ -96,9 +94,9 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies greater than <tt>CasidaSpectrumMinEnergy</tt>.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, cs%min_energy, units_inp%energy)
+  call parse_float('CasidaSpectrumMinEnergy', M_ZERO, cs%min_energy, units_inp%energy)
 
-  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMinEnergy'), cs%min_energy, unit = units_out%energy)
+  call messages_print_var_value(stdout, 'CasidaSpectrumMinEnergy', cs%min_energy, unit = units_out%energy)
 
   !%Variable CasidaSpectrumMaxEnergy
   !%Type float
@@ -107,9 +105,9 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
   !%End
-  call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, cs%max_energy, units_inp%energy)
+  call parse_float('CasidaSpectrumMaxEnergy', M_ONE, cs%max_energy, units_inp%energy)
 
-  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMaxEnergy'), cs%max_energy, unit = units_out%energy)
+  call messages_print_var_value(stdout, 'CasidaSpectrumMaxEnergy', cs%max_energy, unit = units_out%energy)
 
   identity = M_ZERO
   do idir = 1, cs%space%dim
@@ -125,7 +123,7 @@ program casida_spectrum
   !% will also be output. Size of matrix must be <tt>Dimensions</tt>.
   !%End
 
-  if (parse_block(datasets_check('CasidaSpectrumRotationMatrix'), blk) == 0) then 
+  if (parse_block('CasidaSpectrumRotationMatrix', blk) == 0) then 
     rotation(:,:) = M_ZERO
     do idir = 1, cs%space%dim
       do jdir = 1, cs%space%dim
@@ -166,7 +164,6 @@ program casida_spectrum
 
   call space_end(cs%space)
   call io_end()
-  call datasets_end()
   call messages_end()
   call global_end()
 

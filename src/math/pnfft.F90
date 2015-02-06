@@ -40,7 +40,6 @@ end module pnfft_params_m
 !> The low level module to work with the PNFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
 module pnfft_m
-  use datasets_m
   use global_m
   use io_m
   use loct_math_m
@@ -132,7 +131,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_integer(datasets_check('PNFFTCutoff'), pnfft%mm, pnfft%mm)
+    call parse_integer('PNFFTCutoff', pnfft%mm, pnfft%mm)
 
 
     !%Variable PNFFTOversampling
@@ -142,7 +141,7 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_float(datasets_check('PNFFTOversampling'), pnfft%sigma, pnfft%sigma)
+    call parse_float('PNFFTOversampling', pnfft%sigma, pnfft%sigma)
 
 
 

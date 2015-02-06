@@ -20,7 +20,6 @@
 #include "global.h"
 
 module messages_m
-  use datasets_m
   use global_m
   use loct_m
   use mpi_m
@@ -509,10 +508,10 @@ contains
     if(.not.mpi_grp_is_root(mpi_world)) return     
 
     ! remove old status files first, before we switch to state aborted
-    call loct_rm_status_files(current_label)
+    call loct_rm_status_files()
     
     ! create empty status file to indicate 'aborted state'
-    open(unit=iunit_err, file='exec/'//trim(current_label)//'oct-status-'//trim(status), &
+    open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
     
@@ -527,8 +526,8 @@ contains
 
     iunit = mpi_world%rank + unit_offset
     write(filenum, '(i6.6)') iunit - unit_offset
-    call loct_mkdir(trim(current_label)//'debug')
-    open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
+    call loct_mkdir('debug')
+    open(iunit, file = 'debug/debug_trace.node.'//filenum, &
       action='write', status='unknown', position='append')
 
   end subroutine open_debug_trace
@@ -541,8 +540,8 @@ contains
 
     iunit = mpi_world%rank + unit_offset
     write(filenum, '(i6.6)') iunit - unit_offset
-    call loct_mkdir(trim(current_label)//'debug')
-    call loct_rm(trim(current_label)//'debug/debug_trace.node.'//filenum)
+    call loct_mkdir('debug')
+    call loct_rm('debug/debug_trace.node.'//filenum)
 
   end subroutine delete_debug_trace
 
@@ -988,7 +987,7 @@ contains
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if ( parse_isdef(trim(datasets_check(name))) /= 0 ) then 
+    if ( parse_isdef(trim(name)) /= 0 ) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module states_io_m
-  use datasets_m
   use geometry_m
   use global_m
   use grid_m
@@ -186,7 +185,7 @@ contains
     !% The band file will be written in Gnuplot-friendly format to <tt>bands-gp.dat</tt>
     !% (or <tt>band-gp-is.dat</tt> if spin-polarized).
     !%End
-    call parse_logical(datasets_check('OutputBandsGnuplotMode'), .true., gnuplot_mode)
+    call parse_logical('OutputBandsGnuplotMode', .true., gnuplot_mode)
 
     !%Variable OutputBandsGraceMode
     !%Type logical
@@ -196,7 +195,7 @@ contains
     !% The band file will be written in Grace-friendly format to <tt>bands-grace.dat</tt>
     !% (or <tt>bands-grace-is.dat</tt> if spin-polarized).
     !%End
-    call parse_logical(datasets_check('OutputBandsGraceMode'), .false., grace_mode)
+    call parse_logical('OutputBandsGraceMode', .false., grace_mode)
 
     ! shortcuts
     ns = 1
@@ -364,7 +363,7 @@ contains
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(parse_block(datasets_check('MomentumTransfer'), blk) == 0) then
+    if(parse_block('MomentumTransfer', blk) == 0) then
 
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
@@ -530,7 +529,7 @@ contains
     !% Lower bound for the energy mesh of the DOS.
     !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
-    call parse_float(datasets_check('DOSEnergyMin'), evalmin - eextend, emin, units_inp%energy)
+    call parse_float('DOSEnergyMin', evalmin - eextend, emin, units_inp%energy)
 
     !%Variable DOSEnergyMax
     !%Type float
@@ -539,7 +538,7 @@ contains
     !% Upper bound for the energy mesh of the DOS.
     !% The default is the highest eigenvalue, plus a quarter of the total range of eigenvalues.
     !%End
-    call parse_float(datasets_check('DOSEnergyMax'), evalmax + eextend, emax, units_inp%energy)
+    call parse_float('DOSEnergyMax', evalmax + eextend, emax, units_inp%energy)
 
     !%Variable DOSEnergyPoints
     !%Type integer
@@ -549,7 +548,7 @@ contains
     !% Determines how many energy points <tt>Octopus</tt> should use for 
     !% the DOS energy grid.
     !%End
-    call parse_integer(datasets_check('DOSEnergyPoints'), 500, epoints)
+    call parse_integer('DOSEnergyPoints', 500, epoints)
 
     !%Variable DOSGamma
     !%Type float
@@ -558,8 +557,7 @@ contains
     !%Description
     !% Determines the width of the Lorentzian which is used for the DOS sum.
     !%End
-    call parse_float(datasets_check('DOSGamma'), &
-      units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
+    call parse_float('DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
     gamma = units_to_atomic(units_inp%energy, gamma)
 
     ! spacing for energy mesh

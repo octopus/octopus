@@ -26,7 +26,6 @@ module nl_operator_m
   use cl
 #endif
   use c_pointer_m
-  use datasets_m
   use global_m
   use io_m
   use loct_pointer_m
@@ -188,10 +187,10 @@ contains
 
     default = OP_VEC
 
-    call parse_integer(datasets_check('OperateDouble'),  default, dfunction_global)
+    call parse_integer('OperateDouble',  default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')
 
-    call parse_integer(datasets_check('OperateComplex'), default, zfunction_global)
+    call parse_integer('OperateComplex', default, zfunction_global)
     if(.not.varinfo_valid_option('OperateComplex', dfunction_global)) call input_error('OperateComplex')
 
 #ifdef HAVE_OPENCL
@@ -211,7 +210,7 @@ contains
       !%Option nomap 3
       !% (Experimental) This version does not use a map.
       !%End
-      call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
+      call parse_integer('OperateOpenCL',  OP_MAP, function_opencl)
 
     end if
 #endif
@@ -227,7 +226,7 @@ contains
     !% experimental and has not been thoroughly tested.
     !%End
 
-    call parse_logical(datasets_check('NLOperatorCompactBoundaries'), .false., compact_boundaries)
+    call parse_logical('NLOperatorCompactBoundaries', .false., compact_boundaries)
 
     if(compact_boundaries) then
       call messages_experimental('NLOperatorCompactBoundaries')

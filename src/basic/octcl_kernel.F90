@@ -24,7 +24,6 @@ module octcl_kernel_m
   use cl
 #endif
   use c_pointer_m
-  use datasets_m
   use global_m
   use io_m
   use messages_m
