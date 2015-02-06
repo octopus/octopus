@@ -35,7 +35,6 @@ libstates_a_SOURCES =                \
 	states_restart.F90           \
 	modelmb_density_matrix.F90   \
 	modelmb_particles.F90        \
-	ob_green.F90                 \
 	modelmb_exchange_syms.F90    \
 	density.F90                  \
 	states_io.F90                \
@@ -55,13 +54,12 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libstates_a_SOURCES)
 
-ob_green.o: ob_green.F90
 ksinversion.o : ksinversion.F90 modelmb_particles.o states.o
 modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc.F90 modelmb_particles.o states.o
 modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F90 modelmb_density_matrix.o modelmb_particles.o states.o
 modelmb_particles.o : modelmb_particles.F90
 physics_op.o : physics_op.F90 physics_op_inc.F90
-states.o : states.F90 states_group.o states_inc.F90 states_dim.o restart.o ob_green.o modelmb_particles.o smear.o cmplxscl.o
+states.o : states.F90 states_group.o states_inc.F90 states_dim.o restart.o modelmb_particles.o smear.o cmplxscl.o
 states_dim.o : states_dim.F90
 states_group.o : states_group.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o cmplxscl.o physics_op.o states_dim.o
@@ -71,7 +69,7 @@ excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_cal
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o states_dim.o smear.o restart.o
 restart.o : restart.F90 restart_inc.F90
 density.o : density.F90 states.o smear.o states_dim.o
-states_io.o : states_io.F90 states.o smear.o ob_green.o states_dim.o
+states_io.o : states_io.F90 states.o smear.o states_dim.o
 cmplxscl.o : cmplxscl.F90
 smear.o : smear.F90 cmplxscl.o
 opt_control_state.o : opt_control_state.F90 states.o

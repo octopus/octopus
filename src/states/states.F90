@@ -51,7 +51,6 @@ module states_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use multicomm_m
-  use ob_interface_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
@@ -83,7 +82,6 @@ module states_m
     states_densities_init,            &
     states_exec_init,                 &
     states_allocate_wfns,             &
-    states_allocate_intf_wfns,        &
     states_allocate_current,          &
     states_deallocate_wfns,           &
     states_null,                      &
@@ -92,8 +90,6 @@ module states_m
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
-    states_lead_densities_init,       &
-    states_lead_densities_end,        &
     states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
@@ -120,8 +116,7 @@ module states_m
     cmplx_array2_t,                   &
     states_wfs_t,                     &
     states_count_pairs,               &
-    occupied_states,                  &
-    states_get_ob_intf
+    occupied_states
 
   !> cmplxscl: Left and Right eigenstates
   type states_wfs_t    
@@ -182,14 +177,6 @@ module states_m
     logical                  :: have_left_states
 
     type(states_group_t)     :: group
-
-    logical             :: open_boundaries
-    CMPLX, pointer      :: zphi(:, :, :, :)  !< Free states for open-boundary calculations.
-    FLOAT, pointer      :: ob_eigenval(:, :) !< Eigenvalues of free states.
-    type(states_dim_t)  :: ob_d              !< Dims. of the unscattered systems.
-    integer             :: ob_nst            !< nst of the unscattered systems.
-    FLOAT, pointer      :: ob_occ(:, :)      !< occupations
-    type(states_lead_t) :: ob_lead(2*MAX_DIM)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
@@ -265,8 +252,6 @@ contains
   subroutine states_null(st)
     type(states_t), intent(inout) :: st
 
-    integer :: il
-
     PUSH_SUB(states_null)
 
     call states_dim_null(st%d)
@@ -287,13 +272,6 @@ contains
 
     nullify(st%dpsi, st%zpsi)
     
-    nullify(st%zphi, st%ob_eigenval, st%ob_occ)
-    st%open_boundaries = .false.
-    call states_dim_null(st%ob_d)
-    do il = 1, 2*MAX_DIM
-      nullify(st%ob_lead(il)%intf_psi, st%ob_lead(il)%rho, st%ob_lead(il)%self_energy)
-    end do
-
     nullify(st%user_def_states)
     nullify(st%rho, st%current)
     nullify(st%rho_core, st%frozen_rho)
@@ -320,8 +298,6 @@ contains
 
     FLOAT :: excess_charge
     integer :: nempty, ierr, il, ntot, default, nthreads
-    integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
-    type(restart_t) :: ob_restart
     character(len=256)   :: restart_dir
 
     PUSH_SUB(states_init)
@@ -423,75 +399,7 @@ contains
 
     call geometry_val_charge(geo, st%val_charge)
 
-    if(gr%ob_grid%open_boundaries) then
-      ! renormalize charge of central region to match leads (open system, not finite)
-      st%val_charge = st%val_charge * (gr%ob_grid%lead(LEFT)%sb%lsize(TRANS_DIR) / gr%sb%lsize(TRANS_DIR))
-    end if
-
     st%qtot = -(st%val_charge + excess_charge)
-
-    do il = 1, NLEADS
-      nullify(st%ob_lead(il)%intf_psi)
-    end do
-    ! When doing open-boundary calculations the number of free states is
-    ! determined by the previous periodic calculation.
-    st%open_boundaries = gr%ob_grid%open_boundaries
-    if(gr%ob_grid%open_boundaries) then
-      SAFE_ALLOCATE( ob_k(1:NLEADS))
-      SAFE_ALLOCATE(ob_st(1:NLEADS))
-      SAFE_ALLOCATE( ob_d(1:NLEADS))
-      do il = 1, NLEADS
-        restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR
-        call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, ierr, dir=restart_dir)
-        ! first get nst and kpoints of all states
-        if(ierr == 0) call states_look(ob_restart, ob_k(il), ob_d(il), ob_st(il), ierr)
-        if(ierr /= 0) then
-          message(1) = 'Could not read the states information of the periodic calculation'
-          message(2) = 'from '//trim(restart_dir)//'.'
-          call messages_fatal(2)
-        end if
-        call restart_end(ob_restart)
-      end do
-      if(NLEADS > 1) then
-        if(ob_k(LEFT) /= ob_k(RIGHT).or. &
-          ob_st(LEFT) /= ob_st(LEFT).or. &
-          ob_d(LEFT) /= ob_d(RIGHT)) then
-          message(1) = 'The number of states for the left and right leads are not equal.'
-          call messages_fatal(1)
-        end if
-      end if
-      st%ob_d%dim = ob_d(LEFT)
-      st%ob_nst   = ob_st(LEFT)
-      st%ob_d%nik = ob_k(LEFT)
-      st%d%nik = st%ob_d%nik
-      SAFE_DEALLOCATE_A(ob_d)
-      SAFE_DEALLOCATE_A(ob_st)
-      SAFE_DEALLOCATE_A(ob_k)
-      call distributed_nullify(st%ob_d%kpt, 0)
-      if((st%d%ispin == UNPOLARIZED.and.st%ob_d%dim /= 1) .or.   &
-        (st%d%ispin == SPIN_POLARIZED.and.st%ob_d%dim /= 1) .or. &
-        (st%d%ispin == SPINORS.and.st%ob_d%dim /= 2)) then
-        message(1) = 'The spin type of the leads calculation from '&
-                     //gr%ob_grid%lead(LEFT)%info%restart_dir
-        message(2) = 'and SpinComponents of the current run do not match.'
-        call messages_fatal(2)
-      end if
-      SAFE_DEALLOCATE_P(st%d%kweights)
-      SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
-      st%d%kweights = M_ZERO
-      st%d%kweights(1) = M_ONE
-      SAFE_ALLOCATE(st%ob_d%kweights(1:st%ob_d%nik))
-      SAFE_ALLOCATE(st%ob_eigenval(1:st%ob_nst, 1:st%ob_d%nik))
-      SAFE_ALLOCATE(st%ob_occ(1:st%ob_nst, 1:st%ob_d%nik))
-      st%ob_d%kweights = M_ZERO
-      st%ob_eigenval   = huge(st%ob_eigenval)
-      st%ob_occ        = M_ZERO
-      call read_ob_eigenval_and_occ()
-    else
-      st%ob_nst   = 0
-      st%ob_d%nik = 0
-      st%ob_d%dim = 0
-    end if
 
     select case(st%d%ispin)
     case(UNPOLARIZED)
@@ -569,24 +477,6 @@ contains
 
     conf%target_states_block_size = st%d%block_size
 
-    ! FIXME: For now, open-boundary calculations are only possible for
-    ! continuum states, i.e. for those states treated by the Lippmann-
-    ! Schwinger approach during SCF.
-    ! Bound states should be done with extra states, without k-points.
-    if(gr%ob_grid%open_boundaries) then
-      if(st%nst /= st%ob_nst .or. st%d%nik /= st%ob_d%nik) then
-        message(1) = 'Open-boundary calculations for possibly bound states'
-        message(2) = 'are not possible yet. You have to match your number'
-        message(3) = 'of states to the number of free states of your previous'
-        message(4) = 'periodic run.'
-        write(message(5), '(a,i5,a)') 'Your central region contributes ', st%nst, ' states,'
-        write(message(6), '(a,i5,a)') 'while your lead calculation had ', st%ob_nst, ' states.'
-        write(message(7), '(a,i5,a)') 'Your central region contributes ', st%d%nik, ' k-points,'
-        write(message(8), '(a,i5,a)') 'while your lead calculation had ', st%ob_d%nik, ' k-points.'
-        call messages_fatal(8)
-      end if
-    end if
-
     st%d%cdft = .false. ! CDFT was removed
 
     !cmplxscl
@@ -613,9 +503,6 @@ contains
         st%priv%wfs_type = TYPE_CMPLX
       endif
     endif
-
-    ! Calculations with open boundaries require complex wavefunctions.
-    if(gr%ob_grid%open_boundaries) st%priv%wfs_type = TYPE_CMPLX
 
     !%Variable OnlyUserDefinedInitialStates
     !%Type logical
@@ -644,8 +531,6 @@ contains
 
     call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
     call states_read_initial_spins(st)
-
-    nullify(st%zphi)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -684,68 +569,6 @@ contains
     st%packed = .false.
 
     POP_SUB(states_init)
-
-  contains
-
-    subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, iline, ist, ik, idim, idir, err
-      FLOAT              :: flt, eigenval, imeigenval, occ, kweights
-      character          :: char
-      character(len=256) :: chars
-      character(len=256), allocatable :: lines(:)
-
-      PUSH_SUB(states_init.read_ob_eigenval_and_occ)
-
-      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR
-      call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, err, dir=restart_dir)
-      if(err /= 0) then
-        message(1) = 'Could not read open-boundaries eigenvalues and occupations.'
-        call messages_fatal(1)
-      endif
-
-      occs = restart_open(ob_restart, 'occs')
-      if(occs  <  0) then
-        message(1) = 'Could not read "occs" from left lead.'
-        call messages_fatal(1)
-      end if
-
-      SAFE_ALLOCATE(lines(3 + st%ob_nst*st%ob_d%nik))
-
-      call iopar_read(mpi_world, occs, lines, 3 + st%ob_nst*st%ob_d%nik, err)
-
-      do iline = 3, 2 + st%ob_nst*st%ob_d%nik
-
-        ! Extract eigenvalue.
-        ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(lines(iline), *) occ, char, eigenval, char, imeigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
-           char, chars, char, ik, char, ist, char, idim
-
-        if(st%d%ispin  ==  SPIN_POLARIZED) then
-          call messages_not_implemented('Spin-Transport')
-
-          if(is_spin_up(ik)) then
-            !FIXME
-            !              st%ob_eigenval(jst, SPIN_UP) = eigenval
-            !              st%ob_occ(jst, SPIN_UP)      = occ
-          else
-            !              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
-            !              st%ob_occ(jst, SPIN_DOWN)      = occ
-          end if
-        else
-          st%ob_eigenval(ist, ik) = eigenval
-          st%ob_occ(ist, ik)      = occ
-          st%ob_d%kweights(ik)    = kweights
-        end if
-      end do
-
-      SAFE_DEALLOCATE_A(lines)
-
-      call restart_close(ob_restart, occs)
-
-      call restart_end(ob_restart)
-
-      POP_SUB(states_init.read_ob_eigenval_and_occ)
-    end subroutine read_ob_eigenval_and_occ
   end subroutine states_init
 
   ! ---------------------------------------------------------
@@ -778,47 +601,6 @@ contains
 
     POP_SUB(states_look)
   end subroutine states_look
-
-  ! ---------------------------------------------------------
-  !> Allocate the lead densities.
-  subroutine states_lead_densities_init(st, gr)
-    type(states_t), intent(inout) :: st
-    type(grid_t),   intent(in)    :: gr
-
-    integer :: il
-
-    PUSH_SUB(states_lead_densities_init)
-
-    if(gr%ob_grid%open_boundaries) then
-      do il = 1, NLEADS
-        SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%ob_grid%lead(il)%mesh%np, 1:st%d%nspin))
-        st%ob_lead(il)%rho(:, :) = M_ZERO
-      end do
-    end if
-
-    POP_SUB(states_lead_densities_init)
-  end subroutine states_lead_densities_init
-
-
-  ! ---------------------------------------------------------
-  !> Deallocate the lead density.
-  subroutine states_lead_densities_end(st, gr)
-    type(states_t), intent(inout) :: st
-    type(grid_t),   intent(in)    :: gr
-
-    integer :: il
-
-    PUSH_SUB(states_lead_densities_end)
-
-    if(gr%ob_grid%open_boundaries) then
-      do il = 1, NLEADS
-        SAFE_DEALLOCATE_P(st%ob_lead(il)%rho)
-      end do
-    end if
-
-    POP_SUB(states_lead_densities_end)
-  end subroutine states_lead_densities_end
-
 
   ! ---------------------------------------------------------
   !> Reads from the input file the initial occupations, if the
@@ -907,118 +689,107 @@ contains
 
     integral_occs = .true.
 
-    if(st%open_boundaries) then
+    occ_fix: if(parse_block(datasets_check('Occupations'), blk)==0) then
+      ! read in occupations
       st%fixed_occ = .true.
-      st%occ  = st%ob_occ
-      st%d%kweights = st%ob_d%kweights
-      st%qtot = M_ZERO
-      do ist = 1, st%nst
-        st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+
+      ncols = parse_block_cols(blk, 0)
+      if(ncols > st%nst) then
+        message(1) = "Too many columns in block Occupations."
+        call messages_warning(1)
+        call input_error("Occupations")
+      end if
+
+      nrows = parse_block_n(blk)
+      if(nrows /= st%d%nik) then
+        message(1) = "Wrong number of rows in block Occupations."
+        call messages_warning(1)
+        call input_error("Occupations")
+      end if
+
+      do ik = 1, st%d%nik - 1
+        if(parse_block_cols(blk, ik) /= ncols) then
+          message(1) = "All rows in block Occupations must have the same number of columns."
+          call messages_warning(1)
+          call input_error("Occupations")
+        endif
+      enddo
+
+      ! Now we fill all the "missing" states with the maximum occupation.
+      if(st%d%ispin == UNPOLARIZED) then
+        el_per_state = 2
+      else
+        el_per_state = 1
+      endif
+
+      SAFE_ALLOCATE(read_occs(1:ncols, 1:st%d%nik))
+
+      do ik = 1, st%d%nik
+        do icol = 1, ncols
+          call parse_block_float(blk, ik - 1, icol - 1, read_occs(icol, ik))
+        end do
       end do
 
+      charge_in_block = sum(read_occs)
+
+      start_pos = int((st%qtot - charge_in_block)/(el_per_state*st%d%nik))
+
+      if(start_pos + ncols > st%nst) then
+        message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
+        write(message(2),'(a,i6,a)') "number ", start_pos, " but there are too many columns for the number of states."
+        write(message(3),'(a,i6,a)') "Solution: set ExtraStates = ", start_pos + ncols - st%nst
+        call messages_fatal(3)
+      end if
+
+      do ik = 1, st%d%nik
+        do ist = 1, start_pos
+          st%occ(ist, ik) = el_per_state
+        end do
+      end do
+
+      do ik = 1, st%d%nik
+        do ist = start_pos + 1, start_pos + ncols
+          st%occ(ist, ik) = read_occs(ist - start_pos, ik)
+          integral_occs = integral_occs .and. &
+            abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
+        end do
+      end do
+
+      do ik = 1, st%d%nik
+        do ist = start_pos + ncols + 1, st%nst
+          st%occ(ist, ik) = M_ZERO
+        end do
+      end do
+
+      call parse_block_end(blk)
+
+      SAFE_DEALLOCATE_A(read_occs)
+
     else
-      occ_fix: if(parse_block(datasets_check('Occupations'), blk)==0) then
-        ! read in occupations
-        st%fixed_occ = .true.
+      st%fixed_occ = .false.
+      integral_occs = .false.
 
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > st%nst) then
-          message(1) = "Too many columns in block Occupations."
-          call messages_warning(1)
-          call input_error("Occupations")
-        end if
+      ! first guess for occupation...paramagnetic configuration
+      rr = M_ONE
+      if(st%d%ispin == UNPOLARIZED) rr = M_TWO
 
-        nrows = parse_block_n(blk)
-        if(nrows /= st%d%nik) then
-          message(1) = "Wrong number of rows in block Occupations."
-          call messages_warning(1)
-          call input_error("Occupations")
-        end if
+      st%occ  = M_ZERO
+      st%qtot = -(st%val_charge + excess_charge)
 
-        do ik = 1, st%d%nik - 1
-          if(parse_block_cols(blk, ik) /= ncols) then
-            message(1) = "All rows in block Occupations must have the same number of columns."
-            call messages_warning(1)
-            call input_error("Occupations")
-          endif
-        enddo
+      nspin = 1
+      if(st%d%nspin == 2) nspin = 2
 
-        ! Now we fill all the "missing" states with the maximum occupation.
-        if(st%d%ispin == UNPOLARIZED) then
-          el_per_state = 2
-        else
-          el_per_state = 1
-        endif
-     
-        SAFE_ALLOCATE(read_occs(1:ncols, 1:st%d%nik))
- 
-        do ik = 1, st%d%nik
-          do icol = 1, ncols
-            call parse_block_float(blk, ik - 1, icol - 1, read_occs(icol, ik))
+      do ik = 1, st%d%nik, nspin
+        charge = M_ZERO
+        do ispin = ik, ik + nspin - 1
+          do ist = 1, st%nst
+            st%occ(ist, ispin) = min(rr, -(st%val_charge + excess_charge) - charge)
+            charge = charge + st%occ(ist, ispin)
           end do
         end do
+      end do
 
-        charge_in_block = sum(read_occs)
-
-        start_pos = int((st%qtot - charge_in_block)/(el_per_state*st%d%nik))
-
-        if(start_pos + ncols > st%nst) then
-          message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
-          write(message(2),'(a,i6,a)') "number ", start_pos, " but there are too many columns for the number of states."
-          write(message(3),'(a,i6,a)') "Solution: set ExtraStates = ", start_pos + ncols - st%nst
-          call messages_fatal(3)
-        end if
-
-        do ik = 1, st%d%nik
-          do ist = 1, start_pos
-            st%occ(ist, ik) = el_per_state
-          end do
-        end do
-
-        do ik = 1, st%d%nik
-          do ist = start_pos + 1, start_pos + ncols
-            st%occ(ist, ik) = read_occs(ist - start_pos, ik)
-            integral_occs = integral_occs .and. &
-              abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
-          end do
-        end do
-
-        do ik = 1, st%d%nik
-          do ist = start_pos + ncols + 1, st%nst
-             st%occ(ist, ik) = M_ZERO
-          end do
-        end do
-        
-        call parse_block_end(blk)
-
-        SAFE_DEALLOCATE_A(read_occs)
-
-      else
-        st%fixed_occ = .false.
-        integral_occs = .false.
-
-        ! first guess for occupation...paramagnetic configuration
-        rr = M_ONE
-        if(st%d%ispin == UNPOLARIZED) rr = M_TWO
-
-        st%occ  = M_ZERO
-        st%qtot = -(st%val_charge + excess_charge)
-
-        nspin = 1
-        if(st%d%nspin == 2) nspin = 2
-
-        do ik = 1, st%d%nik, nspin
-          charge = M_ZERO
-          do ispin = ik, ik + nspin - 1
-            do ist = 1, st%nst
-              st%occ(ist, ispin) = min(rr, -(st%val_charge + excess_charge) - charge)
-              charge = charge + st%occ(ist, ispin)
-            end do
-          end do
-        end do
-
-      end if occ_fix
-    end if
+    end if occ_fix
 
     !%Variable RestartReorderOccs
     !%Type logical
@@ -1042,7 +813,7 @@ contains
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
       if((st%d%ispin /= SPINORS .and. st%nst * 2  <=  st%qtot) .or. &
-         (st%d%ispin == SPINORS .and. st%nst  <=  st%qtot)) then
+        (st%d%ispin == SPINORS .and. st%nst  <=  st%qtot)) then
         call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
         call messages_warning()
       endif
@@ -1146,11 +917,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_zphi, alloc_Left)
+  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_Left)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    logical,      optional, intent(in)      :: alloc_zphi !< only needed for gs transport
     logical,      optional, intent(in)      :: alloc_Left !< allocate an addtional set of wfs to store left eigenstates
 
     integer :: ip, ik, ist, idim, st1, st2, k1, k2, np_part
@@ -1211,15 +981,6 @@ contains
           end if          
         end if
       end if
-      
-      if(optional_default(alloc_zphi, .false.)) then
-        SAFE_ALLOCATE(st%zphi(1:np_part, 1:st%ob_d%dim, st1:st2, k1:k2))
-        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-          st%zphi(ip, idim, ist, ik) = M_Z0
-        end forall
-      else
-        nullify(st%zphi)
-      end if
 
     end if
 
@@ -1228,37 +989,6 @@ contains
 
     POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns
-
-  ! ---------------------------------------------------------
-  !> Allocates the interface wavefunctions defined within a states_t structure.
-  subroutine states_allocate_intf_wfns(st, ob_mesh)
-    type(states_t),         intent(inout)   :: st
-    type(mesh_t),           intent(in)      :: ob_mesh(:)
-
-    integer :: st1, st2, k1, k2, il
-
-    PUSH_SUB(states_allocate_intf_wfns)
-
-    ASSERT(st%open_boundaries)
-
-    st1 = st%st_start
-    st2 = st%st_end
-    k1 = st%d%kpt%start
-    k2 = st%d%kpt%end
-
-    do il = 1, NLEADS
-      ASSERT(.not.associated(st%ob_lead(il)%intf_psi))
-      SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
-      st%ob_lead(il)%intf_psi = M_z0
-    end do
-
-    ! TODO: write states_init_block for intf_psi
-!    call states_init_block(st)
-
-    POP_SUB(states_allocate_intf_wfns)
-  end subroutine states_allocate_intf_wfns
-  ! -----------------------------------------------------
-
 
   !---------------------------------------------------------------------
   !> Initializes the data components in st that describe how the states
@@ -1438,7 +1168,7 @@ contains
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
-    integer :: il, ib, iq
+    integer :: ib, iq
 
     PUSH_SUB(states_deallocate_wfns)
 
@@ -1476,12 +1206,6 @@ contains
         SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
       end if
       SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
-    end if
-
-    if(st%open_boundaries) then
-      do il = 1, NLEADS
-        SAFE_DEALLOCATE_P(st%ob_lead(il)%intf_psi)
-      end do
     end if
 
     POP_SUB(states_deallocate_wfns)
@@ -1685,9 +1409,6 @@ contains
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
 
-    stout%open_boundaries = stin%open_boundaries
-    ! Warning: some of the "open boundaries" variables are not copied.
-
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
@@ -1742,23 +1463,13 @@ contains
   subroutine states_end(st)
     type(states_t), intent(inout) :: st
 
-    integer :: il
-
     PUSH_SUB(states_end)
 
     call states_dim_end(st%d)
     call modelmb_particles_end(st%modelmbparticles)
 
-    ! this deallocates dpsi, zpsi, psib, iblock, iblock, st%ob_lead(:)%intf_psi
+    ! this deallocates dpsi, zpsi, psib, iblock, iblock
     call states_deallocate_wfns(st)
-
-    SAFE_DEALLOCATE_P(st%zphi)
-    SAFE_DEALLOCATE_P(st%ob_eigenval)
-    call states_dim_end(st%ob_d)
-    SAFE_DEALLOCATE_P(st%ob_occ)
-    do il = 1, 2*MAX_DIM
-      SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
-    end do
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
@@ -2853,49 +2564,6 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
-
-
-  ! ---------------------------------------------------------
-  !> Reads the interface regions of the wavefunctions
-  subroutine states_get_ob_intf(st, gr)
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
-
-    integer            :: ik, ist, idim, il
-    CMPLX, allocatable :: zpsi(:)
-
-    PUSH_SUB(states_get_ob_intf)
-
-    write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
-    call messages_info(1)
-
-    ! Sanity check.
-    do il = 1, NLEADS
-      ASSERT(associated(st%ob_lead(il)%intf_psi))
-      ASSERT(il <= 2) ! FIXME: wrong if non-transport calculation
-    end do
-
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        do idim = 1, st%d%dim
-
-          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-
-          do il = 1, NLEADS
-            call get_intf_wf(gr%intf(il), zpsi, st%ob_lead(il)%intf_psi(:, idim, ist, ik))
-          end do
-
-        end do
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(zpsi)
-
-    POP_SUB(states_get_ob_intf)
-  end subroutine states_get_ob_intf
-
 
 #include "undef.F90"
 #include "real.F90"

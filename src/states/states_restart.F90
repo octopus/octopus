@@ -34,7 +34,6 @@ module states_restart_m
   use messages_m
   use mpi_m
   use multigrid_m
-  use ob_interface_m
   use parser_m
   use profiling_m
   use restart_m
@@ -60,7 +59,6 @@ module states_restart_m
     states_load,                    &
     states_dump_rho,                &
     states_load_rho,                &
-    states_load_free_states,        &
     states_read_user_def_orbitals
 
 contains
@@ -949,187 +947,6 @@ contains
 
     POP_SUB(states_load_rho)
   end subroutine states_load_rho
-
-
-  ! ---------------------------------------------------------
-  !> When doing an open-boundary calculation Octopus needs the
-  !! unscattered states in order to solve the Lippmann-Schwinger
-  !! equation to obtain extended eigenstates.
-  subroutine states_load_free_states(restart, st, gr, ierr)
-    type(restart_t),      intent(inout) :: restart
-    type(states_t),       intent(inout) :: st
-    type(grid_t), target, intent(inout) :: gr
-    integer,              intent(out)   :: ierr
-
-    integer                    :: ik, ist, idim, counter, wfns, occs, il, err
-    integer                    :: np, ip, idir
-    character(len=256)         :: lines(2), fname, filename, chars
-    character                  :: char
-    FLOAT                      :: occ, eval, imeval, kpoint(1:MAX_DIM), w_k
-    type(simul_box_t), pointer :: sb
-    type(mesh_t), pointer      :: m_lead, m_center
-    CMPLX                      :: phase
-    CMPLX, allocatable         :: tmp(:, :)
-    integer                    :: start(1:3), end(1:3), start_lead(1:3), end_lead(1:3)
-
-    PUSH_SUB(states_load_free_states)
-
-    ierr = 0
-
-    if (restart_skip(restart)) then
-      ierr = -1
-      POP_SUB(states_load_free_states)
-      return
-    end if
-
-    if (in_debug_mode) then
-      message(1) = "Debug: Reading free states restart."
-      call messages_info(1)
-    end if
-
-    sb       => gr%sb
-    m_lead   => gr%ob_grid%lead(LEFT)%mesh
-    m_center => gr%mesh
-
-    np = m_lead%np
-    SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
-
-
-
-    ! Open files and skip two lines.
-    wfns = restart_open(restart, 'wfns')
-    call restart_read(restart, wfns, lines, 2, err)
-    if (err /= 0) ierr = ierr + 1
-
-    occs = restart_open(restart, 'occs')
-    call restart_read(restart, occs, lines, 2, err)
-    if (err /= 0) ierr = ierr + 2
-
-    counter  = 0 ! reset counter
-    st%d%kweights(:) = M_ZERO
-
-    forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
-    call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
-
-    do
-      ! Check for end of file. Check only one of the two files assuming
-      ! they are written correctly, i.e. of same length.
-      call restart_read(restart, wfns, lines, 1, err)
-      if (err /= 0) exit
-      read(lines(1), '(a)') char
-      if (char  ==  '%') exit
-      read(lines(1), *) ik, char, ist, char, idim, char, fname
-
-      call restart_read(restart, occs, lines, 1, err)
-      if (err /= 0) exit
-      !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-      read(lines(1), *) occ, char, eval, char, imeval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
-        w_k, char, chars, char, ik, char, ist, char, idim
-
-      ! we need the kpoints from the periodic run for the scattering states
-      ! so overwrite the "false" kpoints of the finite center
-      call kpoints_set_point(gr%sb%kpoints, ik, kpoint(1:gr%sb%dim))
-      st%d%kweights(ik) = w_k
-      st%occ(ist, ik) = occ
-      counter = counter + 1
-      ! if not in the corresponding node cycle
-      if(ik < st%d%kpt%start .or. ik > st%d%kpt%end .or. ist < st%st_start .or. ist > st%st_end) cycle
-
-      call zrestart_read_mesh_function(restart, fname, m_lead, tmp(:, idim), err)
-      if (err /= 0) exit
-
-      call lead_dens_accum()
-
-
-      ! Copy the wave-function from the lead to the central region, using periodicity.
-      start(1:3) = m_center%idx%nr(1, 1:3) + m_center%idx%enlarge(1:3)
-      end(1:3) = m_center%idx%nr(2, 1:3) - m_center%idx%enlarge(1:3)
-
-      start_lead(1:3) = m_lead%idx%nr(1, 1:3) + m_lead%idx%enlarge(1:3)
-      end_lead(1:3) = m_lead%idx%nr(2, 1:3) - m_lead%idx%enlarge(1:3)
-
-      st%zphi(:, idim, ist, ik)  = M_z0
-      call zmf_add(m_lead, start_lead, end_lead, tmp(:, idim), m_center, start, end, &
-                    st%zphi(:, idim, ist, ik), TRANS_DIR)
-
-      ! Apply phase. Here the kpoint read from the file is different
-      ! from the one calculated by octopus, since the box size changed.
-      ! The read kpoints are used for describing the free states of the
-      ! open system, which are mapped 1 to 1 (periodic incoming to scattered)
-      ! with the Lippmann-Schwinger equation.
-
-      do ip = 1, gr%mesh%np
-        phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim)*kpoint(1:gr%sb%dim)))
-        st%zphi(ip, idim, ist, ik) = phase * st%zphi(ip, idim, ist, ik)
-      end do
-
-      ! For debugging: write phi in gnuplot format to files.
-      ! Only the z=0 plane is written, so mainly useful for 1D and 2D
-      ! debugging.
-      if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', ist, '-', idim
-        select case(gr%sb%dim)
-        case(1)
-          call zio_function_output(C_OUTPUT_HOW_AXIS_X, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
-        case(2, 3)
-          call zio_function_output(C_OUTPUT_HOW_PLANE_Z, 'debug/open_boundaries', filename, &
-            m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
-        end select
-        if (err /= 0) then
-          !Failure to write debug information should not affect rest of the routine, so we just print a warning.
-          message(1) = "Unable to write debug information to '"//"debug/open_boundaries/"//trim(filename)//"'."
-          call messages_warning(1)
-        end if
-      end if
-
-    end do ! Loop over all free states.
-
-    call restart_close(restart, wfns)
-    call restart_close(restart, occs)
-    SAFE_DEALLOCATE_A(tmp)
-
-    if (ierr == 0) then
-      write(message(1),'(a,i3,a)') 'Info: Read', counter, ' free states wave functions.'
-      call messages_info(1)
-    end if
-
-    if (in_debug_mode) then
-      message(1) = "Debug: Reading free states restart done."
-      call messages_info(1)
-    end if
-
-    POP_SUB(states_load_free_states)
-  contains
-
-    subroutine lead_dens_accum()
-      integer :: il
-
-      PUSH_SUB(states_load_free_states.lead_dens_accum)
-      !FIXME no spinors yet
-      do il = 1, NLEADS
-        do ip = 1, np
-          st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k * occ * &
-            (real(tmp(ip, idim), REAL_PRECISION)**2 + aimag(tmp(ip, idim))**2)
-       end do
-        select case(st%d%ispin)
-        case(SPINORS)
-          message(1) = "restart.lead_dens_accum() does not work with spinors yet!"
-          call messages_fatal(1)
-!          if(k_idim == 2) then
-!            do ip = 1, np
-!              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
-!              st%ob_lead(il)%rho(ip, 3) = st%ob_lead(il)%rho(ip, 3) + real(c, REAL_PRECISION)
-!              st%ob_lead(il)%rho(ip, 4) = st%ob_lead(il)%rho(ip, 4l) + aimag(c)
-!            end do
-!          end if
-        end select
-      end do
-
-      POP_SUB(states_load_free_states.lead_dens_accum)
-    end subroutine lead_dens_accum
-  end subroutine states_load_free_states
-
 
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions
