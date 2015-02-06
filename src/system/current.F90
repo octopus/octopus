@@ -74,9 +74,10 @@ module current_m
 
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
-    CURRENT_HAMILTONIAN        = 2,       &
-    CURRENT_POISSON            = 3,       &
-    CURRENT_POISSON_CORRECTION = 4
+    CURRENT_GRADIENT_CORR      = 2,       &
+    CURRENT_HAMILTONIAN        = 3,       &
+    CURRENT_POISSON            = 4,       &
+    CURRENT_POISSON_CORRECTION = 5
 
 contains
 
@@ -86,7 +87,7 @@ contains
     PUSH_SUB(current_init)
 
     !%Variable CurrentDensity
-    !%Default gradient
+    !%Default gradient_corrected
     !%Type integer
     !%Section Hamiltonian
     !%Description
@@ -95,18 +96,20 @@ contains
     !% for development purposes and users should not need to use
     !% it.
     !%Option gradient 1
+    !% The calculation of current is done using the gradient operator. 
+    !%Option gradient_corrected 2
     !% The calculation of current is done using the gradient operator
-    !% with additional corrections for non-local operators.
-    !%Option hamiltonian 2
+    !% with additional corrections for the total current from non-local operators.
+    !%Option hamiltonian 3
     !% The current density is obtained from the commutator of the
     !% Hamiltonian with the position operator. (Experimental)
-    !%Option poisson 3
+    !%Option poisson 4
     !% Obtain the current from solving the Poisson equation from the continuity equation. (Experimental)
-    !%Option poisson_correction 4
+    !%Option poisson_correction 5
     !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
-    call parse_integer('CurrentDensity', CURRENT_GRADIENT, this%method)
+    call parse_integer('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT) &
       call messages_experimental("CurrentDensity /= gradient")
@@ -214,7 +217,7 @@ contains
         end do
       end do
     
-    case(CURRENT_GRADIENT)
+    case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
@@ -241,14 +244,18 @@ contains
             call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
           end do
           
-          do idir = 1, der%mesh%sb%dim
-            do iatom = 1, geo%natoms
-              if(species_is_ps(geo%atom(iatom)%spec)) then
-                call zprojector_commute_r(hm%ep%proj(iatom), der%mesh, st%d%dim, idir, ik, psi, gpsi(:, idir, :))
-              end if
+          if(this%method == CURRENT_GRADIENT_CORR) then
+
+            do idir = 1, der%mesh%sb%dim
+              do iatom = 1, geo%natoms
+                if(species_is_ps(geo%atom(iatom)%spec)) then
+                  call zprojector_commute_r(hm%ep%proj(iatom), der%mesh, st%d%dim, idir, ik, psi, gpsi(:, idir, :))
+                end if
+              end do
             end do
-          end do
           
+          end if
+
           do idir = 1, der%mesh%sb%dim
             
             do idim = 1, st%d%dim
