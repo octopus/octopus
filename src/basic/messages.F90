@@ -114,7 +114,6 @@ module messages_m
 contains
 
   ! ---------------------------------------------------------
-  !> datasets cannot be used since they have not been initialized yet
   subroutine messages_init()
 
     call parser_init()
@@ -133,7 +132,6 @@ contains
     !%  http://www.tddft.org/programs/octopus/experimental_features
     !%
     !% for details.
-    !% This variable cannot use a dataset prefix.
     !%End
     call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
 
@@ -145,7 +143,6 @@ contains
     !% This variable decides whether or not to enter debug mode.
     !% If it is greater than 0, different amounts of additional information
     !% are written to standard output and additional assertion checks are performed.
-    !% This variable cannot use a dataset prefix.
     !%Option 0
     !% (default) <tt>Octopus</tt> does not enter debug mode.
     !%Option 1
