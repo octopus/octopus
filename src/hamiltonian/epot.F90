@@ -22,7 +22,6 @@
 module epot_m
   use atom_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use double_grid_m
   use gauge_field_m
@@ -168,7 +167,7 @@ contains
     !%Option filter_BSB 3
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
-    call parse_integer(datasets_check('FilterPotentials'), PS_FILTER_NONE, filter)
+    call parse_integer('FilterPotentials', PS_FILTER_NONE, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
@@ -207,7 +206,7 @@ contains
       !%  Classical charges are treated as Gaussian distributions. 
       !%  Smearing widths are hard-coded by species (experimental).
       !%End
-      call parse_integer(datasets_check('ClassicalPotential'), 0, ep%classical_pot)
+      call parse_integer('ClassicalPotential', 0, ep%classical_pot)
       if(ep%classical_pot  ==  CLASSICAL_GAUSSIAN) then
         call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
@@ -244,7 +243,7 @@ contains
     !% the single-point Berry phase.
     !%End
     nullify(ep%E_field, ep%v_static)
-    if(parse_block(datasets_check('StaticElectricField'), blk)==0) then
+    if(parse_block('StaticElectricField', blk)==0) then
       SAFE_ALLOCATE(ep%E_field(1:gr%sb%dim))
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
@@ -298,7 +297,7 @@ contains
     !% 1.7152553 * 10^3 Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
-    if(parse_block(datasets_check('StaticMagneticField'), blk) == 0) then
+    if(parse_block('StaticMagneticField', blk) == 0) then
 
       !%Variable StaticMagneticField2DGauge
       !%Type integer
@@ -311,7 +310,7 @@ contains
       !%Option linear_y 1
       !% Linear gauge with A = (1/P_c)*(-y,0)*B_z. Can be used for PeriodicDimensions = 1 but not PeriodicDimensions = 2.
       !%End
-      call parse_integer(datasets_check('StaticMagneticField2DGauge'), 0, gauge_2d)
+      call parse_integer('StaticMagneticField2DGauge', 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
         call input_error('StaticMagneticField2DGauge')
 
@@ -394,7 +393,7 @@ contains
     !% you calculate a 2D electron gas, in which case you have an effective
     !% gyromagnetic factor that depends on the material.
     !%End
-    call parse_float(datasets_check('GyromagneticRatio'), P_g, ep%gyromagnetic_ratio)
+    call parse_float('GyromagneticRatio', P_g, ep%gyromagnetic_ratio)
 
     !%Variable RelativisticCorrection
     !%Type integer
@@ -410,7 +409,7 @@ contains
     !%Option spin_orbit 1
     !% Spin-orbit.
     !%End
-    call parse_integer(datasets_check('RelativisticCorrection'), NOREL, ep%reltype)
+    call parse_integer('RelativisticCorrection', NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
@@ -428,7 +427,7 @@ contains
     !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
     if (ep%reltype == SPIN_ORBIT) then
-      call parse_float(datasets_check('SOStrength'), M_ONE, ep%so_strength)
+      call parse_float('SOStrength', M_ONE, ep%so_strength)
     else
       ep%so_strength = M_ONE
     end if
@@ -445,7 +444,7 @@ contains
     !% This feature is only available for finite systems; if the system is periodic in any dimension, 
     !% this variable cannot be set to "yes".
     !%End
-    call parse_logical(datasets_check('IgnoreExternalIons'), .false., ep%ignore_external_ions)
+    call parse_logical('IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
       if(gr%sb%periodic_dim > 0) call input_error('IgnoreExternalIons')
     end if
@@ -459,7 +458,7 @@ contains
     !% of the total forces will be enforced to be zero. The default is
     !% no.
     !%End
-    call parse_logical(datasets_check('ForceTotalEnforce'), .false., ep%force_total_enforce)
+    call parse_logical('ForceTotalEnforce', .false., ep%force_total_enforce)
     if(ep%force_total_enforce) call messages_experimental('ForceTotalEnforce')
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))

@@ -21,7 +21,6 @@
 
 module kick_m
   use c_pointer_m
-  use datasets_m
   use geometry_m
   use global_m
   use grid_m
@@ -129,7 +128,7 @@ contains
     !% external potential is used. However, one may want to apply a kick on top of a laser field,
     !% for example.
     !%End
-    call parse_float(datasets_check('TDDeltaKickTime'), M_ZERO, kick%time, units_inp%time)
+    call parse_float('TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
     if(kick%time > M_ZERO) then
       call messages_experimental('TDDeltaKickTime > 0')
     end if
@@ -148,7 +147,7 @@ contains
     !% the wavefunctions instantaneously to acquire a phase exp(<i>ikx</i>).
     !% The unit is inverse length.
     !%End
-    call parse_float(datasets_check('TDDeltaStrength'), M_ZERO, kick%delta_strength, units_inp%length**(-1))
+    call parse_float('TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
     nullify(kick%l)
     nullify(kick%m)
@@ -193,7 +192,7 @@ contains
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
     !%End
-    call parse_integer(datasets_check('TDDeltaStrengthMode'), KICK_DENSITY_MODE, kick%delta_strength_mode)
+    call parse_integer('TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
@@ -202,7 +201,7 @@ contains
       call input_error('TDDeltaStrengthMode')
     end select
 
-    if(parse_isdef(datasets_check('TDDeltaUserDefined')) /= 0) then
+    if(parse_isdef('TDDeltaUserDefined') /= 0) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0
@@ -217,7 +216,7 @@ contains
       !% block will be ignored. The value of <tt>TDDeltaUserDefined</tt> should be a string describing
       !% the function that is going to be used as delta perturbation.
       !%End
-      call parse_string(datasets_check('TDDeltaUserDefined'), "0", kick%user_defined_function)
+      call parse_string('TDDeltaUserDefined', '0', kick%user_defined_function)
 
       !%Variable TDKickFunction
       !%Type block
@@ -234,7 +233,7 @@ contains
       !%
       !% This feature allows calculation of quadrupole, octupole, etc., response functions.
       !%End
-    else if(parse_block(datasets_check('TDKickFunction'), blk) == 0) then
+    else if(parse_block('TDKickFunction', blk) == 0) then
 
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
       n_rows = parse_block_n(blk)
@@ -264,7 +263,7 @@ contains
       !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
       !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
       !%End
-      call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, kick%pol_equiv_axes)
+      call parse_integer('TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
 
       !%Variable TDPolarizationDirection
       !%Type integer
@@ -282,7 +281,7 @@ contains
       !% to <tt>TDPolarizationEquivAxes</tt>.
       !%End
 
-      call parse_integer(datasets_check('TDPolarizationDirection'), 0, kick%pol_dir)
+      call parse_integer('TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call input_error('TDPolarizationDirection')
       
@@ -322,7 +321,7 @@ contains
       !%End
 
       kick%pol(:, :) = M_ZERO
-      if(parse_block(datasets_check('TDPolarization'), blk)==0) then
+      if(parse_block('TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
         
         if(n_rows < dim) call input_error('TDPolarization')
@@ -368,7 +367,7 @@ contains
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
       !%End
-      if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
+      if(parse_block('TDPolarizationWprime', blk)==0) then
         do idir = 1, 3
           call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
         end do
@@ -406,7 +405,7 @@ contains
     !% In this case the block has to include two extra values (l and m).
     !%End
 
-    if(parse_block(datasets_check('TDMomentumTransfer'), blk)==0) then
+    if(parse_block('TDMomentumTransfer', blk)==0) then
       do idir = 1, MAX_DIM
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module scf_tol_m
-  use datasets_m
   use global_m
   use messages_m
   use parser_m
@@ -84,9 +83,9 @@ contains
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
     str = 'LRMaximumIter'
-    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
          str = trim(prefix)//trim(str)
-    call parse_integer(datasets_check(str), def_maximumiter_, this%max_iter)
+    call parse_integer(str, def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
     !%Type float
@@ -99,9 +98,9 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvAbsDens'
-    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
          str = trim(prefix)//trim(str)
-    call parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
+    call parse_float(str, CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRConvRelDens
     !%Type float
@@ -114,9 +113,9 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvRelDens'
-    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
          str = trim(prefix)//trim(str)
-    call parse_float(datasets_check(str), M_ZERO, this%conv_rel_dens)
+    call parse_float(str, M_ZERO, this%conv_rel_dens)
 
     ! value to use for adaptive tol scheme
     if(this%conv_abs_dens <= M_ZERO) then
@@ -158,9 +157,9 @@ contains
       this%scheme = tol_scheme
     else
       str = 'LRTolScheme'
-      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
         str = trim(prefix)//trim(str)
-      call parse_integer(datasets_check(str), SCF_TOL_ADAPTIVE, this%scheme)
+      call parse_integer(str, SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
       call input_error('LRTolScheme')
@@ -174,9 +173,9 @@ contains
     !% for the first SCF iteration. Ignored if <tt>LRTolScheme = fixed</tt>.
     !%End
     str = 'LRTolInitTol'
-    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
       str = trim(prefix)//trim(str)
-    call parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
+    call parse_float(str, CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
     !%Variable LRTolFinalTol
@@ -187,9 +186,9 @@ contains
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
     str = 'LRTolFinalTol'
-    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
       str = trim(prefix)//trim(str)
-    call parse_float(datasets_check(str), CNST(1e-6), this%final_tol)
+    call parse_float(str, CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRTolAdaptiveFactor
@@ -202,9 +201,9 @@ contains
       !% tolerance is decreased faster.
       !%End
       str = 'LRTolAdaptiveFactor'
-      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
         str = trim(prefix)//trim(str)
-      call parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
+      call parse_float(str, CNST(0.1), this%dynamic_tol_factor)
     end if
 
     if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
@@ -216,9 +215,9 @@ contains
       !% Number of iterations necessary to reach the final tolerance.
       !%End
       str = 'LRTolIterWindow'
-      if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
         str = trim(prefix)//trim(str)
-      call parse_integer(datasets_check(str), 10, this%iter_window)
+      call parse_integer(str, 10, this%iter_window)
     end if
 
     POP_SUB(scf_tol_init)

@@ -22,7 +22,6 @@
 module species_pot_m
   use atom_m
   use curvilinear_m
-  use datasets_m
   use double_grid_m
   use geometry_m
   use global_m

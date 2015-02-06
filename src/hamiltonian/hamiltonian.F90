@@ -27,7 +27,6 @@ module hamiltonian_m
   use cl
 #endif  
   use cmplxscl_m
-  use datasets_m
   use derivatives_m
   use energy_m
   use hamiltonian_base_m
@@ -249,7 +248,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
+    call parse_float('ParticleMass', M_ONE, hm%mass)
 
     !%Variable RashbaSpinOrbitCoupling
     !%Type float
@@ -263,8 +262,8 @@ contains
     !% State Phys. 17, 6031 (1984)]. The variable "RashbaSpinOrbitCoupling" determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_float(datasets_check('RashbaSpinOrbitCoupling'), M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
-    if(parse_isdef(datasets_check('RashbaSpinOrbitCoupling')) /= 0 ) then
+    call parse_float('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
+    if(parse_isdef('RashbaSpinOrbitCoupling') /= 0 ) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
         call messages_fatal(1)
@@ -354,9 +353,9 @@ contains
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. &
       gauge_field_is_applied(hm%ep%gfield) .or. &
-      parse_isdef(datasets_check('RashbaSpinOrbitCoupling')) /= 0) call states_set_complex(st)
+      parse_isdef('RashbaSpinOrbitCoupling') /= 0) call states_set_complex(st)
 
-    call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
+    call parse_logical('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -413,7 +412,7 @@ contains
     !% Warning: This scheme works only with the special Crank-Nicolson propagator and has
     !% quadratic scaling with time. It may be tuned with the parameter <tt>OpenBoundariesMaxMemCoeffs</tt>.
     !%End
-    call parse_integer(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
+    call parse_integer('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
 
@@ -438,7 +437,7 @@ contains
     !%
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block(datasets_check('MassScaling'), blk) == 0) then
+    if(parse_block('MassScaling', blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > gr%sb%dim) then
           call input_error("MassScaling")
@@ -479,7 +478,7 @@ contains
     !% wave-functions when operating with them. This involves some
     !% additional copying but makes operations more efficient.
     !%End
-    call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
+    call parse_logical('StatesPack', .true., hm%apply_packed)
 
     call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
 
@@ -530,7 +529,7 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call parse_float(datasets_check('ABWidth'), CNST(0.4), hm%ab_width, units_inp%length)
+      call parse_float('ABWidth', CNST(0.4), hm%ab_width, units_inp%length)
 
       if(hm%ab == 1) then
         !%Variable ABHeight
@@ -540,7 +539,7 @@ contains
         !%Description
         !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
-        call parse_float(datasets_check('ABHeight'), -CNST(0.2), hm%ab_height, units_inp%energy)
+        call parse_float('ABHeight', -CNST(0.2), hm%ab_height, units_inp%energy)
       else
         hm%ab_height = M_ONE
       end if

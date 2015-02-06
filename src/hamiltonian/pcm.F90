@@ -20,7 +20,6 @@
 #include "global.h"
 
 module pcm_m
-  use datasets_m
   use global_m
   use geometry_m
   use grid_m
@@ -147,7 +146,7 @@ contains
     !% only for ground-state calculations. Experimental.
     !%End
 
-    call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
+    call parse_logical('Solvation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       if (grid%sb%box_shape /= MINIMUM) then
           message(1) = "PCM is only available for BoxShape = minimum"
@@ -175,7 +174,7 @@ contains
     !%Description
     !% Static dielectric constant of the solvent (\epsilon_0). 1.0 indicates gas phase.
     !%End
-    call parse_float(datasets_check('SolventDielectricConstant'), M_ONE, pcm%epsilon_0)
+    call parse_float('SolventDielectricConstant', M_ONE, pcm%epsilon_0)
 
     !%Variable SmearingFactor
     !%Type float
@@ -186,7 +185,7 @@ contains
     !% the polarization charges on each tessera of the cavity surface. If sets to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
-    call parse_float(datasets_check('SmearingFactor'), M_ONE, pcm%gaussian_width)
+    call parse_float('SmearingFactor', M_ONE, pcm%gaussian_width)
 
     if (pcm%gaussian_width == M_ZERO) then
         message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
@@ -259,7 +258,7 @@ contains
     !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
     !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units.
     !%End
-    call parse_string(datasets_check('CavityGeometry'), '', pcm%input_cavity)
+    call parse_string('CavityGeometry', '', pcm%input_cavity)
 
     iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
     

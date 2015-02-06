@@ -20,7 +20,6 @@
 #include "global.h"
 
 module gauge_field_m
-  use datasets_m
   use derivatives_m
   use geometry_m
   use global_m
@@ -130,7 +129,7 @@ contains
     
     ! Read the initial gauge vector field
     
-    if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
+    if(parse_block('GaugeVectorField', blk) == 0) then
       
       this%with_gauge_field = .true.
       

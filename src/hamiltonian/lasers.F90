@@ -20,7 +20,6 @@
 #include "global.h"
 
 module lasers_m
-  use datasets_m
   use derivatives_m
   use global_m
   use mpi_m
@@ -353,7 +352,7 @@ contains
     !%End
 
     no_l = 0
-    if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
+    if(parse_block('TDExternalFields', blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
 
@@ -385,14 +384,14 @@ contains
         ! This should be fixed at the parser level.
         call parse_block_end(blk)
         call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
-        ierr = parse_block(datasets_check('TDExternalFields'), blk)
+        ierr = parse_block('TDExternalFields', blk)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, envelope_expression)
           call parse_block_end(blk)
           call tdf_read(lasers(il)%phi, trim(envelope_expression), ierr)
-          ierr = parse_block(datasets_check('TDExternalFields'), blk)
+          ierr = parse_block('TDExternalFields', blk)
         else
           call tdf_init(lasers(il)%phi)
         end if

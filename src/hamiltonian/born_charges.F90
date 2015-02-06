@@ -20,7 +20,6 @@
 #include "global.h"
 
 module born_charges_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_m
@@ -82,7 +81,7 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)
+    call parse_logical('BornChargeSumRuleCorrection', .true., this%correct)
 
     POP_SUB(Born_charges_init)
   end subroutine Born_charges_init
