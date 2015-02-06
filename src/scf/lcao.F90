@@ -704,17 +704,17 @@ contains
         ASSERT(present(lmm_r))
         call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
       endif
-      
+
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-    
+
       ! get the effective potential (we don`t need the eigenvalues yet)
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
-      
+
     end if
 
     lcao_done = .false.
@@ -722,18 +722,18 @@ contains
     ! after initialized, can check that LCAO is possible
     if(lcao_is_available(lcao)) then
       lcao_done = .true.
-      
+
       if(present(st_start)) then
         write(message(1),'(a,i8,a)') 'Performing LCAO for states ', st_start, ' and above'
         call messages_info(1)
       endif
 
       call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
-      
+
       if (.not. present(st_start)) then
         call states_fermi(sys%st, sys%gr%mesh)
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
-        
+
         ! Update the density and the Hamiltonian
         if (lcao%mode == LCAO_START_FULL) then
           call system_h_setup(sys, hm, calc_eigenval = .false.)
@@ -744,57 +744,33 @@ contains
         endif
       endif
     end if
-    
+
     if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
 
-      if(.not. sys%gr%ob_grid%open_boundaries) then
-
-        if(lcao_done) then
-          st_start_random = lcao%norbs + 1
-        else
-          st_start_random = 1
-        endif
-        if(present(st_start)) st_start_random = max(st_start, st_start_random)
-
-        if(st_start_random > 1) then
-          write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
-          call messages_info(1)
-        endif
-
-        ! Randomly generate the initial wavefunctions.
-        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
-
-        call messages_write('Orthogonalizing wavefunctions.')
-        call messages_info()
-        call states_orthogonalize(sys%st, sys%gr%mesh)
-
-        if(.not. lcao_done) then
-          ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
-          ! of the occupied states.
-          call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
-          if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
-        endif
-
+      if(lcao_done) then
+        st_start_random = lcao%norbs + 1
       else
-  
-        ! FIXME: the following initialization is wrong when not all
-        ! wavefunctions are calculated by the Lippmann-Schwinger
-        ! equation.
-        ! Use free states as initial wavefunctions.
+        st_start_random = 1
+      endif
+      if(present(st_start)) st_start_random = max(st_start, st_start_random)
 
-        ASSERT(sys%st%ob_nst  ==  sys%st%nst)
-        ASSERT(sys%st%ob_d%nik  ==  sys%st%d%nik)
-        s1 = sys%st%st_start
-        s2 = sys%st%st_end
-        k1 = sys%st%d%kpt%start
-        k2 = sys%st%d%kpt%end
+      if(st_start_random > 1) then
+        write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
+        call messages_info(1)
+      endif
 
-        do ik = k1, k2
-          do is = s1, s2
-            call states_set_state(sys%st, sys%gr%mesh, is, ik, sys%st%zphi(:, :, is, ik))
-          end do
-        end do
+      ! Randomly generate the initial wavefunctions.
+      call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
 
+      call messages_write('Orthogonalizing wavefunctions.')
+      call messages_info()
+      call states_orthogonalize(sys%st, sys%gr%mesh)
+
+      if(.not. lcao_done) then
+        ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
+        ! of the occupied states.
+        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
       end if
 
     else if (present(st_start)) then

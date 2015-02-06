@@ -74,7 +74,7 @@ contains
 
     type(scf_t)  :: scfv
     type(rdm_t)  :: rdm
-    type(restart_t) :: restart_load, restart_dump, restart_ob
+    type(restart_t) :: restart_load, restart_dump
     integer      :: ierr
 
     PUSH_SUB(ground_state_run)
@@ -82,7 +82,7 @@ contains
     call messages_write('Info: Allocating ground state wave-functions')
     call messages_info()
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_zphi = sys%st%open_boundaries)
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
 
 #ifdef HAVE_MPI
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
@@ -90,23 +90,6 @@ contains
 #endif
     call messages_write('Info: Ground-state allocation done.')
     call messages_info()
-
-    ! Read free states for ground-state open-boundary calculation.
-    if(sys%st%open_boundaries) then
-      call restart_init(restart_ob, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
-                        dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR)
-      if(ierr == 0) &
-        call states_load_free_states(restart_ob, sys%st, sys%gr, ierr)
-      if (ierr /= 0) then
-        message(1) = "Unable to read free states wavefunctions."
-        call messages_fatal(1)
-      end if
-      call restart_end(restart_ob)
-
-      ! allocate self_energy and calculate
-      call states_init_self_energy(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)     
-    end if
 
     if(.not. fromScratch) then
       ! load wavefunctions

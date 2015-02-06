@@ -48,7 +48,6 @@ module scf_m
   use mpi_lib_m
   use multigrid_m
   use multicomm_m
-  use ob_lippmann_schwinger_m
   use parser_m
   use preconditioners_m
   use profiling_m
@@ -469,17 +468,17 @@ contains
     endif
 
     cmplxscl = st%cmplxscl%space
-  
+
     gs_run_ = .true.
     if(present(gs_run)) gs_run_ = gs_run
-    
+
     verbosity_ = VERB_FULL
     if(present(verbosity)) verbosity_ = verbosity
 
     if(ks%theory_level == CLASSICAL) then
       ! calculate forces
       if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
-      
+
       if(gs_run_) then 
         ! output final information
         call scf_write_static(STATIC_DIR, "info")
@@ -543,19 +542,19 @@ contains
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       rhoout = M_ZERO
     else
-  
+
       SAFE_ALLOCATE(zrhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
       SAFE_ALLOCATE(zrhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
 
       zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) &
-           + M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
+        + M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       zrhoout = M_z0
     end if
 
     if (st%d%cdft) then
       rhoin(1:gr%fine%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%fine%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     end if
-    
+
     select case(scf%mix_field)
     case(MIXPOT)
       SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
@@ -617,56 +616,49 @@ contains
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
       else
-        ! FIXME: Currently, only the eigensolver or the
-        ! Lippmann-Schwinger approach can be used (exclusively),
-        ! i.e. no bound states for open boundaries.
-        if(gr%ob_grid%open_boundaries) then
-          call lippmann_schwinger(scf%eigens, hm, gr, st)
-        else
-          if(associated(hm%vberry)) then
-            ks%frozen_hxc = .true.
-            do iberry = 1, scf%max_iter_berry
-              scf%eigens%converged = 0
-              call eigensolver_run(scf%eigens, gr, st, hm, iter)
-
-              call v_ks_calc(ks, hm, st, geo)
-              call hamiltonian_update(hm, gr%mesh)
-
-              dipole_prev = dipole
-              call calc_dipole(dipole)
-              write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
-              call messages_info(1)
-
-              berry_conv = .true.
-              do idir = 1, gr%sb%periodic_dim
-                berry_conv = berry_conv .and. &
-                  (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
-                  .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
-              enddo
-              if(berry_conv) exit
-            enddo
-            ks%frozen_hxc = .false.
-          else
+        if(associated(hm%vberry)) then
+          ks%frozen_hxc = .true.
+          do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            if(cmplxscl.and.hm%theory_level.eq.KOHN_SHAM_DFT.and.iter.eq.1) then
-              ! Since the LCAO initialization is not complex scaled,
-              ! what it produces is mostly garbage to us.
-              ! Better reset all the arrays and initialize as if
-              ! independent particles, since that part is correctly scaled.
-              !
-              ! Of course this would be better done by *not* doing the
-              ! initialization in the first place, but let`s not be
-              ! overly ambitious just yet.
-              hm%vhxc = M_ZERO
-              hm%Imvhxc = M_ZERO
-              hm%vxc = M_ZERO
-              hm%Imvxc = M_ZERO
-              hm%vhartree = M_ZERO
-              hm%Imvhartree = M_ZERO
-              call hamiltonian_update(hm, gr%mesh)
-            end if
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
-          endif
+
+            call v_ks_calc(ks, hm, st, geo)
+            call hamiltonian_update(hm, gr%mesh)
+
+            dipole_prev = dipole
+            call calc_dipole(dipole)
+            write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
+            call messages_info(1)
+
+            berry_conv = .true.
+            do idir = 1, gr%sb%periodic_dim
+              berry_conv = berry_conv .and. &
+                (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
+                .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
+            enddo
+            if(berry_conv) exit
+          enddo
+          ks%frozen_hxc = .false.
+        else
+          scf%eigens%converged = 0
+          if(cmplxscl.and.hm%theory_level.eq.KOHN_SHAM_DFT.and.iter.eq.1) then
+            ! Since the LCAO initialization is not complex scaled,
+            ! what it produces is mostly garbage to us.
+            ! Better reset all the arrays and initialize as if
+            ! independent particles, since that part is correctly scaled.
+            !
+            ! Of course this would be better done by *not* doing the
+            ! initialization in the first place, but let`s not be
+            ! overly ambitious just yet.
+            hm%vhxc = M_ZERO
+            hm%Imvhxc = M_ZERO
+            hm%vxc = M_ZERO
+            hm%Imvxc = M_ZERO
+            hm%vhartree = M_ZERO
+            hm%Imvhartree = M_ZERO
+            call hamiltonian_update(hm, gr%mesh)
+          end if
+          call eigensolver_run(scf%eigens, gr, st, hm, iter)
         end if
       end if
 
@@ -679,14 +671,14 @@ contains
       else
         call density_calc(st, gr, st%rho)
       end if
-      
+
       if(.not. cmplxscl) then
         rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       else
         zrhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
-                                            M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
+          M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       end if
-      
+
       if (hm%d%cdft) then
         call calc_physical_current(gr%der, st, st%current)
         rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
@@ -743,7 +735,7 @@ contains
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)
       endif
-      
+
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
@@ -856,7 +848,7 @@ contains
         rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       else
         zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
-                                          M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
+          M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
       end if
       if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%mix_field == MIXPOT) then
@@ -879,7 +871,7 @@ contains
 
       call profiling_out(prof)
     end do !iter
-    
+
     if(scf%max_iter > 0 .and. scf%mix_field == MIXPOT) then
       call v_ks_calc(ks, hm, st, geo)
     endif
@@ -896,7 +888,7 @@ contains
       SAFE_DEALLOCATE_A(rhonew)
       SAFE_DEALLOCATE_A(zrhonew)
     case(MIXNONE)
-!       call v_ks_calc(ks, hm, st, geo)
+      !       call v_ks_calc(ks, hm, st, geo)
     end select
 
     SAFE_DEALLOCATE_A(rhoout)
@@ -927,9 +919,6 @@ contains
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-
-      ! write part of the source term s(0)
-      if(gr%ob_grid%open_boundaries) call states_write_proj_lead_wf(gr%sb, 'open_boundaries/', gr%intf, st)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
@@ -958,19 +947,19 @@ contains
         call messages_print_stress(stdout, trim(str))
         if(cmplxscl) then
           write(message(1),'(a,es15.8,2(a,es9.2))') ' Re(etot) = ', units_from_atomic(units_out%energy, hm%energy%total), &
-               ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
+            ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
           write(message(2),'(a,es15.8,2(a,es9.2))') ' Im(etot) = ', units_from_atomic(units_out%energy, hm%energy%Imtotal), &
-               ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
+            ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         else
           write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', units_from_atomic(units_out%energy, hm%energy%total), &
-               ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
+            ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
           write(message(2),'(23x,2(a,es9.2))') &
-               ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        end if      
+            ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
+        end if
         ! write info about forces only if they are used as convergence criteria
         if (scf%conv_abs_force > M_ZERO) then
           write(message(3),'(23x,a,es9.2)') &
-             ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
+            ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
           call messages_info(3)
         else
           call messages_info(2)
@@ -1009,24 +998,24 @@ contains
         end if
 
         call messages_print_stress(stdout)
-        
+
       end if
 
       if ( verbosity_ == VERB_COMPACT ) then
         ! write info about forces only if they are used as convergence criteria
         if (scf%conv_abs_force > M_ZERO) then
-        write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
-             'iter ', iter, &
-             ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-             ' : abs_dens', scf%abs_dens, &
-             ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
-             ' : etime ', etime, 's'
+          write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
+            'iter ', iter, &
+            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
+            ' : abs_dens', scf%abs_dens, &
+            ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
+            ' : etime ', etime, 's'
         else
-        write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
-             'iter ', iter, &
-             ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-             ' : abs_dens', scf%abs_dens, &
-             ' : etime ', etime, 's'
+          write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
+            'iter ', iter, &
+            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
+            ' : abs_dens', scf%abs_dens, &
+            ' : etime ', etime, 's'
         end if
         call messages_info(1)
       end if
@@ -1137,43 +1126,43 @@ contains
               ff(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim)
               torque(1:3) = torque(1:3) + dcross_product(rr, ff)
             end do
-            
+
             write(iunit,'(a14, 10f15.6)') ' Total torque', &
               (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
-            
+
           end if
 
           write(iunit,'(1x)')
-          
+
         end if
       end if
 
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(bader_charges(1:geo%natoms))
         SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
-        
+
         call partial_charges_init(partial_charges)
         call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, bader_charges, voronoi_charges)
         call partial_charges_end(partial_charges)
-        
+
         if(mpi_grp_is_root(mpi_world)) then
-          
+
           write(iunit,'(a)') 'Partial ionic charges'
           write(iunit,'(a)') ' Ion                     Bader         Voronoi'
-          
+
           do iatom = 1, geo%natoms
             write(iunit,'(i4,a10,2f16.3)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
               bader_charges(iatom), voronoi_charges(iatom)
-            
+
           end do
-          
+
         end if
-        
+
         SAFE_DEALLOCATE_A(bader_charges)
         SAFE_DEALLOCATE_A(voronoi_charges)
-        
+
       end if
-      
+
       if(mpi_grp_is_root(mpi_world)) then
         call io_close(iunit)
       end if
@@ -1181,7 +1170,7 @@ contains
       POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
 
-  
+
     ! ---------------------------------------------------------
     subroutine calc_dipole(dipole)
       FLOAT, intent(out) :: dipole(:)
@@ -1208,7 +1197,7 @@ contains
           nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
           dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
 
-        ! in aperiodic directions use normal dipole formula
+          ! in aperiodic directions use normal dipole formula
         else
           e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
           dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)

@@ -26,8 +26,7 @@ libscf_a_SOURCES =       \
 	lcao.F90         \
         rdmft.F90        \
         scf.F90          \
-	ground_state.F90 \
-	ob_lippmann_schwinger.F90
+	ground_state.F90
 
 noinst_HEADERS =     \
 	mix_inc.F90  \
@@ -41,7 +40,7 @@ depend:
 mix.o : mix.F90 mix_inc.F90
 lcao.o: lcao.F90 lcao_inc.F90
 rdmft.o: rdmft.F90 
-scf.o: scf.F90 mix.o lcao.o ob_lippmann_schwinger.o
+scf.o: scf.F90 mix.o lcao.o
 ground_state.o: ground_state.F90 scf.o rdmft.o lcao.o 
-ob_lippmann_schwinger.o: ob_lippmann_schwinger.F90
+
 
