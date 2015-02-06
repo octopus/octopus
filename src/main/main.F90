@@ -90,8 +90,6 @@ program octopus
   !% Sternheimer variables may be prefixed with "EM".
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT; for finite systems only.
-  !%Option td_transport 10
-  !% Time-dependent quantum transport (experimental).
   !%Option vdw 11
   !% Calculate van der Waals coefficients. Sternheimer variables may be prefixed with "VdW".
   !%Option vib_modes 12
