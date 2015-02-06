@@ -20,7 +20,6 @@
 #include "global.h"
 
 module vdw_m
-  use datasets_m
   use em_resp_m
   use em_resp_calc_m
   use gauss_legendre_m
@@ -155,10 +154,10 @@ contains
       !% van der Waals coefficients.
       !%End
       call messages_obsolete_variable('vdW_npoints', 'vdWNPoints')
-      call parse_integer(datasets_check('vdWNPoints'), 6, gaus_leg_n)
+      call parse_integer('vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
-      call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
+      call parse_integer('TDPolarizationEquivAxes', 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module kdotp_m
-  use datasets_m
   use geometry_m
   use global_m
   use grid_m
@@ -371,13 +370,12 @@ contains
 
       call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
-      call parse_integer(datasets_check('KdotPOccupiedSolutionMethod'), 0, kdotp_vars%occ_solution_method)
+      call parse_integer('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       endif
 
-      call parse_float(datasets_check('DegeneracyThreshold'), &
-        units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      call parse_float('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states_calc.F90, in states_degeneracy_matrix
 
@@ -390,7 +388,7 @@ contains
       !% Not recommended.
       !%End
       call messages_obsolete_variable('KdotP_Eta', 'KdotPEta')
-      call parse_float(datasets_check('KdotPEta'), M_ZERO, kdotp_vars%eta)
+      call parse_float('KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotPCalculateEffectiveMasses
@@ -402,7 +400,7 @@ contains
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
       call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
-      call parse_logical(datasets_check('KdotPCalculateEffectiveMasses'), .true., calc_eff_mass)
+      call parse_logical('KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder
       !%Type logical
@@ -413,7 +411,7 @@ contains
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
-      call parse_logical(datasets_check('KdotPCalcSecondOrder'), .false., calc_2nd_order)
+      call parse_logical('KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

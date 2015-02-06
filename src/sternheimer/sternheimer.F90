@@ -22,7 +22,6 @@
 module sternheimer_m
   use batch_m
   use batch_ops_m
-  use datasets_m
   use density_m
   use global_m
   use grid_m
@@ -169,10 +168,10 @@ contains
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    if (parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
+    if (parse_isdef(trim(prefix)//'Preorthogonalization') /= 0) then 
+      call parse_logical(trim(prefix)//'Preorthogonalization', default_preorthog, this%preorthogonalization) 
     else 
-      call parse_logical(datasets_check('Preorthogonalization'), default_preorthog, this%preorthogonalization) 
+      call parse_logical('Preorthogonalization', default_preorthog, this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation
@@ -201,10 +200,10 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      if (parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
-        call parse_integer(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
+      if (parse_isdef(trim(prefix)//'HamiltonianVariation') /= 0) then
+        call parse_integer(trim(prefix)//'HamiltonianVariation', 3, ham_var)
       else
-        call parse_integer(datasets_check('HamiltonianVariation'), 3, ham_var)
+        call parse_integer('HamiltonianVariation', 3, ham_var)
       end if
     else
       ham_var = 0

@@ -21,7 +21,6 @@
 
 module em_resp_m
   use born_charges_m
-  use datasets_m
   use em_resp_calc_m
   use forces_m
   use geometry_m
@@ -505,7 +504,7 @@ contains
       !%
       !%End
 
-      if (parse_block(datasets_check('EMFreqs'), blk) == 0) then 
+      if (parse_block('EMFreqs', blk) == 0) then 
 
         nrow = parse_block_n(blk)
         em_vars%nomega = 0
@@ -551,7 +550,7 @@ contains
         !% they are calculated in increasing order. Can be set to false to use the order as stated,
         !% in case this makes better use of available restart information.
         !%End
-        call parse_logical(datasets_check('EMFreqsSort'), .true., freq_sort)
+        call parse_logical('EMFreqsSort', .true., freq_sort)
 
         if(freq_sort) call sort(em_vars%omega)
 
@@ -574,7 +573,7 @@ contains
       !% In units of energy. Cannot be negative.
       !%End
 
-      call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta, units_inp%energy)
+      call parse_float('EMEta', M_ZERO, em_vars%eta, units_inp%energy)
       if(em_vars%eta < -M_EPSILON) then
         message(1) = "EMEta cannot be negative."
         call messages_fatal(1)
@@ -598,7 +597,7 @@ contains
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
-      call parse_integer(datasets_check('EMPerturbationType'), PERTURBATION_ELECTRIC, perturb_type)
+      call parse_integer('EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
 
       call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
 
@@ -615,7 +614,7 @@ contains
         !% <tt>1 | 1 | -2</tt>.
         !%End
 
-        if (parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
+        if (parse_block('EMHyperpol', blk) == 0) then 
           call parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
@@ -643,7 +642,7 @@ contains
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 
-      call parse_logical(datasets_check('EMForceNoKdotP'), .false., em_vars%force_no_kdotp)
+      call parse_logical('EMForceNoKdotP', .false., em_vars%force_no_kdotp)
 
       !%Variable EMCalcBornCharges
       !%Type logical
@@ -653,7 +652,7 @@ contains
       !% Calculate linear-response Born effective charges from electric perturbation (experimental).
       !%End
 
-      call parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
+      call parse_logical('EMCalcBornCharges', .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMCalcRotatoryResponse
@@ -665,7 +664,7 @@ contains
       !% and write to file <tt>rotatory_strength</tt>.
       !%End
 
-      call parse_logical(datasets_check('EMCalcRotatoryResponse'), .false., em_vars%calc_rotatory)
+      call parse_logical('EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
 
       !%Variable EMOccupiedResponse
       !%Type logical
@@ -678,7 +677,7 @@ contains
       !% the full response is always calculated.
       !%End
 
-      call parse_logical(datasets_check('EMOccupiedResponse'), .false., em_vars%occ_response)
+      call parse_logical('EMOccupiedResponse', .false., em_vars%occ_response)
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call messages_fatal(1)
@@ -694,7 +693,7 @@ contains
       !% be used. Restart wavefunctions from a very different frequency can hinder convergence.
       !%End
 
-      call parse_logical(datasets_check('EMWavefunctionsFromScratch'), .false., em_vars%wfns_from_scratch)
+      call parse_logical('EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
       POP_SUB(em_resp_run.parse_input)
 
