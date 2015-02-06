@@ -37,7 +37,6 @@ module mesh_init_m
   use messages_m
   use mpi_m
   use multicomm_m
-  use ob_grid_m
   use par_vec_m
   use parser_m
   use partition_m
@@ -52,8 +51,7 @@ module mesh_init_m
   public ::                    &
     mesh_init_stage_1,         &
     mesh_init_stage_2,         &
-    mesh_init_stage_3,         &
-    mesh_read_lead
+    mesh_init_stage_3
 
   type(profile_t), save :: mesh_init_prof
   
@@ -62,14 +60,12 @@ contains
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
+subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   type(mesh_t),                intent(inout) :: mesh
   type(simul_box_t),   target, intent(in)    :: sb
   type(curvilinear_t), target, intent(in)    :: cv
   FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
   integer,                     intent(in)    :: enlarge(MAX_DIM)
-  type(ob_grid_t),             intent(in)    :: ob_grid
-
 
   integer :: idir, jj
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
@@ -136,61 +132,11 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
     endif
   enddo
 
-  if(ob_grid%open_boundaries) then
-    ! The upper boundary must be discarded to preserve periodicity in the leads.
-    ! Example in 1D, 2 point unit cell, central region of 8 unit cells, 2
-    ! additional unit cells at each end in simulation box:
-    !
-    ! simulation region:        /-------------------------------\
-    ! free state:        . .|. .|. .|. .|. .|. .|. .|. .|. .|. .|. .|. .
-    ! scattered state:   . .|. .|. .|. .|. . . . . . . .|. .|. .|. .|. .
-    !                       L   |               C               |^  R
-    !
-    ! The indicated point (^) must be omitted to preserve correct periodicity.
-    if(ob_grid%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
-  end if
-
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_1)
 end subroutine mesh_init_stage_1
-
-! ---------------------------------------------------------
-subroutine mesh_read_lead(ob_grid, mesh)
-  type(ob_grid_t), target, intent(in)    :: ob_grid
-  type(mesh_t),    target, intent(in)    :: mesh
-
-  integer :: il, ierr
-  type(mesh_t), pointer :: mm
-  integer :: nr(1:2, 1:MAX_DIM)
-
-  PUSH_SUB(mesh_read_lead)
-
-  do il = 1, NLEADS
-    mm => ob_grid%lead(il)%mesh
-    mm%sb => mesh%sb
-    mm%cv => mesh%cv
-    mm%parallel_in_domains = mesh%parallel_in_domains
-    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh', mpi_world, ierr)
-    if (ierr /= 0) then
-      message(1) = "Unable to read mesh from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"/mesh'."
-      call messages_fatal(1)
-    end if
-
-    ! Read the lxyz maps.
-    nr = mm%idx%nr
-    SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
-    SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, mpi_world, ierr)
-    if (ierr /= 0) then
-      message(1) = "Unable to read index map from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"'."
-      call messages_fatal(1)
-    end if
-  end do
-
-  POP_SUB(mesh_read_lead)
-end subroutine mesh_read_lead
 
 ! ---------------------------------------------------------
 !> This subroutine checks if every grid point belongs to the internal

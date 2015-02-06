@@ -50,7 +50,6 @@ module simul_box_m
   private
   public ::                     &
     simul_box_t,                &
-    simul_box_ob_info_t,        &
     simul_box_init,             &
     simul_box_lookup_init,      &
     simul_box_interp_init,      &
@@ -92,14 +91,6 @@ module simul_box_m
   !> the lead-names of the open boundaries, maximum 4D
   character(len=6), dimension(2*4), parameter, public :: LEAD_NAME = &
     (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front ', 'before', 'after '/)
-
-  !> open boundaries stuff
-  type simul_box_ob_info_t
-    integer             :: ucells         !< Number of additional unit cells.
-    character(len=32)   :: dataset        !< Dataset name of the periodic lead calculation.
-    character(len=32)   :: restart_dir    !< Directory where to find the lead restart files.
-    character(len=32)   :: static_dir     !< Static directory of the lead ground state.
-  end type simul_box_ob_info_t
 
   type, public :: interp_t
     integer          :: nn, order  !< interpolation points and order
@@ -161,13 +152,10 @@ module simul_box_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, geo, space, transport_mode, lead_sb, lead_info)
+  subroutine simul_box_init(sb, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(geometry_t),                    intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
-    logical,                   optional, intent(in)    :: transport_mode
-    type(simul_box_t),         optional, intent(inout) :: lead_sb(:)
-    type(simul_box_ob_info_t), optional, intent(in)    :: lead_info(:)
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
@@ -184,10 +172,6 @@ contains
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
     call read_box_offset()                 ! Parameters defining the offset of the origin.
-    if(present(transport_mode)) then
-      ASSERT(present(lead_sb) .and. present(lead_info))
-      call ob_simul_box_init(sb, transport_mode, lead_sb, space, lead_info, geo)
-    end if
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
@@ -196,15 +180,8 @@ contains
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice)
 
     ! we need k-points for periodic systems or for open boundaries
-    only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)
+    only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
-
-    ! With open boundaries we have a different situation than in a periodic system.
-    ! We set them here to zero to mimic a Gamma-point-only calculation.
-    ! In the gs mode we need the kpoints from the periodic run, these will be set
-    ! in restart.F90:read_free_states.
-    ! In the td run all kpoints must be zero to correctly calculate the current.
-    if (present(transport_mode)) call kpoints_set_transport_mode(sb%kpoints)
 
     POP_SUB(simul_box_init)
 
@@ -1489,219 +1466,6 @@ contains
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
-
-
-  !--------------------------------------------------------------
-  subroutine ob_simul_box_init(sb, transport_mode, lead_sb, space, lead_info, geo)
-    type(simul_box_t), intent(inout) :: sb
-    logical,           intent(in)    :: transport_mode
-    type(simul_box_t), intent(inout) :: lead_sb(:)
-    type(space_t),     intent(in)    :: space
-    type(simul_box_ob_info_t), intent(in) :: lead_info(:)
-    type(geometry_t),  intent(inout) :: geo
-
-    ! some local stuff
-    integer :: il
-
-    PUSH_SUB(ob_simul_box_init)
-
-    ! Open boundaries are only possible for rectangular simulation boxes.
-    if(sb%box_shape /= PARALLELEPIPED) then
-      message(1) = 'Open boundaries are only possible with a parallelepiped'
-      message(2) = 'simulation box.'
-      call messages_fatal(2)
-    end if
-    ! Simulation box must not be periodic in transport direction.
-    if(sb%periodic_dim == 1) then
-      message(1) = 'When using open boundaries, you cannot use periodic boundary'
-      message(2) = 'conditions in the x-direction.'
-      call messages_fatal(2)
-    end if
-
-    if(transport_mode) then
-      ! lowest index must be transport direction
-      ASSERT(TRANS_DIR == 1)
-      sb%transport_dim = TRANS_DIR
-      lead_sb(:)%transport_dim = TRANS_DIR
-    else ! just open boundaries
-      sb%transport_dim = 0
-      lead_sb(:)%transport_dim = 0
-    end if
-
-    call ob_read_lead_unit_cells(sb, lead_sb, lead_info(:)%restart_dir)
-    ! Adjust the size of the simulation box by adding the proper number
-    ! of unit cells to the simulation region.
-    do il = LEFT, RIGHT
-      sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + lead_info(il)%ucells*lead_sb(il)%lsize(TRANS_DIR)
-    end do
-    ! Add the atoms of the lead unit cells that are included in the simulation box to geo.
-    call ob_simul_box_add_lead_atoms(sb, lead_sb, space, lead_info(:)%ucells, lead_info(:)%dataset, geo)
-
-    POP_SUB(ob_simul_box_init)
-
-  end subroutine ob_simul_box_init
-
-
-  !--------------------------------------------------------------
-  !> Read the simulation boxes of the leads
-  subroutine ob_read_lead_unit_cells(sb, lead_sb, dir)
-    type(simul_box_t), intent(inout) :: sb
-    type(simul_box_t), intent(inout) :: lead_sb(:)
-    character(len=*),  intent(in)    :: dir(:)
-
-    integer :: il, ierr
-
-    PUSH_SUB(ob_read_lead_unit_cells)
-
-    do il = 1, NLEADS
-      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world, ierr)
-      if (ierr /= 0) then
-        message(1) = "Unable to read simulation box information from '"//trim(dir(il))//"/"//GS_DIR//"/mesh'."
-        call messages_fatal(1)
-      end if
-
-      ! Check whether
-      ! * simulation box is a parallelepiped,
-      ! * the extensions in y-, z-directions fit the central box,
-      ! * the central simulation box x-length is an integer multiple of
-      !   the unit cell x-length,
-      ! * periodic in one dimension, and
-      ! * of the same dimensionality as the central system.
-
-      if(lead_sb(il)%box_shape /= PARALLELEPIPED) then
-        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
-        call messages_fatal(1)
-      end if
-
-      if(any(sb%lsize(2:sb%dim) /= lead_sb(il)%lsize(2:sb%dim))) then
-        message(1) = 'The size in non-transport-directions of the ' // LEAD_NAME(il) // ' lead'
-        message(2) = 'does not fit the size of the non-transport-directions of the central system.'
-        call messages_fatal(2)
-      end if
-
-      if(.not. is_integer_multiple(sb%lsize(1), lead_sb(il)%lsize(1))) then
-        message(1) = 'The length in x-direction of the central simulation'
-        message(2) = 'box is not an integer multiple of the x-length of'
-        message(3) = 'the ' // trim(LEAD_NAME(il)) // ' lead.'
-        call messages_fatal(3)
-      end if
-
-      if(lead_sb(il)%periodic_dim /= 1) then
-        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
-        message(2) = 'For now we assume the first unit cell to be the periodic representative.'
-        call messages_warning(2)
-      end if
-      if(lead_sb(il)%dim /= sb%dim) then
-        message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
-        message(2) = 'the central system.'
-        call messages_fatal(2)
-      end if
-    end do
-
-    POP_SUB(ob_read_lead_unit_cells)
-  end subroutine ob_read_lead_unit_cells
-
-
-  !--------------------------------------------------------------
-  !> Read the coordinates of the leads atoms and add them to the
-  !! simulation box
-  subroutine ob_simul_box_add_lead_atoms(sb, lead_sb, space, ucells, lead_dataset, geo)
-    type(simul_box_t), intent(inout) :: sb
-    type(simul_box_t), intent(inout) :: lead_sb(:)
-    type(space_t),     intent(in)    :: space
-    integer,           intent(in)    :: ucells(:)
-    character(len=32), intent(in)    :: lead_dataset(:)
-    type(geometry_t),  intent(inout) :: geo
-
-    type(geometry_t)  :: central_geo
-    type(geometry_t), allocatable  :: lead_geo(:)
-    character(len=32) :: label_bak
-    integer           :: il, icell, iatom, jatom, icatom, dir
-
-    PUSH_SUB(ob_simul_box_add_lead_atoms)
-
-    SAFE_ALLOCATE(lead_geo(1:NLEADS))
-    do il = 1, NLEADS
-      ! We temporarily change the current label to read the
-      ! coordinates of another dataset, namely the lead dataset.
-      label_bak     = current_label
-      current_label = lead_dataset(il)
-      call geometry_init(lead_geo(il), space, print_info=.false.)
-      current_label = label_bak
-      call simul_box_atoms_in_box(lead_sb(il), lead_geo(il), .true.)
-    end do
-
-    ! Merge the geometries of the lead and of the central region.
-    call geometry_copy(central_geo, geo)
-
-    ! Set the number of atoms and classical atoms to the number
-    ! of atoms coming from left and right lead and central part.
-    if(geo%natoms > 0) then
-      SAFE_DEALLOCATE_P(geo%atom)
-    end if
-    geo%natoms = central_geo%natoms + ucells(LEFT)*lead_geo(LEFT)%natoms + ucells(RIGHT)*lead_geo(RIGHT)%natoms
-    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-    if(geo%ncatoms > 0) then
-      SAFE_DEALLOCATE_P(geo%catom)
-    end if
-    geo%ncatoms = central_geo%ncatoms + ucells(LEFT)*lead_geo(LEFT)%ncatoms + ucells(RIGHT)*lead_geo(RIGHT)%ncatoms
-    SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-
-    geo%only_user_def = central_geo%only_user_def .and. all(lead_geo(:)%only_user_def)
-    geo%nlpp          = central_geo%nlpp .or. any(lead_geo(:)%nlpp)
-    geo%nlcc          = central_geo%nlcc .or. any(lead_geo(:)%nlcc)
-
-    ! FIXME:
-    ! Please do not do these atrocities... even if the object has
-    ! public components it does not mean you can just initialize it by
-    ! hand. XA
-    geo%atoms_dist%start   = 1
-    geo%atoms_dist%end     = geo%natoms
-    geo%atoms_dist%nlocal  = geo%natoms
-
-    ! 1. Put the atoms of the central region into geo.
-    geo%atom(1:central_geo%natoms)   = central_geo%atom
-    geo%catom(1:central_geo%ncatoms) = central_geo%catom
-
-    ! 2. Put the atoms of the leads into geo and adjust their x-coordinates.
-    iatom  = central_geo%natoms + 1
-    icatom = central_geo%ncatoms + 1
-
-    do il = 1, NLEADS
-      dir = (-1)**il
-      ! We start from the "outer" unit cells of the lead.
-      do icell = 1, ucells(il)
-        do jatom = 1, lead_geo(il)%natoms
-          geo%atom(iatom) = lead_geo(il)%atom(jatom)
-          geo%atom(iatom)%x(TRANS_DIR) = geo%atom(iatom)%x(TRANS_DIR) + &
-            dir * (sb%lsize(TRANS_DIR) - (2*(icell - 1) + 1) * lead_sb(il)%lsize(TRANS_DIR))
-          iatom = iatom + 1
-        end do
-
-        do jatom = 1, lead_geo(il)%ncatoms
-          geo%catom(icatom) = lead_geo(il)%catom(jatom)
-          geo%catom(icatom)%x(TRANS_DIR) = geo%catom(icatom)%x(TRANS_DIR) + &
-            dir * (sb%lsize(TRANS_DIR) - (2 * (icell - 1) + 1) * lead_sb(il)%lsize(TRANS_DIR))
-        end do
-      end do
-    end do
-
-    ! Initialize the species of the "extended" central system.
-    if(geo%nspecies > 0) then
-      SAFE_DEALLOCATE_P(geo%species)
-      SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
-    end if
-    call geometry_init_species(geo, print_info=.false.)
-
-    do il = 1, NLEADS
-      call geometry_end(lead_geo(il))
-    end do
-
-    call geometry_end(central_geo)
-    SAFE_DEALLOCATE_A(lead_geo)
-
-    POP_SUB(ob_simul_box_add_lead_atoms)
-  end subroutine ob_simul_box_add_lead_atoms
 
   ! -----------------------------------------------------
 

@@ -36,8 +36,6 @@ module grid_m
   use multicomm_m
   use multigrid_m
   use nl_operator_m
-  use ob_interface_m
-  use ob_grid_m
   use parser_m
   use profiling_m
   use space_m
@@ -63,12 +61,10 @@ module grid_m
   type grid_t
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
-    type(interface_t)           :: intf(2*MAX_DIM)
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
-    type(ob_grid_t)             :: ob_grid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -88,14 +84,8 @@ contains
 
     PUSH_SUB(grid_init_stage_0)
 
-    call ob_grid_init(gr%ob_grid)
-    if(gr%ob_grid%open_boundaries) then
-      call simul_box_init(gr%sb, geo, space, gr%ob_grid%transport_mode, &
-        gr%ob_grid%lead(:)%sb, gr%ob_grid%lead(:)%info)
-    else
-      call simul_box_init(gr%sb, geo, space)
-    end if
-
+    call simul_box_init(gr%sb, geo, space)
+      
     POP_SUB(grid_init_stage_0)
   end subroutine grid_init_stage_0
 
@@ -212,9 +202,7 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge, gr%ob_grid)
-
-    if(gr%ob_grid%open_boundaries) call mesh_read_lead(gr%ob_grid, gr%mesh)
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
@@ -235,7 +223,6 @@ contains
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
-    integer :: il
     type(mpi_grp_t) :: grp
 
     PUSH_SUB(grid_init_stage_2)
@@ -254,13 +241,6 @@ contains
       call messages_info(1)
     endif
     call derivatives_build(gr%der, gr%mesh)
-
-    ! we need the derivative for the interface, therefore do the initialization here
-    if(gr%ob_grid%open_boundaries) then
-      do il = 1, NLEADS
-        call interface_init(gr%der, gr%intf(il), il, gr%ob_grid%lead(il)%sb%lsize)
-      end do
-    end if
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -306,7 +286,6 @@ contains
 
     ! print info concerning the grid
     call grid_write_info(gr, geo, stdout)
-    if(gr%ob_grid%open_boundaries) call ob_grid_write_info(gr%ob_grid, stdout)
 
     POP_SUB(grid_init_stage_2)
   end subroutine grid_init_stage_2
@@ -315,8 +294,6 @@ contains
   !-------------------------------------------------------------------
   subroutine grid_end(gr)
     type(grid_t), intent(inout) :: gr
-
-    integer :: il
 
     PUSH_SUB(grid_end)
 
@@ -346,19 +323,6 @@ contains
       SAFE_DEALLOCATE_P(gr%mgrid)
     end if
 
-    if(gr%ob_grid%open_boundaries) then
-      do il=1, NLEADS
-        call interface_end(gr%intf(il))
-        ! As usual with open boundaries code, this object is
-        ! half-created so we cannot call mesh_end and we have to
-        ! deallocate by hand. Please fix this.
-        SAFE_DEALLOCATE_P(gr%ob_grid%lead(il)%mesh%idx%lxyz)
-        SAFE_DEALLOCATE_P(gr%ob_grid%lead(il)%mesh%idx%lxyz_inv)        
-      end do
-    end if
-
-    call ob_grid_end(gr%ob_grid)
-
     call stencil_end(gr%stencil)
 
     POP_SUB(grid_end)
@@ -370,8 +334,6 @@ contains
     type(grid_t),     intent(in) :: gr
     type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iunit
-
-    integer :: il
 
     PUSH_SUB(grid_write_info)
 
@@ -395,14 +357,10 @@ contains
     call messages_info(1, iunit)
     call mesh_write_info(gr%fine%mesh, iunit)
 
-    if(gr%ob_grid%open_boundaries) then
-      do il = 1, NLEADS
-        call interface_write_info(gr%intf(il), iunit)
-      end do
-    end if
     if (gr%mesh%use_curvilinear) then
       call curvilinear_write_info(gr%cv, iunit)
     end if
+    
     call messages_print_stress(iunit)
 
     POP_SUB(grid_write_info)

@@ -51,8 +51,6 @@ libgrid_a_SOURCES =       \
 	modelmb_1part.F90       \
 	multigrid.F90           \
 	nl_operator.F90         \
-	ob_grid.F90             \
-	ob_interface.F90        \
 	operate.c               \
 	operate_f.F90           \
 	partition.F90           \
@@ -110,7 +108,7 @@ derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stenci
 double_grid.o : double_grid.F90 double_grid_apply_inc.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 fourier_shell.o : fourier_shell.F90 cube_function.o mesh.o
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
-grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o ob_interface.o mesh_init.o nl_operator.o
+grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o mesh_init.o nl_operator.o
 hypercube.o : hypercube.F90
 index.o : index.F90 hypercube.o
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o mesh_function.o cube_function.o 
@@ -118,14 +116,12 @@ mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
 mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o mesh_partition.o mesh_cube_map.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o partition.o mesh_partition.o mesh_cube_map.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o partition.o
 mesh_partition.o : mesh_partition.F90 mesh.o stencil_star.o stencil.o partition.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o operate_f.o
-ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
-ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 operate.o : operate.c operate_inc.c
 partition.o : partition.F90
 partition_transfer.o : partition_transfer.F90 partition_transfer_inc.F90 par_vec.o
