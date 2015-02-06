@@ -54,7 +54,9 @@ module xc_oep_m
     xc_oep_end,                 &
     xc_oep_write_info,          &
     dxc_oep_calc,               &
-    zxc_oep_calc
+    zxc_oep_calc,               &
+    doep_x,                     &
+    zoep_x
 
   !> the OEP levels
   integer, public, parameter :: &

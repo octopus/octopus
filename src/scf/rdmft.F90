@@ -46,6 +46,7 @@ module rdmft_m
   use unit_m
   use unit_system_m
   use v_ks_m
+  use xc_oep_m
  
   implicit none
 
@@ -527,7 +528,7 @@ contains
     call v_ks_calc(ks, hm,st,geo)
     call hamiltonian_update(hm, gr%mesh)
     call construct_f(hm,st,gr,lambda)
-
+    
     !Set up FO matrix 
     if (rdm%iter==1) then
       do ist = 1, st%nst
@@ -557,11 +558,9 @@ contains
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
       
-
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st, gr, st%occ(:,1), energy)
     
-
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO) 
 
@@ -781,17 +780,30 @@ contains
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm 
     type(states_t),       intent(in)    :: st 
-    type(grid_t),         intent(in)    :: gr
+    type(grid_t),         intent(inout) :: gr
     
-    FLOAT, allocatable :: hpsi(:,:), pot(:), rho(:), dpsi(:,:), dpsi2(:,:)
-    integer :: ist, jst
+    FLOAT, allocatable :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
+    FLOAT, allocatable :: v_ij(:,:,:)
+    FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
+    FLOAT              :: ex !required input variable for doep_x, not used otherwise, might get used
+
+    integer :: ist, jst, nspin_, is, jdm
+
     PUSH_SUB(rdm_derivatives) 
 
+
+    nspin_ = min(st%d%nspin, 2)
+    
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(pot (1:gr%mesh%np))
-    SAFE_ALLOCATE(rho (1:gr%mesh%np))
+    SAFE_ALLOCATE(rho1(1:gr%mesh%np))
+    SAFE_ALLOCATE(rho(1:gr%mesh%np))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(v_ij(1:gr%der%mesh%np, 1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(lxc(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
+
+    lxc = M_ZERO
+    v_ij = M_ZERO
 
     !derivative of one-electron energy with respect to the natural orbitals occupation number
     do ist = 1, st%nst
@@ -801,44 +813,33 @@ contains
       rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
     end do
     
-    !calculates the integrals used for the hartree part of the total energy and its derivative
+    !integrals used for the hartree and exchange parts of the total energy and their derivatives
+    do is = 1, nspin_
+      do jdm = 1, st%d%dim
+        call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
+      enddo
+    enddo
     do ist = 1, st%nst
-      pot = M_ZERO
-      rho = M_ZERO
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
-      rho(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
-      call dpoisson_solve(psolver, pot, rho, all_nodes = .false.)
-      
-      do jst = 1, ist
-        call states_get_state(st, gr%mesh, jst, 1, dpsi)
-        rdm%hartree(jst, ist) = dmf_dotp(gr%mesh, dpsi(:, 1)**2, pot(:))
-        rdm%hartree(ist, jst) = rdm%hartree(jst, ist)
-      end do
-    end do
-   
-    !calculates the integrals used for the exchange part of the total energy and its derivative
-    do ist = 1, st%nst 
-      pot = M_ZERO
-      rho = M_ZERO
-      dpsi2 = M_ZERO      
-      call states_get_state(st, gr%mesh, ist, 1, dpsi2)
-      
-      do jst = 1, ist - 1
-        dpsi = M_ZERO      
-        call states_get_state(st, gr%mesh, jst, 1, dpsi)
+      rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
+      do jst = ist, st%nst
+        rdm%hartree(ist, jst) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, jst))
+        rdm%hartree(jst, ist) = rdm%hartree(ist, jst)
+        call states_get_state(st, gr%mesh, jst, 1, dpsi2)
         rho(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-        call dpoisson_solve(psolver, pot, rho, all_nodes = .false.)
-        rdm%exchange(ist, jst) = dmf_dotp(gr%mesh,rho, pot)
+        rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho, v_ij(:, ist, jst))
         rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
-      end do
-      rdm%exchange(ist, ist) =rdm%hartree(ist, ist)
-    end do
+      enddo
+    enddo
     
     SAFE_DEALLOCATE_A(hpsi)
-    SAFE_DEALLOCATE_A(pot)
     SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(rho1)
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dpsi2)
+    SAFE_DEALLOCATE_A(lxc)
+    SAFE_DEALLOCATE_A(v_ij)
+  
     POP_SUB(rdm_derivatives) 
 
   end subroutine rdm_derivatives

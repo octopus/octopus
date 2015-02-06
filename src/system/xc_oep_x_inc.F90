@@ -37,7 +37,7 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
+subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
   type(derivatives_t), intent(inout) :: der
   type(states_t), target, intent(in) :: st
   integer,        intent(in)    :: is
@@ -45,6 +45,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
   R_TYPE,         intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
   FLOAT,          intent(inout) :: ex
   FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
+  R_TYPE, optional, intent(out) :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
@@ -176,6 +177,12 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef)
           rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np))*psi(1:der%mesh%np)
           F_ij(1:der%mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
+
+          !for rdmft we need the matrix elements and no summation
+          if (present(F_out)) then
+            F_out(:, ist, jst) = F_ij(:)
+            cycle
+          endif
 
           ! this quantity has to be added to lxc(1:der%mesh%np, ist)
           call states_get_state(st, der%mesh, idm, jst, isp, psi)
