@@ -36,7 +36,6 @@ dist_doc_DATA = \
 	States.html \
 	System.html \
 	Time-Dependent.html \
-	Open_Boundaries.html \
 	Utilities.html
 
 CLEANFILES = $(dist_doc_DATA)
