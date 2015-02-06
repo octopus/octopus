@@ -21,7 +21,6 @@
 
 module poisson_multigrid_m
   use boundaries_m
-  use datasets_m
   use derivatives_m
   use global_m
   use lalg_basic_m
@@ -91,7 +90,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps before coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_integer(datasets_check('PoissonSolverMGPresmoothingSteps'), 1, this%presteps)
+    call parse_integer('PoissonSolverMGPresmoothingSteps', 1, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -101,7 +100,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps after coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_integer(datasets_check('PoissonSolverMGPostsmoothingSteps'), 4, this%poststeps)
+    call parse_integer('PoissonSolverMGPostsmoothingSteps', 4, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
@@ -111,7 +110,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved.
     !%End
-    call parse_integer(datasets_check('PoissonSolverMGMaxCycles'), 50, this%maxcycles)
+    call parse_integer('PoissonSolverMGMaxCycles', 50, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -124,7 +123,7 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
-    call parse_integer(datasets_check('PoissonSolverMGRestrictionMethod'), 2, this%restriction_method)
+    call parse_integer('PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
        call input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
@@ -144,9 +143,9 @@ contains
     !% Alternative implementation of Gauss-Jacobi.
     !%End
     if ( mesh%use_curvilinear ) then
-      call parse_integer(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
+      call parse_integer('PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
     else
-      call parse_integer(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)
+      call parse_integer('PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
     end if
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
@@ -163,9 +162,9 @@ contains
     !% The default is 1.0, except 0.6666 for the <tt>gauss_jacobi</tt> method.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
-      call parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), CNST(0.6666), this%relax_factor )
+      call parse_float('PoissonSolverMGRelaxationFactor', CNST(0.6666), this%relax_factor )
     else
-      call parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
+      call parse_float('PoissonSolverMGRelaxationFactor', M_ONE, this%relax_factor)
     end if
 
     POP_SUB(poisson_multigrid_init)

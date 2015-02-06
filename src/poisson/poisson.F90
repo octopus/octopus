@@ -24,7 +24,6 @@ module poisson_m
   use batch_m
   use boundaries_m
   use cube_m
-  use datasets_m
   use derivatives_m
   use fft_m
   use global_m
@@ -173,7 +172,7 @@ contains
     !% among the parallelization-in-domains groups.
     !%End
 
-    call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., this%all_nodes_default)
+    call parse_logical('ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
 #endif
 
     !%Variable PoissonSolver
@@ -244,7 +243,7 @@ contains
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
-    call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
+    call parse_integer('PoissonSolver', default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call input_error('PoissonSolver')
    
     select case(this%method)
@@ -326,7 +325,7 @@ contains
         default_kernel = der%mesh%sb%periodic_dim
       end select
 
-      call parse_integer(datasets_check('PoissonFFTKernel'), default_kernel, this%kernel)
+      call parse_integer('PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%method)) call input_error('PoissonFFTKernel')
 
       call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
@@ -500,7 +499,7 @@ contains
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [the default value of two is typically good].
       !%End
-      call parse_float(datasets_check('DoubleFFTParameter'), M_TWO, fft_alpha)
+      call parse_float('DoubleFFTParameter', M_TWO, fft_alpha)
       if (fft_alpha < M_ONE .or. fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", fft_alpha, &
           "' is not a valid DoubleFFTParameter"
@@ -847,7 +846,7 @@ contains
 
     PUSH_SUB(poisson_test)
 
-    call parse_integer(datasets_check('TestRepetitions'), 1, times)
+    call parse_integer('TestRepetitions', 1, times)
 
     if(mesh%sb%dim == 1) then
       call messages_not_implemented('Poisson test for 1D case')

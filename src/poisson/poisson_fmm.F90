@@ -27,7 +27,6 @@ module poisson_fmm_m
   use boundaries_m 
   use c_pointer_m
   use cube_m
-  use datasets_m
   use derivatives_m
   use fft_m
   use geometry_m
@@ -136,7 +135,7 @@ contains
     !% DeltaEFMM.
     !%
     !%End
-    call parse_float(datasets_check('DeltaEFMM'), CNST(1e-4), this%delta_E_fmm)
+    call parse_float('DeltaEFMM', CNST(1e-4), this%delta_E_fmm)
 
     !%Variable AlphaFMM
     !%Type float
@@ -170,7 +169,7 @@ contains
     !% term $-\alpha_{FMM}V_{self.int.}(i)$ is added to the summation (see
     !% the referred paper for the explicit formulae).
     !%End
-    call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), this%alpha_fmm)
+    call parse_float('AlphaFMM', CNST(0.291262136), this%alpha_fmm)
 
     ! FMM: Variable periodic sets periodicity
     ! 0 = open system

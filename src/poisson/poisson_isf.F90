@@ -23,7 +23,6 @@
 module poisson_isf_m
   use cube_function_m
   use cube_m
-  use datasets_m
   use global_m
   use io_m
   use messages_m
@@ -140,7 +139,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_integer(datasets_check('PoissonSolverNodes'), default_nodes, nodes)
+    call parse_integer('PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 

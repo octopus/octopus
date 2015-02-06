@@ -20,7 +20,6 @@
 #include "global.h"
 
 module poisson_corrections_m
-  use datasets_m
   use derivatives_m
   use global_m
   use lalg_basic_m
@@ -96,7 +95,7 @@ contains
     !% An exact integration of the Poisson equation is done over the boundaries. This option is
     !% experimental, and not implemented for domain parallelization.
     !%End
-    call parse_integer(datasets_check('PoissonSolverBoundaries'), CORR_MULTIPOLE, this%method)
+    call parse_integer('PoissonSolverBoundaries', CORR_MULTIPOLE, this%method)
 
     select case(this%method)
     case(CORR_MULTIPOLE)
