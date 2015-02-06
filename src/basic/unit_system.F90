@@ -150,7 +150,7 @@ contains
     !% Same as <tt>Units</tt>, but only refers to output values.
     !%End
 
-    if(parse_isdef('Units') /= 0) then
+    if(parse_is_defined('Units')) then
       call parse_integer('Units', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('Units')
       cinp = cc

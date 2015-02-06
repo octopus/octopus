@@ -113,7 +113,7 @@ contains
       default = PRE_FILTER
     end if
 
-    if (parse_isdef(trim(prefix_)//'Preconditioner') /= 0 ) then 
+    if (parse_is_defined(trim(prefix_)//'Preconditioner')) then 
       call parse_integer(trim(prefix_)//'Preconditioner', default, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')

@@ -156,7 +156,7 @@ contains
       endif
     endif
 
-    if (parse_isdef(trim(prefix)//"LinearSolver") /= 0 ) then 
+    if (parse_is_defined(trim(prefix)//"LinearSolver")) then 
       call parse_integer(trim(prefix)//"LinearSolver", defsolver_, fsolver)
     else
       call parse_integer("LinearSolver", defsolver_, fsolver)
@@ -178,7 +178,7 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    if (parse_isdef(trim(prefix)//"LinearSolverMaxIter") /= 0) then 
+    if (parse_is_defined(trim(prefix)//"LinearSolverMaxIter")) then 
       call parse_integer(trim(prefix)//"LinearSolverMaxIter", 1000, this%max_iter)
     else
       call parse_integer("LinearSolverMaxIter", 1000, this%max_iter)

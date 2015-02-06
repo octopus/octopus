@@ -232,7 +232,7 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(parse_isdef('RandomVelocityTemp') /= 0) then
+    if(parse_is_defined('RandomVelocityTemp')) then
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)

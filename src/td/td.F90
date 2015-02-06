@@ -402,10 +402,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_isdef('UserDefinedStates') /= 0) then
-          call states_read_user_def_orbitals(gr%mesh, st)
-        end if
-        
+        if(parse_is_defined('UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
 
         !%Variable TransformStates
         !%Type block
@@ -431,7 +428,7 @@ contains
         !% the old ones. The coefficients are complex, but the imaginary part will be
         !% ignored for real wavefunctions.
         !%End
-        if(parse_isdef('TransformStates') /= 0) then
+        if(parse_is_defined('TransformStates')) then
           if(parse_block('TransformStates', blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)

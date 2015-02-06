@@ -51,7 +51,7 @@ module parser_m
     parse_init,          &
     parse_putsym,        &
     parse_end,           &
-    parse_isdef,         &
+    parse_is_defined,    &
     parse_integer,       &
     parse_float,         &
     parse_cmplx,         &
@@ -343,7 +343,15 @@ contains
 
   end subroutine parser_end
 
+  ! ---------------------------------------------------------  
 
+  logical function parse_is_defined(name) result(isdef)
+    character(len=*), intent(in) :: name
+
+    isdef = parse_isdef(name) /= 0
+    
+  end function parse_is_defined
+    
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
   subroutine parse_logical(name, def, res)

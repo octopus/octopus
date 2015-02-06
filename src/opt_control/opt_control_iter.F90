@@ -143,7 +143,7 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
-    if(parse_isdef('OCTVelocityTarget') /= 0) then
+    if(parse_is_defined('OCTVelocityTarget')) then
        iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
     end if
 
@@ -165,7 +165,7 @@ contains
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
-    if(parse_isdef('OCTVelocityTarget') /= 0) then
+    if(parse_is_defined('OCTVelocityTarget')) then
        call io_close(iterator%velocities_iunit)
     end if
 
@@ -303,7 +303,7 @@ contains
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
       iterator%ctr_iter, j, j1, j2, delta
 
-    if(parse_isdef('OCTVelocityTarget') /= 0) then
+    if(parse_is_defined('OCTVelocityTarget')) then
        call velocities_write(iterator, sys)
     end if
 

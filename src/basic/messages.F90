@@ -984,7 +984,7 @@ contains
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if ( parse_isdef(trim(name)) /= 0 ) then 
+    if ( parse_is_defined(trim(name))) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

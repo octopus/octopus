@@ -153,7 +153,7 @@ contains
     !% </ul>
     !%End
 
-    if(parse_isdef('PDB'//trim(what)) /= 0) then
+    if(parse_is_defined('PDB'//trim(what))) then
       call check_duplicated(done)
 
       gf%source = READ_COORDS_PDB
@@ -184,7 +184,7 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_isdef('XYZ'//trim(what)) /= 0) then ! read an xyz file
+    if(parse_is_defined('XYZ'//trim(what))) then ! read an xyz file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XYZ
@@ -225,7 +225,7 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_isdef('XSF'//trim(what)) /= 0) then ! read an xsf file
+    if(parse_is_defined('XSF'//trim(what))) then ! read an xsf file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XSF

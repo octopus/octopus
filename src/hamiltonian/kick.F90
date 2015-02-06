@@ -201,7 +201,7 @@ contains
       call input_error('TDDeltaStrengthMode')
     end select
 
-    if(parse_isdef('TDDeltaUserDefined') /= 0) then
+    if(parse_is_defined('TDDeltaUserDefined')) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0

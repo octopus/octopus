@@ -83,8 +83,7 @@ contains
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
     str = 'LRMaximumIter'
-    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-         str = trim(prefix)//trim(str)
+    if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
     call parse_integer(str, def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
@@ -98,8 +97,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvAbsDens'
-    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-         str = trim(prefix)//trim(str)
+    if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
     call parse_float(str, CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRConvRelDens
@@ -113,8 +111,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvRelDens'
-    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-         str = trim(prefix)//trim(str)
+    if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
     call parse_float(str, M_ZERO, this%conv_rel_dens)
 
     ! value to use for adaptive tol scheme
@@ -157,8 +154,7 @@ contains
       this%scheme = tol_scheme
     else
       str = 'LRTolScheme'
-      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-        str = trim(prefix)//trim(str)
+      if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
       call parse_integer(str, SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
@@ -173,8 +169,7 @@ contains
     !% for the first SCF iteration. Ignored if <tt>LRTolScheme = fixed</tt>.
     !%End
     str = 'LRTolInitTol'
-    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-      str = trim(prefix)//trim(str)
+    if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
     call parse_float(str, CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
@@ -186,8 +181,7 @@ contains
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
     str = 'LRTolFinalTol'
-    if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-      str = trim(prefix)//trim(str)
+    if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
     call parse_float(str, CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
@@ -201,8 +195,7 @@ contains
       !% tolerance is decreased faster.
       !%End
       str = 'LRTolAdaptiveFactor'
-      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-        str = trim(prefix)//trim(str)
+      if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
       call parse_float(str, CNST(0.1), this%dynamic_tol_factor)
     end if
 
@@ -215,8 +208,7 @@ contains
       !% Number of iterations necessary to reach the final tolerance.
       !%End
       str = 'LRTolIterWindow'
-      if(parse_isdef(trim(prefix)//trim(str)) /= 0) &
-        str = trim(prefix)//trim(str)
+      if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
       call parse_integer(str, 10, this%iter_window)
     end if
 

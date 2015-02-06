@@ -132,7 +132,7 @@ contains
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef('OCTInitialTransformStates') /= 0) then
+      if(parse_is_defined('OCTInitialTransformStates')) then
         if(parse_block('OCTInitialTransformStates', blk) == 0) then
           call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)

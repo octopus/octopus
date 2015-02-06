@@ -446,7 +446,7 @@ contains
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
-        else if ((parse_isdef('Lsize')) /= 0) then
+        else if ((parse_is_defined('Lsize'))) then
           call parse_float('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(sb%lsize(1)  ==  -M_ONE) then
             call input_error('Lsize')
@@ -690,7 +690,7 @@ contains
         end if
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
-        if (parse_isdef('Lsize') == 0) then
+        if (parse_is_defined('Lsize')) then
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = M_HALF
         end if

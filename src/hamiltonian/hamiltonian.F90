@@ -263,7 +263,7 @@ contains
     !% of this perturbation, and has dimensions of energy times length.
     !%End
     call parse_float('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
-    if(parse_isdef('RashbaSpinOrbitCoupling') /= 0 ) then
+    if(parse_is_defined('RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
         call messages_fatal(1)
@@ -353,7 +353,7 @@ contains
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. &
       gauge_field_is_applied(hm%ep%gfield) .or. &
-      parse_isdef('RashbaSpinOrbitCoupling') /= 0) call states_set_complex(st)
+      parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
 
     call parse_logical('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField

@@ -51,7 +51,7 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    if(parse_isdef('OCTTargetTransformStates') /= 0) then
+    if(parse_is_defined('OCTTargetTransformStates')) then
       if(parse_block('OCTTargetTransformStates', blk) == 0) then
         call states_copy(tmp_st, tg%st)
         call states_deallocate_wfns(tmp_st)

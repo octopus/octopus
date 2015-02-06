@@ -168,7 +168,7 @@ contains
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    if (parse_isdef(trim(prefix)//'Preorthogonalization') /= 0) then 
+    if (parse_is_defined(trim(prefix)//'Preorthogonalization')) then 
       call parse_logical(trim(prefix)//'Preorthogonalization', default_preorthog, this%preorthogonalization) 
     else 
       call parse_logical('Preorthogonalization', default_preorthog, this%preorthogonalization) 
@@ -200,7 +200,7 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      if (parse_isdef(trim(prefix)//'HamiltonianVariation') /= 0) then
+      if (parse_is_defined(trim(prefix)//'HamiltonianVariation')) then
         call parse_integer(trim(prefix)//'HamiltonianVariation', 3, ham_var)
       else
         call parse_integer('HamiltonianVariation', 3, ham_var)

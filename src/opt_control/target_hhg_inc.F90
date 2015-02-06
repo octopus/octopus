@@ -65,7 +65,7 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_isdef('OCTOptimizeHarmonicSpectrum') /= 0) then
+    if(parse_is_defined('OCTOptimizeHarmonicSpectrum')) then
       if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))

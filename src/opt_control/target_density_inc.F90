@@ -68,7 +68,7 @@
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
 
-    if(parse_isdef('OCTTargetDensity') /= 0) then
+    if(parse_is_defined('OCTTargetDensity')) then
       tg%density_weight = M_ONE
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
@@ -233,7 +233,7 @@
       tg%strt_iter_curr_tg = 0
     end if
 
-    if(parse_isdef('OCTSpatialCurrWeight') /= 0) then
+    if(parse_is_defined('OCTSpatialCurrWeight')) then
       if(parse_block('OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
