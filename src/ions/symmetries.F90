@@ -20,7 +20,6 @@
 #include "global.h"
 
 module symmetries_m
-  use datasets_m
   use geometry_m
   use global_m
   use messages_m
@@ -136,7 +135,7 @@ contains
     !% If disabled, <tt>Octopus</tt> will not compute
     !% nor print the symmetries.
     !%End
-    call parse_logical(datasets_check('SymmetriesCompute'), (geo%natoms < 100), symmetries_compute)
+    call parse_logical('SymmetriesCompute', (geo%natoms < 100), symmetries_compute)
     if(.not. symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1)
@@ -280,7 +279,7 @@ contains
 
       this%breakdir(1:3) = M_ZERO
 
-      if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
+      if(parse_block('SymmetryBreakDir', blk) == 0) then
 
         do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))

@@ -20,7 +20,6 @@
 #include "global.h"
   
 module kpoints_m
-  use datasets_m
   use geometry_m
   use global_m
   use loct_m
@@ -173,7 +172,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_logical(datasets_check('KPointsUseSymmetries'), .false., this%use_symmetries)
+    call parse_logical('KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -193,7 +192,7 @@ contains
     !% time-reversal symmetry should not be used.
     !%
     !%End
-    call parse_logical(datasets_check('KPointsUseTimeReversal'), .not. symmetries_have_break_dir(symm), this%use_time_reversal)
+    call parse_logical('KPointsUseTimeReversal', .not. symmetries_have_break_dir(symm), this%use_time_reversal)
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
@@ -301,7 +300,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) /= 0)
+        gamma_only_ = (parse_block('KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
       this%shifts(1:MAX_DIM) = M_ZERO
@@ -441,8 +440,8 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block(datasets_check('KPoints'), blk) /= 0) then
-        if(parse_block(datasets_check('KPointsReduced'), blk) == 0) then
+      if(parse_block('KPoints', blk) /= 0) then
+        if(parse_block('KPointsReduced', blk) == 0) then
           reduced = .true.
         else
           read_user_kpoints = .false.

@@ -22,7 +22,6 @@
 module geometry_m
   use atom_m
   use c_pointer_m
-  use datasets_m
   use distributed_m
   use global_m
   use io_m
@@ -248,7 +247,7 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call parse_integer(datasets_check('SpinComponents'), 1, ispin)
+    call parse_integer('SpinComponents', 1, ispin)
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
     ispin = min(2, ispin)
 
@@ -271,7 +270,7 @@ contains
     !% and applied to the Hamiltonian at each time step. You must have at least one <tt>spec_user_defined</tt>
     !% type of species to use this.
     !%End
-    call parse_logical(datasets_check('SpeciesTimeDependent'), .false., geo%species_time_dependent)
+    call parse_logical('SpeciesTimeDependent', .false., geo%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,geo%nspecies
       if(species_type(geo%species(i)) == SPEC_USDEF) then
@@ -355,7 +354,7 @@ contains
     !% corresponding input file units).
     !%End
 
-    if(parse_block(datasets_check('IonicInteraction'), blk) == 0) then
+    if(parse_block('IonicInteraction', blk) == 0) then
       call messages_experimental('non-Coulombian ionic interaction')
       nrow = parse_block_n(blk)
 

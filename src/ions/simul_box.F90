@@ -24,7 +24,6 @@ module simul_box_m
   use atom_m
   use blas_m
   use c_pointer_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_m
@@ -218,7 +217,7 @@ contains
       !%End
 
       if(geo%periodic_dim == -1) then
-        call parse_integer(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
+        call parse_integer('PeriodicDimensions', 0, sb%periodic_dim)
       else
         sb%periodic_dim = geo%periodic_dim
       endif
@@ -248,7 +247,7 @@ contains
       !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
       !%End
 
-      if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
+      if(parse_block('MultiResolutionArea', blk) == 0) then
 
         call messages_experimental('Multi-resolution')
 
@@ -287,7 +286,7 @@ contains
         !% The interpolation order in multiresolution approach. The default is 5.
         !%End
         call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_integer(datasets_check('MultiResolutionInterpolationOrder'), 5, order)
+        call parse_integer('MultiResolutionInterpolationOrder', 5, order)
         call simul_box_interp_init(sb, order)
 
         sb%mr_flag = .true.
@@ -354,7 +353,7 @@ contains
       !% number of dimensions.
       !%End
 
-      call parse_integer(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
+      call parse_integer('BoxShape', MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
@@ -394,7 +393,7 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call parse_float(datasets_check('Radius'), def_rsize, sb%rsize, units_inp%length)
+        call parse_float('Radius', def_rsize, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO) call input_error('radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
@@ -406,7 +405,7 @@ contains
         end if
 
         default=sb%rsize
-        call parse_float(datasets_check('radius'), default, sb%rsize, units_inp%length)
+        call parse_float('radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
 
@@ -424,7 +423,7 @@ contains
           default = def_rsize
         endif
 
-        call parse_float(datasets_check('xlength'), default, sb%xsize, units_inp%length)
+        call parse_float('Xlength', default, sb%xsize, units_inp%length)
         sb%lsize(1) = sb%xsize
         if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
           call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
@@ -456,7 +455,7 @@ contains
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
-        else if(parse_block(datasets_check('Lsize'), blk) == 0) then
+        else if(parse_block('Lsize', blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
@@ -464,8 +463,8 @@ contains
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
-        else if ((parse_isdef(datasets_check('Lsize'))) /= 0) then
-          call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1), units_inp%length)
+        else if ((parse_isdef('Lsize')) /= 0) then
+          call parse_float('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(sb%lsize(1)  ==  -M_ONE) then
             call input_error('Lsize')
           end if
@@ -498,7 +497,7 @@ contains
         !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
 #if defined(HAVE_GDLIB)
-        call parse_string(datasets_check("BoxShapeImage"), "", sb%filename)
+        call parse_string('BoxShapeImage', '', sb%filename)
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1)
@@ -551,7 +550,7 @@ contains
         !% with axis parallel to the <i>z</i>-axis.
         !%End
 
-        call parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
+        call parse_string('BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 
@@ -592,13 +591,13 @@ contains
       !% WARNING: This variable does not seem to work correctly!
       !%End
       sb%box_offset = M_ZERO
-      if(parse_block(datasets_check('BoxOffset'), blk) == 0) then
+      if(parse_block('BoxOffset', blk) == 0) then
         do idir = 1, sb%dim
           call parse_block_float(blk, 0, idir - 1, sb%box_offset(idir), units_inp%length)
         end do
         call parse_block_end(blk)
       else
-        call parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1), units_inp%length)
+        call parse_float('BoxOffset', M_ZERO, sb%box_offset(1), units_inp%length)
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
 
@@ -693,7 +692,7 @@ contains
       sb%rlattice_primitive = M_ZERO
       forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
-      if (parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
+      if (parse_block('LatticeVectors', blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
             call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
@@ -708,7 +707,7 @@ contains
         end if
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
-        if (parse_isdef(datasets_check('Lsize')) == 0) then
+        if (parse_isdef('Lsize') == 0) then
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = M_HALF
         end if

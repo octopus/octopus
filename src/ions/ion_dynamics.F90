@@ -21,7 +21,6 @@
 
 module ion_dynamics_m
   use c_pointer_m
-  use datasets_m
   use geometry_m
   use global_m
   use io_m
@@ -122,7 +121,7 @@ contains
     !% This variable controls whether atoms are moved during
     !% a time propagation run. The default is no.
     !%End
-    call parse_logical(datasets_check('MoveIons'), .false., this%move_ions)
+    call parse_logical('MoveIons', .false., this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     nullify(this%oldforce)
@@ -137,7 +136,7 @@ contains
     !% conditions. They will not be affected by any forces. The
     !% default is no.
     !%End
-    call parse_logical(datasets_check('IonsConstantVelocity'), .false., this%constant_velocity)
+    call parse_logical('IonsConstantVelocity', .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
 
     if(this%constant_velocity) call messages_experimental('IonsConstantVelocity')
@@ -161,7 +160,7 @@ contains
     !% Nose-Hoover thermostat.
     !%End
     
-    call parse_integer(datasets_check('Thermostat'), THERMO_NONE, this%thermostat)
+    call parse_integer('Thermostat', THERMO_NONE, this%thermostat)
     if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
@@ -185,7 +184,7 @@ contains
       !% degrees Kelvin. The default name for this function is
       !% "temperature".
       !%End
-      call parse_string(datasets_check('TemperatureFunction'), 'temperature', temp_function_name)
+      call parse_string('TemperatureFunction', 'temperature', temp_function_name)
 
       call tdf_read(this%temperature_function, temp_function_name, ierr)
 
@@ -206,7 +205,7 @@ contains
         !%End
         call messages_obsolete_variable('NHMass', 'ThermostatMass')
 
-        call parse_float(datasets_check('ThermostatMass'), CNST(1.0), this%nh(1)%mass)
+        call parse_float('ThermostatMass', CNST(1.0), this%nh(1)%mass)
         this%nh(2)%mass = this%nh(1)%mass
 
         this%nh(1:2)%pos = M_ZERO
@@ -233,11 +232,11 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(parse_isdef(datasets_check('RandomVelocityTemp')) /= 0) then
+    if(parse_isdef('RandomVelocityTemp') /= 0) then
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call parse_float(datasets_check('RandomVelocityTemp'), M_ZERO, temperature, unit = unit_kelvin)
+        call parse_float('RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
       end if
 
       do i = 1, geo%natoms

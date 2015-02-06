@@ -20,7 +20,6 @@
 #include "global.h"
 
 module read_coords_m
-  use datasets_m
   use global_m
   use io_m
   use parser_m
@@ -154,7 +153,7 @@ contains
     !% </ul>
     !%End
 
-    if(parse_isdef(datasets_check('PDB'//trim(what))) /= 0) then
+    if(parse_isdef('PDB'//trim(what)) /= 0) then
       call check_duplicated(done)
 
       gf%source = READ_COORDS_PDB
@@ -162,7 +161,7 @@ contains
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
       ! no default, since we do not do this unless the input tag is present
-      call parse_string(datasets_check('PDB'//trim(what)), '', str)
+      call parse_string('PDB'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -185,12 +184,12 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_isdef(datasets_check('XYZ'//trim(what))) /= 0) then ! read an xyz file
+    if(parse_isdef('XYZ'//trim(what)) /= 0) then ! read an xyz file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XYZ
       ! no default, since we do not do this unless the input tag is present
-      call parse_string(datasets_check('XYZ'//trim(what)), '', str)
+      call parse_string('XYZ'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -226,12 +225,12 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_isdef(datasets_check('XSF'//trim(what))) /= 0) then ! read an xsf file
+    if(parse_isdef('XSF'//trim(what)) /= 0) then ! read an xsf file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XSF
       ! no default, since we do not do this unless the input tag is present
-      call parse_string(datasets_check('XSF'//trim(what)), '', str)
+      call parse_string('XSF'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -251,7 +250,7 @@ contains
         !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
         !% will be used. The PRIMVEC block must be written for each step.
         !%End
-        call parse_integer(datasets_check('XSFCoordinatesAnimStep'), 1, step_to_use)
+        call parse_integer('XSFCoordinatesAnimStep', 1, step_to_use)
         if(step_to_use < 1) then
           message(1) = "XSFCoordinatesAnimStep must be > 0."
           call messages_fatal(1)
@@ -379,7 +378,7 @@ contains
     !% It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
 
-    if(parse_block(datasets_check(trim(what)), blk) == 0) then
+    if(parse_block(trim(what), blk) == 0) then
       call check_duplicated(done)
 
       gf%n = parse_block_n(blk)
@@ -429,7 +428,7 @@ contains
     !%End
 
     ! This is valid only for Coordinates.
-    if(trim(what) == 'Coordinates' .and. parse_block(datasets_check('Reduced'//trim(what)), blk) == 0) then
+    if(trim(what) == 'Coordinates' .and. parse_block('Reduced'//trim(what), blk) == 0) then
       call check_duplicated(done)
 
       gf%n = parse_block_n(blk)

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module xyz_adjust_m
-  use datasets_m
   use global_m
   use geometry_m
   use lalg_adv_m
@@ -63,7 +62,7 @@ contains
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
-      if(parse_block(datasets_check('MainAxis'), blk)==0) then
+      if(parse_block('MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         enddo
@@ -112,7 +111,7 @@ contains
       else
         default = NONE
       endif
-      call parse_integer(datasets_check('AxisType'), default, axis_type)
+      call parse_integer('AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then
