@@ -99,7 +99,7 @@ contains
 
     if(st%parallel_in_states) then
       message(1) = 'The cholesky_serial orthogonalization method cannot work with state-parallelization.'
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
@@ -143,7 +143,7 @@ contains
 #else
 #ifndef HAVE_SCALAPACK
     message(1) = 'The cholesky_parallel orthogonalizer requires ScaLAPACK.'
-    call messages_fatal(1)
+    call messages_fatal(1, only_root_writes = .true.)
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
       message(1) = 'The cholesky_parallel orthogonalizer is designed to be used with domain or state parallelization.'
@@ -232,7 +232,7 @@ contains
 
 #ifndef HAVE_SCALAPACK
       message(1) = 'The QR orthogonalizer requires ScaLAPACK to work in parallel.'
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
 #endif
 
 #ifdef HAVE_SCALAPACK
@@ -364,7 +364,7 @@ contains
 
     if(st%parallel_in_states) then
       message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 
     SAFE_ALLOCATE(bb(1:nst))
