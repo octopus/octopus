@@ -372,11 +372,11 @@ contains
 
     !%Variable SCFCalculatePartialCharges
     !%Type logical
+    !%Default no
     !%Section SCF
     !%Description
     !% (Experimental) This variable controls whether partial charges
-    !% are calculated dipole is calculated at the end of a
-    !% self-consistent iteration. The default is no.
+    !% are calculated at the end of a self-consistent iteration.
     !%End
     call parse_logical('SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
