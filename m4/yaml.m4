@@ -4,9 +4,6 @@
 ##
 
 AC_DEFUN([ACX_YAML], [
-  AC_MSG_CHECKING(for YAML library)
-
-
   dnl Yaml input file support
   AC_ARG_WITH([yaml-path],
               AS_HELP_STRING([--with-yaml-path], [give a path to find libyaml.]),
