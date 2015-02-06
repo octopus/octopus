@@ -184,11 +184,16 @@ contains
     
     ! Each process writes a portion of the partition
     if (ierr == 0) then
-      call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-      call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
-           partition%np_local, partition%part, err)
-      call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
-      if (err /= 0) ierr = ierr + 2
+      call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE) 
+      ! Only one rank per partition group should write the partition restart information
+      ! Otherwise, more than once is trying to be written data
+      if (mod(mpi_world%rank, mpi_world%size/partition%mpi_grp%size) == 0 .or. &
+           partition%mpi_grp%size == mpi_world%size) then
+        call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+             partition%np_local, partition%part, err)
+        call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
+        if (err /= 0) ierr = ierr + 2
+      end if
     end if
 
     SAFE_DEALLOCATE_A(scounts)
