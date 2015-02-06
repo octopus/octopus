@@ -49,7 +49,7 @@
     !%
     !%End
 
-    if(parse_block(datasets_check('OCTClassicalTarget'),blk)==0) then
+    if(parse_block('OCTClassicalTarget', blk)==0) then
       tg%classical_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
@@ -62,7 +62,7 @@
       call messages_fatal(2)
     end if
 
-    if( parse_block(datasets_check('OCTMomentumDerivatives'),blk)==0   ) then
+    if( parse_block('OCTMomentumDerivatives', blk)==0   ) then
       SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
         do jst=0, geo%space%dim-1
@@ -77,7 +77,7 @@
       call messages_fatal(3)
     end if
 
-    if( parse_block(datasets_check('OCTPositionDerivatives'),blk)==0 ) then
+    if( parse_block('OCTPositionDerivatives', blk)==0 ) then
       SAFE_ALLOCATE(tg%pos_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
         do jst=0, geo%space%dim-1

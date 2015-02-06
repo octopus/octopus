@@ -65,8 +65,8 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')) /= 0) then
-      if(parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
+    if(parse_isdef('OCTOptimizeHarmonicSpectrum') /= 0) then
+      if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
         SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
@@ -161,7 +161,7 @@
     !% the integral of H(w) from one to infinity. In practice, it is better if you also set an upper limit, i.e.
     !% for example f(w) = step(w-1)*step(2-w).
     !%End
-    call parse_string(datasets_check('OCTHarmonicWeight'), "1", tg%plateau_string)
+    call parse_string('OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO

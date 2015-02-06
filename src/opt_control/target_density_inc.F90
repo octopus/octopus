@@ -72,11 +72,11 @@
       tg%density_weight = M_ONE
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
-      call parse_string(datasets_check('OCTTargetDensity'), "0", expression)
+      call parse_string('OCTTargetDensity', "0", expression)
 
       if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
-        if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
+        if(parse_block('OCTTargetDensityFromState', blk) == 0) then
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
           call states_look_and_load(restart, tmp_st, gr)
@@ -201,7 +201,7 @@
       !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
       !%End
 
-    call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, tg%curr_functional)
+    call parse_integer('OCTCurrentFunctional', oct_no_curr, tg%curr_functional)
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
@@ -209,13 +209,13 @@
       stin%current= M_ZERO
     end select
 
-    call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, tg%curr_weight)
+    call parse_float('OCTCurrentWeight', M_ZERO, tg%curr_weight)
     write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', tg%curr_functional
     write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  tg%curr_weight
     call messages_info(2)
 
     if (target_mode(tg)  ==  oct_targetmode_td) then
-      call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, tg%strt_iter_curr_tg)
+      call parse_integer('OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
       if (tg%strt_iter_curr_tg  <  0) then
         message(1) = 'OCTStartIterCurrTg must be positive.'
         call messages_fatal(1)
@@ -233,8 +233,8 @@
       tg%strt_iter_curr_tg = 0
     end if
 
-    if(parse_isdef(datasets_check('OCTSpatialCurrWeight')) /= 0) then
-      if(parse_block(datasets_check('OCTSpatialCurrWeight'), blk) == 0) then
+    if(parse_isdef('OCTSpatialCurrWeight') /= 0) then
+      if(parse_block('OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
         SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))

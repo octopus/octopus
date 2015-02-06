@@ -21,7 +21,6 @@
 
 module propagation_m
   use controlfunction_m
-  use datasets_m
   use density_m
   use energy_calc_m
   use epot_m

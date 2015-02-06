@@ -31,7 +31,7 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    if(parse_block(datasets_check('OCTTdTarget'), blk)==0) then
+    if(parse_block('OCTTdTarget', blk)==0) then
       call parse_block_string(blk, 0, 0, tg%td_local_target)
       call conv_to_C_string(tg%td_local_target)
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module initst_m
-  use datasets_m
   use density_m
   use geometry_m
   use global_m
@@ -95,7 +94,7 @@ contains
     !%Option oct_is_userdefined 4
     !% Start in a userdefined state.
     !%End
-    call parse_integer(datasets_check('OCTInitialState'), oct_is_groundstate, istype)
+    call parse_integer('OCTInitialState', oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
 
     select case(istype)
@@ -133,8 +132,8 @@ contains
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef(datasets_check('OCTInitialTransformStates')) /= 0) then
-        if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
+      if(parse_isdef('OCTInitialTransformStates') /= 0) then
+        if(parse_block('OCTInitialTransformStates', blk) == 0) then
           call states_copy(tmp_st, psi)
           call states_deallocate_wfns(tmp_st)
           call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tmp_st%dom_st_kpt_mpi_grp, &
@@ -196,7 +195,7 @@ contains
       !% <br>%</tt>
       !%  
       !%End
-      if(parse_block(datasets_check('OCTInitialUserdefined'), blk) == 0) then
+      if(parse_block('OCTInitialUserdefined', blk) == 0) then
         
         no_states = parse_block_n(blk)
         do ib = 1, no_states
@@ -249,7 +248,7 @@ contains
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
-    call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+    call parse_integer('TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
       call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals)

@@ -41,8 +41,8 @@
     !% (EXPERIMENTAL)
     !%
     !%End
-    if(parse_isdef(datasets_check('OCTTargetSpin')) /= 0) then
-      if(parse_block(datasets_check('OCTTargetSpin'), blk) == 0) then
+    if(parse_isdef('OCTTargetSpin') /= 0) then
+      if(parse_block('OCTTargetSpin', blk) == 0) then
         alpha = M_z0
         do jst = 1, parse_block_cols(blk, 0)
           call parse_block_cmplx(blk, 0, jst - 1, alpha(jst))

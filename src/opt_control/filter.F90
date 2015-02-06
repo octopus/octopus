@@ -20,7 +20,6 @@
 #include "global.h"
 
 module filter_m  
-  use datasets_m
   use fft_m
   use global_m
   use io_m 
@@ -109,7 +108,7 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( parse_block(datasets_check('OCTFilter'),blk) == 0 ) then
+    if( parse_block('OCTFilter', blk) == 0 ) then
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then

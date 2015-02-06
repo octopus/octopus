@@ -26,7 +26,6 @@
 !! OCT module, opt_control_m (as a module variable). It is initialized
 !! by calling oct_read_inp, defined below in this module.
 module opt_control_global_m
-  use datasets_m
   use global_m
   use messages_m
   use parser_m
@@ -155,7 +154,7 @@ contains
     !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, <i>IMA J. Numer. Analysis</i>
     !% <b>28</b>, 649-664 (2008)].
     !%End
-    call parse_integer(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
+    call parse_integer('OCTScheme', oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
@@ -176,12 +175,12 @@ contains
     case(oct_algorithm_bfgs)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
-      call parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
-      call parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+      call parse_float('OCTEta', M_ONE, oct%eta)
+      call parse_float('OCTDelta', M_ZERO, oct%delta)
     case(oct_algorithm_newuoa)
 #if defined(HAVE_NEWUOA)
-      call parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
-      call parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+      call parse_float('OCTEta', M_ONE, oct%eta)
+      call parse_float('OCTDelta', M_ZERO, oct%delta)
 #else
       write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
       write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
@@ -200,7 +199,7 @@ contains
     !% In order to make sure that the optimized field indeed does its job, the code 
     !% may run a normal propagation after the optimization using the optimized field.
     !%End
-    call parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
+    call parse_logical('OCTDoubleCheck', .true., oct%oct_double_check)
     call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
 
 
@@ -218,7 +217,7 @@ contains
     !% In order to activate this feature, set <tt>OCTCheckGradient</tt> to some non-zero value,
     !% which will be the finite difference used to numerically compute the gradient.
     !%End
-    call parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
+    call parse_float('OCTCheckGradient', CNST(0.0), oct%check_gradient)
     call messages_print_var_value(stdout, "OCTCheckGradient", oct%check_gradient)
 
 
@@ -231,7 +230,7 @@ contains
     !% the algorithms necessitate an initial "step" to perform the direct search for the
     !% optimal value. The precise meaning of this "step" differs.
     !%End
-    call parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
+    call parse_float('OCTDirectStep', CNST(0.25), oct%direct_step)
     call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
 
     !%Variable OCTNumberCheckPoints
@@ -249,7 +248,7 @@ contains
     !% If the backward (or forward) propagation is not retracing the steps of the previous
     !% forward (or backward) propagation, the code will write a warning.
     !%End
-    call parse_integer(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
+    call parse_integer('OCTNumberCheckPoints', 0, oct%number_checkpoints)
     call messages_print_var_value(stdout, "OCTNumberCheckPoints", oct%number_checkpoints)
 
     !%Variable OCTRandomInitialGuess
@@ -264,8 +263,7 @@ contains
     !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
     !% you still need to provide a <tt>TDExternalFields</tt> block.
     !%End
-    call parse_logical(datasets_check('OCTRandomInitialGuess'), &
-      .false., oct%random_initial_guess)
+    call parse_logical('OCTRandomInitialGuess', .false., oct%random_initial_guess)
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 
     call messages_print_stress(stdout)

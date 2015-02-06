@@ -20,7 +20,6 @@
 #include "global.h"
 
 module target_m
-  use datasets_m
   use density_m
   use derivatives_m
   use epot_m
@@ -246,7 +245,7 @@ contains
     !%Option oct_tg_spin 14
     !% EXPERIMENTAL
     !%End
-    call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
+    call parse_integer('OCTTargetOperator', oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
       call input_error('OCTTargetOperator')
 

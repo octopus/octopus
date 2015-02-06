@@ -86,7 +86,7 @@
     !%
     !%End
        
-    if(parse_block(datasets_check('OCTVelocityTarget'),blk)==0) then
+    if(parse_block('OCTVelocityTarget', blk)==0) then
       tg%vel_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
@@ -108,7 +108,7 @@
     end if
        
     if(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
-      if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
+      if(parse_block('OCTVelocityDerivatives', blk)==0) then
         SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
         do ist=0, geo%natoms-1
           do jst=0, gr%sb%dim-1

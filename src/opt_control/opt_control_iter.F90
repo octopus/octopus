@@ -20,7 +20,6 @@
 #include "global.h"
 
 module opt_control_iter_m
-  use datasets_m
   use global_m
   use grid_m
   use output_m
@@ -95,7 +94,7 @@ contains
     !% of the QOCT equations, <i>i.e.</i> a critical point of the QOCT functional (not
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
-    call parse_float(datasets_check('OCTEps'), CNST(1.0e-6), iterator%eps)
+    call parse_float('OCTEps', CNST(1.0e-6), iterator%eps)
     if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
 
     !%Variable OCTMaxIter
@@ -106,7 +105,7 @@ contains
     !% The maximum number of iterations.
     !% Typical values range from 10-100.
     !%End
-    call parse_integer(datasets_check('OCTMaxIter'), 10, iterator%ctr_iter_max)
+    call parse_integer('OCTMaxIter', 10, iterator%ctr_iter_max)
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
       message(1) = "OCTMaxIter and OCTEps cannot be both < 0."
@@ -122,7 +121,7 @@ contains
     !% Writes to disk the laser pulse data during the OCT algorithm at intermediate steps.
     !% These are files called <tt>opt_control/laser.xxxx</tt>, where <tt>xxxx</tt> is the iteration number.
     !%End
-    call parse_logical(datasets_check('OCTDumpIntermediate'), .false., iterator%dump_intermediate)
+    call parse_logical('OCTDumpIntermediate', .false., iterator%dump_intermediate)
     call messages_print_var_value(stdout, "OCTDumpIntermediate", iterator%dump_intermediate)
 
     iterator%ctr_iter = 0
