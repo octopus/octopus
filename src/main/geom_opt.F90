@@ -190,7 +190,7 @@ contains
 
       logical :: center, does_exist
       integer :: iter
-      character*100 :: filename
+      character(len=100) :: filename
       FLOAT :: default_toldr
       real(8) :: default_step
 

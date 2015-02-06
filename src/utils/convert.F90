@@ -46,7 +46,7 @@ program oct_convert
 
   implicit none
 
-  character*256 :: config_str
+  character(len=256) :: config_str
   integer :: ierr
   
   call getopt_init(ierr)

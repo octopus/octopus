@@ -40,7 +40,7 @@ program oct_test
 
   implicit none
 
-  character*256 :: config_str
+  character(len=256) :: config_str
   integer :: test_type
   integer :: test_mode
   integer :: ierr

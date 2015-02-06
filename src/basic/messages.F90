@@ -1188,7 +1188,7 @@ contains
     character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
 
-    character*100 :: fmt_
+    character(len=100) :: fmt_
 
     if(len(trim(message(current_line))) + len(trim(val)) > len(message(current_line))) then
       ! cannot use normal message approach without interfering with message we are trying to write
@@ -1211,7 +1211,7 @@ contains
     logical,           intent(in) :: val
     logical, optional, intent(in) :: new_line
 
-    character*3 :: text
+    character(len=3) :: text
 
     if(val) then
       text = 'yes'

@@ -139,7 +139,7 @@ contains
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
     FLOAT :: fft_alpha
-    character*60 :: str
+    character(len=60) :: str
 
     if(this%method /= POISSON_NULL) return ! already initialized
 
