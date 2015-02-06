@@ -20,7 +20,6 @@
 #include "global.h"
 
 module pes_m
-  use datasets_m
   use geometry_m
   use global_m
   use grid_m
@@ -178,7 +177,7 @@ contains
     !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
     !%End
 
-    call parse_integer(datasets_check('PhotoElectronSpectrum'), PHOTOELECTRON_NONE, photoelectron_flags)
+    call parse_integer('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call input_error('PhotoElectronSpectrum')
     end if

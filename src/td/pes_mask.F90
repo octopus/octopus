@@ -24,7 +24,6 @@ module pes_mask_m
   use comm_m
   use cube_function_m
   use cube_m
-  use datasets_m
   use density_m
   use fft_m
   use fourier_space_m
@@ -242,7 +241,7 @@ contains
     !%Option psf_mode 4
     !% Phase-space filter. Implementation not complete.
     !%End
-    call parse_integer(datasets_check('PESMaskMode'), PES_MASK_MODE_MASK, mask%mode)
+    call parse_integer('PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
     if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call input_error('PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
@@ -272,7 +271,7 @@ contains
     !%Option free 1
     !% Free plane-wave propagation.   
     !%End
-    call parse_integer(datasets_check('PESMaskPropagator'),VOLKOV, mask%sw_evolve)
+    call parse_integer('PESMaskPropagator', VOLKOV, mask%sw_evolve)
     if(.not.varinfo_valid_option('PESMaskPropagator', mask%sw_evolve)) call input_error('PESMaskPropagator')
     call messages_print_var_option(stdout, "PESMaskPropagator", mask%sw_evolve)
     
@@ -285,8 +284,7 @@ contains
     !% get rid of unwanted ionization signal coming from the pump.
     !% NOTE: this will enforce the mask boundary conditions for all the times. 
     !%End
-    call parse_float(datasets_check('PESMaskStartTime'),&
-      units_to_atomic(units_inp%time, - M_ONE), mask%start_time)
+    call parse_float('PESMaskStartTime', units_to_atomic(units_inp%time, - M_ONE), mask%start_time)
 
 
 
@@ -320,7 +318,7 @@ contains
     !%Option pnfft_map 7
     !% Use PNFFT libraries. 
     !%End
-    call parse_integer(datasets_check('PESMaskPlaneWaveProjection'), PW_MAP_BARE_FFT, mask%pw_map_how)
+    call parse_integer('PESMaskPlaneWaveProjection', PW_MAP_BARE_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) call input_error('PESMaskPlaneWaveProjection')
     call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
@@ -370,7 +368,7 @@ contains
     !% This helps to avoid wavefunction wrapping at the boundaries.
     !%End
 
-    call parse_float(datasets_check('PESMaskEnlargeFactor'), M_ONE, mask%enlarge)
+    call parse_float('PESMaskEnlargeFactor', M_ONE, mask%enlarge)
     
     if ( mask%enlarge /= M_ONE ) then
       call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge)
@@ -398,7 +396,7 @@ contains
     !% Note: needs <tt> PESMaskPlaneWaveProjection = nfft_map or pnfft_map </tt>.
     !%End
     
-    call parse_float(datasets_check('PESMask2PEnlargeFactor'), M_ONE, mask%enlarge_2p)
+    call parse_float('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p)
     
     if ( mask%enlarge_2p /= M_ONE ) then
       call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p)
@@ -575,7 +573,7 @@ contains
     !%Option m_erf 3 
     !%Error function. Not Implemented.
     !%End
-    call parse_integer(datasets_check('PESMaskShape'), defaultMask, mask%shape)
+    call parse_integer('PESMaskShape', defaultMask, mask%shape)
     if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call input_error('PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
@@ -592,7 +590,7 @@ contains
     !% <br>%</tt>
     !%
     !%End
-    if (parse_block(datasets_check('PESMaskSize'), blk) < 0)then
+    if (parse_block('PESMaskSize', blk) < 0)then
       if (sb%box_shape == SPHERE) then
         mask%mask_R(1)=mesh%sb%rsize/M_TWO
         mask%mask_R(2)=mesh%sb%rsize
@@ -600,7 +598,7 @@ contains
         mask%mask_R(1)=mesh%sb%lsize(1)/M_TWO
         mask%mask_R(2)=mesh%sb%lsize(1)        
       end if    
-      message(1)="PESMaskSize not specified. Using default values."
+      message(1) = "PESMaskSize not specified. Using default values."
       call messages_info(1)
     else 
       call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
@@ -645,8 +643,7 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_float(datasets_check('PESMaskFilterCutOff'),&
-      units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
+    call parse_float('PESMaskFilterCutOff', units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
@@ -678,7 +675,7 @@ contains
     !% and total simulation time. 
     !% Note: carefully choose R1 in order to avoid contributions from returning electrons. 
     !%End
-    call parse_logical(datasets_check('PESMaskIncludePsiA'), .false., mask%add_psia)
+    call parse_logical('PESMaskIncludePsiA', .false., mask%add_psia)
     if(mask%add_psia) then
       message(1)= "Input: Include contribution from Psi_A."
       call messages_info(1)
@@ -693,8 +690,7 @@ contains
     !% The maximum energy for the PES spectrum.
     !%End
     MaxE = maxval(mask%Lk)**2/2
-    call parse_float(datasets_check('PESMaskSpectEnergyMax'),&
-      units_to_atomic(units_inp%energy, MaxE), mask%energyMax)
+    call parse_float('PESMaskSpectEnergyMax', units_to_atomic(units_inp%energy, MaxE), mask%energyMax)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax)
 
 
@@ -706,8 +702,7 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-    call parse_float(datasets_check('PESMaskSpectEnergyStep'),&
-      units_to_atomic(units_inp%energy, DeltaE), mask%energyStep)
+    call parse_float('PESMaskSpectEnergyStep', units_to_atomic(units_inp%energy, DeltaE), mask%energyStep)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep",mask%energyStep)
     
     !%Variable PESMaskOutputInterpolate 
@@ -719,7 +714,7 @@ contains
     !% NOTE: In 3D this is practically prohibitive in the present implementation.
     !% We suggest to use the postprocessing tool <tt>oct-photoelectron_spectrum</tt> in this case. 
     !%End
-    call parse_logical(datasets_check('PESMaskOutputInterpolate'), .false., mask%interpolate_out)
+    call parse_logical('PESMaskOutputInterpolate', .false., mask%interpolate_out)
     if(mask%interpolate_out) then
       message(1)= "Input: output interpolation ENABLED."
       call messages_info(1)

@@ -21,7 +21,6 @@
 
 module td_write_m
   use c_pointer_m
-  use datasets_m
   use excited_states_m
   use forces_m
   use gauge_field_m
@@ -245,7 +244,7 @@ contains
     if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
     if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
-    call parse_integer(datasets_check('TDOutput'), default, flags)
+    call parse_integer('TDOutput', default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
 
@@ -269,7 +268,7 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
-    call parse_integer(datasets_check('TDMultipoleLmax'), 1, writ%lmax)
+    call parse_integer('TDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
@@ -287,7 +286,7 @@ contains
     if(geo%natoms == 1) rmin = CNST(100.0)
 
     ! This variable is documented in scf/scf.F90
-    call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_float('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write) then
       if (st%parallel_in_states) then
@@ -323,7 +322,7 @@ contains
         !% is set by the number of states in the propagation and the number of unoccupied states
         !% available.
         !%End
-        call parse_integer(datasets_check('TDProjStateStart'), 1, writ%gs_st%st_start)
+        call parse_integer('TDProjStateStart', 1, writ%gs_st%st_start)
       else
         writ%gs_st%st_start = 1
       end if

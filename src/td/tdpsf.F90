@@ -20,7 +20,6 @@
 #include "global.h"
 
 module tdpsf_m
-  use datasets_m
   use fft_m
   use global_m
   use loct_math_m
@@ -133,7 +132,7 @@ contains
     !%Description
     !% Standard deviation of the phase space filter.
     !%End
-    call parse_float(datasets_check('TDPSFSigma'),sqrt(M_TWO),psf%sigma)
+    call parse_float('TDPSFSigma', sqrt(M_TWO), psf%sigma)
     call messages_print_var_value(stdout, "TDPSFSigma",psf%sigma)
 
 
@@ -144,7 +143,7 @@ contains
     !%Description
     !% Filter error threshold.
     !%End
-    call parse_float(datasets_check('TDPSFDelta'),1.0d-4,psf%delta)
+    call parse_float('TDPSFDelta', 1.0d-4, psf%delta)
     call messages_print_var_value(stdout, "TDPSFDelta",psf%delta)
 
     !%Variable TDPSFKmin
@@ -154,7 +153,7 @@ contains
     !%Description
     !% k-space filter width.
     !%End
-    call parse_float(datasets_check('TDPSFKmin'),M_PI/width,psf%kmin)
+    call parse_float('TDPSFKmin', M_PI/width, psf%kmin)
     call messages_print_var_value(stdout, "TDPSFKmin",psf%kmin)
 
     kmin = psf%kmin

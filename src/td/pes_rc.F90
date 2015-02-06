@@ -21,7 +21,6 @@
 
 module pes_rc_m
   use comm_m
-  use datasets_m
   use geometry_m
   use global_m
   use grid_m
@@ -97,7 +96,7 @@ contains
     !% </tt>
     !%End
     call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
-    if (parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
+    if (parse_block('PhotoElectronSpectrumPoints', blk) < 0) then
       message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_rc'
       call messages_fatal(1)
     end if

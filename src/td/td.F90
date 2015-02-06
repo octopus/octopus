@@ -23,7 +23,6 @@ module td_m
   use batch_m
   use calc_mode_m
   use cmplxscl_m
-  use datasets_m
   use density_m
   use energy_calc_m
   use epot_m
@@ -403,7 +402,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_isdef(datasets_check('UserDefinedStates')) /= 0) then
+        if(parse_isdef('UserDefinedStates') /= 0) then
           call states_read_user_def_orbitals(gr%mesh, st)
         end if
         
@@ -432,8 +431,8 @@ contains
         !% the old ones. The coefficients are complex, but the imaginary part will be
         !% ignored for real wavefunctions.
         !%End
-        if(parse_isdef(datasets_check('TransformStates')) /= 0) then
-          if(parse_block(datasets_check('TransformStates'), blk) == 0) then
+        if(parse_isdef('TransformStates') /= 0) then
+          if(parse_block('TransformStates', blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
             call states_look_and_load(restart, stin, gr)
@@ -487,7 +486,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+      call parse_integer('TDFreezeOrbitals', 0, freeze_orbitals)
 
       if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
 
@@ -526,7 +525,7 @@ contains
       !% The electrons are evolved as independent particles feeling the Hartree and 
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
-      call parse_logical(datasets_check('TDFreezeHXC'), .false., freeze_hxc)
+      call parse_logical('TDFreezeHXC', .false., freeze_hxc)
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)

@@ -29,7 +29,6 @@ module propagator_m
   use cmplxscl_m
   use comm_m
   use cube_function_m
-  use datasets_m
   use density_m
   use energy_calc_m
   use exponential_m
@@ -327,7 +326,7 @@ contains
 
     default_propagator = PROP_ETRS
 
-    call parse_integer(datasets_check('TDPropagator'), default_propagator, tr%method)
+    call parse_integer('TDPropagator', default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
 
     select case(tr%method)
@@ -436,7 +435,7 @@ contains
     !% Self-consistency is imposed for all propagation steps.
     !%End
 
-    call parse_integer(datasets_check('TDStepsWithSelfConsistency'), 3, tr%scf_propagation_steps)
+    call parse_integer('TDStepsWithSelfConsistency', 3, tr%scf_propagation_steps)
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
     if(tr%scf_propagation_steps < 0) call input_error('TDStepsWithSelfConsistency')
 
@@ -454,7 +453,7 @@ contains
     !% The self consistency has to be measured against some accuracy 
     !% threshold. This variable controls the value of that threshold.
     !%End
-    call parse_float(datasets_check('TDSCFThreshold'), CNST(1.0e-3), tr%scf_threshold)
+    call parse_float('TDSCFThreshold', CNST(1.0e-3), tr%scf_threshold)
 
     POP_SUB(propagator_init)
   end subroutine propagator_init

@@ -24,7 +24,6 @@ module spectrum_m
   use c_pointer_m
   use cmplxscl_m
   use compressed_sensing_m
-  use datasets_m
   use fft_m
   use global_m
   use io_m
@@ -137,7 +136,7 @@ contains
     !% Power spectrum of the dipole moment.
     !%End
 
-    call parse_integer(datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
+    call parse_integer('PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) call input_error('PropagationSpectrumType')
 
     !%Variable SpectrumMethod
@@ -152,7 +151,7 @@ contains
     !%Option compressed_sensing 2
     !% (Experimental) Uses the compressed sensing technique.
     !%End
-    call parse_integer(datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
+    call parse_integer('SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call input_error('SpectrumMethod')
     endif
@@ -167,7 +166,7 @@ contains
     !% noise that is given by this quantity. The default value is
     !% 0.0, this value is unitless.
     !%End
-    call parse_float(datasets_check('SpectrumSignalNoise'), CNST(0.0), spectrum%noise)
+    call parse_float('SpectrumSignalNoise', CNST(0.0), spectrum%noise)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
       call messages_experimental('compressed sensing')
@@ -193,7 +192,7 @@ contains
     default = SPECTRUM_DAMP_POLYNOMIAL
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
 
-    call parse_integer(datasets_check('PropagationSpectrumDampMode'), default, spectrum%damp)
+    call parse_integer('PropagationSpectrumDampMode', default, spectrum%damp)
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) call input_error('PropagationSpectrumDampMode')
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
@@ -215,7 +214,7 @@ contains
     !%Option exponential 1
     !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
     !%End
-    call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, spectrum%transform)
+    call parse_integer('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
       call input_error('PropagationSpectrumTransform')
     endif
@@ -228,7 +227,7 @@ contains
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumStartTime'),  M_ZERO, spectrum%start_time, units_inp%time)
+    call parse_float('PropagationSpectrumStartTime',  M_ZERO, spectrum%start_time, units_inp%time)
 
     !%Variable PropagationSpectrumEndTime
     !%Type float
@@ -239,7 +238,7 @@ contains
     !% value of this variable. If set to a negative value, the maximum value from 
     !% the corresponding multipole file will used.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumEndTime'), -M_ONE, spectrum%end_time, units_inp%time)
+    call parse_float('PropagationSpectrumEndTime', -M_ONE, spectrum%end_time, units_inp%time)
 
     !%Variable PropagationSpectrumEnergyStep
     !%Type float
@@ -251,7 +250,7 @@ contains
     !%End
     fdefault = CNST(0.01)/(M_TWO*P_Ry)
     if(present(default_energy_step)) fdefault = default_energy_step
-    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), fdefault, spectrum%energy_step, units_inp%energy)
+    call parse_float('PropagationSpectrumEnergyStep', fdefault, spectrum%energy_step, units_inp%energy)
     
     !%Variable PropagationSpectrumMaxEnergy
     !%Type float
@@ -262,7 +261,7 @@ contains
     !%End
     fdefault = CNST(20.0)/(M_TWO*P_Ry)
     if(present(default_max_energy)) fdefault = default_max_energy
-    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), fdefault, spectrum%max_energy, units_inp%energy)
+    call parse_float('PropagationSpectrumMaxEnergy', fdefault, spectrum%max_energy, units_inp%energy)
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
@@ -272,8 +271,7 @@ contains
     !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), &
-      spectrum%damp_factor, units_inp%time**(-1))
+    call parse_float('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init

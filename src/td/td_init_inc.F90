@@ -62,14 +62,14 @@ subroutine td_init(td, sys, hm)
   !% For more details see: <tt>http://arxiv.org/abs/0710.3321</tt>
   !%
   !%End
-  call parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
+  call parse_float('TDIonicTimeScale', CNST(1.0), td%mu)
 
   if (td%mu <= M_ZERO) then
     write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
     call messages_fatal(1)
   end if
 
-  call messages_print_var_value(stdout, datasets_check('TDIonicTimeScale'), td%mu)
+  call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
 
   !%Variable TDTimeStep
   !%Type float
@@ -94,14 +94,14 @@ subroutine td_init(td, sys, hm)
   default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
   default_dt = default_dt*td%mu
 
-  call parse_float(datasets_check('TDTimeStep'), default_dt, td%dt, unit = units_inp%time)
+  call parse_float('TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
   if (td%dt <= M_ZERO) then
     write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
     call messages_fatal(1)
   end if
 
-  call messages_print_var_value(stdout, datasets_check('TDTimeStep'), td%dt, unit = units_out%time)
+  call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
   !%Variable TDMaximumIter
   !%Type integer
@@ -118,8 +118,8 @@ subroutine td_init(td, sys, hm)
   !%
   !%End 
 
-  call parse_integer(datasets_check('TDMaximumIter'), 1500, td%max_iter)
-  call messages_print_var_value(stdout, datasets_check('TDMaximumIter'), td%max_iter)
+  call parse_integer('TDMaximumIter', 1500, td%max_iter)
+  call messages_print_var_value(stdout, 'TDMaximumIter', td%max_iter)
 
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
@@ -149,7 +149,7 @@ subroutine td_init(td, sys, hm)
   !% Car-Parrinello molecular dynamics.
   !%End
 
-  call parse_integer(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
+  call parse_integer('TDDynamics', EHRENFEST, td%dynamics)
   if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
   if(td%dynamics .ne. EHRENFEST) then
@@ -172,9 +172,9 @@ subroutine td_init(td, sys, hm)
   !% The recalculation is not done every time step, but only every
   !% <tt>RestartWriteInterval</tt> time steps.
   !%End
-  call parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
+  call parse_logical('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
-  call messages_obsolete_variable(datasets_check('TDScissor'))
+  call messages_obsolete_variable('TDScissor')
 
   call propagator_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
@@ -197,7 +197,7 @@ subroutine td_init(td, sys, hm)
   !% the energy will be calculated in each step.
   !%End 
 
-  call parse_integer(datasets_check('TDEnergyUpdateIter'), 10, td%energy_update_iter)
+  call parse_integer('TDEnergyUpdateIter', 10, td%energy_update_iter)
 
   POP_SUB(td_init)
 end subroutine td_init
