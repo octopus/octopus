@@ -111,8 +111,8 @@ contains
 
     call parse_integer('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
-    if(this%method /= CURRENT_GRADIENT) &
-      call messages_experimental("CurrentDensity /= gradient")
+    if(this%method /= CURRENT_GRADIENT_CORR) &
+      call messages_experimental("CurrentDensity /= gradient_corrected")
 
     POP_SUB(current_init)
   end subroutine current_init
