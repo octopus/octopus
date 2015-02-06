@@ -48,9 +48,6 @@ module propagator_m
   use mesh_function_m
   use messages_m
   use multicomm_m
-  use ob_mem_m
-  use ob_propagator_m
-  use ob_terms_m
   use opencl_m
   use opt_control_state_m
   use output_m
@@ -93,7 +90,6 @@ module propagator_m
     PROP_CRANK_NICOLSON          = 5,  &
     PROP_CRANK_NICOLSON_SPARSKIT = 6,  &
     PROP_MAGNUS                  = 7,  &
-    PROP_CRANK_NICOLSON_SRC_MEM  = 8,  &
     PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
     PROP_CAETRS                  = 12, &
     PROP_RUNGE_KUTTA4            = 13, &
@@ -113,7 +109,6 @@ module propagator_m
     type(vksinterp_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
-    type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
     integer             :: scf_propagation_steps 
     logical             :: first
 #ifdef HAVE_SPARSKIT
@@ -147,7 +142,6 @@ contains
     !call exponential_nullify(this%te)
     call vksinterp_nullify(this%vksold)
     this%vmagnus=>null() 
-    !call ob_terms_nullify(this%ob)
     !this%scf_propagation_steps 
     !this%first
 
@@ -172,9 +166,6 @@ contains
     select case(tro%method)
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
-    case(PROP_CRANK_NICOLSON_SRC_MEM)
-      message(1) = 'Internal error at propagator_copy.'
-      call messages_fatal(1)
 #ifdef HAVE_SPARSKIT
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
@@ -322,10 +313,6 @@ contains
     !% dealing with problem with very high-frequency time-dependence.
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
-    !%Option crank_nicholson_src_mem 8
-    !%Option crank_nicolson_src_mem 8
-    !% Crank-Nicolson propagator with source and memory term for transport
-    !% calculations.
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
     !%Option runge_kutta4 13
@@ -339,21 +326,9 @@ contains
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
     default_propagator = PROP_ETRS
-    if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICOLSON_SRC_MEM
 
     call parse_integer(datasets_check('TDPropagator'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
-
-    if(gr%ob_grid%open_boundaries.and.tr%method /= PROP_CRANK_NICOLSON_SRC_MEM) then
-      message(1) = 'The time-evolution method for time-dependent run cannot'
-      message(2) = 'be chosen freely. The Crank-Nicolson propagator'
-      message(3) = 'with source and memory term has to be used. Either set'
-      message(4) = ''
-      message(5) = '  TDPropagator = crank_nicolson_src_mem'
-      message(6) = ''
-      message(7) = 'in your input or remove the TDPropagator variable.'
-      call messages_fatal(7)
-    end if
 
     select case(tr%method)
     case(PROP_ETRS)
@@ -411,8 +386,6 @@ contains
     case(PROP_MAGNUS)
       call messages_experimental("Magnus propagator")
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
-    case(PROP_CRANK_NICOLSON_SRC_MEM)
-      call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call messages_experimental("QOCT+TDDFT propagator")
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
@@ -535,8 +508,6 @@ contains
       call sparskit_solver_end(tr%tdsk)
       SAFE_DEALLOCATE_P(tr%tdsk)
 #endif
-    case(PROP_CRANK_NICOLSON_SRC_MEM)
-      call ob_propagator_end(tr%ob)
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
@@ -641,8 +612,6 @@ contains
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
       call td_magnus(hm, gr, st, tr, time, dt)
-    case(PROP_CRANK_NICOLSON_SRC_MEM)
-      call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
@@ -693,8 +662,6 @@ contains
             call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
           case(PROP_MAGNUS)
             call td_magnus(hm, gr, st, tr, time, dt)
-          case(PROP_CRANK_NICOLSON_SRC_MEM)
-            call td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
           case(PROP_EXPLICIT_RUNGE_KUTTA4)

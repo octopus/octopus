@@ -147,10 +147,6 @@ contains
     if(td%dynamics == EHRENFEST) then
       !complex wfs are required for Ehrenfest
       call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
-      if(st%open_boundaries) then
-        ASSERT(associated(gr%ob_grid%lead))
-        call states_allocate_intf_wfns(st, gr%ob_grid%lead(:)%mesh)
-      end if
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
     end if
@@ -397,13 +393,11 @@ contains
         call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs", kpts_dont_matter = st%open_boundaries)
+          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
           if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
           end if
-          ! extract the interface wave function
-          if(st%open_boundaries) call states_get_ob_intf(st, gr)
         end if
 
         ! check if we should deploy user-defined wavefunctions.
@@ -703,9 +697,6 @@ contains
     call states_load(restart, st, gr, err, iter=td%iter, read_left = st%have_left_states, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
-    else if (st%open_boundaries) then
-      ! extract the interface wave function
-      call states_get_ob_intf(st, gr)
     end if
 
     ! read potential from previous interactions

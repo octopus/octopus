@@ -18,37 +18,6 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-!> Crank-Nicolson scheme with source and memory term.
-subroutine td_crank_nicolson_src_mem(hm, gr, st, tr, max_iter, nt, time, dt)
-  type(hamiltonian_t), target,     intent(inout) :: hm
-  type(grid_t),        target,     intent(inout) :: gr
-  type(states_t),      target,     intent(inout) :: st
-  type(propagator_t),  target,     intent(inout) :: tr
-  integer,                         intent(in)    :: max_iter
-  integer,                         intent(in)    :: nt
-  FLOAT,                           intent(in)    :: time
-  FLOAT,                           intent(in)    :: dt
-
-  PUSH_SUB(td_crank_nicolson_src_mem)
-    
-  select case(tr%ob%mem_type)
-  case(SAVE_CPU_TIME)
-    call cn_src_mem_dt(tr%ob, st, hm, gr, dt, time, nt)
-  case(SAVE_RAM_USAGE)
-    call cn_src_mem_sp_dt(tr%ob, st, hm, gr, max_iter, dt, time, nt)
-  end select
-
-  if(.not. hm%cmplxscl%space) then
-    call density_calc(st, gr, st%rho)
-  else
-    call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-  end if
-
-  POP_SUB(td_crank_nicolson_src_mem)
-end subroutine td_crank_nicolson_src_mem
-! ---------------------------------------------------------
-
-! ---------------------------------------------------------
 !> Crank-Nicolson propagator
 subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
   type(hamiltonian_t), target,     intent(inout) :: hm
