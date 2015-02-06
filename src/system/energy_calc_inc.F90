@@ -44,14 +44,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
     call messages_info(1)
   end if
 
-  ! FIXME: for TD open boundaries this is wrong. But the GS case like above
-  ! is also wrong.
-  ! The correct way to calculate the eigenvalue here is:
-  !      / Psi_L | H_LL H_LC 0    | Psi_L \
-  ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
-  !      \ Psi_R | 0    H_RC H_RR | Psi_R /
-  ! But I am not sure how to calculate this right now.
-
   st%eigenval = M_ZERO
   if(cmplxscl) st%zeigenval%Im = M_ZERO
 

@@ -74,8 +74,7 @@ contains
 
   !-------------------------------------------------------------------
   !>
-  !! "Zero-th" stage of grid initialization. It initializes the open boundaries stuff
-  !! (if necessary), and the simulation box.
+  !! "Zero-th" stage of grid initialization. It initializes the simulation box.
   subroutine grid_init_stage_0(gr, geo, space)
     type(grid_t),          intent(inout) :: gr
     type(geometry_t),      intent(inout) :: geo

@@ -120,7 +120,6 @@ module simul_box_m
 
     integer :: dim
     integer :: periodic_dim
-    integer :: transport_dim
 
     !> for the box defined through an image
     integer             :: image_size(1:2)
@@ -146,8 +145,6 @@ contains
 
     PUSH_SUB(simul_box_init)
 
-    sb%transport_dim = 0
-
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
     call read_misc()                       ! Miscellaneous stuff.
@@ -161,7 +158,7 @@ contains
 
     call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice)
 
-    ! we need k-points for periodic systems or for open boundaries
+    ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
@@ -1137,7 +1134,6 @@ contains
       llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
-      ulimit(1:sb%transport_dim) = sb%lsize(1:sb%transport_dim) - DELTA
 
       forall(ip = 1:npoints)
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
@@ -1222,7 +1218,7 @@ contains
         write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
         write(iunit, '(a20,i4)')        'dim=                ', sb%dim
         write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
-        write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
+        write(iunit, '(a20,i4)')        'transport_dim=      ', 0 ! sb%transport_dim
         select case(sb%box_shape)
         case(SPHERE, MINIMUM)
           write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
@@ -1296,7 +1292,7 @@ contains
           read(lines(1), *) str, sb%box_shape
           read(lines(2), *) str, sb%dim
           read(lines(3), *) str, sb%periodic_dim
-          read(lines(4), *) str, sb%transport_dim
+          read(lines(4), *) str, il ! sb%transport_dim
         else
           ierr = ierr + 2**2
         end if
@@ -1429,7 +1425,6 @@ contains
     sbout%volume_element          = sbin%volume_element
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
-    sbout%transport_dim           = sbin%transport_dim
     sbout%mr_flag                 = sbin%mr_flag
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii

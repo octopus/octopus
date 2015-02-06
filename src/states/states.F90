@@ -75,7 +75,6 @@ module states_m
   public ::                           &
     states_t,                         &
     states_priv_t,                    &
-    states_lead_t,                    &
     states_init,                      &
     states_look,                      &
     states_densities_init,            &
@@ -130,12 +129,6 @@ module states_m
     FLOAT, pointer     :: Re(:, :) !< Real components 
     FLOAT, pointer     :: Im(:, :) !< Imaginary components
   end type cmplx_array2_t
-
-  type states_lead_t
-    CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
-    FLOAT, pointer     :: rho(:, :)   !< Density of the lead unit cells.
-    CMPLX, pointer     :: self_energy(:, :, :, :, :) !< (np, np, nspin, ncs, nik) self-energy of the leads.
-  end type states_lead_t
 
   type states_priv_t
     private

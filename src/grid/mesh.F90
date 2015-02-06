@@ -669,25 +669,14 @@ contains
 
 
   ! --------------------------------------------------------------
-  recursive subroutine mesh_end(mesh, is_lead)
+  recursive subroutine mesh_end(mesh)
     type(mesh_t), intent(inout)   :: mesh
-    logical, intent(in), optional :: is_lead
-
-    logical :: is_lead_
 
     PUSH_SUB(mesh_end)
 
     call mesh_cube_map_end(mesh%cube_map)
 
-    if (present(is_lead)) then
-      is_lead_ = is_lead
-    else
-      is_lead_ = .false.
-    end if
-
-    if (.not. is_lead_) then
-      if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
-    end if
+    if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
 
     SAFE_DEALLOCATE_P(mesh%resolution)
     SAFE_DEALLOCATE_P(mesh%idx%lxyz)
