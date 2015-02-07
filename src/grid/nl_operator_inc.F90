@@ -33,8 +33,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   logical :: ghost_update_, profile_
   integer :: nri, nri_loc, ini
   integer, pointer :: imin(:), imax(:), ri(:, :)
-  R_TYPE,  pointer ::  pfi(:), pfo(:)
-  FLOAT,   pointer :: wre(:), wim(:)
+  R_TYPE,  pointer :: pfi(:), pfo(:)
+!  FLOAT, allocatable :: wre(:), wim(:)
+  R_BASE, allocatable :: wre(:), wim(:)  
 
   PUSH_SUB(X(nl_operator_operate_batch))
 
@@ -68,9 +69,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 #endif
 
-  nullify(wre)
-  nullify(wim)
-
 #ifdef R_TREAL
   if(op%cmplx_op) then
     message(1) = "dnl_operator_operate_batch: cannot apply complex operator with real output."
@@ -79,19 +77,23 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
 
   if(op%const_w) then
+    SAFE_ALLOCATE(wre(1:op%stencil%size))
+
+    wre(1:op%stencil%size) = op%w_re(:, 1)
+
+    if(op%cmplx_op) then
+      SAFE_ALLOCATE(wim(1:op%stencil%size))
+      wim(1:op%stencil%size) = op%w_im(1:op%stencil%size, 1)
+    end if
+    
     if(present(factor)) then
-      SAFE_ALLOCATE(wre(1:op%stencil%size))
-      wre = op%w_re(:, 1)*factor
+      wre(1:op%stencil%size) = wre(1:op%stencil%size)*factor
       if(op%cmplx_op) then
-        SAFE_ALLOCATE(wim(1:op%stencil%size))
-        wim = op%w_im(:, 1)*factor
+        wim(1:op%stencil%size) = wim(1:op%stencil%size)*factor
       end if
-    else
-      wre => op%w_re(:, 1)
-      if(op%cmplx_op) wim => op%w_im(:, 1)
     end if
   end if
-
+    
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
@@ -148,10 +150,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   end if
 
-  if(op%const_w .and. present(factor)) then
-    SAFE_DEALLOCATE_P(wre)
-    SAFE_DEALLOCATE_P(wim)
-  end if
+  SAFE_DEALLOCATE_A(wre)
+  SAFE_DEALLOCATE_A(wim)
 
   if(profile_) call profiling_out(operate_batch_prof)
   POP_SUB(X(nl_operator_operate_batch))
