@@ -412,7 +412,7 @@ contains
     n_spec_def = max(0, loct_number_of_lines(fname))
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 
-    iunit = io_open(fname, action='read', status='old', die=.false., is_tmp=.true.)
+    iunit = io_open(fname, action='read', status='old', die=.false.)
     if(iunit > 0) then
       read(iunit,*)
 

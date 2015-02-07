@@ -45,11 +45,11 @@ subroutine output_states(st, gr, geo, dir, outp)
         SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
         forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
         call zio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          ztmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          ztmp(:), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
         SAFE_DEALLOCATE_A(ztmp)
       else
         call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end if
     end do
   end if
@@ -66,7 +66,7 @@ subroutine output_states(st, gr, geo, dir, outp)
           write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
         endif
         call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          dtmp(:), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end do
     SAFE_DEALLOCATE_A(dtmp)
@@ -102,16 +102,16 @@ subroutine output_states(st, gr, geo, dir, outp)
             if (states_are_real(st)) then
               call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               call dio_function_output(outp%how, dir, fname, gr%mesh, dtmp, &
-                fn_unit, ierr, is_tmp = .false., geo = geo)
+                fn_unit, ierr, geo = geo)
             else
               call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
-                fn_unit, ierr, is_tmp = .false., geo = geo)
+                fn_unit, ierr, geo = geo)
               if(st%have_left_states) then
                 fname = 'L'// trim(fname)
                 call states_get_state(st, gr%mesh, idim, ist, ik, ztmp, left = .true.)
                 call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
-                  fn_unit, ierr, is_tmp = .false., geo = geo)                    
+                  fn_unit, ierr, geo = geo)                    
               end if
             end if
           end do
@@ -155,7 +155,7 @@ subroutine output_states(st, gr, geo, dir, outp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
             call dio_function_output (outp%how, dir, fname, gr%mesh, &
-              dtmp, fn_unit, ierr, is_tmp = .false., geo = geo)
+              dtmp, fn_unit, ierr, geo = geo)
           end do
         end do
       end if
@@ -172,12 +172,12 @@ subroutine output_states(st, gr, geo, dir, outp)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-        elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        elf(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, 2
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          elf(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)

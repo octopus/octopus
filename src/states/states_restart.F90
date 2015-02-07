@@ -877,7 +877,7 @@ contains
 
     ! skip for now, since we know what the files are going to be called
     !read the densities
-!    iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
+!    iunit_rho = io_open(trim(dir)//'/density', action='write')
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.
@@ -1087,7 +1087,7 @@ contains
                 call messages_info(3)
 
                 ! finally read the state
-                call zio_function_input(filename, mesh, zpsi(:, 1), ierr, .true.)
+                call zio_function_input(filename, mesh, zpsi(:, 1), ierr)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr

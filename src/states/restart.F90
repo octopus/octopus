@@ -477,7 +477,7 @@ contains
     ! Check if the directory already exists and create it if necessary
     dir_exists = loct_dir_exists(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
-      call io_mkdir(trim(restart%pwd), is_tmp=.true., parents=.true.)
+      call io_mkdir(trim(restart%pwd), parents=.true.)
     end if
 
     if (restart%data_type == RESTART_UNDEFINED) then
@@ -495,7 +495,7 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., is_tmp=.true., grp=mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
@@ -709,7 +709,7 @@ contains
 
     ASSERT (restart%type == RESTART_TYPE_DUMP)
 
-    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), is_tmp=.true., parents=.true.)
+    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), parents=.true.)
 
     POP_SUB(restart_mkdir)
   end subroutine restart_mkdir
@@ -773,7 +773,7 @@ contains
     if (present(status)) status_ = status
 
     restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
-                           die=die, is_tmp=.true., position=position, form="formatted", grp=restart%mpi_grp)
+                           die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."

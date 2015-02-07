@@ -117,7 +117,7 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
-        fn_unit, ierr, is_tmp = .false., geo = geo)
+        fn_unit, ierr, geo = geo)
     end if
 
   end do

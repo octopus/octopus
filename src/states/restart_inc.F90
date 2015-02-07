@@ -39,10 +39,9 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, use
   ASSERT(restart%has_mesh)
   if (use_mpi_grp_) then
     call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
-         is_tmp=.true., grp=restart%mpi_grp)
+         grp=restart%mpi_grp)
   else
-    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
-         is_tmp=.true.)
+    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr)
   ! all restart files are in atomic units
   end if
 
@@ -82,7 +81,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
     call X(io_function_input) (trim(restart%pwd)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, &
-                               is_tmp=.true., map = restart%map)
+                               map = restart%map)
 
     POP_SUB(X(restart_read_mesh_function))
     return

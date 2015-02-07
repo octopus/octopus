@@ -142,7 +142,7 @@
             endif
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               current(:, idir, is), (unit_one / units_out%time) * units_out%length**(1-der%mesh%sb%dim), err, &
-              is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
+              geo = geo, grp = st%dom_st_kpt_mpi_grp)
           end do
         end do
         SAFE_DEALLOCATE_A(current)

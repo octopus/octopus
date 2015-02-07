@@ -75,7 +75,7 @@ contains
       write(message(2), '(6x,3a)') "'", trim(filename2), "'"
       call messages_info(2)
 
-      iunit = io_open(filename2, action='read', form='unformatted', status='old', is_tmp=.true.)
+      iunit = io_open(filename2, action='read', form='unformatted', status='old')
       call ps_psf_file_read(iunit, .false., pstm%psf_file)
       call io_close(iunit)
     else
@@ -93,7 +93,7 @@ contains
       write(message(2), '(6x,3a)') "'", trim(filename2), "'"
       call messages_info(2)
 
-      iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
+      iunit = io_open(filename2, action='read', form='formatted', status='old')
       call ps_psf_file_read(iunit, .true., pstm%psf_file)
       call io_close(iunit)
     end if

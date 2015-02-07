@@ -157,7 +157,7 @@ contains
     endif
 
     ! create static directory
-    call io_mkdir(STATIC_DIR, is_tmp=.false.)
+    call io_mkdir(STATIC_DIR)
 
     if(in_debug_mode) then
       !%Variable MPIDebugHook
@@ -264,16 +264,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=512) function io_workpath(path, is_tmp) result(wpath)
+  character(len=512) function io_workpath(path) result(wpath)
     character(len=*),  intent(in) :: path
-    logical, optional, intent(in) :: is_tmp
-
-    logical :: is_tmp_
 
     PUSH_SUB(io_workpath)
-
-    is_tmp_ = .false.
-    if(present(is_tmp)) is_tmp_ = is_tmp
 
     if(path(1:1)  ==  '/') then
       ! we do not change absolute path names
@@ -288,30 +282,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine io_mkdir(fname, is_tmp, parents)
+  subroutine io_mkdir(fname, parents)
     character(len=*),  intent(in) :: fname
-    logical, optional, intent(in) :: is_tmp
     logical, optional, intent(in) :: parents
 
-    logical :: is_tmp_, parents_
+    logical :: parents_
     integer :: last_slash, pos, length
 
     PUSH_SUB(io_mkdir)
-
-    is_tmp_ = .false.
-    if (present(is_tmp)) is_tmp_ = is_tmp
 
     parents_ = .false.
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
+      call loct_mkdir(trim(io_workpath(fname)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
       pos = 1
       length = index(fname, '/') - 1
       do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), is_tmp_)))
+        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1))))
         pos = pos + length + 1
         length = index(fname(pos:), "/") - 1
         if (length < 1) length = len_trim(fname(pos:))
@@ -324,16 +314,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die, is_tmp, recl, grp) result(iunit)
+  integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
     character(len=*), intent(in), optional :: status, form, position
-    logical,          intent(in), optional :: die, is_tmp
+    logical,          intent(in), optional :: die
     integer,          intent(in), optional :: recl
     type(mpi_grp_t),  intent(in), optional :: grp
 
     character(len=20)  :: status_, form_, position_
     character(len=512) :: file_
-    logical            :: die_, is_tmp_
+    logical            :: die_
     integer            :: iostat
     type(mpi_grp_t)    :: grp_
 
@@ -369,9 +359,7 @@ contains
         return
       end if
 
-      is_tmp_ = .false.
-      if(present(is_tmp)) is_tmp_ = is_tmp
-      file_ = io_workpath(file, is_tmp_)
+      file_ = io_workpath(file)
 
       if(present(recl)) then
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
@@ -550,7 +538,7 @@ contains
 
       ! create empty status file 
       iunit = io_open('exec/oct-status-'//trim(status), &
-        action='write', status='unknown', is_tmp=.true.)
+        action='write', status='unknown')
       call io_close(iunit)
     end if
 

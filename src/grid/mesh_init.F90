@@ -874,7 +874,7 @@ contains
       call parse_logical('MeshPartitionWrite', .true., write_partition)
 
       if (mpi_grp_is_root(mesh%mpi_grp)) then
-        call io_mkdir(trim(partition_dir), is_tmp = .true., parents=.true.)
+        call io_mkdir(trim(partition_dir), parents=.true.)
       end if
       if (write_partition) then
         call mesh_partition_dump(partition_dir, mesh, vsize, ierr)

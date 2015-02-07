@@ -104,7 +104,7 @@ contains
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
     call messages_info(2)
 
-    iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
+    iunit = io_open(filename2, action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
       message(1) = 'Error reading hgh file!'

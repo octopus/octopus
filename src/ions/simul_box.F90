@@ -1206,7 +1206,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., is_tmp=.true., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -1275,7 +1275,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., is_tmp=.true., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."

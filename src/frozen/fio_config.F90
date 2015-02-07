@@ -469,7 +469,7 @@ contains
     PUSH_SUB(fio_config_parse_read)
     call json_init(this)
     call fio_config_parse_get_file(dirname, input_static_dir, dir, "config.json")
-    iunit=io_open(trim(adjustl(dir))//"/"//"config.json", action='read', status="old", is_tmp=.true.)
+    iunit=io_open(trim(adjustl(dir))//"/"//"config.json", action='read', status="old")
     ASSERT(iunit>0)
     call json_parser_init(parser, iunit, ierr)
     if(ierr/=0)call json_parser_error(parser, fatal=.true.)
