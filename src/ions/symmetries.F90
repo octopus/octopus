@@ -207,6 +207,13 @@ contains
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
         call messages_warning(1)
+
+        do iatom = 1, geo%natoms
+          write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
+            ' reduced coords ', position(:, iatom), ' cartesian coords ', geo%atom(iatom)%x(:)
+          call messages_info(1)
+        enddo
+
         call init_identity()
         SAFE_DEALLOCATE_A(rotation)
         SAFE_DEALLOCATE_A(translation)
