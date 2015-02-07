@@ -143,6 +143,8 @@ contains
     integer :: iatom
     type(states_t), pointer :: psi
 
+    FLOAT :: init_time, final_time
+
     PUSH_SUB(propagate_forward)
 
     message(1) = "Info: Forward propagation."
@@ -209,6 +211,7 @@ contains
       end if
     end if
 
+    init_time = loct_clock()
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     ii = 1
@@ -248,6 +251,10 @@ contains
       if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+
+    final_time = loct_clock()
+    write(message(1),'(a,f12.2,a)') 'Propagation time: ', final_time - init_time, ' seconds.'
+    call messages_info(1)
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
@@ -578,6 +585,8 @@ contains
     FLOAT, allocatable :: fold(:, :), fnew(:, :)
     type(ion_state_t) :: ions_state_initial, ions_state_final
 
+    FLOAT :: init_time, final_time
+
     PUSH_SUB(bwd_step_2)
 
     chi => opt_control_point_qs(qcchi)
@@ -623,6 +632,9 @@ contains
     message(1) = "Info: Backward propagation."
     call messages_info(1)
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
+
+    init_time = loct_clock()
+
     do i = td%max_iter, 1, -1
 
       call oct_prop_check(prop_psi, psi, gr, i)
@@ -702,6 +714,10 @@ contains
       call loct_progress_bar(td%max_iter, td%max_iter)
       write(stdout, '(1x)')
     end if
+
+    final_time = loct_clock()
+    write(message(1),'(a,f12.2,a)') 'Propagation time: ', final_time - init_time, ' seconds.'
+    call messages_info(1)
 
     call states_end(st_ref)
 

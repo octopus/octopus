@@ -124,8 +124,10 @@ contains
 
     integer :: jatom, idim, jdim
     integer, target :: i, j, ist, ik, iatom
-    FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), gq, fq, dq, abserr
+    FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), gq, fq, dq, abserr, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
     type(profile_t), save :: forces_prof
+
+    FLOAT, allocatable :: forceks1p(:), forceks1m(:), forceks1p2(:), forceks1m2(:), dforceks1(:)
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
@@ -152,7 +154,7 @@ contains
 
     SAFE_ALLOCATE(derpsi_(1:gr%mesh%np_part, 1:gr%sb%dim, 1:psi%d%dim))
 
-    dq = CNST(0.005)
+    dq = CNST(0.001)
 
     geo_ => geo
     gr_ => gr
@@ -164,23 +166,37 @@ contains
     iatom_ => iatom
     psi_ => psi
     chi_ => chi
+
+    SAFE_ALLOCATE(forceks1p(1:gr%sb%dim))
+    SAFE_ALLOCATE(forceks1m(1:gr%sb%dim))
+    SAFE_ALLOCATE(forceks1p2(1:gr%sb%dim))
+    SAFE_ALLOCATE(forceks1m2(1:gr%sb%dim))
+    SAFE_ALLOCATE(dforceks1(1:gr%sb%dim))
     
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
         derpsi_ = M_z0
         call zderivatives_grad(gr%der, psi%zpsi(:, 1, ist, ik), derpsi_(:, :, 1))
         do iatom = 1, geo%natoms
-          do i = 1, gr%sb%dim
-            do j = 1, gr%sb%dim
-              call loct_numerical_derivative(geo%atom(iatom)%x(j), dq, gq, abserr, gofq)
-              f(iatom, i) = f(iatom, i) - M_TWO * psi%occ(ist, ik) * q(iatom, j) * gq
-            end do
-            call loct_numerical_derivative(geo%atom(iatom)%x(i), dq, fq, abserr, fofq)
-            f(iatom, i) = f(iatom, i) + M_TWO * fq
+          do j = 1, gr%sb%dim
+            call force1(geo%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
+            call force1(geo%atom(iatom)%x(j) - dq, forceks1m, pdot3m)
+            call force1(geo%atom(iatom)%x(j) + dq/M_TWO, forceks1p2, pdot3p2)
+            call force1(geo%atom(iatom)%x(j) - dq/M_TWO, forceks1m2, pdot3m2)
+            dforceks1 = ((M_FOUR/M_THREE) * (forceks1p2 - forceks1m2) - (M_ONE / M_SIX) * (forceks1p - forceks1m)) / dq
+            dforce1 = sum(q(iatom, :) * dforceks1(:))
+            dforce2 = ((M_FOUR/M_THREE) * (pdot3p2 - pdot3m2) - (M_ONE / M_SIX) * (pdot3p - pdot3m)) / dq
+            f(iatom, j) = f(iatom, j) - M_TWO * psi%occ(ist, ik) * dforce1 + M_TWO * dforce2
           end do
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(forceks1p)
+    SAFE_DEALLOCATE_A(forceks1m)
+    SAFE_DEALLOCATE_A(forceks1p2)
+    SAFE_DEALLOCATE_A(forceks1m2)
+    SAFE_DEALLOCATE_A(dforceks1)
     SAFE_DEALLOCATE_A(derpsi_)
 
     POP_SUB(forces_costate_calculate)
@@ -210,9 +226,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine gofq(q, res)
+  subroutine force1(q, res, pdot3)
     FLOAT, intent(in) :: q
-    FLOAT, intent(inout) :: res
+    FLOAT, intent(inout) :: res(:)
+    FLOAT, intent(inout) :: pdot3
+
+    integer :: m
 
     FLOAT :: qold
     CMPLX, allocatable :: viapsi(:, :)
@@ -221,29 +240,13 @@ contains
     SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
     viapsi = M_z0
     call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zpsi(:, :, ist_, ik_), viapsi)
-    res = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, i_, 1)) , REAL_PRECISION)
+    do m = 1, 3
+      res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1)) , REAL_PRECISION)
+    end do
+    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, chi_%zpsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
     geo_%atom(iatom_)%x(j_) = qold
     SAFE_DEALLOCATE_A(viapsi)
-  end subroutine gofq
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine fofq(q, res)
-    FLOAT, intent(in) :: q
-    FLOAT, intent(inout) :: res
-
-    FLOAT :: qold
-    CMPLX, allocatable :: viapsi(:, :)
-    qold = geo_%atom(iatom_)%x(i_)
-    geo_%atom(iatom_)%x(i_) = q
-    SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
-    viapsi = M_z0
-    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zpsi(:, :, ist_, ik_), viapsi)
-    res = real(M_zI * zmf_dotp(gr_%mesh, chi_%zpsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
-    geo_%atom(iatom_)%x(i_) = qold
-    SAFE_DEALLOCATE_A(viapsi)
-  end subroutine fofq
+  end subroutine force1
   ! ---------------------------------------------------------
 
 
