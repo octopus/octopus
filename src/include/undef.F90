@@ -25,6 +25,10 @@
 #undef R_TCOMPLEX
 #endif
 
+#ifdef SINGLE_PRECISION
+#undef SINGLE_PRECISION
+#endif
+  
 #ifdef R_TINTEGER
 #undef R_TINTEGER
 #endif
@@ -34,6 +38,7 @@
 #undef aX
 #undef TS
 #undef R_TYPE
+#undef R_BASE
 #undef R_TYPE_VAL
 #undef R_TYPE_CL
 #undef R_TYPE_IOBINARY

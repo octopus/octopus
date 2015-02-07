@@ -17,36 +17,37 @@
 !!
 !! $Id$
 
-#define R_TREAL     1
+#define R_TCOMPLEX 1
+#define SINGLE_PRECISION 1
 
-#define R_TYPE      FLOAT
-#define R_BASE      FLOAT
-#define R_SINGLE    real(4)
-#define R_DOUBLE    real(8)
-#define R_MPITYPE   MPI_FLOAT
-#define R_TYPE_VAL  TYPE_FLOAT
-#define R_TYPE_CL   'RTYPE_DOUBLE'
-#define R_TYPE_IOBINARY TYPE_DOUBLE
-#define R_TOTYPE(x) real(x, REAL_PRECISION)
-#define R_TOPREC(x) real(x, REAL_PRECISION)
+#define R_TYPE      complex(4)
+#define R_BASE      real(4)
+#define R_SINGLE    complex(4)
+#define R_DOUBLE    complex(8)
+#define R_MPITYPE   MPI_COMPLEX
+#define R_TYPE_VAL  TYPE_CMPLX_SINGLE
+#define R_TYPE_CL   'RTYPE_COMPLEX_SINGLE'
+#define R_TYPE_IOBINARY TYPE_DOUBLE_COMPLEX
+#define R_TOTYPE(x) cmplx(x, 0.0_4, 4)
+#define R_TOPREC(x) cmplx(real(x), aimag(x), 4)
 
 #define R_ABS(x)    abs(x)
-#define R_CONJ(x)   (x)
-#define R_REAL(x)   (x)
-#define R_AIMAG(x)  (M_ZERO)
-
-#define X(x)        d ## x
-#define pX(x)       pd ## x
-#define aX(x,y)     x ## d ## y
+#define R_CONJ(x)   conjg(x)
+#define R_REAL(x)   real(x, 4)
+#define R_AIMAG(x)  aimag(x)
 
 #define R_SIZEOF    8
-#define R_ADD       1
-#define R_MUL       1
+#define R_ADD       2
+#define R_MUL       6
+
+#define X(x)        c ## x
+#define pX(x)       pc ## x
+#define aX(x,y)     x ## c ## y
 
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x
 #else
-#define TS(x)       TSD_ ## x
+#define TS(x)       TSZ_ ## x
 #endif
 
 
