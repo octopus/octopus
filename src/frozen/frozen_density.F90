@@ -24,10 +24,7 @@ module frozen_density_m
   use fio_density_m, only: &
     fio_density_intrpl_t
 
-  use simulation_m, only:                    &
-    simulation_t   => simulation_t,   &
-    simulation_get => simulation_get
-
+  use simulation_m
   use base_density_m, only:                     &
     frozen_density_t     => base_density_t,     &
     frozen_density_init  => base_density_init,  &
