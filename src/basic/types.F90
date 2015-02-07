@@ -29,16 +29,20 @@ module types_m
     type_t,            &
     types_get_size,    &
     operator(==),      &
-    operator(/=)
+    operator(/=),      &
+    type_is_complex,   &
+    type_is_single
 
   type type_t
     integer :: itype
   end type type_t
 
-  type(type_t), public :: TYPE_FLOAT   = type_t(1)
-  type(type_t), public :: TYPE_CMPLX   = type_t(2)
-  type(type_t), public :: TYPE_INTEGER = type_t(3)
-  type(type_t), public :: TYPE_BYTE    = type_t(4)
+  type(type_t), public :: TYPE_FLOAT        = type_t(1)
+  type(type_t), public :: TYPE_CMPLX        = type_t(2)
+  type(type_t), public :: TYPE_INTEGER      = type_t(3)
+  type(type_t), public :: TYPE_BYTE         = type_t(4)
+  type(type_t), public :: TYPE_FLOAT_SINGLE = type_t(5)
+  type(type_t), public :: TYPE_CMPLX_SINGLE = type_t(6)
 
   interface operator(==)
     module procedure types_equal
@@ -48,7 +52,7 @@ module types_m
     module procedure types_not_equal
   end interface operator(/=)
 
-  integer :: sizes(4) = (/8, 16, 4, 1/)
+  integer :: sizes(6) = (/8, 16, 4, 1, 4, 8/)
   
 contains
   
@@ -77,6 +81,25 @@ contains
     equal = ta%itype /= tb%itype
 
   end function types_not_equal
+
+  ! -----------------------------------------------------
+
+  logical pure function type_is_complex(this) result(is_complex)
+    type(type_t), intent(in) :: this
+    
+    is_complex = this == TYPE_CMPLX .or. this == TYPE_CMPLX_SINGLE
+
+  end function type_is_complex
+
+  ! -----------------------------------------------------
+
+  logical pure function type_is_single(this) result(is_single)
+    type(type_t), intent(in) :: this
+    
+    is_single = this == TYPE_FLOAT_SINGLE .or. this == TYPE_CMPLX_SINGLE
+
+  end function type_is_single
+
 end module types_m
 
 !! Local Variables:
