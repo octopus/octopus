@@ -52,6 +52,8 @@ module batch_m
     batch_add_state,                &
     dbatch_new,                     &
     zbatch_new,                     &
+    sbatch_new,                     &
+    cbatch_new,                     &
     batch_delete,                   &
     batch_is_packed,                &
     batch_pack_was_modified,        &
@@ -70,21 +72,27 @@ module batch_m
 
   !--------------------------------------------------------------
   type batch_state_t
-    FLOAT, pointer :: dpsi(:, :)
-    CMPLX, pointer :: zpsi(:, :)
+    FLOAT,      pointer :: dpsi(:, :)
+    CMPLX,      pointer :: zpsi(:, :)
+    real(4),    pointer :: spsi(:, :)
+    complex(4), pointer :: cpsi(:, :)
     integer        :: ist
   end type batch_state_t
 
   type batch_state_l_t
-    FLOAT, pointer :: dpsi(:)
-    CMPLX, pointer :: zpsi(:)
+    FLOAT,      pointer :: dpsi(:)
+    CMPLX,      pointer :: zpsi(:)
+    real(4),    pointer :: spsi(:)
+    complex(4), pointer :: cpsi(:)
   end type batch_state_l_t
   
   type batch_pack_t
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT, pointer                 :: dpsi(:, :)
-    CMPLX, pointer                 :: zpsi(:, :)
+    FLOAT,      pointer            :: dpsi(:, :)
+    CMPLX,      pointer            :: zpsi(:, :)
+    real(4),    pointer            :: spsi(:, :)
+    complex(4), pointer            :: cpsi(:, :)
     type(opencl_mem_t)             :: buffer
   end type batch_pack_t
   
@@ -106,6 +114,8 @@ module batch_m
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,               pointer   :: dpsicont(:, :, :)
     CMPLX,               pointer   :: zpsicont(:, :, :)
+    real(4),             pointer   :: spsicont(:, :, :)
+    complex(4),          pointer   :: cpsicont(:, :, :)
     integer                        :: status
     integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
     logical                        :: dirty     !< if this is true, the buffer has different data
@@ -118,13 +128,19 @@ module batch_m
     module procedure  batch_init_empty_linear
     module procedure dbatch_init_contiguous
     module procedure zbatch_init_contiguous
+    module procedure sbatch_init_contiguous
+    module procedure cbatch_init_contiguous
   end interface batch_init
 
   interface batch_add_state
     module procedure dbatch_add_state
     module procedure zbatch_add_state
+    module procedure sbatch_add_state
+    module procedure cbatch_add_state
     module procedure dbatch_add_state_linear
     module procedure zbatch_add_state_linear
+    module procedure sbatch_add_state_linear
+    module procedure cbatch_add_state_linear
   end interface batch_add_state
 
   integer, public, parameter :: &
@@ -154,6 +170,8 @@ contains
 
     nullify(this%dpsicont)
     nullify(this%zpsicont)
+    nullify(this%spsicont)
+    nullify(this%cpsicont)
 
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
@@ -176,17 +194,23 @@ contains
     do ii = 1, this%nst
       nullify(this%states(ii)%dpsi)
       nullify(this%states(ii)%zpsi)
+      nullify(this%states(ii)%spsi)
+      nullify(this%states(ii)%cpsi)
     end do
     
     do ii = 1, this%nst_linear
       nullify(this%states_linear(ii)%dpsi)
       nullify(this%states_linear(ii)%zpsi)
+      nullify(this%states_linear(ii)%spsi)
+      nullify(this%states_linear(ii)%cpsi)
     end do
     
     this%current = 1
     
     SAFE_DEALLOCATE_P(this%dpsicont)
     SAFE_DEALLOCATE_P(this%zpsicont)
+    SAFE_DEALLOCATE_P(this%spsicont)
+    SAFE_DEALLOCATE_P(this%cpsicont)
     
     POP_SUB(batch_delete)
   end subroutine batch_delete
@@ -206,12 +230,14 @@ contains
     this%nst = nst
     this%dim = dim
     this%current = 1
-    nullify(this%dpsicont, this%zpsicont)
+    nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     
     SAFE_ALLOCATE(this%states(1:nst))
     do ist = 1, nst
       nullify(this%states(ist)%dpsi)
       nullify(this%states(ist)%zpsi)
+      nullify(this%states(ist)%spsi)
+      nullify(this%states(ist)%cpsi)
     end do
     
     this%nst_linear = nst*dim
@@ -219,6 +245,8 @@ contains
     do ist = 1, this%nst_linear
       nullify(this%states_linear(ist)%dpsi)
       nullify(this%states_linear(ist)%zpsi)
+      nullify(this%states_linear(ist)%spsi)
+      nullify(this%states_linear(ist)%cpsi)
     end do
     
     this%in_buffer_count = 0
@@ -226,6 +254,8 @@ contains
 
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
+    nullify(this%pack%spsi)
+    nullify(this%pack%cpsi)    
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -248,7 +278,7 @@ contains
     this%nst = 0
     this%dim = 0
     this%current = 1
-    nullify(this%dpsicont, this%zpsicont)
+    nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     nullify(this%states)
 
     this%nst_linear = nst
@@ -256,6 +286,8 @@ contains
     do ist = 1, this%nst_linear
       nullify(this%states_linear(ist)%dpsi)
       nullify(this%states_linear(ist)%zpsi)
+      nullify(this%states_linear(ist)%spsi)
+      nullify(this%states_linear(ist)%cpsi)
     end do
 
     this%in_buffer_count = 0
@@ -263,6 +295,8 @@ contains
 
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
+    nullify(this%pack%spsi)
+    nullify(this%pack%cpsi)    
 
     this%ndims = 1
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -276,7 +310,7 @@ contains
     type(batch_t), intent(in)   :: this
 
     integer :: ist
-    logical :: dpsi_all_assoc, zpsi_all_assoc
+    logical :: all_assoc(1:4)
     
     ! no push_sub, called too frequently
     
@@ -284,13 +318,17 @@ contains
     ok = ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok) then
       ! ensure that either all real are associated, or all cplx are associated
-      dpsi_all_assoc = .true.
-      zpsi_all_assoc = .true.
+      all_assoc = .true.
       do ist = 1, this%nst_linear
-        dpsi_all_assoc = dpsi_all_assoc .and. associated(this%states_linear(ist)%dpsi)
-        zpsi_all_assoc = zpsi_all_assoc .and. associated(this%states_linear(ist)%zpsi)
-      enddo
-      ok = ok .and. dpsi_all_assoc .neqv. zpsi_all_assoc
+        all_assoc(1) = all_assoc(1) .and. associated(this%states_linear(ist)%dpsi)
+        all_assoc(2) = all_assoc(2) .and. associated(this%states_linear(ist)%zpsi)
+        all_assoc(3) = all_assoc(3) .and. associated(this%states_linear(ist)%spsi)
+        all_assoc(4) = all_assoc(4) .and. associated(this%states_linear(ist)%cpsi)
+      end do
+
+      ASSERT(count(all_assoc, dim = 1) <= 1)
+      
+      ok = ok .and. (count(all_assoc, dim = 1) == 1)
    end if
 
   end function batch_is_ok
@@ -318,11 +356,15 @@ contains
       do ii = 1, bout%nst
         if(associated(bin%states(ii)%dpsi)) bout%states(ii)%dpsi => bin%states(ii)%dpsi
         if(associated(bin%states(ii)%zpsi)) bout%states(ii)%zpsi => bin%states(ii)%zpsi
+        if(associated(bin%states(ii)%spsi)) bout%states(ii)%spsi => bin%states(ii)%spsi
+        if(associated(bin%states(ii)%cpsi)) bout%states(ii)%cpsi => bin%states(ii)%cpsi
       end do
       
       do ii = 1, bout%nst_linear
         if(associated(bin%states_linear(ii)%dpsi)) bout%states_linear(ii)%dpsi => bin%states_linear(ii)%dpsi
         if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
+        if(associated(bin%states_linear(ii)%spsi)) bout%states_linear(ii)%spsi => bin%states_linear(ii)%spsi
+        if(associated(bin%states_linear(ii)%cpsi)) bout%states_linear(ii)%cpsi => bin%states_linear(ii)%cpsi
       end do
 
       bout%current             = bin%current
@@ -339,19 +381,40 @@ contains
     else      
 
       if(batch_type(bin) == TYPE_FLOAT) then
+
         np = 0
         do ii = 1, bin%nst_linear
           np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
         end do
 
         call dbatch_new(bout, 1, bin%nst, np)
-      else
+        
+      else if(batch_type(bin) == TYPE_CMPLX) then
         np = 0
         do ii = 1, bin%nst_linear
           np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
         end do
 
         call zbatch_new(bout, 1, bin%nst, np)
+
+      else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
+
+        np = 0
+        do ii = 1, bin%nst_linear
+          np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
+        end do
+
+        call sbatch_new(bout, 1, bin%nst, np)
+        
+      else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
+
+        np = 0
+        do ii = 1, bin%nst_linear
+          np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
+        end do
+
+        call cbatch_new(bout, 1, bin%nst, np)
+        
       end if
 
       pack_ = batch_is_packed(bin)
@@ -376,6 +439,9 @@ contains
 
     if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
     if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
+    if(associated(this%states_linear(1)%spsi)) btype = TYPE_FLOAT_SINGLE
+    if(associated(this%states_linear(1)%cpsi)) btype = TYPE_CMPLX_SINGLE
+    
   end function batch_type
 
   ! ----------------------------------------------------
@@ -405,8 +471,12 @@ contains
     do ist = 1, this%nst_linear
       if(associated(this%states_linear(ist)%dpsi)) then
         size = max(size, ubound(this%states_linear(ist)%dpsi, dim = 1))
-      else
+      else if(associated(this%states_linear(ist)%zpsi)) then
         size = max(size, ubound(this%states_linear(ist)%zpsi, dim = 1))
+      else if(associated(this%states_linear(ist)%spsi)) then
+        size = max(size, ubound(this%states_linear(ist)%spsi, dim = 1))
+      else if(associated(this%states_linear(ist)%cpsi)) then
+        size = max(size, ubound(this%states_linear(ist)%cpsi, dim = 1))
       end if
     end do
 
@@ -455,7 +525,7 @@ contains
       if(opencl_is_enabled()) this%pack%size(2) = opencl_padded_size(this%pack%size(2))
 
       this%pack%size_real = this%pack%size
-      if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
+      if(type_is_complex(batch_type(this))) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
@@ -467,8 +537,12 @@ contains
         this%status = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
           SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
-        else
+        else if(batch_type(this) == TYPE_CMPLX) then
           SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+        else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+          SAFE_ALLOCATE(this%pack%spsi(1:this%pack%size(1), 1:this%pack%size(2)))
+        else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+          SAFE_ALLOCATE(this%pack%cpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         end if
       end if
       
@@ -514,8 +588,7 @@ contains
           end forall
         end do
 
-        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
-      else
+      else if(batch_type(this) == TYPE_CMPLX) then
 
         bsize = hardware%zblock_size
 
@@ -529,9 +602,38 @@ contains
           end forall
         end do
 
-        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ZI)
-     end if
+      else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
 
+        bsize = hardware%zblock_size
+
+        !$omp parallel do private(ep, ist, ip)
+        do sp = 1, this%pack%size(2), bsize
+          ep = min(sp + bsize - 1, this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
+            forall(ip = sp:ep)
+              this%pack%spsi(ist, ip) = this%states_linear(ist)%spsi(ip)
+            end forall
+          end forall
+        end do
+
+      else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+
+        bsize = hardware%zblock_size
+
+        !$omp parallel do private(ep, ist, ip)
+        do sp = 1, this%pack%size(2), bsize
+          ep = min(sp + bsize - 1, this%pack%size(2))
+          forall(ist = 1:this%nst_linear)
+            forall(ip = sp:ep)
+              this%pack%cpsi(ist, ip) = this%states_linear(ist)%cpsi(ip)
+            end forall
+          end forall
+        end do
+
+      end if
+
+      call profiling_count_transfers(this%nst_linear*this%pack%size(2), batch_type(this))
+      
     end subroutine pack_copy
 
   end subroutine batch_pack
@@ -619,8 +721,7 @@ contains
            end forall
          end do
 
-        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ONE)
-      else
+      else if(batch_type(this) == TYPE_CMPLX) then
          
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
@@ -629,8 +730,28 @@ contains
           end forall
         end do
 
-        call profiling_count_transfers(this%nst_linear*this%pack%size(2), M_ZI)
+      else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+        
+        !$omp parallel do private(ist)
+        do ip = 1, this%pack%size(2)
+          forall(ist = 1:this%nst_linear)
+            this%states_linear(ist)%spsi(ip) = this%pack%spsi(ist, ip) 
+          end forall
+        end do
+        
+      else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+        
+        !$omp parallel do private(ist)
+        do ip = 1, this%pack%size(2)
+          forall(ist = 1:this%nst_linear)
+            this%states_linear(ist)%cpsi(ip) = this%pack%cpsi(ist, ip) 
+          end forall
+        end do
+        
       end if
+      
+      call profiling_count_transfers(this%nst_linear*this%pack%size(2), batch_type(this))
+      
     end subroutine unpack_copy
 
   end subroutine batch_sync
@@ -654,8 +775,10 @@ contains
       ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
         call opencl_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
-      else
+      else if(batch_type(this) == TYPE_CMPLX) then
         call opencl_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+      else
+        ASSERT(.false.)
       end if
 
     else
@@ -848,6 +971,14 @@ end function batch_is_sync
 #include "undef.F90"
 
 #include "complex.F90"
+#include "batch_inc.F90"
+#include "undef.F90"
+
+#include "real_single.F90"
+#include "batch_inc.F90"
+#include "undef.F90"
+
+#include "complex_single.F90"
 #include "batch_inc.F90"
 #include "undef.F90"
 

@@ -107,7 +107,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
   this%is_allocated = .true.
 
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist,this%X(psicont)(:, :, ist - st_start + 1))
+    call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_new))
