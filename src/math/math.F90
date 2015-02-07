@@ -1349,12 +1349,14 @@ contains
     real(8) :: errt, fac, hh, fx1, fx2
     real(8), allocatable :: a(:, :)
 
+    PUSH_SUB(numder_ridders)
+    
     if(h == M_ZERO) then
-      message(1) = "h must be nonzero in loct_numerical_derivative_ridders"
+      message(1) = "h must be nonzero in numder_ridders"
       call messages_fatal(1)
     end if
 
-    allocate(a(ntab, ntab))
+    SAFE_ALLOCATE(a(1:ntab, 1:ntab))
  
     hh = h
     call f(x+hh, fx1)
@@ -1379,7 +1381,8 @@ contains
       if ( abs(a(i,i)-a(i-1,i-1) ) .ge. safe*err)return
     end do
 
-    deallocate(a)
+    SAFE_DEALLOCATE_A(a)
+    POP_SUB(numder_ridders)
   end subroutine numder_ridders
 
 
