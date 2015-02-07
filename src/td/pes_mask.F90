@@ -285,8 +285,7 @@ contains
     !% get rid of unwanted ionization signal coming from the pump.
     !% NOTE: this will enforce the mask boundary conditions for all the times. 
     !%End
-    call parse_float(datasets_check('PESMaskStartTime'),&
-      units_to_atomic(units_inp%time, - M_ONE), mask%start_time)
+    call parse_float(datasets_check('PESMaskStartTime'), -M_ONE, mask%start_time, unit = units_inp%time)
 
 
 
@@ -645,8 +644,7 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_float(datasets_check('PESMaskFilterCutOff'),&
-      units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
+    call parse_float(datasets_check('PESMaskFilterCutOff'), -M_ONE, pCutOff, unit = units_inp%energy)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
@@ -693,8 +691,7 @@ contains
     !% The maximum energy for the PES spectrum.
     !%End
     MaxE = maxval(mask%Lk)**2/2
-    call parse_float(datasets_check('PESMaskSpectEnergyMax'),&
-      units_to_atomic(units_inp%energy, MaxE), mask%energyMax)
+    call parse_float(datasets_check('PESMaskSpectEnergyMax'), MaxE, mask%energyMax, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax)
 
 
@@ -706,8 +703,7 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-    call parse_float(datasets_check('PESMaskSpectEnergyStep'),&
-      units_to_atomic(units_inp%energy, DeltaE), mask%energyStep)
+    call parse_float(datasets_check('PESMaskSpectEnergyStep'), DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep",mask%energyStep)
     
     !%Variable PESMaskOutputInterpolate 
