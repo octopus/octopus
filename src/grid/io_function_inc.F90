@@ -81,7 +81,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, is_tmp, map)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call X(vec_scatter)(mesh%vp, mesh%vp%root, ff_global, ff)
+      call vec_scatter(mesh%vp, mesh%vp%root, ff_global, ff)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
@@ -477,7 +477,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
     !present, but to avoid it we will have to find out all if the
     !processes are members of the domain line where the root of grp
     !lives
-    call X(vec_gather)(mesh%vp, 0, ff_global, ff)
+    call vec_gather(mesh%vp, 0, ff_global, ff)
 
     i_am_root = (mesh%vp%rank == 0)
     comm = mesh%vp%comm

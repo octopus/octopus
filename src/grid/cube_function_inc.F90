@@ -223,7 +223,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
     SAFE_ALLOCATE(gmf(1:mesh%np_global))
 #ifdef HAVE_MPI
-    call X(vec_allgather)(mesh%vp, gmf, mf)
+    call vec_allgather(mesh%vp, gmf, mf)
 #endif
   else
     ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)

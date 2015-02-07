@@ -55,7 +55,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
 #ifdef HAVE_MPI
-      call X(vec_allgather)(vp, field_global, field)
+      call vec_allgather(vp, field_global, field)
 #endif
     else
       field_global => field
@@ -67,7 +67,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
 #ifdef HAVE_MPI
-        call X(vec_allgather)(vp, field_global_vector(:, idir), field_vector(:, idir))
+        call vec_allgather(vp, field_global_vector(:, idir), field_vector(:, idir))
 #endif
       enddo
     else

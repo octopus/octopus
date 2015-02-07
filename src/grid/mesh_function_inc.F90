@@ -385,8 +385,6 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   POP_SUB(X(mf_interpolate_points))
 end subroutine X(mf_interpolate_points)
 
-#endif
-
 ! ---------------------------------------------------------
 !> Given a function ff defined on mesh, and a plane, it gives 
 !! back the values of ff on the plane, by doing the appropriate
@@ -412,7 +410,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call X(vec_gather)(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
 #else
   f_global(1:mesh%np_global) = ff(1:mesh%np_global)
 #endif
@@ -434,7 +432,6 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   SAFE_DEALLOCATE_A(f_global)
   POP_SUB(X(mf_interpolate_on_plane))
 end subroutine X(mf_interpolate_on_plane)
-
 
 ! ---------------------------------------------------------
 !> Given a function ff defined on mesh, and a line, it gives 
@@ -461,7 +458,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call X(vec_gather)(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
 #else
   f_global(1:mesh%np_global) = ff(1:mesh%np_global)
 #endif
@@ -479,7 +476,6 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   POP_SUB(X(mf_interpolate_on_line))
 end subroutine X(mf_interpolate_on_line)
-
 
 ! ---------------------------------------------------------
 !> This subroutine calculates the surface integral of a scalar
@@ -586,6 +582,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   POP_SUB(X(mf_line_integral_vector))
 end function X(mf_line_integral_vector)
 
+#endif
 
 ! -----------------------------------------------------------------------------
 !> This routine calculates the multipoles of a function ff,

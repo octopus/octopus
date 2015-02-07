@@ -769,7 +769,7 @@ contains
       call nl_operator_init(opgt, op%label)
       call nl_operator_copy(opgt, opg)
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
-      call dvec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
+      call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
     else
 #endif
       opg  => op
@@ -845,7 +845,7 @@ contains
       call nl_operator_init(opgt, op%label)
       opgt = opg
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
-      call dvec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
+      call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
 #else
       ! avoid appearance of using vol_pp uninitialized
       vol_pp => mesh%vol_pp
@@ -926,15 +926,15 @@ contains
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do ip = 1, op%stencil%size
-      call ivec_allgather(op%mesh%vp, opg%index(ip, :), op%index(ip, :))
+      call vec_allgather(op%mesh%vp, opg%index(ip, :), op%index(ip, :))
     end do
     call nl_operator_translate_indices(opg)
 
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
-        call dvec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
-        if(op%cmplx_op) call dvec_allgather(op%mesh%vp, opg%w_im(ip, :), op%w_im(ip, :))
+        call vec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
+        if(op%cmplx_op) call vec_allgather(op%mesh%vp, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
