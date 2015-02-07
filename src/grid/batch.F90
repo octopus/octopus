@@ -671,6 +671,8 @@ contains
         else
           SAFE_DEALLOCATE_P(this%pack%dpsi)
           SAFE_DEALLOCATE_P(this%pack%zpsi)
+          SAFE_DEALLOCATE_P(this%pack%spsi)
+          SAFE_DEALLOCATE_P(this%pack%cpsi)
         end if
       end if
       
