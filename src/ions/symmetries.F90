@@ -201,14 +201,13 @@ contains
         lattice(idir, idir) = M_ONE
       end do
 
-      forall(iatom = 1:geo%natoms)
-        !this has to be fixed for non-orthogonal cells. So does everything else!
+      do iatom = 1, geo%natoms
         position(1:3, iatom) = M_HALF
         ! position here contains reduced coordinates
         ! this should be matmul(klattice, geo atom x)
         position(1:dim4syms, iatom) = matmul (klattice, geo%atom(iatom)%x(1:dim4syms)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%spec)
-      end forall
+      enddo
 
       this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
