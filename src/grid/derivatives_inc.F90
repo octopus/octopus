@@ -698,7 +698,7 @@ subroutine X(derivatives_test)(this)
   integer :: blocksize, max_blocksize, itime, times
   logical :: packstates
   real(8) :: stime, etime
-  character(len=7) :: type
+  character(len=20) :: type
 
   call parse_logical('StatesPack', .true., packstates)
 
@@ -706,27 +706,35 @@ subroutine X(derivatives_test)(this)
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
 
 #ifdef R_TREAL
+#ifdef SINGLE_PRECISION
+  type = 'real single'
+#else  
   type = 'real'
+#endif  
 #else
+#ifdef SINGLE_PRECISION
+  type = 'complex single'
+#else  
   type = 'complex'
+#endif
 #endif
 
   ! Note: here we need to use a constant function or anything that
   ! is constant at the borders, since we assume that all boundary
   ! points have equal values to optimize the application of the nl-operator.
 
-  aa = CNST(1.0)/this%mesh%sb%lsize(1)
-  bb = CNST(10.0)
-  cc = CNST(100.0)
+  aa = R_TOTYPE(1.0)/this%mesh%sb%lsize(1)
+  bb = R_TOTYPE(10.0)
+  cc = R_TOTYPE(100.0)
 
 #ifdef R_TCOMPLEX
   ! we make things more "complex"
-  aa = aa + M_ZI*CNST(0.01)
-  bb = bb*exp(M_ZI*CNST(0.345))
-  cc = cc - M_ZI*CNST(50.0)
+  aa = aa + M_ZI*R_TOTYPE(0.01)
+  bb = bb*exp(M_ZI*R_TOTYPE(0.345))
+  cc = cc - M_ZI*R_TOTYPE(50.0)
 #endif
 
-  forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
+  forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
 
   call parse_integer('TestMinBlockSize', 1, blocksize)
   call parse_integer('TestMaxBlockSize', 128, max_blocksize)

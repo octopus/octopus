@@ -51,10 +51,12 @@ program oct_test
     ORT_TEST           =   3,        &
     INTERPOLATION_TEST =   4
 
-  integer, parameter :: &
-    TEST_REAL    = 1,   &
-    TEST_COMPLEX = 2,   &
-    TEST_ALL     = 3
+  integer, parameter ::        &
+    TEST_REAL           = 1,   &
+    TEST_COMPLEX        = 2,   &
+    TEST_ALL            = 3,   &
+    TEST_REAL_SINGLE    = 4,   &
+    TEST_COMPLEX_SINGLE = 5    
 
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -97,6 +99,10 @@ program oct_test
   !% Tests derivatives for real functions.
   !%Option complex 2
   !% Tests derivatives for complex functions.
+  !%Option real_single 4
+  !% Tests derivatives for single-precision real functions.
+  !%Option complex_single 5
+  !% Tests derivatives for single-precision complex functions.
   !%Option all 3
   !% Tests derivatives for both real and complex functions.
   !%End
@@ -170,6 +176,14 @@ program oct_test
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       call zderivatives_test(sys%gr%der)
+    end if
+
+    if(test_type == TEST_ALL .or. test_type == TEST_REAL_SINGLE) then
+      call sderivatives_test(sys%gr%der)
+    end if
+   
+    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX_SINGLE) then
+      call cderivatives_test(sys%gr%der)
     end if
 
     call system_end(sys)
