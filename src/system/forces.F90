@@ -81,7 +81,7 @@ module forces_m
   type(hamiltonian_t), pointer :: hm_
   type(states_t), pointer :: psi_
   type(states_t), pointer :: chi_
-  integer, pointer :: i_, j_, ist_, ik_, iatom_
+  integer, pointer :: j_, ist_, ik_, iatom_
   CMPLX, allocatable :: derpsi_(:, :, :)
 
 contains
@@ -123,8 +123,8 @@ contains
     FLOAT,            intent(in)    :: q(:, :)
 
     integer :: jatom, idim, jdim
-    integer, target :: i, j, ist, ik, iatom
-    FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), gq, fq, dq, abserr, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
+    integer, target :: j, ist, ik, iatom
+    FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), dq, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
     type(profile_t), save :: forces_prof
 
     FLOAT, allocatable :: forceks1p(:), forceks1m(:), forceks1p2(:), forceks1m2(:), dforceks1(:)
@@ -159,7 +159,6 @@ contains
     geo_ => geo
     gr_ => gr
     hm_ => hm
-    i_ => i
     j_ => j
     ist_ => ist
     ik_ => ik
