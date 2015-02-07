@@ -19,8 +19,17 @@
 ##
 ## $Id$
 
-noinst_HEADERS = \
-	global.h integer.F90 real.F90 complex.F90 undef.F90 vectors.h fortran_types.h
+noinst_HEADERS =                  \
+	global.h                  \
+	integer.F90               \
+	real.F90                  \
+	complex.F90               \
+	real_single.F90           \
+	complex.F90               \
+	complex_single.F90        \
+	undef.F90                 \
+	vectors.h                 \
+	fortran_types.h
 
 include $(srcdir)/../common-rules.make
 
