@@ -284,9 +284,7 @@ contains
     !% get rid of unwanted ionization signal coming from the pump.
     !% NOTE: this will enforce the mask boundary conditions for all the times. 
     !%End
-    call parse_float('PESMaskStartTime', units_to_atomic(units_inp%time, - M_ONE), mask%start_time)
-
-
+    call parse_float('PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
 
     !%Variable PESMaskPlaneWaveProjection
     !%Type integer
@@ -629,10 +627,6 @@ contains
       call pes_mask_generate_mask(mask,mesh)
     end if
     
-    
-
-
-
     !%Variable PESMaskFilterCutOff 
     !%Type float
     !%Default -1
@@ -643,13 +637,13 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_float('PESMaskFilterCutOff', units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
+    call parse_float('PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
     
     if(pCutOff > M_ZERO) then       
-      call messages_print_var_value(stdout, "PESMaskFilterCutOff",pCutOff)
+      call messages_print_var_value(stdout, "PESMaskFilterCutOff", pCutOff, unit = units_out%energy)
       mask%filter_k = .true.
       
       SAFE_ALLOCATE(mask%Mk(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
@@ -690,10 +684,8 @@ contains
     !% The maximum energy for the PES spectrum.
     !%End
     MaxE = maxval(mask%Lk)**2/2
-    call parse_float('PESMaskSpectEnergyMax', units_to_atomic(units_inp%energy, MaxE), mask%energyMax)
-    call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax)
-
-
+    call parse_float('PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
+    call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax, unit = units_out%energy)
 
     !%Variable PESMaskSpectEnergyStep 
     !%Type float
@@ -702,8 +694,8 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-    call parse_float('PESMaskSpectEnergyStep', units_to_atomic(units_inp%energy, DeltaE), mask%energyStep)
-    call messages_print_var_value(stdout, "PESMaskSpectEnergyStep",mask%energyStep)
+    call parse_float('PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
+    call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     
     !%Variable PESMaskOutputInterpolate 
     !%Type logical
