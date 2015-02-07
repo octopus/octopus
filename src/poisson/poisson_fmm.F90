@@ -276,9 +276,10 @@ contains
   !> Release memory and call to end the library
   subroutine poisson_fmm_end(this)
     type(poisson_fmm_t), intent(inout) :: this
+
+#ifdef HAVE_LIBFM
     type(c_ptr) ::  ret
     
-#ifdef HAVE_LIBFM
     PUSH_SUB(poisson_fmm_end)
 
     call nl_operator_end(this%corrector)

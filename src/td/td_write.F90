@@ -2151,7 +2151,7 @@ contains
     type(geometry_t),        intent(in)    :: geo
     integer,                 intent(in)    :: iter
 
-    integer :: idir, ispin
+    integer :: idir
     character(len=50) :: aux
     FLOAT, allocatable :: bader_charges(:), voronoi_charges(:)
 

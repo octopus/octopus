@@ -289,8 +289,7 @@ contains
     type(geometry_t),       intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il, ntot, default, nthreads
-    character(len=256)   :: restart_dir
+    integer :: nempty, ntot, default, nthreads
 
     PUSH_SUB(states_init)
 
@@ -913,9 +912,9 @@ contains
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    logical,      optional, intent(in)      :: alloc_Left !< allocate an addtional set of wfs to store left eigenstates
+    logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    integer :: ip, ik, ist, idim, st1, st2, k1, k2, np_part
+    integer :: st1, st2, k1, k2, np_part
     logical :: force
 
     PUSH_SUB(states_allocate_wfns)

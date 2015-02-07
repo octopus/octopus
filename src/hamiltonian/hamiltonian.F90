@@ -222,7 +222,7 @@ contains
     integer,                  intent(in)    :: theory_level
     integer,                  intent(in)    :: xc_family
 
-    integer :: iline, icol, ispin
+    integer :: iline, icol
     type(states_dim_t), pointer :: states_dim
     integer :: ncols
     type(block_t) :: blk
@@ -553,8 +553,6 @@ contains
   subroutine hamiltonian_end(hm, gr)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(in)    :: gr
-
-    integer :: il
 
     PUSH_SUB(hamiltonian_end)
 
@@ -1019,8 +1017,6 @@ contains
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
     FLOAT,          optional, intent(in)    :: time
-
-    integer :: np
 
     PUSH_SUB(hamiltonian_epot_generate)
 
