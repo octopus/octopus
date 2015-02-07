@@ -38,6 +38,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   PUSH_SUB(X(nl_operator_operate_batch))
 
+  ASSERT(batch_type(fi) == R_TYPE_VAL)
+  ASSERT(batch_type(fo) == R_TYPE_VAL)
+
   ASSERT(fi%nst_linear == fo%nst_linear)
 
   do ist = 1, fi%nst_linear
@@ -98,7 +101,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       call operate_opencl()
 #endif
-    else 
+    else
+      
+#ifndef SINGLE_PRECISION ! for the moment this not implemented      
 
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef HAVE_OPENMP
@@ -126,6 +131,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         end do
       end if
       !$omp end parallel
+#endif
     end if
 
     ! count operations

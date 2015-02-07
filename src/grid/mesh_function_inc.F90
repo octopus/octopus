@@ -286,6 +286,7 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
 
 end function X(mf_moment)
 
+#ifndef SINGLE_PRECISION
 
 ! ---------------------------------------------------------
 !> This subroutine generates a Gaussian wavefunction at a
@@ -297,7 +298,7 @@ subroutine X(mf_random)(mesh, ff, seed)
 
   integer, save :: iseed = 123
   integer :: idim, ip
-  FLOAT :: aa(MAX_DIM), rnd, rr
+  R_BASE  :: aa(MAX_DIM), rnd, rr
 
   PUSH_SUB(X(mf_random))
 
@@ -323,12 +324,11 @@ subroutine X(mf_random)(mesh, ff, seed)
   !$omp end parallel do
 
   rr = X(mf_nrm2)(mesh, ff)
-  call lalg_scal(mesh%np, M_ONE/rr, ff)
+  call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
 
   POP_SUB(X(mf_random))
 
 end subroutine X(mf_random)
-
 
 ! --------------------------------------------------------- 
 !> This function receives a function f_in defined in a mesh, and returns
@@ -385,6 +385,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   POP_SUB(X(mf_interpolate_points))
 end subroutine X(mf_interpolate_points)
 
+#endif
 
 ! ---------------------------------------------------------
 !> Given a function ff defined on mesh, and a plane, it gives 

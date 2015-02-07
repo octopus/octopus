@@ -44,8 +44,12 @@ module subarray_m
        isubarray_gather,         &
        dsubarray_gather,         &
        zsubarray_gather,         &
+       ssubarray_gather,         &
+       csubarray_gather,         &
        dsubarray_gather_batch,   &
-       zsubarray_gather_batch,   &
+       zsubarray_gather_batch,   &       
+       ssubarray_gather_batch,   &
+       csubarray_gather_batch,   &
        get_blocks
   
   type subarray_t
@@ -154,6 +158,14 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
+#include "subarray_inc.F90"
+
+#include "undef.F90"
+#include "real_single.F90"
+#include "subarray_inc.F90"
+
+#include "undef.F90"
+#include "complex_single.F90"
 #include "subarray_inc.F90"
 
 end module subarray_m

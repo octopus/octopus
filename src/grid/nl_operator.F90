@@ -61,10 +61,16 @@ module nl_operator_m
     nl_operator_transpose,      &
     dnl_operator_operate,       &
     znl_operator_operate,       &
+    snl_operator_operate,           &
+    cnl_operator_operate,           &
     dnl_operator_operate_batch, &
     znl_operator_operate_batch, &
+    snl_operator_operate_batch,     &
+    cnl_operator_operate_batch,     &
     dnl_operator_operate_diag,  &
     znl_operator_operate_diag,  &
+    snl_operator_operate_diag,      &
+    cnl_operator_operate_diag,      &    
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
@@ -144,6 +150,8 @@ module nl_operator_m
 
   integer :: dfunction_global = -1
   integer :: zfunction_global = -1
+  integer :: sfunction_global = -1
+  integer :: cfunction_global = -1  
 #ifdef HAVE_OPENCL
   integer :: function_opencl
 #endif
@@ -187,11 +195,44 @@ contains
 
     default = OP_VEC
 
-    call parse_integer('OperateDouble',  default, dfunction_global)
+    call parse_integer('OperateDouble', default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')
 
     call parse_integer('OperateComplex', default, zfunction_global)
-    if(.not.varinfo_valid_option('OperateComplex', dfunction_global)) call input_error('OperateComplex')
+    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call input_error('OperateComplex')
+
+
+    !%Variable OperateSingle
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Default optimized
+    !%Description
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for single-precision real functions.
+    !%Option fortran 0
+    !% The standard Fortran function.
+    !%Option optimized 1
+    !% This version is optimized using vector primitives (if available).
+    !%End
+
+    !%Variable OperateComplexSingle
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Default optimized
+    !%Description
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for single-precision complex functions. 
+    !%Option fortran 0
+    !% The standard Fortran function.
+    !%Option optimized 1
+    !% This version is optimized using vector primitives (if available).
+    !%End
+    
+    call parse_integer('OperateSingle', OP_FORTRAN, sfunction_global)
+    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call input_error('OperateSingle')
+    
+    call parse_integer('OperateComplexSingle', OP_FORTRAN, cfunction_global)
+    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call input_error('OperateComplexSingle')
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
@@ -1144,6 +1185,14 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "nl_operator_inc.F90"
+
+#include "undef.F90"
+#include "real_single.F90"
+#include "nl_operator_inc.F90"
+
+#include "undef.F90"
+#include "complex_single.F90"
+#include "nl_operator_inc.F90"  
 
 end module nl_operator_m
 

@@ -72,10 +72,16 @@ module boundaries_m
     pv_handle_batch_t,             &
     dvec_ghost_update,             &
     zvec_ghost_update,             &
+    svec_ghost_update,             &
+    cvec_ghost_update,             &
     dghost_update_batch_start,     &
     zghost_update_batch_start,     &
+    sghost_update_batch_start,     &
+    cghost_update_batch_start,     &
     dghost_update_batch_finish,    &
-    zghost_update_batch_finish
+    zghost_update_batch_finish,    &
+    sghost_update_batch_finish,    &
+    cghost_update_batch_finish
 
   type pv_handle_batch_t
     private
@@ -351,6 +357,14 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
+#include "boundaries_inc.F90"
+
+#include "undef.F90"
+#include "complex_single.F90"
+#include "boundaries_inc.F90"
+
+#include "undef.F90"
+#include "real_single.F90"
 #include "boundaries_inc.F90"
 
 #endif
