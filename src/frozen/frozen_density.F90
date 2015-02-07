@@ -25,8 +25,8 @@ module frozen_density_m
     fio_density_intrpl_t
 
   use simulation_m, only:                    &
-    frozen_simulation_t   => simulation_t,   &
-    frozen_simulation_get => simulation_get
+    simulation_t   => simulation_t,   &
+    simulation_get => simulation_get
 
   use base_density_m, only:                     &
     frozen_density_t     => base_density_t,     &
@@ -60,7 +60,7 @@ contains
     !
     real(kind=wp), dimension(:,:),   pointer :: dnst
     real(kind=wp), dimension(:), allocatable :: x, rho
-    type(frozen_simulation_t),       pointer :: sim
+    type(simulation_t),       pointer :: sim
     type(space_t),                   pointer :: space
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
@@ -70,10 +70,10 @@ contains
     nullify(dnst, sim, space, mesh)
     call frozen_density_get(this, sim)
     ASSERT(associated(sim))
-    call frozen_simulation_get(sim, space)
+    call simulation_get(sim, space)
     ASSERT(associated(space))
     call basis_init(basis, space, config)
-    call frozen_simulation_get(sim, mesh)
+    call simulation_get(sim, mesh)
     ASSERT(associated(mesh))
     nullify(sim)
     call frozen_density_get(this, dnst)

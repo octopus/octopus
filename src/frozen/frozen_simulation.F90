@@ -5,33 +5,23 @@ module frozen_simulation_m
   use global_m
   use messages_m
   use profiling_m
-
-  use basis_m, only: basis_t
-
-  use fio_m, only: fio_t, fio_get
-
-  use simulation_m, only: &
-    simulation_t,         &
-    simulation_extend
-
+  use basis_m
+  use fio_m
+  use simulation_m
   use simulation_m, only:                        &
     frozen_simulation_init  => simulation_init,  &
     frozen_simulation_start => simulation_start, &
-    frozen_simulation_get   => simulation_get,   &
     frozen_simulation_copy  => simulation_copy,  &
     frozen_simulation_end   => simulation_end
 
   implicit none
 
   private
-  public ::       &
-    simulation_t
 
   public ::                   &
     frozen_simulation_init,   &
     frozen_simulation_start,  &
     frozen_simulation_extend, &
-    frozen_simulation_get,    &
     frozen_simulation_copy,   &
     frozen_simulation_end
   

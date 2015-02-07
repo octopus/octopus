@@ -31,7 +31,7 @@ module frozen_handle_m
     fio_handle_end
 
   use simulation_m, only:                &
-    frozen_simulation_t => simulation_t
+    simulation_t => simulation_t
 
   use frozen_model_m, only: &
     frozen_model_t,         &

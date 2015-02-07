@@ -36,10 +36,10 @@ module frozen_tnadd_m
     grid_t !=> frozen_grid_t
 
   use frozen_simulation_m, only:             &
-    simulation_t   !=> frozen_simulation_t,   &
+    simulation_t   !=> simulation_t,   &
 
   use frozen_simulation_m, only:             &
-    simulation_get => frozen_simulation_get
+    simulation_get => simulation_get
 
   use frozen_system_m, only:     &
     system_t => frozen_system_t

@@ -1,31 +1,15 @@
 #include "global.h"
 
 module frozen_hamiltonian_m
-
+  use base_external_m
   use global_m
   use messages_m
   use profiling_m
-
-  use json_m, only: JSON_OK, json_object_t, json_get
-
-  use fio_external_m, only: &
-    fio_external_t
-
-  use fio_hamiltonian_m, only: &
-    fio_hamiltonian_t,         &
-    fio_hamiltonian_get
-
-  use frozen_system_m, only: &
-    frozen_system_t
-
-  use frozen_external_m, only:     &
-    frozen_external_t,             &
-    frozen_external_init,          &
-    frozen_external_start,         &
-    frozen_external_update,        &
-    frozen_external_copy,          &
-    frozen_external_end
-
+  use json_m
+  use fio_external_m
+  use fio_hamiltonian_m
+  use frozen_system_m
+  use frozen_external_m
   use base_hamiltonian_m, only:                &
     hamiltonian_setn => base_hamiltonian_setn, &
     hamiltonian_getn => base_hamiltonian_getn, &
@@ -55,7 +39,7 @@ module frozen_hamiltonian_m
   end interface !frozen_hamiltonian_get
 
   !interface frozen_hamiltonian_get_energy
-  !  module procedure frozen_external_get_energy
+  !  module procedure base_external_get_energy
   !end interface !frozen_hamiltonian_get_energy
 
 contains
@@ -67,7 +51,7 @@ contains
     type(json_object_t),        intent(in)    :: config
     !
     type(json_object_t),     pointer :: cnfg
-    type(frozen_external_t), pointer :: epot
+    type(base_external_t), pointer :: epot
     integer                          :: ierr
     !
     PUSH_SUB(frozen_hamiltonian_init)
@@ -75,7 +59,7 @@ contains
     call json_get(config, "external", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(epot)
-    call frozen_external_init(epot, sys, cnfg)
+    call base_external_init(epot, sys, cnfg)
     call hamiltonian_setn(this, "external", epot)
     POP_SUB(frozen_hamiltonian_init)
     return
@@ -87,7 +71,7 @@ contains
     type(fio_hamiltonian_t),    intent(in)    :: that
     type(json_object_t),        intent(in)    :: config
     !
-    type(frozen_external_t), pointer :: mept
+    type(base_external_t), pointer :: mept
     type(fio_external_t),    pointer :: sept
     !
     PUSH_SUB(frozen_hamiltonian_update)
@@ -105,7 +89,7 @@ contains
   ! ---------------------------------------------------------
   subroutine frozen_hamiltonian_get_external(this, that)
     type(frozen_hamiltonian_t), intent(in) :: this
-    type(frozen_external_t),   pointer     :: that
+    type(base_external_t),   pointer     :: that
     !
     PUSH_SUB(frozen_hamiltonian_get_external)
     call hamiltonian_getn(this, "external", that)
@@ -118,7 +102,7 @@ contains
     type(frozen_hamiltonian_t), intent(inout) :: this
     type(frozen_hamiltonian_t), intent(in)    :: that
     !
-    type(frozen_external_t), pointer :: oept, iept
+    type(base_external_t), pointer :: oept, iept
     !
     PUSH_SUB(frozen_hamiltonian_copy)
     nullify(oept, iept)
@@ -126,7 +110,7 @@ contains
     call frozen_hamiltonian_get_external(that, iept)
     if(associated(iept))then
       SAFE_ALLOCATE(oept)
-      call frozen_external_copy(oept, iept)
+      call base_external_copy(oept, iept)
       call hamiltonian_setn(this, "external", oept)
     end if
     POP_SUB(frozen_hamiltonian_copy)
@@ -137,13 +121,13 @@ contains
   subroutine frozen_hamiltonian_end(this)
     type(frozen_hamiltonian_t), intent(inout) :: this
     !
-    type(frozen_external_t), pointer :: epot
+    type(base_external_t), pointer :: epot
     !
     PUSH_SUB(frozen_hamiltonian_end)
     nullify(epot)
     call hamiltonian_deln(this, "external", epot)
     if(associated(epot))then
-      call frozen_external_end(epot)
+      call base_external_end(epot)
       SAFE_DEALLOCATE_P(epot)
       nullify(epot)
     end if
