@@ -116,7 +116,7 @@ unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o  unit.o
 papi_f.o : papi_f.F90
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types.o
 
 command_line.o : command_line.F90 messages.o profiling.o
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  

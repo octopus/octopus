@@ -63,6 +63,7 @@ module profiling_m
   use papi_m
 #endif
   use string_m
+  use types_m
   use varinfo_m
 
   implicit none
@@ -117,7 +118,8 @@ module profiling_m
          profiling_count_tran_real_4,      &
          profiling_count_tran_real_8,      &
          profiling_count_tran_complex_4,   &
-         profiling_count_tran_complex_8
+         profiling_count_tran_complex_8,   &
+         profiling_count_tran_type
   end interface profiling_count_transfers
 
   interface profiling_count_operations
@@ -675,6 +677,19 @@ contains
   end subroutine profiling_count_tran_complex_8
 
 
+  ! ---------------------------------------------------------
+  
+  subroutine profiling_count_tran_type(trf, type)
+    integer,         intent(in)    :: trf
+    type(type_t),    intent(in)    :: type
+    
+    if(.not.in_profiling_mode) return
+    ! no PUSH_SUB, called too often
+    
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(trf)*types_get_size(type)
+
+  end subroutine profiling_count_tran_type
+  
   ! ---------------------------------------------------------
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
