@@ -34,8 +34,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
   logical :: apply_phase, pack
-  integer :: ii, ist, idim, ip
-  R_TYPE, pointer :: psi(:), hpsi(:)
+  integer :: ii, ist, ip
+  R_TYPE, pointer :: hpsi(:)
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -219,11 +219,8 @@ contains
   subroutine set_pointers
     ! no push_sub since called very frequently
 
-    psi  => psib%states_linear(ii)%X(psi)
     epsi => epsib%states_linear(ii)%X(psi)
     hpsi => hpsib%states_linear(ii)%X(psi)
-    ist  =  batch_linear_to_ist(psib, ii)
-    idim =  batch_linear_to_idim(psib, ii)
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)
@@ -306,7 +303,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtim
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
   R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  R_TYPE,   target,    intent(out)   :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
   FLOAT,    optional,  intent(in)    :: Imtime
@@ -443,8 +440,9 @@ end subroutine X(exchange_operator)
 subroutine X(oct_exchange_operator) (hm, der, hpsi, ist, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,  intent(inout) :: hpsi(:, :)
-  integer, intent(in) :: ist, ik
+  R_TYPE,              intent(inout) :: hpsi(:, :)
+  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
 
   integer :: ik2
   R_TYPE, allocatable :: psi(:, :), psi2(:, :)
@@ -636,7 +634,7 @@ end subroutine X(vmask)
 subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
+  R_TYPE,              intent(out)   :: diag(:,:) !< hpsi(gr%mesh%np, hm%d%dim)
   integer,             intent(in)    :: ik
 
   integer :: idim, ip, ispin
