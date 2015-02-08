@@ -132,6 +132,8 @@ contains
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
 
+    ! FIXME: is the next section not basically the same as the routine ion_interaction_calculate?
+
     f = M_ZERO
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
@@ -231,15 +233,15 @@ contains
     FLOAT, intent(inout) :: pdot3
 
     integer :: m
-
     FLOAT :: qold
     CMPLX, allocatable :: viapsi(:, :)
+
     qold = geo_%atom(iatom_)%x(j_)
     geo_%atom(iatom_)%x(j_) = q
     SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
     viapsi = M_z0
     call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zpsi(:, :, ist_, ik_), viapsi)
-    do m = 1, 3
+    do m = 1, ubound(res, 1)
       res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1)) , REAL_PRECISION)
     end do
     pdot3 = real(M_zI * zmf_dotp(gr_%mesh, chi_%zpsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
