@@ -1978,8 +1978,6 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    ASSERT(associated(st%dpsi) .or. associated(st%zpsi))
-
     SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections()
@@ -2009,17 +2007,25 @@ contains
     ! ---------------------------------------------------------
     subroutine calc_projections()
       integer :: uist, ist, ik
-
+      CMPLX, allocatable :: psi(:, :), gspsi(:, :)      
+      
       PUSH_SUB(td_write_proj.calc_projections)
 
+      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
+      
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
+          call states_get_state(st, gr%mesh, ist, ik, psi)
           do uist = gs_st%st_start, gs_st%st_end
-            projections(ist, uist, ik) = &
-              zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
+            call states_get_state(gs_st, gr%mesh, ist, ik, gspsi)
+            projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi)
           end do
         end do
       end do
+
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(gspsi)
       
       call distribute_projections()
 
@@ -2034,12 +2040,16 @@ contains
       integer :: uist, ist, ik, idim
       FLOAT   :: n_dip(MAX_DIM)
       CMPLX, allocatable :: xpsi(:,:)
-
+      CMPLX, allocatable :: psi(:, :), gspsi(:, :)
+      
       PUSH_SUB(td_write_proj.dipole_matrix_elements)
  
       ASSERT(associated(st%zpsi))
       ASSERT(associated(gs_st%zpsi))
 
+      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
+      
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
 
@@ -2047,14 +2057,14 @@ contains
       
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
+          call states_get_state(st, gr%mesh, ist, ik, psi)
           do uist = gs_st%st_start, gs_st%st_end
-            
-            do idim = 1, st%d%dim
-              xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir) * gs_st%zpsi(1:gr%mesh%np, idim, uist, ik)
-            end do
+            call states_get_state(gs_st, gr%mesh, ist, ik, gspsi)
 
-            projections(ist, uist, ik) = -n_dip(dir) - &
-              zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
+            do idim = 1, st%d%dim
+              xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
+            end do
+            projections(ist, uist, ik) = -n_dip(dir) - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi)
 
           end do
         end do
