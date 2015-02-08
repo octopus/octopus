@@ -131,12 +131,18 @@ module opencl_m
     module procedure iopencl_write_buffer_1, dopencl_write_buffer_1, zopencl_write_buffer_1
     module procedure iopencl_write_buffer_2, dopencl_write_buffer_2, zopencl_write_buffer_2
     module procedure iopencl_write_buffer_3, dopencl_write_buffer_3, zopencl_write_buffer_3
+    module procedure sopencl_write_buffer_1, copencl_write_buffer_1
+    module procedure sopencl_write_buffer_2, copencl_write_buffer_2
+    module procedure sopencl_write_buffer_3, copencl_write_buffer_3
   end interface opencl_write_buffer
 
   interface opencl_read_buffer
     module procedure iopencl_read_buffer_1, dopencl_read_buffer_1, zopencl_read_buffer_1
     module procedure iopencl_read_buffer_2, dopencl_read_buffer_2, zopencl_read_buffer_2
     module procedure iopencl_read_buffer_3, dopencl_read_buffer_3, zopencl_read_buffer_3
+    module procedure sopencl_read_buffer_1, copencl_read_buffer_1
+    module procedure sopencl_read_buffer_2, copencl_read_buffer_2
+    module procedure sopencl_read_buffer_3, copencl_read_buffer_3
   end interface opencl_read_buffer
 
   interface opencl_set_kernel_arg
@@ -1391,6 +1397,14 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
+#include "opencl_inc.F90"
+
+#include "undef.F90"
+#include "real_single.F90"
+#include "opencl_inc.F90"
+
+#include "undef.F90"
+#include "complex_single.F90"
 #include "opencl_inc.F90"
 
 #include "undef.F90"
