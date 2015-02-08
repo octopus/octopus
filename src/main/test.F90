@@ -178,11 +178,11 @@ program oct_test
       call zderivatives_test(sys%gr%der)
     end if
 
-    if(test_type == TEST_ALL .or. test_type == TEST_REAL_SINGLE) then
+    if(test_type == TEST_REAL_SINGLE) then
       call sderivatives_test(sys%gr%der)
     end if
    
-    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX_SINGLE) then
+    if(test_type == TEST_COMPLEX_SINGLE) then
       call cderivatives_test(sys%gr%der)
     end if
 
