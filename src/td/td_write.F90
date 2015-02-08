@@ -2044,9 +2044,6 @@ contains
       
       PUSH_SUB(td_write_proj.dipole_matrix_elements)
  
-      ASSERT(associated(st%zpsi))
-      ASSERT(associated(gs_st%zpsi))
-
       SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
       
