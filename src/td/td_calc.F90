@@ -67,7 +67,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   FLOAT,               intent(out)   :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
-  CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
+  CMPLX, allocatable :: zpsi(:, :), hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
   integer  :: j, k, ik, ist, idim
 
 #if defined(HAVE_MPI)
@@ -96,20 +96,23 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
 
   ! And now, i<[H,[V_nl,x]]>
   x = M_ZERO
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hzpsi (1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hhzpsi(1:3, 1:gr%mesh%np_part))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      call zhamiltonian_apply(hm, gr%der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, time)
+      call states_get_state(st, gr%mesh, ist, ik, zpsi)
+      
+      call zhamiltonian_apply(hm, gr%der, zpsi, hzpsi, ist, ik, time)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
       xzpsi = M_z0
       do k = 1, gr%mesh%np
         do j = 1, gr%mesh%sb%dim
-          xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
+          xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*zpsi(k, 1:st%d%dim)
         end do
       end do
 
@@ -132,8 +135,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
         call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) + 2*st%occ(ist, ik)* &
-            real(zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim)), REAL_PRECISION)
+          x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
         end do
       end do
       SAFE_DEALLOCATE_A(xzpsi)
