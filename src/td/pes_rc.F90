@@ -155,6 +155,7 @@ contains
 
     integer :: ip, ik, ist, idim
     logical :: contains_ip
+    CMPLX, allocatable :: psi(:, :, :, :)
 #if defined(HAVE_MPI)
     CMPLX :: wf
     integer :: status(MPI_STATUS_SIZE)
@@ -162,6 +163,8 @@ contains
 
     PUSH_SUB(PES_rc_calc)
 
+    SAFE_ALLOCATE(psi(1:1, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+    
     contains_ip = .true.
 
     do ip = 1, pesrc%npoints
@@ -174,17 +177,19 @@ contains
       end if
 #endif
 
+      if(contains_ip) call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
+              
+      
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             if(contains_ip) then
-              pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik) * &
-                st%zpsi(pesrc%points(ip), idim, ist, ik)
+              pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik)*psi(1, idim, ist, ik)
 
 #if defined(HAVE_MPI)
               if(mesh%mpi_grp%rank /= 0) then
                 wf=pesrc%wf(ip, idim, ist, ik, ii)
-                call mpi_send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
+                call MPI_Send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
               end if
 #endif
 
@@ -192,7 +197,7 @@ contains
 
 #if defined(HAVE_MPI)
             if(mesh%mpi_grp%rank  ==  0 .and. pesrc%rankmin(ip) /= 0) then
-              call mpi_recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
+              call MPI_Recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
               pesrc%wf(ip, idim, ist, ik, ii) = wf
 
             end if
@@ -202,6 +207,8 @@ contains
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(psi)
 
     POP_SUB(PES_rc_calc)
   end subroutine PES_rc_calc
