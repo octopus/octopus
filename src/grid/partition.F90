@@ -262,7 +262,11 @@ contains
       call io_binary_read(filename, partition%np_global, part_global, err)
       if (err /= 0) ierr = ierr + 2
     else
+      ! Create a dummy variable for the rest of the processes
       SAFE_ALLOCATE(part_global(1:1))
+      ! Either there are not reading the partition, or there is not
+      ! partition. So partition 1 has all the points
+      part_global = 1
     end if
 
 #ifdef HAVE_MPI
