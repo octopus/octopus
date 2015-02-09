@@ -193,6 +193,8 @@ subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
 
   PUSH_SUB(output_etsf_file_init)
 
+  ! Note: the presence of 'PACKAGE_STRING' here means the size of the file, and hence the
+  ! result of the matches in the testsuite, will change when the version name is updated.
   call etsf_io_data_init(filename, flags, dims, filetype, "Created by "//PACKAGE_STRING, &
     lstat, error_data, overwrite = .true., k_dependent = .false.)
   if (.not. lstat) call output_etsf_error(error_data)
