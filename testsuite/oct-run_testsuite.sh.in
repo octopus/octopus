@@ -66,7 +66,7 @@ EOF
 function find_tests() {
     groups="$1"
     if [ -n "$groups" ]; then
-	groups_pat=`echo "$groups" | sed 's/ *, */|/'`
+	groups_pat=`echo "$groups" | sed 's/ *, */|/g'`
 	groups_pat="^TestGroups *:.*($groups_pat)"
     else # No groups given defaults to all tests.
 	groups_pat="."
