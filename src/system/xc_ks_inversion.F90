@@ -258,17 +258,15 @@ contains
     integer,             intent(in)    :: nspin
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
         
-    integer :: ii, jj, ierr
-    integer :: iunit, iunit2, verbosity, counter, np
-    FLOAT :: rr
-    FLOAT :: alpha, beta, convergence, betascale
+    integer :: ii, jj, ierr, asym1, asym2
+    integer :: iunit, verbosity, counter, np
+    FLOAT :: rr, shift
+    FLOAT :: alpha, beta, convergence
     FLOAT :: stabilizer, convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
     character(len=20) :: alpha_str
-    character(len=20) :: beta_str
     character(len=256) :: fname
-    character(len=256) :: filename2
 
     PUSH_SUB(invertks_iter)
 
@@ -326,22 +324,13 @@ contains
     
     diffdensity = M_ONE
     counter = 0
-    alpha = CNST(0.1)
-    beta  = CNST(0.1)
-    convergence = CNST(0.1)
-    betascale = CNST(100.0)
- 
-    if(verbosity == 2) then
-      write(alpha_str, '(f8.4)') alpha
-      write(beta_str, '(f8.4)') beta
-      filename2 = "diffdens_" // trim(adjustl(alpha_str)) // "_" // trim(adjustl(beta_str)) // ".dat"
-      iunit2 = io_open(trim(filename2), action='write')
-    end if
+    alpha = CNST(0.05)
 
     do while(diffdensity > convdensity)
       
       counter = counter + 1 
-        
+      beta = diffdensity*0.001 !parameter to avoid numerical problems due to small denominator
+  
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call dio_function_output(io_function_fill_how("AxisX"), &
@@ -353,20 +342,15 @@ contains
       call hamiltonian_update(aux_hm, gr%mesh)
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
-       
-      ! Inversion according to Phys. Rev. Lett. 100, 153004 (2008), Eq. (6)
-      do jj = 1, np
-        call mesh_r(gr%mesh, jj, rr)
-        if (abs(rr) < CNST(1e-1)) rr = CNST(1e-1) 
-        vhxc(jj, 1:nspin) = vhxc(jj, 1:nspin) + (st%rho(jj,1:nspin) - target_rho(jj,1:nspin))*alpha*rr**beta
+
+      ! Inversion according to Stella/Verstraete
+      do ii = 1, nspin
+        do jj = 1, np
+          vhxc(jj, ii) = vhxc(jj, ii) &
+                       + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
+        end do
       end do
 
-      aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
-      
-      do jj = 1, nspin
-        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
-      enddo
-      
       diffdensity = M_ZERO
       do jj = 1, nspin
         do ii = 1, np
@@ -375,15 +359,6 @@ contains
           endif
         enddo
       enddo
-
-      if (diffdensity  <  convergence) then
-        if(verbosity == 2) then
-          write(iunit2,*) counter, diffdensity
-        end if
-        convergence = convergence / CNST(10.0)
-      endif
-      beta = min(M_ONE, diffdensity*betascale)
-      alpha = M_ONE - diffdensity
             
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
@@ -392,8 +367,52 @@ contains
         call flush(iunit)
 #endif
       endif
-     
+
+      aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
+      
+      do jj = 1, nspin
+        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+      enddo
     end do
+
+    !ensure correct asymptotic behavior, only for 1D potentials at the moment
+    !need to find a way to find all points from where asymptotics should start in 2 and 3D
+    do ii = 1, nspin
+      do jj = 1, int(np/2)
+        if(target_rho(jj,ii) < convdensity*CNST(10.0)) then
+          call mesh_r(gr%mesh, jj, rr)
+          vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+          asym1 = jj
+        endif
+        if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
+          asym2 = np - jj + 1
+        endif
+      enddo
+     
+      ! calculate constant shift for correct asymptotics and shift accordingly
+      call mesh_r(gr%mesh, asym1+1, rr)
+      shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+      do jj = asym1+1, asym2-1
+        vhxc(jj,ii) = vhxc(jj, ii) - shift
+      enddo
+  
+      call mesh_r(gr%mesh, asym2-1, rr)
+      shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+      do jj = 1, asym2-1
+        vhxc(jj,ii) = vhxc(jj, ii) - shift
+      enddo
+      do jj = asym2, np
+        call mesh_r(gr%mesh, jj, rr)
+        vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+      enddo
+    enddo
+
+    aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
+      
+    do jj = 1, nspin
+      aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+    enddo
+
 
     !calculate final density
 
@@ -405,9 +424,6 @@ contains
     call messages_info(1)
     
     call io_close(iunit)      
-    if(verbosity == 2) then
-      call io_close(iunit2)      
-    end if
 
     SAFE_DEALLOCATE_A(vhxc)
 
