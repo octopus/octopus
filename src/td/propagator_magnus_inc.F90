@@ -30,6 +30,7 @@ subroutine td_magnus(hm, gr, st, tr, time, dt)
   integer :: j, is, ist, ik, i
   FLOAT :: atime(2)
   FLOAT, allocatable :: vaux(:, :, :), pot(:)
+  CMPLX, allocatable :: psi(:, :)
 
   PUSH_SUB(propagator_dt.td_magnus)
   
@@ -70,12 +71,17 @@ subroutine td_magnus(hm, gr, st, tr, time, dt)
   tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
   tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+  
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
-      call exponential_apply(tr%te, gr%der, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, M_ZERO, &
-        vmagnus = tr%vmagnus)
+      call states_get_state(st, gr%mesh, ist, ik, psi)
+      call exponential_apply(tr%te, gr%der, hm, psi, ist, ik, dt, M_ZERO, vmagnus = tr%vmagnus)
+      call states_set_state(st, gr%mesh, ist, ik, psi)
     end do
   end do
+  
+  SAFE_DEALLOCATE_A(psi)
   
   if(.not. hm%cmplxscl%space) then
     call density_calc(st, gr, st%rho)
