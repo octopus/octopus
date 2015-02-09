@@ -1557,7 +1557,7 @@ contains
 
     integer :: idim, ist, ik
     type(cube_function_t):: cf1,cf2,cf3,cf4
-    CMPLX, allocatable :: mf(:)
+    CMPLX, allocatable :: mf(:), psi(:)
 
     FLOAT :: time
 
@@ -1592,17 +1592,20 @@ contains
         call  cube_function_alloc_FS(mask%cube, cf4, force_alloc = .true.) 
       end select
       
-
+      SAFE_ALLOCATE(psi(1:mask%mesh%np_part))
+      
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
+
+            call states_get_state(st, mask%mesh, idim, ist, ik, psi)
             
             cf1%zRs(:,:,:) = M_z0
             cf2%zRS(:,:,:) = M_z0
             cf1%Fs(:,:,:)  = M_z0
             cf2%Fs(:,:,:)  = M_z0
             
-            call pes_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
+            call pes_mask_mesh_to_cube(mask, psi, cf1)
             
             select case(mask%mode)
               !----------------------------------------- 
@@ -1631,9 +1634,9 @@ contains
                 
                 ! Apply Back-action to wavefunction in A
                 call pes_mask_K_to_X(mask,mesh,cf1%Fs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
-                call pes_mask_cube_to_mesh(mask, cf2, mf)  
-                st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik) + mf
-                
+                call pes_mask_cube_to_mesh(mask, cf2, mf)
+                psi(1:mask%mesh%np) = psi(1:mask%mesh%np) + mf(1:mask%mesh%np)
+                call states_set_state(st, mask%mesh, idim, ist, ik, psi)
                 
                 ! Apply correction to wavefunction in B
                 cf2%zRs= (mask%cM%zRs) * cf2%zRs                                     ! cf2 = M*\Psi_B(x,t1)
@@ -1674,7 +1677,9 @@ contains
               end if
               
               !substitute the KS wf with the filtered one
-              call pes_mask_cube_to_mesh(mask, cf2, st%zpsi(:, idim, ist, ik))
+              call pes_mask_cube_to_mesh(mask, cf2, psi)
+              call states_set_state(st, mask%mesh, idim, ist, ik, psi)
+              
               !the out-going part of the wf
               cf4%zRs = cf1%zRs - cf2%zRs
               call pes_mask_X_to_K(mask,mesh,cf4%zRs,cf3%Fs) 
@@ -1696,6 +1701,8 @@ contains
           end do
         end do
       end do
+
+      SAFE_DEALLOCATE_A(psi)
 
       call zcube_function_free_RS(mask%cube, cf1)
       call  cube_function_free_FS(mask%cube, cf1)
