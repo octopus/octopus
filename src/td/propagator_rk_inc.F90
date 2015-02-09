@@ -242,9 +242,6 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
     nullify(q)
   end if
 
-  if(propagate_chi) then
-    SAFE_ALLOCATE(zchi(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
-  end if
   if(ion_dynamics_ions_move(ions)) then
     SAFE_DEALLOCATE_A(pos)
     SAFE_DEALLOCATE_A(vel)
@@ -322,40 +319,57 @@ contains
   end subroutine f_chi
 
   subroutine apply_inh()
-
+    integer :: ib
+    
     if(hamiltonian_inh_term(hm)) then
       do ik = kp1, kp2
-        do ist = st1, st2
-          do idim = 1, st%d%dim
-            do ip = 1, gr%mesh%np
-              hchi%zpsi(ip, idim, ist, ik) = hchi%zpsi(ip, idim, ist, ik) + M_zI * hm%inh_st%zpsi(ip, idim, ist, ik)
-            end do
-          end do
+        do ib = 1, st%group%block_start, st%group%block_end
+          call batch_axpy(np, M_ZI, hm%inh_st%group%psib(ib, ik), hchi%group%psib(ib, ik))
         end do
       end do
     end if
   end subroutine apply_inh
   
   subroutine prepare_inh()
-
+    integer :: idir
+    CMPLX, allocatable :: psi(:, :), inhpsi(:, :)
+    
     if(ion_dynamics_ions_move(ions)) then
       call states_copy(inh, st)
-      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
-      inh%zpsi = M_z0
-      do ist = 1, st%nst
-        do ik = 1, st%d%nik
+
+      SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(inhpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))      
+      
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+
+          inhpsi = M_z0
+          call states_get_state(stphi, gr%mesh, ist, ik, psi)
+          
           do iatom = 1, geo%natoms
-            call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-              stphi%d%dim, stphi%zpsi(:, :, ist, ik), dvpsi)
-            do idim = 1, gr%sb%dim
-              inh%zpsi(:, :, ist, ik) = inh%zpsi(:, :, ist, ik) + st%occ(ist, ik) * post(idim, iatom) * dvpsi(:, :, idim)
+
+            call zhamiltonian_dervexternal(hm, geo, gr, iatom, stphi%d%dim, psi, dvpsi)
+
+            do idir = 1, gr%sb%dim
+              inhpsi(1:gr%mesh%np, 1:stphi%d%dim) = inhpsi(1:gr%mesh%np, 1:stphi%d%dim) &
+                + st%occ(ist, ik)*post(idir, iatom)*dvpsi(1:gr%mesh%np, 1:stphi%d%dim, idir)
             end do
+
           end do
+          
+          call states_set_state(inh, gr%mesh, ist, ik, inhpsi)
+
         end do
       end do
-      SAFE_DEALLOCATE_A(dvpsi)
+
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
+
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(inhpsi)
+      SAFE_DEALLOCATE_A(dvpsi)
+      
     end if
   end subroutine prepare_inh
 
