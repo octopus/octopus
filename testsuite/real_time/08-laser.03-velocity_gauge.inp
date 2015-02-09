@@ -43,6 +43,5 @@ vector_potential   | 0 | 0 | 1 | 0     | "envelope2"
 %
 
 AbsorbingBoundaries = no
-MoveIons = no
 
 TDOutput = laser + energy + multipoles

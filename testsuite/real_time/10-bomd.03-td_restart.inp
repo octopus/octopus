@@ -16,8 +16,6 @@ Spacing = 0.6
 
 Radius = 6
 
-MoveIons = yes
-
 TDDynamics = bo
 
 TDTimeStep = 10.0

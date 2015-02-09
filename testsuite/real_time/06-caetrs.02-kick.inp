@@ -13,6 +13,8 @@ bond_length = 2.8
  "C" | -0.001 | 0.0 | 0.0
 %
 
+MoveIons = no
+
 Spacing = 0.6
 
 Radius = 6

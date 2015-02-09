@@ -38,8 +38,6 @@ Radius=8
 
 ParallelizationStrategy = par_domains + par_states
 
-MoveIons = yes
-
 TDIonicTimeScale = 10
 
 TDTimeStep = 0.1 * TDIonicTimeScale
