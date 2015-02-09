@@ -110,21 +110,13 @@ contains
     type(c_ptr) :: random_gen_pointer
     type(read_coords_info) :: xyz
     character(len=100)  :: temp_function_name
+    logical :: have_velocities
 
     PUSH_SUB(ion_dynamics_init)
 
-    !%Variable MoveIons
-    !%Type logical
-    !%Default no
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% This variable controls whether atoms are moved during
-    !% a time propagation run. The default is no.
-    !%End
-    call parse_logical('MoveIons', .false., this%move_ions)
-    call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
-
     nullify(this%oldforce)
+
+    have_velocities = .false.
 
     !%Variable IonsConstantVelocity
     !%Type logical
@@ -139,10 +131,9 @@ contains
     call parse_logical('IonsConstantVelocity', .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
 
-    if(this%constant_velocity) call messages_experimental('IonsConstantVelocity')
-
-    if(ion_dynamics_ions_move(this)) then 
-      SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
+    if(this%constant_velocity) then
+      call messages_experimental('IonsConstantVelocity')
+      have_velocities = .true.
     end if
 
     !%Variable Thermostat
@@ -166,6 +157,8 @@ contains
     
     if(this%thermostat /= THERMO_NONE) then
       
+      have_velocities = .true.
+
       if(this%constant_velocity) then
         call messages_write('You cannot use a Thermostat and IonsConstantVelocity at the same time.')
         call messages_fatal()
@@ -233,6 +226,8 @@ contains
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
     if(parse_is_defined('RandomVelocityTemp')) then
+
+      have_velocities = .true.
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
@@ -316,6 +311,9 @@ contains
       call read_coords_init(xyz)
       call read_coords_read('Velocities', xyz, geo%space)
       if(xyz%source /= READ_COORDS_ERR) then
+        
+        have_velocities = .true.
+
         if(geo%natoms /= xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
           call messages_fatal(1)
@@ -336,6 +334,21 @@ contains
     end if
 
     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+
+    !%Variable MoveIons
+    !%Type logical
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% This variable controls whether atoms are moved during a time
+    !% propagation run. The default is yes when the ion velocity is
+    !% set explicitly or implicitly, otherwise is no.
+    !%End
+    call parse_logical('MoveIons', have_velocities, this%move_ions)
+    call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
+
+    if(ion_dynamics_ions_move(this)) then 
+      SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
+    end if
 
     POP_SUB(ion_dynamics_init)
   end subroutine ion_dynamics_init
