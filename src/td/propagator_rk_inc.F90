@@ -91,11 +91,12 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
 
   call states_copy(hst, st)
   call states_copy(stphi, st)
-  zphi = st%zpsi
+  call states_get_state(st, gr%mesh, zphi)
+
   if(propagate_chi) then
     call states_copy(hchi, chi)
     call states_copy(stchi, chi)
-    zchi = chi%zpsi
+    call states_get_state(chi, gr%mesh, zchi)
   end if
 
   if(ion_dynamics_ions_move(ions)) then
@@ -121,9 +122,9 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
   !
       
   ! 
-  stphi%zpsi = zphi
+  call states_set_state(stphi, gr%mesh, zphi)
   if(propagate_chi) then
-    stchi%zpsi = zchi
+    call states_set_state(stchi, gr%mesh, zchi)    
   end if
   if(ion_dynamics_ions_move(ions)) then
     pos = pos0
@@ -134,9 +135,9 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
     end if
   end if
 
-  call f_psi(time-dt)
-  if(propagate_chi) call f_chi(time-dt)
-  if(ion_dynamics_ions_move(ions)) call f_ions(time-dt)
+  call f_psi(time - dt)
+  if(propagate_chi) call f_chi(time - dt)
+  if(ion_dynamics_ions_move(ions)) call f_ions(time - dt)
   
   call update_state(M_ONE/M_SIX)
 

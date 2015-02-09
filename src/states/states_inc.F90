@@ -62,6 +62,27 @@ end subroutine X(states_get_state1)
 
 ! ------------------------------------------------------------
 
+subroutine X(states_get_state4)(st, mesh, psi, left)
+  type(states_t),    intent(in)    :: st
+  type(mesh_t),      intent(in)    :: mesh
+  R_TYPE,            intent(inout) :: psi(:, :, st%st_start:, st%d%kpt%start:)
+  logical, optional, intent(in)    :: left
+  
+  integer :: iqn, ist
+  
+  PUSH_SUB(X(states_get_state4))
+
+  do iqn = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      call states_get_state(st, mesh, ist, iqn, psi(:, :, ist, iqn), left)
+    end do
+  end do
+  
+  POP_SUB(X(states_get_state4))
+end subroutine X(states_get_state4)
+
+! ------------------------------------------------------------
+
 subroutine X(states_set_state2)(st, mesh, ist, iqn, psi, left)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -103,6 +124,27 @@ subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi, left)
   
   POP_SUB(X(states_set_state1))
 end subroutine X(states_set_state1)
+
+! ------------------------------------------------------------
+
+subroutine X(states_set_state4)(st, mesh, psi, left)
+  type(states_t),    intent(inout) :: st
+  type(mesh_t),      intent(in)    :: mesh
+  R_TYPE,            intent(in)    :: psi(:, :, st%st_start:, st%d%kpt%start:)
+  logical, optional, intent(in)    :: left
+  
+  integer :: iqn, ist
+  
+  PUSH_SUB(X(states_set_state4))
+
+  do iqn = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      call states_set_state(st, mesh, ist, iqn, psi(:, :, ist, iqn), left)
+    end do
+  end do
+  
+  POP_SUB(X(states_set_state4))
+end subroutine X(states_set_state4)
 
 ! ------------------------------------------------------------
 

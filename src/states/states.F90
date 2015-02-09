@@ -228,10 +228,12 @@ module states_m
 
   interface states_get_state
     module procedure dstates_get_state1, zstates_get_state1, dstates_get_state2, zstates_get_state2
+    module procedure dstates_get_state4, zstates_get_state4
   end interface states_get_state
 
   interface states_set_state
     module procedure dstates_set_state1, zstates_set_state1, dstates_set_state2, zstates_set_state2
+    module procedure dstates_set_state4, zstates_set_state4
   end interface states_set_state
 
   interface states_get_points
