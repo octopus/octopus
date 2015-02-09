@@ -1322,7 +1322,7 @@ contains
   end subroutine sort_complex
 
   ! ---------------------------------------------------------
-  !> Numerical derivative (Ridder's algorithm).
+  !> Numerical derivative (Ridder`s algorithm).
   !!
   !! This is an alternative to "loct_numerical_derivative" (which
   !! is just an interface to the GSL numerical derivative). This version
