@@ -22,7 +22,7 @@ Spacing = 0.6
 
 TDPropagator = aetrs
 TDTimeStep = 0.11
-TDMaximumIter = 100
+TDMaxSteps = 100
 
 TDPolarizationDirection = 1
 TDDeltaStrength = 0.1

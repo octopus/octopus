@@ -40,7 +40,7 @@ dt = 0.008
 T = 60
 
 TDTimeStep = dt
-TDMaximumIter = T/TDTimeStep
+TDPropagationTime = T
 
 
 

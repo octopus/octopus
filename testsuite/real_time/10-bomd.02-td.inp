@@ -22,7 +22,7 @@ TDDynamics = bo
 
 TDTimeStep = 10.0
 
-TDMaximumIter = 4
+TDMaxSteps = 4
 
 ParallelizationStrategy = par_domains
 

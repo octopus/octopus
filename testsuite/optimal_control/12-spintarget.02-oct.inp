@@ -162,7 +162,7 @@ dt = period/400
 TDPropagator = exp_mid
 TDExponentialMethod = taylor
 TDExpOrder = 4
-TDMaximumIter = stime/dt
+TDPropagationTime = stime
 TDTimeStep = dt
 
 

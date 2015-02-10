@@ -40,7 +40,7 @@ TDPropagator = exp_mid
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
 TDLanczosTol = 5.0e-5
-TDMaximumIter = stime/dt
+TDPropagationTime = stime
 TDTimeStep = dt
 
 

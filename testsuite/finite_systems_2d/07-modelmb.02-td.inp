@@ -41,7 +41,7 @@ Output = mmb + mmb_den + mmb_wfs
 OutputHow = plane_z + axis_x
 
 TDTimeStep = 0.01
-TDMaximumIter = 200
+TDMaxSteps = 200
 
 TDDeltaStrength = 0.1
 

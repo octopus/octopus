@@ -20,7 +20,7 @@ SmearingFunction = fermi_dirac
 %
 
 TDTimeStep = 0.15
-TDMaximumIter = 20
+TDMaxSteps = 20
 
 FromScratch = yes
 

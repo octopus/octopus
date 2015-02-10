@@ -24,7 +24,7 @@ SpinComponents = spin_polarized
 FromScratch = yes
 
 TDTimeStep = 0.15
-TDMaximumIter = 20
+TDMaxSteps = 20
 
 TDDeltaStrength  = 0.1
 TDPolarizationDirection = 1

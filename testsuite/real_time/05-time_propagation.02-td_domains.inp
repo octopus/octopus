@@ -24,6 +24,6 @@ Radius=8
 ParallelizationStrategy = par_domains
 
 TDTimeStep = 0.1
-TDMaximumIter = 10
+TDMaxSteps = 10
 
 TDEnergyUpdateIter = 5

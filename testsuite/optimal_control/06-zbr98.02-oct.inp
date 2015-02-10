@@ -59,7 +59,7 @@ TheoryLevel = independent_particles
 
 T = 30000
 dt = 1.0
-TDMaximumIter = T/dt
+TDPropagationTime = T
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExpOrder = 20

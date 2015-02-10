@@ -54,5 +54,5 @@ dt = 0.08
 T = nc*tc
 
 TDTimeStep = dt
-TDMaximumIter = T/TDTimeStep
+TDPropagationTime = T
 

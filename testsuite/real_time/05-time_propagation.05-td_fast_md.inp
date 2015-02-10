@@ -41,7 +41,7 @@ ParallelizationStrategy = par_domains + par_states
 TDIonicTimeScale = 10
 
 TDTimeStep = 0.1 * TDIonicTimeScale
-TDMaximumIter = 20
+TDMaxSteps = 20
 
 %ParallelizationGroupRanks
 2 | 2

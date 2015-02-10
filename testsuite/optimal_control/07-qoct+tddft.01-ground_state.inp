@@ -39,7 +39,7 @@ dt = 0.005
 TDPropagator = qoct_tddft_propagator
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
-TDMaximumIter = stime/dt
+TDPropagationTime = stime
 TDTimeStep = dt
 
 #----------------------------

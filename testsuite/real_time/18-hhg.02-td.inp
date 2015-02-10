@@ -32,7 +32,7 @@ stime = 8*period
 # algorithm is also probably different.
 dt = period / 250
 
-TDMaximumIter = stime/dt
+TDPropagationTime = stime
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExpOrder = 20

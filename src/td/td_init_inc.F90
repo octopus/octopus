@@ -23,7 +23,8 @@ subroutine td_init(td, sys, hm)
   type(system_t),        intent(inout) :: sys
   type(hamiltonian_t),   intent(inout) :: hm
 
-  FLOAT   :: spacing, default_dt
+  integer :: default_time_steps
+  FLOAT   :: spacing, default_dt, propagation_time
 
   PUSH_SUB(td_init)
 
@@ -103,27 +104,48 @@ subroutine td_init(td, sys, hm)
 
   call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
-  !%Variable TDMaximumIter
+  if(parse_is_defined('TDMaxSteps') .and. parse_is_defined('TDPropagationTime')) then
+    call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
+    call messages_fatal()
+  end if
+    
+  !%Variable TDPropagationTime
+  !%Type float
+  !%Section Time-Dependent::Propagation
+  !%Description
+  !% The length of the time propagation. You cannot set this variable
+  !% at the same time as TDMaxSteps. By default this variable will
+  !% not be used.
+  !%
+  !% The units for this variable are hbar/Hartre (or hbar/eV if you
+  !% selected ev_angstrom as input units). The approximate conversions to
+  !% femtoseconds are 1 fs = 41.34 hbar/Hartree = 1.52 hbar/eV.
+  !%End
+  call parse_float('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+
+  call messages_obsolete_variable('TDMaximumIter', 'TDMaxSteps')
+  
+  !%Variable TDMaxSteps
   !%Type integer
   !%Default 1500
   !%Section Time-Dependent::Propagation
   !%Description
-  !% Number of time-propagation steps that will be performed. By default 1500.
-  !%
-  !% Tip: If you would like to specify the real time of the
-  !% propagation, rather than the number of steps, just use something
-  !% like:
-  !%
-  !% <tt>TDMaximumIter</tt> = 1000.0 / <tt>TDTimeStep</tt>
-  !%
-  !%End 
+  !% Number of time-propagation steps that will be performed. You
+  !% cannot use this variable together with TDPropagationTime. The
+  !% default value is 1500.
+  !%End
+  default_time_steps = 1500
+  if(propagation_time > CNST(0.0)) default_time_steps = nint(propagation_time/td%dt)
+  call parse_integer('TDMaxSteps', default_time_steps, td%max_iter)
 
-  call parse_integer('TDMaximumIter', 1500, td%max_iter)
-  call messages_print_var_value(stdout, 'TDMaximumIter', td%max_iter)
+  if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
+  
+  call messages_print_var_value(stdout, 'TDPropagationTime', propagation_time, unit = units_out%time)
+  call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
 
   if(td%max_iter < 1) then
-    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
-    message(2) = '(TDMaximumIter <= 1)'
+    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaxSteps"
+    message(2) = '(TDMaxSteps <= 1)'
     call messages_fatal(2)
   end if
   

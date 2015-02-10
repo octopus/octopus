@@ -20,7 +20,7 @@ Radius = 6
 
 TDTimeStep = 0.1
 
-TDMaximumIter = 20
+TDMaxSteps = 20
 
 TDPropagator = crank_nicolson
 

@@ -13,7 +13,7 @@ FromScratch = yes
 Spacing = 0.32
 Radius = 6.0
 
-TDMaximumIter = 100
+TDMaxSteps = 100
 
 TDPropagator = aetrs
 

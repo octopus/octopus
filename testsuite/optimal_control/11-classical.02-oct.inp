@@ -47,7 +47,7 @@ TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExponentialOrder = 30
 TDLanczosTol = 1.0e-4
-TDMaximumIter = stime/dt
+TDPropagationTime = stime
 TDTimeStep = dt
 
 ampl = 0.1

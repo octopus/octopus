@@ -12,7 +12,7 @@ ExcessCharge = 1
 Spacing = 0.32
 Radius = 6.0
 
-TDMaximumIter = 200
+TDMaxSteps = 200
 
 TDPropagator = aetrs
 

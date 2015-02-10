@@ -23,7 +23,7 @@ MoveIons = yes
 
 TDPropagator = exp_mid
 
-TDMaximumIter = 20
+TDMaxSteps = 20
 TDTimeStep = 0.1
 
 SPARSKITSolver = sk_gmres

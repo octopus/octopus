@@ -32,7 +32,7 @@ KPointsUseSymmetries = no
 
 TDPropagator = aetrs
 TDTimeStep = 0.02
-TDMaximumIter = 20
+TDMaxSteps = 20
 
 ExperimentalFeatures = yes
 

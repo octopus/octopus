@@ -42,7 +42,7 @@ P_c = 137.036
 
 T = (1/4) * (2*pi*P_c)/Bz
 dt = 0.50
-TDMaximumIter = T/dt
+TDPropagationTime = T
 TDPropagator = aetrs
 TDExponentialMethod = lanczos
 TDExpOrder = 16
