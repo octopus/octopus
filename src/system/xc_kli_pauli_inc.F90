@@ -24,7 +24,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   integer :: is, ip, ii, jj, ist, eigen_n, it, kssi
   FLOAT, allocatable :: rho(:,:), lambda(:), n(:), t_rho(:,:)
   FLOAT, allocatable :: t_v(:,:), vloc(:,:), rhov(:), v_m1(:,:), p_i(:,:,:), t_vi(:,:,:), delta_v(:), vs(:,:)
-  CMPLX, allocatable :: weighted_hf(:,:,:), rho_i(:,:,:,:)
+  CMPLX, allocatable :: weighted_hf(:,:,:), rho_i(:,:,:,:), psii(:), psij(:)
   FLOAT :: reached_threshold(4)
 
   call profiling_in(C_PROFILING_XC_KLI)
@@ -48,16 +48,21 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   SAFE_ALLOCATE(weighted_hf(1:mesh%np, 1:st%d%dim,st%d%dim))
   weighted_hf = M_Z0
 
+  SAFE_ALLOCATE(psij(1:mesh%np))
+  
   ! w_{up,down} = \sum_i \phi_{i,down}^* u_x^{i,up}^* \phi_{i,up}
   do ii = 1,st%d%dim
     do jj = 1,st%d%dim
       do ist = st%st_start,st%st_end
+        call states_get_state(st, mesh, jj, ist, 1, psij)
         weighted_hf(1:mesh%np,ii,jj) = weighted_hf(1:mesh%np,ii,jj) + &
-             &oep%socc*st%occ(ist,1)*conjg(st%zpsi(1:mesh%np,jj,ist,1)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
+             &oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
       end do
     end do
   end do
 
+  SAFE_DEALLOCATE_A(psij)
+  
   ! reduce over states
   if(st%parallel_in_states) then
     call comm_allreduce(st%mpi_grp%comm, weighted_hf)
@@ -116,17 +121,27 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       ! orbital densities
       SAFE_ALLOCATE(rho_i(1:mesh%np, 1:st%d%dim,st%d%dim, 1:eigen_n))
       rho_i = M_Z0
+
+      SAFE_ALLOCATE(psii(1:mesh%np))
+      SAFE_ALLOCATE(psij(1:mesh%np))
+      
       do ii = 1, st%d%dim
         do jj = ii, st%d%dim
           do ist = 1, eigen_n
             kssi = oep%eigen_index(ist)
-            rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(st%zpsi(1:mesh%np,jj,kssi,1))* &
-                 st%zpsi(1:mesh%np,ii,kssi,1)
+
+            call states_get_state(st, mesh, ii, kssi, 1, psii)
+            call states_get_state(st, mesh, jj, kssi, 1, psij)
+           
+            rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(psij(1:mesh%np))*psii(1:mesh%np)
             rho_i(1:mesh%np,jj,ii,ist) = conjg(rho_i(1:mesh%np,ii,jj,ist))
           end do
         end do
       end do
 
+      SAFE_DEALLOCATE_A(psii)
+      SAFE_DEALLOCATE_A(psij)
+      
       ! arrange them in a 4-vector
       SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
       p_i = M_ZERO
