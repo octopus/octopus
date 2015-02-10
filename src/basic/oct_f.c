@@ -31,6 +31,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <libgen.h>
 
 #include <fortran_types.h>
 
