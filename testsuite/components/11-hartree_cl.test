@@ -3,9 +3,12 @@
 
 Test       : Hartree OpenCL
 Options    : clamdfft
-Programs   : oct-test
+Programs   : oct-test; oct-test_mpi
 TestGroups : short-run, components
 Enabled    : Yes
+
+# FIXME: will this work in parallel?
+Processors: 1
 
 Precision : 0.005
 Input: 11-hartree_cl.01-fft.inp
