@@ -51,11 +51,10 @@
 ! is defined). Otherwise it is merely a logical assertion that, when fails,
 ! prints out the assertion string, the file, and the line. The subroutine
 ! assert_die is in the global_m module.
-#define __STRING(x)     #x
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \
   if(.not.(expr)) _anl_ \
-     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
+     call assert_die(TOSTRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
   CARDINAL
 #else
 #  define ASSERT(expr)
@@ -84,7 +83,7 @@
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
   global_sizeof = SIZEOF(x); _newline_	\
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_allocate(_anl_ #x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+    call profiling_memory_allocate(_anl_ TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
     call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
@@ -93,7 +92,7 @@
   global_sizeof = SIZEOF(x); _newline_ \
   deallocate(x, stat=global_alloc_err); _newline_ \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+    call profiling_memory_deallocate(TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
     call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
