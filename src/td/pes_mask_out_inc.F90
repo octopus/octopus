@@ -31,7 +31,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   character(len=80) :: fname
   type(unit_t) :: fn_unit
 
-  CMPLX, allocatable :: PsiAB(:,:,:,:)
+  CMPLX, allocatable :: PsiAB(:,:,:,:), psi(:)
   FLOAT,allocatable :: RhoAB(:,:) 
   type(cube_function_t) :: cf
   type(mesh_t):: mesh   
@@ -43,8 +43,9 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   
   mesh= gr%mesh
 
-  SAFE_ALLOCATE(PsiAB(1:mesh%np_part,1:st%d%dim,1:st%nst,1:st%d%nik))
-  SAFE_ALLOCATE(RhoAB(1:mesh%np_part,1:st%d%nspin))
+  SAFE_ALLOCATE(PsiAB(1:mesh%np_part, 1:st%d%dim,1:st%nst,1:st%d%nik))
+  SAFE_ALLOCATE(RhoAB(1:mesh%np_part, 1:st%d%nspin))
+  SAFE_ALLOCATE(psi(1:mesh%np_part))
 
   call cube_function_null(cf)    
   call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.)
@@ -64,8 +65,10 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
+        call states_get_state(st, gr%mesh, idim, ist, ik, psi)
+
         if (mask%mode /= PES_MASK_MODE_PASSIVE) then 
-          PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
+          PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + psi(:)
         end if
         
       end do
@@ -1633,7 +1636,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   type(geometry_t),  intent(in)    :: geo
   integer,           intent(in)    :: iter
 
-  CMPLX, allocatable :: wfAk(:,:,:,:,:,:) 
+  CMPLX, allocatable :: wfAk(:,:,:,:,:,:), psi(:)
   FLOAT :: pesK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
   integer :: ist, ik, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
@@ -1672,18 +1675,23 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   
     call cube_function_null(cf1)    
     call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
-    call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
+    call cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
+
+    SAFE_ALLOCATE(psi(1:mesh%np_part))
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist =  st%st_start, st%st_end
         do idim = 1, st%d%dim
-          call pes_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
+          call states_get_state(st, mesh, idim, ist, ik, psi)
+          call pes_mask_mesh_to_cube(mask, psi, cf1)
           cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
           call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
           wfAk(:,:,:,idim, ist, ik) = cf1%Fs
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(psi)
 
     call zcube_function_free_RS(mask%cube, cf1)
     call  cube_function_free_FS(mask%cube, cf1)
@@ -1715,8 +1723,9 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   end if
 
   if(mask%add_psia) then 
-   SAFE_DEALLOCATE_A(wfAk)
+    SAFE_DEALLOCATE_A(wfAk)
   end if
+
   call profiling_out(prof)
   
   POP_SUB(pes_mask_output)
@@ -2003,7 +2012,7 @@ subroutine pes_mask_restart_map(mask, st, RR)
 
   integer :: itot, ik, ist, idim, np
   integer :: ll(3)
-!   CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
+  CMPLX, allocatable :: psi(:)
   FLOAT, allocatable :: M_old(:,:,:)
   type(cube_function_t):: cf1,cf2
 
@@ -2020,6 +2029,7 @@ subroutine pes_mask_restart_map(mask, st, RR)
   call cube_function_null(cf2)    
   call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
 
+  SAFE_ALLOCATE(psi(1:mask%mesh%np))
 
   call pes_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
   
@@ -2029,18 +2039,22 @@ subroutine pes_mask_restart_map(mask, st, RR)
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
         call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
-        call pes_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf2)
+        call states_get_state(st, mask%mesh, idim, ist, ik, psi)
+        call pes_mask_mesh_to_cube(mask, psi, cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
         cf1%zRs = cf2%zRs* mask%cM%zRs !modify the orbital in A
-        call pes_mask_cube_to_mesh(mask, cf1, st%zpsi(:, idim, ist, ik))
+        call pes_mask_cube_to_mesh(mask, cf1, psi)
+        call states_set_state(st, mask%mesh, idim, ist, ik, psi)
         cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
         call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do
     end do
   end do
+
   SAFE_DEALLOCATE_A(M_old)
-  
+  SAFE_DEALLOCATE_A(psi)
+
   call zcube_function_free_RS(mask%cube, cf1)
   call  cube_function_free_FS(mask%cube, cf1)
   call zcube_function_free_RS(mask%cube, cf2)
