@@ -197,14 +197,14 @@ contains
     integer, intent(in)      :: nspin
     FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
            
-    integer :: ii, jj 
+    integer :: ii, jj, asym1, asym2 
     integer :: np
-    FLOAT   :: stabilizer
+    FLOAT   :: rr, shift
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
     PUSH_SUB(invertks_2part)
     
-    call parse_float('InvertKSStabilizer', M_HALF, stabilizer)
+    !call parse_float('InvertKSStabilizer', M_HALF, stabilizer)
     
     np = gr%mesh%np
     
@@ -232,13 +232,43 @@ contains
     
     do jj = 1, nspin 
       aux_hm%vxc(:,jj) = vks(:,jj) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
-      aux_hm%vhxc(:,jj) = aux_hm%vxc(:,jj) + aux_hm%vhartree(:)
     enddo
     
-    call hamiltonian_update(aux_hm, gr%mesh)
-    
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+    !ensure correct asymptotic behavior, only for 1D potentials at the moment
+    !need to find a way to find all points from where asymptotics should start in 2 and 3D
+    do ii = 1, nspin
+      do jj = 1, int(np/2)
+        if(target_rho(jj,ii) < CNST(1e-8)) then
+          call mesh_r(gr%mesh, jj, rr)
+          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+          asym1 = jj
+        endif
+        if(target_rho(np-jj+1, ii) < CNST(1e-8)) then
+          asym2 = np - jj + 1
+        endif
+      enddo
+     
+      ! calculate constant shift for correct asymptotics and shift accordingly
+      call mesh_r(gr%mesh, asym1+1, rr)
+      shift  = aux_hm%vxc(asym1+1, ii) + 1.0/sqrt(rr**2 + 1.0)
+      do jj = asym1+1, asym2-1
+        aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+      enddo
+  
+      call mesh_r(gr%mesh, asym2-1, rr)
+      shift  = aux_hm%vxc(asym2-1, ii) + 1.0/sqrt(rr**2 + 1.0)
+      do jj = 1, asym2-1
+        aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+      enddo
+      do jj = asym2, np
+        call mesh_r(gr%mesh, jj, rr)
+        aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+      enddo
+      aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
+    enddo 
 
+    call hamiltonian_update(aux_hm, gr%mesh)
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     
     SAFE_DEALLOCATE_A(sqrtrho)
@@ -430,111 +460,6 @@ contains
     POP_SUB(invertks_iter)
 
   end subroutine invertks_iter
-
-  ! ---------------------------------------------------------
-  subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
-    type(mesh_t),   intent(in)  :: mesh
-    integer,        intent(in)  :: np, nspin
-    type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: target_rho(1:np, 1:nspin)
-    FLOAT,          intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
-    
-    integer :: ip, iprime, ii, jj, ivec, jdim
-    FLOAT :: diffrho, epsij, occij, inverse
-    FLOAT :: vol_element
-    FLOAT :: ki(1:np, 1:np)
-    FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
-    FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
-    FLOAT, allocatable :: psii(:, :), psij(:, :)
-
-    PUSH_SUB(precond_kiks)
-
-    vhxc_out = M_ZERO
-    
-    !do ip = 1, np
-    !  diffrho = st%rho(ip, 1) - target_rho(ip, 1)
-    !  numerator = numerator + diffrho**2
-    !end do
-    
-    ki = M_ZERO
-    
-    SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
-
-    do jj = 1, st%nst
-
-      call states_get_state(st, mesh, jj, 1, psij)
-
-      do ii = jj + 1, st%nst
-
-        call states_get_state(st, mesh, ii, 1, psii)
-
-        epsij = M_ONE / (st%eigenval(jj, 1) - st%eigenval(ii, 1))
-	occij = st%occ(jj, 1) - st%occ(ii, 1)
-        do iprime = 1, np
-          do ip = 1, np
-            ki(ip, iprime) = ki(ip, iprime) + occij*epsij*(psii(ip, 1)*psij(ip, 1))*(psii(iprime, 1)*psij(iprime, 1))
-	  end do
-        end do
-
-      end do
-    end do
-    
-    SAFE_DEALLOCATE_A(psii)
-    SAFE_DEALLOCATE_A(psij)
-
-    call lalg_eigensolve(np, ki, eigenvals)
-    
-    !do ip = 1, np
-    !  if(abs(eigenvals(ip))>1d-10) then
-    !    neigenval = ip
-    !  endif
-    !enddo
-    
-    SAFE_ALLOCATE(matrixmul(1:np, 1:st%nst))
-    SAFE_ALLOCATE(kired(1:np, 1:st%nst))
-    
-    do ivec = 1, st%nst
-      inverse = M_ONE/eigenvals(ivec)
-      do ip = 1, np
-        matrixmul(ip, ivec) = ki(ip,ivec)*inverse
-	kired(ip, ivec) = ki(ip, ivec)
-      enddo
-    enddo
-    
-    inverseki = matmul(matrixmul, transpose(kired))
-    
-    vhxc_out = M_ZERO
-    
-    vol_element = M_ONE
-    do jdim = 1, MAX_DIM
-      if (mesh%spacing(jdim) > CNST(1.e-10)) vol_element = vol_element*mesh%spacing(jdim)
-    end do
-    
-    do iprime = 1, np
-      diffrho = target_rho(iprime, 1) - st%rho(iprime, 1)
-      do ip = 1, np
-	vhxc_out(ip, 1, 1) = vhxc_out(ip, 1, 1) + inverseki(ip, iprime)*diffrho
-!	write(200,*) ip, iprime, inverseki(ip, iprime) 
-      enddo
-    enddo
-   
-    do ip = 1, np
-!      write(100,*) ip, vhxc_out(ip, 1, 1),  target_rho(ip, 1) - st%rho(ip, 1)
-    enddo   
-    
-    
-    SAFE_DEALLOCATE_A(matrixmul)
-    SAFE_DEALLOCATE_A(kired)
-        
-#ifdef HAVE_FLUSH
-    !call flush(200)
-#endif
-
-    POP_SUB(precond_kiks)
-  
-  end subroutine precond_kiks
-
 
   ! ---------------------------------------------------------
   subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, vxc, time)
