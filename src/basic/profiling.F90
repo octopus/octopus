@@ -282,6 +282,9 @@ contains
     end if
 
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
+      ! make sure output directory is available before other processes try to write there
+      call MPI_Barrier(mpi_world, mpi_err)
+      
       prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
     end if
 
