@@ -4,7 +4,7 @@
 <!-- **** application specific patterns for analysis of octopus results          **** -->
 <!-- ******************************************************************************** -->
 
-<parm name="walltime"  unit="s" mode="line,add" type="float">COMPLETE_DATASET\s+$patnint\s+$patfp\s*</parm>
+<parm name="walltime"  unit="s" mode="line,add" type="float">COMPLETE_RUN\s+$patnint\s+$patfp\s*</parm>
 <parm name="scftime"   unit="s" mode="line"     type="float">SCF_CYCLE\s+$patnint\s+$patfp\s+</parm>
 <parm name="scfmflops" unit="s" mode="line"     type="float">SCF_CYCLE\s+$patnint\s+$patnfp\s+$patnfp\s+$patfp</parm>
 <parm name="tdtime"    unit="s" mode="line"     type="float">TIME_STEP\s+$patnint\s+$patfp\s*</parm>

@@ -164,11 +164,11 @@ module profiling_m
 
   type(profile_vars_t), target, public :: prof_vars
 
-  !For the moment we will have the profiler objects here, but they
-  !should be moved to their respective modules.
-  !i.e. DO NOT PUT NEW PROFILES HERE
+  !> For the moment we will have the profiler objects here, but they
+  !! should be moved to their respective modules.
+  !! i.e. DO NOT PUT NEW PROFILES HERE
 
-  type(profile_t), save, public :: C_PROFILING_COMPLETE_DATASET
+  type(profile_t), save, public :: C_PROFILING_COMPLETE_RUN
 
   type(profile_t), save, public :: &
        C_PROFILING_XC_OEP,         &
@@ -285,7 +285,7 @@ contains
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       ! make sure output directory is available before other processes try to write there
 #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world, mpi_err)
+      call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
       
       prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
@@ -297,7 +297,7 @@ contains
 
     call init_profiles()
 
-    call profiling_in(C_PROFILING_COMPLETE_DATASET)
+    call profiling_in(C_PROFILING_COMPLETE_RUN)
 
     POP_SUB(profiling_init)
 
@@ -306,7 +306,7 @@ contains
     subroutine init_profiles
       PUSH_SUB(profiling_init.init_profiles)
 
-      call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
+      call profile_init(C_PROFILING_COMPLETE_RUN,     'COMPLETE_RUN')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
       call profile_init(C_PROFILING_XC_EXX,           'XC_EXX')
       call profile_init(C_PROFILING_XC_SIC,           'XC_SIC')
@@ -360,7 +360,7 @@ contains
     if(.not. in_profiling_mode) return
     PUSH_SUB(profiling_end)
 
-    call profiling_out(C_PROFILING_COMPLETE_DATASET)
+    call profiling_out(C_PROFILING_COMPLETE_RUN)
     call profiling_output()
 
 #ifdef HAVE_PAPI
@@ -840,7 +840,7 @@ contains
       '============================================================================================================', &
       '=================|==========================================='
 
-    total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
+    total_time = profile_total_time(C_PROFILING_COMPLETE_RUN)
 
     do ii = 1, prof_vars%last_profile
       prof =>  prof_vars%profile_list(ii)%p
