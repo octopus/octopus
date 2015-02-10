@@ -425,6 +425,9 @@ contains
       if(all(atom_counted)) exit
     end do
 
+    SAFE_DEALLOCATE_A(atom_counted)
+    SAFE_DEALLOCATE_A(region_count)
+
     if(in_debug_mode) then
       call messages_write('The atoms can be separated in ')
       call messages_write(nregion)
@@ -468,6 +471,9 @@ contains
     if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
+      SAFE_DEALLOCATE_A(order)
+      SAFE_DEALLOCATE_A(head)
+
       POP_SUB(hamiltonian_base_build_proj)
       return
     end if
@@ -529,6 +535,9 @@ contains
 
       end do
     end do
+
+    SAFE_DEALLOCATE_A(order)
+    SAFE_DEALLOCATE_A(head)
 
 !    do iregion = 1, this%nregions
 !      print*, iregion, this%regions(iregion), this%regions(iregion + 1) - 1
