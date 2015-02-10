@@ -1,5 +1,9 @@
 #!/usr/bin/env perl
 
+# Script to identify mismatched allocations and deallocations,
+# from the output of an Octopus run with ProfilingMode = prof_memory
+# or prof_memory_full. Pass the output as an argument on the command line.
+
 %alloc   = {};
 %dealloc = {};
 
@@ -9,18 +13,24 @@ while($_=<>){
 
     $varname = $pos;
     $varname =~ s/^.*%//;
-    $varname =~ s/:[0-9]*//g;
+    $varname =~ s/\([^(]*\.F90\:[0-9]+\)//g;
 
     if($type eq 'A'){
 	$alloc{$varname}++;
+	if($dealloc{$varname} eq "") {
+	    $dealloc{$varname} = 0;
+	}
     }elsif($type eq 'D'){
 	$dealloc{$varname}++;
+	if($alloc{$varname} eq "") {
+	    $alloc{$varname} = 0;
+	}
     }
 }
 
 print "\n Allocs not deallocated\n"; 
 foreach $key (keys %alloc) {
-    if($alloc{$key} != $dealloc{$key}){
+    if($alloc{$key} > $dealloc{$key}){
 	print "Variable '$key' allocated ", $alloc{$key},
 	" times and deallocated ", $dealloc{$key}, " times\n";
     }
@@ -28,7 +38,7 @@ foreach $key (keys %alloc) {
 
 print "\n Deallocs not allocated\n"; 
 foreach $key (keys %dealloc) {
-    if($alloc{$key} != $dealloc{$key}){
+    if($alloc{$key} < $dealloc{$key}){
 	print "Variable '$key' allocated ", $alloc{$key},
 	" times and deallocated ", $dealloc{$key}, " times\n";
     }
