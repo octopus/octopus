@@ -114,11 +114,11 @@ subroutine td_init(td, sys, hm)
   !%Section Time-Dependent::Propagation
   !%Description
   !% The length of the time propagation. You cannot set this variable
-  !% at the same time as TDMaxSteps. By default this variable will
+  !% at the same time as <tt>TDMaxSteps</tt>. By default this variable will
   !% not be used.
   !%
-  !% The units for this variable are hbar/Hartre (or hbar/eV if you
-  !% selected ev_angstrom as input units). The approximate conversions to
+  !% The units for this variable are hbar/Hartree (or hbar/eV if you
+  !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
   !% femtoseconds are 1 fs = 41.34 hbar/Hartree = 1.52 hbar/eV.
   !%End
   call parse_float('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
@@ -131,8 +131,7 @@ subroutine td_init(td, sys, hm)
   !%Section Time-Dependent::Propagation
   !%Description
   !% Number of time-propagation steps that will be performed. You
-  !% cannot use this variable together with TDPropagationTime. The
-  !% default value is 1500.
+  !% cannot use this variable together with <tt>TDPropagationTime</tt>.
   !%End
   default_time_steps = 1500
   if(propagation_time > CNST(0.0)) default_time_steps = nint(propagation_time/td%dt)
@@ -162,7 +161,7 @@ subroutine td_init(td, sys, hm)
   !%Description
   !% Type of dynamics to follow during a time propagation. By default
   !% it is Ehrenfest TDDFT. In any of the other two cases, you must set
-  !% 'MoveIons = yes'.
+  !% <tt>MoveIons = yes</tt>.
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
   !%Option bo 2
