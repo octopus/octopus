@@ -109,10 +109,6 @@ contains
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .true.)
 
-#ifdef HAVE_SCALAPACK    
-    call calc_mode_set_scalapack_compat()
-#endif
-    
     POP_SUB(td_run_init)
   end subroutine td_run_init
 
