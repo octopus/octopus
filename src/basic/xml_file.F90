@@ -27,30 +27,58 @@ module xml_file_m
 
   public ::                   &
     xml_file_t,               &
+    xml_tag_t,                &
     xml_file_init,            &
     xml_file_end,             &
-    xml_file_read
+    xml_file_read,            &
+    xml_file_tag,             &
+    xml_tag_end
   
   type xml_file_t
     private
     integer, pointer :: dummy
   end type xml_file_t
 
+  type xml_tag_t
+    private
+    integer, pointer :: dummy
+  end type xml_tag_t
+  
   interface
     integer function xml_file_init(this, filename)
       import xml_file_t
       type(xml_file_t), intent(out)   :: this
       character(len=*), intent(in)    :: filename
     end function xml_file_init
-  end interface
 
-  interface
     subroutine xml_file_end(this)
       import xml_file_t
       type(xml_file_t), intent(inout) :: this
     end subroutine xml_file_end
+
+    subroutine xml_file_tag(this, tag_name, tag)
+      import xml_file_t
+      import xml_tag_t
+      type(xml_file_t), intent(inout) :: this
+      character(len=*), intent(in)    :: tag_name
+      type(xml_tag_t),  intent(out)   :: tag
+    end subroutine xml_file_tag
+
+    subroutine xml_tag_end(this)
+      import xml_tag_t
+      type(xml_tag_t), intent(inout) :: this
+    end subroutine xml_tag_end
+
+    integer function xml_tag_get_attribute(this, att_name, val)
+      import xml_tag_t
+      type(xml_tag_t),  intent(in)    :: this
+      character(len=*), intent(in)    :: att_name
+      integer,          intent(out)   :: val
+    end function xml_tag_get_attribute
+
   end interface
 
+ 
   interface xml_file_read
     module procedure xml_file_read_integer
     module procedure xml_file_read_float
