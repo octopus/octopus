@@ -39,14 +39,12 @@ static void seek_tag(FILE ** xml_file, const char * tag, int index, const int en
   char buffer[1000];
   char endchar;
 
-  fseek(*xml_file, 0, SEEK_SET);
-
   fgetpos(*xml_file, &startpos);
 
   while(fgets(buffer, sizeof(buffer), *xml_file)){
 
 #ifdef XML_FILE_DEBUG
-    //    printf("line: %s\n", buffer);
+    /*    printf("line: %s\n", buffer); */
 #endif
     
     /* check for the tag */
@@ -136,6 +134,7 @@ void FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f
 
   (*tag)->xml_file = *xml_file;
 
+  fseek(*xml_file, 0, SEEK_SET);
   seek_tag(xml_file, tagname, *index, 0);
   
   fgetpos(*xml_file, &(*tag)->pos);
@@ -153,7 +152,6 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   char * res;
   char * attname;
   
-
   TO_C_STR1(attname_f, attname);
   
 #ifdef XML_FILE_DEBUG
@@ -198,6 +196,7 @@ fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_
   printf("Reading tag \"%s>\" of type integer\n", tag);
 #endif
 
+  fseek(*xml_file, 0, SEEK_SET);
   seek_tag(xml_file, tag, 0, 1);
 
   fscanf(*xml_file, "%d", value);  
@@ -220,6 +219,7 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
   printf("Reading tag \"%s>\" of type double\n", tag);
 #endif
 
+  fseek(*xml_file, 0, SEEK_SET);
   seek_tag(xml_file, tag, 0, 1);
 
   fscanf(*xml_file, "%lf", value);  
@@ -232,6 +232,39 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
 
   return 0;
 }
+
+fint FC_FUNC_(xml_tag_get_tag_value_array, XML_TAG_GET_TAG_VALUE_ARRAY)
+     (tag_t ** tag, STR_F_TYPE subtagname_f, const fint * size, double * val STR_ARG1){
+
+  char *origsubtagname;
+  char *subtagname;
+  fint ii;
+  
+  TO_C_STR1(subtagname_f, origsubtagname);
+
+  subtagname = (char *) malloc(strlen(origsubtagname) + 2);
+
+  strcpy(subtagname, "<");
+  strcat(subtagname, origsubtagname);  
+ 
+#ifdef XML_FILE_DEBUG
+  printf("Opened subtag \"%s\".\n", origsubtagname);
+#endif
+
+  free(origsubtagname);
+
+  fsetpos((*tag)->xml_file, &(*tag)->pos);
+  seek_tag(&(*tag)->xml_file, subtagname, 0, 1);
+
+  for(ii = 0; ii < *size; ii++){
+    fscanf((*tag)->xml_file, "%lf", val + ii);
+  }
+  
+  free(subtagname);
+  
+  return 0;
+}
+
 
 void FC_FUNC_(xml_file_end, XML_FILE_END)(FILE ** xml_file)
 {

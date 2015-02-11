@@ -83,6 +83,15 @@ module xml_file_m
    interface xml_file_get_tag_value
     module procedure xml_file_read_integer
     module procedure xml_file_read_float
+
+    integer function xml_tag_get_tag_value_array(this, tag_name, size, val)
+      import xml_tag_t
+      type(xml_tag_t),  intent(in)    :: this
+      character(len=*), intent(in)    :: tag_name
+      integer,          intent(in)    :: size
+      real(8),          intent(out)   :: val
+    end function xml_tag_get_tag_value_array
+    
   end interface xml_file_get_tag_value
 
 contains
