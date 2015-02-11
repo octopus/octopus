@@ -385,11 +385,12 @@ contains
 #endif
 
       ! Deallocate matrices
-      SAFE_DEALLOCATE_A(vtxdist)
       SAFE_DEALLOCATE_A(options)
 
     end select
     
+    SAFE_DEALLOCATE_A(vtxdist)
+
     ASSERT(all(part(1:nv) > 0))
     ASSERT(all(part(1:nv) <= vsize))
     call partition_set(mesh%inner_partition, part)
