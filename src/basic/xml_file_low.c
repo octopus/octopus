@@ -33,7 +33,7 @@ typedef struct {
 } tag_t;
 
 
-static void seek_tag(FILE ** xml_file, const char * tag, const int end_of_tag){
+static void seek_tag(FILE ** xml_file, const char * tag, int index, const int end_of_tag){
   fpos_t startpos;
   char * res;
   char buffer[1000];
@@ -53,7 +53,9 @@ static void seek_tag(FILE ** xml_file, const char * tag, const int end_of_tag){
     res = strstr(buffer, tag);
 
     /* the string was found */
-    if(res != NULL) {
+    if(res != NULL) index--;
+
+    if(index == -1){
     
 #ifdef XML_FILE_DEBUG
       printf("Tag was found in line: %s", res);
@@ -112,21 +114,29 @@ fint FC_FUNC_(xml_file_init, XML_FILE_INIT)(FILE ** xml_file, STR_F_TYPE fname S
 
 }
 
-void FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f, tag_t ** tag STR_ARG1)
+void FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f, const fint * index, tag_t ** tag STR_ARG1)
 {
-
+  char *origtagname;
   char *tagname;
-  TO_C_STR1(tagname_f, tagname);
+  
+  TO_C_STR1(tagname_f, origtagname);
 
+  tagname = (char *) malloc(strlen(origtagname) + 2);
+
+  strcpy(tagname, "<");
+  strcat(tagname, origtagname);  
+ 
 #ifdef XML_FILE_DEBUG
-  printf("Opened tag \"%s\".\n", tagname);
+  printf("Opened tag \"%s\" index %d.\n", origtagname, *index);
 #endif
+
+  free(origtagname);
   
   *tag = (tag_t *) malloc(sizeof(tag_t));
 
   (*tag)->xml_file = *xml_file;
 
-  seek_tag(xml_file, tagname, 0);
+  seek_tag(xml_file, tagname, *index, 0);
   
   fgetpos(*xml_file, &(*tag)->pos);
 
@@ -138,10 +148,11 @@ void FC_FUNC_(xml_tag_end, XML_TAG_END)(tag_t ** tag)
   free(*tag);
 }
 
-fint FC_FUNC_(xml_tag_get_attribute, XML_TAG_GET_ATTRIBUTE)(tag_t ** tag, STR_F_TYPE attname_f, fint * val STR_ARG1){
+fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t ** tag, STR_F_TYPE attname_f, fint * val STR_ARG1){
   char buffer[1000];
   char * res;
-  char *attname;
+  char * attname;
+  
 
   TO_C_STR1(attname_f, attname);
   
@@ -187,14 +198,14 @@ fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_
   printf("Reading tag \"%s>\" of type integer\n", tag);
 #endif
 
-  seek_tag(xml_file, tag, 1);
+  seek_tag(xml_file, tag, 0, 1);
 
   fscanf(*xml_file, "%d", value);  
 
 #ifdef XML_FILE_DEBUG
   printf("Got value: %d\n", *value);
 #endif
-
+			   
   free(tag);
 
   return 0;
@@ -209,7 +220,7 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
   printf("Reading tag \"%s>\" of type double\n", tag);
 #endif
 
-  seek_tag(xml_file, tag, 1);
+  seek_tag(xml_file, tag, 0, 1);
 
   fscanf(*xml_file, "%lf", value);  
 

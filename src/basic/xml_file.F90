@@ -25,13 +25,14 @@ module xml_file_m
 
   private
 
-  public ::                   &
-    xml_file_t,               &
-    xml_tag_t,                &
-    xml_file_init,            &
-    xml_file_end,             &
-    xml_file_read,            &
-    xml_file_tag,             &
+  public ::                        &
+    xml_file_t,                    &
+    xml_tag_t,                     &
+    xml_file_init,                 &
+    xml_file_end,                  &
+    xml_file_get_tag_value,        &
+    xml_file_tag,                  &
+    xml_tag_get_attribute_value,   &
     xml_tag_end
   
   type xml_file_t
@@ -56,11 +57,12 @@ module xml_file_m
       type(xml_file_t), intent(inout) :: this
     end subroutine xml_file_end
 
-    subroutine xml_file_tag(this, tag_name, tag)
+    subroutine xml_file_tag(this, tag_name, index, tag)
       import xml_file_t
       import xml_tag_t
       type(xml_file_t), intent(inout) :: this
       character(len=*), intent(in)    :: tag_name
+      integer,          intent(in)    :: index
       type(xml_tag_t),  intent(out)   :: tag
     end subroutine xml_file_tag
 
@@ -69,20 +71,19 @@ module xml_file_m
       type(xml_tag_t), intent(inout) :: this
     end subroutine xml_tag_end
 
-    integer function xml_tag_get_attribute(this, att_name, val)
+    integer function xml_tag_get_attribute_value(this, att_name, val)
       import xml_tag_t
       type(xml_tag_t),  intent(in)    :: this
       character(len=*), intent(in)    :: att_name
       integer,          intent(out)   :: val
-    end function xml_tag_get_attribute
+    end function xml_tag_get_attribute_value
 
   end interface
 
- 
-  interface xml_file_read
+   interface xml_file_get_tag_value
     module procedure xml_file_read_integer
     module procedure xml_file_read_float
-  end interface xml_file_read
+  end interface xml_file_get_tag_value
 
 contains
 
