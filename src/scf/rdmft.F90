@@ -35,10 +35,12 @@ module rdmft_m
   use loct_math_m 
   use messages_m
   use mesh_function_m
+  use minimizer_m
   use output_m
   use parser_m
   use poisson_m
   use profiling_m
+  use scf_m
   use simul_box_m
   use states_m
   use states_calc_m
@@ -61,7 +63,7 @@ module rdmft_m
 
   type rdm_t
     type(states_t) :: psi
-    integer  :: max_iter, iter
+    integer  :: iter
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), hartree(:,:), exchange(:,:), evalues(:)   
   end type rdm_t
@@ -98,17 +100,6 @@ contains
     rdm%scale_f = CNST(1e-2)
     rdm%maxFO = M_ZERO
     rdm%iter = 1 
-    
-
-    !%Variable RDMMaxIter
-    !%Type integer
-    !%Default 400
-    !%Section SCF::RDMFT
-    !%Description
-    !% Even if the convergence criterion is not satisfied, the minimization will stop
-    !% after this number of iterations.
-    !%End 
-    call parse_integer('RDMMaxIter', 400, rdm%max_iter)
     
 
     !%Variable RDMTolerance
@@ -162,7 +153,7 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp)
+  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr  !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
@@ -170,6 +161,7 @@ contains
     type(v_ks_t),         intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_t),  intent(inout) :: hm  !< Hamiltonian
     type(output_t),       intent(in)    :: outp !< output
+    integer,              intent(in)    :: max_iter
     
     integer :: iter, icount, ip, ist, iatom
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg
@@ -219,7 +211,7 @@ contains
    
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
-    do iter = 1, rdm%max_iter
+    do iter = 1, max_iter
       write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter
       call messages_info(1)
 
@@ -282,10 +274,12 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
-    integer :: ist, icycle
+    integer :: ist, icycle, ierr
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
-    FLOAT, allocatable ::  occin(:,:), theta(:)
-    FLOAT, parameter :: smallocc = CNST(0.0000001) 
+    FLOAT, allocatable ::  occin(:,:)
+    FLOAT, parameter :: smallocc = CNST(0.01) 
+    REAL(8), allocatable ::   theta(:)
+    REAL(8) :: objective
 
     PUSH_SUB(scf_occ)
 
@@ -306,7 +300,6 @@ contains
     st%occ = occin
     
     call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st,gr, st%occ(:,1), energy)
 
     !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
     !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
@@ -316,11 +309,13 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 1000, theta, energy) 
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
+        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call  multid_minimize(st%nst, 1000, theta, energy) 
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
+        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -331,7 +326,8 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 1000, theta, energy) 
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
+        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -339,7 +335,8 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call  multid_minimize(st%nst, 1000, theta, energy) 
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
+        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       end if
     end do
 
@@ -347,7 +344,8 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call  multid_minimize(st%nst, 1000, theta, energy) 
+      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
+      real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -366,6 +364,8 @@ contains
     do ist = 1, st%nst
       st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
     end do
+ 
+    energy = objective
     
     write(message(1),'(a,1x,f11.4)') 'Occupations sum', rdm%occsum
     write(message(2),'(a,es15.5)') ' etot RDMFT after occ minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
@@ -385,94 +385,28 @@ contains
 
   contains
   
-    subroutine multid_minimize(nst, max_iter, theta, objective) 
-      integer, intent(in)        :: nst
-      integer, intent(in)        :: max_iter
-      FLOAT, intent(inout)       :: theta(:)
-      FLOAT, intent(out)         :: objective
 
-      integer :: icycle, ist, iexit
-      FLOAT :: objective_new, step
-      FLOAT, allocatable :: theta_new(:), df(:)
- 
-      PUSH_SUB(scf_occ.multid_minimize)
-
-      SAFE_ALLOCATE(theta_new(1:nst))
-      SAFE_ALLOCATE(df(1:nst))
-
-      df = M_ZERO
-      theta_new = theta
-      step = 1.0e-2
-
-      do icycle = 1, max_iter
-        if (icycle /= 1) then
-          if (objective_new < objective) then
-            step = CNST(1.3)*step
-            objective = objective_new
-            theta = theta_new
-          else
-            step = CNST(0.9)*step
-          end if
-        end if
-
-        do ist = 1, nst
-          theta_new(ist) = theta(ist) - step*df(ist)
-        end do
-           
-        call calcul_objective(nst, theta_new, df, objective_new)
-        if (icycle == 1) objective = objective_new + M_HALF 
-       
-        iexit = 0
-        do ist = 1, nst 
-          if(abs(df(ist)) < rdm%toler)  iexit = iexit + 1 
-        end do
-        if (iexit == nst) exit
-        cycle
-      end do
-   
-      if (iexit /= nst) then
-        write(message(1),'(a,f11.4)') 'Did not manage to minimize the energy with respect to all occupation numbers for mu ',rdm%mu
-        write(message(2), '(a, i3, a)') 'Only ', iexit, ' derivatives are below the tolerance' 
-        call messages_info(2)
-      end if
-
-      objective = objective_new
-      theta = theta_new
- 
-      SAFE_DEALLOCATE_A(theta_new)
-      SAFE_DEALLOCATE_A(df)
-
-      POP_SUB(scf_occ.multid_minimize)
-  
-    end subroutine multid_minimize
-   
-    ! --------------------------------------------
-    
-    subroutine calcul_objective(nst, theta_new, df, objective_new) 
-      integer, intent(in)  :: nst
-      FLOAT,   intent(in)  :: theta_new(:)
-      FLOAT,   intent(out) :: df(:) 
-      FLOAT,   intent(out) :: objective_new
+    subroutine objective_rdmft(nst, theta, objective, getgrad, df)
+      integer,     intent(in)    :: nst
+      REAL_DOUBLE, intent(in)    :: theta(nst)
+      REAL_DOUBLE, intent(inout) :: objective
+      integer,     intent(in)    :: getgrad
+      REAL_DOUBLE, intent(inout) :: df(nst)
 
       integer :: ist
-      FLOAT ::  energy
-      FLOAT, allocatable :: V_h(:), V_x(:), dE_dn(:),occ(:) 
+      FLOAT, allocatable :: dE_dn(:),occ(:)
  
-      PUSH_SUB(scf_occ.calcul_objective)
+      POP_SUB(scf_occ.objective_rdmft)
 
-      SAFE_ALLOCATE(V_h(1:nst))
-      SAFE_ALLOCATE(V_x(1:nst))
       SAFE_ALLOCATE(dE_dn(1:nst))
       SAFE_ALLOCATE(occ(1:nst))
 
-      V_h = M_ZERO
-      V_x = M_ZERO
       occ = M_ZERO
 
       do ist = 1, nst
-        occ(ist) = M_TWO*sin(theta_new(ist)*M_PI*M_TWO)**2
+        occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
       end do
-
+      
       rdm%occsum = M_ZERO
       do ist = 1, nst
         rdm%occsum = rdm%occsum + occ(ist)
@@ -481,23 +415,31 @@ contains
       !calculate the total energy without nuclei interaction and the energy
       !derivatives with respect to the occupation numbers
 
-      call total_energy_rdm(rdm, st,gr, occ, energy, dE_dn)
-
+      call total_energy_rdm(rdm, st,gr, occ, objective, dE_dn)
       do ist = 1, nst
-        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta_new(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
       end do
+      objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
 
-      objective_new = energy - rdm%mu*(rdm%occsum - rdm%qtot)
-
-      SAFE_DEALLOCATE_A(V_h)
-      SAFE_DEALLOCATE_A(V_x)
       SAFE_DEALLOCATE_A(dE_dn)
       SAFE_DEALLOCATE_A(occ)
 
-      POP_SUB(scf_occ.calcul_objective)
 
-    end subroutine calcul_objective
+      POP_SUB(scf_occ.objective_rdmft)
 
+    end subroutine objective_rdmft
+
+    subroutine write_iter_info_rdmft(iter, nst, energy, maxdr, theta)
+        implicit none
+        integer, intent(in) :: iter
+        integer, intent(in) :: nst
+        real(8), intent(in) :: energy
+        real(8), intent(in) :: maxdr
+        real(8), intent(in) :: theta(nst)
+       PUSH_SUB(scf_occ.write_iter_info_rdmft)
+
+       POP_SUB(scf_occ.write_iter_info_rdmft)
+    end subroutine write_iter_info_rdmft
   end subroutine scf_occ
    
   ! --------------------------------------------
