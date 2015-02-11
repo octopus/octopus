@@ -40,7 +40,6 @@ module rdmft_m
   use parser_m
   use poisson_m
   use profiling_m
-  use scf_m
   use simul_box_m
   use states_m
   use states_calc_m
@@ -63,7 +62,7 @@ module rdmft_m
 
   type rdm_t
     type(states_t) :: psi
-    integer  :: iter
+    integer  :: max_iter, iter
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), hartree(:,:), exchange(:,:), evalues(:)   
   end type rdm_t
@@ -99,7 +98,17 @@ contains
     rdm%occsum = M_ZERO
     rdm%scale_f = CNST(1e-2)
     rdm%maxFO = M_ZERO
-    rdm%iter = 1 
+    rdm%iter = 1
+ 
+    !%Variable RDMMaxIter
+    !%Type integer
+    !%Default 200
+    !%Section SCF::RDMFT
+    !%Description
+    !% Even if the convergence criterion is not satisfied, the minimization will stop
+    !% after this number of iterations.
+    !%End 
+    call parse_integer('RDMMaxIter', 200, rdm%max_iter)
     
 
     !%Variable RDMTolerance
@@ -153,7 +162,7 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter)
+  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr  !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
@@ -161,7 +170,6 @@ contains
     type(v_ks_t),         intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_t),  intent(inout) :: hm  !< Hamiltonian
     type(output_t),       intent(in)    :: outp !< output
-    integer,              intent(in)    :: max_iter
     
     integer :: iter, icount, ip, ist, iatom
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg
@@ -211,7 +219,7 @@ contains
    
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
-    do iter = 1, max_iter
+    do iter = 1, rdm%max_iter
       write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter
       call messages_info(1)
 

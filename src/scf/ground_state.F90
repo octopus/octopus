@@ -140,7 +140,7 @@ contains
     ! self-consistency for occupation numbers in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
       call rdmft_init(rdm, sys%st) 
-      call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter)
+      call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
       call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
