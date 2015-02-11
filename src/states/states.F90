@@ -2175,6 +2175,8 @@ contains
     ! What we do for now is to use the maximum of the number of
     ! points and we set to zero the remaining points.
 
+    ASSERT(calc_mode_scalapack_compat())
+    
     if (mesh%parallel_in_domains) then
       blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &
        maxval(mesh%vp%np_local_vec + mesh%vp%np_bndry + mesh%vp%np_ghost)
