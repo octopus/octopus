@@ -21,22 +21,22 @@
 ! Lowering Error: bad ast optype in expression [ast=1125,asttype=12,datatype=0]
 ! PGF90-F-0000-Internal compiler error. Errors in Lowering       1 (../../../src/basic/loct_pointer_inc.F90: 33)
 ! ---------------------------------------------------------
-subroutine SUBNAME(loct_pointer_copy_1)(o, i)
-  TYPE, pointer, intent(out) :: o(:)
-  TYPE, pointer, intent(in)  :: i(:)
+subroutine SUBNAME(loct_pointer_copy_1)(pout, pin)
+  TYPE, pointer, intent(out) :: pout(:)
+  TYPE, pointer, intent(in)  :: pin(:)
 
   integer :: nl1, nu1
   integer :: i1
 
   PUSH_SUB(SUBNAME(loct_pointer_copy_1))
 
-  if(associated(i)) then
-    nl1 = lbound(i, 1)
-    nu1 = ubound(i, 1)
-    allocate(o(nl1:nu1))
-    forall (i1 = nl1:nu1) o(i1) = i(i1)
+  if(associated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    allocate(pout(nl1:nu1))
+    forall (i1 = nl1:nu1) pout(i1) = pin(i1)
   else
-    nullify(o)
+    nullify(pout)
   end if
 
   POP_SUB(SUBNAME(loct_pointer_copy_1))
@@ -44,24 +44,24 @@ end subroutine SUBNAME(loct_pointer_copy_1)
 
 
 ! ---------------------------------------------------------
-subroutine SUBNAME(loct_pointer_copy_2)(o, i)
-  TYPE, pointer, intent(out) :: o(:, :)
-  TYPE, pointer, intent(in)  :: i(:, :)
+subroutine SUBNAME(loct_pointer_copy_2)(pout, pin)
+  TYPE, pointer, intent(out) :: pout(:, :)
+  TYPE, pointer, intent(in)  :: pin(:, :)
 
   integer :: nl1, nu1, nl2, nu2
   integer :: i1, i2
 
   PUSH_SUB(SUBNAME(loct_pointer_copy_2))
 
-  if(associated(i)) then
-    nl1 = lbound(i, 1)
-    nu1 = ubound(i, 1)
-    nl2 = lbound(i, 2)
-    nu2 = ubound(i, 2)
-    allocate(o(nl1:nu1, nl2:nu2))
-    forall (i1 = nl1:nu1, i2 = nl2:nu2) o(i1, i2) = i(i1, i2)
+  if(associated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    allocate(pout(nl1:nu1, nl2:nu2))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2) pout(i1, i2) = pin(i1, i2)
   else
-    nullify(o)
+    nullify(pout)
   end if
 
   POP_SUB(SUBNAME(loct_pointer_copy_2))
@@ -69,26 +69,26 @@ end subroutine SUBNAME(loct_pointer_copy_2)
 
 
 ! ---------------------------------------------------------
-subroutine SUBNAME(loct_pointer_copy_3)(o, i)
-  TYPE, pointer, intent(out) :: o(:, :, :)
-  TYPE, pointer, intent(in)  :: i(:, :, :)
+subroutine SUBNAME(loct_pointer_copy_3)(pout, pin)
+  TYPE, pointer, intent(out) :: pout(:, :, :)
+  TYPE, pointer, intent(in)  :: pin(:, :, :)
 
   integer :: nl1, nu1, nl2, nu2, nl3, nu3
   integer :: i1, i2, i3
 
   PUSH_SUB(SUBNAME(loct_pointer_copy_3))
 
-  if(associated(i)) then
-    nl1 = lbound(i, 1)
-    nu1 = ubound(i, 1)
-    nl2 = lbound(i, 2)
-    nu2 = ubound(i, 2)
-    nl3 = lbound(i, 3)
-    nu3 = ubound(i, 3)
-    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3))
-    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) o(i1, i2, i3) = i(i1, i2, i3)
+  if(associated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    nl3 = lbound(pin, 3)
+    nu3 = ubound(pin, 3)
+    allocate(pout(nl1:nu1, nl2:nu2, nl3:nu3))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) pout(i1, i2, i3) = pin(i1, i2, i3)
   else
-    nullify(o)
+    nullify(pout)
   end if
 
   POP_SUB(SUBNAME(loct_pointer_copy_3))
@@ -96,28 +96,28 @@ end subroutine SUBNAME(loct_pointer_copy_3)
 
 
 ! ---------------------------------------------------------
-subroutine SUBNAME(loct_pointer_copy_4)(o, i)
-  TYPE, pointer, intent(out) :: o(:, :, :, :)
-  TYPE, pointer, intent(in)  :: i(:, :, :, :)
+subroutine SUBNAME(loct_pointer_copy_4)(pout, pin)
+  TYPE, pointer, intent(out) :: pout(:, :, :, :)
+  TYPE, pointer, intent(in)  :: pin(:, :, :, :)
 
   integer :: nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
   integer :: i1, i2, i3, i4
   
   PUSH_SUB(SUBNAME(loct_pointer_copy_4))
 
-  if(associated(i)) then
-    nl1 = lbound(i, 1)
-    nu1 = ubound(i, 1)
-    nl2 = lbound(i, 2)
-    nu2 = ubound(i, 2)
-    nl3 = lbound(i, 3)
-    nu3 = ubound(i, 3)
-    nl4 = lbound(i, 4)
-    nu4 = ubound(i, 4)
-    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
-    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) o(i1, i2, i3, i4) = i(i1, i2, i3, i4)
+  if(associated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    nl3 = lbound(pin, 3)
+    nu3 = ubound(pin, 3)
+    nl4 = lbound(pin, 4)
+    nu4 = ubound(pin, 4)
+    allocate(pout(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) pout(i1, i2, i3, i4) = pin(i1, i2, i3, i4)
   else
-    nullify(o)
+    nullify(pout)
   end if
 
   POP_SUB(SUBNAME(loct_pointer_copy_4))
