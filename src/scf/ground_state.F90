@@ -139,9 +139,7 @@ contains
     
     ! self-consistency for occupation numbers in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%st) 
-      call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
-      call rdmft_end(rdm)
+      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp,scfv%max_iter)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &

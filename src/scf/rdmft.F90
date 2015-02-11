@@ -54,122 +54,38 @@ module rdmft_m
   public ::                      & 
        assign_eigfunctions,      &
        rdm_t,                    &
-       rdmft_init,               &
-       rdmft_end,                &
        scf_occ,                  &
        scf_orb,                  &
        scf_rdmft
 
   type rdm_t
     type(states_t) :: psi
-    integer  :: max_iter, iter
+    integer  :: max_iter
+    integer  :: iter
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), hartree(:,:), exchange(:,:), evalues(:)   
+
+    !>shortcuts
+    type(states_t),   pointer :: st
+    type(grid_t),     pointer :: gr
   end type rdm_t
-  
+ 
+  type(rdm_t), save :: rdm
+ 
 contains
    
-  subroutine rdmft_init(rdm, st)
-    type(rdm_t),           intent(inout)    :: rdm
-    type(states_t),        intent(inout)    :: st
-
-    PUSH_SUB(rdmft_init)  
-
-    if(st%nst < st%qtot + 1) then   
-      message(1) = "Too few states to run RDMFT calculation"
-      message(2) = "Number of states should be at least the number of electrons plus one"
-      call messages_fatal(2)
-    endif
-   
-    if (states_are_complex(st)) then
-      call messages_not_implemented("Complex states for RDMFT")
-    endif
-
-    SAFE_ALLOCATE(rdm%eone(1:st%nst))
-    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%evalues(1:st%nst))
-
-    rdm%eone = M_ZERO
-    rdm%hartree = M_ZERO
-    rdm%exchange = M_ZERO
-    rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
-    rdm%qtot = st%qtot
-    rdm%occsum = M_ZERO
-    rdm%scale_f = CNST(1e-2)
-    rdm%maxFO = M_ZERO
-    rdm%iter = 1
- 
-    !%Variable RDMMaxIter
-    !%Type integer
-    !%Default 200
-    !%Section SCF::RDMFT
-    !%Description
-    !% Even if the convergence criterion is not satisfied, the minimization will stop
-    !% after this number of iterations.
-    !%End 
-    call parse_integer('RDMMaxIter', 200, rdm%max_iter)
-    
-
-    !%Variable RDMTolerance
-    !%Type float
-    !%Default 1e-1 Ha
-    !%Section SCF::RDMFT
-    !%Description
-    !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
-    !% stopped when all derivatives of the energy wrt. each occupation number 
-    !% are smaller than this criterion. The bisection for finding the correct mu that is needed
-    !% for the occupation number minimization also stops according to this criterion.
-    !% This number gets stricter with more iterations.
-    !%End
-
-    call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
-
-    !%Variable RDMConvEner
-    !%Type float
-    !%Default 1e-6 Ha
-    !%Section SCF::RDMFT
-    !% Convergence criterion for stopping the overall minimization of the energy with
-    !% respect to occupation numbers and the orbitals. The minimization of the 
-    !% energy stops when the total energy difference between two subsequent 
-    !% minimizations of the energy with respect to the occupation numbers and the
-    !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
-    !%End
-
-    call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
-    
-    
-    POP_SUB(rdmft_init)
-
-  end subroutine rdmft_init
-
-  ! ----------------------------------------
-
-  subroutine rdmft_end(rdm)
-    type(rdm_t), intent(inout) :: rdm
-
-    PUSH_SUB(rdmft_end)
-
-    SAFE_DEALLOCATE_A(rdm%evalues)
-    SAFE_DEALLOCATE_A(rdm%eone)
-    SAFE_DEALLOCATE_A(rdm%hartree)
-    SAFE_DEALLOCATE_A(rdm%exchange)
-
-    POP_SUB(rdmft_end)
-
-  end subroutine rdmft_end
 
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp)
-    type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr  !< grid
-    type(geometry_t),     intent(inout) :: geo !< geometry
-    type(states_t),       intent(inout) :: st  !< States
-    type(v_ks_t),         intent(inout) :: ks  !< Kohn-Sham
-    type(hamiltonian_t),  intent(inout) :: hm  !< Hamiltonian
-    type(output_t),       intent(in)    :: outp !< output
+  subroutine scf_rdmft(gr, geo, st, ks, hm, outp, max_iter)
+    type(grid_t),  target, intent(inout) :: gr  !< grid
+    type(geometry_t),      intent(inout) :: geo !< geometry
+    type(states_t),target, intent(inout) :: st  !< States
+    type(v_ks_t),          intent(inout) :: ks  !< Kohn-Sham
+    type(hamiltonian_t),   intent(inout) :: hm  !< Hamiltonian
+    type(output_t),        intent(in)    :: outp !< output
+    integer,               intent(in)    :: max_iter
     
     integer :: iter, icount, ip, ist, iatom
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg
@@ -216,10 +132,11 @@ contains
 
     write(message(1),'(a)') 'Initial minimization of occupation numbers'
     call messages_info(1)
-   
+    
+    call rdmft_init() 
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
-    do iter = 1, rdm%max_iter
+    do iter = 1, max_iter
       write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter
       call messages_info(1)
 
@@ -266,9 +183,96 @@ contains
       call messages_info(3)
     end if
 
-    call output_states(st,gr,geo,STATIC_DIR,outp)    
+    call output_states(st,gr,geo,STATIC_DIR,outp)  
+    call rdmft_end()
+ 
+    POP_SUB(scf_rdmft) 
+  contains
 
-    POP_SUB(scf_rdmft)
+    ! ---------------------------------------------------------
+  subroutine rdmft_init()
+
+    PUSH_SUB(scf_rdmft.rdmft_init)  
+
+    if(st%nst < st%qtot + 1) then   
+      message(1) = "Too few states to run RDMFT calculation"
+      message(2) = "Number of states should be at least the number of electrons plus one"
+      call messages_fatal(2)
+    endif
+   
+    if (states_are_complex(st)) then
+      call messages_not_implemented("Complex states for RDMFT")
+    endif
+
+   ! shortcuts
+    rdm%gr   => gr
+    rdm%st   => st
+
+    SAFE_ALLOCATE(rdm%eone(1:st%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(rdm%evalues(1:st%nst))
+
+    rdm%eone = M_ZERO
+    rdm%hartree = M_ZERO
+    rdm%exchange = M_ZERO
+    rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
+    rdm%qtot = st%qtot
+    rdm%occsum = M_ZERO
+    rdm%scale_f = CNST(1e-2)
+    rdm%maxFO = M_ZERO
+    rdm%iter = M_ONE
+ 
+
+    !%Variable RDMTolerance
+    !%Type float
+    !%Default 1e-1 Ha
+    !%Section SCF::RDMFT
+    !%Description
+    !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
+    !% stopped when all derivatives of the energy wrt. each occupation number 
+    !% are smaller than this criterion. The bisection for finding the correct mu that is needed
+    !% for the occupation number minimization also stops according to this criterion.
+    !% This number gets stricter with more iterations.
+    !%End
+
+    call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
+
+    !%Variable RDMConvEner
+    !%Type float
+    !%Default 1e-6 Ha
+    !%Section SCF::RDMFT
+    !% Convergence criterion for stopping the overall minimization of the energy with
+    !% respect to occupation numbers and the orbitals. The minimization of the 
+    !% energy stops when the total energy difference between two subsequent 
+    !% minimizations of the energy with respect to the occupation numbers and the
+    !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
+    !%End
+
+    call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
+    
+    
+    POP_SUB(scf_rdmft.rdmft_init)
+
+  end subroutine rdmft_init
+
+  ! ----------------------------------------
+
+  subroutine rdmft_end()
+
+    PUSH_SUB(scf_rdmft.rdmft_end)
+    
+    nullify(rdm%gr)
+    nullify(rdm%st)
+
+    SAFE_DEALLOCATE_A(rdm%evalues)
+    SAFE_DEALLOCATE_A(rdm%eone)
+    SAFE_DEALLOCATE_A(rdm%hartree)
+    SAFE_DEALLOCATE_A(rdm%exchange)
+
+    POP_SUB(scf_rdmft.rdmft_end)
+
+  end subroutine rdmft_end
 
   end subroutine scf_rdmft
   
@@ -391,7 +395,8 @@ contains
     SAFE_DEALLOCATE_A(theta)
     POP_SUB(scf_occ)
 
-  contains
+  end subroutine scf_occ
+
   
 
     subroutine objective_rdmft(size, theta, objective, getgrad, df)
@@ -404,9 +409,9 @@ contains
       integer :: ist
       FLOAT, allocatable :: dE_dn(:),occ(:)
  
-      POP_SUB(scf_occ.objective_rdmft)
+      POP_SUB(objective_rdmft)
 
-      ASSERT(size == st%nst)
+      ASSERT(size == rdm%st%nst)
 
       SAFE_ALLOCATE(dE_dn(1:size))
       SAFE_ALLOCATE(occ(1:size))
@@ -425,7 +430,7 @@ contains
       !calculate the total energy without nuclei interaction and the energy
       !derivatives with respect to the occupation numbers
 
-      call total_energy_rdm(rdm, st,gr, occ, objective, dE_dn)
+      call total_energy_rdm(rdm, occ, objective, dE_dn)
       do ist = 1, size
         df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
       end do
@@ -435,7 +440,7 @@ contains
       SAFE_DEALLOCATE_A(occ)
 
 
-      POP_SUB(scf_occ.objective_rdmft)
+      POP_SUB(objective_rdmft)
 
     end subroutine objective_rdmft
 
@@ -446,14 +451,13 @@ contains
         real(8), intent(in) :: energy, maxdr, maxdf
         real(8), intent(in) :: theta(size)
 
-       PUSH_SUB(scf_occ.write_iter_info_rdmft)
+       PUSH_SUB(write_iter_info_rdmft)
 
-       ASSERT(size == st%nst)
+       ASSERT(size == rdm%st%nst)
 
-       POP_SUB(scf_occ.write_iter_info_rdmft)
+       POP_SUB(write_iter_info_rdmft)
 
     end subroutine write_iter_info_rdmft
-  end subroutine scf_occ
    
   ! --------------------------------------------
     
@@ -513,7 +517,7 @@ contains
     call assign_eigfunctions(st, gr, FO)
       
     call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st, gr, st%occ(:,1), energy)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
     
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO) 
@@ -675,10 +679,8 @@ contains
   end subroutine assign_eigfunctions
    
   ! ----------------------------------------
-  subroutine total_energy_rdm(rdm, st, gr, occ, energy, dE_dn)
+  subroutine total_energy_rdm(rdm, occ, energy, dE_dn)
     type(rdm_t),          intent(inout)  :: rdm
-    type(states_t),       intent(in)     :: st 
-    type(grid_t),         intent(in)     :: gr
     FLOAT,                intent(in)     :: occ(:)
     FLOAT,                intent(out)    :: energy
     FLOAT, optional,      intent(out)    :: dE_dn(:) !< (1:st%nst)
@@ -688,23 +690,23 @@ contains
      
     PUSH_SUB(total_energy_rdm)
   
-    SAFE_ALLOCATE(V_h(1:st%nst))
-    SAFE_ALLOCATE(V_x(1:st%nst))
+    SAFE_ALLOCATE(V_h(1:rdm%st%nst))
+    SAFE_ALLOCATE(V_x(1:rdm%st%nst))
 
     energy = M_ZERO
     V_h = M_ZERO
     V_x = M_ZERO
      
     !Calculate hartree contribution 
-    do ist = 1, st%nst
-      do jst = 1, st%nst
+    do ist = 1, rdm%st%nst
+      do jst = 1, rdm%st%nst
         V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
       enddo
     end do
 
     !Calculate exchange contribution
-    do ist = 1, st%nst 
-      do jst = 1, st%nst
+    do ist = 1, rdm%st%nst 
+      do jst = 1, rdm%st%nst
         V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst)
       end do
       V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), CNST(1.0e-16))
@@ -716,7 +718,7 @@ contains
     end if
 
     !Total energy calculation without nuclei interaction  
-    do ist = 1, st%nst
+    do ist = 1, rdm%st%nst
       energy = energy + occ(ist)*rdm%eone(ist) &
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
