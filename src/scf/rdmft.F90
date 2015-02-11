@@ -394,29 +394,31 @@ contains
   contains
   
 
-    subroutine objective_rdmft(nst, theta, objective, getgrad, df)
-      integer,     intent(in)    :: nst
-      REAL_DOUBLE, intent(in)    :: theta(nst)
+    subroutine objective_rdmft(size, theta, objective, getgrad, df)
+      integer,     intent(in)    :: size
+      REAL_DOUBLE, intent(in)    :: theta(size)
       REAL_DOUBLE, intent(inout) :: objective
       integer,     intent(in)    :: getgrad
-      REAL_DOUBLE, intent(inout) :: df(nst)
+      REAL_DOUBLE, intent(inout) :: df(size)
 
       integer :: ist
       FLOAT, allocatable :: dE_dn(:),occ(:)
  
       POP_SUB(scf_occ.objective_rdmft)
 
-      SAFE_ALLOCATE(dE_dn(1:nst))
-      SAFE_ALLOCATE(occ(1:nst))
+      ASSERT(size == st%nst)
+
+      SAFE_ALLOCATE(dE_dn(1:size))
+      SAFE_ALLOCATE(occ(1:size))
 
       occ = M_ZERO
 
-      do ist = 1, nst
+      do ist = 1, size
         occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
       end do
       
       rdm%occsum = M_ZERO
-      do ist = 1, nst
+      do ist = 1, size
         rdm%occsum = rdm%occsum + occ(ist)
       end do
       
@@ -424,7 +426,7 @@ contains
       !derivatives with respect to the occupation numbers
 
       call total_energy_rdm(rdm, st,gr, occ, objective, dE_dn)
-      do ist = 1, nst
+      do ist = 1, size
         df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
       end do
       objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
@@ -437,16 +439,19 @@ contains
 
     end subroutine objective_rdmft
 
-    subroutine write_iter_info_rdmft(iter, nst, energy, maxdr, theta)
+    subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
         implicit none
         integer, intent(in) :: iter
-        integer, intent(in) :: nst
-        real(8), intent(in) :: energy
-        real(8), intent(in) :: maxdr
-        real(8), intent(in) :: theta(nst)
+        integer, intent(in) :: size
+        real(8), intent(in) :: energy, maxdr, maxdf
+        real(8), intent(in) :: theta(size)
+
        PUSH_SUB(scf_occ.write_iter_info_rdmft)
 
+       ASSERT(size == st%nst)
+
        POP_SUB(scf_occ.write_iter_info_rdmft)
+
     end subroutine write_iter_info_rdmft
   end subroutine scf_occ
    
