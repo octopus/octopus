@@ -329,7 +329,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
   SAFE_DEALLOCATE_A(force_loc)
-
+  SAFE_DEALLOCATE_A(grad_rho)
+  
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
 
