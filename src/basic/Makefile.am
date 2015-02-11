@@ -72,7 +72,9 @@ libbasic_a_SOURCES =     \
 	comm.F90             \
 	octcl_kernel.F90     \
 	openscad.F90         \
-	polyhedron.F90
+	polyhedron.F90       \
+	xml_file.F90         \
+	xml_file_low.c
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
