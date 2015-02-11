@@ -291,7 +291,11 @@
         else
           call drestart_read_mesh_function(restart, trim(filename), gr%mesh, vksinterp%v_old(1:gr%mesh%np, is, ii), err)
         end if
-        if (err /= 0) err2 = err2 + 1
+        if (err /= 0) then
+          err2 = err2 + 1
+          message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
+          call messages_warning(1)
+        endif
       end do
     end do
 

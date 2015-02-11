@@ -164,17 +164,21 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
       call io_binary_get_info(filename, np, ierr)
 
-      SAFE_ALLOCATE(read_ff(1:np))
+      if (ierr == 0) then
+        SAFE_ALLOCATE(read_ff(1:np))
 
-      call io_binary_read(filename, np, read_ff, ierr)
-      call profiling_count_transfers(np, read_ff(1))
+        call io_binary_read(filename, np, read_ff, ierr)
+        call profiling_count_transfers(np, read_ff(1))
+        
+        if (ierr == 0) then
+          ff(1:mesh%np_global) = M_ZERO
+          do ip = 1, min(np, ubound(map, dim = 1))
+            if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
+          end do
+        endif
 
-      ff(1:mesh%np_global) = M_ZERO
-      do ip = 1, min(np, ubound(map, dim = 1))
-        if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
-      end do
-
-      SAFE_DEALLOCATE_P(read_ff)
+        SAFE_DEALLOCATE_P(read_ff)
+      endif
 
     else
       call io_binary_read(filename, mesh%np_global, ff, ierr)
