@@ -37,6 +37,9 @@ match ; Dipole Moment x   ; GREPFIELD(static/info, '<x>', 4) ;  0.0
 match ; Dipole Moment y   ; GREPFIELD(static/info, '<y>', 4) ;  7.18492E-03
 match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;  8.09807E-01
 
+match ; Force C  x        ; GREPFIELD(static/info, '1         C', 3) ;  -0.000000
+match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.890096
+match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  21.948215
 
 Input: 16-scfinlcao.02-alt.inp
 
