@@ -651,6 +651,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do ! iatom
 
+      SAFE_DEALLOCATE_A(aa)
+      SAFE_DEALLOCATE_A(bb)
+      
 #ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_h)
