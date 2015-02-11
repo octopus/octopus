@@ -1,4 +1,5 @@
 CalculationMode = td
+DebugLevel = 1
 
 bond_length = 2.8
 

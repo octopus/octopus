@@ -516,11 +516,12 @@ contains
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
       logical :: dim_mask(MAX_INDEX)
-      integer :: i_strategy
+      integer :: i_strategy, irank
       logical :: reorder, periodic_mask(MAX_INDEX)
       logical, allocatable :: periodic_mask_tmp(:)
       integer :: coords(MAX_INDEX)
       integer :: new_comm
+      character(len=6) :: node_type
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -616,6 +617,26 @@ contains
         mc%dom_st_kpt_comm = base_grp%comm
       end if
       SAFE_DEALLOCATE_A(periodic_mask_tmp)
+
+      if(in_debug_mode) then
+        if(mpi_world%rank == 0) then
+          write(0,'(a)') 'Debug: MPI Task Assignment to MPI Groups'
+          write(0,'(5a10)') 'World', 'Domains', 'States', 'K-Points', 'Other'
+        endif
+
+        if(mc%node_type == P_SLAVE) then
+          node_type = "slave"
+        else
+          node_type = "master"
+        endif
+        do irank = 0, mpi_world%size - 1
+          if(mpi_world%rank == irank) &
+            write(0,'(5i10,5x,a)') mpi_world%rank, mc%who_am_i(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_STATES), &
+            mc%who_am_i(P_STRATEGY_KPOINTS), mc%who_am_i(P_STRATEGY_OTHER), trim(node_type)
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+        enddo
+      endif
+
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
