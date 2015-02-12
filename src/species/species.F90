@@ -256,7 +256,7 @@ contains
     !%Section System::Species
     !%Description
     !% A species is by definition either an "ion" (nucleus + core electrons) described
-    !% through a pseudopotential, or a user-defined model potential.
+    !% through a pseudopotential, or a model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
     !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials, you are
@@ -269,58 +269,60 @@ contains
     !% octopus homepage</a>.
     !%
     !% The format of this block is the following: The first field is
-    !% the name of the species. The second is the atomic mass (in atomic mass
-    !% units). The third defines the type of species (the valid options
-    !% are detailed below). The fourth is the atomic number (or valence charge for non-atomic species).
-    !% Some types may need some parameters given in the remaining fields of the row.
-    !% Note: pseudopotentials may only be used in 3D.
+    !% the name of the species. The second defines the type of species
+    !% (the valid options are detailed below). The third is the atomic
+    !% mass (in atomic mass units, i.e. the mass of a proton is
+    !% roughly one).The fourth is the atomic number (or valence charge
+    !% for non-atomic species).  Some types may need some parameters
+    !% given in the remaining fields of the row.  Note:
+    !% pseudopotentials may only be used in 3D.
     !%
     !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       |  15.9994 | spec_ps_psf         | 8   | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       |   1.0079 | spec_ps_hgh         | 1 
-    !% <br>&nbsp;&nbsp;'jlm'     |  23.2    | spec_jelli          | 8   | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     |  17.0    | spec_charge_density | 6   | "exp(-r/a)"
-    !% <br>&nbsp;&nbsp;'udf'     |   0.0    | spec_user_defined   | 8   | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_delta     | 1
-    !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_gaussian  | 1
-    !% <br>&nbsp;&nbsp;'Xe'      | 131.29   | spec_ps_upf         | 54
-    !% <br>&nbsp;&nbsp;'C'       |  12.01   | spec_ps_qso         | 12
+    !% <br>&nbsp;&nbsp;'O'       | spec_ps_psf         |  15.9994 |  8 | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       | spec_ps_hgh         |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'Xe'      | spec_ps_upf         | 131.29   | 54
+    !% <br>&nbsp;&nbsp;'C'       | spec_ps_qso         |  12.01   | 12
+    !% <br>&nbsp;&nbsp;'jlm'     | spec_jelli          |  23.2    |  8 | 5.0
+    !% <br>&nbsp;&nbsp;'rho'     | spec_charge_density |  17.0    |  6 | "exp(-r/a)"
+    !% <br>&nbsp;&nbsp;'udf'     | spec_user_defined   |   0.0    |  8 | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   | spec_full_delta     |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'H_all'   | spec_full_gaussian  |   1.0079 |  1
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified).
-    !%Option spec_user_defined 123
+    !%Option spec_user_defined -123
     !% Species with user-defined potential. In this case, the fifth
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
-    !%Option spec_point  3
-    !%Option spec_jelli  3
+    !%Option spec_point  -3
+    !%Option spec_jelli  -3
     !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
-    !%Option spec_jelli_slab  4
+    !%Option spec_jelli_slab  -4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
-    !%Option spec_ps_psf  100
+    !%Option spec_ps_psf  -100
     !% Troullier-Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option spec_ps_hgh  101
+    !%Option spec_ps_hgh  -101
     !% Hartwigsen-Goedecker-Hutter pseudopotentials. No extra columns,
     !% as they are not necessary to define the HGH pseudopotential.
-    !%Option spec_ps_cpi  102
+    !%Option spec_ps_cpi  -102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
     !% read from a <tt>.cpi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/CPI</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option spec_ps_fhi  103
+    !%Option spec_ps_fhi  -103
     !% Fritz-Haber pseudopotential (<tt>ABINIT6</tt> format): the pseudopotential will be
     !% read from a <tt>.fhi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
@@ -328,7 +330,7 @@ contains
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !% Note that you can use the pseudopotentials from <tt>ABINIT</tt> homepage.
-    !%Option spec_ps_upf  104
+    !%Option spec_ps_upf  -104
     !% UPF format: the pseudopotential will be
     !% read from a <tt>.UPF</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
@@ -336,7 +338,7 @@ contains
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file and cannot be changed.
     !% Note that version 2.0 or any later version of the UPF file format are not supported.
-    !%Option spec_ps_qso  105
+    !%Option spec_ps_qso  -105
     !% (experimental) The quantum-simulation.org XML pseudo-potential
     !% format used by qbox. The pseudopotential will be read from a
     !% <tt>.xml</tt> file, either in the working directory or in the
@@ -345,18 +347,18 @@ contains
     !% pseudopotential to consider in the calculation and the
     !% <i>l</i>-component to consider as local are indicated in the
     !% pseudopotential file.
-    !%Option spec_pspio  110
+    !%Option spec_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
     !% directory, using the PSPIO library.
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
-    !%Option spec_full_delta   127
+    !%Option spec_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
     !% point. No extra columns.
-    !%Option spec_full_gaussian   124
+    !%Option spec_full_gaussian   -124
     !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
     !% used), in the form:
@@ -377,13 +379,13 @@ contains
     !% Column 5 is <math>sigma</math>, the width of the Gaussian that should be
     !% small, but you may run into numerical difficulties if it is too
     !% small (0.25 by default).
-    !%Option spec_charge_density 125
+    !%Option spec_charge_density -125
     !% The potential is created by a distribution of charge.
     !% Column 5 is an expression for the charge distribution.
-    !%Option species_from_file  126
+    !%Option species_from_file  -126
     !% The potential is read from a file, whose name is given in column 5.
     !% Accepted file formats, detected by extension: obf, ncdf and csv.
-    !%Option spec_soft_coulomb 128
+    !%Option spec_soft_coulomb -128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
     !% <math>
@@ -1261,8 +1263,26 @@ contains
     ncols = parse_block_cols(blk, row)
     read_data = 0
 
-    call parse_block_float(blk, row, 1, spec%weight)
-    call parse_block_integer(blk, row, 2, spec%type)
+    call parse_block_integer(blk, row, 1, spec%type)
+
+    ! To detect the old species block format, options are represented
+    ! as negative values. If we get a non-negative value we know we
+    ! are reading a mass.
+    if(spec%type < 0) then
+      call parse_block_float(blk, row, 2, spec%weight)
+    else
+      call parse_block_float(blk, row, 1, spec%weight)
+      call parse_block_integer(blk, row, 2, spec%type)
+      
+      call messages_write('Found  a species  with the old format.  Please update', new_line = .true.)
+      call messages_write('the Species block to the new format, where the second', new_line = .true.)
+      call messages_write('column indicates the type of the species  rather than', new_line = .true.)
+      call messages_write('the mass.')
+      call messages_warning()
+    end if
+
+    ! now we convert back to positive
+    spec%type = -spec%type
 
     select case(spec%type)
 
