@@ -264,7 +264,9 @@ contains
       ps%l_loc  = ps_qso%llocal
 
       nullify(ps%g%drdi, ps%g%s)
-      ps%g%nrval = ps_qso%grid_size
+
+      ! use a larger grid
+      ps%g%nrval = max(ps_qso%grid_size, nint(CNST(20.0)/(ps_qso%mesh_spacing)))
 
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
@@ -924,8 +926,8 @@ contains
     type(ps_qso_t), intent(in)    :: ps_qso
 
     integer :: ll, ip, is
-    FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
-    FLOAT, allocatable :: kbprojector(:)
+    FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element, aa, cc
+    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:)
 
     PUSH_SUB(ps_qso_load)
 
@@ -933,18 +935,39 @@ contains
     ps%icore = 'nc'
 
     ps%z_val = ps_qso%valence_charge
+
+    ! the local potential
     
-    call spline_fit(ps%g%nrval, ps%g%rofi, ps_qso%potential(:, ps_qso%llocal), ps%vl)
+    SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
+
+    do ip = 1, ps%g%nrval
+      rr = (ip - 1)*ps_qso%mesh_spacing
+      if(ip <= ps_qso%grid_size) then
+        vlocal(ip) = ps_qso%potential(ip, ps_qso%llocal)
+      else
+        vlocal(ip) = -ps_qso%valence_charge/rr
+      end if
+    end do
+
+    call spline_fit(ps%g%nrval, ps%g%rofi, vlocal, ps%vl)
+
+    SAFE_DEALLOCATE_A(vlocal)
 
     SAFE_ALLOCATE(kbprojector(1:ps%g%nrval))
+    SAFE_ALLOCATE(wavefunction(1:ps%g%nrval))
 
+    kbprojector = CNST(0.0)
+    wavefunction = CNST(0.0)
+
+    ! the projectors and the orbitals
+    
     do ll = 0, ps_qso%lmax
 
       ! we need to build the KB projectors
       ! the procedure was copied from ps_in_grid.F90 (r12967)
       dnrm = M_ZERO
       avgv = M_ZERO
-      do ip = 1, ps%g%nrval
+      do ip = 1, ps_qso%grid_size
         rr = (ip - 1)*ps_qso%mesh_spacing
         volume_element = rr**2*ps_qso%mesh_spacing
         kbprojector(ip) = (ps_qso%potential(ip, ll) - ps_qso%potential(ip, ps_qso%llocal))*ps_qso%wavefunction(ip, ll)
@@ -963,14 +986,27 @@ contains
 
       call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, 1))
 
+      ! wavefunctions, for the moment we pad them with zero
+      do ip = 1, ps%g%nrval
+        rr = (ip - 1)*ps_qso%mesh_spacing
+        if(ip <= ps_qso%grid_size) then
+          wavefunction(ip) = ps_qso%wavefunction(ip, ll)
+        else
+          wavefunction(ip) = CNST(0.0)
+        end if
+      end do
+      
       do is = 1, ps%ispin
-        call spline_fit(ps%g%nrval, ps%g%rofi, ps_qso%wavefunction(:, ll), ps%ur(ll + 1, is))
-        call spline_fit(ps%g%nrval, ps%g%r2ofi, ps_qso%wavefunction(:, ll), ps%ur_sq(ll + 1, is))
+        call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
+        call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
       end do
 
     end do
 
     call ps_getradius(ps)
+
+    SAFE_DEALLOCATE_A(kbprojector)
+    SAFE_DEALLOCATE_A(wavefunction)
 
     POP_SUB(ps_qso_load)
   end subroutine ps_qso_load
