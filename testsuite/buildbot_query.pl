@@ -3,7 +3,7 @@
 # Query a buildbot using the Octopus/APE/BerkeleyGW testsuite infrastructure for
 # values obtained by each buildslave for a particular test and match.
 # Parses the HTML status pages.
-# Tested with BuildBot 0.7.12 and 0.8.5.
+# Tested with BuildBot 0.7.12, 0.8.5, 0.8.8
 
 # modify these to choose the input file and match you want to search for
 $inputfile = "01-asym_doublewell.04-oct_run.inp";
@@ -44,7 +44,9 @@ while ($_ = <ONEBOX>) {
 # <td align="center" class="LastBuild box success"><a href="builders/lascar_x86_64_gfortran_cl_intel/builds/139">10187</a><br />build<br />successful</td>
 # BB 0.8.5
 #<a href="builders/mauchly_x86_64_intel_openmp/builds/80">10898</a>
-    if ( $_ =~ /<a href="builders\/(.*)\/builds\/(.*)">(.*)<\/a>/) {
+# BB 0.8.8
+#<td class="box"><a href="./builders/mauchly_x86_64_intel_openmp">mauchly_x86_64_intel_openmp</a></td>
+    if ( $_ =~ /<a href=".*builders\/(.*)\/builds\/(.*)">(.*)<\/a>/) {
 	$builder = $1;
 	$build_num = $2;
 	$svn_rev = $3;
