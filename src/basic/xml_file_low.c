@@ -112,7 +112,7 @@ fint FC_FUNC_(xml_file_init, XML_FILE_INIT)(FILE ** xml_file, STR_F_TYPE fname S
 
 }
 
-void FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f, const fint * index, tag_t ** tag STR_ARG1)
+fint FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f, const fint * index, tag_t ** tag STR_ARG1)
 {
   char *origtagname;
   char *tagname;
@@ -140,6 +140,8 @@ void FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f
   fgetpos(*xml_file, &(*tag)->pos);
 
   free(tagname);
+
+  return 0;
 }
 
 void FC_FUNC_(xml_tag_end, XML_TAG_END)(tag_t ** tag)
@@ -233,7 +235,7 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
   return 0;
 }
 
-fint FC_FUNC_(xml_tag_get_tag_value_array, XML_TAG_GET_TAG_VALUE_ARRAY)
+fint FC_FUNC_(xml_tag_get_tag_value_array_low, XML_TAG_GET_TAG_VALUE_ARRAY_LOW)
      (tag_t ** tag, STR_F_TYPE subtagname_f, const fint * size, double * val STR_ARG1){
 
   char *origsubtagname;
@@ -264,7 +266,6 @@ fint FC_FUNC_(xml_tag_get_tag_value_array, XML_TAG_GET_TAG_VALUE_ARRAY)
   
   return 0;
 }
-
 
 void FC_FUNC_(xml_file_end, XML_FILE_END)(FILE ** xml_file)
 {

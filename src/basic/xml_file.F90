@@ -21,6 +21,10 @@
 
 module xml_file_m
 
+  ! This module implements a very limited and non-general interface to
+  ! read xml files. Its main purpose it is to read pseudo-potentials
+  ! in xml format.
+
   implicit none 
 
   private
@@ -30,11 +34,11 @@ module xml_file_m
     xml_tag_t,                     &
     xml_file_init,                 &
     xml_file_end,                  &
-    xml_file_get_tag_value,        &
+    xml_get_tag_value,             &
     xml_file_tag,                  &
     xml_tag_get_attribute_value,   &
     xml_tag_end
-  
+
   type xml_file_t
     private
     integer, pointer :: dummy
@@ -44,7 +48,7 @@ module xml_file_m
     private
     integer, pointer :: dummy
   end type xml_tag_t
-  
+
   interface
     integer function xml_file_init(this, filename)
       import :: xml_file_t
@@ -57,14 +61,14 @@ module xml_file_m
       type(xml_file_t), intent(inout) :: this
     end subroutine xml_file_end
 
-    subroutine xml_file_tag(this, tag_name, index, tag)
+    integer function xml_file_tag(this, tag_name, index, tag)
       import :: xml_file_t
       import :: xml_tag_t
       type(xml_file_t), intent(inout) :: this
       character(len=*), intent(in)    :: tag_name
       integer,          intent(in)    :: index
       type(xml_tag_t),  intent(out)   :: tag
-    end subroutine xml_file_tag
+    end function xml_file_tag
 
     subroutine xml_tag_end(this)
       import :: xml_tag_t
@@ -80,59 +84,73 @@ module xml_file_m
 
   end interface
 
-  interface xml_file_get_tag_value
+  interface xml_get_tag_value
     module procedure xml_file_read_integer
     module procedure xml_file_read_float
-!
-!    integer function xml_tag_get_tag_value_array(this, tag_name, size, val)
-!      import :: xml_tag_t
-!      type(xml_tag_t),  intent(in)    :: this
-!      character(len=*), intent(in)    :: tag_name
-!      integer,          intent(in)    :: size
-!      real(8),          intent(out)   :: val
-!    end function xml_tag_get_tag_value_array
-    
-  end interface xml_file_get_tag_value
+    module procedure xml_tag_get_tag_value_array
+  end interface xml_get_tag_value
 
 contains
 
-    integer function xml_file_read_integer(this, tag, val) result(ierr)
-      type(xml_file_t), intent(inout) :: this
-      character(len=*), intent(in)    :: tag
-      integer,          intent(out)   :: val
+  integer function xml_file_read_integer(this, tag, val) result(ierr)
+    type(xml_file_t), intent(inout) :: this
+    character(len=*), intent(in)    :: tag
+    integer,          intent(out)   :: val
 
-      interface
-        integer function xml_file_read_integer_low(this, tag, val) result(ierr)
-          import :: xml_file_t
-          type(xml_file_t), intent(inout) :: this
-          character(len=*), intent(in)    :: tag
-          integer,          intent(out)   :: val
-        end function xml_file_read_integer_low
-      end interface
+    interface
+      integer function xml_file_read_integer_low(this, tag, val) result(ierr)
+        import :: xml_file_t
+        type(xml_file_t), intent(inout) :: this
+        character(len=*), intent(in)    :: tag
+        integer,          intent(out)   :: val
+      end function xml_file_read_integer_low
+    end interface
 
-      ierr = xml_file_read_integer_low(this, '<'//trim(tag), val)
+    ierr = xml_file_read_integer_low(this, '<'//trim(tag), val)
 
-    end function xml_file_read_integer
+  end function xml_file_read_integer
 
-    ! ----------------------------------------------------------------------
+  ! ----------------------------------------------------------------------
 
-    integer function xml_file_read_float(this, tag, val) result(ierr)
-      type(xml_file_t), intent(inout) :: this
-      character(len=*), intent(in)    :: tag
-      real(8),          intent(out)   :: val
+  integer function xml_file_read_float(this, tag, val) result(ierr)
+    type(xml_file_t), intent(inout) :: this
+    character(len=*), intent(in)    :: tag
+    real(8),          intent(out)   :: val
 
-      interface
-        integer function xml_file_read_double_low(this, tag, val) result(ierr)
-          import :: xml_file_t
-          type(xml_file_t), intent(inout) :: this
-          character(len=*), intent(in)    :: tag
-          real(8),          intent(out)   :: val
-        end function xml_file_read_double_low
-      end interface
+    interface
+      integer function xml_file_read_double_low(this, tag, val) result(ierr)
+        import :: xml_file_t
+        type(xml_file_t), intent(inout) :: this
+        character(len=*), intent(in)    :: tag
+        real(8),          intent(out)   :: val
+      end function xml_file_read_double_low
+    end interface
 
-      ierr = xml_file_read_double_low(this, '<'//trim(tag), val)
+    ierr = xml_file_read_double_low(this, '<'//trim(tag), val)
 
-    end function xml_file_read_float
+  end function xml_file_read_float
+
+  ! ----------------------------------------------------------------------
+
+  integer function xml_tag_get_tag_value_array(this, tag_name, size, val) result(ierr)
+    type(xml_tag_t),  intent(in)    :: this
+    character(len=*), intent(in)    :: tag_name
+    integer,          intent(in)    :: size
+    real(8),          intent(out)   :: val(:)
+
+    interface
+      integer function xml_tag_get_tag_value_array_low(this, tag_name, size, val)
+        import :: xml_tag_t
+        type(xml_tag_t),  intent(in)    :: this
+        character(len=*), intent(in)    :: tag_name
+        integer,          intent(in)    :: size
+        real(8),          intent(out)   :: val
+      end function xml_tag_get_tag_value_array_low
+    end interface
+
+    ierr = xml_tag_get_tag_value_array_low(this, tag_name, size, val(1))
+
+  end function xml_tag_get_tag_value_array
 
 end module xml_file_m
 

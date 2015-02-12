@@ -72,11 +72,11 @@ contains
       call messages_fatal()
     end if    
 
-    ierr = xml_file_get_tag_value(qso_file, 'lmax', this%lmax)
-    ierr = xml_file_get_tag_value(qso_file, 'llocal', this%llocal)
-    ierr = xml_file_get_tag_value(qso_file, 'mass', this%mass)
-    ierr = xml_file_get_tag_value(qso_file, 'valence_charge', this%valence_charge)
-    ierr = xml_file_get_tag_value(qso_file, 'mesh_spacing', this%mesh_spacing)
+    ierr = xml_get_tag_value(qso_file, 'lmax', this%lmax)
+    ierr = xml_get_tag_value(qso_file, 'llocal', this%llocal)
+    ierr = xml_get_tag_value(qso_file, 'mass', this%mass)
+    ierr = xml_get_tag_value(qso_file, 'valence_charge', this%valence_charge)
+    ierr = xml_get_tag_value(qso_file, 'mesh_spacing', this%mesh_spacing)
 
     do ii = 0, this%lmax
       call xml_file_tag(qso_file, 'projector', ii, tag)
@@ -93,8 +93,8 @@ contains
         ASSERT(size == this%grid_size)
       end if
       
-      call xml_tag_get_tag_value_array(tag, 'radial_potential', size, this%potential(:, ll))
-      call xml_tag_get_tag_value_array(tag, 'radial_function', size, this%wavefunction(:, ll))
+      ierr = xml_get_tag_value(tag, 'radial_potential', size, this%potential(:, ll))
+      ierr = xml_get_tag_value(tag, 'radial_function', size, this%wavefunction(:, ll))
 
       call xml_tag_end(tag)
 
