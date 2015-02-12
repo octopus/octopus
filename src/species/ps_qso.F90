@@ -125,7 +125,7 @@ contains
     integer :: ll, ip
     FLOAT   :: nrm, rr
 
-    PUSH_SUB(ps_qso_check_rphi)
+    PUSH_SUB(ps_qso_check_normalization)
 
     !  checking normalization of the wavefunctions
     do ll = 0, this%lmax
@@ -146,7 +146,7 @@ contains
 
     end do
       
-    POP_SUB(ps_qso_check_rphi)
+    POP_SUB(ps_qso_check_normalization)
   end subroutine ps_qso_check_normalization
   
   ! ---------------------------------------------------------
