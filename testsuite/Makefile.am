@@ -63,4 +63,6 @@ check-base:
 clean-local:
 	-find /tmp -name 'octopus*' -type d -mmin +600 -exec rm -rf {} \; 2>/dev/null
 
+CLEANFILES = *.log
+
 .PHONY: check check-full clean clean-local
