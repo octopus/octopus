@@ -65,4 +65,4 @@ clean-local:
 
 CLEANFILES = *.log
 
-.PHONY: check check-full clean clean-local
+.PHONY: check check-full clean clean-local check-dryrun check-base
