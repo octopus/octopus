@@ -103,13 +103,6 @@ contains
 
     end do
 
-    call messages_write('QSO pseudopotential for '//trim(filename)//':', new_line = .true.)
-    call messages_write('  maximum angular momentum component = ')
-    call messages_write(this%lmax, new_line = .true.)
-    call messages_write('  local angular momentum component   = ')
-    call messages_write(this%llocal, new_line = .true.)
-    call messages_info()
-    
     call xml_file_end(qso_file)
 
     call ps_qso_check_normalization(this)
@@ -133,7 +126,6 @@ contains
       do ip = 1, this%grid_size
         rr = (ip - 1)*this%mesh_spacing
         nrm = nrm + this%wavefunction(ip, ll)**2*this%mesh_spacing*rr**2
-        write(10 + ll, *) rr, this%wavefunction(ip, ll), this%potential(ip, ll)
       end do
       nrm = sqrt(nrm)
 

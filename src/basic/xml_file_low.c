@@ -25,7 +25,7 @@
 #include "string_f.h"
 #include <string.h>
 
-#define XML_FILE_DEBUG
+/* #define XML_FILE_DEBUG */
 
 typedef struct {
   FILE * xml_file;
