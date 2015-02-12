@@ -31,6 +31,7 @@ module ps_m
   use ps_cpi_m
   use ps_fhi_m
   use ps_hgh_m
+  use ps_qso_m
   use ps_in_grid_m
 #if HAVE_PSPIO
   use pspio_f90_lib_m
@@ -60,14 +61,15 @@ module ps_m
     PS_TYPE_HGH = 101,          &
     PS_TYPE_CPI = 102,          &
     PS_TYPE_FHI = 103,          &
-    PS_TYPE_UPF = 104
+    PS_TYPE_UPF = 104,          &
+    PS_TYPE_QSO = 105
 
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_UPF) = (/"tm2", "hgh", "cpi", "fhi", "upf"/)
+  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_QSO) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
   type ps_t
     character(len=10) :: label
@@ -137,12 +139,13 @@ contains
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
 
-    integer :: l
+    integer :: l, ii, ll
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(hgh_t)    :: psp    !< In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(ps_qso_t) :: ps_qso !< quantum-simulation.org xml format (from qbox)
 
     PUSH_SUB(ps_init)
 
@@ -151,7 +154,7 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ! Initialization and processing.
-    ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_UPF)
+    ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_QSO)
 
     select case(flavour)
     case(PS_TYPE_PSF)
@@ -243,6 +246,34 @@ contains
       ps%g%rofi = ps_upf%r
       ps%g%r2ofi = ps%g%rofi**2
 
+    case(PS_TYPE_QSO)
+      call ps_qso_init(ps_qso, trim(label))
+
+      call valconf_null(ps%conf)
+
+      ps%z      = z
+      ps%conf%z = nint(z)
+      ps%conf%p = ps_qso%lmax + 1
+
+      do ll = 0, ps_qso%lmax
+        ps%conf%l(ll + 1) = ll
+      end do
+
+      ps%kbc    = 1
+      ps%l_max  = ps_qso%lmax
+      ps%l_loc  = ps_qso%llocal
+
+      nullify(ps%g%drdi, ps%g%s)
+      ps%g%nrval = ps_qso%grid_size
+
+      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+
+      do ii = 1, ps%g%nrval
+        ps%g%rofi(ii) = (ii - 1)*ps_qso%mesh_spacing
+        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+      end do
+
     end select
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
@@ -277,6 +308,9 @@ contains
     case(PS_TYPE_UPF)
       call ps_upf_load(ps, ps_upf)
       call ps_upf_end(ps_upf)
+    case(PS_TYPE_QSO)
+      call ps_qso_load(ps, ps_qso)
+      call ps_qso_end(ps_qso)
     end select
 
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
@@ -883,6 +917,63 @@ contains
 
     POP_SUB(ps_upf_load)
   end subroutine ps_upf_load
+
+  ! ---------------------------------------------------------
+  subroutine ps_qso_load(ps, ps_qso)
+    type(ps_t),     intent(inout) :: ps
+    type(ps_qso_t), intent(in)    :: ps_qso
+
+    integer :: ll, ip, is
+    FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
+    FLOAT, allocatable :: kbprojector(:)
+
+    PUSH_SUB(ps_qso_load)
+
+    ! no local core corrections
+    ps%icore = 'nc'
+
+    ps%z_val = ps_qso%valence_charge
+    
+    call spline_fit(ps%g%nrval, ps%g%rofi, ps_qso%potential(:, ps_qso%llocal), ps%vl)
+
+    SAFE_ALLOCATE(kbprojector(1:ps%g%nrval))
+
+    do ll = 0, ps_qso%lmax
+
+      ! we need to build the KB projectors
+      ! the procedure was copied from ps_in_grid.F90 (r12967)
+      dnrm = M_ZERO
+      avgv = M_ZERO
+      do ip = 1, ps%g%nrval
+        rr = (ip - 1)*ps_qso%mesh_spacing
+        volume_element = rr**2*ps_qso%mesh_spacing
+        kbprojector(ip) = (ps_qso%potential(ip, ll) - ps_qso%potential(ip, ps_qso%llocal))*ps_qso%wavefunction(ip, ll)
+        dnrm = dnrm + kbprojector(ip)**2*volume_element
+        avgv = avgv + kbprojector(ip)*ps_qso%wavefunction(ip, ll)*volume_element
+      end do
+      kbcos = dnrm/(avgv + CNST(1.0e-20))
+      kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
+
+      if(ll /= ps_qso%llocal) then
+        ps%h(ll, 1, 1) = kbcos        
+        kbprojector = kbprojector*kbnorm
+      else
+        ps%h(ll, 1, 1) = CNST(0.0)
+      end if
+
+      call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, 1))
+
+      do is = 1, ps%ispin
+        call spline_fit(ps%g%nrval, ps%g%rofi, ps_qso%wavefunction(:, ll), ps%ur(ll + 1, is))
+        call spline_fit(ps%g%nrval, ps%g%r2ofi, ps_qso%wavefunction(:, ll), ps%ur_sq(ll + 1, is))
+      end do
+
+    end do
+
+    call ps_getradius(ps)
+
+    POP_SUB(ps_qso_load)
+  end subroutine ps_qso_load
 
 
   !> Returns the number of atomic orbitals that can be used for LCAO calculations.

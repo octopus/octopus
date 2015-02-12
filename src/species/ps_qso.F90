@@ -45,7 +45,7 @@ module ps_qso_m
     FLOAT              :: mesh_spacing
     integer            :: grid_size
     FLOAT, allocatable :: potential(:, :)
-    FLOAT, allocatable :: projector(:, :)
+    FLOAT, allocatable :: wavefunction(:, :)
   end type ps_qso_t
 
 contains
@@ -86,16 +86,18 @@ contains
       ierr = xml_tag_get_attribute_value(tag, 'l', ll)
       ierr = xml_tag_get_attribute_value(tag, 'size', size)
 
+      ASSERT(ll == ii)
+      
       if(ii == 0) then
         this%grid_size = size
         SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
-        SAFE_ALLOCATE(this%projector(1:size, 0:this%lmax))
+        SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
       else
         ASSERT(size == this%grid_size)
       end if
       
       call xml_tag_get_tag_value_array(tag, 'radial_potential', size, this%potential(:, ll))
-      call xml_tag_get_tag_value_array(tag, 'radial_function', size, this%projector(:, ll))
+      call xml_tag_get_tag_value_array(tag, 'radial_function', size, this%wavefunction(:, ll))
 
       call xml_tag_end(tag)
 
@@ -110,9 +112,43 @@ contains
     
     call xml_file_end(qso_file)
 
+    call ps_qso_check_normalization(this)
+    
     POP_SUB(ps_qso_init)
   end subroutine ps_qso_init
 
+  ! ---------------------------------------------------------
+  !> checks normalization of the pseudo wavefunctions
+  subroutine ps_qso_check_normalization(this)
+    type(ps_qso_t), intent(in) :: this
+    
+    integer :: ll, ip
+    FLOAT   :: nrm, rr
+
+    PUSH_SUB(ps_qso_check_rphi)
+
+    !  checking normalization of the wavefunctions
+    do ll = 0, this%lmax
+      nrm = 0.0
+      do ip = 1, this%grid_size
+        rr = (ip - 1)*this%mesh_spacing
+        nrm = nrm + this%wavefunction(ip, ll)**2*this%mesh_spacing*rr**2
+        write(10 + ll, *) rr, this%wavefunction(ip, ll), this%potential(ip, ll)
+      end do
+      nrm = sqrt(nrm)
+
+      nrm = abs(nrm - M_ONE)
+      if (nrm > CNST(1.0e-5)) then
+        write(message(1), '(a,i2,a)') "Eigenstate for l = ", ll, ' is not normalized'
+        write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
+        call messages_warning(2)
+      end if
+
+    end do
+      
+    POP_SUB(ps_qso_check_rphi)
+  end subroutine ps_qso_check_normalization
+  
   ! ---------------------------------------------------------
   subroutine ps_qso_end(this)
     type(ps_qso_t), intent(inout) :: this
@@ -120,7 +156,7 @@ contains
     PUSH_SUB(ps_qso_end)
 
     SAFE_DEALLOCATE_A(this%potential)
-    SAFE_DEALLOCATE_A(this%projector)
+    SAFE_DEALLOCATE_A(this%wavefunction)
 
     POP_SUB(ps_qso_end)
   end subroutine ps_qso_end

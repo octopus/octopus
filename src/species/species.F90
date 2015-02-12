@@ -94,6 +94,7 @@ module species_m
     SPEC_PS_CPI = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
     SPEC_PS_FHI = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT6 format)
     SPEC_PS_UPF = PS_TYPE_UPF,   & !< UPF pseudopotential
+    SPEC_PS_QSO = PS_TYPE_QSO,   & !< QSO pseudopotential
     SPEC_PSPIO          = 110,   & !< pseudopotential parsed by pspio library
     SPEC_USDEF          = 123,   & !< user-defined function for local potential
     SPEC_FULL_GAUSSIAN  = 124,   & !< full-potential atom
@@ -285,6 +286,7 @@ contains
     !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_delta     | 1
     !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_gaussian  | 1
     !% <br>&nbsp;&nbsp;'Xe'      | 131.29   | spec_ps_upf         | 54
+    !% <br>&nbsp;&nbsp;'C'       |  12.01   | spec_ps_qso         | 12
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
@@ -332,8 +334,17 @@ contains
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
-    !% local are indicated in the pseudopotential file are cannot be changed.
+    !% local are indicated in the pseudopotential file and cannot be changed.
     !% Note that version 2.0 or any later version of the UPF file format are not supported.
+    !%Option spec_ps_qso  105
+    !% (experimental) The quantum-simulation.org XML pseudo-potential
+    !% format used by qbox. The pseudopotential will be read from a
+    !% <tt>.xml</tt> file, either in the working directory or in the
+    !% <tt>OCTOPUS-HOME/share/PP/qso</tt> directory.  No extra
+    !% columns, as the maximum <i>l</i>-component of the
+    !% pseudopotential to consider in the calculation and the
+    !% <i>l</i>-component to consider as local are indicated in the
+    !% pseudopotential file.
     !%Option spec_pspio  110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
@@ -447,6 +458,7 @@ contains
     logical :: print_info_
     integer :: i
     FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
+    logical, save :: qso_warning = .false.
 
     PUSH_SUB(species_init)
 
@@ -469,7 +481,13 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO, SPEC_PSPIO)
+
+      if(spec%type == SPEC_PS_QSO .and. .not. qso_warning) then
+        call messages_experimental('QSO pseudopotential support')
+        qso_warning = .true.
+      end if
+
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPEC_PSPIO) then
@@ -941,6 +959,7 @@ contains
          ( spec%type == SPEC_PS_CPI) .or. &
          ( spec%type == SPEC_PS_FHI) .or. &
          ( spec%type == SPEC_PS_UPF) .or. &
+         ( spec%type == SPEC_PS_QSO) .or. &
          ( spec%type == SPEC_PSPIO)
  
   end function species_is_ps
@@ -1305,7 +1324,7 @@ contains
       spec%Z_val = spec%Z
       read_data = 5
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO) ! a pseudopotential file
       call parse_block_float(blk, row, 3, spec%Z)
       read_data = 4
 
