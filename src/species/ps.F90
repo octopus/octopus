@@ -102,8 +102,7 @@ module ps_m
     type(spline_t), pointer :: kb(:, :)     !< Kleinman-Bylander projectors
     type(spline_t), pointer :: dkb(:, :)    !< derivatives of KB projectors
 
-
-    character(len=4) :: icore !< nonlinear core corrections
+    logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
 
 
@@ -479,7 +478,7 @@ contains
         end do
       end do
       
-      if(trim(ps%icore) /= 'nc') then
+      if(ps%nlcc) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -498,7 +497,7 @@ contains
         end do
       end do
       
-      if(trim(ps%icore) /= 'nc') then
+      if(ps%nlcc) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
 
@@ -589,7 +588,7 @@ contains
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
-    if(trim(ps%icore) /= 'nc') then
+    if(ps%nlcc) then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
@@ -648,7 +647,7 @@ contains
 
     ! Fixes some components of ps
     ps%z_val = psp%z_val
-    ps%icore = 'nc'
+    ps%nlcc = .false.
     if(ps%l_max>=0) then
       ps%rc_max = CNST(1.1) * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
     else
@@ -725,8 +724,7 @@ contains
     ! Fixes some components of ps, read in ps_grid
     ps%z_val = ps_grid%zval
 
-    ps%icore = 'nc'
-    if(ps_grid%core_corrections) ps%icore=''
+    ps%nlcc = ps_grid%core_corrections
 
     ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
 
@@ -819,8 +817,7 @@ contains
     ! Fixes some components of ps, read in ps_upf
     ps%z_val = ps_upf%z_val
 
-    ps%icore = 'nc'
-    if(ps_upf%nlcc) ps%icore=''
+    ps%nlcc = ps_upf%nlcc
 
     ! The spin-dependent pseudopotentials are not supported yet, so we need to fix the occupations
     ! if we want to have a spin-dependent atomic density.
@@ -931,13 +928,12 @@ contains
 
     PUSH_SUB(ps_qso_load)
 
-    ! no local core corrections
-    ps%icore = 'nc'
+    ! no nonlinear core corrections
+    ps%nlcc = .false.
 
     ps%z_val = ps_qso%valence_charge
 
     ! the local potential
-    
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval

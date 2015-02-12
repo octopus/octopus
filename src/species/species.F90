@@ -496,7 +496,7 @@ contains
         call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
       endif
       spec%z_val = spec%ps%z_val
-      spec%nlcc = (spec%ps%icore /= 'nc  ' )
+      spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
     case(SPEC_USDEF)
