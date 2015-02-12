@@ -409,7 +409,7 @@ contains
       integer :: ist
       FLOAT, allocatable :: dE_dn(:),occ(:)
  
-      POP_SUB(objective_rdmft)
+      PUSH_SUB(objective_rdmft)
 
       ASSERT(size == rdm%st%nst)
 
