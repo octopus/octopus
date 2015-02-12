@@ -54,11 +54,11 @@ program octopus
   !%Default no
   !%Section Execution::Debug
   !%Description
-  !% If true, <tt>Octopus</tt> will print as part of the screen output
+  !% If true, after each SCF iteration <tt>Octopus</tt> will print
   !% information about the memory the code is using. The quantity
   !% reported is an approximation to the size of the heap and
   !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
-  !% using. By default this variable is set to false.
+  !% using.
   !%End
   call parse_logical('ReportMemory', .false., conf%report_memory)
 
