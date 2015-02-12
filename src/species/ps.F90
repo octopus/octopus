@@ -923,7 +923,7 @@ contains
     type(ps_qso_t), intent(in)    :: ps_qso
 
     integer :: ll, ip, is
-    FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element, aa, cc
+    FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:)
 
     PUSH_SUB(ps_qso_load)

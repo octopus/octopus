@@ -55,10 +55,7 @@ contains
     type(ps_qso_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
 
-    character(len=256) :: filename2
-    integer :: iunit, l, ll, size, ierr, ii
-    logical :: found
-    logical, allocatable :: found_l(:)    
+    integer :: ll, size, ierr, ii
     type(xml_file_t) :: qso_file
     type(xml_tag_t)  :: tag
     
