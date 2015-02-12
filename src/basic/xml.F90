@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module xml_file_m
+module xml_m
 
   ! This module implements a very limited and non-general interface to
   ! read xml files. Its main purpose it is to read pseudo-potentials
@@ -152,7 +152,7 @@ contains
 
   end function xml_tag_get_tag_value_array
 
-end module xml_file_m
+end module xml_m
 
 !! Local Variables:
 !! mode: f90

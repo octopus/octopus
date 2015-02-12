@@ -26,7 +26,7 @@ module ps_qso_m
   use messages_m
   use profiling_m
   use ps_in_grid_m
-  use xml_file_m
+  use xml_m
 
   implicit none
 
@@ -79,7 +79,7 @@ contains
     ierr = xml_get_tag_value(qso_file, 'mesh_spacing', this%mesh_spacing)
 
     do ii = 0, this%lmax
-      call xml_file_tag(qso_file, 'projector', ii, tag)
+      ierr = xml_file_tag(qso_file, 'projector', ii, tag)
       ierr = xml_tag_get_attribute_value(tag, 'l', ll)
       ierr = xml_tag_get_attribute_value(tag, 'size', size)
 
