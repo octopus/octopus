@@ -72,7 +72,6 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(scf_t)  :: scfv
-    type(rdm_t)  :: rdm
     type(restart_t) :: restart_load, restart_dump
     integer      :: ierr
 
