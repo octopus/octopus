@@ -18,6 +18,8 @@ ExtraStates = 20
 
 StatesBlocksize = 32
 
+ReportMemory = yes
+
 %Coordinates
 'C'| 5.465626 | -3.656647 | -1.274761
 'C'| 4.158301 | -5.219964 | 0.564975

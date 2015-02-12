@@ -16,6 +16,8 @@ CalculationMode = gs
 Dimensions = 1
 fromScratch = yes
 
+ProfilingMode = prof_memory_full
+
 BoxShape = sphere
 Spacing = 0.5
 Radius = 100.0

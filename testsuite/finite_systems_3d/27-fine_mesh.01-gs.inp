@@ -25,7 +25,7 @@ Radius = 5
 UseFineMesh = yes
 ExperimentalFeatures = yes
 
-ProfilingMode = yes
+ProfilingMode = prof_time
 
 LCAOAlternative = yes
 

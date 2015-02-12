@@ -27,5 +27,5 @@ LSize = 5
 
 FromScratch = yes
 
-ProfilingMode = yes
+ProfilingMode = prof_memory
 SCFCalculateDipole = yes
