@@ -865,9 +865,6 @@ contains
       SAFE_ALLOCATE(work(1:lwork))
       SAFE_ALLOCATE(iwork(1:liwork))
 
-      SAFE_DEALLOCATE_A(ifail)
-      SAFE_ALLOCATE(ifail(1:this%norbs))
-
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
         n = this%norbs, a = hamiltonian(1, 1), ia = 1, ja = 1, desca = this%desc(1), &
