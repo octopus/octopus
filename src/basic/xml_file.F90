@@ -47,19 +47,19 @@ module xml_file_m
   
   interface
     integer function xml_file_init(this, filename)
-      import xml_file_t
+      import :: xml_file_t
       type(xml_file_t), intent(out)   :: this
       character(len=*), intent(in)    :: filename
     end function xml_file_init
 
     subroutine xml_file_end(this)
-      import xml_file_t
+      import :: xml_file_t
       type(xml_file_t), intent(inout) :: this
     end subroutine xml_file_end
 
     subroutine xml_file_tag(this, tag_name, index, tag)
-      import xml_file_t
-      import xml_tag_t
+      import :: xml_file_t
+      import :: xml_tag_t
       type(xml_file_t), intent(inout) :: this
       character(len=*), intent(in)    :: tag_name
       integer,          intent(in)    :: index
@@ -67,12 +67,12 @@ module xml_file_m
     end subroutine xml_file_tag
 
     subroutine xml_tag_end(this)
-      import xml_tag_t
+      import :: xml_tag_t
       type(xml_tag_t), intent(inout) :: this
     end subroutine xml_tag_end
 
     integer function xml_tag_get_attribute_value(this, att_name, val)
-      import xml_tag_t
+      import :: xml_tag_t
       type(xml_tag_t),  intent(in)    :: this
       character(len=*), intent(in)    :: att_name
       integer,          intent(out)   :: val
@@ -85,7 +85,7 @@ module xml_file_m
     module procedure xml_file_read_float
 
     integer function xml_tag_get_tag_value_array(this, tag_name, size, val)
-      import xml_tag_t
+      import :: xml_tag_t
       type(xml_tag_t),  intent(in)    :: this
       character(len=*), intent(in)    :: tag_name
       integer,          intent(in)    :: size
@@ -103,7 +103,7 @@ contains
 
       interface
         integer function xml_file_read_integer_low(this, tag, val) result(ierr)
-          import xml_file_t
+          import :: xml_file_t
           type(xml_file_t), intent(inout) :: this
           character(len=*), intent(in)    :: tag
           integer,          intent(out)   :: val
@@ -123,7 +123,7 @@ contains
 
       interface
         integer function xml_file_read_double_low(this, tag, val) result(ierr)
-          import xml_file_t
+          import :: xml_file_t
           type(xml_file_t), intent(inout) :: this
           character(len=*), intent(in)    :: tag
           real(8),          intent(out)   :: val
