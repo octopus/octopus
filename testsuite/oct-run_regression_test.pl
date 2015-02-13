@@ -165,34 +165,33 @@ $tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
-# FIXME: move indentation over <--
-  set_precision("default");
-  $test_succeeded = 1;
+set_precision("default");
+$test_succeeded = 1;
 
-  $pwd = get_env("PWD");
-  if (!$opt_m) {
-      $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
-      chomp($workdir);
+$pwd = get_env("PWD");
+if (!$opt_m) {
+    $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
+    chomp($workdir);
 
-      system ("rm -rf $workdir");
-      mkdir $workdir;
+    system ("rm -rf $workdir");
+    mkdir $workdir;
       
-      $scriptname = "$workdir/matches.sh";
-      open(SCRIPT, ">$scriptname") or die255("ERROR: could not create '$scriptname'.\n");
-      print SCRIPT "#\!/usr/bin/env bash\n\n";
-      print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
-      close(SCRIPT);
-      chmod 0755, $scriptname;
+    $scriptname = "$workdir/matches.sh";
+    open(SCRIPT, ">$scriptname") or die255("ERROR: could not create '$scriptname'.\n");
+    print SCRIPT "#\!/usr/bin/env bash\n\n";
+    print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
+    close(SCRIPT);
+    chmod 0755, $scriptname;
       
-      $matchdir = $workdir;
-  } else {
-      $workdir = $pwd;
-  }
+    $matchdir = $workdir;
+} else {
+    $workdir = $pwd;
+}
 
-  # testsuite
-  open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
+# testsuite
+open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
 
-  while ($_ = <TESTSUITE>) {
+while ($_ = <TESTSUITE>) {
 
     # remove trailing newline 
     chomp; 
@@ -444,13 +443,13 @@ if (! -d $tempdirpath) { mkdir $tempdirpath; }
       }
     }
 
-  }
+}
 
-  if ($opt_l && !$opt_m && !$opt_n)  { system ("cat $workdir/out >> out.log"); }
-  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
+if ($opt_l && !$opt_m && !$opt_n)  { system ("cat $workdir/out >> out.log"); }
+if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
-  print "\n";
-  close(TESTSUITE);
+print "\n";
+close(TESTSUITE);
 
 exit $failures;
 
