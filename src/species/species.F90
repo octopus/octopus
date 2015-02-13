@@ -271,8 +271,8 @@ contains
     !% The format of this block is the following: The first field is
     !% the name of the species. The second defines the type of species
     !% (the valid options are detailed below). The third is the atomic
-    !% mass (in atomic mass units, i.e. the mass of a proton is
-    !% roughly one).The fourth is the atomic number (or valence charge
+    !% mass (in atomic mass units, <i>i.e.</i> the mass of a proton is
+    !% roughly one). The fourth is the atomic number (or valence charge
     !% for non-atomic species).  Some types may need some parameters
     !% given in the remaining fields of the row.  Note:
     !% pseudopotentials may only be used in 3D.
