@@ -33,12 +33,13 @@ typedef struct {
 } tag_t;
 
 
-static void seek_tag(FILE ** xml_file, const char * tag, int index, const int end_of_tag){
+static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int end_of_tag){
   fpos_t startpos;
   char * res;
   char buffer[1000];
   char endchar;
-
+  fint ierr = 1;
+  
   fgetpos(*xml_file, &startpos);
 
   while(fgets(buffer, sizeof(buffer), *xml_file)){
@@ -74,12 +75,16 @@ static void seek_tag(FILE ** xml_file, const char * tag, int index, const int en
       
       /* and move to the end of the tag */
       fseek(*xml_file, res - buffer + 1, SEEK_CUR);
-    
+
+      ierr = 0;
+      
       break;
     }
 
     fgetpos(*xml_file, &startpos);
   }
+
+  return ierr;
 }
 
 fint FC_FUNC_(xml_file_init, XML_FILE_INIT)(FILE ** xml_file, STR_F_TYPE fname STR_ARG1)
@@ -116,6 +121,7 @@ fint FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f
 {
   char *origtagname;
   char *tagname;
+  fint ierr;
   
   TO_C_STR1(tagname_f, origtagname);
 
@@ -130,18 +136,18 @@ fint FC_FUNC_(xml_file_tag, XML_FILE_TAG)(FILE ** xml_file, STR_F_TYPE tagname_f
 
   free(origtagname);
   
-  *tag = (tag_t *) malloc(sizeof(tag_t));
-
-  (*tag)->xml_file = *xml_file;
-
   fseek(*xml_file, 0, SEEK_SET);
-  seek_tag(xml_file, tagname, *index, 0);
-  
-  fgetpos(*xml_file, &(*tag)->pos);
+  ierr = seek_tag(xml_file, tagname, *index, 0);
+
+  if(ierr == 0){
+    *tag = (tag_t *) malloc(sizeof(tag_t));
+    (*tag)->xml_file = *xml_file;
+    fgetpos(*xml_file, &(*tag)->pos);
+  }
 
   free(tagname);
-
-  return 0;
+    
+  return ierr;
 }
 
 void FC_FUNC_(xml_tag_end, XML_TAG_END)(tag_t ** tag)
