@@ -24,6 +24,7 @@
 #include <fortran_types.h>
 #include "string_f.h"
 #include <string.h>
+#include <assert.h>
 
 #define XML_FILE_DEBUG
 
@@ -39,6 +40,7 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
   char buffer[1000];
   char endchar;
   fint ierr = 1;
+  int found;
   
   fgetpos(*xml_file, &startpos);
 
@@ -67,11 +69,48 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
 	/* or where the list of attributes starts */
 	endchar = ' ';
       }
-    
-      while(res[0] != endchar) res++;
 
+#ifdef XML_FILE_DEBUG
+      printf("endchar = %c\n", endchar);
+#endif
+      
+      found = 0;
+      while(!found){
+	res = strchr(res, endchar);
+	if(res == NULL){
+	  fgetpos(*xml_file, &startpos);
+	  fgets(buffer, sizeof(buffer), *xml_file);
+	  res = buffer;
+#ifdef XML_FILE_DEBUG
+	  printf("newline: %s", buffer);
+#endif	  
+	} else {
+	  found = 1;
+	}
+      }
+      
+#ifdef XML_FILE_DEBUG
+      printf("end found in line: %s", buffer);
+#endif
+      
+      assert(res[0] == endchar);
+      
       if(!end_of_tag) res--;
 
+#ifdef XML_FILE_DEBUG
+      /* go back to the beginning of the line */
+      fsetpos(*xml_file, &startpos);
+      
+      /* and move to the end of the tag */
+      fseek(*xml_file, res - buffer + 1, SEEK_CUR);
+
+      printf("what follows:\n");
+      fgets(buffer, sizeof(buffer), *xml_file);
+      printf("%s", buffer);
+      fgets(buffer, sizeof(buffer), *xml_file);
+      printf("%s", buffer);
+#endif
+      
       /* go back to the beginning of the line */
       fsetpos(*xml_file, &startpos);
       
@@ -392,7 +431,7 @@ fint FC_FUNC_(xml_tag_get_tag_value_array_low, XML_TAG_GET_TAG_VALUE_ARRAY_LOW)
 
   char *origsubtagname;
   char *subtagname;
-  fint ii;
+  fint ii, ierr;
   
   TO_C_STR1(subtagname_f, origsubtagname);
 
@@ -408,8 +447,13 @@ fint FC_FUNC_(xml_tag_get_tag_value_array_low, XML_TAG_GET_TAG_VALUE_ARRAY_LOW)
   free(origsubtagname);
 
   fsetpos((*tag)->xml_file, &(*tag)->pos);
-  seek_tag(&(*tag)->xml_file, subtagname, 0, 1);
 
+  ierr = seek_tag(&(*tag)->xml_file, subtagname, 0, 1);
+
+#ifdef XML_FILE_DEBUG
+  if(ierr != 0) printf("subtag not found\n");
+#endif
+  
   for(ii = 0; ii < *size; ii++){
     fscanf((*tag)->xml_file, "%lf", val + ii);
   }

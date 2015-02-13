@@ -386,7 +386,7 @@ contains
     type(xml_file_t), intent(inout) :: upf2_file
     type(ps_upf_t),   intent(inout) :: ps_upf
 
-    integer :: ierr, startp, iproj, dij_size, iwfs
+    integer :: ierr, startp, iproj, dij_size, iwfs, ip
     character(len=200) :: str
     type(xml_tag_t)    :: tag, proj_tag, wfs_tag
     FLOAT :: mesh_min
@@ -438,27 +438,35 @@ contains
     SAFE_ALLOCATE(ps_upf%r(1:ps_upf%np))
     if(startp == 2) ps_upf%r(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_R', ps_upf%np - startp + 1, ps_upf%r(startp:))
-
+    
     SAFE_ALLOCATE(ps_upf%drdi(1:ps_upf%np))
     if(startp == 2) ps_upf%drdi(1) = CNST(0.0)
-    ierr = xml_get_tag_value(tag, 'PP_RAB', ps_upf%np - startp + 1, ps_upf%r(startp:))
+    ierr = xml_get_tag_value(tag, 'PP_RAB', ps_upf%np - startp + 1, ps_upf%drdi(startp:))
 
+    do ip = 1, ps_upf%np
+      write(12, *) ip, ps_upf%r(ip), ps_upf%drdi(ip)
+    end do
+    
     call xml_tag_end(tag)
 
     ! the local part
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
 
     SAFE_ALLOCATE(ps_upf%v_local(1:ps_upf%np))
-    ierr = xml_get_tag_value(tag, 'PP_LOCAL', ps_upf%np - startp + 1, ps_upf%r(startp:))
+    ierr = xml_get_tag_value(tag, 'PP_LOCAL', ps_upf%np - startp + 1, ps_upf%v_local(startp:))
     if (startp == 2) then
       ps_upf%v_local(1) = linear_extrapolate(ps_upf%r(1), ps_upf%r(2), &
         ps_upf%r(3), ps_upf%v_local(2), ps_upf%v_local(3))
     end if
 
+    do ip = 1, ps_upf%np
+      write(13, *) ip, ps_upf%r(ip), ps_upf%v_local(ip)
+    end do
+    
     call xml_tag_end(tag)
 
     ! the non-local part
-    ierr = xml_file_tag(upf2_file, 'PP_NONLOCAL', 0, tag)
+    ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
 
     SAFE_ALLOCATE(ps_upf%proj(1:ps_upf%np, 1:ps_upf%n_proj))
     SAFE_ALLOCATE(ps_upf%proj_l(1:ps_upf%n_proj))
@@ -479,6 +487,10 @@ contains
 
       ierr = xml_get_tag_value(tag, trim(str), ps_upf%proj_np(iproj) - startp + 1, ps_upf%proj(startp:, iproj))
       
+    end do
+
+    do ip = 1, ps_upf%np
+      write(14, *) ip, ps_upf%r(ip), ps_upf%proj(ip, :)
     end do
 
     ! DIJ
@@ -532,17 +544,28 @@ contains
 
     call xml_tag_end(tag)
 
+    do ip = 1, ps_upf%np
+      write(15, *) ip, ps_upf%r(ip), ps_upf%wfs(ip, :)
+    end do
+    
     !Valence charge
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
 
     SAFE_ALLOCATE(ps_upf%rho(1:ps_upf%np))
     ps_upf%rho(1) = CNST(0.0)
-    ierr = xml_get_tag_value(tag, 'PP_RHOATOM', ps_upf%np - startp + 1, ps_upf%rho)
+    ierr = xml_get_tag_value(tag, 'PP_RHOATOM', ps_upf%np - startp + 1, ps_upf%rho(startp:))
 
     call xml_tag_end(tag)
 
+    do ip = 1, ps_upf%np
+      write(16, *) ip, ps_upf%r(ip), ps_upf%rho(ip)
+    end do
+    
     !Non-linear core-corrections not supported at the moment
     nullify(ps_upf%core_density)
+
+    !Apparently j is not given in the file
+    nullify(ps_upf%proj_j)
     
     POP_SUB(ps_upf_file_read_version2)
   end subroutine ps_upf_file_read_version2
