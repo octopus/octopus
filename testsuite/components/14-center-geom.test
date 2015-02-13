@@ -2,7 +2,6 @@
 # $Id$
 
 Test       : oct-center-geom
-Program    : octopus
 TestGroups : short-run; components
 Enabled    : Yes
 
