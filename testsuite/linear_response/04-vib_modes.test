@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : LiH vibrational frequency
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, linear_response
 Enabled    : Yes
 

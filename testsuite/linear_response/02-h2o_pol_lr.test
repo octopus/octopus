@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Linear-Response Polarizabilities
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run, linear_response
 Enabled    : Yes
 

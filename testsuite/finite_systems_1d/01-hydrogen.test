@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : 1D-Hydrogen
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run; finite_systems_1d
 Enabled    : Yes
 

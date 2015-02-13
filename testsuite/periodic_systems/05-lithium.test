@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Lithium
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run, periodic_systems
 Enabled    : Yes
 

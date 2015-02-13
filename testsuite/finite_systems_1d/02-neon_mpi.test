@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : 1D-Neon - MPI
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : short-run, finite_systems_1d
 Enabled    : Yes
 

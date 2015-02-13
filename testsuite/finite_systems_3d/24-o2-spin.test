@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : O2 - Spin
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 

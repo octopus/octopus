@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Biot-Savart law
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, finite_systems_2d
 Enabled    : Yes
 

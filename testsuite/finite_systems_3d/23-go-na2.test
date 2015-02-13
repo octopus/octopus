@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Geometry optimization
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 

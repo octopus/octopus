@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Hartree direct 3D
-Programs   : oct-test; oct-test_mpi
+Program    : oct-test
 TestGroups : long-run, components
 Enabled    : Yes
 

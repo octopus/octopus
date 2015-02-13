@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Hartree ISF
-Programs   : oct-test; oct-test_mpi
+Program    : oct-test
 TestGroups : short-run, components
 Enabled    : Yes
 

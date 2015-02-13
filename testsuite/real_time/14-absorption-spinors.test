@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Absorption spectrum (non-collinear spin)
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes
 

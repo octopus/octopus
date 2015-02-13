@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Static magnetic field
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 

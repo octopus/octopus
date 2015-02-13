@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Full-Potential Hydrogen
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 

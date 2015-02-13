@@ -3,7 +3,7 @@
 
 Test       : Hartree pfft
 Options    : pfft
-Programs   : oct-test_mpi
+Program    : oct-test
 TestGroups : short-run, components
 Enabled    : Yes
 

@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Boron Nitride Sheet
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

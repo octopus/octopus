@@ -38,6 +38,7 @@ Usage: oct-run_regression_test.pl [options]
     -v        verbose
     -h        this usage
     -D        name of the directory where to look for the executables   
+    -s        run everything serial
     -f        filename of testsuite [required]
     -p        preserve working directories
     -l        copy output log to current directory
@@ -85,11 +86,12 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-getopts("nlvhD:c:f:pm");
+getopts("nlvhD:c:f:spm");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
 $useless = $opt_l;
+$useless = $opt_s;
 
 # Default values
 use File::Temp qw/tempdir/;
@@ -111,48 +113,50 @@ if(length($opt_f) == 0) {
     die255("ERROR: You must supply the name of a test file with the -f option.\n");
 }
 
-# Find out which executables are available.
-opendir(EXEC_DIRECTORY, $exec_directory) || 
- die255("ERROR: Could not open the directory $exec_directory to look for executables");
-@octopus_execs = grep { /^oct/ } readdir(EXEC_DIRECTORY);
-closedir(EXEC_DIRECTORY);
-
 $aexec = get_env("EXEC");
 $global_np = get_env("OCT_TEST_MPI_NPROCS");
 
-$mpiexec = get_env("MPIEXEC");
-$machinelist = get_env("MACHINELIST");
-if ("$mpiexec" eq "") { $mpiexec = `which mpiexec 2> /dev/null`; }
-chomp($mpiexec);
+# FIXME: all test files should declare Processors
+#$np = "serial";
+$is_parallel = 0;
 
+# FIXME: could bake in mpiexec at configure time
+
+if(!$opt_s) {
+# MPI stuff
+    $mpiexec = get_env("MPIEXEC");
+    $machinelist = get_env("MACHINELIST");
+    if ("$mpiexec" eq "") { $mpiexec = `which mpiexec 2> /dev/null`; }
+    chomp($mpiexec);
+
+    if( "$mpiexec" eq "" ) { 
+	print "No mpiexec found: running in serial.\n\n";
+    } else {
 # mpiexec without arguments (to check if it is available)
-$mpiexec_raw = $mpiexec;
-$mpiexec_raw =~ s/\ (.*)//;
-
-if ("$mpiexec_raw" ne "") {
-    if(!( -e "$mpiexec_raw")) {
-	print "mpiexec ($mpiexec_raw) does not exist\n";
-    } elsif(!( -x "$mpiexec_raw")) {
-	print "mpiexec ($mpiexec_raw) is not executable\n";
+	$mpiexec_raw = $mpiexec;
+	$mpiexec_raw =~ s/\ (.*)//;
+	if ( ! -e "$mpiexec_raw" ) {
+	    print "mpiexec command ($mpiexec_raw) does not exist: running in serial.\n\n";
+	    $mpiexec = "";
+	} elsif( ! -x "$mpiexec_raw" ) {
+	    print "mpiexec command ($mpiexec_raw) is not executable: running in serial.\n\n";
+	    $mpiexec = "";
+	} else {
+# default number of processors is 1
+	    $np = 1;
+	    $is_parallel = 1;
+	}
     }
-}
-
-# default dummy value, for dry run so MPIEXEC need not be set properly
-if("$mpiexec" eq "") {
-    $mpiexec = "mpiexec";
+} else {
+    $mpiexec = "";
 }
 
 # default number of processors for MPI runs is 2
 $np = 2;
-
-
-# Figure out which are the executables to test
-my @executables;
-if($opt_n) {
-    @executables = "octopus";
-} else {
-    find_executables();
-}
+$enabled = ""; # FIXME: should Enabled be optional?
+$options_required = "";
+$options_required_mpi = "";
+$options_are_mpi = 0;
 
 # This variable counts the number of failed testcases.
 $failures = 0;
@@ -161,9 +165,7 @@ $tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
-# Loop over all the executables.
-foreach my $octopus_exe (@executables){
-
+# FIXME: move indentation over <--
   set_precision("default");
   $test_succeeded = 1;
 
@@ -190,8 +192,6 @@ foreach my $octopus_exe (@executables){
   # testsuite
   open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
 
-  $command = $octopus_exe;
-
   while ($_ = <TESTSUITE>) {
 
     # remove trailing newline 
@@ -211,8 +211,8 @@ foreach my $octopus_exe (@executables){
       if($opt_p) {
 	  print "Workdir will be saved.\n";
       }
-      print "Using executable : $octopus_exe\n";
       print "Using test file  : $opt_f \n";
+
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
       $enabled = $1;
@@ -228,18 +228,73 @@ foreach my $octopus_exe (@executables){
 	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
       }
-    } elsif ( $_ =~ /^Programs/) {
-        # handled earlier
-    } elsif ( $_ =~ /^Options/) {
-        # handled earlier
+
+    } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
+        $options_required = $1;
+	# note: we could implement Options by baking this into the script via configure...
+	
+    } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
+        if ($is_parallel && $np ne "serial") {
+	    $options_required_mpi = $1;
+	    $options_are_mpi = 1;
+	}
+
+    } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
+	$octopus_exe = "$exec_directory/$1";
+	$command = $octopus_exe; # FIXME remove some of these intermediate variables
+
+	# FIXME: should we do this for a dry-run?
+	
+	# beware: trailing space in executable name may cause this to fail. FIXME and solve this
+	if( ! -x $octopus_exe) {
+	  print "\nSkipping test: executable $octopus_exe not available.\n\n";
+	  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
+	  if($failures == 0) {
+	      exit 254;
+	  } else {
+	      exit $failures;
+	      # if a previous step has failed, mark as failed not skipped
+	  }
+        }
+
+	$options_available = `$octopus_exe -c`;
+	if($is_parallel && $options_available !~ "mpi") {
+	    print "Running in serial since executable was not compiled with MPI.\n";
+	    $is_parallel = 0;
+	    $options_are_mpi = 0;
+	}
+
+	if(length($options_required) > 0) {
+	    # check if the executable was compiled with the required options
+	    foreach my $option (split(/;/, $options_required)){
+		if($options_available !~ $option) {
+		    print "\nSkipping test: executable does not have the required option '$option'";
+		    if($options_are_mpi) {
+			print " for MPI";
+		    }
+		    print ".\n";
+		    print "Executable: $octopus_exe\n";
+		    print "Available options: $options_available\n\n";
+		    if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
+		    if($failures == 0) {
+			exit 254;
+		    } else {
+			exit $failures;
+			# if a previous step has failed, mark as failed not skipped
+		    }
+		}
+	    }
+	}
+	# FIXME: make common skip proc; import Options to BGW version
     } elsif ( $_ =~ /^TestGroups/) {
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
-	die255("ERROR: Testsuite file must set Enabled tag before another (except Test, Programs, Options, TestGroups).\n\n");
+	die255("ERROR: Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).\n\n");
       }
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
+	$np = "serial";
 	$command = "$exec_directory/$1";
 	if( ! -x "$command") {
 	  $command = "$exec_directory/../utils/$1";
@@ -253,11 +308,13 @@ foreach my $octopus_exe (@executables){
       }
 
       elsif ( $_ =~ /^Not_Util/) {
-        $command = $octopus_exe;
+	  $command = $octopus_exe;
+	  $np = 2;
       }
 
       elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
-	$np = $1;
+	  # FIXME: enforce this is "serial" or numeric
+	  $np = $1;
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
@@ -286,14 +343,10 @@ foreach my $octopus_exe (@executables){
 	  $command_suffix = $command;
 
 	  # serial or MPI run?
-	  if ( $octopus_exe =~ /mpi$/) {
+	  if ( $is_parallel && $np ne "serial") {
             if("$global_np" ne "") {
 		$np = $global_np;
             }
-	    # utility runs should be on only one processor
-	    if ( $command_suffix !~ /mpi$/) {
-		$np = 1;
-	    }
 	    # we do not need to care if mpiexec works if we are just doing a dry run
 	    if( -x "$mpiexec_raw" || $opt_n) {
 	      if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
@@ -319,9 +372,11 @@ foreach my $octopus_exe (@executables){
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
 	  }
 
-# MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
-	  if($np > 4) {
-	      print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
+	  # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
+	  if($np ne "serial") {
+	      if($np > 4) {
+		  print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
+	      }
 	  }
 
 	  print "Executing: " . $command_line . "\n";
@@ -390,67 +445,10 @@ foreach my $octopus_exe (@executables){
   if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
   print "\n";
-  close(TESTSUITE)
-}
+  close(TESTSUITE);
 
 exit $failures;
 
-
-sub find_executables {
-  my $name = "";
-  $options = ""; # initialize in case no options specified
-
-  open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
-  while ($_ = <TESTSUITE>) {
-
-    if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
-      $name = $1;
-    }
-
-    if ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
-      $options = $1;
-    }
-
-    if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
-      my $i = 0;
-      foreach my $program (split(/;/, $1)) {
-	$program =~ s/^\s+//;
-	foreach my $x (@octopus_execs) {
-	  $valid = $program cmp $x;
-	  if(!$valid) {
-	    # check if the executable was compiled with the required options
-	    $has_options = 1;
-	    foreach my $y (split(/;/, $options)){
-	      $command_line = "$exec_directory/$x -c | grep -q $y";
-	      $rv = system($command_line);
-	      $has_options = $has_options && ($rv == 0)
-	    }
-
-	    if($has_options) {
-	      $executables[$i] = "$exec_directory/$x";
-	      $i = $i+1;
-	    }
-	  }
-	}
-      }
-    }
-
-  }
-  close(TESTSUITE);
-
-  if($name eq "") {
-      print STDERR "ERROR: No name was provided with Test tag.\n";
-      exit 254;
-  }
-
-  # Exit if no suitable executable was found.
-  if( @executables == 0 ){
-    print STDERR "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
-    print STDERR "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
-    print STDERR "Skipping ... \n\n";
-    exit 254;
-  }
-}
 
 sub run_match_new {
   die255("ERROR: Have to run before matching\n") if !$test{"run"} && !opt_m;

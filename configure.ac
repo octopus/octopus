@@ -223,21 +223,11 @@ if test "${HAVE_OPENMP}"; then
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
 fi
 
-dnl ============================================================================
-dnl find what is the extension of the programs supposed to be
-MYEXT=""
-
-dnl mpi
-AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
-
 dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
   AC_DEFINE(NDEBUG, yes, [octopus compiled without debug mode])
 fi
 AC_SUBST(DEBUG)
-
-dnl set the default extension for the programs
-EXEEXT="${MYEXT}${EXEEXT}"
 
 dnl can turn off build of utilities
 AC_ARG_ENABLE(utils, AS_HELP_STRING([--disable-utils], [Build utilities]))
@@ -263,7 +253,7 @@ AC_DEFINE_UNQUOTED(MAX_DIM, $maxdim, [the maximum dimension of the space])
 
 dnl tell the user what we will be compiling
 echo "**********************************************"
-echo "***   octopus${EXEEXT} $msg will be generated "
+echo "***   octopus $msg will be generated "
 echo "**********************************************"
 
 dnl ===================================================================

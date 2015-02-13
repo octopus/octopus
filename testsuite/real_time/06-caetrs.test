@@ -2,10 +2,8 @@
 # $Id$
 
 Test       : Corrected approximated enforced time-reversal symmetry propagator
-Options    : mpi2
-Programs   : octopus_mpi
-Options    : 
-Programs   : octopus
+Options_MPI : mpi2
+Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes
 

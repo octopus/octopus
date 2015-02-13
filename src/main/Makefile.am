@@ -48,7 +48,7 @@ oct_test_LDADD = \
 noinst_HEADERS = \
 	casida_inc.F90
 
-CLEANFILES += octopus oct-test octopus_mpi oct-test_mpi
+CLEANFILES += octopus oct-test
 
 depend:
 	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)

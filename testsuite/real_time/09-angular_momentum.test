@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Time-dependent angular momentum
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : long-run, real_time
 Enabled    : Yes
 

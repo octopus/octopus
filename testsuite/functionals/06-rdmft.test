@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : RDMFT
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, functionals
 Enabled    : Yes
 

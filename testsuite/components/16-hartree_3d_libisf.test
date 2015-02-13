@@ -3,7 +3,7 @@
 
 Test       : Hartree LIBISF
 Options    : libisf
-Programs   : oct-test; oct-test_mpi
+Program    : oct-test
 TestGroups : short-run, components
 Enabled    : Yes
 

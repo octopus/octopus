@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : ZBR98
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, optimal_control
 Enabled    : Yes
 

@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Time-dependent magnetic field
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, real_time
 Enabled    : Yes
 

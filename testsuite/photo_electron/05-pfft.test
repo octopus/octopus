@@ -2,7 +2,7 @@
 
 Test       : Photoelectron - PFFT
 Options    : pfft
-Programs   : octopus_mpi
+Program    : octopus
 TestGroups : short-run, photo_electron
 Enabled    : Yes
 

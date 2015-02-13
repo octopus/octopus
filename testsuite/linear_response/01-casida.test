@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Casida linear response TDDFT
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, linear_response
 Enabled    : Yes
 

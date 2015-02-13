@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 Test       : Forces
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 

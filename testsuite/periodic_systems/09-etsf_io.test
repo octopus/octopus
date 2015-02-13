@@ -3,7 +3,7 @@
 
 Test       : ETSF_IO
 Options    : etsf_io
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Model MB
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 

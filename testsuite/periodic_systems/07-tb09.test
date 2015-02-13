@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Diamond TB09 functional
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

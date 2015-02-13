@@ -2,10 +2,8 @@
 # $Id$
 
 Test       : QR orthogonalization
-Options    : scalapack
-Programs   : oct-test_mpi
-Options    : 
-Programs   : oct-test
+Options_MPI : scalapack
+Program    : oct-test
 TestGroups : long-run, components
 Enabled    : Yes
 

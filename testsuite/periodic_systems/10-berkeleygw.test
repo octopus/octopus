@@ -3,7 +3,7 @@
 
 Test       : BerkeleyGW
 Options    : berkeleygw
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

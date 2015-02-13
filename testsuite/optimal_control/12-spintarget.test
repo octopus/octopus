@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : testsuite/optimal_control/12-spintarget.test
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run
 Enabled    : Yes
 

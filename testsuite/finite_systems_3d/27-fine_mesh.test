@@ -2,10 +2,8 @@
 # $Id$
 
 Test       : Fine mesh density - Benzene
-Options    : scalapack
-Programs   : octopus_mpi
-Options    : 
-Programs   : octopus
+Options_MPI : scalapack
+Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 

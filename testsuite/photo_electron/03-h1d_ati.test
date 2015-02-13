@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Photoelectron ATI peaks
-Programs   : octopus_mpi; octopus
+Program    : octopus
 TestGroups : short-run, photo_electron
 Enabled    : Yes
 

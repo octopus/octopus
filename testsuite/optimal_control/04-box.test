@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : 1D Box
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : long-run, optimal_control
 Enabled    : Yes
 

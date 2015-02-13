@@ -2,7 +2,7 @@
 
 Test       : Complex-scaling - PBE / Stark effect
 Options    : arpack
-Programs   : octopus; octopus_mpi
+Program    : octopus
 TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
