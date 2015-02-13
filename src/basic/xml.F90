@@ -37,6 +37,8 @@ module xml_m
     xml_get_tag_value,             &
     xml_file_tag,                  &
     xml_tag_get_attribute_value,   &
+    xml_tag_get_attribute_float,   &
+    xml_tag_get_attribute_string,  &
     xml_tag_end
 
   type xml_file_t
@@ -82,11 +84,26 @@ module xml_m
       integer,          intent(out)   :: val
     end function xml_tag_get_attribute_value
 
+    integer function xml_tag_get_attribute_float(this, att_name, val)
+      import :: xml_tag_t
+      type(xml_tag_t),  intent(in)    :: this
+      character(len=*), intent(in)    :: att_name
+      real(8),          intent(out)   :: val
+    end function xml_tag_get_attribute_float
+    
+    integer function xml_tag_get_attribute_string(this, att_name, val)
+      import :: xml_tag_t
+      type(xml_tag_t),  intent(in)    :: this
+      character(len=*), intent(in)    :: att_name
+      character(len=*), intent(out)   :: val
+    end function xml_tag_get_attribute_string
+    
   end interface
 
   interface xml_get_tag_value
     module procedure xml_file_read_integer
     module procedure xml_file_read_float
+    module procedure xml_file_read_string
     module procedure xml_tag_get_tag_value_array
   end interface xml_get_tag_value
 
@@ -129,6 +146,26 @@ contains
     ierr = xml_file_read_double_low(this, '<'//trim(tag), val)
 
   end function xml_file_read_float
+
+  ! ----------------------------------------------------------------------
+
+  integer function xml_file_read_string(this, tag, val) result(ierr)
+    type(xml_file_t), intent(inout) :: this
+    character(len=*), intent(in)    :: tag
+    character(len=*), intent(out)   :: val
+
+    interface
+      integer function xml_file_read_string_low(this, tag, val) result(ierr)
+        import :: xml_file_t
+        type(xml_file_t), intent(inout) :: this
+        character(len=*), intent(in)    :: tag
+        character(len=*), intent(out)   :: val
+      end function xml_file_read_string_low
+    end interface
+
+    ierr = xml_file_read_string_low(this, '<'//trim(tag), val)
+
+  end function xml_file_read_string
 
   ! ----------------------------------------------------------------------
 

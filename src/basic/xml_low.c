@@ -25,7 +25,7 @@
 #include "string_f.h"
 #include <string.h>
 
-/* #define XML_FILE_DEBUG */
+#define XML_FILE_DEBUG
 
 typedef struct {
   FILE * xml_file;
@@ -168,13 +168,13 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
 
   /* go to the start of the attribute list */
   fsetpos((*tag)->xml_file, &(*tag)->pos);
-  fgets(buffer, sizeof(buffer), (*tag)->xml_file);
 
-#ifdef XML_FILE_DEBUG
-  /*  printf("line to parse: %s", buffer);*/
-#endif
-
-  res = strstr(buffer, attname);
+  res = NULL;
+  
+  while(res == NULL){
+    fgets(buffer, sizeof(buffer), (*tag)->xml_file);
+    res = strstr(buffer, attname);
+  }
 
   free(attname);
   
@@ -191,6 +191,104 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
 #ifdef XML_FILE_DEBUG
   printf("got value: %d\n", *val);
 #endif
+  
+  return 0;
+}
+
+fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
+     (tag_t ** tag, STR_F_TYPE attname_f, double * val STR_ARG1){
+  char buffer[1000];
+  char * res;
+  char * attname;
+  
+  TO_C_STR1(attname_f, attname);
+  
+#ifdef XML_FILE_DEBUG
+  printf("Reading attribute \"%s\".\n", attname);
+#endif
+
+  /* go to the start of the attribute list */
+  fsetpos((*tag)->xml_file, &(*tag)->pos);
+
+  res = NULL;
+  
+  while(res == NULL){
+    fgets(buffer, sizeof(buffer), (*tag)->xml_file);
+    res = strstr(buffer, attname);
+  }
+
+#ifdef XML_FILE_DEBUG
+  printf("line to parse: %s", buffer);
+#endif
+
+  free(attname);
+  
+  if(res == NULL) return 1;
+
+  res = strchr(res, '"') + 1;
+  
+#ifdef XML_FILE_DEBUG
+  printf("line to parse: %s", res);
+#endif
+
+  sscanf(res, "%lf", val);
+
+#ifdef XML_FILE_DEBUG
+  printf("got value: %lf\n", *val);
+#endif
+
+  return 0;
+}
+
+
+fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
+     (tag_t ** tag, STR_F_TYPE attname_f, STR_F_TYPE val STR_ARG2){
+  char buffer[1000];
+  char val_c[200];
+  char * res;
+  char * attname;
+  
+  TO_C_STR1(attname_f, attname);
+  
+#ifdef XML_FILE_DEBUG
+  printf("Reading attribute \"%s\".\n", attname);
+#endif
+
+  /* go to the start of the attribute list */
+  fsetpos((*tag)->xml_file, &(*tag)->pos);
+
+  res = NULL;
+  
+  while(res == NULL){
+    fgets(buffer, sizeof(buffer), (*tag)->xml_file);
+    res = strstr(buffer, attname);
+  }
+
+#ifdef XML_FILE_DEBUG
+  printf("line to parse: %s", buffer);
+#endif
+
+  free(attname);
+  
+  if(res == NULL) return 1;
+
+  res = strchr(res, '"') + 1;
+  
+#ifdef XML_FILE_DEBUG
+  printf("line to parse: %s", res);
+#endif
+
+  sscanf(res, "%s", val_c);
+
+  /* remove the trailing quote */
+  res = strchr(val_c, '"');
+  res[0] = '\0';
+
+#ifdef XML_FILE_DEBUG
+  printf("got value: %s\n", val_c);
+#endif
+
+  TO_F_STR2(val_c, val);
   
   return 0;
 }
@@ -214,7 +312,7 @@ fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_
 #endif
 			   
   free(tag);
-
+ 
   return 0;
 }
 
@@ -238,6 +336,35 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
 
   free(tag);
 
+  return 0;
+}
+
+fint FC_FUNC_(xml_file_read_string_low, XML_FILE_READ_STRING_LOW)(FILE ** xml_file, STR_F_TYPE tag_f, STR_F_TYPE value STR_ARG2){
+  char * tag;
+  char string[255];
+  fint ierr;
+  
+  TO_C_STR1(tag_f, tag);
+
+#ifdef XML_FILE_DEBUG
+  printf("Reading tag \"%s>\" of type string\n", tag);
+#endif
+
+  fseek(*xml_file, 0, SEEK_SET);
+  ierr = seek_tag(xml_file, tag, 0, 1);
+
+  free(tag);
+
+  if(ierr != 0) return ierr;
+  
+  fscanf(*xml_file, "%s", string);
+
+#ifdef XML_FILE_DEBUG
+  printf("Got value: %s\n", string);
+#endif
+
+  TO_F_STR2(string, value);
+  
   return 0;
 }
 
