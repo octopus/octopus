@@ -225,9 +225,16 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    /* did we reach the end of the tag? */
+    if(res == NULL && strchr(buffer, '>')) break;
   }
-  
-  if(res == NULL) return 1;
+
+  if(res == NULL) {
+#ifdef XML_FILE_DEBUG
+    printf("Attribute not found\n");
+#endif
+    return 1;
+  }
 
   res = strchr(res, '"') + 1;
   
@@ -263,6 +270,10 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
 
   free(attname);
   
+#ifdef XML_FILE_DEBUG
+  printf("Decorated attribute |%s|\n", dec_attname);
+#endif
+
   /* go to the start of the attribute list */
   fsetpos((*tag)->xml_file, &(*tag)->pos);
 
@@ -271,14 +282,21 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    /* did we reach the end of the tag? */
+    if(res == NULL && strchr(buffer, '>')) break;
   }
 
 #ifdef XML_FILE_DEBUG
   printf("line to parse: %s", buffer);
 #endif
   
-  if(res == NULL) return 1;
-
+  if(res == NULL) {
+#ifdef XML_FILE_DEBUG
+    printf("Attribute not found\n");
+#endif
+    return 1;
+  }
+  
   res = strchr(res, '"') + 1;
   
 #ifdef XML_FILE_DEBUG
@@ -322,6 +340,8 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    /* did we reach the end of the tag? */
+    if(res == NULL && strchr(buffer, '>')) break;
   }
 
 #ifdef XML_FILE_DEBUG
@@ -338,9 +358,9 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
 
   sscanf(res, "%s", val_c);
 
-  /* remove the trailing quote */
+  /* remove the trailing quote, if there*/
   res = strchr(val_c, '"');
-  res[0] = '\0';
+  if(res != NULL) res[0] = '\0';
 
 #ifdef XML_FILE_DEBUG
   printf("got value: %s\n", val_c);

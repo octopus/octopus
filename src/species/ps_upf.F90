@@ -398,16 +398,20 @@ contains
 
     ! Read the header
     ierr = xml_file_tag(upf2_file, 'PP_HEADER', 0, tag)
-
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_string(tag, 'element', ps_upf%symbol)
-
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_string(tag, 'pseudo_type', ps_upf%type)
+    call check_error(ierr)
     if(ps_upf%type /= 'NC') then
       message(1) = "Octopus can only read norm-conserving pseudo-potentials from UPF format."
       call messages_fatal(1)
     end if
 
     ierr = xml_tag_get_attribute_string(tag, 'core_correction', str)
+    call check_error(ierr)
     ps_upf%nlcc = str /= 'F'
 
     if(ps_upf%nlcc) then
@@ -415,19 +419,33 @@ contains
     end if
 
     ierr = xml_tag_get_attribute_float(tag, 'z_valence', ps_upf%z_val)
-
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_value(tag, 'number_of_wfc', ps_upf%n_wfs)
-
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_value(tag, 'number_of_proj', ps_upf%n_proj)
-
+    call check_error(ierr)
+    
     call xml_tag_end(tag)
     
     ! Read the mesh
     ierr = xml_file_tag(upf2_file, 'PP_MESH', 0, tag)
-
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_value(tag, 'mesh', ps_upf%np)
-
+    if(ierr /= 0) then
+      ! in some files this is called size
+      ierr = xml_tag_get_attribute_value(tag, 'size', ps_upf%np)
+      call check_error(ierr)
+    end if
+    
     ierr = xml_tag_get_attribute_float(tag, 'xmin', mesh_min)
+    if(ierr /= 0) then
+      ! if not present, we assume is zero
+      mesh_min = CNST(0.0)
+    end if
+    
     if(abs(mesh_min) > M_EPSILON) then
       ps_upf%np = ps_upf%np + 1
       startp = 2
@@ -438,11 +456,13 @@ contains
     SAFE_ALLOCATE(ps_upf%r(1:ps_upf%np))
     if(startp == 2) ps_upf%r(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_R', ps_upf%np - startp + 1, ps_upf%r(startp:))
+    call check_error(ierr)
     
     SAFE_ALLOCATE(ps_upf%drdi(1:ps_upf%np))
     if(startp == 2) ps_upf%drdi(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_RAB', ps_upf%np - startp + 1, ps_upf%drdi(startp:))
-
+    call check_error(ierr)
+    
     do ip = 1, ps_upf%np
       write(12, *) ip, ps_upf%r(ip), ps_upf%drdi(ip)
     end do
@@ -451,9 +471,12 @@ contains
 
     ! the local part
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
-
+    call check_error(ierr)
+    
     SAFE_ALLOCATE(ps_upf%v_local(1:ps_upf%np))
     ierr = xml_get_tag_value(tag, 'PP_LOCAL', ps_upf%np - startp + 1, ps_upf%v_local(startp:))
+    call check_error(ierr)
+    
     if (startp == 2) then
       ps_upf%v_local(1) = linear_extrapolate(ps_upf%r(1), ps_upf%r(2), &
         ps_upf%r(3), ps_upf%v_local(2), ps_upf%v_local(3))
@@ -467,7 +490,8 @@ contains
 
     ! the non-local part
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
-
+    call check_error(ierr)
+    
     SAFE_ALLOCATE(ps_upf%proj(1:ps_upf%np, 1:ps_upf%n_proj))
     SAFE_ALLOCATE(ps_upf%proj_l(1:ps_upf%n_proj))
     SAFE_ALLOCATE(ps_upf%proj_np(1:ps_upf%n_proj))
@@ -476,8 +500,12 @@ contains
 
       write(str, '(a,i1)') 'PP_BETA.', iproj
       ierr = xml_file_tag(upf2_file, trim(str), 0, proj_tag)
+      call check_error(ierr)
       ierr = xml_tag_get_attribute_value(proj_tag, 'size', ps_upf%proj_np(iproj))
+      call check_error(ierr)
       ierr = xml_tag_get_attribute_value(proj_tag, 'angular_momentum', ps_upf%proj_l(iproj))
+      call check_error(ierr)
+
       call xml_tag_end(proj_tag)
       
       if(startp == 2) then
@@ -495,7 +523,9 @@ contains
 
     ! DIJ
     ierr = xml_file_tag(upf2_file, 'PP_DIJ', 0, proj_tag)
+    call check_error(ierr)
     ierr = xml_tag_get_attribute_value(proj_tag, 'size', dij_size)
+    call check_error(ierr)
     call xml_tag_end(proj_tag)
 
     SAFE_ALLOCATE(dij_linear(1:dij_size))
@@ -505,6 +535,7 @@ contains
     ps_upf%e = CNST(0.0)
     
     ierr = xml_get_tag_value(tag, 'PP_DIJ', dij_size, dij_linear)
+    call check_error(ierr)
 
     dij = reshape(dij_linear, (/ps_upf%n_proj, ps_upf%n_proj/))
 
@@ -520,6 +551,7 @@ contains
 
     ! the wavefunctions
     ierr = xml_file_tag(upf2_file, 'PP_PSWFC', 0, tag)
+    call check_error(ierr)
     
     SAFE_ALLOCATE(ps_upf%n(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%l(1:ps_upf%n_wfs))
@@ -531,14 +563,19 @@ contains
       write(str, '(a,i1)') 'PP_CHI.', iwfs
       
       ierr = xml_file_tag(upf2_file, trim(str), 0, wfs_tag)
+      call check_error(ierr)
       ierr = xml_tag_get_attribute_value(wfs_tag, 'n', ps_upf%n(iwfs))
+      call check_error(ierr)
       ierr = xml_tag_get_attribute_value(wfs_tag, 'l', ps_upf%l(iwfs))
+      call check_error(ierr)
       ierr = xml_tag_get_attribute_float(wfs_tag, 'occupation', ps_upf%occ(iwfs))
-
+      call check_error(ierr)
+      
       call xml_tag_end(wfs_tag)
       
       ps_upf%wfs(1, iwfs) = CNST(0.0)
       ierr = xml_get_tag_value(tag, trim(str), ps_upf%np - startp + 1, ps_upf%wfs(startp:, iwfs))
+      call check_error(ierr)
       
     end do
 
@@ -554,7 +591,8 @@ contains
     SAFE_ALLOCATE(ps_upf%rho(1:ps_upf%np))
     ps_upf%rho(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_RHOATOM', ps_upf%np - startp + 1, ps_upf%rho(startp:))
-
+    call check_error(ierr)
+    
     call xml_tag_end(tag)
 
     do ip = 1, ps_upf%np
@@ -568,6 +606,19 @@ contains
     nullify(ps_upf%proj_j)
     
     POP_SUB(ps_upf_file_read_version2)
+
+  contains
+
+    subroutine check_error(ierr)
+      integer, intent(in) :: ierr
+
+      if(ierr /= 0) then
+        call messages_write('Cannot parse UPF2 file')
+        call messages_fatal()        
+      end if
+      
+    end subroutine check_error
+    
   end subroutine ps_upf_file_read_version2
 
   ! ---------------------------------------------------------------------------
