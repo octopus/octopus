@@ -221,7 +221,7 @@ contains
     rdm%occsum = M_ZERO
     rdm%scale_f = CNST(1e-2)
     rdm%maxFO = M_ZERO
-    rdm%iter = M_ONE
+    rdm%iter = 1
  
 
     !%Variable RDMTolerance
