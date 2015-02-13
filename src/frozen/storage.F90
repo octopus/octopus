@@ -163,7 +163,7 @@ contains
     this%data(this%mesh%np+1:,:)=0.0_wp
 #if defined(HAVE_MPI)
     do indx = 1, this%ndim
-      call dvec_ghost_update(this%mesh%vp, this%data(:,i))
+      call dvec_ghost_update(this%mesh%vp, this%data(:,indx))
     end do
 #endif
     POP_SUB(storage_update)
