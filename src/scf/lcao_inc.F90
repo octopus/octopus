@@ -693,19 +693,20 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       call messages_write('Generating wavefunctions.')
       call messages_info()
 
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs)
-
       ! set the eigenvalues
       st%eigenval(1:nev, ik) = eval(1:nev)
       st%eigenval(this%norbs + 1:st%nst, ik) = HUGE(M_ONE)
       ! FIXME: we should calculate expectation values of the Hamiltonian here.
       ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
-      !
       if (.not. this%parallel .and. gr%mesh%parallel_in_domains) then
+
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs * nev)
+
         ! We will work on each batch of states at a time, broadcasting only the portion of evec needed by that batch of states.
         ! Unfortunately this means the loop over atoms will be repeated for each batch, which is not the most efficient way
         ! of doing this, but it avoids storing the full evec matrix in all processes.
+
         do ib = st%group%block_start, st%group%block_end
           SAFE_ALLOCATE(block_evec(1:this%norbs, 1:st%group%block_size(ib)))
 
@@ -732,7 +733,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
             ibasis = ibasis + norbs
             if(mpi_grp_is_root(mpi_world)) then
-              call loct_progress_bar((ib - 1)*this%norbs+ibasis-1, this%norbs*(st%group%block_end-st%group%block_end+1))
+              call loct_progress_bar((states_block_min(st, ib) - 1) * this%norbs + states_block_size(st, ib) * (ibasis - 1), &
+                this%norbs * nev)
             end if
           end do
 
@@ -750,8 +752,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         end if
 
       else
-        !
+
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs)
         ibasis = 1
+
         do iatom = 1, geo%natoms
           norbs = this%norb_atom(iatom)
 
@@ -770,7 +774,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
 
           ibasis = ibasis + norbs
-          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%norbs)
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis - 1, this%norbs)
         end do
         
         SAFE_DEALLOCATE_A(levec)
