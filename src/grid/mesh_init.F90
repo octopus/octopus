@@ -66,8 +66,8 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
   integer,                     intent(in)    :: enlarge(MAX_DIM)
 
-  integer :: idir, jj
-  FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
+  integer :: idir, jj, delta
+  FLOAT   :: x(MAX_DIM), chi(MAX_DIM), spacing_new(-1:1)
   logical :: out
 
   PUSH_SUB(mesh_init_stage_1)
@@ -109,7 +109,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
 
   ! we have a symmetric mesh (for now)
   mesh%idx%nr(1,:) = -mesh%idx%nr(2,:)
-  
+
   ! we have to adjust a couple of things for the periodic directions
   do idir = 1, sb%periodic_dim
     if(mesh%idx%nr(2, idir) == 0) then
@@ -118,11 +118,35 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       mesh%idx%nr(1, idir) = -1
     endif
 
-    !the spacing has to be a divisor of the box size
-    mesh%spacing(idir) = sb%lsize(idir)/real(mesh%idx%nr(2, idir))
-    !the upper boundary does not have to be included (as it is a copy of the lower boundary)
-    mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
+    ! We have to adjust the spacing to be conmesurable with the box,
+    ! for this we scan the possible values of the grid size around the
+    ! one we selected. We choose the size that has the spacing closest
+    ! to the requested one.
+    do delta = -1, 1
+      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta) 
+      spacing_new(delta) = abs(spacing_new(delta) - spacing(idir))
+    end do
+
+    delta = minloc(spacing_new, dim = 1) - 2
+
+    ASSERT(delta >= -1) 
+    ASSERT(delta <=  1) 
+
+    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta)
+
+    ! we need to adjust the grid by adding or removing one point
+    if(delta == -1) then
+      mesh%idx%nr(1, idir) = mesh%idx%nr(1, idir) - 1
+    else if (delta == 1) then
+      mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
+    end if
+    
   end do
+
+  if( any(abs(mesh%spacing(1:sb%periodic_dim) - spacing(1:sb%periodic_dim)) > CNST(1e-6)) ) then
+    call messages_write('The spacing has been modified to make it conmesurable with the periodicity of the system.')
+    call messages_warning()
+  end if
 
   do idir = sb%periodic_dim + 1, sb%dim
     if(mesh%idx%nr(2, idir) == 0) then

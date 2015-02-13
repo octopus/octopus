@@ -25,7 +25,7 @@ BoxShape = parallelepiped
 %
 
 %Spacing
- 0.3 | 0.3 | 0.3
+ 1.99932905/6  | 0.3 | 0.3
 %
 
 %KPoints

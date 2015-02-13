@@ -4,9 +4,8 @@ CalculationMode = gs
 
 PeriodicDimensions = 3
 
-Spacing = 0.7
-
 a = 10.2
+Spacing = a/14
 
 BoxShape = parallelepiped
 Lsize = a/2

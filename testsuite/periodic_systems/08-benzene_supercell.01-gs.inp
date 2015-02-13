@@ -23,7 +23,8 @@ EigenSolver = rmmdiis
 
 BoxShape = parallelepiped
 
-LSize = 5
+LSize = 5.0
+Spacing = LSize/11
 
 FromScratch = yes
 
