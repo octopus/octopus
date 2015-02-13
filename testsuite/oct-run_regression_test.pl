@@ -264,6 +264,10 @@ if (! -d $tempdirpath) { mkdir $tempdirpath; }
 	    $options_are_mpi = 0;
 	}
 
+	if($options_are_mpi) {
+	    $options_required = $options_required_mpi;
+	}
+
 	if(length($options_required) > 0) {
 	    # check if the executable was compiled with the required options
 	    foreach my $option (split(/;/, $options_required)){
@@ -325,6 +329,7 @@ if (! -d $tempdirpath) { mkdir $tempdirpath; }
 	if ( $opt_m ) {
 	    print "\n\nFor input file : $input_file\n\n";
 	    $return_value = 0;
+	    # FIXME: this works from outer directory, but not in archived subdirectories.
 	    $matchdir = "$workdir/$input_base";
 	} else {
           if( -f $input_file ) {
