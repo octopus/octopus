@@ -10,14 +10,16 @@ module fio_system_m
     fio_states_t,         &
     fio_states_update
 
-  use base_system_m, only:                 &
-    fio_system_t     => base_system_t,     &
-    fio_system_init  => base_system_init,  &
-    fio_system_start => base_system_start, &
-    fio_system_stop  => base_system_stop,  &
-    fio_system_get   => base_system_get,   &
-    fio_system_copy  => base_system_copy,  &
-    fio_system_end   => base_system_end
+  use base_system_m, only:                    &
+    fio_system_start => base_system__start__, &
+    fio_system_stop  => base_system__stop__
+
+  use base_system_m, only:               &
+    fio_system_t    => base_system_t,    &
+    fio_system_init => base_system_init, &
+    fio_system_get  => base_system_get,  &
+    fio_system_copy => base_system_copy, &
+    fio_system_end  => base_system_end
 
   implicit none
 

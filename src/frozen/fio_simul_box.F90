@@ -6,22 +6,16 @@ module fio_simul_box_m
   use messages_m
   use profiling_m
 
+  use geometry_m,   only: geometry_t
   use json_m,       only: JSON_OK, json_object_t, json_get
   use kpoints_m,    only: kpoints_init
   use mpi_m,        only: mpi_world
   use symmetries_m, only: symmetries_init
 
-  use geometry_m, only: &
-    geometry_t
-
   use simul_box_m, only:   &
     HYPERCUBE,             &
     simul_box_load,        &
     simul_box_lookup_init
-
-  use base_geom_m, only:           &
-    fio_geom_t   => base_geom_t,   &
-    fio_geom_get => base_geom_get
 
   use simul_box_m, only:                  &
     fio_simul_box_t    => simul_box_t,    &
@@ -40,23 +34,19 @@ module fio_simul_box_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_simul_box_init(this, geom, config)
+  subroutine fio_simul_box_init(this, geo, config)
     type(fio_simul_box_t), intent(out) :: this
-    type(fio_geom_t),      intent(in)  :: geom
+    type(geometry_t),      intent(in)  :: geo
     type(json_object_t),   intent(in)  :: config
     !
-    type(geometry_t),   pointer :: geo
     character(len=MAX_PATH_LEN) :: dir, file
     integer                     :: ierr, order
     !
     PUSH_SUB(fio_simul_box_init)
-    nullify(geo)
     call json_get(config, "dir", dir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(config, "file", file, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_geom_get(geom, geo)
-    ASSERT(associated(geo))
     call simul_box_load(this, dir, file, mpi_world, ierr)
     if(ierr==0)then
       ASSERT(this%box_shape/=HYPERCUBE)
@@ -72,7 +62,6 @@ contains
       write(unit=message(3), fmt="(a,i10)") "I/O Error: ", ierr
       call messages_fatal(3)
     end if
-    nullify(geo)
     POP_SUB(fio_simul_box_init)
     return
   end subroutine fio_simul_box_init

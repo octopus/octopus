@@ -514,7 +514,7 @@ contains
     !
     type(EXTERNAL(LIST,t)), pointer :: list
     type(EXTERNAL(PAIR,t)), pointer :: pair
-    integer                         :: n, i, jerr
+    integer                         :: jerr
     !
     PUSH_SUB(TEMPLATE(hash_get))
     jerr=TEMPLATE(HASH_KEY_ERROR)

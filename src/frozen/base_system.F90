@@ -33,6 +33,18 @@ module base_system_m
 
   use json_m,  only: JSON_OK, json_object_t, json_get
 
+  use config_dict_m, only: &
+    CONFIG_DICT_OK,        &
+    CONFIG_DICT_NAME_LEN
+
+  use config_dict_m, only: &
+    config_dict_t,         &
+    config_dict_init,      &
+    config_dict_set,       &
+    config_dict_get,       &
+    config_dict_copy,      &
+    config_dict_end
+
   use simulation_m, only: &
     simulation_t
 
@@ -46,31 +58,46 @@ module base_system_m
   use geometry_m, only: &
     geometry_t
 
-  use base_geom_m, only:           &
-    geom_t     => base_geom_t,     &
-    geom_init  => base_geom_init,  &
-    geom_get   => base_geom_get,   &
-    geom_copy  => base_geom_copy,  &
-    geom_end   => base_geom_end
+  use base_geom_m, only: &
+    base_geom__init__,   &
+    base_geom__add__
 
-  use base_states_m, only:               &
-    states_t      => base_states_t,      &
-    states_init   => base_states_init,   &
-    states_start  => base_states_start,  &
-    states_update => base_states_update, &
-    states_stop   => base_states_stop,   &
-    states_get    => base_states_get,    &
-    states_copy   => base_states_copy,   &
-    states_end    => base_states_end
+  use base_geom_m, only: &
+    base_geom_t,         &
+    base_geom_get,       &
+    base_geom_copy,      &
+    base_geom_end
+
+  use base_states_m, only: &
+    base_states__start__,  &
+    base_states__update__, &
+    base_states__stop__,   &
+    base_states__add__
+
+  use base_states_m, only: &
+    base_states_t,         &
+    base_states_init,      &
+    base_states_get,       &
+    base_states_copy,      &
+    base_states_end
 
   implicit none
 
   private
+  public ::                &
+    base_system__init__,   &
+    base_system__start__,  &
+    base_system__update__, &
+    base_system__stop__,   &
+    base_system__add__,    &
+    base_system__get__
+
   public ::             &
     base_system_init,   &
     base_system_start,  &
     base_system_update, &
     base_system_stop,   &
+    base_system_next,   &
     base_system_set,    &
     base_system_get,    &
     base_system_copy,   &
@@ -85,8 +112,9 @@ module base_system_m
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
     type(space_t)                :: space
-    type(geom_t)                 :: geom
-    type(states_t)               :: st
+    type(base_geom_t)            :: geom
+    type(base_states_t)          :: st
+    type(config_dict_t)          :: dict
     type(base_system_hash_t)     :: hash
   end type base_system_t
 
@@ -96,10 +124,13 @@ module base_system_m
     type(base_system_hash_iterator_t) :: iter
   end type base_system_iterator_t
 
+  interface base_system__init__
+    module procedure base_system__init__begin
+    module procedure base_system__init__finish
+ end interface base_system__init__
+
   interface base_system_init
-    module procedure base_system_init_begin
-    module procedure base_system_init_build
-    module procedure base_system_init_finish
+    module procedure base_system_init_system
     module procedure base_system_iterator_init
   end interface base_system_init
 
@@ -131,9 +162,9 @@ module base_system_m
     module procedure base_system_iterator_end
   end interface base_system_end
 
-  integer, parameter :: BASE_SYSTEM_OK          = BASE_SYSTEM_HASH_OK
-  integer, parameter :: BASE_SYSTEM_KEY_ERROR   = BASE_SYSTEM_HASH_KEY_ERROR
-  integer, parameter :: BASE_SYSTEM_EMPTY_ERROR = BASE_SYSTEM_HASH_EMPTY_ERROR
+  integer, public, parameter :: BASE_SYSTEM_OK          = BASE_SYSTEM_HASH_OK
+  integer, public, parameter :: BASE_SYSTEM_KEY_ERROR   = BASE_SYSTEM_HASH_KEY_ERROR
+  integer, public, parameter :: BASE_SYSTEM_EMPTY_ERROR = BASE_SYSTEM_HASH_EMPTY_ERROR
 
 contains
 
@@ -142,92 +173,204 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_system_init_begin(this, config)
+  subroutine base_system__init__begin(this, config)
     type(base_system_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
     !
-    PUSH_SUB(base_system_init_begin)
+    PUSH_SUB(base_system__init__begin)
     this%config=>config
     nullify(this%sim, cnfg)
     call json_get(this%config, "space", cnfg, ierr)
     if(ierr==JSON_OK)call space_init(this%space, cnfg)
     nullify(cnfg)
     call json_get(this%config, "geometry", cnfg, ierr)
-    if(ierr==JSON_OK)call geom_init(this%geom, this%space, cnfg)
+    if(ierr==JSON_OK)call base_geom__init__(this%geom, this%space, cnfg)
     nullify(cnfg)
     call json_get(this%config, "states", cnfg, ierr)
-    if(ierr==JSON_OK)call states_init(this%st, cnfg)
+    if(ierr==JSON_OK)call base_states_init(this%st, cnfg)
     nullify(cnfg)
+    call config_dict_init(this%dict)
     call base_system_hash_init(this%hash)
-    POP_SUB(base_system_init_begin)
+    POP_SUB(base_system__init__begin)
     return
-  end subroutine base_system_init_begin
+  end subroutine base_system__init__begin
 
   ! ---------------------------------------------------------
-  subroutine base_system_init_build(this, that, config)
-    type(base_system_t), intent(inout) :: this
-    type(base_system_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-    !
-    PUSH_SUB(base_system_init_build)
-    ASSERT(this%space==that%space)
-    call geom_init(this%geom, that%geom, config)
-    call states_init(this%st, that%st, config)
-    call base_system_hash_set(this%hash, config, that)
-    POP_SUB(base_system_init_build)
-    return
-  end subroutine base_system_init_build
-
-  ! ---------------------------------------------------------
-  subroutine base_system_init_finish(this)
+  subroutine base_system__init__finish(this)
     type(base_system_t), intent(inout) :: this
     !
-    PUSH_SUB(base_system_init_finish)
-    call geom_init(this%geom)
-    POP_SUB(base_system_init_finish)
+    PUSH_SUB(base_system__init__finish)
+    call base_geom__init__(this%geom)
+    POP_SUB(base_system__init__finish)
     return
-  end subroutine base_system_init_finish
+  end subroutine base_system__init__finish
 
   ! ---------------------------------------------------------
-  subroutine base_system_start(this, sim)
-    type(base_system_t),              intent(inout) :: this
+  subroutine base_system_init_system(this, config)
+    type(base_system_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: config
+    !
+    PUSH_SUB(base_system_init_system)
+    call base_system__init__begin(this, config)
+    call base_system__init__finish(this)
+    POP_SUB(base_system_init_system)
+    return
+  end subroutine base_system_init_system
+
+  ! ---------------------------------------------------------
+  subroutine base_system__start__(this, sim)
+    type(base_system_t),        intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
-    PUSH_SUB(base_system_start)
+    PUSH_SUB(base_system__start__)
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
-    call states_start(this%st, sim)
+    call base_states__start__(this%st, sim)
+    POP_SUB(base_system__start__)
+    return
+  end subroutine base_system__start__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_start(this, sim)
+    type(base_system_t), intent(inout) :: this
+    type(simulation_t),  intent(in)    :: sim
+    !
+    type(base_system_iterator_t) :: iter
+    type(base_system_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system_start)
+    nullify(subs)
+    call base_system_init(iter, this)
+    do
+      nullify(subs)
+      call base_system_next(iter, subs, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call base_system_start(subs, sim)
+    end do
+    call base_system_end(iter)
+    nullify(subs)
+    call base_system__start__(this, sim)
     POP_SUB(base_system_start)
     return
   end subroutine base_system_start
 
   ! ---------------------------------------------------------
-  subroutine base_system_update(this)
+  subroutine base_system__update__(this)
     type(base_system_t), intent(inout) :: this
     !
-    PUSH_SUB(base_system_update)
+    PUSH_SUB(base_system__update__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call states_update(this%st)
+    call base_states__update__(this%st)
+    POP_SUB(base_system__update__)
+    return
+  end subroutine base_system__update__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_update(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    type(base_system_iterator_t) :: iter
+    type(base_system_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system_update)
+    nullify(subs)
+    call base_system_init(iter, this)
+    do
+      nullify(subs)
+      call base_system_next(iter, subs, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call base_system_update(subs)
+    end do
+    call base_system_end(iter)
+    nullify(subs)
+    call base_system__update__(this)
     POP_SUB(base_system_update)
     return
   end subroutine base_system_update
 
   ! ---------------------------------------------------------
-  subroutine base_system_stop(this)
+  subroutine base_system__stop__(this)
     type(base_system_t), intent(inout) :: this
     !
-    PUSH_SUB(base_system_stop)
+    PUSH_SUB(base_system__stop__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call states_stop(this%st)
+    call base_states__stop__(this%st)
+    POP_SUB(base_system__stop__)
+    return
+  end subroutine base_system__stop__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_stop(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    type(base_system_iterator_t) :: iter
+    type(base_system_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system_stop)
+    nullify(subs)
+    call base_system_init(iter, this)
+    do
+      nullify(subs)
+      call base_system_next(iter, subs, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call base_system_stop(subs)
+    end do
+    call base_system_end(iter)
+    nullify(subs)
+    call base_system__stop__(this)
     POP_SUB(base_system_stop)
     return
   end subroutine base_system_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_system__add__(this, that, config)
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    !
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+    !
+    PUSH_SUB(base_system__add__)
+    ASSERT(this%space==that%space)
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_system_hash_set(this%hash, config, that)
+    call base_geom__add__(this%geom, that%geom, config)
+    call base_states__add__(this%st, that%st, config)
+    POP_SUB(base_system__add__)
+    return
+  end subroutine base_system__add__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__get__(this, name, that)
+    type(base_system_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(base_system_t), pointer        :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system__get__)
+    nullify(that)
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)then
+      call base_system_hash_get(this%hash, config, that, ierr)
+      if(ierr/=BASE_SYSTEM_OK)nullify(that)
+    end if
+    POP_SUB(base_system__get__)
+    return
+  end subroutine base_system__get__
 
   ! ---------------------------------------------------------
   subroutine base_system_set_simulation(this, that)
@@ -281,7 +424,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_system_get_geom(this, that)
     type(base_system_t), target, intent(in) :: this
-    type(geom_t),       pointer             :: that
+    type(base_geom_t),  pointer             :: that
     !
     PUSH_SUB(base_system_get_geom)
     that=>this%geom
@@ -291,8 +434,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_system_get_states(this, that)
-    type(base_system_t), target, intent(in) :: this
-    type(states_t),     pointer             :: that
+    type(base_system_t),  target, intent(in) :: this
+    type(base_states_t), pointer             :: that
     !
     PUSH_SUB(base_system_get_states)
     that=>this%st
@@ -302,17 +445,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_system_copy_system(this, that)
-    type(base_system_t), intent(out) :: this
-    type(base_system_t), intent(in)  :: that
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
     !
-    PUSH_SUB(base_system_copy_system)
+    PUSH_SUB(base_system__copy___system)
     this%config=>that%config
     this%sim=>that%sim
-    call geom_copy(this%geom, that%geom)
+    call base_geom_copy(this%geom, that%geom)
     call space_copy(this%space, that%space)
-    call states_copy(this%st, that%st)
+    call base_states_copy(this%st, that%st)
+    call config_dict_copy(this%dict, that%dict)
     call base_system_hash_copy(this%hash, that%hash)
-    POP_SUB(base_system_copy_system)
+    POP_SUB(base_system__copy_system)
     return
   end subroutine base_system_copy_system
 
@@ -323,8 +467,9 @@ contains
     PUSH_SUB(base_system_end_system)
     nullify(this%config, this%sim)
     call space_end(this%space)
-    call geom_end(this%geom)
-    call states_end(this%st)
+    call base_geom_end(this%geom)
+    call base_states_end(this%st)
+    call config_dict_end(this%dict)
     call base_system_hash_end(this%hash)
     POP_SUB(base_system_end_system)
     return

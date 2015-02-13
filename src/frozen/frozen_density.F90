@@ -7,12 +7,14 @@ module frozen_density_m
   use profiling_m
 
   use json_m,  only: JSON_OK, json_object_t, json_get
-  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_end
+  use json_m,  only: json_array_t, json_array_iterator_t, json_len, json_init, json_next, json_end
   use kinds_m, only: wp
   use mesh_m,  only: mesh_t
   use space_m, only: space_t
 
   use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
+
+  use intrpl_m, only: NEAREST
 
   use fio_density_m, only: &
     fio_density_t,         &
@@ -24,28 +26,45 @@ module frozen_density_m
   use fio_density_m, only: &
     fio_density_intrpl_t
 
-  use simulation_m
-  use base_density_m, only:                     &
-    frozen_density_t     => base_density_t,     &
-    frozen_density_init  => base_density_init,  &
-    frozen_density_start => base_density_start, &
-    frozen_density_stop  => base_density_stop,  &
-    frozen_density_get   => base_density_get,   &
-    frozen_density_copy  => base_density_copy,  &
-    frozen_density_end   => base_density_end
+  use simulation_m, only: &
+    simulation_t,         &
+    simulation_get
+
+  use base_density_m, only:                          &
+    frozen_density_start  => base_density__start__,  &
+    frozen_density_update => base_density__update__, &
+    frozen_density_stop   => base_density__stop__
+
+  use base_density_m, only:                   &
+    frozen_density_t    => base_density_t,    &
+    frozen_density_init => base_density_init, &
+    frozen_density_eval => base_density_eval, &
+    frozen_density_get  => base_density_get,  &
+    frozen_density_copy => base_density_copy, &
+    frozen_density_end  => base_density_end
+
+  use base_density_m, only:                           &
+    frozen_density_intrpl_t => base_density_intrpl_t
 
   implicit none
 
   private
+  public ::                   &
+    frozen_density__update__
+
   public ::                &
     frozen_density_t,      &
     frozen_density_init,   &
     frozen_density_start,  &
     frozen_density_update, &
     frozen_density_stop,   &
+    frozen_density_eval,   &
     frozen_density_get,    &
     frozen_density_copy,   &
     frozen_density_end
+
+  public ::                  &
+    frozen_density_intrpl_t
 
 contains
 
@@ -57,7 +76,7 @@ contains
     !
     real(kind=wp), dimension(:,:),   pointer :: dnst
     real(kind=wp), dimension(:), allocatable :: x, rho
-    type(simulation_t),       pointer :: sim
+    type(simulation_t),              pointer :: sim
     type(space_t),                   pointer :: space
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
@@ -93,7 +112,7 @@ contains
   end subroutine frozen_density_update_intrpl
 
   ! ---------------------------------------------------------
-  subroutine frozen_density_update(this, that, config)
+  subroutine frozen_density__update__(this, that, config)
     type(frozen_density_t), intent(inout) :: this
     type(fio_density_t),    intent(in)    :: that
     type(json_object_t),    intent(in)    :: config
@@ -104,16 +123,14 @@ contains
     type(fio_density_intrpl_t)   :: intrp
     integer                      :: type, ierr
     !
-    PUSH_SUB(frozen_density_update)
+    PUSH_SUB(frozen_density__update__)
     nullify(cnfg, list)
     call json_get(config, "type", type, ierr)
-    if(ierr==JSON_OK)then
-      call fio_density_init(intrp, that, type)
-    else
-      call fio_density_init(intrp, that)
-    end if
+    if(ierr/=JSON_OK)type=NEAREST
+    call fio_density_init(intrp, that, type)
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
+    ASSERT(json_len(list)>0)
     call json_init(iter, list)
     do
        nullify(cnfg)
@@ -124,9 +141,9 @@ contains
     call json_end(iter)
     nullify(cnfg, list)
     call fio_density_end(intrp)
-    POP_SUB(frozen_density_update)
+    POP_SUB(frozen_density__update__)
     return
-  end subroutine frozen_density_update
+  end subroutine frozen_density__update__
 
 end module frozen_density_m
  

@@ -33,12 +33,26 @@ module base_potential_m
 
   use json_m,   only: JSON_OK, json_object_t, json_get
 
+  use config_dict_m, only: &
+    CONFIG_DICT_OK,        &
+    CONFIG_DICT_NAME_LEN
+
+  use config_dict_m, only: &
+    config_dict_t,         &
+    config_dict_init,      &
+    config_dict_set,       &
+    config_dict_get,       &
+    config_dict_copy,      &
+    config_dict_end
+
   use storage_m, only:     &
     storage_t,             &
     storage_init,          &
     storage_start,         &
     storage_update,        &
     storage_stop,          &
+    storage_reset,         &
+    storage_accumulate,    &
     storage_eval,          &
     storage_get,           &
     storage_get_size,      &
@@ -57,17 +71,26 @@ module base_potential_m
   use simulation_m, only: &
     simulation_t
 
-  use base_system_m, only:     &
-    system_t => base_system_t
+  use base_system_m, only: &
+    base_system_t
 
   implicit none
 
   private
+  public ::                   &
+    base_potential__start__,  &
+    base_potential__update__, &
+    base_potential__stop__,   &
+    base_potential__reset__,  &
+    base_potential__acc__,    &
+    base_potential__add__
+
   public ::                &
     base_potential_init,   &
     base_potential_start,  &
     base_potential_update, &
     base_potential_stop,   &
+    base_potential_next,   &
     base_potential_eval,   &
     base_potential_set,    &
     base_potential_get,    &
@@ -86,10 +109,11 @@ module base_potential_m
   type, public :: base_potential_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(system_t),      pointer :: sys    =>null()
+    type(base_system_t), pointer :: sys    =>null()
     type(simulation_t),  pointer :: sim    =>null()
     real(kind=wp)                :: energy = 0.0_wp
     type(storage_t)              :: data
+    type(config_dict_t)          :: dict
     type(base_potential_hash_t)  :: hash
   end type base_potential_t
 
@@ -106,9 +130,8 @@ module base_potential_m
   end type base_potential_intrpl_t
 
   interface base_potential_init
-    module procedure base_potential_init_begin
+    module procedure base_potential_init_potential
     module procedure base_potential_init_copy
-    module procedure base_potential_init_build
     module procedure base_potential_iterator_init
     module procedure base_potential_intrpl_init
   end interface base_potential_init
@@ -150,6 +173,10 @@ module base_potential_m
     module procedure base_potential_intrpl_end
   end interface base_potential_end
 
+  integer, public, parameter :: BASE_POTENTIAL_OK          = BASE_POTENTIAL_HASH_OK
+  integer, public, parameter :: BASE_POTENTIAL_KEY_ERROR   = BASE_POTENTIAL_HASH_KEY_ERROR
+  integer, public, parameter :: BASE_POTENTIAL_EMPTY_ERROR = BASE_POTENTIAL_HASH_EMPTY_ERROR
+
 contains
 
 #define HASH_INCLUDE_BODY
@@ -157,14 +184,14 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_potential_init_begin(this, sys, config)
+  subroutine base_potential_init_potential(this, sys, config)
     type(base_potential_t),      intent(out) :: this
-    type(system_t),      target, intent(in)  :: sys
+    type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
     !
     integer :: nspin, ierr
     !
-    PUSH_SUB(base_potential_init_begin)
+    PUSH_SUB(base_potential_init_potential)
     ASSERT(.not.associated(this%config))
     this%config=>config
     this%sys=>sys
@@ -173,81 +200,202 @@ contains
     call json_get(this%config, "nspin", nspin, ierr)
     if(ierr/=JSON_OK)nspin=1
     call storage_init(this%data, nspin)
+    call config_dict_init(this%dict)
     call base_potential_hash_init(this%hash)
-    POP_SUB(base_potential_init_begin)
+    POP_SUB(base_potential_init_potential)
     return
-  end subroutine base_potential_init_begin
+  end subroutine base_potential_init_potential
 
   ! ---------------------------------------------------------
   subroutine base_potential_init_copy(this, that)
-    type(base_potential_t),         intent(out) :: this
-    type(base_potential_t), target, intent(in)  :: that
+    type(base_potential_t), intent(out) :: this
+    type(base_potential_t), intent(in)  :: that
     !
-    type(json_object_t), pointer :: config =>null()
-    type(simulation_t),  pointer :: sim    =>null()
-    type(system_t),      pointer :: sys    =>null()
-    real(kind=wp)                :: energy = 0.0_wp
-    type(storage_t)              :: data
-
     PUSH_SUB(base_potential_init_copy)
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     ASSERT(associated(that%sim))
-    call base_potential_init_begin(this, that%sys, that%config)
+    call base_potential_init(this, that%sys, that%config)
     call base_potential_start(this, that%sim)
     POP_SUB(base_potential_init_copy)
     return
   end subroutine base_potential_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_potential_init_build(this, that, config)
-    type(base_potential_t), intent(inout) :: this
-    type(base_potential_t), intent(in)    :: that
-    type(json_object_t),    intent(in)    :: config
-    !
-    PUSH_SUB(base_potential_init_build)
-    call base_potential_hash_set(this%hash, config, that)
-    POP_SUB(base_potential_init_build)
-    return
-  end subroutine base_potential_init_build
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_start(this, sim)
-    type(base_potential_t),              intent(inout) :: this
+  subroutine base_potential__start__(this, sim)
+    type(base_potential_t),     intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
-    PUSH_SUB(base_potential_start)
+    PUSH_SUB(base_potential__start__)
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
     call storage_start(this%data, sim)
+    POP_SUB(base_potential__start__)
+    return
+  end subroutine base_potential__start__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_potential_start(this, sim)
+    type(base_potential_t), intent(inout) :: this
+    type(simulation_t),     intent(in)    :: sim
+    !
+    type(base_potential_iterator_t) :: iter
+    type(base_potential_t), pointer :: subs
+    integer                         :: ierr
+    !
+    PUSH_SUB(base_potential_start)
+    nullify(subs)
+    call base_potential_init(iter, this)
+    do
+      nullify(subs)
+      call base_potential_next(iter, subs, ierr)
+      if(ierr/=BASE_POTENTIAL_OK)exit
+      call base_potential_start(subs, sim)
+    end do
+    call base_potential_end(iter)
+    nullify(subs)
+    call base_potential__start__(this, sim)
     POP_SUB(base_potential_start)
     return
   end subroutine base_potential_start
 
   ! ---------------------------------------------------------
-  subroutine base_potential_update(this)
+  subroutine base_potential__update__(this)
     type(base_potential_t), intent(inout) :: this
     !
-    PUSH_SUB(base_potential_update_finish)
+    PUSH_SUB(base_potential__update__)
     ASSERT(associated(this%sim))
     call storage_update(this%data)
-    POP_SUB(base_potential_update_finish)
+    POP_SUB(base_potential__update__)
+    return
+  end subroutine base_potential__update__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_potential_update(this)
+    type(base_potential_t), intent(inout) :: this
+    !
+    type(base_potential_iterator_t) :: iter
+    type(base_potential_t), pointer :: subs
+    integer                         :: ierr
+    !
+    PUSH_SUB(base_potential_update)
+    nullify(subs)
+    this%energy=0.0_wp
+    call storage_reset(this%data)
+    call base_potential_init(iter, this)
+    do
+      nullify(subs)
+      call base_potential_next(iter, subs, ierr)
+      if(ierr/=BASE_POTENTIAL_OK)exit
+      call base_potential_update(subs)
+      call storage_accumulate(this%data, subs%data)
+      this%energy=this%energy+subs%energy
+    end do
+    call base_potential_end(iter)
+    nullify(subs)
+    call base_potential__update__(this)
+    POP_SUB(base_potential_update)
     return
   end subroutine base_potential_update
 
   ! ---------------------------------------------------------
-  subroutine base_potential_stop(this)
+  subroutine base_potential__stop__(this)
     type(base_potential_t), intent(inout) :: this
     !
-    PUSH_SUB(base_potential_stop)
+    PUSH_SUB(base_potential__stop__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     nullify(this%sim)
     call storage_stop(this%data)
+    POP_SUB(base_potential__stop__)
+    return
+  end subroutine base_potential__stop__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_potential_stop(this)
+    type(base_potential_t), intent(inout) :: this
+    !
+    type(base_potential_iterator_t) :: iter
+    type(base_potential_t), pointer :: subs
+    integer                         :: ierr
+    !
+    PUSH_SUB(base_potential_stop)
+    nullify(subs)
+    call base_potential_init(iter, this)
+    do
+      nullify(subs)
+      call base_potential_next(iter, subs, ierr)
+      if(ierr/=BASE_POTENTIAL_OK)exit
+      call base_potential_stop(subs)
+    end do
+    call base_potential_end(iter)
+    nullify(subs)
+    call base_potential__stop__(this)
     POP_SUB(base_potential_stop)
     return
   end subroutine base_potential_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__reset__(this)
+    type(base_potential_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_potential__reset__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call storage_reset(this%data)
+    POP_SUB(base_potential__reset__)
+    return
+  end subroutine base_potential__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__acc__(this, that)
+    type(base_potential_t), intent(inout) :: this
+    type(base_potential_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_potential__acc__)
+    call storage_accumulate(this%data, that%data)
+    POP_SUB(base_potential__acc__)
+    return
+  end subroutine base_potential__acc__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__add__(this, that, config)
+    type(base_potential_t), intent(inout) :: this
+    type(base_potential_t), intent(in)    :: that
+    type(json_object_t),    intent(in)    :: config
+    !
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+    !
+    PUSH_SUB(base_potential__add__)
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_potential_hash_set(this%hash, config, that)
+    POP_SUB(base_potential__add__)
+    return
+  end subroutine base_potential__add__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__get__(this, name, that)
+    type(base_potential_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(base_potential_t), pointer        :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_potential__get__)
+    nullify(that)
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)then
+      call base_potential_hash_get(this%hash, config, that, ierr)
+      if(ierr/=BASE_POTENTIAL_OK)nullify(that)
+    end if
+    POP_SUB(base_potential__get__)
+    return
+  end subroutine base_potential__get__
 
   ! ---------------------------------------------------------
   elemental subroutine base_potential_set_energy(this, that)
@@ -289,7 +437,8 @@ contains
   end function base_potential_get_energy
 
   ! ---------------------------------------------------------
-  elemental subroutine base_potential_get_info(this, size, nspin, energy)
+  !elemental 
+  subroutine base_potential_get_info(this, size, nspin, energy)
     type(base_potential_t),  intent(in)  :: this
     integer,       optional, intent(out) :: size
     integer,       optional, intent(out) :: nspin
@@ -320,7 +469,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_potential_get_system(this, that)
     type(base_potential_t), target, intent(in) :: this
-    type(system_t),        pointer             :: that
+    type(base_system_t),   pointer             :: that
     !
     PUSH_SUB(base_potential_get_system)
     nullify(that)
@@ -382,12 +531,17 @@ contains
     type(base_potential_t), intent(in)    :: that
     !
     PUSH_SUB(base_potential_copy_potential)
-    this%config=>that%config
-    this%sys=>that%sys
-    this%sim=>that%sim
-    this%energy=that%energy
-    call storage_copy(this%data, that%data)
-    call base_potential_hash_copy(this%hash, that%hash)
+    call base_potential_end(this)
+    if(associated(that%config))then
+      call base_potential_init(this, that%sys, that%config)
+      this%energy=that%energy
+      if(associated(that%sim))then
+        call base_potential_start(this, that%sim)
+        call storage_copy(this%data, that%data)
+      end if
+      call config_dict_copy(this%dict, that%dict)
+      call base_potential_hash_copy(this%hash, that%hash)
+    end if
     POP_SUB(base_potential_copy_potential)
     return
   end subroutine base_potential_copy_potential
@@ -400,6 +554,7 @@ contains
     nullify(this%config, this%sys, this%sim)
     this%energy=0.0_wp
     call storage_end(this%data)
+    call config_dict_end(this%dict)
     call base_potential_hash_end(this%hash)
     POP_SUB(base_potential_end_potential)
     return

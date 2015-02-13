@@ -79,8 +79,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine grid_copy(this, that)
-    type(grid_t), intent(out) :: this
-    type(grid_t), intent(in)  :: that
+    type(grid_t), intent(inout) :: this
+    type(grid_t), intent(in)    :: that
     !
     PUSH_SUB(grid_copy)
     ASSERT(.false.)

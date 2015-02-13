@@ -7,23 +7,28 @@ module fio_density_m
   use profiling_m
 
   use io_binary_m, only: io_binary_read
-  use json_m,      only: JSON_OK, json_len, json_object_t, json_array_t,  json_get
-  use json_m,      only: json_array_iterator_t, json_init, json_end, json_next
+  use json_m,      only: JSON_OK, json_object_t, json_array_t, json_array_iterator_t
+  use json_m,      only: json_len, json_init, json_next, json_get, json_end
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
   use fio_simulation_m, only: &
     fio_simulation_t
 
-  use base_density_m, only:                  &
-    fio_density_t     => base_density_t,     &
-    fio_density_init  => base_density_init,  &
-    fio_density_start => base_density_start, &
-    fio_density_stop  => base_density_stop,  &
-    fio_density_eval  => base_density_eval,  &
-    fio_density_get   => base_density_get,   &
-    fio_density_copy  => base_density_copy,  &
-    fio_density_end   => base_density_end
+  use base_density_m, only: &
+    base_density__update__
+
+  use base_density_m, only:                     &
+    fio_density_start => base_density__start__, &
+    fio_density_stop  => base_density__stop__
+
+  use base_density_m, only:                &
+    fio_density_t    => base_density_t,    &
+    fio_density_init => base_density_init, &
+    fio_density_eval => base_density_eval, &
+    fio_density_get  => base_density_get,  &
+    fio_density_copy => base_density_copy, &
+    fio_density_end  => base_density_end
 
   use base_density_m, only:                        &
     fio_density_intrpl_t => base_density_intrpl_t
@@ -107,6 +112,7 @@ contains
     call json_end(iter)
     ASSERT(isp==nspin)
     nullify(cnfg, list)
+    call base_density__update__(this)
     POP_SUB(fio_density_update)
     return
   end subroutine fio_density_update

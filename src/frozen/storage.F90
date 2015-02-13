@@ -10,7 +10,7 @@ module storage_m
   use boundaries_m, only: dvec_ghost_update
 #endif
   use grid_m,       only: grid_t
-  use kinds_m,      only: wp
+  use kinds_m,      only: wp, operator(.equal.)
   use mesh_m,       only: mesh_t
 
   use simulation_m, only: &
@@ -39,8 +39,9 @@ module storage_m
     storage_start,         &
     storage_update,        &
     storage_stop,          &
+    storage_reset,         &
+    storage_accumulate,    &
     storage_eval,          &
-    !storage_conform,       &
     storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
@@ -102,8 +103,6 @@ contains
     integer,       optional, intent(in)  :: ndim
     real(kind=wp), optional, intent(in)  :: default
     !
-    integer :: ierr
-    !
     PUSH_SUB(storage_init_simple)
     this%ndim=1
     if(present(ndim))then
@@ -132,27 +131,23 @@ contains
 
   ! ---------------------------------------------------------
   subroutine storage_start(this, sim)
-    type(storage_t),                      intent(inout) :: this
-    type(simulation_t), optional, target, intent(in)    :: sim
+    type(storage_t),            intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
     !
     type(grid_t), pointer :: grid
     !
     PUSH_SUB(storage_start)
     nullify(grid)
-    if(present(sim))then
-      ASSERT(.not.associated(this%sim))
-      ASSERT(.not.associated(this%mesh))
-      this%sim=>sim
-      call simulation_get(sim, grid)
-      ASSERT(associated(grid))
-      this%mesh=>grid%mesh
-      nullify(grid)
-      ASSERT(this%mesh%np_part>0)
-    end if
+    ASSERT(.not.associated(this%sim))
+    ASSERT(.not.associated(this%mesh))
+    this%sim=>sim
+    call simulation_get(sim, grid)
+    ASSERT(associated(grid))
+    this%mesh=>grid%mesh
+    nullify(grid)
+    ASSERT(this%mesh%np_part>0)
     SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
-    this%data=this%default
-    if(abs(this%default)>0.0_wp)&
-      call storage_update(this)
+    call storage_reset(this)
     POP_SUB(storage_start)
     return
   end subroutine storage_start
@@ -161,13 +156,13 @@ contains
   subroutine storage_update(this)
     type(storage_t), intent(inout) :: this
     !
-    integer :: i
+    integer :: indx
     !
     PUSH_SUB(storage_update)
     ASSERT(associated(this%sim))
     this%data(this%mesh%np+1:,:)=0.0_wp
 #if defined(HAVE_MPI)
-    do i = 1, this%ndim
+    do indx = 1, this%ndim
       call dvec_ghost_update(this%mesh%vp, this%data(:,i))
     end do
 #endif
@@ -186,6 +181,41 @@ contains
     POP_SUB(storage_stop)
     return
   end subroutine storage_stop
+
+  ! ---------------------------------------------------------
+  subroutine storage_reset(this)
+    type(storage_t), intent(inout) :: this
+    !
+    PUSH_SUB(storage_reset)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(this%mesh))
+    this%data=this%default
+    if(abs(this%default)>0.0_wp)&
+      call storage_update(this)
+    POP_SUB(storage_reset)
+    return
+  end subroutine storage_reset
+
+  ! ---------------------------------------------------------
+  subroutine storage_accumulate(this, that)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    !
+    integer :: indx
+    !
+    PUSH_SUB(storage_accumulate)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%default.equal.that%default)
+    POP_SUB(storage_accumulate)
+    do indx = 1, this%mesh%np
+      this%data(indx,:)=this%data(indx,:)+that%data(indx,:)
+    end do
+    call storage_update(this)
+    return
+  end subroutine storage_accumulate
 
   ! ---------------------------------------------------------
   elemental function storage_get_size(this) result(that)

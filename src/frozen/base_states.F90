@@ -33,27 +33,49 @@ module base_states_m
 
   use json_m,  only: JSON_OK, json_object_t, json_get
 
+  use config_dict_m, only: &
+    CONFIG_DICT_OK,        &
+    CONFIG_DICT_NAME_LEN
+
+  use config_dict_m, only: &
+    config_dict_t,         &
+    config_dict_init,      &
+    config_dict_set,       &
+    config_dict_get,       &
+    config_dict_copy,      &
+    config_dict_end
+
   use simulation_m, only: &
     simulation_t
 
-  use base_density_m, only:                &
-    density_t      => base_density_t,      &
-    density_init   => base_density_init,   &
-    density_start  => base_density_start,  &
-    density_update => base_density_update, &
-    density_stop   => base_density_stop,   &
-    density_get    => base_density_get,    &
-    density_copy   => base_density_copy,   &
-    density_end    => base_density_end
+  use base_density_m, only: &
+    base_density__start__,  &
+    base_density__update__, &
+    base_density__stop__,   &
+    base_density__add__
+
+  use base_density_m, only: &
+    base_density_t,         &
+    base_density_init,      &
+    base_density_get,       &
+    base_density_copy,      &
+    base_density_end
 
   implicit none
 
   private
+  public ::                &
+    base_states__start__,  &
+    base_states__update__, &
+    base_states__stop__,   &
+    base_states__add__
+
   public ::             &
     base_states_init,   &
     base_states_start,  &
     base_states_update, &
     base_states_stop,   &
+    base_states_next,   &
     base_states_set,    &
     base_states_get,    &
     base_states_copy,   &
@@ -68,7 +90,8 @@ module base_states_m
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
     real(kind=wp)                :: charge = 0.0_wp
-    type(density_t)              :: density
+    type(base_density_t)         :: density
+    type(config_dict_t)          :: dict
     type(base_states_hash_t)     :: hash
   end type base_states_t
 
@@ -79,9 +102,15 @@ module base_states_m
   end type base_states_iterator_t
 
   interface base_states_init
-    module procedure base_states_init_begin
-    module procedure base_states_init_build
+    module procedure base_states_init_states
+    module procedure base_states_iterator_init
   end interface base_states_init
+
+  interface base_states_next
+    module procedure base_states_iterator_next_config_states
+    module procedure base_states_iterator_next_config
+    module procedure base_states_iterator_next_states
+  end interface base_states_next
 
   interface base_states_set
     module procedure base_states_set_charge
@@ -105,6 +134,10 @@ module base_states_m
     module procedure base_states_iterator_end
   end interface base_states_end
 
+  integer, public, parameter :: BASE_STATES_OK          = BASE_STATES_HASH_OK
+  integer, public, parameter :: BASE_STATES_KEY_ERROR   = BASE_STATES_HASH_KEY_ERROR
+  integer, public, parameter :: BASE_STATES_EMPTY_ERROR = BASE_STATES_HASH_EMPTY_ERROR
+
 contains
     
 #define HASH_INCLUDE_BODY
@@ -112,78 +145,178 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_states_init_begin(this, config)
+  subroutine base_states_init_states(this, config)
     type(base_states_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
     !
-    PUSH_SUB(base_states_init_begin)
+    PUSH_SUB(base_states_init_states)
     this%config=>config
-    nullify(cnfg, this%sim)
+    nullify(this%sim, cnfg)
     call json_get(this%config, "charge", this%charge, ierr)
     if(ierr/=JSON_OK)this%charge=0.0_wp
-    call json_get(this%config, "density", cnfg, ierr)
-    if(ierr==JSON_OK)call density_init(this%density, cnfg)
     nullify(cnfg)
+    call json_get(config, "density", cnfg, ierr)
+    if(ierr==JSON_OK)call base_density_init(this%density, cnfg)
+    nullify(cnfg)
+    call config_dict_init(this%dict)
     call base_states_hash_init(this%hash)
-    POP_SUB(base_states_init_begin)
+    POP_SUB(base_states_init_states)
     return
-  end subroutine base_states_init_begin
+  end subroutine base_states_init_states
     
   ! ---------------------------------------------------------
-  subroutine base_states_init_build(this, that, config)
-    type(base_states_t), intent(inout) :: this
-    type(base_states_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-    !
-    PUSH_SUB(base_states_init_build)
-    this%charge=this%charge+base_states_get_charge(that)
-    call density_init(this%density, that%density, config)
-    call base_states_hash_set(this%hash, config, that)
-    POP_SUB(base_states_init_build)
-    return
-  end subroutine base_states_init_build
-    
-  ! ---------------------------------------------------------
-  subroutine base_states_start(this, sim)
+  subroutine base_states__start__(this, sim)
     type(base_states_t),        intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
-    PUSH_SUB(base_states_start)
+    PUSH_SUB(base_states__start__)
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
-    call density_start(this%density, sim)
+    call base_density__start__(this%density, sim)
+    POP_SUB(base_states__start__)
+    return
+  end subroutine base_states__start__
+    
+  ! ---------------------------------------------------------
+  recursive subroutine base_states_start(this, sim)
+    type(base_states_t), intent(inout) :: this
+    type(simulation_t),  intent(in)    :: sim
+    !
+    type(base_states_iterator_t) :: iter
+    type(base_states_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_states_start)
+    nullify(subs)
+    call base_states_init(iter, this)
+    do
+      nullify(subs)
+      call base_states_next(iter, subs, ierr)
+      if(ierr/=BASE_STATES_OK)exit
+      call base_states_start(subs, sim)
+    end do
+    call base_states_end(iter)
+    nullify(subs)
+    call base_states__start__(this, sim)
     POP_SUB(base_states_start)
     return
   end subroutine base_states_start
-    
+
   ! ---------------------------------------------------------
-  subroutine base_states_update(this)
+  subroutine base_states__update__(this)
     type(base_states_t), intent(inout) :: this
     !
-    PUSH_SUB(base_states_update)
+    PUSH_SUB(base_states__update__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call density_update(this%density)
+    call base_density__update__(this%density)
+    POP_SUB(base_states__update__)
+    return
+  end subroutine base_states__update__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_states_update(this)
+    type(base_states_t), intent(inout) :: this
+    !
+    type(base_states_iterator_t) :: iter
+    type(base_states_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_states_update)
+    nullify(subs)
+    call base_states_init(iter, this)
+    do
+      nullify(subs)
+      call base_states_next(iter, subs, ierr)
+      if(ierr/=BASE_STATES_OK)exit
+      call base_states_update(subs)
+    end do
+    call base_states_end(iter)
+    nullify(subs)
+    call base_states__update__(this)
     POP_SUB(base_states_update)
     return
   end subroutine base_states_update
 
   ! ---------------------------------------------------------
-  subroutine base_states_stop(this)
+  subroutine base_states__stop__(this)
     type(base_states_t), intent(inout) :: this
     !
-    PUSH_SUB(base_states_stop)
+    PUSH_SUB(base_states__stop__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call density_stop(this%density)
+    call base_density__stop__(this%density)
+    POP_SUB(base_states__stop__)
+    return
+  end subroutine base_states__stop__
+    
+  ! ---------------------------------------------------------
+  recursive subroutine base_states_stop(this)
+    type(base_states_t), intent(inout) :: this
+    !
+    type(base_states_iterator_t) :: iter
+    type(base_states_t), pointer :: subs
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_states_stop)
+    nullify(subs)
+    call base_states_init(iter, this)
+    do
+      nullify(subs)
+      call base_states_next(iter, subs, ierr)
+      if(ierr/=BASE_STATES_OK)exit
+      call base_states_stop(subs)
+    end do
+    call base_states_end(iter)
+    nullify(subs)
+    call base_states__stop__(this)
     POP_SUB(base_states_stop)
     return
   end subroutine base_states_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_states__add__(this, that, config)
+    type(base_states_t), intent(inout) :: this
+    type(base_states_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    !
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+    !
+    PUSH_SUB(base_states__add__)
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_states_hash_set(this%hash, config, that)
+    call base_density__add__(this%density, that%density, config)
+    POP_SUB(base_states__add__)
+    return
+  end subroutine base_states__add__
     
+  ! ---------------------------------------------------------
+  subroutine base_states__get__(this, name, that)
+    type(base_states_t),  intent(inout) :: this
+    character(len=*),     intent(in)    :: name
+    type(base_states_t), pointer        :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_states__get__)
+    nullify(that)
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)then
+      call base_states_hash_get(this%hash, config, that, ierr)
+      if(ierr/=BASE_STATES_OK)nullify(that)
+    end if
+    POP_SUB(base_states__get__)
+    return
+  end subroutine base_states__get__
+
   ! ---------------------------------------------------------
   elemental subroutine base_states_set_charge(this, that)
     type(base_states_t), intent(inout) :: this
@@ -228,7 +361,7 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states_get_config(this, that)
-    type(base_states_t),        target, intent(in) :: this
+    type(base_states_t),  target, intent(in) :: this
     type(json_object_t), pointer             :: that
     !
     PUSH_SUB(base_states_get_config)
@@ -254,8 +387,8 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states_get_density(this, that)
-    type(base_states_t), target, intent(in) :: this
-    type(density_t),    pointer             :: that
+    type(base_states_t),   target, intent(in) :: this
+    type(base_density_t), pointer             :: that
     !
     PUSH_SUB(base_states_get_density)
     that=>this%density
@@ -272,7 +405,8 @@ contains
     this%config=>that%config
     this%sim=>that%sim
     this%charge=that%charge
-    call density_copy(this%density, that%density)
+    call base_density_copy(this%density, that%density)
+    call config_dict_copy(this%dict, that%dict)
     call base_states_hash_copy(this%hash, that%hash)
     POP_SUB(base_states_copy_states)
     return
@@ -285,7 +419,8 @@ contains
     PUSH_SUB(base_states_end_states)
     nullify(this%config, this%sim)
     this%charge=0.0_wp
-    call density_end(this%density)
+    call base_density_end(this%density)
+    call config_dict_end(this%dict)
     call base_states_hash_end(this%hash)
     POP_SUB(base_states_end_states)
     return
@@ -329,16 +464,16 @@ contains
   end subroutine base_states_iterator_next_config
 
   ! ---------------------------------------------------------
-  subroutine base_states_iterator_next_system(this, that, ierr)
+  subroutine base_states_iterator_next_states(this, that, ierr)
     type(base_states_iterator_t), intent(inout) :: this
     type(base_states_t),         pointer        :: that
     integer,            optional, intent(out)   :: ierr
     !
-    PUSH_SUB(base_states_iterator_next_system)
+    PUSH_SUB(base_states_iterator_next_states)
     call base_states_hash_next(this%iter, that, ierr)
-    POP_SUB(base_states_iterator_next_system)
+    POP_SUB(base_states_iterator_next_states)
     return
-  end subroutine base_states_iterator_next_system
+  end subroutine base_states_iterator_next_states
 
   ! ---------------------------------------------------------
   subroutine base_states_iterator_copy(this, that)

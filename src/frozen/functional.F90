@@ -116,7 +116,6 @@ contains
     nullify(this%mesh)
     call json_get(this%config, "family", this%family, ierr)
     if(ierr/=JSON_OK)this%family=XC_NONE
-    print *, "***: functional_init: ", this%family
     ASSERT(this%family>XC_UNKNOWN)
     if(this%family>XC_NONE)then
       select case(this%family)

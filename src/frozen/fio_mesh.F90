@@ -35,8 +35,6 @@ module fio_mesh_m
   public ::         &
     fio_mesh_t,     &
     fio_mesh_init,  &
-    fio_mesh_start, &
-    fio_mesh_stop,  &
     fio_mesh_copy,  &
     fio_mesh_end
 
@@ -100,28 +98,27 @@ contains
   end subroutine fio_index_end
 
   ! ---------------------------------------------------------
-  subroutine fio_mesh_init(this, sb, cv, config)
+  subroutine fio_mesh__init__(this, sb, cv, config)
     type(fio_mesh_t),              intent(out) :: this
     type(fio_simul_box_t), target, intent(in)  :: sb
     type(curvilinear_t),   target, intent(in)  :: cv
     type(json_object_t),           intent(in)  :: config
     !
-    character(len=MAX_PATH_LEN) :: dir, file
-    integer                     :: i, ia, ib, ierr
+    integer :: i, ierr
     !
-    PUSH_SUB(fio_mesh_init)
+    PUSH_SUB(fio_mesh__init__)
     ASSERT(.not.sb%mr_flag)
     this%sb=>sb
     this%cv=>cv
     call json_get(config, "spacing", this%spacing(1:sb%dim), ierr=ierr)
     ASSERT(ierr==JSON_OK)
     this%spacing=(/this%spacing(1:sb%dim),(0.0_wp,i=sb%dim+1,MAX_DIM)/)
-    POP_SUB(fio_mesh_init)
+    POP_SUB(fio_mesh__init__)
     return
-  end subroutine fio_mesh_init
+  end subroutine fio_mesh__init__
 
   ! ---------------------------------------------------------
-  subroutine fio_mesh_start(this, mpi_grp, config)
+  subroutine fio_mesh__start__(this, mpi_grp, config)
     type(fio_mesh_t),    intent(inout) :: this
     type(mpi_grp_t),     intent(in)    :: mpi_grp
     type(json_object_t), intent(in)    :: config
@@ -129,7 +126,7 @@ contains
     character(len=MAX_PATH_LEN) :: dir, file
     integer                     :: i, ia, ib, ierr
     !
-    PUSH_SUB(fio_mesh_start)
+    PUSH_SUB(fio_mesh__start__)
     call json_get(config, "dir", dir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(config, "file", file, ierr)
@@ -154,23 +151,24 @@ contains
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr
       call messages_fatal(2)
     end if
-    POP_SUB(fio_mesh_start)
+    POP_SUB(fio_mesh__start__)
     return
-  end subroutine fio_mesh_start
+  end subroutine fio_mesh__start__
 
   ! ---------------------------------------------------------
-  subroutine fio_mesh_stop(this)
-    type(fio_mesh_t), intent(inout) :: this
+  subroutine fio_mesh_init(this, sb, cv, mpi_grp, config)
+    type(fio_mesh_t),      intent(out) :: this
+    type(fio_simul_box_t), intent(in)  :: sb
+    type(curvilinear_t),   intent(in)  :: cv
+    type(mpi_grp_t),       intent(in)  :: mpi_grp
+    type(json_object_t),   intent(in)  :: config
     !
-    PUSH_SUB(fio_mesh_stop)
-    call fio_index_end(this%idx)
-    SAFE_DEALLOCATE_P(this%x)
-    SAFE_DEALLOCATE_P(this%resolution)
-    SAFE_DEALLOCATE_P(this%vol_pp)
-    nullify(this%x, this%resolution, this%vol_pp)
-    POP_SUB(fio_mesh_stop)
+    PUSH_SUB(fio_mesh_init)
+    call fio_mesh__init__(this, sb, cv, config)
+    call fio_mesh__start__(this, mpi_grp, config)
+    POP_SUB(fio_mesh_init)
     return
-  end subroutine fio_mesh_stop
+  end subroutine fio_mesh_init
 
 end module fio_mesh_m
 

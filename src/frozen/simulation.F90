@@ -50,6 +50,9 @@ module simulation_m
     grid_get
 
   use domain_m, only: &
+    domain__add__
+
+  use domain_m, only: &
     domain_t,         &
     domain_init,      &
     domain_start,     &
@@ -59,11 +62,14 @@ module simulation_m
   implicit none
 
   private
+  public ::            &
+    simulation__add__
+
   public ::           &
     simulation_init,  &
     simulation_start, &
-    simulation_get,   &
     simulation_set,   &
+    simulation_get,   &
     simulation_copy,  &
     simulation_end
   
@@ -88,8 +94,7 @@ module simulation_m
   end type simulation_iterator_t
 
   interface simulation_init
-    module procedure simulation_init_begin
-    module procedure simulation_init_build
+    module procedure simulation_init_simulation
     module procedure simulation_iterator_init
   end interface simulation_init
 
@@ -136,57 +141,53 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine simulation_init_begin(this, config)
+  subroutine simulation_init_simulation(this, space, config)
     type(simulation_t),          intent(out) :: this
+    type(space_t),       target, intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(simulation_init_begin)
-    nullify(this%config, this%gr)
+    PUSH_SUB(simulation_init_simulation)
+    nullify(this%config, this%space, this%geo, this%gr)
     this%config=>config
+    this%space=>space
     call domain_init(this%domain)
     call simulation_hash_init(this%hash)
-    POP_SUB(simulation_init_begin)
+    POP_SUB(simulation_init_simulation)
     return
-  end subroutine simulation_init_begin
+  end subroutine simulation_init_simulation
 
   ! ---------------------------------------------------------
-  subroutine simulation_init_build(this, that, config)
-    type(simulation_t),  intent(inout) :: this
-    type(simulation_t),  intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-    !
-    PUSH_SUB(simulation_init_build)
-    ASSERT(associated(this%config))
-    call domain_init(this%domain, that%domain)
-    call simulation_hash_set(this%hash, config, that)
-    POP_SUB(simulation_init_build)
-    return
-  end subroutine simulation_init_build
-
-  ! ---------------------------------------------------------
-  subroutine simulation_start(this, grid, geo, space)
-    type(simulation_t),             intent(inout) :: this
-    type(grid_t), optional, target, intent(in)    :: grid
-    type(geometry_t),       target, intent(in)    :: geo
-    type(space_t),          target, intent(in)    :: space
+  subroutine simulation_start(this, grid, geo)
+    type(simulation_t),       intent(inout) :: this
+    type(grid_t),     target, intent(in)    :: grid
+    type(geometry_t), target, intent(in)    :: geo
     !
     PUSH_SUB(simulation_start)
     ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
     ASSERT(.not.associated(this%geo))
-    ASSERT(.not.associated(this%space))
-    if(present(grid))then
-      ASSERT(.not.associated(this%gr))
-      this%gr=>grid
-    else
-      ASSERT(associated(this%gr))
-    end if
+    ASSERT(.not.associated(this%gr))
+    this%gr=>grid
     this%geo=>geo
-    this%space=>space
     ASSERT(this%gr%sb%dim==this%space%dim)
     call domain_start(this%domain, this%gr%sb, this%geo)
     POP_SUB(simulation_start)
     return
   end subroutine simulation_start
+
+  ! ---------------------------------------------------------
+  subroutine simulation__add__(this, that, config)
+    type(simulation_t),  intent(inout) :: this
+    type(simulation_t),  intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    !
+    PUSH_SUB(simulation__add__)
+    ASSERT(associated(this%config))
+    call domain__add__(this%domain, that%domain, config)
+    call simulation_hash_set(this%hash, config, that)
+    POP_SUB(simulation__add__)
+    return
+  end subroutine simulation__add__
 
   ! ---------------------------------------------------------
   subroutine simulation_set_space(this, that)

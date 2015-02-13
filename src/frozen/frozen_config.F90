@@ -6,14 +6,15 @@ module frozen_config_m
   use messages_m
   use profiling_m
 
-  use json_m, only: JSON_OK, json_object_t, json_init, json_set, json_get, json_copy
+  use json_m, only: JSON_OK, json_object_t
+  use json_m, only: json_init, json_set, json_get, json_del
 
   use base_hamiltonian_m, only: &
     HMLT_TYPE_POTN,             &
     HMLT_TYPE_HMLT
 
-  use base_config_m, only:             &
-    config_parse => base_config_parse
+  use base_config_m, only: &
+    base_config_parse
 
   use frozen_handle_m, only: &
     HNDL_TYPE_FRZN
@@ -25,6 +26,17 @@ module frozen_config_m
     frozen_config_parse
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine frozen_config_parse_simulation(this)
+    type(json_object_t), intent(inout) :: this
+    !
+    integer :: ierr
+    !
+    call json_del(this, "grid", ierr)
+    ASSERT(ierr==JSON_OK)
+    return
+  end subroutine frozen_config_parse_simulation
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_external(this)
@@ -66,6 +78,10 @@ contains
     integer                      :: ierr
     !
     nullify(cnfg)
+    call json_get(this, "simulation", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call frozen_config_parse_simulation(cnfg)
+    nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call frozen_config_parse_hamiltonian(cnfg)
@@ -83,7 +99,7 @@ contains
     integer                      :: ierr
     !
     nullify(cnfg)
-    call config_parse(this, ndim, nspin)
+    call base_config_parse(this, ndim, nspin)
     call json_set(this, "type", HNDL_TYPE_FRZN)
     call json_set(this, "name", "frozen")
     call json_get(this, "model", cnfg, ierr)

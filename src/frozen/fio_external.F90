@@ -11,15 +11,20 @@ module fio_external_m
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
-  use base_external_m, only:                   &
-    fio_external_t     => base_external_t,     &
-    fio_external_init  => base_external_init,  &
-    fio_external_start => base_external_start, &
-    fio_external_stop  => base_external_stop,  &
-    fio_external_eval  => base_external_eval,  &
-    fio_external_get   => base_external_get,   &
-    fio_external_copy  => base_external_copy,  &
-    fio_external_end   => base_external_end
+  use base_external_m, only: &
+    base_external__update__
+
+  use base_external_m, only:                      &
+    fio_external_start => base_external__start__, &
+    fio_external_stop  => base_external__stop__
+
+  use base_external_m, only:                 &
+    fio_external_t    => base_external_t,    &
+    fio_external_init => base_external_init, &
+    fio_external_eval => base_external_eval, &
+    fio_external_get  => base_external_get,  &
+    fio_external_copy => base_external_copy, &
+    fio_external_end  => base_external_end
 
   use base_external_m, only:                         &
     fio_external_intrpl_t => base_external_intrpl_t
@@ -57,7 +62,7 @@ contains
     nullify(potn)
     call fio_external_get(this, potn)
     ASSERT(associated(potn))
-!    call fio_external_get(this, size=np)
+    call fio_external_get(this, size=np)
     call path_join(dir, file, fpth)
     call io_binary_read(fpth, np, potn, ierr, offset=0)
     if(ierr/=0)then
@@ -89,6 +94,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call fio_external_read(this, trim(adjustl(dir)), trim(adjustl(file)))
     nullify(cnfg)
+    call base_external__update__(this)
     POP_SUB(fio_external_update)
     return
   end subroutine fio_external_update
