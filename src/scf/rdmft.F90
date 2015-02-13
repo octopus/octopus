@@ -187,92 +187,92 @@ contains
     call rdmft_end()
  
     POP_SUB(scf_rdmft) 
+
   contains
 
     ! ---------------------------------------------------------
-  subroutine rdmft_init()
+    subroutine rdmft_init()
 
-    PUSH_SUB(scf_rdmft.rdmft_init)  
+      PUSH_SUB(scf_rdmft.rdmft_init)  
 
-    if(st%nst < st%qtot + 1) then   
-      message(1) = "Too few states to run RDMFT calculation"
-      message(2) = "Number of states should be at least the number of electrons plus one"
-      call messages_fatal(2)
-    endif
+      if(st%nst < st%qtot + 1) then   
+        message(1) = "Too few states to run RDMFT calculation"
+        message(2) = "Number of states should be at least the number of electrons plus one"
+        call messages_fatal(2)
+      endif
    
-    if (states_are_complex(st)) then
-      call messages_not_implemented("Complex states for RDMFT")
-    endif
+      if (states_are_complex(st)) then
+        call messages_not_implemented("Complex states for RDMFT")
+      endif
 
-   ! shortcuts
-    rdm%gr   => gr
-    rdm%st   => st
+      ! shortcuts
+      rdm%gr   => gr
+      rdm%st   => st
 
-    SAFE_ALLOCATE(rdm%eone(1:st%nst))
-    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%evalues(1:st%nst))
+      SAFE_ALLOCATE(rdm%eone(1:st%nst))
+      SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%evalues(1:st%nst))
 
-    rdm%eone = M_ZERO
-    rdm%hartree = M_ZERO
-    rdm%exchange = M_ZERO
-    rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
-    rdm%qtot = st%qtot
-    rdm%occsum = M_ZERO
-    rdm%scale_f = CNST(1e-2)
-    rdm%maxFO = M_ZERO
-    rdm%iter = 1
+      rdm%eone = M_ZERO
+      rdm%hartree = M_ZERO
+      rdm%exchange = M_ZERO
+      rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
+      rdm%qtot = st%qtot
+      rdm%occsum = M_ZERO
+      rdm%scale_f = CNST(1e-2)
+      rdm%maxFO = M_ZERO
+      rdm%iter = 1
  
 
-    !%Variable RDMTolerance
-    !%Type float
-    !%Default 1e-1 Ha
-    !%Section SCF::RDMFT
-    !%Description
-    !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
-    !% stopped when all derivatives of the energy wrt. each occupation number 
-    !% are smaller than this criterion. The bisection for finding the correct mu that is needed
-    !% for the occupation number minimization also stops according to this criterion.
-    !% This number gets stricter with more iterations.
-    !%End
+      !%Variable RDMTolerance
+      !%Type float
+      !%Default 1e-1 Ha
+      !%Section SCF::RDMFT
+      !%Description
+      !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
+      !% stopped when all derivatives of the energy wrt. each occupation number 
+      !% are smaller than this criterion. The bisection for finding the correct mu that is needed
+      !% for the occupation number minimization also stops according to this criterion.
+      !% This number gets stricter with more iterations.
+      !%End
 
-    call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
+      call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
 
-    !%Variable RDMConvEner
-    !%Type float
-    !%Default 1e-6 Ha
-    !%Section SCF::RDMFT
-    !% Convergence criterion for stopping the overall minimization of the energy with
-    !% respect to occupation numbers and the orbitals. The minimization of the 
-    !% energy stops when the total energy difference between two subsequent 
-    !% minimizations of the energy with respect to the occupation numbers and the
-    !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
-    !%End
+      !%Variable RDMConvEner
+      !%Type float
+      !%Default 1e-6 Ha
+      !%Section SCF::RDMFT
+      !% Convergence criterion for stopping the overall minimization of the energy with
+      !% respect to occupation numbers and the orbitals. The minimization of the 
+      !% energy stops when the total energy difference between two subsequent 
+      !% minimizations of the energy with respect to the occupation numbers and the
+      !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
+      !%End
 
-    call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
+      call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
     
+      POP_SUB(scf_rdmft.rdmft_init)
+
+    end subroutine rdmft_init
+
+    ! ----------------------------------------
+
+    subroutine rdmft_end()
+
+      PUSH_SUB(scf_rdmft.rdmft_end)
     
-    POP_SUB(scf_rdmft.rdmft_init)
+      nullify(rdm%gr)
+      nullify(rdm%st)
 
-  end subroutine rdmft_init
+      SAFE_DEALLOCATE_A(rdm%evalues)
+      SAFE_DEALLOCATE_A(rdm%eone)
+      SAFE_DEALLOCATE_A(rdm%hartree)
+      SAFE_DEALLOCATE_A(rdm%exchange)
 
-  ! ----------------------------------------
+      POP_SUB(scf_rdmft.rdmft_end)
 
-  subroutine rdmft_end()
-
-    PUSH_SUB(scf_rdmft.rdmft_end)
-    
-    nullify(rdm%gr)
-    nullify(rdm%st)
-
-    SAFE_DEALLOCATE_A(rdm%evalues)
-    SAFE_DEALLOCATE_A(rdm%eone)
-    SAFE_DEALLOCATE_A(rdm%hartree)
-    SAFE_DEALLOCATE_A(rdm%exchange)
-
-    POP_SUB(scf_rdmft.rdmft_end)
-
-  end subroutine rdmft_end
+    end subroutine rdmft_end
 
   end subroutine scf_rdmft
   
