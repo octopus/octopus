@@ -69,7 +69,9 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
       }
     
       while(res[0] != endchar) res++;
-    
+
+      if(!end_of_tag) res--;
+
       /* go back to the beginning of the line */
       fsetpos(*xml_file, &startpos);
       
@@ -157,6 +159,7 @@ void FC_FUNC_(xml_tag_end, XML_TAG_END)(tag_t ** tag)
 
 fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t ** tag, STR_F_TYPE attname_f, fint * val STR_ARG1){
   char buffer[1000];
+  char dec_attname[100];
   char * res;
   char * attname;
   
@@ -166,17 +169,24 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
+  strcpy(dec_attname, " ");
+  strcat(dec_attname, attname);
+  strcat(dec_attname, "=");
+
+  free(attname);
+
+#ifdef XML_FILE_DEBUG
+  printf("Decorated attribute |%s|\n", dec_attname);
+#endif
+
   /* go to the start of the attribute list */
   fsetpos((*tag)->xml_file, &(*tag)->pos);
 
   res = NULL;
-  
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
-    res = strstr(buffer, attname);
+    res = strstr(buffer, dec_attname);
   }
-
-  free(attname);
   
   if(res == NULL) return 1;
 
@@ -198,6 +208,7 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
 fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
      (tag_t ** tag, STR_F_TYPE attname_f, double * val STR_ARG1){
   char buffer[1000];
+  char dec_attname[100];
   char * res;
   char * attname;
   
@@ -207,6 +218,12 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
+  strcpy(dec_attname, " ");
+  strcat(dec_attname, attname);
+  strcat(dec_attname, "=");
+
+  free(attname);
+  
   /* go to the start of the attribute list */
   fsetpos((*tag)->xml_file, &(*tag)->pos);
 
@@ -214,14 +231,12 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
   
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
-    res = strstr(buffer, attname);
+    res = strstr(buffer, dec_attname);
   }
 
 #ifdef XML_FILE_DEBUG
   printf("line to parse: %s", buffer);
 #endif
-
-  free(attname);
   
   if(res == NULL) return 1;
 
@@ -244,6 +259,7 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
 fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
      (tag_t ** tag, STR_F_TYPE attname_f, STR_F_TYPE val STR_ARG2){
   char buffer[1000];
+  char dec_attname[100];
   char val_c[200];
   char * res;
   char * attname;
@@ -254,21 +270,24 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
+  strcpy(dec_attname, " ");
+  strcat(dec_attname, attname);
+  strcat(dec_attname, "=");
+
+  free(attname);
+  
   /* go to the start of the attribute list */
   fsetpos((*tag)->xml_file, &(*tag)->pos);
 
   res = NULL;
-  
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
-    res = strstr(buffer, attname);
+    res = strstr(buffer, dec_attname);
   }
 
 #ifdef XML_FILE_DEBUG
   printf("line to parse: %s", buffer);
 #endif
-
-  free(attname);
   
   if(res == NULL) return 1;
 
