@@ -218,6 +218,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle_init_pass(this, handle_init, config)
+    external                                 :: handle_init
     type(base_handle_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
