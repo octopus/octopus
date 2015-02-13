@@ -121,7 +121,10 @@ void progress_bar(int actual, int max)
   if(max > 0){
     ratio = 100 * actual / max;
     if(ratio < 0)   ratio = 0;
-    if(ratio > 100) ratio = 100;
+    if(ratio > 100) {
+       ratio = 100;
+       fprintf(stderr, "Internal warning: progress_bar called with actual %i > max %i\n", actual, max);
+    }
   }else
     ratio = 100;
 
