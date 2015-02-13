@@ -106,7 +106,7 @@ contains
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
     ! if there is no restart info to read, this will not get set otherwise
     ! setting to zero means everything is missing.
-    lowest_missing(:,:) = M_ZERO
+    lowest_missing(:,:) = 0
     
     read_gs = .true.
     if (.not. fromScratch) then
