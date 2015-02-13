@@ -166,7 +166,7 @@ contains
 
         message(2) = "Not all the occupied orbitals could be read."
         message(3) = "Please run a ground-state calculation first!"
-        call messages_fatal(3)
+        call messages_fatal(3, only_root_writes = .true.)
       endif
 
       message(1) = "Unable to read density: Building density from wavefunctions."
