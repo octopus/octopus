@@ -118,7 +118,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       mesh%idx%nr(1, idir) = -1
     endif
 
-    ! We have to adjust the spacing to be conmesurable with the box,
+    ! We have to adjust the spacing to be commensurate with the box,
     ! for this we scan the possible values of the grid size around the
     ! one we selected. We choose the size that has the spacing closest
     ! to the requested one.
@@ -144,7 +144,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   end do
 
   if( any(abs(mesh%spacing(1:sb%periodic_dim) - spacing(1:sb%periodic_dim)) > CNST(1e-6)) ) then
-    call messages_write('The spacing has been modified to make it conmesurable with the periodicity of the system.')
+    call messages_write('The spacing has been modified to make it commensurate with the periodicity of the system.')
     call messages_warning()
   end if
 
