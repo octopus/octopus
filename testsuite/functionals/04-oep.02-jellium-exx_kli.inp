@@ -10,7 +10,7 @@ N_electrons = 8
 jellium_radius = r_s * (N_electrons)^(1.0/3.0)
 
 %Species
-"jellium" | spec_jelli | 1.0 | N_electrons | jellium_radius
+"jellium" | spec_jellium | 1.0 | N_electrons | jellium_radius
 %
 
 %Coordinates
