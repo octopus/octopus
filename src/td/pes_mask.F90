@@ -108,6 +108,8 @@ module pes_mask_m
     type(cube_function_t) :: cM                !< the mask cube function
     FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
+    FLOAT, pointer :: ufn(:) => NULL()         !< user defined mask function
+    logical        :: user_def = .false.       
     
     FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
     !< we implicitly assume k to be the same for all directions
@@ -198,7 +200,12 @@ contains
     FLOAT :: DeltaE, MaxE, pCutOff
     FLOAT :: width 
     integer :: defaultMask,k1,k2,st1,st2
-    
+    integer :: cols_pesmask_block, idim, ip
+
+    FLOAT :: xx(1:sb%dim), r
+    FLOAT :: ufn_re, ufn_im
+    character(len=1024) :: user_def_expr
+   
     PUSH_SUB(pes_mask_init)
         
     mask%mesh => mesh  
@@ -583,39 +590,81 @@ contains
     !% Here you can set the inner (R1) and outer (R2) radius by setting
     !% the block as follows:
     !%
-    !%<tt>%PESMaskSize 
-    !% <br>&nbsp;&nbsp; R1 | R2 
+    !% <tt>%PESMaskSize
+    !% <br>&nbsp;&nbsp; R1 | R2 | "user defined"
     !% <br>%</tt>
     !%
+    !% The optional 3rd column is a user defined expression for the mask 
+    !% function. For example, "r" creates a spherical mask (which is the 
+    !% default for 'BoxShape = sphere'). Note, values R2 larger than 
+    !% the box size may lead in this case to unexpected reflection 
+    !% behaviours.
     !%End
-    if (parse_block('PESMaskSize', blk) < 0)then
+    cols_pesmask_block = 0
+    if (parse_block('PESMaskSize', blk) == 0) then
+      cols_pesmask_block = parse_block_cols(blk, 0)
+    end if
+
+    select case(cols_pesmask_block)
+    case(0)
       if (sb%box_shape == SPHERE) then
         mask%mask_R(1)=mesh%sb%rsize/M_TWO
         mask%mask_R(2)=mesh%sb%rsize
+        message(1) = "Input: PESMaskSize R(1) and R(2) not specified. Using default values for spherical mask."
       else if(sb%box_shape == PARALLELEPIPED) then
         mask%mask_R(1)=mesh%sb%lsize(1)/M_TWO
         mask%mask_R(2)=mesh%sb%lsize(1)        
+        message(1) = "Input: PESMaskSize R(1) and R(2) not specified. Using default values for cubic mask."
       end if    
-      message(1) = "PESMaskSize not specified. Using default values."
       call messages_info(1)
-    else 
+    case(1)
+      call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
+      if (sb%box_shape == SPHERE) then
+        mask%mask_R(2)=mesh%sb%rsize
+        message(1) = "Input: PESMaskSize R(2) not specified. Using default value for spherical mask."
+      else if(sb%box_shape == PARALLELEPIPED) then
+        mask%mask_R(2)=mesh%sb%lsize(1)
+        message(1) = "Input: PESMaskSize R(2) not specified. Using default value for cubic mask."
+      end if    
+      call messages_info(1)
+    case(2)
       call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
       call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
-    end if
-    
-    if (sb%box_shape == SPHERE) then
-      if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
-    else if (sb%box_shape == PARALLELEPIPED) then
-      if(mask%mask_R(2) > mesh%sb%lsize(1))  mask%mask_R(2) = mesh%sb%lsize(1) 
-    end if    
-    
-    
-    
+
+      if (sb%box_shape == SPHERE) then
+        if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
+        message(1) = "Info: using spherical mask."
+      else if (sb%box_shape == PARALLELEPIPED) then
+        if(mask%mask_R(2) > mesh%sb%lsize(1))  mask%mask_R(2) = mesh%sb%lsize(1) 
+        message(1) = "Info: using cubic mask."
+      end if    
+      call messages_info(1)
+
+    case(3)
+      mask%user_def = .true.
+      SAFE_ALLOCATE(mask%ufn(1:mask%np))
+      mask%ufn = M_ZERO
+      call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
+      call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
+      call parse_block_string(blk, 0, 2, user_def_expr)
+      do ip = 1, mask%np
+        xx = M_ZERO
+        xx(1:sb%dim) = mesh%x(ip, 1:sb%dim)
+        r = units_from_atomic(units_inp%length, sqrt(sum(xx(1:sb%dim)**2)))
+        forall(idim = 1:sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        call parse_expression(ufn_re, ufn_im, sb%dim, xx, r, M_ZERO, user_def_expr)
+        mask%ufn(ip) = ufn_re
+      end do
+      message(1) = "Input: using user defined mask function from expression:"
+      write(message(2),'(a,a)') '   R = ', trim(user_def_expr) 
+      call messages_info(2)
+    end select
+
     write(message(1),'(a,es10.3,3a)') & 
-      "Input: Mask  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) ),&
+      "  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) ),&
       ' [', trim(units_abbrev(units_inp%length)), ']'
     write(message(2),'(a,es10.3,3a)') & 
-      "             R2 = ", units_from_atomic(units_inp%length, mask%mask_R(2) ),&
+      "  R2 = ", units_from_atomic(units_inp%length, mask%mask_R(2) ),&
       ' [', trim(units_abbrev(units_inp%length)), ']'
     call messages_info(2)
     
@@ -787,6 +836,10 @@ contains
     
     call zcube_function_free_RS(mask%cube, mask%cM)
     call cube_end(mask%cube)   
+
+    if (mask%user_def) then 
+      SAFE_DEALLOCATE_P(mask%ufn)
+    end if
     
     POP_SUB(pes_mask_end)
   end subroutine pes_mask_end
@@ -918,36 +971,50 @@ contains
           xx=mesh_x_global(mesh, ip) 
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
         end if
-        if(mesh%sb%box_shape == SPHERE) then
-          
-          dd = rr -  R(1) 
-          if(dd > M_ZERO ) then 
-            if (dd  <  width) then
+
+        if(mask%user_def) then
+          dd = mask%ufn(ip) - R(1)
+          if(dd > M_ZERO) then
+            if(mask%ufn(ip) < R(2) ) then
               mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
-            else 
-              mask_fn(ip) = M_ONE 
+            else
+              mask_fn(ip) = M_ONE
             end if
           end if
 
-        else if (mesh%sb%box_shape == PARALLELEPIPED) then
+        else ! mask%user_def == .false.
+
+          if(mesh%sb%box_shape == SPHERE) then
           
-          ! We are filling from the center opposite to the spherical case
-          tmp = M_ONE
-          mask_fn(ip) = M_ONE
-          ddv(:) = abs(xx(:)) -  R(1) 
-          do dir=1, mesh%sb%dim 
-            if(ddv(dir) > M_ZERO ) then 
-              if (ddv(dir)  <  width) then
-                tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width) ))**2
+            dd = rr -  R(1) 
+            if(dd > M_ZERO ) then 
+              if (dd  <  width) then
+                mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
               else 
-                tmp(dir) = M_ZERO
+                mask_fn(ip) = M_ONE 
               end if
-            end if        
-          mask_fn(ip) = mask_fn(ip)*tmp(dir)
-          end do
-          mask_fn(ip) = M_ONE - mask_fn(ip)
+            end if
+
+          else if (mesh%sb%box_shape == PARALLELEPIPED) then
           
-        end if  
+            ! We are filling from the center opposite to the spherical case
+            tmp = M_ONE
+            mask_fn(ip) = M_ONE
+            ddv(:) = abs(xx(:)) -  R(1) 
+            do dir=1, mesh%sb%dim 
+              if(ddv(dir) > M_ZERO ) then 
+                if (ddv(dir)  <  width) then
+                  tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width) ))**2
+                else 
+                  tmp(dir) = M_ZERO
+                end if
+              end if        
+            mask_fn(ip) = mask_fn(ip)*tmp(dir)
+            end do
+            mask_fn(ip) = M_ONE - mask_fn(ip)
+          
+          end if  
+        end if
       end do
 
     case(M_STEP)
