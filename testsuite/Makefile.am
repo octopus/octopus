@@ -43,13 +43,24 @@ EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
 # set the environment variable SKIP_CHECK to some value.
 check:
 	@if test "x$(SKIP_CHECK)" == "x"; then \
+	    CHECKOPTS="" $(MAKE) check-base; \
+	else \
+            $(MAKE) check-dryrun; \
+	fi
+
+check-short:
+	@if test "x$(SKIP_CHECK)" == "x"; then \
 	    CHECKOPTS="-g short-run" $(MAKE) check-base; \
 	else \
             $(MAKE) check-dryrun; \
 	fi
 
-check-full:
-	@CHECKOPTS="" $(MAKE) check-base
+check-long:
+	@if test "x$(SKIP_CHECK)" == "x"; then \
+		CHECKOPTS="-g long-run" $(MAKE) check-base; \
+	else \
+            $(MAKE) check-dryrun; \
+	fi
 
 check-dryrun:
 	@CHECKOPTS="-n" $(MAKE) check-base

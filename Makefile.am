@@ -40,8 +40,11 @@ DISTCLEANFILES = \
 
 DEB_DIR = deb-work
 
-check-full:
-	$(MAKE) -C testsuite check-full
+check-short:
+	$(MAKE) -C testsuite check-short
+
+check-long:
+	$(MAKE) -C testsuite check-long
 
 rpm: dist
 	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \
