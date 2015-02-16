@@ -284,7 +284,7 @@ contains
     !% <br>&nbsp;&nbsp;'H'       | spec_ps_hgh         |   1.0079 |  1
     !% <br>&nbsp;&nbsp;'Xe'      | spec_ps_upf         | 131.29   | 54
     !% <br>&nbsp;&nbsp;'C'       | spec_ps_qso         |  12.01   | 12
-    !% <br>&nbsp;&nbsp;'jlm'     | spec_jelli          |  23.2    |  8 | 5.0
+    !% <br>&nbsp;&nbsp;'jlm'     | spec_jellium        |  23.2    |  8 | 5.0
     !% <br>&nbsp;&nbsp;'rho'     | spec_charge_density |  17.0    |  6 | "exp(-r/a)"
     !% <br>&nbsp;&nbsp;'udf'     | spec_user_defined   |   0.0    |  8 | "1/2*r^2"
     !% <br>&nbsp;&nbsp;'H_all'   | spec_full_delta     |   1.0079 |  1
@@ -300,9 +300,9 @@ contains
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
     !%Option spec_point  -3
-    !%Option spec_jelli  -3
+    !%Option spec_jellium  -3
     !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
-    !%Option spec_jelli_slab  -4
+    !%Option spec_jellium_slab  -4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
     !%Option spec_ps_psf  -100
