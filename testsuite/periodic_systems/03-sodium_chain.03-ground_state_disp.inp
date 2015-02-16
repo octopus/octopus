@@ -11,7 +11,7 @@ CalculationMode = gs
 FromScratch = yes
 
 %Species
-  "Na"  | 23.0 | spec_ps_psf | 11 | 2 | 2
+  "Na" | spec_ps_psf | 23.0 | 11 | 2 | 2
 %
 
 %Coordinates

@@ -5,7 +5,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | 1.0 | spec_user_defined | 1 | "0"
+"qd" | spec_user_defined | 1.0 | 1 | "0"
 %
 
 %Coordinates

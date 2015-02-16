@@ -25,7 +25,7 @@ Eigensolver = arpack
 eith = exp(i * ComplexScalingTheta)
 
 %Species
- 'HARMONIC' | 1 | spec_user_defined | 2 | "2*(r*eith)^2"
+ 'HARMONIC' | spec_user_defined | 1 | 2 | "2*(r*eith)^2"
 %
 
 %Coordinates

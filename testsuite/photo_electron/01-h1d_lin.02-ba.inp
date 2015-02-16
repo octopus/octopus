@@ -15,7 +15,7 @@ ExperimentalFeatures = YES
 %
 
 %Species
-'H1D' | 1.0079400 | spec_user_defined | 1 | '-1.0/(abs(x)+0.002)'
+'H1D' | spec_user_defined | 1.0079400 | 1 | '-1.0/(abs(x)+0.002)'
 %
 
 %UserDefinedStates

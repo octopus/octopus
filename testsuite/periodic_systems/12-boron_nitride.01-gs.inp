@@ -36,7 +36,7 @@ ParallelizationStrategy = par_kpoints
 %
 
 %Species
- 'B' | 10.81 | spec_ps_hgh | 3
+ 'B' | spec_ps_hgh | 10.81 | 3
 %
 
 %Coordinates

@@ -16,7 +16,7 @@ bond_length = 2.0744
 
 FilterPotentials = filter_TS
 %Species
-"N" | 14.0067000 | spec_ps_psf | 7 | 2 | 0 
+"N" | spec_ps_psf | 14.0067000 | 7 | 2 | 0 
 %
 
 BoxShape = sphere

@@ -10,7 +10,7 @@ Radius = 50.0
 ExtraStates = 6
 
 %Species
-  "Neon1D" | 1 | spec_user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+  "Neon1D" | spec_user_defined | 1 | 10 | "-10/sqrt(0.25 + x^2)"
 %
 
 %Coordinates

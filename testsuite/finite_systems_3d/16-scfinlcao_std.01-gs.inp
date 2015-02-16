@@ -19,9 +19,9 @@ theta = 108.23 * pi / 180
 %
 
 %Species
- 'C'  | 12.0107 | spec_ps_psf |  6 | 3 | 0
- 'H'  | 1.00794 | spec_ps_psf |  1 | 3 | 0
- 'Cl' | 35.4527 | spec_ps_psf | 17 | 3 | 0
+ 'C' | spec_ps_psf | 12.0107 |  6 | 3 | 0
+ 'H' | spec_ps_psf | 1.00794 |  1 | 3 | 0
+ 'Cl' | spec_ps_psf | 35.4527 | 17 | 3 | 0
 %
 
 Spacing = 0.25

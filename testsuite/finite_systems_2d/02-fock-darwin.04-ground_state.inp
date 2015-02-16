@@ -122,7 +122,7 @@ gfactor=-40
 omega = (7.5 / 27211.384) * (epsilon^2/meff)
 
 %Species
-"qd" | 1.0 | spec_user_defined | 4 | "0.5*omega^2*r^2"
+"qd" | spec_user_defined | 1.0 | 4 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

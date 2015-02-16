@@ -3,7 +3,7 @@ fromScratch = yes
 ExperimentalFeatures = yes
 
 %Species
-  "F"  | 18.998 | spec_ps_upf | 9
+  "F" | spec_ps_upf | 18.998 | 9
 %                                                                                          
 
 %Coordinates
