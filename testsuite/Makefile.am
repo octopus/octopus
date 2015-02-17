@@ -76,4 +76,4 @@ clean-local:
 
 CLEANFILES = *.log
 
-.PHONY: check check-full clean clean-local check-dryrun check-base
+.PHONY: check check-short check-long clean clean-local check-dryrun check-base
