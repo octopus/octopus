@@ -63,8 +63,6 @@ dist_share_DATA = \
 	09-spinors.test                                \
 	10-fullerene.test                              \
 	10-fullerene.01-gs.inp                         \
-	11-sic.01-gs.inp \
-	11-sic.test \
 	12-forces.01-N2_gs.inp \
         12-forces.02-N2_gs.inp \
         12-forces.03-N2_gs.inp \

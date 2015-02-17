@@ -126,6 +126,8 @@ dist_share_DATA =                                  \
         05-ks_inversion.03-inversion.inp           \
         06-rdmft.01-oep.inp                        \
         06-rdmft.02-gs.inp                         \
-        06-rdmft.test
+        06-rdmft.test                              \
+	07-sic.01-gs.inp                           \
+	07-sic.test
 
 CLEANFILES = *~ *.bak

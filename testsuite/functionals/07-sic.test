@@ -22,5 +22,5 @@ Enabled    : Yes
 
 # this calculation seems numerically unstable!
 Precision : 0.0015
-Input     : 11-sic.01-gs.inp
+Input     : 07-sic.01-gs.inp
 match ; Ionization Potential ; GREP(static/info, '4   --', 13) ; -0.542700
