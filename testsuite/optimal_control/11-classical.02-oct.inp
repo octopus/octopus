@@ -15,8 +15,8 @@ Radius =  9.0
 TheoryLevel = independent_particles
 
 %Species
-"sc" | spec_soft_coulomb | 10*0.0005485799110 | 1.0 | 1.0
-"sc2" | spec_soft_coulomb | 10*0.0005485799110 | 2.0 | 1.0
+"sc" | species_soft_coulomb | 10*0.0005485799110 | 1.0 | 1.0
+"sc2" | species_soft_coulomb | 10*0.0005485799110 | 2.0 | 1.0
 %
 
 %Coordinates

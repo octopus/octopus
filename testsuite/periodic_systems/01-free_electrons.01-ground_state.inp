@@ -11,7 +11,7 @@ PeriodicDimensions = 1
 TheoryLevel = independent_particles
 
 %Species
-"Zero" | spec_user_defined | 22.1 | 2 | "0"
+"Zero" | species_user_defined | 22.1 | 2 | "0"
 %
 
 %Coordinates

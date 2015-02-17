@@ -15,7 +15,7 @@ units = ev_angstrom
 %
 
 %Species
-"C" | spec_ps_fhi | 12.0107000 | 6 | 1 | 1
+"C" | species_ps_fhi | 12.0107000 | 6 | 1 | 1
 %
 
 spacing = 0.19

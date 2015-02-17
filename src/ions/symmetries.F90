@@ -113,12 +113,12 @@ contains
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
     any_non_spherical = .false.
     do iatom = 1, geo%natoms
-      any_non_spherical = any_non_spherical                       .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_USDEF          .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB     .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE      .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_FROZEN
+      any_non_spherical = any_non_spherical                          .or. &
+        species_type(geo%atom(iatom)%spec) == SPECIES_USDEF          .or. &
+        species_type(geo%atom(iatom)%spec) == SPECIES_JELLIUM_SLAB   .or. &
+        species_type(geo%atom(iatom)%spec) == SPECIES_CHARGE_DENSITY .or. &
+        species_type(geo%atom(iatom)%spec) == SPECIES_FROM_FILE      .or. &
+        species_type(geo%atom(iatom)%spec) == SPECIES_FROZEN
       if(any_non_spherical)exit
     enddo
     if(any_non_spherical) then

@@ -22,7 +22,7 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | spec_user_defined | 1.0 | 20 | "0.5*omega^2*r^2"
+"qd" | species_user_defined | 1.0 | 20 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

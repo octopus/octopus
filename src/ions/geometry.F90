@@ -273,7 +273,7 @@ contains
     call parse_logical('SpeciesTimeDependent', .false., geo%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,geo%nspecies
-      if(species_type(geo%species(i)) == SPEC_USDEF) then
+      if(species_type(geo%species(i)) == SPECIES_USDEF) then
         spec_user_defined = .true.
       end if
     end do

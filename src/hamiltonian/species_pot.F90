@@ -98,15 +98,15 @@ contains
 
     ! build density ...
     select case (species_type(spec))
-    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_SOFT_COULOMB, &
-          SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, &
+          SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_PS_CPI, SPECIES_PS_FHI) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
         x = (species_zval(spec)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
-    case (SPEC_CHARGE_DENSITY)
+    case (SPECIES_CHARGE_DENSITY)
       ! We put, for the electron density, the same as the positive density that 
       ! creates the external potential.
 
@@ -135,7 +135,7 @@ contains
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
-    case (SPEC_JELLI) ! ... from jellium
+    case (SPECIES_JELLIUM) ! ... from jellium
       in_points = 0
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = atom%x)
@@ -173,7 +173,7 @@ contains
         end if
       end if
 
-    case (SPEC_JELLI_SLAB) ! ... from jellium slab
+    case (SPECIES_JELLIUM_SLAB) ! ... from jellium slab
       in_points = 0
       do ip = 1, mesh%np
         rr = abs( mesh%x( ip, 3 ) )
@@ -211,7 +211,7 @@ contains
         end if
       end if
 
-    case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF, SPEC_PS_QSO, SPEC_PSPIO) ! ...from pseudopotential
+    case (SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO) ! ...from pseudopotential
 
       ! the outer loop sums densities over atoms in neighbour cells
       pos(1:MAX_DIM) = M_ZERO
@@ -280,7 +280,7 @@ contains
     
     select case(species_type(spec))
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO, SPEC_PSPIO)
+    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
       ps => species_ps(spec)
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
@@ -304,7 +304,7 @@ contains
       call submesh_end(sphere)
       nullify(ps)
 
-    case(SPEC_FULL_DELTA)
+    case(SPECIES_FULL_DELTA)
 
       dist2_min = huge(delta)
       ipos = 0
@@ -347,7 +347,7 @@ contains
         end if
       end if
 
-    case(SPEC_FULL_GAUSSIAN)
+    case(SPECIES_FULL_GAUSSIAN)
 
       ! periodic copies are not considered in this routine
       if(simul_box_is_periodic(mesh%sb)) then
@@ -403,7 +403,7 @@ contains
       SAFE_DEALLOCATE_A(rho_p)
 
 
-    case(SPEC_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY)
 
       call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
@@ -572,7 +572,7 @@ contains
 
       select case(species_type(spec))
 
-      case(SPEC_SOFT_COULOMB)
+      case(SPECIES_SOFT_COULOMB)
 
         do ip = 1, mesh%np
           xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
@@ -580,7 +580,7 @@ contains
           vl(ip) = -species_zval(spec)/sqrt(r2+species_sc_alpha(spec))
         end do
 
-      case(SPEC_USDEF)
+      case(SPECIES_USDEF)
 
         do ip = 1, mesh%np
           
@@ -601,7 +601,7 @@ contains
         end do
 
 
-      case(SPEC_FROM_FILE)
+      case(SPECIES_FROM_FILE)
 
         call dio_function_input(trim(species_filename(spec)), mesh, vl, err)
         if(err /= 0) then
@@ -610,7 +610,7 @@ contains
           call messages_fatal(2)
         end if
 
-      case(SPEC_JELLI)
+      case(SPECIES_JELLIUM)
         a1 = species_z(spec)/(M_TWO*species_jradius(spec)**3)
         a2 = species_z(spec)/species_jradius(spec)
         Rb2= species_jradius(spec)**2
@@ -628,7 +628,7 @@ contains
           
         end do
       
-      case(SPEC_JELLI_SLAB)
+      case(SPECIES_JELLIUM_SLAB)
         a1 = M_TWO *M_PI * species_z(spec)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
 
         do ip = 1, mesh%np
@@ -643,7 +643,7 @@ contains
 
         end do
 
-      case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO, SPEC_PSPIO)
+      case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
        
         ps => species_ps(spec)
 
@@ -658,7 +658,7 @@ contains
 
         nullify(ps)
         
-      case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_CHARGE_DENSITY)
+      case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
         
       end select

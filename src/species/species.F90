@@ -86,22 +86,22 @@ module species_m
   integer, public, parameter :: LABEL_LEN=15
 
   integer, public, parameter ::  &
-    SPEC_JELLI          = 3,     & !< jellium sphere.
-    SPEC_JELLI_SLAB     = 4,     & !< jellium slab.
-    SPEC_FROZEN         = 5,     & !< frozen species.
-    SPEC_PS_PSF = PS_TYPE_PSF,   & !< SIESTA pseudopotential
-    SPEC_PS_HGH = PS_TYPE_HGH,   & !< HGH pseudopotential
-    SPEC_PS_CPI = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
-    SPEC_PS_FHI = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT6 format)
-    SPEC_PS_UPF = PS_TYPE_UPF,   & !< UPF pseudopotential
-    SPEC_PS_QSO = PS_TYPE_QSO,   & !< QSO pseudopotential
-    SPEC_PSPIO          = 110,   & !< pseudopotential parsed by pspio library
-    SPEC_USDEF          = 123,   & !< user-defined function for local potential
-    SPEC_FULL_GAUSSIAN  = 124,   & !< full-potential atom
-    SPEC_CHARGE_DENSITY = 125,   & !< user-defined function for charge density
-    SPEC_FROM_FILE      = 126,   &
-    SPEC_FULL_DELTA     = 127,   & !< full-potential atom
-    SPEC_SOFT_COULOMB   = 128      !< soft-Coulomb potential
+    SPECIES_JELLIUM        = 3,             & !< jellium sphere.
+    SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
+    SPECIES_FROZEN         = 5,             & !< frozen species.
+    SPECIES_PS_PSF         = PS_TYPE_PSF,   & !< SIESTA pseudopotential
+    SPECIES_PS_HGH         = PS_TYPE_HGH,   & !< HGH pseudopotential
+    SPECIES_PS_CPI         = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
+    SPECIES_PS_FHI         = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT6 format)
+    SPECIES_PS_UPF         = PS_TYPE_UPF,   & !< UPF pseudopotential
+    SPECIES_PS_QSO         = PS_TYPE_QSO,   & !< QSO pseudopotential
+    SPECIES_PSPIO          = 110,           & !< pseudopotential parsed by pspio library
+    SPECIES_USDEF          = 123,           & !< user-defined function for local potential
+    SPECIES_FULL_GAUSSIAN  = 124,           & !< full-potential atom
+    SPECIES_CHARGE_DENSITY = 125,           & !< user-defined function for charge density
+    SPECIES_FROM_FILE      = 126,           &
+    SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
+    SPECIES_SOFT_COULOMB   = 128              !< soft-Coulomb potential
 
   type species_t
     private
@@ -280,49 +280,49 @@ contains
     !% In 3D, <i>e.g.</i>
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | spec_ps_psf         |  15.9994 |  8 | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       | spec_ps_hgh         |   1.0079 |  1
-    !% <br>&nbsp;&nbsp;'Xe'      | spec_ps_upf         | 131.29   | 54
-    !% <br>&nbsp;&nbsp;'C'       | spec_ps_qso         |  12.01   | 12
-    !% <br>&nbsp;&nbsp;'jlm'     | spec_jellium        |  23.2    |  8 | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | spec_charge_density |  17.0    |  6 | "exp(-r/a)"
-    !% <br>&nbsp;&nbsp;'udf'     | spec_user_defined   |   0.0    |  8 | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   | spec_full_delta     |   1.0079 |  1
-    !% <br>&nbsp;&nbsp;'H_all'   | spec_full_gaussian  |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'O'       | species_ps_psf         |  15.9994 |  8 | 1 | 1
+    !% <br>&nbsp;&nbsp;'H'       | species_ps_hgh         |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'Xe'      | species_ps_upf         | 131.29   | 54
+    !% <br>&nbsp;&nbsp;'C'       | species_ps_qso         |  12.01   | 12
+    !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        |  23.2    |  8 | 5.0
+    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density |  17.0    |  6 | "exp(-r/a)"
+    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   |   0.0    |  8 | "1/2*r^2"
+    !% <br>&nbsp;&nbsp;'H_all'   | species_full_delta     |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |   1.0079 |  1
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified).
-    !%Option spec_user_defined -123
+    !%Option species_user_defined -123
     !% Species with user-defined potential. In this case, the fifth
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
-    !%Option spec_point  -3
-    !%Option spec_jellium  -3
+    !%Option species_point  -3
+    !%Option species_jellium  -3
     !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
-    !%Option spec_jellium_slab  -4
+    !%Option species_jellium_slab  -4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
-    !%Option spec_ps_psf  -100
+    !%Option species_ps_psf  -100
     !% Troullier-Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option spec_ps_hgh  -101
+    !%Option species_ps_hgh  -101
     !% Hartwigsen-Goedecker-Hutter pseudopotentials. No extra columns,
     !% as they are not necessary to define the HGH pseudopotential.
-    !%Option spec_ps_cpi  -102
+    !%Option species_ps_cpi  -102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
     !% read from a <tt>.cpi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/CPI</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option spec_ps_fhi  -103
+    !%Option species_ps_fhi  -103
     !% Fritz-Haber pseudopotential (<tt>ABINIT6</tt> format): the pseudopotential will be
     !% read from a <tt>.fhi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
@@ -330,7 +330,7 @@ contains
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !% Note that you can use the pseudopotentials from <tt>ABINIT</tt> homepage.
-    !%Option spec_ps_upf  -104
+    !%Option species_ps_upf  -104
     !% UPF format: the pseudopotential will be
     !% read from a <tt>.UPF</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
@@ -338,7 +338,7 @@ contains
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file and cannot be changed.
     !% Note that version 2.0 or any later version of the UPF file format are not supported.
-    !%Option spec_ps_qso  -105
+    !%Option species_ps_qso  -105
     !% (experimental) The quantum-simulation.org XML pseudo-potential
     !% format used by qbox. The pseudopotential will be read from a
     !% <tt>.xml</tt> file, either in the working directory or in the
@@ -347,18 +347,18 @@ contains
     !% pseudopotential to consider in the calculation and the
     !% <i>l</i>-component to consider as local are indicated in the
     !% pseudopotential file.
-    !%Option spec_pspio  -110
+    !%Option species_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
     !% directory, using the PSPIO library.
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
-    !%Option spec_full_delta   -127
+    !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
     !% point. No extra columns.
-    !%Option spec_full_gaussian   -124
+    !%Option species_full_gaussian   -124
     !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
     !% used), in the form:
@@ -379,13 +379,13 @@ contains
     !% Column 5 is <math>sigma</math>, the width of the Gaussian that should be
     !% small, but you may run into numerical difficulties if it is too
     !% small (0.25 by default).
-    !%Option spec_charge_density -125
+    !%Option species_charge_density -125
     !% The potential is created by a distribution of charge.
     !% Column 5 is an expression for the charge distribution.
     !%Option species_from_file  -126
     !% The potential is read from a file, whose name is given in column 5.
     !% Accepted file formats, detected by extension: obf, ncdf and csv.
-    !%Option spec_soft_coulomb -128
+    !%Option species_soft_coulomb -128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
     !% <math>
@@ -475,7 +475,7 @@ contains
     spec%has_density = .false.
 
     select case(spec%type)
-    case(SPEC_SOFT_COULOMB)
+    case(SPECIES_SOFT_COULOMB)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a soft-Coulomb potential.'
         call messages_info(1)
@@ -483,16 +483,16 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO, SPEC_PSPIO)
+    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
 
-      if(spec%type == SPEC_PS_QSO .and. .not. qso_warning) then
+      if(spec%type == SPECIES_PS_QSO .and. .not. qso_warning) then
         call messages_experimental('QSO pseudopotential support')
         qso_warning = .true.
       end if
 
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
-      if(spec%type == SPEC_PSPIO) then
+      if(spec%type == SPECIES_PSPIO) then
         call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       else
         call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
@@ -501,7 +501,7 @@ contains
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
-    case(SPEC_USDEF)
+    case(SPECIES_USDEF)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
         i = min(237, len_trim(spec%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
@@ -521,7 +521,7 @@ contains
       ! To avoid problems with constant potentials.
       if(spec%omega <= M_ZERO) spec%omega = CNST(0.1) 
 
-    case(SPEC_FROM_FILE)
+    case(SPECIES_FROM_FILE)
       if(print_info_) then
         write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
         call messages_info(1)
@@ -529,7 +529,7 @@ contains
       spec%niwfs = 2*nint(spec%z_val+M_HALF)
       spec%omega = CNST(0.1)
 
-    case(SPEC_JELLI)
+    case(SPECIES_JELLIUM)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium sphere / approximated point particle.'
         write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
@@ -540,7 +540,7 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
-    case(SPEC_JELLI_SLAB)
+    case(SPECIES_JELLIUM_SLAB)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium slab.'
         write(message(2),'(a,f11.6)')  '   Valence charge  = ', spec%z_val
@@ -552,7 +552,7 @@ contains
       spec%niwfs = 2*nint(spec%z_val+M_HALF)
       spec%omega = CNST(0.1)
 
-    case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
+    case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'
@@ -564,7 +564,7 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = spec%z_val
 
-    case(SPEC_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY)
       spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
       spec%omega = spec%z_val
       spec%has_density = .true.
@@ -607,7 +607,7 @@ contains
 
     PUSH_SUB(species_read_delta)
 
-    spec%type = SPEC_FULL_DELTA
+    spec%type = SPECIES_FULL_DELTA
     spec%z     = zz
     spec%z_val = zz
     spec%sigma = CNST(0.25)
@@ -956,13 +956,13 @@ contains
     type(species_t), intent(in) :: spec
     
     species_is_ps = &
-         ( spec%type == SPEC_PS_PSF) .or. &
-         ( spec%type == SPEC_PS_HGH) .or. &
-         ( spec%type == SPEC_PS_CPI) .or. &
-         ( spec%type == SPEC_PS_FHI) .or. &
-         ( spec%type == SPEC_PS_UPF) .or. &
-         ( spec%type == SPEC_PS_QSO) .or. &
-         ( spec%type == SPEC_PSPIO)
+         ( spec%type == SPECIES_PS_PSF) .or. &
+         ( spec%type == SPECIES_PS_HGH) .or. &
+         ( spec%type == SPECIES_PS_CPI) .or. &
+         ( spec%type == SPECIES_PS_FHI) .or. &
+         ( spec%type == SPECIES_PS_UPF) .or. &
+         ( spec%type == SPECIES_PS_QSO) .or. &
+         ( spec%type == SPECIES_PSPIO)
  
   end function species_is_ps
 
@@ -972,8 +972,8 @@ contains
     type(species_t), intent(in) :: spec
     
     species_is_full = &
-         ( spec%type == SPEC_FULL_GAUSSIAN) .or. &
-         ( spec%type == SPEC_FULL_DELTA)
+         ( spec%type == SPECIES_FULL_GAUSSIAN) .or. &
+         ( spec%type == SPECIES_FULL_DELTA)
     
   end function species_is_full
 
@@ -1005,8 +1005,8 @@ contains
     PUSH_SUB(species_represents_real_atom)
     
     type = species_type(spec)
-    species_represents_real_atom = (type /= SPEC_USDEF .and. type /= SPEC_CHARGE_DENSITY .and. type /= SPEC_FROM_FILE &
-      .and. type /= SPEC_JELLI_SLAB)
+    species_represents_real_atom = (type /= SPECIES_USDEF .and. type /= SPECIES_CHARGE_DENSITY &
+      .and. type /= SPECIES_FROM_FILE .and. type /= SPECIES_JELLIUM_SLAB)
     
     POP_SUB(species_represents_real_atom)
   end function species_represents_real_atom
@@ -1182,8 +1182,8 @@ contains
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)
     write(iunit, '(a,i3)')    'Type   = ', spec%type
-    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', spec%z
-    if (spec%type == SPEC_FROM_FILE) then
+    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', spec%z
+    if (spec%type == SPECIES_FROM_FILE) then
       write(iunit,'(a)')      'Species read from file "'//trim(spec%filename)//'".'
     end if
     write(iunit, '(a,f15.2)') 'z_val  = ', spec%z_val
@@ -1191,17 +1191,17 @@ contains
     bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
     write(iunit, '(2a)')      'usdef  = ', trim(spec%user_def)
-    if (spec%type == SPEC_JELLI) then
+    if (spec%type == SPECIES_JELLIUM) then
       write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
     end if
-    if (spec%type == SPEC_JELLI_SLAB) then
+    if (spec%type == SPECIES_JELLIUM_SLAB) then
       write(iunit, '(a,f15.2)') 'jthick= ', spec%jthick
     end if
     write(iunit, '(a,l1)')    'nlcc   = ', spec%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', spec%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
-    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
-    if (spec%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
+    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
+    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
 
     if(species_is_ps(spec)) then
        if(in_debug_mode) call ps_debug(spec%ps, trim(dirname))
@@ -1286,26 +1286,26 @@ contains
 
     select case(spec%type)
 
-    case(SPEC_SOFT_COULOMB)
+    case(SPECIES_SOFT_COULOMB)
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_float(blk, row, 4, spec%sc_alpha)
       read_data = 5
 
-    case(SPEC_USDEF) ! user-defined
+    case(SPECIES_USDEF) ! user-defined
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%user_def)
       call conv_to_C_string(spec%user_def)
       read_data = 5
 
-    case(SPEC_FROM_FILE)
+    case(SPECIES_FROM_FILE)
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%filename)
       read_data = 5
 
-    case(SPEC_JELLI)
+    case(SPECIES_JELLIUM)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
       if(ncols > 4) then
         call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
@@ -1318,7 +1318,7 @@ contains
       endif
       spec%Z_val = spec%Z
 
-    case(SPEC_JELLI_SLAB)
+    case(SPECIES_JELLIUM_SLAB)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium slab
       call parse_block_float(blk, row, 4, spec%jthick) ! thickness of the jellium slab
       if(spec%jthick <= M_ZERO) call input_error('Species')
@@ -1326,7 +1326,7 @@ contains
       spec%Z_val = spec%Z
       read_data = 5
 
-    case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
+    case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
       call parse_block_float(blk, row, 3, spec%Z)
       spec%Z_val = spec%Z
       read_data = 4
@@ -1338,17 +1338,17 @@ contains
         if(spec%sigma <= M_ZERO) call input_error('Species')
       end if
 
-    case(SPEC_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY)
       call parse_block_float(blk, row, 3, spec%Z)
       call parse_block_string(blk, row, 4, spec%rho)
       spec%Z_val = spec%Z
       read_data = 5
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PS_QSO) ! a pseudopotential file
+    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
       call parse_block_float(blk, row, 3, spec%Z)
       read_data = 4
 
-      if(spec%type == SPEC_PS_PSF .or. spec%type == SPEC_PS_CPI .or. spec%type == SPEC_PS_FHI) then
+      if(spec%type == SPECIES_PS_PSF .or. spec%type == SPECIES_PS_CPI .or. spec%type == SPECIES_PS_FHI) then
         if(ncols > 4) then
           call parse_block_integer(blk, row, 4, spec%lmax)
           read_data = 5
@@ -1382,7 +1382,7 @@ contains
         call messages_fatal(1)
       endif
 
-    case(SPEC_PSPIO) ! a pseudopotential file to be handled by the pspio library
+    case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
       !for the moment we will read lmax and lloc, even if they are not necessary,
       !and we will not get any data from the default values

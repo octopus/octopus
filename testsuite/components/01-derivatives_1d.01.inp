@@ -5,7 +5,7 @@ TestMode = derivatives
 "dummy" | 0.0
 %
 %Species
-"dummy" | spec_user_defined | 1 | 1 | "0"
+"dummy" | species_user_defined | 1 | 1 | "0"
 %
 
 Dimensions = 1
