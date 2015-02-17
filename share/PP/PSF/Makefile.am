@@ -52,11 +52,12 @@ check:
 	  fi \
 	done
 
-check-full: check
+check-short: check
+check-long: check
 
 clean-local:
 	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
 	  rm -f $(dist_psf_DATA); \
 	fi
 
-.PHONY: check check-full
+.PHONY: check check-short check-long
