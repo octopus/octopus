@@ -118,7 +118,7 @@ simulation.o	: simulation.F90 domain.o igrid.o
 intrpl.o 	: intrpl.F90 simulation.o domain.o basis.o
 storage.o 	: storage.F90 intrpl.o simulation.o basis.o
 
-base_geom.o 		: base_geom.F90 strng.o basis.o 
+base_geom.o 		: base_geom.F90 strng.o basis.o config_dict.o
 base_density.o 		: base_density.F90 simulation.o storage.o strng.o 
 base_states.o 		: base_states.F90 base_density.o simulation.o
 base_system.o 		: base_system.F90 base_states.o simulation.o base_geom.o 
