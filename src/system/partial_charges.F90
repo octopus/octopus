@@ -234,7 +234,7 @@ contains
 
     vol = matrix_volume(ions%lattice)
     do iatom = 1, geo%natoms
-      ions%atomic_num(iatom) = species_z(geo%atom(iatom)%spec)
+      ions%atomic_num(iatom) = species_z(geo%atom(iatom)%species)
       ions%ion_chg(iatom) = 0.0_q2
       ions%r_car(iatom, 1:3) = geo%atom(iatom)%x(1:3)
       call matrix_vector(ions%car2dir, ions%r_car(iatom, :) - charge%org_car(:), ions%r_dir(iatom, :))

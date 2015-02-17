@@ -702,7 +702,7 @@ contains
       do  id = 1, nd
         if (box_union_inside(dom(id), geo%atom(ia)%x)) then
           dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) + &
-          species_zval(geo%atom(ia)%spec)*(geo%atom(ia)%x(1:geo%space%dim))
+          species_zval(geo%atom(ia)%species)*(geo%atom(ia)%x(1:geo%space%dim))
         end if
       end do
     end do

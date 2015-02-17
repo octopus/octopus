@@ -137,7 +137,7 @@ contains
       nullify(atom)
       call base_geom_next(iter, atom)
       if(.not.associated(atom))exit
-      v=v+base_external_calc(x, atom%x, species_zval(atom%spec))
+      v=v+base_external_calc(x, atom%x, species_zval(atom%species))
     end do
     nullify(atom)
     !do

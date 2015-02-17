@@ -1276,7 +1276,7 @@ contains
       SAFE_ALLOCATE(atyp(1:geo%natoms))
       SAFE_ALLOCATE(apos(1:3, 1:geo%natoms))
       do iatom = 1, geo%natoms
-        atyp(iatom) = species_index(geo%atom(iatom)%spec)
+        atyp(iatom) = species_index(geo%atom(iatom)%species)
         apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
       enddo
 

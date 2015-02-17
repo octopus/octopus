@@ -485,7 +485,7 @@ contains
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
-        spci => geo%atom(ia)%spec
+        spci => geo%atom(ia)%species
         z_ia = species_zval(spci)
 
         v_n_cav(ik) = v_n_cav(ik) + z_ia/dist       
@@ -533,7 +533,7 @@ contains
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
-        spci => geo%atom(ia)%spec
+        spci => geo%atom(ia)%species
         z_ia = -species_zval(spci)
 
         E_int_ne = E_int_ne + z_ia*pcm%q_e(ik) / dist

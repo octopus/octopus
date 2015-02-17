@@ -977,7 +977,7 @@ contains
     if(dir == 'b') then
       pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
-        d(1) = d(1) - species_zval(geo%atom(iatom)%spec) * &
+        d(1) = d(1) - species_zval(geo%atom(iatom)%species) * &
           real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
       end do
     end if

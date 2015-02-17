@@ -248,7 +248,7 @@ contains
 
             do idir = 1, der%mesh%sb%dim
               do iatom = 1, geo%natoms
-                if(species_is_ps(geo%atom(iatom)%spec)) then
+                if(species_is_ps(geo%atom(iatom)%species)) then
                   call zprojector_commute_r(hm%ep%proj(iatom), der%mesh, st%d%dim, idir, ik, psi, gpsi(:, idir, :))
                 end if
               end do

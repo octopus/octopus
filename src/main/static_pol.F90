@@ -542,7 +542,7 @@ contains
             Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom) = &
               (sys%geo%atom(iatom)%f(1:sys%gr%mesh%sb%dim) - Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom)) &
               / (M_TWO*e_field)
-            Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%geo%atom(iatom)%spec)
+            Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%geo%atom(iatom)%species)
             ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,
             ! the ionic force due to the efield is not included in the forces returned by the SCF run, and so the ionic
             ! contribution to the Born charge must be added by hand here

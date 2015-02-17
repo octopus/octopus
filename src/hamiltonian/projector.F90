@@ -153,7 +153,7 @@ contains
     PUSH_SUB(projector_init)
 
     call projector_null(p)
-    ps => species_ps(atm%spec)
+    ps => species_ps(atm%species)
 
     nullify(p%phase)
     p%reltype = reltype
@@ -174,7 +174,7 @@ contains
       p%type = M_KB
       if (reltype == 1) then
         write(message(1),'(a,a,a)') &
-          "Spin-orbit coupling for species ", trim(species_label(atm%spec)), " is not available."
+          "Spin-orbit coupling for species ", trim(species_label(atm%species)), " is not available."
         call messages_warning(1)
       end if
     case (2)

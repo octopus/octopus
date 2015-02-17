@@ -690,7 +690,7 @@ contains
     dipole(1:geo%space%dim) = M_ZERO
     do ia = 1, geo%natoms
       dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
-        species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:geo%space%dim)
+        species_zval(geo%atom(ia)%species)*geo%atom(ia)%x(1:geo%space%dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -745,8 +745,8 @@ contains
     pos = M_ZERO
     mass = M_ZERO
     do ia = 1, geo%natoms
-      pos = pos + species_mass(geo%atom(ia)%spec) * geo%atom(ia)%x
-      mass = mass + species_mass(geo%atom(ia)%spec)
+      pos = pos + species_mass(geo%atom(ia)%species) * geo%atom(ia)%x
+      mass = mass + species_mass(geo%atom(ia)%species)
     end do
     pos = pos/mass
 
@@ -767,8 +767,8 @@ contains
     vel = M_ZERO
     mass = M_ZERO
     do iatom = 1, geo%natoms
-      vel = vel + species_mass(geo%atom(iatom)%spec) * geo%atom(iatom)%v
-      mass = mass + species_mass(geo%atom(iatom)%spec)
+      vel = vel + species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%v
+      mass = mass + species_mass(geo%atom(iatom)%species)
     end do
     vel = vel / mass
 
@@ -856,9 +856,9 @@ contains
     do iatom = 1, geo%natoms
 
       write(numi, '(i12)') iatom
-      call openscad_file_comment(cad_file_, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%spec)))
+      call openscad_file_comment(cad_file_, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%species)))
 
-      if(species_z(geo%atom(iatom)%spec) == 1) then
+      if(species_z(geo%atom(iatom)%species) == 1) then
         call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
         max_bond_length = hydrogen_max_bond_length
       else
@@ -897,7 +897,7 @@ contains
 
     val_charge = M_ZERO
     do iatom = 1, geo%natoms
-      val_charge = val_charge - species_zval(geo%atom(iatom)%spec)
+      val_charge = val_charge - species_zval(geo%atom(iatom)%species)
     end do
 
     POP_SUB(geometry_val_charge)
@@ -913,7 +913,7 @@ contains
 
     mass = M_ZERO
     do iatom = 1, geo%natoms
-      mass = mass + species_mass(geo%atom(iatom)%spec)
+      mass = mass + species_mass(geo%atom(iatom)%species)
     end do
 
   end function geometry_mass

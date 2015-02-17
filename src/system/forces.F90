@@ -140,8 +140,8 @@ contains
         if(jatom == iatom) cycle
         xx(1:gr%sb%dim) = geo%atom(jatom)%x(1:gr%sb%dim) - geo%atom(iatom)%x(1:gr%sb%dim)
         r = sqrt( sum( xx(1:gr%sb%dim)**2 ) )
-        w2r_ = w2r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
-        w1r_ = w1r(geo%atom(iatom)%spec, geo%atom(jatom)%spec, r)
+        w2r_ = w2r(geo%atom(iatom)%species, geo%atom(jatom)%species, r)
+        w1r_ = w1r(geo%atom(iatom)%species, geo%atom(jatom)%species, r)
         do idim = 1, gr%sb%dim
           do jdim = 1, gr%sb%dim
             f(iatom, idim) = f(iatom, idim) + (q(jatom, jdim) - q(iatom, jdim)) * w2r_ * (M_ONE/r**2) * xx(idim) * xx(jdim)
@@ -305,7 +305,7 @@ contains
           do i = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(i)%spec)*x(1:gr%mesh%sb%dim)
+             + species_zval(geo%atom(i)%species)*x(1:gr%mesh%sb%dim)
           end do
     
         case(E_FIELD_VECTOR_POTENTIAL)
@@ -319,7 +319,7 @@ contains
           do i = 1, geo%natoms
             ! Also here the proton charge is +1
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(i)%spec)*x(1:gr%mesh%sb%dim)
+             + species_zval(geo%atom(i)%species)*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
@@ -334,7 +334,7 @@ contains
       do i = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
         geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-          + species_zval(geo%atom(i)%spec)*hm%ep%E_field(1:gr%mesh%sb%dim)
+          + species_zval(geo%atom(i)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

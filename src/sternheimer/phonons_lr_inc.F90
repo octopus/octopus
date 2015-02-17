@@ -50,7 +50,7 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
   do jdir = gr%sb%periodic_dim + 1, gr%sb%dim
     infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), TOFLOAT(lr%X(dl_rho)(:, 1)))
   end do
-  infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%spec)
+  infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%species)
   
   POP_SUB(X(phonons_lr_infrared))
 end subroutine X(phonons_lr_infrared)

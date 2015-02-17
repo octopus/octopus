@@ -33,7 +33,7 @@ module atom_m
   type, public :: atom_t
     !private
     character(len=LABEL_LEN)  :: label = ""
-    type(species_t), pointer  :: spec  =>null() !< pointer to species
+    type(species_t), pointer  :: species  =>null() !< pointer to species
     FLOAT, dimension(MAX_DIM) :: x     = M_ZERO !< position of atom in real space
     FLOAT, dimension(MAX_DIM) :: v     = M_ZERO !< velocity of atom in real space
     FLOAT, dimension(MAX_DIM) :: f     = M_ZERO !< force on atom in real space
@@ -59,18 +59,18 @@ module atom_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine atom_init(this, label, x, spec, move)
+  subroutine atom_init(this, label, x, species, move)
     type(atom_t),                      intent(out) :: this
     character(len=*),                  intent(in)  :: label
     FLOAT, dimension(:),               intent(in)  :: x
-    type(species_t), target, optional, intent(in)  :: spec
+    type(species_t), target, optional, intent(in)  :: species
     logical,                 optional, intent(in)  :: move
 
     PUSH_SUB(atom_init)
 
     this%label = trim(adjustl(label))
-    this%spec  =>null()
-    if(present(spec))this%spec=>spec
+    this%species  =>null()
+    if(present(species))this%species=>species
     this%x     = x
     this%v     = M_ZERO
     this%f     = M_ZERO
@@ -85,7 +85,7 @@ contains
     type(atom_t), intent(inout) :: this
 
     this%label = ""
-    this%spec  =>null()
+    this%species  =>null()
     this%x     = M_ZERO
     this%v     = M_ZERO
     this%f     = M_ZERO
@@ -94,9 +94,9 @@ contains
   end subroutine atom_end
 
   ! ---------------------------------------------------------
-  subroutine atom_init_from_data_object(this, spec, json)
+  subroutine atom_init_from_data_object(this, species, json)
     type(atom_t),            intent(out) :: this
-    type(species_t), target, intent(in)  :: spec
+    type(species_t), target, intent(in)  :: species
     type(json_object_t),     intent(in)  :: json
 
     integer :: ierr
@@ -108,8 +108,8 @@ contains
       message(1) = 'Could not read "label" from atom data object.'
       call messages_fatal(1)
     end if
-    ASSERT(atom_get_label(this)==species_label(spec))
-    this%spec=>spec
+    ASSERT(atom_get_label(this)==species_label(species))
+    this%species=>species
     call json_get(json, "x", this%x, ierr)
     if(ierr/=JSON_OK)then
       message(1) = 'Could not read "x" (coordinates) from atom data object.'
@@ -147,26 +147,26 @@ contains
   end function atom_get_label
   
   ! ---------------------------------------------------------
-  subroutine atom_set_species(this, spec)
+  subroutine atom_set_species(this, species)
     type(atom_t),            intent(inout) :: this
-    type(species_t), target, intent(in)    :: spec
+    type(species_t), target, intent(in)    :: species
 
     PUSH_SUB(atom_set_species)
 
-    this%spec=>spec
+    this%species=>species
     POP_SUB(atom_set_species)
 
   end subroutine atom_set_species
   
   ! ---------------------------------------------------------
-  subroutine atom_get_species(this, spec)
+  subroutine atom_get_species(this, species)
     type(atom_t),    target,  intent(in)  :: this
-    type(species_t), pointer, intent(out) :: spec
+    type(species_t), pointer, intent(out) :: species
 
     PUSH_SUB(atom_get_species)
 
-    spec=>null()
-    if(associated(this%spec))spec=>this%spec
+    species=>null()
+    if(associated(this%species))species=>this%species
 
     POP_SUB(atom_get_species)
 
@@ -184,24 +184,24 @@ contains
   end function atom_same_species_aa
 
   ! ---------------------------------------------------------
-  elemental function atom_same_species_as(this, spec) result(is)
+  elemental function atom_same_species_as(this, species) result(is)
     type(atom_t),    intent(in) :: this
-    type(species_t), intent(in) :: spec
+    type(species_t), intent(in) :: species
 
     logical :: is
 
-    is=(atom_get_label(this)==species_label(spec))
+    is=(atom_get_label(this)==species_label(species))
 
   end function atom_same_species_as
 
   ! ---------------------------------------------------------
-  elemental function atom_same_species_sa(spec, this) result(is)
-    type(species_t), intent(in) :: spec
+  elemental function atom_same_species_sa(species, this) result(is)
+    type(species_t), intent(in) :: species
     type(atom_t),    intent(in) :: this
 
     logical :: is
 
-    is=(atom_get_label(this)==species_label(spec))
+    is=(atom_get_label(this)==species_label(species))
 
   end function atom_same_species_sa
 

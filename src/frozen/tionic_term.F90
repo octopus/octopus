@@ -50,10 +50,10 @@ contains
     ASSERT(associated(geo))
     energy=0.0_wp
     do i = 1, geo%natoms
-      zi=species_zval(geo%atom(i)%spec)
+      zi=species_zval(geo%atom(i)%species)
       do j = i+1, geo%natoms
         rr=atom_distance(geo%atom(i), geo%atom(j))
-        zj=species_zval(geo%atom(j)%spec)
+        zj=species_zval(geo%atom(j)%species)
         energy=energy+zi*zj/rr
       end do
     end do
@@ -81,7 +81,7 @@ contains
     ASSERT(associated(geo))
     za=species_zval(atom%spec)
     do i = 1, geo%natoms
-      zi=species_zval(geo%atom(i)%spec)
+      zi=species_zval(geo%atom(i)%species)
       r=atom%x-geo%atom(i)%x
       rr=sqrt(sum(r**2))
       dd=za*zi/rr

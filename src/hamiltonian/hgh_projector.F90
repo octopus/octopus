@@ -98,7 +98,7 @@ contains
       x(1:3) = sm%x(is, 1:3)
       
       do i = 1, 3
-        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv)
+        call species_real_nl_projector(a%species, x, l, lm, i, v, dv)
         hgh_p%p (is, i) = v
         hgh_p%lp(is, 1, i) = x(2)*dv(3) - x(3)*dv(2)
         hgh_p%lp(is, 2, i) = x(3)*dv(1) - x(1)*dv(3)
@@ -106,7 +106,7 @@ contains
       end do
     end do
 
-    ps => species_ps(a%spec)
+    ps => species_ps(a%species)
     hgh_p%h(:, :) = ps%h(l, :, :)
     hgh_p%k(:, :) = ps%k(l, :, :)*so_strength
     nullify(ps)

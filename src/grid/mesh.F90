@@ -285,7 +285,7 @@ contains
       radius = mesh%sb%rsize
       do iatom = 1, geo%natoms
         call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x, coords=xx)
-        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%spec)
+        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%species)
         dd = rr - (radius - width)
 	! check if the point is on the spherical shell of atom # iatom
 	if ((dd < M_ZERO) .or. (rr > radius)) cycle
@@ -295,7 +295,7 @@ contains
         do jatom = 1, geo%natoms
           if(jatom == iatom) cycle
           call mesh_r(mesh, ip, rr, origin=geo%atom(jatom)%x)
-          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(jatom)%spec)
+          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(jatom)%species)
           if(rr < radius - width) then 
             is_on_border = .false.
             exit

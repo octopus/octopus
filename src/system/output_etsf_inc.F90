@@ -291,7 +291,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
 
   do i = 1, geo%natoms
     do j = 1, geo%nspecies
-      if (species_z(geo%atom(i)%spec) == species_z(geo%species(j))) then
+      if (species_z(geo%atom(i)%species) == species_z(geo%species(j))) then
         geometry%atom_species(i) = j
         exit
       end if

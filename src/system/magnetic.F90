@@ -131,12 +131,12 @@ contains
       if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
         write(iunit,'(a,6x,14x,a)') ' Ion','mz'
         do ia = 1, geo%natoms
-          write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(3, ia)
+          write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%species)), lmm(3, ia)
         end do
       else if(st%d%ispin == SPINORS) then ! non-collinear
         write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
         do ia = 1, geo%natoms
-          write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(:, ia)
+          write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%species)), lmm(:, ia)
         end do
       end if
       

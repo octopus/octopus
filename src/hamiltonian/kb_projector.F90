@@ -86,7 +86,7 @@ contains
 
     PUSH_SUB(kb_projector_init)
 
-    ps => species_ps(a%spec)
+    ps => species_ps(a%species)
 
     kb_p%n_s = sm%np
     if (l == 0 .or. ps%kbc == 1) then
@@ -101,7 +101,7 @@ contains
     kb_p%e = M_ZERO
     
     do ic = 1, n_c
-      call double_grid_apply_non_local(gr%dgrid, a%spec, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
+      call double_grid_apply_non_local(gr%dgrid, a%species, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
       kb_p%e(ic) = ps%h(l, ic, ic)
     end do
 

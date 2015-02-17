@@ -114,11 +114,11 @@ contains
     any_non_spherical = .false.
     do iatom = 1, geo%natoms
       any_non_spherical = any_non_spherical                          .or. &
-        species_type(geo%atom(iatom)%spec) == SPECIES_USDEF          .or. &
-        species_type(geo%atom(iatom)%spec) == SPECIES_JELLIUM_SLAB   .or. &
-        species_type(geo%atom(iatom)%spec) == SPECIES_CHARGE_DENSITY .or. &
-        species_type(geo%atom(iatom)%spec) == SPECIES_FROM_FILE      .or. &
-        species_type(geo%atom(iatom)%spec) == SPECIES_FROZEN
+        species_type(geo%atom(iatom)%species) == SPECIES_USDEF          .or. &
+        species_type(geo%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
+        species_type(geo%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
+        species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE      .or. &
+        species_type(geo%atom(iatom)%species) == SPECIES_FROZEN
       if(any_non_spherical)exit
     enddo
     if(any_non_spherical) then
@@ -166,7 +166,7 @@ contains
         forall(iatom = 1:geo%natoms)
           position(1:3, iatom) = M_ZERO
           position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
-          typs(iatom) = species_index(geo%atom(iatom)%spec)
+          typs(iatom) = species_index(geo%atom(iatom)%species)
         end forall
 
         verbosity = -1
@@ -206,7 +206,7 @@ contains
         ! position here contains reduced coordinates
         ! this should be matmul(klattice, geo atom x)
         position(1:dim4syms, iatom) = matmul (klattice, geo%atom(iatom)%x(1:dim4syms)) + M_HALF
-        typs(iatom) = species_index(geo%atom(iatom)%spec)
+        typs(iatom) = species_index(geo%atom(iatom)%species)
       enddo
 
       this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)

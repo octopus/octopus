@@ -202,7 +202,7 @@ contains
     ! note that second-order term is left out
     if(this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
-        if(species_is_ps(geo%atom(iatom)%spec)) then
+        if(species_is_ps(geo%atom(iatom)%species)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, f_out)
         end if
       end do
@@ -566,7 +566,7 @@ contains
     
     if(this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
-        if(species_is_ps(geo%atom(iatom)%spec)) then
+        if(species_is_ps(geo%atom(iatom)%species)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
         endif
       enddo

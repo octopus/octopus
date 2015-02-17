@@ -302,8 +302,8 @@ contains
       maxj = 0
       this%maxorbs = 0
       do ia = 1, geo%natoms
-        maxj = max(maxj, species_niwfs(geo%atom(ia)%spec) )
-        this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%spec)
+        maxj = max(maxj, species_niwfs(geo%atom(ia)%species) )
+        this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%species)
       end do
 
       this%maxorbs = this%maxorbs*st%d%dim
@@ -315,7 +315,7 @@ contains
       SAFE_ALLOCATE( this%ddim(1:this%maxorbs))
 
       ! Each atom provides niwfs pseudo-orbitals (this number is given in
-      ! geo%atom(ia)%spec%niwfs for atom number ia). This number is
+      ! geo%atom(ia)%species%niwfs for atom number ia). This number is
       ! actually multiplied by two in case of spin-unrestricted or spinors
       ! calculations.
       !
@@ -344,9 +344,9 @@ contains
       do jj = 1, maxj
         do ia = 1, geo%natoms
           do idim = 1,st%d%dim
-            if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
-            call species_iwf_ilm(geo%atom(ia)%spec, jj, idim, ii, ll, mm)            
-            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%spec, ii, is = 1) >= max_orb_radius) cycle
+            if(jj > species_niwfs(geo%atom(ia)%species) ) cycle
+            call species_iwf_ilm(geo%atom(ia)%species, jj, idim, ii, ll, mm)            
+            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%species, ii, is = 1) >= max_orb_radius) cycle
 
             this%atom(iorb) = ia
             this%level(iorb) = jj
@@ -537,9 +537,9 @@ contains
       this%maxorb = 0
       this%norbs = 0
       do iatom = 1, geo%natoms
-        this%norb_atom(iatom) = this%mult*species_niwfs(geo%atom(iatom)%spec)
-        this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%spec))
-        this%norbs = this%norbs + species_niwfs(geo%atom(iatom)%spec)
+        this%norb_atom(iatom) = this%mult*species_niwfs(geo%atom(iatom)%species)
+        this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%species))
+        this%norbs = this%norbs + species_niwfs(geo%atom(iatom)%species)
       end do
 
       this%maxorb = this%maxorb*this%mult
@@ -553,7 +553,7 @@ contains
 
       ibasis = 0
       do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%spec)
+        norbs = species_niwfs(geo%atom(iatom)%species)
 
         do iorb = 1, this%mult*norbs
           ibasis = ibasis + 1
@@ -564,7 +564,7 @@ contains
 #ifdef LCAO_DEBUG
           ! no stored spin index in alternative mode
           if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-            call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
+            call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
           endif
 #endif
@@ -583,12 +583,12 @@ contains
       SAFE_ALLOCATE(this%radius(1:geo%natoms))
 
       do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%spec)
+        norbs = species_niwfs(geo%atom(iatom)%species)
 
         maxradius = M_ZERO
         do iorb = 1, norbs
-          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
-          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, ii, is = 1))
+          call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
+          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%species, ii, is = 1))
         end do
 
         if(this%derivative) maxradius = maxradius + this%lapdist
@@ -942,11 +942,11 @@ contains
 
     rho = M_ZERO
 
-    use_stored_orbitals = species_is_ps(geo%atom(iatom)%spec) &
+    use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
       .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh
 
-    ps => species_ps(geo%atom(iatom)%spec)
+    ps => species_ps(geo%atom(iatom)%species)
 
     ! we can use the orbitals we already have calculated
     if(use_stored_orbitals) then
@@ -963,7 +963,7 @@ contains
         do iorb = 1, this%norbs
           if(iatom /= this%atom(iorb)) cycle
           
-          call species_iwf_ilm(geo%atom(iatom)%spec, this%level(iorb), 1, ii, ll, mm)
+          call species_iwf_ilm(geo%atom(iatom)%species, this%level(iorb), 1, ii, ll, mm)
           factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
          
           if(states_are_real(st)) then
@@ -994,7 +994,7 @@ contains
         SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)/this%mult))
 
         do iorb = 1, this%norb_atom(iatom)/this%mult
-          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
+          call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
 

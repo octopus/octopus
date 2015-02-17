@@ -146,7 +146,7 @@ contains
       imass = 1
       do iatom = 1, sys%geo%natoms
         if(g_opt%fixed_atom == iatom) cycle
-        mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%spec)
+        mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%species)
         imass = imass + 3
       end do
 

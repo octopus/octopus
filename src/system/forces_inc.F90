@@ -697,7 +697,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
     call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv)
     do iatom = 1, geo%natoms
       born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)
-      born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%spec)
+      born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%species)
     enddo
   enddo
 

@@ -523,7 +523,7 @@ contains
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
             bsize(:) = rsize
-            if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(sys%geo%atom(ia)%spec)
+            if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(sys%geo%atom(ia)%species)
             call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
             ibox = ibox + 1
           end if
@@ -533,7 +533,7 @@ contains
         do ia = 1, sys%geo%natoms
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
-            bsize(:) = species_def_rsize(sys%geo%atom(ia)%spec)
+            bsize(:) = species_def_rsize(sys%geo%atom(ia)%species)
             call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
             ibox = ibox + 1
           end if
@@ -548,7 +548,7 @@ contains
       do ia = 1, sys%geo%natoms
         if (box_union_inside(dom, sys%geo%atom(ia)%x).and. .not.loct_isinstringlist(ia, clist) ) then
           ic = ic + 1
-          if( ic <= 20 ) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%spec)),ia, & 
+          if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%species)),ia, &
                                  ' is inside the union box BUT not in list: ',trim(clist)
         end if
       end do
@@ -726,7 +726,7 @@ contains
 
     SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
-      call species_get_density(geo%atom(ia)%spec, geo%atom(ia)%x, sys%gr%mesh, ffs)
+      call species_get_density(geo%atom(ia)%species, geo%atom(ia)%x, sys%gr%mesh, ffs)
       do is = 1, sys%st%d%nspin
         ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
       end do
@@ -754,8 +754,8 @@ contains
       do  id = 1, nd
         if (box_union_inside(dom(id),geo%atom(ia)%x)) then
           center(1:geo%space%dim,id) = center(1:geo%space%dim,id) &
-                   + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%spec)     
-          sumw(id) = sumw(id) + species_mass(geo%atom(ia)%spec)
+                   + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)     
+          sumw(id) = sumw(id) + species_mass(geo%atom(ia)%species)
         end if
       end do
     end do

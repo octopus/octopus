@@ -48,7 +48,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   iatom = this%atom(iorb)
   jj = this%level(iorb)
   idim = this%ddim(iorb)
-  spec => geo%atom(iatom)%spec
+  spec => geo%atom(iatom)%species
   ASSERT(jj <= species_niwfs(spec))
   ispin = max(spin_channel, idim)
 
@@ -435,7 +435,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
 
   dof = 0
   do iatom = 1, geo%natoms
-    norbs = species_niwfs(geo%atom(iatom)%spec)
+    norbs = species_niwfs(geo%atom(iatom)%species)
 
     ! initialize the radial grid
     call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
@@ -1121,16 +1121,16 @@ end subroutine X(lcao_alt_wf)
       
       ! generate the orbitals
       do iorb = 1, norbs
-        if(iorb > species_niwfs(geo%atom(iatom)%spec)) then
-          call species_iwf_ilm(geo%atom(iatom)%spec, &
-            iorb - species_niwfs(geo%atom(iatom)%spec), ispin, ii, ll, mm)
+        if(iorb > species_niwfs(geo%atom(iatom)%species)) then
+          call species_iwf_ilm(geo%atom(iatom)%species, &
+            iorb - species_niwfs(geo%atom(iatom)%species), ispin, ii, ll, mm)
           derivative = .true.
         else
-          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, ispin, ii, ll, mm)
+          call species_iwf_ilm(geo%atom(iatom)%species, iorb, ispin, ii, ll, mm)
           derivative = .false.
         endif
 
-        call X(species_get_orbital_submesh)(geo%atom(iatom)%spec, sphere, ii, ll, mm, &
+        call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
           ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
       end do
  

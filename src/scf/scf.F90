@@ -1106,7 +1106,7 @@ contains
           write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
           write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
           do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
+            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
           end do
           write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
@@ -1150,7 +1150,7 @@ contains
           write(iunit,'(a)') ' Ion                     Bader         Voronoi'
 
           do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,2f16.3)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
+            write(iunit,'(i4,a10,2f16.3)') iatom, trim(species_label(geo%atom(iatom)%species)), &
               bader_charges(iatom), voronoi_charges(iatom)
 
           end do

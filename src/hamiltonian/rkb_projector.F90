@@ -93,17 +93,17 @@ contains
 
     !Build projectors
     do i = 1, 2
-      call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 0:3), l, lm, i, rkb_p%ket(:, i, 1, 1))
+      call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm, i, rkb_p%ket(:, i, 1, 1))
       rkb_p%bra(:, i) = conjg(rkb_p%ket(:, i, 1, 1))
       rkb_p%ket(:, i, 2, 2) = rkb_p%ket(:, i, 1, 1)
 
       if (lm /= l) then
-        call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 0:3), l, lm+1, i, rkb_p%ket(:, i, 2, 1))
+        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm+1, i, rkb_p%ket(:, i, 2, 1))
       else
         rkb_p%ket(:, i, 2, 1) = M_z0
       end if
       if (lm /= -l) then
-        call species_nl_projector(a%spec, rkb_p%n_s, sm%x(:, 0:3), l, lm-1, i, rkb_p%ket(:, i, 1, 2))
+        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm-1, i, rkb_p%ket(:, i, 1, 2))
       else
         rkb_p%ket(:, i, 1, 2) = M_z0
       end if
@@ -120,7 +120,7 @@ contains
     rkb_p%f(2, 2, 2) = real(l + so_strength*lm, REAL_PRECISION)
     rkb_p%f = rkb_p%f/real(2*l + 1, REAL_PRECISION)
 
-    ps => species_ps(a%spec)
+    ps => species_ps(a%species)
     rkb_p%f(1, :, :) = rkb_p%f(1, :, :) * ps%h(l, 1, 1)
     rkb_p%f(2, :, :) = rkb_p%f(2, :, :) * ps%h(l, 2, 2)
     nullify(ps)

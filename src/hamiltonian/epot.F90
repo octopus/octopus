@@ -534,7 +534,7 @@ contains
     SAFE_DEALLOCATE_P(ep%A_static)
 
     do iproj = 1, geo%natoms
-      if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
+      if(.not. species_is_ps(geo%atom(iproj)%species)) cycle
       call projector_end(ep%proj(iproj))
     end do
 
@@ -646,7 +646,7 @@ contains
     ! the pseudopotential part.
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
-      if(.not. species_is_ps(atm%spec)) cycle
+      if(.not. species_is_ps(atm%species)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
@@ -669,7 +669,7 @@ contains
     type(atom_t),             intent(in)    :: atom
     
     has_density = &
-      species_has_density(atom%spec) .or. (species_is_ps(atom%spec) .and. simul_box_is_periodic(sb))
+      species_has_density(atom%species) .or. (species_is_ps(atom%species) .and. simul_box_is_periodic(sb))
 
   end function local_potential_has_density
   
@@ -719,9 +719,9 @@ contains
 
         if (cmplxscl) then
           SAFE_ALLOCATE(Imrho(1:der%mesh%np))
-          call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho, Imrho)
+          call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho, Imrho)
         else
-          call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho)
+          call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
         end if
 
         if(present(density)) then
@@ -756,9 +756,9 @@ contains
         SAFE_ALLOCATE(vl(1:der%mesh%np))
         if(cmplxscl) then
           SAFE_ALLOCATE(Imvl(1:der%mesh%np))
-          call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, Imvl)
+          call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, Imvl)
         else
-          call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
+          call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
         end if
       end if
 
@@ -772,14 +772,14 @@ contains
       end if
 
       !the localized part
-      if(species_is_ps(geo%atom(iatom)%spec)) then
+      if(species_is_ps(geo%atom(iatom)%species)) then
 
-        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%spec, der%mesh) + der%mesh%spacing(1)
+        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
 
         call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
-        call double_grid_apply_local(dgrid, geo%atom(iatom)%spec, der%mesh, sphere, geo%atom(iatom)%x, vl)
+        call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
 
         ! Cannot be written (correctly) as a vector expression since for periodic systems,
         ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
@@ -797,10 +797,10 @@ contains
 
     !Non-local core corrections
     if(present(rho_core) .and. &
-      species_has_nlcc(geo%atom(iatom)%spec) .and. &
-      species_is_ps(geo%atom(iatom)%spec)) then
+      species_has_nlcc(geo%atom(iatom)%species) .and. &
+      species_is_ps(geo%atom(iatom)%species)) then
       SAFE_ALLOCATE(rho(1:der%mesh%np))
-      call species_get_nlcc(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho)
+      call species_get_nlcc(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
       forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
       SAFE_DEALLOCATE_A(rho)
       SAFE_DEALLOCATE_A(Imrho)
@@ -928,7 +928,7 @@ contains
     if(simul_box_is_periodic(sb)) then
       ASSERT(geo%ncatoms==0)
       ! This depends on the area, but we should check if it is fully consistent.        
-      spci => geo%atom(1)%spec
+      spci => geo%atom(1)%species
       if( species_type(spci) == SPECIES_JELLIUM_SLAB ) then
         energy = energy +M_PI *species_zval(spci)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
           & *( sb%lsize(3) - species_jthick(spci) /M_THREE ) 
@@ -951,7 +951,7 @@ contains
         if(ep%ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
-        spci=>geo%atom(iatom)%spec
+        spci=>geo%atom(iatom)%species
         zi=species_zval(spci)
         select case(species_type(spci))
         case(SPECIES_JELLIUM)
@@ -966,7 +966,7 @@ contains
           if(ep%ignore_external_ions) then
             if(.not. in_box(jatom)) cycle
           end if
-          spcj=>geo%atom(jatom)%spec
+          spcj=>geo%atom(jatom)%species
           r=geo%atom(iatom)%x(1:sb%dim)-geo%atom(jatom)%x(1:sb%dim)
           rr=sqrt(sum(r**2))
           iindex=species_index(spci)
@@ -1005,7 +1005,7 @@ contains
           r=geo%atom(iatom)%x(1:sb%dim)-geo%catom(jatom)%x(1:sb%dim)
           rr=sqrt(sum(r**2))
           !INTERACTION_COULOMB
-          zi=species_zval(geo%atom(iatom)%spec)
+          zi=species_zval(geo%atom(iatom)%species)
           zj=geo%catom(jatom)%charge
           !the force
           dd=zi*zj/rr
@@ -1028,7 +1028,7 @@ contains
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< sb%dim, geo%natoms
 
-    type(species_t), pointer :: spec
+    type(species_t), pointer :: species
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
@@ -1060,9 +1060,9 @@ contains
 
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
-      spec => geo%atom(iatom)%spec
-      if (.not. species_represents_real_atom(spec)) cycle
-      zi = species_zval(geo%atom(iatom)%spec)
+      species => geo%atom(iatom)%species
+      if (.not. species_represents_real_atom(species)) cycle
+      zi = species_zval(geo%atom(iatom)%species)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
       
@@ -1070,7 +1070,7 @@ contains
         xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1, geo%natoms
-          zj = species_zval(geo%atom(jatom)%spec)
+          zj = species_zval(geo%atom(jatom)%species)
           rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
           if(rr < CNST(1e-5)) cycle
@@ -1095,7 +1095,7 @@ contains
     eself = M_ZERO
     charge = M_ZERO
     do iatom = 1, geo%natoms
-      zi = species_zval(geo%atom(iatom)%spec)
+      zi = species_zval(geo%atom(iatom)%species)
       charge = charge + zi
       eself = eself - alpha/sqrt(M_PI)*zi**2
     end do
@@ -1138,7 +1138,7 @@ contains
 
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
-            zi = species_zval(geo%atom(iatom)%spec)
+            zi = species_zval(geo%atom(iatom)%species)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
             gx = sum(gg(1:sb%dim)*xi(1:sb%dim))
             phase(iatom) = zi*TOCMPLX(cos(gx), sin(gx))

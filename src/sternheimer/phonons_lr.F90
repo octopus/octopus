@@ -392,7 +392,7 @@ contains
               xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
               r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
 
-              term = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) &
+              term = species_zval(geo%atom(iatom)%species) * species_zval(geo%atom(jatom)%species) &
                 /(r2**CNST(1.5))*(ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               ! note: this accomplishes the sum over k for diagonal terms, using the j loop

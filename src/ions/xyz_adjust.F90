@@ -199,7 +199,7 @@ contains
     m = M_ONE
     sm = M_ZERO
     do i = 1, geo%natoms
-      if(.not.pseudo) m = species_mass(geo%atom(i)%spec)
+      if(.not.pseudo) m = species_mass(geo%atom(i)%species)
       sm = sm + m
       x = x + m * geo%atom(i)%x
     end do
@@ -266,7 +266,7 @@ contains
     tinertia = M_ZERO
     m = M_ONE
     do iatom = 1, geo%natoms
-      if(.not.pseudo) m = species_mass(geo%atom(iatom)%spec)
+      if(.not.pseudo) m = species_mass(geo%atom(iatom)%species)
       do ii = 1, geo%space%dim
         do jj = 1, geo%space%dim
           tinertia(ii, jj) = tinertia(ii, jj) - m*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)

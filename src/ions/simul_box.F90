@@ -1088,13 +1088,13 @@ contains
       else
         radius = M_ZERO
         do iatom = 1, geo%natoms
-          if(species_def_rsize(geo%atom(iatom)%spec) < -M_EPSILON) then
+          if(species_def_rsize(geo%atom(iatom)%species) < -M_EPSILON) then
             write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-              trim(species_label(geo%atom(iatom)%spec)), ' is negative or undefined.'
+              trim(species_label(geo%atom(iatom)%species)), ' is negative or undefined.'
             message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
             call messages_fatal(2)
           endif
-          radius = max(radius, species_def_rsize(geo%atom(iatom)%spec))
+          radius = max(radius, species_def_rsize(geo%atom(iatom)%species))
         end do
       end if
 
@@ -1119,7 +1119,7 @@ contains
           do ilist = 1, nlist(ip)
             iatom = list(ilist, ip)
             dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
-            if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
+            if(dist2 < species_def_rsize(geo%atom(iatom)%species)**2) then
               in_box(ip) = .true.
               exit
             end if

@@ -148,8 +148,8 @@ contains
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms
-      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
-        '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
+      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%species)), &
+        '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
 
       if(.not. write_real) write(iunit,'(a)') 'Real:'
       call output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
@@ -165,8 +165,8 @@ contains
     if(.not. write_real) then
       write(iunit,'(a)') '# Magnitude and phase'
       do iatom = 1, geo%natoms
-        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
-          '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
+        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%species)), &
+          '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
 
         write(iunit,'(a)') 'Magnitude:'
         call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)

@@ -785,8 +785,8 @@ contains
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
               kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &
-              P_PROTON_CHARGE * species_zval(geo%atom(iatom)%spec) / &
-              species_mass(geo%atom(iatom)%spec)
+              P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
+              species_mass(geo%atom(iatom)%species)
           end do
         end if
 

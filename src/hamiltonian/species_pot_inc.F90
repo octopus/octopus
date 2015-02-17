@@ -30,8 +30,8 @@
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine X(species_get_orbital)(spec, mesh, ii, ll, mm, ispin, pos, orb, scale)
-    type(species_t), target, intent(in)     :: spec
+  subroutine X(species_get_orbital)(species, mesh, ii, ll, mm, ispin, pos, orb, scale)
+    type(species_t), target, intent(in)     :: species
     type(mesh_t),            intent(in)     :: mesh
     integer,                 intent(in)     :: ii
     integer,                 intent(in)     :: ll
@@ -52,7 +52,7 @@
 
     xfactor = CNST(1.0)/optional_default(scale, CNST(1.0))
 
-    radius = min(species_get_iwf_radius(spec, ii, ispin)/xfactor, maxval(mesh%sb%lsize))
+    radius = min(species_get_iwf_radius(species, ii, ispin)/xfactor, maxval(mesh%sb%lsize))
 
     call periodic_copy_init(pc, mesh%sb, pos, range = radius)
 
@@ -60,9 +60,9 @@
 
     SAFE_ALLOCATE(lorb(1:mesh%np))
 
-    if(species_represents_real_atom(spec)) then
-      if(species_is_ps(spec)) then
-        ps => species_ps(spec)
+    if(species_represents_real_atom(species)) then
+      if(species_is_ps(species)) then
+        ps => species_ps(species)
         ASSERT(ii <= ps%conf%p)
       endif
       SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
@@ -71,14 +71,14 @@
 
     do icell = 1, periodic_copy_num(pc)
 
-      if(species_represents_real_atom(spec) .and. mesh%sb%dim == 3) then
+      if(species_represents_real_atom(species) .and. mesh%sb%dim == 3) then
 
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
           xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
           
-          if(species_is_ps(spec)) then
+          if(species_is_ps(species)) then
             if(r2 < spline_range_max(ps%ur_sq(ii, ispin))) then
               lorb(ip) = spline_eval(ps%ur_sq(ii, ispin), r2)
             else
@@ -86,9 +86,9 @@
             end if
           else
             ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
-            lorb(ip) = sqrt( (2*species_zval(spec)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
-              exp(-species_zval(spec) * sqrt(r2) / ii) * (2*species_zval(spec)*sqrt(r2)/ii)**ll * &
-              loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*species_zval(spec)*sqrt(r2)/ii)
+            lorb(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
+              exp(-species_zval(species) * sqrt(r2) / ii) * (2*species_zval(species)*sqrt(r2)/ii)**ll * &
+              loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*species_zval(species)*sqrt(r2)/ii)
           endif
         end do
 
@@ -115,9 +115,9 @@
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
-          lorb = exp(-species_omega(spec)*r2/M_TWO)
+          lorb = exp(-species_omega(species)*r2/M_TWO)
           do idir = 1, mesh%sb%dim
-            lorb(ip) = lorb(ip) * hermite(nn(idir) - 1, x(idir)*sqrt(species_omega(spec)))
+            lorb(ip) = lorb(ip) * hermite(nn(idir) - 1, x(idir)*sqrt(species_omega(species)))
           enddo
           orb(ip) = orb(ip) + lorb(ip)
         end do
@@ -127,7 +127,7 @@
 
     SAFE_DEALLOCATE_A(lorb)
 
-    if(species_is_ps(spec)) then
+    if(species_is_ps(species)) then
       SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
       nullify(ps)
@@ -140,8 +140,8 @@
 
 
   ! ---------------------------------------------------------
-  subroutine X(species_get_orbital_submesh)(spec, submesh, ii, ll, mm, ispin, pos, phi, derivative)
-    type(species_t), target, intent(in)  :: spec       !< The species.
+  subroutine X(species_get_orbital_submesh)(species, submesh, ii, ll, mm, ispin, pos, phi, derivative)
+    type(species_t), target, intent(in)  :: species       !< The species.
     type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
     integer,                 intent(in)  :: ii
     integer,                 intent(in)  :: ll
@@ -166,12 +166,12 @@
 
     ASSERT(ubound(phi, dim = 1) >= submesh%np)
 
-    if(species_represents_real_atom(spec)) then
-      ps => species_ps(spec)
+    if(species_represents_real_atom(species)) then
+      ps => species_ps(species)
       
       forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
 
-      if(species_is_ps(spec)) then
+      if(species_is_ps(species)) then
         if(.not. derivative_) then
           call spline_eval_vec(ps%ur(ii, ispin), submesh%np, phi)
         else
@@ -183,8 +183,8 @@
       else
         ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
         do ip = 1, submesh%np
-          ww = species_zval(spec)*submesh%x(ip, 0)/ii
-          phi(ip) = sqrt( (2*species_zval(spec)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
+          ww = species_zval(species)*submesh%x(ip, 0)/ii
+          phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
             exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
         enddo
       endif
@@ -215,7 +215,7 @@
       ! Question: why not implemented derivatives here?
       ! Answer: because they are linearly dependent with lower-order Hermite polynomials.
 
-      ww = species_omega(spec)
+      ww = species_omega(species)
       sqrtw = sqrt(ww)
 
       ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
