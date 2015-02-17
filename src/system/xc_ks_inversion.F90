@@ -88,10 +88,11 @@ module xc_ks_inversion_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, gr, geo, mc)
+  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st, mc)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
+    type(states_t),          intent(in)    :: st
     type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(xc_ks_inversion_init)
@@ -150,11 +151,12 @@ contains
     call parse_integer('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
+      call states_copy(ks_inv%aux_st, st, exclude_wfns = .true.)
+      
       ! initialize auxiliary random wavefunctions
-      call states_init(ks_inv%aux_st, gr, geo)      
-      call states_exec_init(ks_inv%aux_st, mc)
       call states_allocate_wfns(ks_inv%aux_st, gr%mesh)
       call states_generate_random(ks_inv%aux_st, gr%mesh)      
+
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, XC_FAMILY_NONE)
@@ -199,7 +201,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
-    
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: aux_hm

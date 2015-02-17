@@ -234,7 +234,7 @@ contains
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       endif
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
       endif
     end select
 

@@ -294,7 +294,7 @@ contains
         call messages_fatal(1)
       end if
 
-      call states_copy(writ%gs_st, st, exclude = .true.)
+      call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
 
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)

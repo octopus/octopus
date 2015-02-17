@@ -1240,6 +1240,7 @@ contains
     POP_SUB(states_densities_init)
   end subroutine states_densities_init
 
+  !---------------------------------------------------------------------
   subroutine states_allocate_current(st, gr)
     type(states_t), target, intent(inout) :: st
     type(grid_t),           intent(in)    :: gr
@@ -1345,16 +1346,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_copy(stout, stin, exclude)
+  subroutine states_copy(stout, stin, exclude_wfns, exclude_eigenval)
     type(states_t), target, intent(inout) :: stout
     type(states_t),         intent(in)    :: stin
-    logical, optional,      intent(in)    :: exclude !< do not copy wavefunctions, etc.
+    logical, optional,      intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
+    logical, optional,      intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
 
-    logical :: exclude_
+    logical :: exclude_wfns_
 
     PUSH_SUB(states_copy)
 
-    exclude_ = optional_default(exclude, .false.)
+    exclude_wfns_ = optional_default(exclude_wfns, .false.)
 
     call states_null(stout)
 
@@ -1365,7 +1367,7 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    if(.not. exclude_) then
+    if(.not. exclude_wfns_) then
       call loct_pointer_copy(stout%dpsi, stin%dpsi)
 
       !cmplxscl
@@ -1373,19 +1375,22 @@ contains
       stout%zpsi => stout%psi%zR
       call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
       stout%rho => stout%zrho%Re
-      call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
-      stout%eigenval => stout%zeigenval%Re
       if(stin%cmplxscl%space) then
         call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
         call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
-        call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
-        call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
-        call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
       end if
 
+      call loct_pointer_copy(stout%node, stin%node)
+    endif
+
+    if(.not. optional_default(exclude_eigenval, .false.)) then
+      call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
+      stout%eigenval => stout%zeigenval%Re
+      if(stin%cmplxscl%space) then
+        call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im)
+      endif
       call loct_pointer_copy(stout%occ, stin%occ)
       call loct_pointer_copy(stout%spin, stin%spin)
-      call loct_pointer_copy(stout%node, stin%node)
     endif
 
     stout%have_left_states = stin%have_left_states
@@ -1398,10 +1403,13 @@ contains
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
-
+ 
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
-
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
+    if(stin%cmplxscl%space) then
+      call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
+      call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
+    endif
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1432,7 +1440,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_) then
+    if(.not. exclude_wfns_) then
       stout%group%block_initialized = .false.
       if(stin%group%block_initialized) then
         call states_init_block(stout, verbose = .false.)
