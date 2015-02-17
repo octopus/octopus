@@ -444,7 +444,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, gs_run_, berry_conv, cmplxscl
-    integer :: iter, is, idim, iatom, nspin, ierr, iberry, idir, verbosity_
+    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
     character(len=32) :: dirname

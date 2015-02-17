@@ -88,20 +88,13 @@ module xc_ks_inversion_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, family, gr, geo, mc)
+  subroutine xc_ks_inversion_init(ks_inv, gr, geo, mc)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
-    integer,                 intent(in)    :: family
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(xc_ks_inversion_init)
-
-    if(iand(family, XC_FAMILY_KS_INVERSION)  ==  0) then
-      ks_inv%level = XC_KS_INVERSION_NONE
-      POP_SUB(xc_ks_inversion_init)
-      return
-    end if
 
     if(mc%n_node > 1) &
       call messages_not_implemented("Kohn-Sham inversion in parallel")
@@ -337,11 +330,10 @@ contains
     integer :: ii, jj, ierr, asym1, asym2
     integer :: iunit, verbosity, counter, np
     FLOAT :: rr, shift
-    FLOAT :: alpha, beta, convergence
+    FLOAT :: alpha, beta
     FLOAT :: stabilizer, convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
-    character(len=20) :: alpha_str
     character(len=256) :: fname
 
     PUSH_SUB(invertks_iter)
