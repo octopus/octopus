@@ -28,7 +28,7 @@ omega = 0.05655
 period = 2*pi/omega
 # In the original reference, there are 96 cycles instead of 8.
 stime = 8*period
-# The time-step is shorter in the original referece. But the propagation
+# The time-step is shorter in the original reference. But the propagation
 # algorithm is also probably different.
 dt = period / 250
 
