@@ -302,8 +302,7 @@ contains
       scf%mixdim1 = gr%fine%mesh%np
     end select
 
-    scf%mixdim2 = 1
-    if(hm%d%cdft) scf%mixdim2 = 1 + gr%mesh%sb%dim
+    scf%mixdim2 = 1 ! this is a relic of support for CDFT
     if(scf%mix_field /= MIXNONE) then
       if(.not. st%cmplxscl%space) then
         call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
@@ -550,10 +549,6 @@ contains
       zrhoout = M_z0
     end if
 
-    if (st%d%cdft) then
-      rhoin(1:gr%fine%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%fine%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
-    end if
-
     select case(scf%mix_field)
     case(MIXPOT)
       SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
@@ -562,7 +557,6 @@ contains
 
       vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       vout = M_ZERO
-      if (st%d%cdft) vin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if(cmplxscl) then
         SAFE_ALLOCATE(Imvout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
         SAFE_ALLOCATE( Imvin(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
@@ -678,15 +672,10 @@ contains
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       end if
 
-      if (hm%d%cdft) then
-        call calc_physical_current(gr%der, st, st%current)
-        rhoout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
-      end if
       if (scf%mix_field == MIXPOT) then
         call v_ks_calc(ks, hm, st, geo)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-        if (hm%d%cdft) vout(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
@@ -764,7 +753,6 @@ contains
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
-        if (hm%d%cdft) st%current(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin)
         call v_ks_calc(ks, hm, st, geo)
       case (MIXPOT)
         !set the pointer for dmf_dotp_aux
@@ -777,7 +765,6 @@ contains
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
         call hamiltonian_update(hm, gr%mesh)
-        if (hm%d%cdft) hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin) = vnew(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin)
       case(MIXNONE)
         call v_ks_calc(ks, hm, st, geo)
       end select
@@ -849,11 +836,9 @@ contains
         zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
       end if
-      if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%mix_field == MIXPOT) then
         vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (cmplxscl) Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-        if (hm%d%cdft) vin(1:gr%mesh%np, 2:scf%mixdim2, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then

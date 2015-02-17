@@ -85,7 +85,6 @@ module states_dim_m
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
     integer :: nspin                !< dimension of rho (1, 2 or 4)
     integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
-    logical :: cdft                 !< Are we using current-DFT or not?    
     FLOAT, pointer :: kweights(:)   !< weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
@@ -121,7 +120,6 @@ contains
     dout%ispin          = din%ispin
     dout%nspin          = din%nspin
     dout%spin_channels  = din%spin_channels
-    dout%cdft           = din%cdft
     dout%block_size     = din%block_size
     dout%pack_states    = din%pack_states
     dout%cl_states_mem  = din%cl_states_mem

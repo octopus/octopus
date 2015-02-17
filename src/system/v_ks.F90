@@ -678,9 +678,7 @@ contains
       end if
 
       ! Get the *local* XC term
-      if(hm%d%cdft) then
-        call messages_not_implemented('Current-DFT')
-      else if(ks%calc%calc_energy) then
+      if(ks%calc%calc_energy) then
         if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &

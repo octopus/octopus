@@ -61,8 +61,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
 
-  if(present(time) .and. hm%d%cdft) call messages_not_implemented('TDCDFT')
-
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
   ASSERT(psib%nst == hpsib%nst)

@@ -307,11 +307,6 @@ contains
         hm%vtau=M_ZERO
       end if
 
-      if (hm%d%cdft) then
-        SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
-        hm%axc = M_ZERO
-      end if
-
     end if
 
     nullify(hm%Imvhxc, hm%Imvhartree, hm%Imvxc, hm%Imvtau)

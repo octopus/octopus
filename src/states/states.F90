@@ -470,8 +470,6 @@ contains
 
     conf%target_states_block_size = st%d%block_size
 
-    st%d%cdft = .false. ! CDFT was removed
-
     !cmplxscl
     call cmplxscl_init(st%cmplxscl)
 
@@ -1222,11 +1220,6 @@ contains
     if( st%cmplxscl%space) then
       SAFE_ALLOCATE(st%zrho%Im(1:gr%fine%mesh%np_part, 1:st%d%nspin))
       st%zrho%Im = M_ZERO
-    end if
-
-    if(st%d%cdft) then
-      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-      st%current = M_ZERO
     end if
 
     if(geo%nlcc) then
