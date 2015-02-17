@@ -446,7 +446,7 @@ contains
         end if
       end if
 
-      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(geo, hm)
+      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(hm)
     else
       ks%calc%total_density_alloc = .false.
     end if
@@ -636,8 +636,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine v_a_xc(geo, hm)
-      type(geometry_t),     intent(in) :: geo
+    subroutine v_a_xc(hm)
       type(hamiltonian_t),  intent(in) :: hm 
 
       type(profile_t), save :: prof

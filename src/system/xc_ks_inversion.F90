@@ -58,18 +58,18 @@ module xc_ks_inversion_m
     invertks_2part,                &
     invertks_iter
 
-  ! KS inversion methods/algorithms
+  !> KS inversion methods/algorithms
   integer, public, parameter ::      &
     XC_INV_METHOD_VS_ITER      = 1,  &
     XC_INV_METHOD_TWO_PARTICLE = 2
 
-  ! the KS inversion levels
+  !> the KS inversion levels
   integer, public, parameter ::      &
     XC_KS_INVERSION_NONE      = 1,   &
     XC_KS_INVERSION_ADIABATIC = 2,   &   
     XC_KS_INVERSION_TD_EXACT  = 3
 
-  ! asymptotic correction for v_xc
+  !> asymptotic correction for v_xc
   integer, public, parameter ::      &
     XC_ASYMPTOTICS_NONE    = 1,      &
     XC_ASYMPTOTICS_SC      = 2     
