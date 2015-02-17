@@ -59,7 +59,7 @@ module xc_ks_inversion_m
     invertks_iter
 
   ! KS inversion methods/algorithms
-  integer, public, parameter ::            &
+  integer, public, parameter ::      &
     XC_INV_METHOD_VS_ITER      = 1,  &
     XC_INV_METHOD_TWO_PARTICLE = 2
 
@@ -69,9 +69,15 @@ module xc_ks_inversion_m
     XC_KS_INVERSION_ADIABATIC = 2,   &   
     XC_KS_INVERSION_TD_EXACT  = 3
 
+  ! asymptotic correction for v_xc
+  integer, public, parameter ::      &
+    XC_ASYMPTOTICS_NONE    = 1,      &
+    XC_ASYMPTOTICS_SC      = 2     
+
   type xc_ks_inversion_t
      integer             :: method
      integer             :: level
+     integer             :: asymp
      FLOAT, pointer      :: vxc_previous_step(:,:)
      type(states_t)      :: aux_st
      type(hamiltonian_t) :: aux_hm
@@ -113,8 +119,6 @@ contains
     !% Iterative scheme for v_s.
     !%Option two_particle 2
     !% Exact two-particle scheme.
-    !%Option iterativevxc 3
-    !% Iterative scheme for v_xc.
     !%End
     call parse_integer('InvertKSmethod', XC_INV_METHOD_VS_ITER, ks_inv%method)
 
@@ -138,6 +142,19 @@ contains
     call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
     call parse_integer('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call input_error('KSInversionLevel')
+
+    !%Variable KSInversionAsymptotics
+    !%Type integer
+    !%Default xc_asymptotics_none
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Asymptotic correction applied to v_xc
+    !%Option xc_asymptotics_none 1
+    !% Do not apply any correction in the asymptotic region
+    !%Option xc_asymptotics_sc 2
+    !% Applies the soft-Coulomb decay of -1/sqrt(r^2+1) to v_xc in the asymptotic region
+    !%End
+    call parse_integer('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! initialize auxiliary random wavefunctions
@@ -188,7 +205,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver)
+  subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
     
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
@@ -196,10 +213,11 @@ contains
     type(eigensolver_t), intent(inout) :: eigensolver
     integer, intent(in)      :: nspin
     FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
+    integer, intent(in)      :: asymptotics
            
     integer :: ii, jj, asym1, asym2 
     integer :: np
-    FLOAT   :: rr, shift
+    FLOAT   :: rr, shift, smalldensity
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
     PUSH_SUB(invertks_2part)
@@ -213,10 +231,12 @@ contains
     SAFE_ALLOCATE(laplace(1:gr%der%mesh%np, 1:nspin))
     
     sqrtrho = M_ZERO
+    smalldensity = 5d-6
     
     do jj = 1, nspin
       do ii = 1, gr%der%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
+        !if (sqrtrho(ii, jj) < CNST(2.5e-6)) sqrtrho(ii, jj) = CNST(2.5e-6)
       enddo
     enddo   
     
@@ -224,49 +244,74 @@ contains
       call dderivatives_lapl(gr%der, sqrtrho(:,jj), laplace(:,jj))
     enddo
     
-    do jj = 1, nspin
-      do ii = 1, np
-          vks(ii, jj) = laplace(ii, jj)/(M_TWO*sqrtrho(ii, jj)) + st%eigenval(1,jj)
-      enddo
-    enddo
-    
-    do jj = 1, nspin 
-      aux_hm%vxc(:,jj) = vks(:,jj) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
-    enddo
-    
-    !ensure correct asymptotic behavior, only for 1D potentials at the moment
-    !need to find a way to find all points from where asymptotics should start in 2 and 3D
     do ii = 1, nspin
+      !avoid division by zero and set parameters for asymptotics
+      !only for 1D potentials at the moment
+      !need to find a way to find all points from where asymptotics should start in 2 and 3D
       do jj = 1, int(np/2)
-        if(target_rho(jj,ii) < CNST(1e-8)) then
-          call mesh_r(gr%mesh, jj, rr)
-          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+        if(target_rho(jj,ii) < smalldensity) then
+          vks(jj, ii) = aux_hm%ep%vpsl(jj) + aux_hm%vhartree(jj)
           asym1 = jj
         endif
-        if(target_rho(np-jj+1, ii) < CNST(1e-8)) then
+        if(target_rho(np-jj+1, ii) < smalldensity) then
+          vks(np-jj+1, ii) = aux_hm%ep%vpsl(np-jj+1) + aux_hm%vhartree(np-jj+1)
           asym2 = np - jj + 1
         endif
       enddo
-     
-      ! calculate constant shift for correct asymptotics and shift accordingly
-      call mesh_r(gr%mesh, asym1+1, rr)
-      shift  = aux_hm%vxc(asym1+1, ii) + 1.0/sqrt(rr**2 + 1.0)
       do jj = asym1+1, asym2-1
-        aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+        vks(jj, ii) = laplace(jj, ii)/(M_TWO*sqrtrho(jj, ii))
       enddo
-  
-      call mesh_r(gr%mesh, asym2-1, rr)
-      shift  = aux_hm%vxc(asym2-1, ii) + 1.0/sqrt(rr**2 + 1.0)
-      do jj = 1, asym2-1
-        aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
-      enddo
-      do jj = asym2, np
-        call mesh_r(gr%mesh, jj, rr)
-        aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
-      enddo
-      aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
-    enddo 
+      aux_hm%vxc(:,ii) = vks(:,ii) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
+    enddo
 
+    !ensure correct asymptotic behavior, only for 1D potentials at the moment
+    !need to find a way to find all points from where asymptotics should start in 2 and 3D
+    if(asymptotics == XC_ASYMPTOTICS_SC) then
+      do ii = 1, nspin
+        do jj = 1, asym1
+          call mesh_r(gr%mesh, jj, rr)
+          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+        enddo
+     
+        ! calculate constant shift for correct asymptotics and shift accordingly
+        call mesh_r(gr%mesh, asym1+1, rr)
+        shift  = aux_hm%vxc(asym1+1, ii) + 1.0/sqrt(rr**2 + 1.0)
+        do jj = asym1+1, asym2-1
+          aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+        enddo
+  
+        call mesh_r(gr%mesh, asym2-1, rr)
+        shift  = aux_hm%vxc(asym2-1, ii) + 1.0/sqrt(rr**2 + 1.0)
+        do jj = 1, asym2-1
+          aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+        enddo
+        do jj = asym2, np
+          call mesh_r(gr%mesh, jj, rr)
+          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+        enddo
+      enddo 
+    endif !apply asymptotic correction
+    
+    if(asymptotics == XC_ASYMPTOTICS_NONE) then
+      do ii = 1, nspin
+        ! calculate constant shift to make potential continuous
+        shift  = aux_hm%vxc(asym1+1, ii)! + aux_hm%ep%vpsl(asym1+1) + aux_hm%vhartree(asym1+1)
+        do jj = asym1+1, asym2-1
+          aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+        enddo
+  
+        shift  = aux_hm%vxc(asym2-1, ii)!+ aux_hm%ep%vpsl(asym2-1) + aux_hm%vhartree(asym2-1)
+ 
+        do jj = 1, asym2-1
+          aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
+        enddo
+      enddo 
+    endif  
+
+    do ii = 1, nspin
+      aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
+    enddo
+    
     call hamiltonian_update(aux_hm, gr%mesh)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
@@ -280,13 +325,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver)
+  subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: aux_hm
     type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: nspin
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
+    integer,             intent(in)    :: asymptotics
         
     integer :: ii, jj, ierr, asym1, asym2
     integer :: iunit, verbosity, counter, np
@@ -407,42 +453,43 @@ contains
 
     !ensure correct asymptotic behavior, only for 1D potentials at the moment
     !need to find a way to find all points from where asymptotics should start in 2 and 3D
-    do ii = 1, nspin
-      do jj = 1, int(np/2)
-        if(target_rho(jj,ii) < convdensity*CNST(10.0)) then
+    if(asymptotics == XC_ASYMPTOTICS_SC) then
+      do ii = 1, nspin
+        do jj = 1, int(np/2)
+          if(target_rho(jj,ii) < convdensity*CNST(10.0)) then
+            call mesh_r(gr%mesh, jj, rr)
+            vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+            asym1 = jj
+          endif
+          if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
+            asym2 = np - jj + 1
+          endif
+        enddo
+     
+        ! calculate constant shift for correct asymptotics and shift accordingly
+        call mesh_r(gr%mesh, asym1+1, rr)
+        shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+        do jj = asym1+1, asym2-1
+          vhxc(jj,ii) = vhxc(jj, ii) - shift
+        enddo
+  
+        call mesh_r(gr%mesh, asym2-1, rr)
+        shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+        do jj = 1, asym2-1
+          vhxc(jj,ii) = vhxc(jj, ii) - shift
+        enddo
+        do jj = asym2, np
           call mesh_r(gr%mesh, jj, rr)
           vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
-          asym1 = jj
-        endif
-        if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
-          asym2 = np - jj + 1
-        endif
+        enddo
       enddo
-     
-      ! calculate constant shift for correct asymptotics and shift accordingly
-      call mesh_r(gr%mesh, asym1+1, rr)
-      shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
-      do jj = asym1+1, asym2-1
-        vhxc(jj,ii) = vhxc(jj, ii) - shift
-      enddo
-  
-      call mesh_r(gr%mesh, asym2-1, rr)
-      shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
-      do jj = 1, asym2-1
-        vhxc(jj,ii) = vhxc(jj, ii) - shift
-      enddo
-      do jj = asym2, np
-        call mesh_r(gr%mesh, jj, rr)
-        vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
-      enddo
-    enddo
+    endif
 
     aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
     do jj = 1, nspin
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
     enddo
-
 
     !calculate final density
 
@@ -510,10 +557,10 @@ contains
     ! adiabatic ks inversion
     case(XC_INV_METHOD_TWO_PARTICLE)
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
-                         ks_inversion%aux_st, ks_inversion%eigensolver)
+                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
     case(XC_INV_METHOD_VS_ITER)
       call invertks_iter(st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
-                         ks_inversion%aux_st, ks_inversion%eigensolver)
+                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
     end select
 
     !subtract external and Hartree potentials, ATTENTION: subtracts true external potential not adiabatic one 

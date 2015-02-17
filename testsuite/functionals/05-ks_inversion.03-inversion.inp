@@ -1,0 +1,35 @@
+ExperimentalFeatures = yes
+CalculationMode = invert_ks
+
+Dimensions = 1
+FromScratch = yes
+
+# simulation box
+BoxShape = Hypercube
+acell = 15
+spacing = 0.05
+%Lsize 
+ acell
+%
+
+# define system
+a=1.0
+%Species
+'He1D' | 0.0 | species_user_defined | 2 |"-2/sqrt(x^2+a^2)" 
+%
+
+%Coordinates
+'He1D' | 0.0 |no
+%
+
+# ks_inversion is defined as XC functional
+XCFunctional = ks_inversion
+KSInversionLevel = ks_inversion_adiabatic
+KSInversionAsymptotics = xc_asymptotics_none
+InvertKSmethod = iterative
+
+InvertKSTargetDensity = "static/density.y=0,z=0"
+
+InvertKSConvAbsDens = 1e-3
+InvertKSstabilizer = 1.0d-20
+InvertKSVerbosity = 1

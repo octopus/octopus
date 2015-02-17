@@ -15,20 +15,22 @@ spacing = 0.05
 # define system
 a=1.0
 %Species
-'He1D' | species_user_defined | 0.0 | 2 |"-2/sqrt(x^2+a^2)" 
+'He1D' | 0.0 | species_user_defined | 2 |"-2/sqrt(x^2+a^2)" 
 %
 
 %Coordinates
-'He1D' | 0.0 | no
+'He1D' | 0.0 |no
 %
 
 # ks_inversion is defined as XC functional
 XCFunctional = ks_inversion
 KSInversionLevel = ks_inversion_adiabatic
-InvertKSmethod = iterative
+KSInversionAsymptotics = xc_asymptotics_none
+InvertKSmethod = two_particle
 
 InvertKSTargetDensity = "static/density.y=0,z=0"
 
-InvertKSConvAbsDens = 1e-3
 InvertKSstabilizer = 1.0d-20
 InvertKSVerbosity = 1
+Output = potential
+OutputHow = axis_x

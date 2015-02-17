@@ -105,12 +105,12 @@ contains
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
       call invertks_2part(target_rho, nspin, hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
      
     else ! iterative case
       if (sys%ks%ks_inversion%method == XC_INV_METHOD_VS_ITER) then ! iterative procedure for v_s 
         call invertks_iter(target_rho, nspin, hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
       endif
     end if
 
