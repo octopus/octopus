@@ -18,7 +18,7 @@ AC_DEFUN([ACX_YAML], [
   if test x"$ac_build_libyaml" != x"yes" ; then
      LDFLAGS_SVG="$LDFLAGS"
      AC_LANG_PUSH(C)
-     LDFLAGS="-L$ac_path_yaml/lib"
+     LDFLAGS="$LDFLAGS -L$ac_path_yaml/lib"
      AC_CHECK_LIB([yaml], [yaml_parser_parse],
                   [ac_use_libyaml=yes], [ac_use_libyaml=no])
      if test x"$ac_use_libyaml" = x"yes"; then
