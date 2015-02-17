@@ -121,6 +121,7 @@ contains
     dout%nspin          = din%nspin
     dout%spin_channels  = din%spin_channels
     dout%block_size     = din%block_size
+    dout%orth_method    = din%orth_method
     dout%pack_states    = din%pack_states
     dout%cl_states_mem  = din%cl_states_mem
 

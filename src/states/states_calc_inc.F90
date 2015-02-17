@@ -64,8 +64,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 !glibc detected *** octopus_mpi: malloc(): memory corruption
 #endif
 
-  ASSERT(st%d%orth_method /= 0)
-
   call profiling_in(prof, "ORTHOGONALIZATION_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
@@ -83,6 +81,11 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   case(ORTH_MGS)
     call mgs()
+
+  case default
+    write(message(1),'(a,i6)') "Internal error from states_orthogonalization_full: orth_method has illegal value ", &
+      st%d%orth_method
+    call messages_fatal(1)
   end select
 
   call profiling_out(prof)
