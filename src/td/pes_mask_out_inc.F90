@@ -1886,8 +1886,10 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
         else
           gwf => mask%k(:,:,:, idim, ist, ik)
         end if
-
-        if (mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
+        
+        !we need to check both cube and mesh mpi_grp to make sure only the root node writes the
+        !output and preserve state parallelization 
+        if (mpi_grp_is_root(mask%cube%mpi_grp) .and. mpi_grp_is_root(mask%mesh%mpi_grp)) then 
           call io_binary_write(path, np, gwf(:,:,:), err)
           if (err /= 0) then
             err2 = err2 + 1
