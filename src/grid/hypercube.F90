@@ -114,7 +114,7 @@ contains
   subroutine hypercube_x_to_i(this, ndim, nr, enlarge, coord, icoord)
     type(hypercube_t), intent(in)  :: this
     integer,           intent(in)  :: ndim
-    integer,           intent(in)  :: nr(1:2,1:ndim)
+    integer,           intent(in)  :: nr(:,:) !< (1:2,1:ndim)
     integer,           intent(in)  :: enlarge
     integer,           intent(in)  :: coord(:) !< (1:ndim)
     integer,           intent(out) :: icoord
@@ -123,7 +123,7 @@ contains
     integer :: border(1:MAX_DIM), npoints(1:MAX_DIM), lowerb(1:MAX_DIM), tempcoord(1:MAX_DIM)
     integer :: ii, jj
 
-    PUSH_SUB(hypercube_x_to_i)
+    ! no push sub, called too frequently
 
     do ii = 1, ndim
       npoints(ii) = nr(2, ii) - nr(1, ii) + 1
@@ -183,7 +183,6 @@ contains
       endif
     endif
 
-    POP_SUB(hypercube_x_to_i)
   end subroutine hypercube_x_to_i
 
 
