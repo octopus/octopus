@@ -107,7 +107,6 @@ module scf_m
     type(mix_t) :: smix
     type(eigensolver_t) :: eigens
     integer :: mixdim1
-    integer :: mixdim2
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
   end type scf_t
 
@@ -302,12 +301,11 @@ contains
       scf%mixdim1 = gr%fine%mesh%np
     end select
 
-    scf%mixdim2 = 1 ! this is a relic of support for CDFT
     if(scf%mix_field /= MIXNONE) then
       if(.not. st%cmplxscl%space) then
-        call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
+        call mix_init(scf%smix, scf%mixdim1, 1, st%d%nspin)
       else
-        call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin, func_type = TYPE_CMPLX)
+        call mix_init(scf%smix, scf%mixdim1, 1, st%d%nspin, func_type = TYPE_CMPLX)
       end if
     end if
 
@@ -534,15 +532,15 @@ contains
     end if
 
     if(.not. cmplxscl) then      
-      SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
-      SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
+      SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
+      SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
 
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       rhoout = M_ZERO
     else
 
-      SAFE_ALLOCATE(zrhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
-      SAFE_ALLOCATE(zrhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
+      SAFE_ALLOCATE(zrhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
+      SAFE_ALLOCATE(zrhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
 
       zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) &
         + M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
@@ -551,25 +549,25 @@ contains
 
     select case(scf%mix_field)
     case(MIXPOT)
-      SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
-      SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
-      SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
+      SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:1, 1:nspin))
+      SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:1, 1:nspin))
+      SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:1, 1:nspin))
 
       vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       vout = M_ZERO
       if(cmplxscl) then
-        SAFE_ALLOCATE(Imvout(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
-        SAFE_ALLOCATE( Imvin(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
-        SAFE_ALLOCATE(Imvnew(1:gr%mesh%np, 1:scf%mixdim2, 1:nspin))
+        SAFE_ALLOCATE(Imvout(1:gr%mesh%np, 1:1, 1:nspin))
+        SAFE_ALLOCATE( Imvin(1:gr%mesh%np, 1:1, 1:nspin))
+        SAFE_ALLOCATE(Imvnew(1:gr%mesh%np, 1:1, 1:nspin))
 
         Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
         Imvout = M_ZERO
       end if
     case(MIXDENS)
       if(.not. cmplxscl) then
-        SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
+        SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
       else
-        SAFE_ALLOCATE(zrhonew(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
+        SAFE_ALLOCATE(zrhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
       end if
     end select
 
@@ -686,14 +684,12 @@ contains
       scf%abs_dens = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, nspin
-        do idim = 1, scf%mixdim2
-          if(.not. cmplxscl) then
-            tmp = abs(rhoin(1:gr%fine%mesh%np, idim, is) - rhoout(1:gr%fine%mesh%np, idim, is))
-          else
-            tmp = abs(zrhoin(1:gr%fine%mesh%np, idim, is) - zrhoout(1:gr%fine%mesh%np, idim, is))
-          end if
-          scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
-        end do
+        if(.not. cmplxscl) then
+          tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
+        else
+          tmp = abs(zrhoin(1:gr%fine%mesh%np, 1, is) - zrhoout(1:gr%fine%mesh%np, 1, is))
+        end if
+        scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
       end do
       SAFE_DEALLOCATE_A(tmp)
 
