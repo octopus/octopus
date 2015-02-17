@@ -68,7 +68,7 @@ module species_m
     species_jthick,                &
     species_sigma,                 &
     species_omega,                 &
-    species_weight,                &
+    species_mass,                &
     species_rho_string,            &
     species_filename,              &
     species_niwfs,                 &
@@ -112,7 +112,7 @@ module species_m
     FLOAT   :: z                      !< charge of the species
     FLOAT   :: z_val                  !< valence charge of the species -- the total charge
                                       !< minus the core charge in the case of the pseudopotentials
-    FLOAT   :: weight                 !< mass, in atomic mass units (!= atomic units of mass)
+    FLOAT   :: mass                 !< mass, in atomic mass units (!= atomic units of mass)
 
     logical :: has_density            !< true if the species has an electronic density
 
@@ -166,7 +166,7 @@ contains
     this%type=0
     this%z=M_ZERO
     this%z_val=M_ZERO
-    this%weight=M_ZERO
+    this%mass=M_ZERO
     this%has_density=.false.
     this%user_def=""
     this%omega=M_ZERO
@@ -470,7 +470,7 @@ contains
     end if
 
     ! masses are always in amu, so convert them to a.u.
-    spec%weight =  units_to_atomic(unit_amu, spec%weight)
+    spec%mass =  units_to_atomic(unit_amu, spec%mass)
 
     spec%has_density = .false.
 
@@ -892,10 +892,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function species_weight(spec)
+  FLOAT pure function species_mass(spec)
     type(species_t), intent(in) :: spec
-    species_weight = spec%weight
-  end function species_weight
+    species_mass = spec%mass
+  end function species_mass
   ! ---------------------------------------------------------
 
 
@@ -1187,7 +1187,7 @@ contains
       write(iunit,'(a)')      'Species read from file "'//trim(spec%filename)//'".'
     end if
     write(iunit, '(a,f15.2)') 'z_val  = ', spec%z_val
-    write(iunit, '(a,f15.2)') 'weight = ', spec%weight
+    write(iunit, '(a,f15.2)') 'mass = ', spec%mass
     bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
     write(iunit, '(2a)')      'usdef  = ', trim(spec%user_def)
@@ -1220,7 +1220,7 @@ contains
     type(species_t), intent(inout) :: spec
 
     character(len=LABEL_LEN) :: label
-    FLOAT :: weight, z, def_h, def_rsize
+    FLOAT :: mass, z, def_h, def_rsize
     integer :: lloc, lmax
     integer :: type
 
@@ -1228,12 +1228,12 @@ contains
 
     backspace(iunit)
 
-    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
+    read(iunit,*) label, mass, type, z, lmax, lloc, def_h, def_rsize
 
     ASSERT(trim(label) == trim(spec%label))
 
     if(read_data == 0) then ! The Species was not supplied in the block.
-      spec%weight    = weight
+      spec%mass    = mass
       spec%type      = type
     end if
     if(read_data < 4) spec%z         = z
@@ -1269,9 +1269,9 @@ contains
     ! as negative values. If we get a non-negative value we know we
     ! are reading a mass.
     if(spec%type < 0) then
-      call parse_block_float(blk, row, 2, spec%weight)
+      call parse_block_float(blk, row, 2, spec%mass)
     else
-      call parse_block_float(blk, row, 1, spec%weight)
+      call parse_block_float(blk, row, 1, spec%mass)
       call parse_block_integer(blk, row, 2, spec%type)
       
       call messages_write('Found  a species  with the old format.  Please update', new_line = .true.)

@@ -129,7 +129,7 @@ contains
     do idim = 1, geo%space%dim
       do iatom = 1, geo%natoms
         geo%atom(iatom)%x(idim) = ocs%q(iatom, idim)
-        geo%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_weight(geo%atom(iatom)%spec)
+        geo%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_mass(geo%atom(iatom)%spec)
       end do
     end do
 
@@ -147,7 +147,7 @@ contains
     do idim = 1, geo%space%dim
       do iatom = 1, geo%natoms
         ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
-        ocs%p(iatom, idim) = geo%atom(iatom)%v(idim) * species_weight(geo%atom(iatom)%spec)
+        ocs%p(iatom, idim) = geo%atom(iatom)%v(idim) * species_mass(geo%atom(iatom)%spec)
       end do
     end do
 
@@ -177,7 +177,7 @@ contains
     do idim = 1, geo%space%dim
       do iatom = 1, geo%natoms
         ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
-        ocs%p(iatom, idim) = species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%v(idim)
+        ocs%p(iatom, idim) = species_mass(geo%atom(iatom)%spec) * geo%atom(iatom)%v(idim)
       end do
     end do
     

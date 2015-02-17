@@ -250,7 +250,7 @@
         call parse_array(temp_string, x, 'v')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
-        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
+        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_mass(geo%atom(ist)%spec)
       end do
     end do
 
@@ -299,7 +299,7 @@
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
     do iatom = 1, geo%natoms
        geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
-         geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
+         geo%atom(iatom)%f(1:MAX_DIM) * dt / species_mass(geo%atom(iatom)%spec)
     end do
 
     POP_SUB(target_tdcalc_velocity)

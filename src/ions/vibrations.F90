@@ -93,7 +93,7 @@ contains
 
     this%total_mass = M_ZERO
     do iatom = 1, geo%natoms
-      this%total_mass = this%total_mass + species_weight(geo%atom(iatom)%spec)
+      this%total_mass = this%total_mass + species_mass(geo%atom(iatom)%spec)
     end do
 
     this%suffix = suffix
@@ -203,7 +203,7 @@ contains
     integer,            intent(in) :: jatom
 
     vibrations_norm_factor = this%total_mass / &
-      sqrt(species_weight(geo%atom(iatom)%spec) * species_weight(geo%atom(jatom)%spec))
+      sqrt(species_mass(geo%atom(iatom)%spec) * species_mass(geo%atom(jatom)%spec))
 
   end function vibrations_norm_factor
 

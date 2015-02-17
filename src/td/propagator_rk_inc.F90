@@ -110,7 +110,7 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
     if(propagate_chi) then
       do iatom = 1, geo%natoms
         pos0t(1:geo%space%dim, iatom) = q(iatom, 1:geo%space%dim)
-        vel0t(1:geo%space%dim, iatom) = p(iatom, 1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+        vel0t(1:geo%space%dim, iatom) = p(iatom, 1:geo%space%dim) / species_mass(geo%atom(iatom)%spec)
       end do
       posfinalt = pos0t
       velfinalt = vel0t
@@ -225,7 +225,7 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
     if(propagate_chi) then
       do iatom = 1, geo%natoms
         q(iatom, 1:geo%space%dim) = posfinalt(1:geo%space%dim, iatom)
-        p(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * velfinalt(1:geo%space%dim, iatom)
+        p(iatom, 1:geo%space%dim) = species_mass(geo%atom(iatom)%spec) * velfinalt(1:geo%space%dim, iatom)
       end do
     end if
   end if
@@ -292,13 +292,13 @@ contains
     call forces_calculate(gr, geo, hm, stphi, tau, dt)
     do iatom = 1, geo%natoms
       posk(:, iatom) = dt * vel(:, iatom)
-      velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+      velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%spec)
     end do
     if(propagate_chi) then
       call forces_costate_calculate(gr, geo, hm, stphi, stchi, coforce, transpose(post))
       do iatom = 1, geo%natoms
         poskt(:, iatom) = dt * velt(:, iatom)
-        velkt(:, iatom) = dt * coforce(iatom, :) / species_weight(geo%atom(iatom)%spec)
+        velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(geo%atom(iatom)%spec)
       end do
     end if
   end subroutine f_ions

@@ -745,8 +745,8 @@ contains
     pos = M_ZERO
     mass = M_ZERO
     do ia = 1, geo%natoms
-      pos = pos + species_weight(geo%atom(ia)%spec) * geo%atom(ia)%x
-      mass = mass + species_weight(geo%atom(ia)%spec)
+      pos = pos + species_mass(geo%atom(ia)%spec) * geo%atom(ia)%x
+      mass = mass + species_mass(geo%atom(ia)%spec)
     end do
     pos = pos/mass
 
@@ -767,8 +767,8 @@ contains
     vel = M_ZERO
     mass = M_ZERO
     do iatom = 1, geo%natoms
-      vel = vel + species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%v
-      mass = mass + species_weight(geo%atom(iatom)%spec)
+      vel = vel + species_mass(geo%atom(iatom)%spec) * geo%atom(iatom)%v
+      mass = mass + species_mass(geo%atom(iatom)%spec)
     end do
     vel = vel / mass
 
@@ -913,7 +913,7 @@ contains
 
     mass = M_ZERO
     do iatom = 1, geo%natoms
-      mass = mass + species_weight(geo%atom(iatom)%spec)
+      mass = mass + species_mass(geo%atom(iatom)%spec)
     end do
 
   end function geometry_mass

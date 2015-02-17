@@ -786,7 +786,7 @@ contains
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
               kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &
               P_PROTON_CHARGE * species_zval(geo%atom(iatom)%spec) / &
-              species_weight(geo%atom(iatom)%spec)
+              species_mass(geo%atom(iatom)%spec)
           end do
         end if
 

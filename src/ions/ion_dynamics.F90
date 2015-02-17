@@ -237,7 +237,7 @@ contains
       do i = 1, geo%natoms
         !generate the velocities in the root node
         if( mpi_grp_is_root(mpi_world)) then
-          sigma = sqrt(temperature / species_weight(geo%atom(i)%spec) )
+          sigma = sqrt(temperature / species_mass(geo%atom(i)%spec) )
           do j = 1, 3
              geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
@@ -410,7 +410,7 @@ contains
 
           geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
             + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
-            M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
+            M_HALF*dt**2 / species_mass(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
           
           this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
           
@@ -512,7 +512,7 @@ contains
         if(.not. geo%atom(iatom)%move) cycle
         
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) &
-          + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
+          + this%dt/species_mass(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
           geo%atom(iatom)%f(1:geo%space%dim))
         
       end do
@@ -521,7 +521,7 @@ contains
       ! the nose-hoover integration
       do iatom = 1, geo%natoms
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) + &
-          this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+          this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%spec)
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
       enddo
       
@@ -556,7 +556,7 @@ contains
 
     ! First transform momenta to velocities
     do iatom = 1, geo%natoms
-      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_mass(geo%atom(iatom)%spec)
     end do
 
     ! integrate using verlet
@@ -564,12 +564,12 @@ contains
       if(.not. geo%atom(iatom)%move) cycle
       q(iatom, 1:geo%space%dim) = q(iatom, 1:geo%space%dim) &
         + dt * v(iatom, 1:geo%space%dim) + &
-        M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * fold(iatom, 1:geo%space%dim)
+        M_HALF*dt**2 / species_mass(geo%atom(iatom)%spec) * fold(iatom, 1:geo%space%dim)
     end do
 
     ! And back to momenta.
     do iatom = 1, geo%natoms
-      v(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
+      v(iatom, 1:geo%space%dim) = species_mass(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
     end do
 
     POP_SUB(ion_dynamics_verlet_step1)
@@ -592,20 +592,20 @@ contains
 
     ! First transform momenta to velocities
     do iatom = 1, geo%natoms
-      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
+      v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) / species_mass(geo%atom(iatom)%spec)
     end do
 
     ! velocity verlet
     do iatom = 1, geo%natoms
       if(.not. geo%atom(iatom)%move) cycle
       v(iatom, 1:geo%space%dim) = v(iatom, 1:geo%space%dim) &
-        + dt / species_weight(geo%atom(iatom)%spec) * M_HALF * (fold(iatom, 1:geo%space%dim) + &
+        + dt / species_mass(geo%atom(iatom)%spec) * M_HALF * (fold(iatom, 1:geo%space%dim) + &
         fnew(iatom, 1:geo%space%dim))
     end do
 
     ! And back to momenta.
     do iatom = 1, geo%natoms
-      v(iatom, 1:geo%space%dim) = species_weight(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
+      v(iatom, 1:geo%space%dim) = species_mass(geo%atom(iatom)%spec) * v(iatom, 1:geo%space%dim)
     end do
 
     POP_SUB(ion_dynamics_verlet_step2)
@@ -692,7 +692,7 @@ contains
     kinetic_energy = M_ZERO
     do iatom = 1, geo%natoms
       kinetic_energy = kinetic_energy + &
-        M_HALF * species_weight(geo%atom(iatom)%spec) * sum(geo%atom(iatom)%v(1:geo%space%dim)**2)
+        M_HALF * species_mass(geo%atom(iatom)%spec) * sum(geo%atom(iatom)%v(1:geo%space%dim)**2)
     end do
 
   end function ion_dynamics_kinetic_energy

@@ -754,8 +754,8 @@ contains
       do  id = 1, nd
         if (box_union_inside(dom(id),geo%atom(ia)%x)) then
           center(1:geo%space%dim,id) = center(1:geo%space%dim,id) &
-                   + geo%atom(ia)%x(1:geo%space%dim)*species_weight(geo%atom(ia)%spec)     
-          sumw(id) = sumw(id) + species_weight(geo%atom(ia)%spec)
+                   + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%spec)     
+          sumw(id) = sumw(id) + species_mass(geo%atom(ia)%spec)
         end if
       end do
     end do
