@@ -41,9 +41,21 @@ DISTCLEANFILES = \
 DEB_DIR = deb-work
 
 check-short:
+	$(MAKE) -C build check
+	$(MAKE) -C external_libs check
+	$(MAKE) -C liboct_parser check
+	$(MAKE) -C src check
+	$(MAKE) -C share check
+	$(MAKE) -C doc check
 	$(MAKE) -C testsuite check-short
 
 check-long:
+	$(MAKE) -C build check
+	$(MAKE) -C external_libs check
+	$(MAKE) -C liboct_parser check
+	$(MAKE) -C src check
+	$(MAKE) -C share check
+	$(MAKE) -C doc check
 	$(MAKE) -C testsuite check-long
 
 rpm: dist
