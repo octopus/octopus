@@ -162,12 +162,11 @@ check:
 	  fi \
 	done
 
-check-short: check
-check-long: check
+check-full: check
 
 clean-local:
 	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
 	  rm -f $(dist_hgh_DATA); \
 	fi
 
-.PHONY: check check-short check-long
+.PHONY: check check-full

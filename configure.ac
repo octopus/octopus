@@ -24,7 +24,6 @@ AC_INIT([Octopus],[tetricus],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
-AM_EXTRA_RECURSIVE_TARGETS([check-short check-long])
 
 AC_CONFIG_HEADERS([config.h])
 

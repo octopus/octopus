@@ -40,6 +40,12 @@ DISTCLEANFILES = \
 
 DEB_DIR = deb-work
 
+check-short:
+	$(MAKE) -C testsuite check-short
+
+check-long:
+	$(MAKE) -C testsuite check-long
+
 rpm: dist
 	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $$topdir/SOURCES; \
