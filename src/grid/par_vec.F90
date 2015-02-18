@@ -650,7 +650,7 @@ contains
     subroutine init_local()
 
       integer :: sp, ep, np_tmp
-      integer, allocatable :: local_tmp(:), xlocal_tmp(:)
+      integer, allocatable :: xlocal_tmp(:)
 
       PUSH_SUB(vec_init.init_local)
       
@@ -663,13 +663,8 @@ contains
       SAFE_ALLOCATE(vp%local_vec(sp:ep))
 
       ! Calculate the local vector in parallel
-      call partition_get_local(inner_partition, local_tmp, np_tmp)
+      call partition_get_local(inner_partition, vp%local(vp%xlocal:), np_tmp)
 
-      ! Add padding to the calculated local vector
-      do ip = 1, np_tmp
-        vp%local(vp%xlocal + ip - 1) = local_tmp(ip)
-      end do
-      
       SAFE_ALLOCATE(xlocal_tmp(1:npart))
       xlocal_tmp = vp%xlocal_vec - 1
       ! Gather all the local vectors in a unique big one
