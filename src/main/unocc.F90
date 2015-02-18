@@ -105,11 +105,14 @@ contains
     converged = .false.
 
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
-
+    ! if there is no restart info to read, this will not get set otherwise
+    ! setting to zero means everything is missing.
+    lowest_missing(:,:) = 0
+    
     read_gs = .true.
     if (.not. fromScratch) then
       call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+                        ierr, mesh=sys%gr%mesh, exact=.true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -124,7 +127,7 @@ contains
     end if
 
     call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr_rho, mesh=sys%gr%mesh)
+                      ierr_rho, mesh=sys%gr%mesh, exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
