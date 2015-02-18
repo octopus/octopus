@@ -657,7 +657,6 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ii
   FLOAT ::  KK(3)
 
   integer :: nn, ie
@@ -670,7 +669,6 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
   integer :: Nphi, ith, iph, Nth
-  integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   FLOAT :: eGrid(3), thGrid(3), phiBounds(2)
   type(profile_t), save :: prof
@@ -685,12 +683,6 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
   
-  
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK,ii) 
-  end do
-
   step= Estep
   nn  = int(Emax/step)
 
@@ -783,7 +775,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ii, ix, iy
+  integer :: ix, iy
   FLOAT ::  KK(3)
 
   integer :: nn, nx, ny
@@ -796,7 +788,6 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
 
   FLOAT :: Dphi, theta, phi, Ex, Ey, EE, phiBounds(2)
   integer :: Nphi, iph
-  integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   type(profile_t), save :: prof
 
@@ -810,12 +801,6 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
   
-  
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK,ii) 
-  end do
-
   step= Estep
   nn  = int(Emax/step)
 
@@ -920,7 +905,6 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Em
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ii
   FLOAT ::  KK(3)
 
   integer :: nn, ie
@@ -933,7 +917,6 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Em
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
   integer :: Nphi, ith, iph, Nth
-  integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   FLOAT :: phGrid(3), thGrid(3), eBounds(2)
   type(profile_t), save :: prof
@@ -948,12 +931,6 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Em
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
   
-  
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK,ii) 
-  end do
-
   step= Estep
   nn  = int(abs(Emax-Emin)/step)
 
@@ -1346,7 +1323,7 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
   FLOAT ::  KK(3),vec
 
   integer :: nn
-  FLOAT  :: step,DE
+  FLOAT  :: step
   FLOAT, allocatable :: npoints(:), pes(:)
 
   ! needed for interpolation in 2D and 3D 
@@ -1365,8 +1342,6 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
   step = mask%energyStep
   nn  = int(mask%energyMax/step)
 
-  DE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-  
   np = mask%ll(1)*mask%ll(2)*mask%ll(3)  
 
   Ntheta = 36
@@ -1744,7 +1719,7 @@ subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   FLOAT, pointer,   intent(out) :: RR(:)
 
 
-  character(len=256) :: filename,dummy
+  character(len=256) :: filename, dummy
 
   integer :: iunit,ii
 
@@ -2012,17 +1987,12 @@ subroutine pes_mask_restart_map(mask, st, RR)
   type(states_t),   intent(inout) :: st
   FLOAT,            intent(in)    :: RR(2)
 
-  integer :: itot, ik, ist, idim, np
-  integer :: ll(3)
+  integer :: ik, ist, idim
   CMPLX, allocatable :: psi(:)
   FLOAT, allocatable :: M_old(:,:,:)
   type(cube_function_t):: cf1,cf2
 
   PUSH_SUB(pes_mask_restart_map)
-
-
-  ll(1:3) = mask%ll(1:3)
-  np =ll(1)*ll(2)*ll(3)
 
   SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   call cube_function_null(cf1)    
@@ -2035,7 +2005,6 @@ subroutine pes_mask_restart_map(mask, st, RR)
 
   call pes_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
   
-  itot = 1
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim

@@ -185,8 +185,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
-    type(pes_mask_t), target, intent(out) :: mask
-    type(mesh_t),target,      intent(in)  :: mesh
+    type(pes_mask_t),         intent(out) :: mask
+    type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_t),           intent(in)  :: st
     type(hamiltonian_t),      intent(in)  :: hm
@@ -1150,13 +1150,10 @@ contains
     CMPLX,            intent(out) :: wfout(:,:,:)
     
     integer :: ix, iy, iz, ixx(3)
-    integer :: ll(3)
     CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
     
     PUSH_SUB(fft_X_to_K)
     
-    
-    ll(1:3) = mask%ll(1:3)
     SAFE_ALLOCATE(wftmp(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
     SAFE_ALLOCATE(wfPlus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
     SAFE_ALLOCATE(wfMinus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
@@ -1172,7 +1169,7 @@ contains
       do iy = 1, mask%ll(2)
         do iz = 1, mask%ll(3)
           
-          if(ix <= ll(1)/2+1)   then
+          if(ix <= mask%ll(1)/2+1)   then
             wfMinus(ix, iy, iz)  =  wfin(ix, iy, iz)
             wfPlus(ix,iy,iz) = M_z0
           else
@@ -1229,13 +1226,10 @@ contains
     integer,          intent(in)  :: inout
     
     integer :: ix, iy, iz, ixx(3)
-    integer :: ll(3)
     CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
 
     PUSH_SUB(fft_K_to_X)
     
-
-    ll(1:3) = mask%ll(1:3)
     SAFE_ALLOCATE(wftmp(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
     SAFE_ALLOCATE(wfPlus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
     SAFE_ALLOCATE(wfMinus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
@@ -1295,13 +1289,13 @@ contains
         do iz = 1, mask%ll(3)
           select case(inout)
           case(IN)
-            if(ix <= ll(1)/2+1)   then
+            if(ix <= mask%ll(1)/2+1)   then
               wfPlus(ix,iy,iz) = M_z0
             else
               wfMinus(ix,iy,iz)  = M_z0
             end if
           case (OUT)
-            if(ix <= ll(1)/2+1)   then
+            if(ix <= mask%ll(1)/2+1)   then
               wfPlus(ix,iy,iz) = M_z0
             else
               wfMinus(ix,iy,iz)  = M_z0
