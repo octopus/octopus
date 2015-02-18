@@ -267,7 +267,7 @@ contains
     !%Section System::Species
     !%Description
     !% When this variable is set, the potential defined in the block <tt>Species</tt> is calculated
-    !% and applied to the Hamiltonian at each time step. You must have at least one <tt>spec_user_defined</tt>
+    !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
     !% type of species to use this.
     !%End
     call parse_logical('SpeciesTimeDependent', .false., geo%species_time_dependent)

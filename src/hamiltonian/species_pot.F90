@@ -354,7 +354,7 @@ contains
       end do
 
       write(message(1), '(3a,f5.2,3a)') &
-        "Info: spec_full_delta species ", trim(species_label(species)), &
+        "Info: species_full_delta species ", trim(species_label(species)), &
         " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
         " [ ", trim(units_abbrev(units_out%length)), " ]"
       call messages_info(1)
