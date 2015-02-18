@@ -108,8 +108,8 @@ module pes_mask_m
     type(cube_function_t) :: cM                !< the mask cube function
     FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
-    FLOAT, pointer :: ufn(:) => NULL()         !< user defined mask function
-    logical        :: user_def = .false.       
+    FLOAT, pointer :: ufn(:) => NULL()         !< user-defined mask function
+    logical        :: user_def
     
     FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
     !< we implicitly assume k to be the same for all directions
@@ -456,7 +456,7 @@ contains
 !     Note: even if tempting, setting       
 !     mask%ll(1:3) = mask%cube%fs_n(1:3) 
 !     results in the wrong index mapping! (1->3, 2->1, 3->2) 
-!     Well.. very much agains intuit it turns out to be 
+!     Well.. very much against intuition it turns out to be 
       mask%ll(1:3) = mask%cube%rs_n(1:3) 
 
       mask%fft = mask%cube%fft
@@ -591,12 +591,12 @@ contains
     !% the block as follows:
     !%
     !% <tt>%PESMaskSize
-    !% <br>&nbsp;&nbsp; R1 | R2 | "user defined"
+    !% <br>&nbsp;&nbsp; R1 | R2 | "user-defined"
     !% <br>%</tt>
     !%
-    !% The optional 3rd column is a user defined expression for the mask 
+    !% The optional 3rd column is a user-defined expression for the mask 
     !% function. For example, "r" creates a spherical mask (which is the 
-    !% default for 'BoxShape = sphere'). Note, values R2 larger than 
+    !% default for <tt>BoxShape = sphere</tt>). Note, values R2 larger than 
     !% the box size may lead in this case to unexpected reflection 
     !% behaviours.
     !%End
@@ -605,6 +605,8 @@ contains
       cols_pesmask_block = parse_block_cols(blk, 0)
     end if
 
+    mask%user_def = .false.
+    
     select case(cols_pesmask_block)
     case(0)
       if (sb%box_shape == SPHERE) then
@@ -655,7 +657,7 @@ contains
         call parse_expression(ufn_re, ufn_im, sb%dim, xx, r, M_ZERO, user_def_expr)
         mask%ufn(ip) = ufn_re
       end do
-      message(1) = "Input: using user defined mask function from expression:"
+      message(1) = "Input: using user-defined mask function from expression:"
       write(message(2),'(a,a)') '   R = ', trim(user_def_expr) 
       call messages_info(2)
     end select
