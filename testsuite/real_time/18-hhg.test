@@ -21,11 +21,10 @@ Input      : 18-hhg.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -0.66977716
 
 # td run
-# Here we will test the acceleration file. Not that afterwards the spectrum is computed
+# Here we will test the acceleration file. Note that afterwards the spectrum is computed
 # from the multipoles file, not from this one.
 Precision : 1e-4
 Processors : 4
-Not_Util
 Input      : 18-hhg.02-td.inp
 match ; Dipole acceleration [step   2000] ; LINE(td.general/acceleration, -1, 30) ; 1.583357735415e-04 
 
@@ -34,5 +33,3 @@ Precision : 1e-4
 Util       : oct-harmonic-spectrum
 Input      : 18-hhg.02-td.inp
 match ; Emission spectrum (at resonance frequency) ; LINEFIELD(hs-mult.x, 14, 2) ; 0.544695E-01
-
-

@@ -109,8 +109,8 @@ Input      : 13-absorption-spin.05-spectrum_compressed_sensing.inp
 #match ; Sigma       6 ; LINE(cross_section_tensor, 163, 21); 0.72994915E-01
 #match ; Anisotropy  6 ; LINE(cross_section_tensor, 163, 41); 0.14135404E+00
 
+Program : octopus
 Processors : 4
-Not_Util
 Input      : 13-absorption-spin.06-td_spinkick.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -6.136196726297e+00
 match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -6.135815719165e+00
