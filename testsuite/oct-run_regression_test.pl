@@ -195,8 +195,11 @@ while ($_ = <TESTSUITE>) {
 
     # remove trailing newline 
     chomp; 
-    # remove trailing whitespace 
-    $_ =~ s/^\s+//; 
+    # remove leading whitespace 
+    $_ =~ s/^\s+//;
+    # remove trailing whitespace
+    $_ =~ s/\s+$//;
+
     # skip blank lines
     next if (length($_) == 0);
 
@@ -240,11 +243,10 @@ while ($_ = <TESTSUITE>) {
 
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
 	$octopus_exe = "$exec_directory/$1";
-	$command = $octopus_exe; # FIXME remove some of these intermediate variables
+	$command = $octopus_exe;
 
 	# FIXME: should we do this for a dry-run?
 	
-	# beware: trailing space in executable name may cause this to fail. FIXME and solve this
 	if( ! -x $octopus_exe) {
 	  print "\nSkipping test: executable $octopus_exe not available.\n\n";
 	  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
@@ -407,7 +409,7 @@ while ($_ = <TESTSUITE>) {
 	      printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
 
 	      $failures++;
-	      $test_succeeded = 0;      
+	      $test_succeeded = 0;  
 	    }
 	    $test{"run"} = 1;
 	  }
@@ -427,6 +429,7 @@ while ($_ = <TESTSUITE>) {
       }
 
       elsif ( $_ =~ /^match/ ) {
+	  # FIXME: should we do matches even when execution failed?
 	  if (!$opt_n && $return_value == 0) {
 	      if(run_match_new($_)){
 		  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
