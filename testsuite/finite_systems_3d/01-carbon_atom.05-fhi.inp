@@ -35,3 +35,5 @@ PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
 
 ConvRelDens = 4e-6
+
+FromScratch = yes
