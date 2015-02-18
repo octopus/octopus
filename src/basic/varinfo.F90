@@ -48,12 +48,13 @@ module varinfo_m
       type(c_ptr),      intent(inout) :: var
     end subroutine varinfo_getvar
 
-    subroutine varinfo_getinfo(var, name, type, section, desc)
+    subroutine varinfo_getinfo(var, name, type, default, section, desc)
       use c_pointer_m
       implicit none
       type(c_ptr), intent(in)  :: var
       type(c_ptr), intent(out) :: name
       type(c_ptr), intent(out) :: type
+      type(c_ptr), intent(out) :: default
       type(c_ptr), intent(out) :: section
       type(c_ptr), intent(out) :: desc
     end subroutine varinfo_getinfo
@@ -104,7 +105,7 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
 
-    type(c_ptr) :: handle, opt, name, type, section, desc
+    type(c_ptr) :: handle, opt, name, type, default, section, desc
     integer :: val
     logical :: first
 
@@ -120,9 +121,11 @@ contains
     end if
 
     if(present(ierr)) ierr = 0
-    call varinfo_getinfo(handle, name, type, section, desc)
-    call print_C_string(iunit, name, "Variable: ")
-    call print_C_string(iunit, type, "Type:     ")
+    call varinfo_getinfo(handle, name, type, default, section, desc)
+
+    call print_C_string(iunit, name,    "Variable: ")
+    call print_C_string(iunit, type,    "Type:     ")
+    call print_C_string(iunit, default, "Default:  ")
     call print_C_string(iunit, section, "Section:  ")
     write(iunit, '(a)') "Description:"
     call print_C_string(iunit, desc, "    ")
@@ -232,7 +235,7 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
     
-    type(c_ptr) :: handle, name, type, section, desc
+    type(c_ptr) :: handle, name, type, default, section, desc
     
     call set_null(handle)
     if(present(ierr)) ierr = -1
@@ -245,7 +248,7 @@ contains
         exit
       end if
 
-      call varinfo_getinfo(handle, name, type, section, desc)
+      call varinfo_getinfo(handle, name, type, default, section, desc)
       call print_C_string(iunit, name)
       
     end do
