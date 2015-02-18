@@ -312,11 +312,6 @@ while ($_ = <TESTSUITE>) {
 	}
       }
 
-      elsif ( $_ =~ /^Not_Util/) {
-	  $command = $octopus_exe;
-	  $np = 2;
-      }
-
       elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	  # FIXME: enforce this is "serial" or numeric
 	  $np = $1;

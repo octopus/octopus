@@ -65,8 +65,6 @@ Precision : 1e-4
   A floating point number, the tolerance for testing whether a match has passed or failed. Persists until next Precision tag. Default is 1e-4.
 Util : util-name
   Perform a run of a utility in serial (e.g. oct-dielectric_function).
-Not_Util
-  Unsets 'Util' and returns to using exectable specified by Programs.
 Input : file-name
   Perform a run, after copying the input file to working directory.
 match ; name ; COMMAND(..); reference-value
