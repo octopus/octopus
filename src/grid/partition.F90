@@ -558,7 +558,7 @@ contains
   !! has.
   subroutine partition_get_local(partition, rbuffer, np_local)
     type(partition_t),    intent(in)    :: partition
-    integer, allocatable, intent(inout) :: rbuffer(:) !< The actual result, the local vector from 1 to np_local
+    integer,              intent(inout) :: rbuffer(:) !< The actual result, the local vector from 1 to np_local
     integer,              intent(out)   :: np_local   !< Number of elements, might be less than partition%np_local
 
     integer :: ip, ipart, istart
@@ -614,7 +614,7 @@ contains
     ! Create the displacement vector from the counts vector
     np_local = sum(rcounts)
     SAFE_ALLOCATE(rdispls(1:partition%npart))
-    SAFE_ALLOCATE(rbuffer(1:np_local))
+    ASSERT(ubound(rbuffer, 1) >= np_local)
 
     rdispls(1) = 0
     do ipart = 2, partition%npart
