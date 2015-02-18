@@ -589,7 +589,7 @@ contains
 
     iread = 0
     if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-      idone = 1
+      idone = 0
       ntodo = st%lnst*st%d%kpt%nlocal*st%d%dim
       call loct_progress_bar(-1, ntodo)
     end if
