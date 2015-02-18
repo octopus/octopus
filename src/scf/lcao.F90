@@ -185,16 +185,26 @@ contains
     !% of initial wavefunctions and with a new guess for the density.
     !% (Up to the current version, only a minimal basis set is used.)
     !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
-    !% The default is <tt>lcao_none</tt> if all species are <tt>spec_user_defined</tt>,
-    !% <tt>spec_charge_density</tt>, <tt>species_from_file</tt>, or <tt>spec_jelli_slab</tt>.
-    !% The initial guess densities for LCAO are from the pseudopotential for PSF, HGH, UPF, PSPIO species;
-    !% from the natural charge density for <tt>spec_charge_density</tt>, <tt>spec_point</tt>,
-    !% <tt>spec_jelli</tt>, and <tt>spec_jelli_slab</tt>;
-    !% or uniform for CPI and FHI pseudopotentials, <tt>spec_full_delta</tt>, <tt>spec_full_gaussian</tt>,
-    !% <tt>spec_user_defined</tt>, or <tt>species_from_file</tt>.
+    !% The default is <tt>lcao_none</tt> if all species are <tt>species_user_defined</tt>,
+    !% <tt>species_charge_density</tt>, <tt>species_from_file</tt>, or <tt>species_jelli_slab</tt>.
+    !%
+    !% The initial guess densities for LCAO are taken from the atomic orbitals for pseudopotential species;
+    !% from the natural charge density for <tt>species_charge_density</tt>, <tt>species_point</tt>,
+    !% <tt>species_jelli</tt>, and <tt>species_jelli_slab</tt>;
+    !% or uniform for <tt>species_full_delta</tt>, <tt>species_full_gaussian</tt>,
+    !% <tt>species_user_defined</tt>, or <tt>species_from_file</tt>.
     !% Pseudopotential species use the pseudo-wavefunctions as orbitals, full-potential atomic species
-    !% (<tt>spec_full_delta</tt> and <tt>spec_full_gaussian</tt>) use hydrogenic wavefunctions, and
+    !% (<tt>species_full_delta</tt> and <tt>species_full_gaussian</tt>) use hydrogenic wavefunctions, and
     !% others use harmonic-oscillator wavefunctions.
+    !%
+    !% Note: Some pseudopotential files (CPI, FHI for example) do not
+    !% contain full information about the orbitals. In this case,
+    !% Octopus generates the starting density from the normalized
+    !% square root of the local potential. If no orbitals are
+    !% available at all from the pseudopotential files, Octopus will
+    !% not be able to perform an LCAO and the initial states will be
+    !% randomized.
+    !%
     !%Option lcao_none 0
     !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
     !%Option lcao_states 2

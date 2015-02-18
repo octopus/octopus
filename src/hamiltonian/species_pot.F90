@@ -98,8 +98,7 @@ contains
 
     ! build density ...
     select case (species_type(species))
-    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, &
-          SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_PS_CPI, SPECIES_PS_FHI) ! ... from userdef
+    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
         x = (species_zval(species)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
@@ -211,61 +210,65 @@ contains
         end if
       end if
 
-    case (SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO) ! ...from pseudopotential
-
-      ! the outer loop sums densities over atoms in neighbour cells
+    case (SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO, SPECIES_PS_CPI, SPECIES_PS_FHI)
+      ! ...from pseudopotentials
+      
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
-      if(ps_niwfs(ps) > 0) then
+      if(ps_niwfs(ps) > 0 .and. species_type(species) /= SPECIES_PS_CPI .and. species_type(species) /= SPECIES_PS_CPI) then
         call periodic_copy_init(pp, sb, atom%x, &
           range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
-      else
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
-      end if
-      
-      do icell = 1, periodic_copy_num(pp)
-        pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = pos)
-          rr = max(rr, r_small)
 
-          if(ps_niwfs(ps) > 0) then
-
-            nn_loop: do nn = 1, ps%conf%p
-              do isp = 1, spin_channels
-                if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle nn_loop
-              enddo
-              do isp = 1, spin_channels
-                rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
-              enddo
-            end do nn_loop
-
-          else
+        do icell = 1, periodic_copy_num(pp)
+          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, origin = pos)
+            rr = max(rr, r_small)
             
-            !we use the square root of the short-range local potential, just to put something
-            do isp = 1, spin_channels
-              if(rr < spline_range_max(ps%vl)) rho(ip, isp) = rho(ip, isp) + sqrt(abs(spline_eval(ps%vl, rr)))
+              do nn = 1, ps%conf%p
+                do isp = 1, spin_channels
+                if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle
+                rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
+              end do
             end do
             
-          end if
-            
+          end do
         end do
-      end do
   
-      call periodic_copy_end(pp)
+        call periodic_copy_end(pp)
 
-      if(.not. ps_niwfs(ps) > 0) then
+      else 
+
+        !we use the square root of the short-range local potential, just to put something that looks like a density
+
+        call periodic_copy_init(pp, sb, atom%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+      
+        do icell = 1, periodic_copy_num(pp)
+          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, origin = pos)
+            rr = max(rr, r_small)
+
+            if(rr >= spline_range_max(ps%vl)) cycle
+            
+            do isp = 1, spin_channels
+              rho(ip, isp) = rho(ip, isp) + sqrt(abs(spline_eval(ps%vl, rr)))
+            end do
+              
+          end do
+        end do
+  
+        call periodic_copy_end(pp)
+
         ! normalize
-        
         nrm = CNST(0.0)
         do isp = 1, spin_channels
           nrm = nrm + dmf_integrate(mesh, rho(:, isp))
         end do
 
         rho(1:mesh%np, 1:spin_channels) = rho(1:mesh%np, 1:spin_channels)*species_zval(species)/nrm
-        
+
       end if
 
     end select
