@@ -464,7 +464,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ispin, nev, ib, n1, n2
-  integer :: ibasis, jbasis, iorb, jorb, norbs
+  integer :: ibasis, jbasis, iorb, jorb, norbs, block_evec_max, block_evec_size
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
@@ -707,11 +707,16 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         ! of doing this, but it avoids storing the full evec matrix in all processes.
 
         do ib = st%group%block_start, st%group%block_end
-          SAFE_ALLOCATE(block_evec(1:this%norbs, 1:st%group%block_size(ib)))
+          if(nev < states_block_min(st, ib)) cycle
+
+          block_evec_max = min(nev, states_block_max(st, ib))
+          block_evec_size = block_evec_max - states_block_min(st, ib) + 1
+          
+          SAFE_ALLOCATE(block_evec(1:this%norbs, 1:block_evec_size))
 
           if (mpi_grp_is_root(mpi_world)) then
-            block_evec(1:this%norbs, 1:st%group%block_size(ib)) = &
-                 evec(1:this%norbs, states_block_min(st, ib):states_block_max(st, ib))
+            block_evec(1:this%norbs, 1:block_evec_size) = &
+                 evec(1:this%norbs, states_block_min(st, ib):block_evec_max)
           end if
 #ifdef HAVE_MPI
           call MPI_Bcast(block_evec(1,1), size(block_evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
@@ -732,7 +737,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
             ibasis = ibasis + norbs
             if(mpi_grp_is_root(mpi_world)) then
-              call loct_progress_bar((states_block_min(st, ib) - 1) * this%norbs + states_block_size(st, ib) * (ibasis - 1), &
+              call loct_progress_bar((states_block_min(st, ib) - 1) * this%norbs + block_evec_size * (ibasis - 1), &
                 this%norbs * nev)
             end if
           end do
