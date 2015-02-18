@@ -321,7 +321,6 @@ contains
       else
         writ%gs_st%st_start = 1
       end if
-      writ%gs_st%st_end = writ%gs_st%nst
 
       ! allocate memory
       SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))

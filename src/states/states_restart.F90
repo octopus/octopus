@@ -97,9 +97,17 @@ contains
     st%occ => new_occ
 
     ! FIXME: This wrong, one cannot just change the number of states
-    ! without updating the internal structures. (Especially changing st_end!)
-    st%nst    = nst
-    st%st_end = nst
+    ! without updating the internal structures, in the case of parallel in states.
+    ! I think it is right now without state parallelism.
+    st%nst      = nst
+    st%st_start = 1
+    st%st_end   = nst
+    st%lnst     = nst
+
+    SAFE_DEALLOCATE_P(st%node)
+    SAFE_ALLOCATE(st%node(1:st%nst))
+    st%node(:)  = 0
+
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
     nullify(st%eigenval)
     
