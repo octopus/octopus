@@ -145,7 +145,7 @@ contains
     ps_upf%conf%l(1:ps_upf%n_wfs) = ps_upf%l(1:ps_upf%n_wfs)
     ps_upf%conf%occ(1:ps_upf%n_wfs,1) = ps_upf%occ(1:ps_upf%n_wfs)
 
-    ps_upf%l_max = maxval(ps_upf%l)
+    if(ps_upf%n_wfs > 0) ps_upf%l_max = maxval(ps_upf%l)
 
     !Check if the local component is one of the angular momentum channels
     SAFE_ALLOCATE(found_l(0:ps_upf%l_max))
@@ -417,7 +417,10 @@ contains
     if(ps_upf%nlcc) then
       call messages_not_implemented('UPF version 2 with non-linear core corrections')
     end if
-
+    
+    ierr = xml_tag_get_attribute_value(tag, 'l_max', ps_upf%l_max)
+    call check_error(ierr)
+    
     ierr = xml_tag_get_attribute_float(tag, 'z_valence', ps_upf%z_val)
     call check_error(ierr)
     
