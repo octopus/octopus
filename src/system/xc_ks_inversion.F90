@@ -125,13 +125,13 @@ contains
     !%Variable KSInversionLevel
     !%Type integer
     !%Default ks_inversion_adiabatic
-    !%Section Hamiltonian::XC
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% At what level <tt>Octopus</tt> shall handle the KS inversion.
     !%Option ks_inversion_none 1
-    !% Do not compute KS inversion
+    !% Do not compute KS inversion.
     !%Option ks_inversion_adiabatic 2
-    !% Compute exact adiabatic vxc
+    !% Compute exact adiabatic vxc.
     !%End
     call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
     call parse_integer('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
@@ -140,13 +140,13 @@ contains
     !%Variable KSInversionAsymptotics
     !%Type integer
     !%Default xc_asymptotics_none
-    !%Section Hamiltonian::XC
+    !%Section Calculation Modes::Invert KS
     !%Description
-    !% Asymptotic correction applied to v_xc
+    !% Asymptotic correction applied to v_xc.
     !%Option xc_asymptotics_none 1
-    !% Do not apply any correction in the asymptotic region
+    !% Do not apply any correction in the asymptotic region.
     !%Option xc_asymptotics_sc 2
-    !% Applies the soft-Coulomb decay of -1/sqrt(r^2+1) to v_xc in the asymptotic region
+    !% Applies the soft-Coulomb decay of -1/sqrt(r^2+1) to v_xc in the asymptotic region.
     !%End
     call parse_integer('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
