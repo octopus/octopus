@@ -79,7 +79,7 @@ contains
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, nn, icell
-    FLOAT :: rr, x, pos(1:MAX_DIM)
+    FLOAT :: rr, x, pos(1:MAX_DIM), nrm
     FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
@@ -255,7 +255,18 @@ contains
       end do
   
       call periodic_copy_end(pp)
-      nullify(ps)
+
+      if(.not. ps_niwfs(ps) > 0) then
+        ! normalize
+        
+        nrm = CNST(0.0)
+        do isp = 1, spin_channels
+          nrm = nrm + dmf_integrate(mesh, rho(:, isp))
+        end do
+
+        rho(1:mesh%np, 1:spin_channels) = rho(1:mesh%np, 1:spin_channels)*species_zval(species)/nrm
+        
+      end if
 
     end select
 
