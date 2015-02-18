@@ -118,7 +118,7 @@ int parse_input(char *file_in)
 	*s = ' ';
 	str_trim(s);
 	if(getsym(s) != NULL){ /* error */
-	  fprintf(stderr, "%s \"%s\" %s", "Block", s, "already defined");
+	  fprintf(stderr, "Parser warning: %s \"%s\" %s.\n", "Block", s, "already defined");
 	  do{ /* skip block */
 	    c = parse_get_line(f, &s, &length);
 	  }while(c != EOF && *s != '%');
@@ -213,7 +213,7 @@ int parse_isdef(char *name)
 
 static void check_is_numerical(const char * name, const symrec * ptr){
   if( ptr->type != S_CMPLX){
-    fprintf(stderr, "Input error: expecting a numerical value for variable '%s' and found a string.\n", name);
+    fprintf(stderr, "Parser error: expecting a numerical value for variable '%s' and found a string.\n", name);
     exit(1);
   }
 }
@@ -290,7 +290,7 @@ char *parse_string(char *name, char *def)
   ptr = getsym(name);	
   if(ptr){
     if( ptr->type != S_STR){
-      fprintf(stderr, "Input error: expecting a string for variable '%s'.\n", name);
+      fprintf(stderr, "Parser error: expecting a string for variable '%s'.\n", name);
       exit(1);
     }
     ret = ptr->value.str;
@@ -354,7 +354,7 @@ static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
   assert(col>=0);
 
   if(col >= blk->lines[l].n){
-    fprintf(stderr, "%s\n", "Input error: not enough columns found when parsing block.");
+    fprintf(stderr, "%s\n", "Parser error: not enough columns found when parsing block.");
     exit(1);
   }
   

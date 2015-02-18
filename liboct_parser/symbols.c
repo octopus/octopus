@@ -100,13 +100,13 @@ struct init_fntc{
 
 void sym_notdef (symrec *sym)
 {
-  fprintf(stderr, "Input error:\n\tsymbol '%s' used before being defined\n", sym->name);
+  fprintf(stderr, "Parser error: symbol '%s' used before being defined.\n", sym->name);
   exit(1);
 }
 
 void sym_wrong_arg (symrec *sym)
 {
-  fprintf(stderr, "Input error:\n\tfunction '%s' accepts %d argument\n", sym->name, sym->nargs);
+  fprintf(stderr, "Parser error: function '%s' requires %d argument(s).\n", sym->name, sym->nargs);
   exit(1);
 }
 

@@ -147,7 +147,7 @@ static int oct_parser_lex (){
 	length *= 2;
 	symbuf2 = (char *)realloc (symbuf, length + 1);
 	if (symbuf2 == NULL) {
-	  fprintf(stderr, "Error: failed to reallocate buffer to size %i", length);
+	  fprintf(stderr, "Parser error: failed to reallocate buffer to size %i.\n", length);
 	  exit(1);
 	} else {
 	  symbuf = symbuf2;
@@ -169,7 +169,7 @@ static int oct_parser_lex (){
 	int jj;
 	for (jj = 0; reserved_symbols[jj] != 0; jj++){
 	  if(strcmp(symbuf, reserved_symbols[jj]) == 0){
-	    fprintf(stderr, "Error: trying to redefine reserved symbol '%s'", symbuf);
+	    fprintf(stderr, "Parser error: trying to redefine reserved symbol '%s'.\n", symbuf);
 	    exit(1);
 	  }
 	}
