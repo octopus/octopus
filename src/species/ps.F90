@@ -505,13 +505,15 @@ contains
         write(iunit,'(10f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
       end do
     end do
-    write(iunit,'(/,a,/)')    'k matrix:'
-    do l = 0, ps%l_max
-      do k = 1, ps%kbc
-        write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
+    if(associated(ps%k)) then
+      write(iunit,'(/,a,/)')    'k matrix:'
+      do l = 0, ps%l_max
+        do k = 1, ps%kbc
+          write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
+        end do
       end do
-    end do
-    call io_close(iunit);
+    endif
+    call io_close(iunit)
 
     ! Local part of the pseudopotential
     iunit  = io_open(trim(dir)//'/local', action='write')
