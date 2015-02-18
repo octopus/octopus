@@ -211,9 +211,8 @@ subroutine td_init(td, sys, hm)
   !%Default 10
   !%Section Time-Dependent::Propagation
   !%Description
-  !% This variable controls how often Octopus updates the total energy
-  !% during a time propagation run. The default is every 10
-  !% iterations. For iterations where the energy is not updated, the
+  !% This variable controls after how many iterations Octopus updates the total energy
+  !% during a time-propagation run. For iterations where the energy is not updated, the
   !% last calculated value is reported. If you set this variable to 1,
   !% the energy will be calculated in each step.
   !%End 

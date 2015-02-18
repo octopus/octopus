@@ -263,7 +263,7 @@ contains
         !%Default 5
         !%Section Mesh
         !%Description
-        !% The interpolation order in multiresolution approach. The default is 5.
+        !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
         !%End
         call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
         call parse_integer('MultiResolutionInterpolationOrder', 5, order)

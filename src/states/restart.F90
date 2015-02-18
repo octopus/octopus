@@ -428,7 +428,7 @@ contains
       !%Section Execution::IO
       !%Description
       !% If this variable is set to no, restart information is not
-      !% written. The default is yes. Note that some run modes will ignore this
+      !% written. Note that some run modes will ignore this
       !% option and write some restart information anyway.
       !%End
 

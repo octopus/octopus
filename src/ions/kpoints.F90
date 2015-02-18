@@ -160,8 +160,6 @@ contains
     !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
     !% sampling will range over the full Brillouin zone.
     !%
-    !% The default is no.
-    !%
     !% When a perturbation is applied to the system, the full
     !% symmetries of the system cannot be used. In this case you must
     !% not use symmetries or use the <tt>SymmetryBreakDir</tt> to tell

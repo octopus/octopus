@@ -97,7 +97,7 @@ contains
     !% molecular physics community. Internally, the code works in
     !% atomic units. However, for input or output, some people like
     !% to use a system based on eV for energies and <math>\AA</math>
-    !% for length. The default is atomic units.
+    !% for length.
     !%
     !% Normally time units are derived from energy and length units,
     !% so it is measured in <math>\hbar/Hartree</math> or

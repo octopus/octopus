@@ -197,7 +197,7 @@ contains
       !%Section Execution::Parallelization
       !%Description
       !% Specifies the size of the groups used for the
-      !% parallelization, as one number each for domain, states, <i>k</i>-points, and other.
+      !% parallelization, as one number each for domains, states, <i>k</i>-points, and other.
       !% For example (n_d, n_s, n_k, n_o) means we have
       !% <i>n_d*n_s*n_k*n_o</i> processors and that electron-hole pairs (only for <tt>CalculationMode = casida</tt>)
       !% will be divided into <i>n_o</i> groups, the <i>k</i>-points should be
@@ -206,6 +206,9 @@ contains
       !% field: it will be replaced by the value required to complete
       !% the number of processors in the run. Any value for the column corresponding to
       !% a parallelization strategy unavailable for the current <tt>CalculationMode</tt> will be ignored.
+      !% If this option is not set, the groups will be set automatically, choosing divisors of the number
+      !% of available processors, and using the largest numbers for the groups in this order:
+      !% other, <i>k</i>-points, states, domains (<i>i.e.</i> from right to left of how they are laid out in this block).
       !%Option fill -1
       !% Replaced by the value required to complete the number of processors.
       !%End
@@ -218,11 +221,12 @@ contains
 
       !%Variable ParallelizationNumberSlaves
       !%Type integer
+      !%Default 0
       !%Section Execution::Parallelization
       !%Description
       !% Slaves are nodes used for task parallelization. The number of
       !% such nodes is given by this variable multiplied by the number
-      !% of domains used in domain parallelization. The default is 0.
+      !% of domains used in domain parallelization.
       !%End
       call parse_integer('ParallelizationNumberSlaves', 0, num_slaves)
       

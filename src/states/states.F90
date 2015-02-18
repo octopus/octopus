@@ -1274,8 +1274,7 @@ contains
     !%Description
     !% (Experimental) When set to yes, states are stored in packed
     !% mode, which improves performance considerably. However this
-    !% is not fully implemented and it might give wrong results. The
-    !% default is no.
+    !% is not fully implemented and it might give wrong results.
     !%
     !% If OpenCL is used and this variable is set to yes, Octopus
     !% will store the wave-functions in device (GPU) memory. If
@@ -1291,7 +1290,7 @@ contains
     !%Section SCF::Eigensolver
     !%Description
     !% The full orthogonalization method used by some
-    !% eigensolvers. The default is <tt>cholesky_serial</tt>. With state
+    !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
     !%Option gram_schmidt 1
     !%Option cholesky_serial 1
