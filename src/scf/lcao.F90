@@ -186,11 +186,11 @@ contains
     !% (Up to the current version, only a minimal basis set is used.)
     !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
     !% The default is <tt>lcao_none</tt> if all species are <tt>species_user_defined</tt>,
-    !% <tt>species_charge_density</tt>, <tt>species_from_file</tt>, or <tt>species_jelli_slab</tt>.
+    !% <tt>species_charge_density</tt>, <tt>species_from_file</tt>, or <tt>species_jellium_slab</tt>.
     !%
     !% The initial guess densities for LCAO are taken from the atomic orbitals for pseudopotential species;
     !% from the natural charge density for <tt>species_charge_density</tt>, <tt>species_point</tt>,
-    !% <tt>species_jelli</tt>, and <tt>species_jelli_slab</tt>;
+    !% <tt>species_jellium</tt>, and <tt>species_jellium_slab</tt>;
     !% or uniform for <tt>species_full_delta</tt>, <tt>species_full_gaussian</tt>,
     !% <tt>species_user_defined</tt>, or <tt>species_from_file</tt>.
     !% Pseudopotential species use the pseudo-wavefunctions as orbitals, full-potential atomic species
