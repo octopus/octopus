@@ -42,28 +42,23 @@ EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
 # If the testsuite should be skipped, e.g. in make distcheck,
 # set the environment variable SKIP_CHECK to some value.
 check:
-	@if test "x$(SKIP_CHECK)" == "x"; then \
-	    CHECKOPTS="" $(MAKE) check-base; \
-	else \
-            $(MAKE) check-dryrun; \
-	fi
+	@CHECKOPTS="" $(MAKE) check-wrapper
 
 check-short:
-	@if test "x$(SKIP_CHECK)" == "x"; then \
-	    CHECKOPTS="-g short-run" $(MAKE) check-base; \
-	else \
-            $(MAKE) check-dryrun; \
-	fi
+	@CHECKOPTS="-g short-run" $(MAKE) check-wrapper
 
 check-long:
-	@if test "x$(SKIP_CHECK)" == "x"; then \
-		CHECKOPTS="-g long-run" $(MAKE) check-base; \
-	else \
-            $(MAKE) check-dryrun; \
-	fi
+	@CHECKOPTS="-g long-run" $(MAKE) check-wrapper
 
 check-dryrun:
 	@CHECKOPTS="-n" $(MAKE) check-base
+
+check-wrapper:
+	@if test "x$(SKIP_CHECK)" == "x"; then \
+	    $(MAKE) check-base; \
+	else \
+            $(MAKE) check-dryrun; \
+	fi
 
 check-base:
 	@base=`basename "$(top_builddir)/share"` && \
@@ -76,4 +71,4 @@ clean-local:
 
 CLEANFILES = *.log
 
-.PHONY: check check-short check-long clean clean-local check-dryrun check-base
+.PHONY: check check-short check-long clean clean-local check-dryrun check-base check-wrapper
