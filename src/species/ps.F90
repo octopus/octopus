@@ -553,6 +553,11 @@ contains
     call spline_print(ps%vl, iunit)
     call io_close(iunit)
 
+    ! Local part of the pseudopotential
+    iunit  = io_open(trim(dir)//'/local_long_range', action='write')
+    call spline_print(ps%vlr, iunit)
+    call io_close(iunit)
+    
     ! Fourier transform of the local part
     iunit = io_open(trim(dir)//'/local_ft', action='write')
     SAFE_ALLOCATE(fw(1:1, 1:1))
