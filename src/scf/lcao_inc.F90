@@ -683,7 +683,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       end if
 
       call diagonalization()
-  
+
       if (this%parallel) then
         SAFE_DEALLOCATE_A(hamiltonian)
         SAFE_DEALLOCATE_A(overlap)
@@ -802,6 +802,7 @@ contains
   
   !> \return evec the eigenvector
   subroutine diagonalization()
+
     integer              :: neval_found, info, lwork
     R_TYPE               :: tmp(3) !< size must be at least 3 according to ScaLAPACK
     R_TYPE,  allocatable :: work(:)
@@ -826,11 +827,10 @@ contains
 
     PUSH_SUB(X(lcao_alt_wf).diagonalization)
 
-    SAFE_ALLOCATE(ifail(1:this%norbs))
-
     call profiling_in(prof, "LCAO_DIAG")
     if(this%parallel) then
 #ifdef HAVE_SCALAPACK            
+      SAFE_ALLOCATE(ifail(1:this%norbs))
       SAFE_ALLOCATE(iclustr(1:2*st%dom_st_proc_grid%nprocs))
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
 
@@ -897,6 +897,10 @@ contains
         write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. ScaLAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
+
+      SAFE_DEALLOCATE_A(ifail)
+      SAFE_DEALLOCATE_A(iwork)
+      SAFE_DEALLOCATE_A(work)
 
       ! Now we have to rearrange the data between processors. We have
       ! the data in levec, distributed according to ScaLAPACK and we
@@ -1008,6 +1012,7 @@ contains
     else
 
       if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
+        SAFE_ALLOCATE(ifail(1:this%norbs))
         SAFE_ALLOCATE(iwork(1:5*this%norbs))
 
 #ifdef R_TREAL    
@@ -1017,7 +1022,6 @@ contains
           m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
           work = tmp(1), lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
-
         SAFE_ALLOCATE(rwork(1:7*this%norbs))
 
         call lapack_hegvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
@@ -1025,7 +1029,6 @@ contains
           vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
           m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%norbs, &
           work = tmp(1), lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
-
 #endif
         if(info /= 0) then
           write(message(1), '(a,i4,a)') 'Workspace query for LCAO diagonalization failed. LAPACK returned info code ', info, '.'
@@ -1033,7 +1036,6 @@ contains
         end if
         
         lwork = nint(R_REAL(tmp(1)))
-
         SAFE_ALLOCATE(work(1:lwork))
 
 #ifdef R_TREAL
@@ -1059,6 +1061,9 @@ contains
         
         SAFE_DEALLOCATE_A(hamiltonian)
         SAFE_DEALLOCATE_A(overlap)
+        SAFE_DEALLOCATE_A(ifail)
+        SAFE_DEALLOCATE_A(iwork)
+        SAFE_DEALLOCATE_A(work)
       end if
 
 #ifdef HAVE_MPI
@@ -1069,7 +1074,7 @@ contains
         ! want all the processes to store the full matrix at the same time, as this
         ! can use a lot of memory space.
       end if
-#endif      
+#endif
     end if
 
 #ifdef LCAO_DEBUG
@@ -1082,10 +1087,6 @@ contains
       call io_close(iunit_e)
     endif
 #endif
-
-    SAFE_DEALLOCATE_A(iwork)
-    SAFE_DEALLOCATE_A(work)
-    SAFE_DEALLOCATE_A(ifail)
 
     call profiling_out(prof)
 
