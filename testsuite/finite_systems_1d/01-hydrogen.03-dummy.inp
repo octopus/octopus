@@ -1,0 +1,24 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = dummy
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.5
+Radius = 100.0
+
+TheoryLevel = independent_particles
+
+%Species
+"Hydrogen1D" | species_user_defined | 1 | 1 | "-1/sqrt(1+(x)^2)"
+%
+
+%Coordinates
+"Hydrogen1D" | 0
+%
+
+ExtraStates = 9
+EigenSolverTolerance = 1e-5

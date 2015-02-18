@@ -21,3 +21,7 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; -0.66978603
 
 Input: 01-hydrogen.02-excited_state.inp
 match ; 10th state   ; GREP(static/eigenvalues, '10   --', 12) ; -0.017727
+
+Input: 01-hydrogen.03-dummy.inp
+match ; Cutoff (Ry)  ; GREPFIELD(out, 'Grid Cutoff', 10)        ; 39.478418
+match ; FFT grid     ; GREPFIELD(out, 'FFT grid dimensions', 6) ; 819
