@@ -699,6 +699,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       ! FIXME: we should calculate expectation values of the Hamiltonian here.
       ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
+      SAFE_DEALLOCATE_A(eval)
+      
       if (.not. this%parallel .and. gr%mesh%parallel_in_domains) then
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs * nev)
@@ -777,10 +779,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis - 1, this%norbs)
         end do
         
-        SAFE_DEALLOCATE_A(levec)
         SAFE_DEALLOCATE_A(evec)
       end if
-      SAFE_DEALLOCATE_A(eval)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
@@ -901,6 +901,8 @@ contains
       SAFE_DEALLOCATE_A(ifail)
       SAFE_DEALLOCATE_A(iwork)
       SAFE_DEALLOCATE_A(work)
+      SAFE_DEALLOCATE_A(iclustr)
+      SAFE_DEALLOCATE_A(gap)
 
       ! Now we have to rearrange the data between processors. We have
       ! the data in levec, distributed according to ScaLAPACK and we
@@ -975,6 +977,7 @@ contains
         end do
       end do
 
+      SAFE_DEALLOCATE_A(levec)
       SAFE_ALLOCATE(recv_buffer(1:max(1, maxval(recv_count)), 1:st%dom_st_mpi_grp%size))
 
       SAFE_ALLOCATE(send_disp(1:st%dom_st_mpi_grp%size))
@@ -996,9 +999,6 @@ contains
           evec(recv_pos(1, ii, node), recv_pos(2, ii, node)) = recv_buffer(ii, node)
         end do
       end do
-
-      SAFE_DEALLOCATE_A(iclustr)
-      SAFE_DEALLOCATE_A(gap)
 
       SAFE_DEALLOCATE_A(send_disp)
       SAFE_DEALLOCATE_A(send_count)      
