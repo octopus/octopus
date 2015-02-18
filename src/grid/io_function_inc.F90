@@ -498,7 +498,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
     call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
   end if
 
-  if(comm /= MPI_COMM_NULL) then
+  if(comm /= MPI_COMM_NULL .and. comm /= 0) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
     ! Add a barrier to ensure that the process are synchronized
