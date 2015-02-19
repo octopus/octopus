@@ -218,22 +218,40 @@ contains
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(spec)
 
-      call periodic_copy_init(pp, sb, atom%x, &
-        range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
-
+      if(ps_niwfs(ps) > 0) then
+        call periodic_copy_init(pp, sb, atom%x, &
+          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+      else
+        call periodic_copy_init(pp, sb, atom%x, &
+          range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+      end if
+      
       do icell = 1, periodic_copy_num(pp)
         pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
           rr = max(rr, r_small)
-          nn_loop: do nn = 1, ps%conf%p
+
+          if(ps_niwfs(ps) > 0) then
+
+            nn_loop: do nn = 1, ps%conf%p
+              do isp = 1, spin_channels
+                if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle nn_loop
+              enddo
+              do isp = 1, spin_channels
+                rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
+              enddo
+            end do nn_loop
+
+          else
+            
+            !we use the square root of the short-range local potential, just to put something
             do isp = 1, spin_channels
-              if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle nn_loop
-            enddo
-            do isp = 1, spin_channels
-              rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
-            enddo
-          end do nn_loop
+              if(rr < spline_range_max(ps%vl)) rho(ip, isp) = rho(ip, isp) + sqrt(abs(spline_eval(ps%vl, rr)))
+            end do
+            
+          end if
+            
         end do
       end do
   
