@@ -114,7 +114,7 @@ basis.o 	: basis.F90
 strng.o 	: strng.F90
 config_dict.o	: config_dict.F90 strng.o 
 domain.o 	: domain.F90
-simulation.o	: simulation.F90 domain.o igrid.o
+simulation.o	: simulation.F90 domain.o igrid.o basis.o
 intrpl.o 	: intrpl.F90 simulation.o domain.o basis.o
 storage.o 	: storage.F90 intrpl.o simulation.o basis.o
 
