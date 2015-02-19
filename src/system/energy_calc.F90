@@ -90,17 +90,25 @@ contains
       & .and.(hm%theory_level /= CLASSICAL)) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_local = denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%kinetic   = real(etmp)
         hm%energy%Imkinetic = aimag(etmp)
          
-        etmp  = zenergy_calc_electronic(hm, gr%der, st, &
-          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
-        hm%energy%extern   =  real(etmp)
-        hm%energy%Imextern =  aimag(etmp)
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_local   = real(etmp)
+        hm%energy%Imextern_local = aimag(etmp)        
+        
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%extern_non_local   = real(etmp)
+        hm%energy%Imextern_non_local = aimag(etmp)
+
+        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local
+        hm%energy%Imextern = hm%energy%Imextern_local + hm%energy%Imextern_non_local
         
         etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
      
@@ -227,7 +235,10 @@ contains
         if(cmplxscl) write(message(1), '(a, es18.6)') trim(message(1)), units_from_atomic(units_out%energy, hm%energy%Imkinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
         if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy, hm%energy%Imextern)
-        call messages_info(2, iunit)
+        write(message(3), '(6x,a, f18.8)')'Non-local   = ', units_from_atomic(units_out%energy, hm%energy%extern_non_local)
+        if(cmplxscl) write(message(3), '(a, es18.6)') &
+          trim(message(3)), units_from_atomic(units_out%energy, hm%energy%Imextern_non_local)
+        call messages_info(3, iunit)
       end if
       if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)

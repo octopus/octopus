@@ -51,6 +51,8 @@ module energy_m
     FLOAT :: pcm_corr    !< Int[n (v_e_rs + v_n_rs)]
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
+    FLOAT :: extern_local !< The local part of the external energy ( Int[n v] )
+    FLOAT :: extern_non_local !< The part of the external energy coming from the non-local part of the pseudos
     FLOAT :: entropy
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
@@ -66,6 +68,8 @@ module energy_m
     FLOAT :: Imhartree
     FLOAT :: Imkinetic
     FLOAT :: Imextern
+    FLOAT :: Imextern_local
+    FLOAT :: Imextern_non_local
     FLOAT :: Imentropy
     FLOAT :: Imts
     FLOAT :: Imberry
@@ -92,6 +96,8 @@ contains
     this%pcm_corr     = M_ZERO
     this%kinetic      = M_ZERO
     this%extern       = M_ZERO
+    this%extern_local = M_ZERO
+    this%extern_non_local = M_ZERO
     this%entropy      = M_ZERO
     this%ts           = M_ZERO
     this%berry        = M_ZERO
@@ -106,6 +112,8 @@ contains
     this%Imhartree     = M_ZERO
     this%Imkinetic     = M_ZERO
     this%Imextern      = M_ZERO
+    this%Imextern_local = M_ZERO
+    this%Imextern_non_local = M_ZERO
     this%Imentropy     = M_ZERO
     this%Imts          = M_ZERO
     this%Imberry       = M_ZERO
@@ -133,6 +141,8 @@ contains
     eout%pcm_corr     = ein%pcm_corr
     eout%kinetic      = ein%kinetic
     eout%extern       = ein%extern
+    eout%extern_local = ein%extern_local
+    eout%extern_non_local = ein%extern_non_local
     eout%entropy      = ein%entropy
     eout%ts           = ein%ts
     eout%berry        = ein%berry
@@ -147,6 +157,8 @@ contains
     eout%Imhartree = ein%Imhartree
     eout%Imkinetic = ein%Imkinetic
     eout%Imextern = ein%Imextern
+    eout%Imextern_local = ein%Imextern_local
+    eout%Imextern_non_local = ein%Imextern_non_local
     eout%Imentropy = ein%Imentropy
     eout%Imts = ein%Imts
     eout%Imberry = ein%Imberry
