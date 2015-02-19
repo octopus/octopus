@@ -286,10 +286,8 @@ contains
       call messages_warning(1)
     endif
 
-    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
+    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) &
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
-      call states_write_fermi_energy(STATIC_DIR, sys%st, sys%gr%mesh, sys%gr%sb)
-    end if
 
     call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 

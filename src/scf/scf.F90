@@ -901,10 +901,8 @@ contains
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
     end if
 
-    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
+    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
-      call states_write_fermi_energy(STATIC_DIR, st, gr%mesh, gr%sb)
-    end if
 
     POP_SUB(scf_run)
 

@@ -52,8 +52,7 @@ module states_io_m
     states_write_eigenvalues,         &
     states_write_dos,                 &
     states_write_tpa,                 &
-    states_write_bands,               &
-    states_write_fermi_energy
+    states_write_bands
 
 contains
 
@@ -161,7 +160,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_write_bands(dir, nst, st, sb)
-    character(len=*),  intent(in) :: dir    
+    character(len=*),  intent(in) :: dir
     integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
@@ -221,7 +220,7 @@ contains
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
         enddo
-        write(iunit(is),'(a, i6)') '(scaled), bands:', nst
+        write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
       end do
 
       ! output bands in gnuplot format
@@ -269,7 +268,7 @@ contains
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
         enddo
-        write(iunit(is),'(a, i6)') '(scaled), bands:', nst
+        write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
       end do
 
       ! output bands in xmgrace format, i.e.:
@@ -300,6 +299,8 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(iunit)
+
+    call states_write_fermi_for_bands(dir, st, sb)
 
     POP_SUB(states_write_bands)
   end subroutine states_write_bands
@@ -506,7 +507,7 @@ contains
     character(len=*), intent(in) :: dir
     type(states_t),   intent(in) :: st
 
-    integer :: ie, ik, ist, epoints, is, ns
+    integer :: ie, ik, ist, epoints, is, ns, maxdos
     integer, allocatable :: iunit(:)
     FLOAT   :: emin, emax, de, gamma, energy
     FLOAT   :: evalmax, evalmin, tdos, eextend
@@ -582,7 +583,7 @@ contains
         end if
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
         ! write header
-        write(iunit(is), '(a)') '# energy, band-resolved DOS'
+        write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
       end do
 
       do ie = 1, epoints
@@ -613,7 +614,7 @@ contains
         write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
         ! write header
-        write(iunit(is), '(a)') '# energy, total DOS (spin-resolved)'
+        write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
 
         do ie = 1, epoints
           energy = emin + (ie - 1) * de
@@ -632,7 +633,8 @@ contains
 
 
     iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
-
+    write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
+    
     ! compute total density of states
     do ie = 1, epoints
       energy = emin + (ie - 1) * de
@@ -649,33 +651,44 @@ contains
 
     call io_close(iunit(0))
 
-    SAFE_DEALLOCATE_A(iunit)
     SAFE_DEALLOCATE_A(dos)
+
+
+    ! write Fermi file
+    iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')
+    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
+      '] in a format compatible with total-dos.dat'
+
+    ! this is the maximum that tdos can reach
+    maxdos = st%smear%el_per_state * st%nst
+
+    write(message(2), '(2f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), M_ZERO
+    write(message(3), '(f12.6,i6)') units_from_atomic(units_out%energy, st%smear%e_fermi), maxdos
+
+    call messages_info(3, iunit(0))
+    call io_close(iunit(0))
+
+    SAFE_DEALLOCATE_A(iunit)
 
     POP_SUB(states_write_dos)
   end subroutine states_write_dos
 
 
   ! ---------------------------------------------------------
-  subroutine states_write_fermi_energy(dir, st, mesh, sb)
+  subroutine states_write_fermi_for_bands(dir, st, sb)
     character(len=*),  intent(in) :: dir
-    type(states_t), intent(inout) :: st
-    type(mesh_t),      intent(in) :: mesh
+    type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
     integer :: iunit, idir
-    FLOAT :: maxdos
     character(len=100) :: str_tmp
 
-    PUSH_SUB(states_write_fermi_energy)
-
-    call states_fermi(st, mesh)
+    PUSH_SUB(states_write_fermi_for_bands)
 
     iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
 
-    ! write Fermi energy in a format that can be used together 
-    ! with bands.dat
-    write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
+    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
+      '] in a format compatible with bands-gp.dat'
 
     message(2)=""
     message(3)=""
@@ -704,23 +717,8 @@ contains
     call messages_info(4, iunit)
     call io_close(iunit)
 
-    ! now we write the same information so that it can be used 
-    ! together with total-dos.dat
-    iunit = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')    
-
-    write(message(1), '(a)') '# Fermi energy in a format compatible with total-dos.dat'    
-
-    ! this is the maximum that tdos can reach
-    maxdos = sum(st%d%kweights) * st%nst
-
-    write(message(2), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), M_ZERO
-    write(message(3), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), maxdos
-
-    call messages_info(3, iunit)
-    call io_close(iunit)
-
-    POP_SUB(states_write_fermi_energy)
-  end subroutine states_write_fermi_energy
+    POP_SUB(states_write_fermi_for_bands)
+  end subroutine states_write_fermi_for_bands
 
 end module states_io_m
 
