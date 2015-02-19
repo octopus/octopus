@@ -134,8 +134,7 @@ contains
     !%Description
     !% (Experimental) If this variable is set to yes, the ions will
     !% move with a constant velocity given by the initial
-    !% conditions. They will not be affected by any forces. The
-    !% default is no.
+    !% conditions. They will not be affected by any forces.
     !%End
     call parse_logical(datasets_check('IonsConstantVelocity'), .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
@@ -176,14 +175,13 @@ contains
 
       !%Variable TemperatureFunction
       !%Type integer
-      !%Default none
+      !%Default "temperature"
       !%Section Time-Dependent::Propagation
       !%Description
-      !% If a thermostat is used, this variable indicates the name
-      !% function of the TDFunctions that will be used to control the
+      !% If a thermostat is used, this variable indicates the name of the
+      !% function in the <tt>TDFunctions</tt> block that will be used to control the
       !% temperature. The values of the temperature are given in
-      !% degrees Kelvin. The default name for this function is
-      !% "temperature".
+      !% degrees Kelvin.
       !%End
       call parse_string(datasets_check('TemperatureFunction'), 'temperature', temp_function_name)
 
@@ -202,7 +200,7 @@ contains
         !%Section Time-Dependent::Propagation
         !%Description
         !% This variable sets the fictitious mass for the Nose-Hoover
-        !% thermostat. The default is 1.0.
+        !% thermostat.
         !%End
         call messages_obsolete_variable('NHMass', 'ThermostatMass')
 
@@ -225,6 +223,7 @@ contains
 
     !%Variable RandomVelocityTemp
     !%Type float
+    !%Default 0.0
     !%Section System::Velocities
     !%Description
     !% If this variable is present, <tt>Octopus</tt> will assign random

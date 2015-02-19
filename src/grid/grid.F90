@@ -120,7 +120,8 @@ contains
     !%Section Mesh
     !%Description
     !% If enabled, <tt>Octopus</tt> will use a finer mesh for the calculation
-    !% of the forces or other sensitive quantities. The default is no.
+    !% of the forces or other sensitive quantities.
+    !% Experimental, and incompatible with domain-parallelization.
     !%End
     if (gr%sb%dim == 3) then 
       call parse_logical(datasets_check('UseFineMesh'), .false., gr%have_fine_mesh)

@@ -275,7 +275,7 @@ contains
     !%Description
     !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
-    !% conjugate gradients (<tt>cg</tt>); when parallelization in states is
+    !% conjugate gradients (<tt>cg</tt>); except when parallelization in states is
     !% enabled, the default is <tt>lobpcg</tt>.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
@@ -365,7 +365,7 @@ contains
       !% During the first iterations, the RMMDIIS eigensolver requires
       !% some steepest-descent minimizations to improve
       !% convergence. This variable determines the number of those
-      !% minimizations. The default is 5.
+      !% minimizations.
       !%End
 
       call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
@@ -378,7 +378,7 @@ contains
       !% The RMMDIIS eigensolver may require a considerable amount of
       !% extra memory. When this variable is set to yes, the
       !% eigensolver will use less memory at the expense of some
-      !% performance. This is especially useful for GPUs. The default is no.
+      !% performance. This is especially useful for GPUs.
       !%End
 
       call parse_logical(datasets_check('EigensolverSaveMemory'), .false., eigens%save_mem)
@@ -390,7 +390,6 @@ contains
 
       !%Variable EigensolverArnoldiVectors 
       !%Type integer 
-      !%Default 20 
       !%Section SCF::Eigensolver
       !%Description 
       !% For <tt>Eigensolver = arpack</tt>, this indicates how many Arnoldi vectors are generated.
@@ -443,10 +442,9 @@ contains
 
     !%Variable EigensolverTolerance
     !%Type float
-    !%Default 1.0e-6
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6
+    !% This is the tolerance for the eigenvectors. The default is 1e-6,
     !% except for the ARPACK solver for which it is 0.
     !%End
     call parse_float(datasets_check('EigensolverTolerance'), default_tol, eigens%tolerance)

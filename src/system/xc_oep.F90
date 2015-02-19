@@ -127,7 +127,7 @@ contains
         !%Section Hamiltonian::XC
         !%Description
         !% The linear mixing factor used to solve the Sternheimer
-        !% equation in the full OEP procedure. The default is 1.0.
+        !% equation in the full OEP procedure.
         !%End
         call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
         call parse_float(datasets_check('OEPMixing'), M_ONE, oep%mixing)

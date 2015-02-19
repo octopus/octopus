@@ -106,7 +106,7 @@ contains
     !%Description
     !% Order of the interpolation used for the double grid. Must be
     !% an odd number. Low-order interpolation schemes are not
-    !% recommended. The default is to use 9th-order interpolation.
+    !% recommended.
     !%End
     call parse_integer(datasets_check('DoubleGridOrder'), 9, this%order)
     

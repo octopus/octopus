@@ -280,21 +280,22 @@ contains
 
       !%Variable LCAOScaleFactor
       !%Type float
+      !%Default 1.0
       !%Section SCF::LCAO
       !%Description
       !% The coordinates of the atomic orbitals used by the LCAO
-      !% procedure will be rescaled by the value of this variable. The
-      !% default value is 1.0 (no rescaling).
+      !% procedure will be rescaled by the value of this variable. 1.0 means no rescaling.
       !%End
       call parse_float(datasets_check('LCAOScaleFactor'), CNST(1.0), this%orbital_scale_factor)
       call messages_print_var_value(stdout, 'LCAOScaleFactor', this%orbital_scale_factor)
 
       !%Variable LCAOMaximumOrbitalRadius
       !%Type float
+      !%Default 20.0 a.u.
       !%Section SCF::LCAO
       !%Description
       !% The LCAO procedure will ignore orbitals that have an
-      !% extension longer that this value. The default value is 20.0.
+      !% extent greater that this value.
       !%End
       call parse_float(datasets_check('LCAOMaximumOrbitalRadius'), CNST(20.0), max_orb_radius, unit = units_inp%length)
       call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', max_orb_radius, units_out%length)
@@ -475,7 +476,7 @@ contains
       !% If set to yes (the default) Octopus keeps atomic orbitals in
       !% memory during the LCAO procedure. If set to no, the orbitals
       !% are generated each time that they are needed, increasing
-      !% computational time but saving memory. The default is yes.
+      !% computational time but saving memory.
       !%
       !% When set to yes, Octopus prints the amount of memory per node
       !% that is required to store the orbitals.
@@ -520,7 +521,7 @@ contains
       !%Section SCF::LCAO
       !%Description
       !% Only applies if <tt>LCAOAlternative = true</tt>.
-      !% The tolerance for the diagonalization of the LCAO Hamiltonian. The default is 1e-10.
+      !% The tolerance for the diagonalization of the LCAO Hamiltonian.
       !%End
       call parse_float(datasets_check('LCAODiagTol'), CNST(1e-10), this%diag_tol)
 

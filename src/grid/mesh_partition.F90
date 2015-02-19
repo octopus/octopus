@@ -161,12 +161,12 @@ contains
 
     !%Variable MeshPartitionStencil
     !%Type integer
-    !%Default star
+    !%Default stencil_star
     !%Section Execution::Parallelization
     !%Description
     !% To partition the mesh, it is necessary to calculate the connection
     !% graph connecting the points. This variable selects which stencil
-    !% is used to do this. The default is the order-one star stencil.
+    !% is used to do this.
     !% Alternatively, the stencil used for the Laplacian may be used.
     !%Option stencil_star 1
     !% An order-one star stencil.
