@@ -18,4 +18,4 @@ Input: 05-spin_precession.02-time_propagation.inp
 match ; <Sx> (t=T/4) ; LINE(td.general/spin, -1, 29) ; 2.304949036240e-05
 match ; <Sy> (t=T/4) ; LINE(td.general/spin, -1, 49) ; 4.999999994628e-01
 
-
+match ; max density 3; LINEFIELD(output_iter/td.0000025/density-sp3.xsf, 5009, 1); 0.033548793354394

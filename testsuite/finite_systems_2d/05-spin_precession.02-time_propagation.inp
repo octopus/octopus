@@ -48,6 +48,8 @@ TDExponentialMethod = lanczos
 TDExpOrder = 16
 TDTimeStep = dt
 
+Output = density
+OutputHow = xcrysden
 OutputInterval = 25
 TDOutput = energy + multipoles + spin
 
