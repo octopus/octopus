@@ -129,13 +129,13 @@ contains
     !%Variable KSInversionLevel
     !%Type integer
     !%Default ks_inversion_adiabatic
-    !%Section Hamiltonian::XC
+    !%Section Calculation Modes::Invert KS
     !%Description
     !% At what level <tt>Octopus</tt> shall handle the KS inversion.
     !%Option ks_inversion_none 1
-    !% Do not compute KS inversion
+    !% Do not compute KS inversion.
     !%Option ks_inversion_adiabatic 2
-    !% Compute exact adiabatic vxc
+    !% Compute exact adiabatic vxc.
     !%End
     call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
     call parse_integer(datasets_check('KSInversionLevel'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
