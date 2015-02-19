@@ -546,7 +546,6 @@ contains
     dij = reshape(dij_linear, (/ps_upf%n_proj, ps_upf%n_proj/))
 
     do iproj = 1, ps_upf%n_proj
-      ! TODO: convert to Hartree?
       ps_upf%e(iproj) = dij(iproj, iproj)
     end do
 
