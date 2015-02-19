@@ -652,9 +652,6 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do ! iatom
 
-      SAFE_DEALLOCATE_A(aa)
-      SAFE_DEALLOCATE_A(bb)
-      
 #ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_h)
@@ -684,10 +681,6 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       call diagonalization()
 
-      if (this%parallel) then
-        SAFE_DEALLOCATE_A(hamiltonian)
-        SAFE_DEALLOCATE_A(overlap)
-      end if
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
       call messages_write('Generating wavefunctions.')
@@ -789,8 +782,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
-    end do
-  end do
+    end do ! ik
+  end do ! ispin
 
   do iatom = 1, geo%natoms
     call submesh_end(this%sphere(iatom))
@@ -798,6 +791,13 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
     call batch_end(this%orbitals(iatom))
   end do
 
+  if (this%parallel .or. mpi_grp_is_root(mpi_world)) then
+    SAFE_DEALLOCATE_A(hamiltonian)
+    SAFE_DEALLOCATE_A(overlap)
+  end if
+
+  SAFE_DEALLOCATE_A(aa)
+  SAFE_DEALLOCATE_A(bb)
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(hpsi)
 
@@ -1064,8 +1064,6 @@ contains
           call messages_warning(1)
         end if
         
-        SAFE_DEALLOCATE_A(hamiltonian)
-        SAFE_DEALLOCATE_A(overlap)
         SAFE_DEALLOCATE_A(ifail)
         SAFE_DEALLOCATE_A(iwork)
         SAFE_DEALLOCATE_A(work)
