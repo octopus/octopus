@@ -96,7 +96,7 @@ iatom.o : iatom.F90
 igrid.o : igrid.F90
 basis.o : basis.F90
 domain.o : domain.F90
-simulation.o : simulation.F90 domain.o igrid.o
+simulation.o : simulation.F90 domain.o igrid.o basis.o
 interpolation_frozen.o : interpolation_frozen.F90 simulation.o domain.o basis.o
 storage.o : storage.F90 interpolation_frozen.o simulation.o
 
