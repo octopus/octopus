@@ -622,7 +622,8 @@ contains
       end if
       SAFE_DEALLOCATE_A(periodic_mask_tmp)
 
-      if(in_debug_mode) then
+      ! This is temporary debugging information.
+      if(in_debug_mode .and. mc%par_strategy /= P_STRATEGY_SERIAL) then
         if(mpi_world%rank == 0) then
           write(0,'(a)') 'Debug: MPI Task Assignment to MPI Groups'
           write(0,'(5a10)') 'World', 'Domains', 'States', 'K-Points', 'Other'
