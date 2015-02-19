@@ -122,6 +122,7 @@ module ps_m
     type(spline_t) :: dvion       !< the potential that other ions see
     
     logical :: is_separated
+    logical :: local
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -279,6 +280,8 @@ contains
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
     call messages_info(1)
+
+    ps%local = ps%l_max == 0
 
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
@@ -880,13 +883,26 @@ contains
       end do
     end if
 
+    ps%local = ps_upf%n_proj == 0
+    
     ps%h = M_ZERO
     do i = 1, ps_upf%n_proj
 
-      ij = 1
-      if (ps_upf%kb_nc == 2) then
-        if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
+      if(associated(ps_upf%proj_j)) then
+        
+        ij = 1
+        if (ps_upf%kb_nc == 2) then
+          if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
+        end if
+
+      else
+
+        ij = 1 + count(ps_upf%proj_l(1:i - 1) == ps_upf%proj_l(i))
+        
       end if
+
+      ASSERT(ij <= ps%kbc)
+      
       ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)*M_TWO
 
       nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
@@ -895,9 +911,12 @@ contains
       hato(nrc+1:ps%g%nrval) = M_ZERO
 
       call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
-      if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
-        hato = M_ZERO
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
+
+      if(associated(ps_upf%proj_j)) then
+        if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
+          hato = M_ZERO
+          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
+        end if
       end if
     end do
  

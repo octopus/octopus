@@ -386,15 +386,13 @@ contains
     type(xml_file_t), intent(inout) :: upf2_file
     type(ps_upf_t),   intent(inout) :: ps_upf
 
-    integer :: ierr, startp, iproj, dij_size, iwfs, ip
+    integer :: ierr, startp, iproj, dij_size, iwfs, ip, ll
     character(len=200) :: str
     type(xml_tag_t)    :: tag, proj_tag, wfs_tag
     FLOAT :: mesh_min
     FLOAT, allocatable :: dij(:, :), dij_linear(:)
     
     PUSH_SUB(ps_upf_file_read_version2)
-
-    ps_upf%kb_nc = 1
 
     ! Read the header
     ierr = xml_file_tag(upf2_file, 'PP_HEADER', 0, tag)
@@ -498,7 +496,7 @@ contains
     SAFE_ALLOCATE(ps_upf%proj(1:ps_upf%np, 1:ps_upf%n_proj))
     SAFE_ALLOCATE(ps_upf%proj_l(1:ps_upf%n_proj))
     SAFE_ALLOCATE(ps_upf%proj_np(1:ps_upf%n_proj))
-    
+
     do iproj = 1, ps_upf%n_proj
 
       write(str, '(a,i1)') 'PP_BETA.', iproj
@@ -518,6 +516,11 @@ contains
 
       ierr = xml_get_tag_value(tag, trim(str), ps_upf%proj_np(iproj) - startp + 1, ps_upf%proj(startp:, iproj))
       
+    end do
+
+    ps_upf%kb_nc = 1
+    do ll = 0, ps_upf%l_max
+      ps_upf%kb_nc = max(ps_upf%kb_nc, count(ps_upf%proj_l(1:ps_upf%n_proj) == ll))
     end do
 
     do ip = 1, ps_upf%np

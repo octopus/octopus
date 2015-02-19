@@ -159,7 +159,7 @@ contains
     p%reltype = reltype
     p%lmax = ps%l_max
 
-    if(p%lmax == 0) then
+    if(ps%local) then
       p%type = M_NONE
       POP_SUB(projector_init)
       return
@@ -198,6 +198,8 @@ contains
 
     POP_SUB(projector_init)
   end subroutine projector_init
+
+  !---------------------------------------------
 
   subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
     type(projector_t),  intent(inout) :: this
