@@ -185,7 +185,11 @@ contains
       end function xml_tag_get_tag_value_array_low
     end interface
 
-    ierr = xml_tag_get_tag_value_array_low(this, tag_name, size, val(1))
+    if(size > 0) then
+      ierr = xml_tag_get_tag_value_array_low(this, tag_name, size, val(1))
+    else
+      ierr = 0
+    end if
 
   end function xml_tag_get_tag_value_array
 
