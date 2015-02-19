@@ -189,9 +189,10 @@ contains
     !%Default none
     !%Section Output
     !%Description
-    !% Specifies what to print. The output files go into the <tt>static</tt> directory, except when
-    !% running a time-dependent simulation, when the directory <tt>OutputIterDir</tt>/<tt>td.XXXXXXX</tt> is used, 
-    !% or ground-state simulations, when the directory <tt>OutputIterDir</tt>/<tt>scf.XXXX</tt> is used.
+    !% Specifies what to print. The output files go into the <tt>static</tt> directory at the end of most kinds of run,
+    !% except for time-dependent simulations which print only per iteration. The frequency of output per iteration 
+    !% (available for <tt>CalculationMode</tt> = gs, unocc, and td</tt>) is set by <tt>OutputInterval</tt>
+    !% and the directory is set by <tt>OutputIterDir</tt>.
     !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
     !% the options below; the files will be printed in the directory
     !% for the run mode. Indices in the filename are labelled as follows:
@@ -494,6 +495,26 @@ contains
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
+    !%Variable OutputInterval
+    !%Type integer
+    !%Default 0
+    !%Section Output
+    !%Description
+    !% The output requested by variable <tt>Output</tt> is written
+    !% to the directory <tt>OutputIterDir</tt>
+    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
+    !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
+    !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
+    !% Must be >= 0. If it is 0, then no output is written.
+    !%End
+    call parse_integer('OutputInterval', 0, outp%output_interval)
+    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
+    if(outp%output_interval < 0) then
+      message(1) = "OutputInterval must be >= 0."
+      call messages_fatal(1)
+    endif
+
     !%Variable OutputIterDir
     !%Default "output_iter"
     !%Type string
@@ -501,32 +522,14 @@ contains
     !%Description
     !% The name of the directory where <tt>Octopus</tt> stores information
     !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputHow</tt>
-    !% This information is written while iterating GS or TD, according to 
-    !% <tt>OutputInterval</tt>, and has nothing to do with the restart information.
+    !% in the format specified by <tt>OutputHow</tt>.
+    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
+    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
-    call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
-    call add_last_slash(outp%iter_dir)
-    if (outp%what /= 0 .and. outp%iter_dir /= "") then
+    if(outp%what /= 0 .and. outp%output_interval > 0) then
+      call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
       call io_mkdir(outp%iter_dir)
-    end if
-
-    !%Variable OutputInterval
-    !%Type integer
-    !%Default 50
-    !%Section Output
-    !%Description
-    !% The output requested by variable <tt>Output</tt> is written
-    !% to the directory <tt>OutputIterDir</tt>
-    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
-    !% (Output of restart files is controlled by <tt>RestartWriteInterval</tt>.)
-    !% Must be >= 0. If it is 0, then no output is written.
-    !%End
-    call parse_integer('OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
-    if(outp%output_interval < 0) then
-      message(1) = "OutputInterval must be >= 0."
-      call messages_fatal(1)
+      call add_last_slash(outp%iter_dir)
     endif
 
     !%Variable RestartWriteInterval
@@ -603,6 +606,7 @@ contains
     if(outp%what /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
+      call io_mkdir(dir)
     endif
 
     if(iand(outp%what, C_OUTPUT_R) /= 0) then
@@ -623,12 +627,10 @@ contains
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       endif
       if(iand(outp%how, C_OUTPUT_HOW_XYZ) /= 0) then
-        call io_mkdir(dir)
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       endif
       if(iand(outp%how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
-        call io_mkdir(dir)
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
       endif
     end if
