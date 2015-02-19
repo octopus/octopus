@@ -70,6 +70,12 @@ match ; crystal  70 1  ; LINEFIELD(static/crystal.xyz, 72, 2) ; -7.65
 match ; crystal  70 2  ; LINEFIELD(static/crystal.xyz, 72, 3) ; -7.65
 match ; crystal  70 3  ; LINEFIELD(static/crystal.xyz, 72, 4) ;  2.55
 
+match ; DOS E Fermi    ; LINEFIELD(static/total-dos-efermi.dat, 2, 1);   0.139406
+match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.406396
+match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.463290
+match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.259992
+match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.542773
+
 Input      : 04-silicon.02-kdotp.inp
 
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06525
