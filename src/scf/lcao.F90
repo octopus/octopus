@@ -310,6 +310,14 @@ contains
 
       this%maxorbs = this%maxorbs*st%d%dim
 
+      if(this%maxorbs == 0) then
+        call messages_write('The are no atomic orbitals available, cannot do LCAO.')
+        call messages_warning()
+        this%mode = LCAO_START_NONE
+        POP_SUB(lcao_init)
+        return
+      end if
+      
       ! generate tables to know which indices each atomic orbital has
 
       SAFE_ALLOCATE( this%atom(1:this%maxorbs))
