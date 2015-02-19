@@ -39,6 +39,7 @@ typedef struct opt_type{
 typedef struct var_type{
   char *name;
   char *type;
+  char *default_str; /* default is a reserved keyword */
   char *section;
   char *desc;
   opt_type *opt;
@@ -138,6 +139,7 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
 	lvar->name = s;
 	lvar->desc = NULL;
 	lvar->type = NULL;
+	lvar->default_str = NULL;
 	lvar->section = NULL;
 	lvar->opt  = NULL;
 	lvar->next = NULL;
@@ -152,6 +154,9 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
 
     if(strncasecmp("Type", line, 4) == 0)
       get_token(line+5, &(lvar->type));
+
+    if(strncasecmp("Default", line, 7) == 0)
+      get_token(line+8, &(lvar->default_str));
 
     if(strncasecmp("Section", line, 7) == 0){
       char *s = line+7;
@@ -203,6 +208,7 @@ void FC_FUNC_(varinfo_end, VARINFO_END)
 
     if(v->name) free(v->name);
     if(v->type) free(v->type);
+    if(v->default_str) free(v->default_str);
     if(v->section) free(v->section);
     if(v->desc) free(v->desc);
     for(;o;){
@@ -238,13 +244,18 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_getinfo, VARINFO_GETINFO)
-  (const var_type **var, char **name, char **type, char **section, char **desc)
+  (const var_type **var, char **name, char **type, char **default_str, char **section, char **desc)
 {
   if(var == NULL){
-    *name = NULL; *type = NULL; *desc = NULL;
+    *name = NULL;
+    *type = NULL;
+    *default_str = NULL;
+    *section = NULL;
+    *desc = NULL;
   }else{
     *name = (*var)->name;
     *type = (*var)->type;
+    *default_str = (*var)->default_str;
     *section = (*var)->section;
     *desc = (*var)->desc;
   }
