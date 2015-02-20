@@ -196,8 +196,10 @@ contains
     POP_SUB(species_nullify)
   end subroutine species_nullify
 
+
+  ! ---------------------------------------------------------
   subroutine species_init_global()
-    PUSH_SUB(species_nullify)
+    PUSH_SUB(species_init_global)
 
     initialized = .true.
     
@@ -222,7 +224,7 @@ contains
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
     if(pseudo_set == PSEUDO_SET_SG15) call messages_experimental('PseudopotentialSet = sg15')
 
-    POP_SUB(species_nullify)
+    POP_SUB(species_init_global)
   end subroutine species_init_global
   
   ! ---------------------------------------------------------
@@ -236,12 +238,15 @@ contains
     character(len=*), intent(in)    :: label
     integer,          intent(in)    :: index
 
+    PUSH_SUB(species_init)
+    
     if(.not. initialized) call species_init_global()
 
     call species_nullify(this)
     this%label = trim(label)
     this%index = index
 
+    POP_SUB(species_init)
   end subroutine species_init
   ! ---------------------------------------------------------
 
@@ -982,12 +987,15 @@ contains
     type(species_t),   intent(in) :: spec
     integer,           intent(in) :: dim
     FLOAT,             intent(in) :: xx(1:MAX_DIM), r
-    
+
     FLOAT :: pot_re, pot_im
 
+    PUSH_SUB(species_userdef_pot)
+    
     call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%user_def)
     species_userdef_pot = pot_re + M_zI * pot_im  
 
+    POP_SUB(species_userdef_pot)
   end function species_userdef_pot
   ! ---------------------------------------------------------
 
