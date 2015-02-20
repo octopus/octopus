@@ -259,11 +259,11 @@ contains
     !% through a pseudopotential, or a model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
-    !% directory <tt>OCTOPUS-HOME/share/PP/</tt>. To use these pseudopotentials, you are
+    !% directory <tt>OCTOPUS-HOME/share/pseudopotentials/</tt>. To use these pseudopotentials, you are
     !% not required to define them explicitly in the <tt>Species</tt> block, as defaults 
     !% are provided by the program (you can override these defaults in any case). 
     !% The defaults, including for <tt>Spacing</tt> and <tt>Radius</tt>,
-    !% are found in <tt>OCTOPUS-HOME/share/PP/defaults</tt>.
+    !% are found in <tt>OCTOPUS-HOME/share/pseudopotentials/defaults</tt>.
     !% Additional pseudopotentials can be downloaded from the 
     !% <a href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
     !% octopus homepage</a>.
@@ -308,7 +308,7 @@ contains
     !%Option species_ps_psf  -100
     !% Troullier-Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
+    !% directory or in the <tt>OCTOPUS-HOME/share/octopus/pseudopotentials/PSF</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
@@ -318,14 +318,14 @@ contains
     !%Option species_ps_cpi  -102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
     !% read from a <tt>.cpi</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/PP/CPI</tt> directory.
+    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/CPI</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option species_ps_fhi  -103
     !% Fritz-Haber pseudopotential (<tt>ABINIT6</tt> format): the pseudopotential will be
     !% read from a <tt>.fhi</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
+    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/FHI</tt> directory.
     !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
@@ -333,7 +333,7 @@ contains
     !%Option species_ps_upf  -104
     !% UPF format: the pseudopotential will be
     !% read from a <tt>.UPF</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
+    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> directory.
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file and cannot be changed.
@@ -342,14 +342,14 @@ contains
     !% (experimental) The quantum-simulation.org XML pseudo-potential
     !% format used by qbox. The pseudopotential will be read from a
     !% <tt>.xml</tt> file, either in the working directory or in the
-    !% <tt>OCTOPUS-HOME/share/PP/qso</tt> directory.  No extra
+    !% <tt>OCTOPUS-HOME/share/pseudopotentials/qso</tt> directory.  No extra
     !% columns, as the maximum <i>l</i>-component of the
     !% pseudopotential to consider in the calculation and the
     !% <i>l</i>-component to consider as local are indicated in the
     !% pseudopotential file.
     !%Option species_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
-    !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
+    !% either in the working directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> 
     !% directory, using the PSPIO library.
     !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
@@ -421,7 +421,7 @@ contains
     end if
 
     ! Find out if the species is in the defaults file.
-    write(fname, '(2a)') trim(conf%share), "/PP/defaults"
+    write(fname, '(2a)') trim(conf%share), "/pseudopotentials/defaults"
     n_spec_def = max(0, loct_number_of_lines(fname))
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 

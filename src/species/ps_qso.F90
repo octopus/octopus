@@ -65,7 +65,7 @@ contains
 
     if(ierr /= 0) ierr = xml_file_init(qso_file, trim(filename)// '.XML')
 
-    if(ierr /= 0) ierr = xml_file_init(qso_file, trim(conf%share) // "/PP/qso/" // trim(filename) // ".xml")
+    if(ierr /= 0) ierr = xml_file_init(qso_file, trim(conf%share) // "/pseudopotentials/qso/" // trim(filename) // ".xml")
 
     if(ierr /= 0) then
       call messages_write("Pseudopotential file '" // trim(filename) // ".xml' not found")

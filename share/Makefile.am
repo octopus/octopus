@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = PP recipes util opencl
+SUBDIRS = pseudopotentials recipes util opencl
 
 dta1dir = $(pkgdatadir)
 dist_dta1_DATA = logo                 \

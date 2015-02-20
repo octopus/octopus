@@ -82,7 +82,7 @@ contains
       filename2 = trim(filename) // '.psf'
       inquire(file=filename2, exist=found)
       if(.not.found) then
-        filename2 = trim(conf%share) // "/PP/PSF/" // trim(filename) // ".psf"
+        filename2 = trim(conf%share) // "/pseudopotentials/PSF/" // trim(filename) // ".psf"
         inquire(file=filename2, exist=found)
         if(.not.found) then
           message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.psf}' not found"

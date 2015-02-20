@@ -92,7 +92,7 @@ contains
     filename2 =  filename // '.hgh'
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      filename2 = trim(conf%share) // "/PP/HGH/" // filename // ".hgh"
+      filename2 = trim(conf%share) // "/pseudopotentials/HGH/" // filename // ".hgh"
       inquire(file=filename2, exist=found)
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".hgh' not found!"
@@ -672,7 +672,7 @@ contains
     kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
     wav_unit = io_open(trim(dirname)//'/wave', action='write')
 
-    ! Writes down the input file, to be checked against SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
+    ! Writes down the input file, to be checked against SHARE_OCTOPUS/pseudopotentials/HGH/ATOM_NAME.hgh
     write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
     write(hgh_unit,'(  11x,4f12.6)') psp%rc(0), (psp%h(0,i,i), i = 1, 3)
     do k = 1, 3

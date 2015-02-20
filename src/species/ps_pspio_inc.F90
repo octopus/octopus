@@ -43,7 +43,7 @@
 
     if(.not. found) then
       do idir = 1, size(psp_dir)
-        filename2 = trim(conf%share) // "/PP/" // trim(psp_dir(idir)) // "/" // trim(filename)
+        filename2 = trim(conf%share) // "/pseudopotentials/" // trim(psp_dir(idir)) // "/" // trim(filename)
         inquire(file=filename2, exist=found)
 
         if(found) exit

@@ -132,7 +132,7 @@ contains
     !% coordinates, this is a canonical spacing that will be changed locally by the
     !% transformation. In periodic directions, your spacing may be slightly larger than
     !% what you request here, since the box size must be an integer multiple of the spacing.
-    !% The default is defined by the species if set in the file <tt>OCTOPUS-HOME/share/PP/defaults</tt>,
+    !% The default is defined by the species if set in the file <tt>OCTOPUS-HOME/share/pseudopotentials/defaults</tt>,
     !% or by the image resolution if <tt>BoxShape = box_image</tt>. Otherwise, there is
     !% no default.
     !%

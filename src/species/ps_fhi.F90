@@ -69,7 +69,7 @@ contains
     filename2 = trim(filename) // '.fhi'
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      filename2 = trim(conf%share) // "/PP/FHI/" // trim(filename) // ".fhi"
+      filename2 = trim(conf%share) // "/pseudopotentials/FHI/" // trim(filename) // ".fhi"
       inquire(file=filename2, exist=found)
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".fhi' not found"

@@ -68,7 +68,7 @@ contains
     filename2 = trim(filename) // '.cpi'
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      filename2 = trim(conf%share) // "/PP/CPI/" // trim(filename) // ".cpi"
+      filename2 = trim(conf%share) // "/pseudopotentials/CPI/" // trim(filename) // ".cpi"
       inquire(file=filename2, exist=found)
       if(.not.found) then
         message(1) = "Pseudopotential file '" // trim(filename) // ".cpi' not found"

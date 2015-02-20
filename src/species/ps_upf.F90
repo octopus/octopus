@@ -108,7 +108,7 @@ contains
     message(1) = "Reading pseudopotential from file:"
 
     if(.not. found) then
-      filename2 = trim(conf%share) // "/PP/UPF/" // trim(filename) // ".UPF"
+      filename2 = trim(conf%share) // "/pseudopotentials/UPF/" // trim(filename) // ".UPF"
       inquire(file=filename2, exist=found)
 
       if(.not.found) then

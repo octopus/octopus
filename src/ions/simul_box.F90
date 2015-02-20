@@ -365,11 +365,14 @@ contains
       !%Type float
       !%Section Mesh::Simulation Box
       !%Description
-      !% Defines the radius for <tt>BoxShape</tt> = <tt>sphere</tt>, <tt>cylinder</tt>, or <tt>minimum</tt>.
-      !% Must be a positive number. If not specified, the code will look for values in 
-      !% the <tt>Species</tt> block, or, if default pseudopotentials are used, the <tt>rsize</tt> column of
-      !% <tt>share/PP/defaults</tt>. In these cases, for <tt>minimum</tt>, a different radius is used for each species,
-      !% while for other shapes, the maximum radius is used.
+      !% Defines the radius for <tt>BoxShape</tt> = <tt>sphere</tt>,
+      !% <tt>cylinder</tt>, or <tt>minimum</tt>.  Must be a positive
+      !% number. If not specified, the code will look for values in
+      !% the <tt>Species</tt> block, or, if default pseudopotentials
+      !% are used, the <tt>rsize</tt> column of
+      !% <tt>share/pseudopotentials/defaults</tt>. In these cases, for
+      !% <tt>minimum</tt>, a different radius is used for each
+      !% species, while for other shapes, the maximum radius is used.
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)

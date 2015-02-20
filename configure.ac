@@ -397,12 +397,12 @@ AC_CONFIG_FILES([Makefile
   doc/html/js/Makefile
   doc/html/vars/Makefile
   share/Makefile
-  share/PP/Makefile
-  share/PP/PSF/Makefile
-  share/PP/HGH/Makefile
-  share/PP/UPF/Makefile
-  share/PP/CPI/Makefile
-  share/PP/FHI/Makefile
+  share/pseudopotentials/Makefile
+  share/pseudopotentials/PSF/Makefile
+  share/pseudopotentials/HGH/Makefile
+  share/pseudopotentials/UPF/Makefile
+  share/pseudopotentials/CPI/Makefile
+  share/pseudopotentials/FHI/Makefile
   share/recipes/Makefile
   share/recipes/en/Makefile
   share/recipes/es/Makefile
