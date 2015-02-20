@@ -123,6 +123,7 @@ module ps_m
     
     logical :: is_separated
     logical :: local
+    logical :: hamann
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -153,6 +154,7 @@ contains
     ps%flavour = flavour
     ps%label   = label
     ps%ispin   = ispin
+    ps%hamann  = .false.
     ! Initialization and processing.
     ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_QSO)
 
@@ -829,6 +831,9 @@ contains
 
     ps%nlcc = ps_upf%nlcc
 
+    ! if there are two projectors for l==0, this is a hamann
+    ps%hamann = ps_upf%nchannels(0) == 2
+
     ! The spin-dependent pseudopotentials are not supported yet, so we need to fix the occupations
     ! if we want to have a spin-dependent atomic density.
     if(ps%ispin == 2) then
@@ -912,12 +917,13 @@ contains
 
       call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
 
-      if(associated(ps_upf%proj_j)) then
+      if(.not. ps%hamann) then
         if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
           hato = M_ZERO
           call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
         end if
       end if
+
     end do
  
     ! Define the table for the pseudo-wavefunction components (using splines)

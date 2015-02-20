@@ -82,6 +82,8 @@ module ps_upf_m
     !>Extra information
     FLOAT, pointer :: proj_j(:)
 
+    integer, pointer :: nchannels(:) !< Number of channels per each angular momentum
+
   end type ps_upf_t
 
 contains
@@ -92,7 +94,7 @@ contains
     character(len=*), intent(in)    :: filename
 
     character(len=256) :: filename2
-    integer :: iunit, l, ierr
+    integer :: iunit, l, ierr, ll
     logical :: found
     logical, allocatable :: found_l(:)    
     type(xml_file_t) :: upf2_file
@@ -170,6 +172,14 @@ contains
     write(message(2), '(a,i2)') '      l loc = ', ps_upf%l_local
     call messages_info(2)
 
+    SAFE_ALLOCATE(ps_upf%nchannels(0:ps_upf%l_max))
+    
+    do ll = 0, ps_upf%l_max
+      ps_upf%nchannels(ll) = count(ps_upf%proj_l(1:ps_upf%n_proj) == ll)
+    end do
+
+    ps_upf%kb_nc = maxval(ps_upf%nchannels)
+
     ! Define the KB-projector cut-off radii
     call ps_upf_cutoff_radii(ps_upf)
 
@@ -201,6 +211,7 @@ contains
     SAFE_DEALLOCATE_P(ps_upf%wfs)
     SAFE_DEALLOCATE_P(ps_upf%rho)
     SAFE_DEALLOCATE_P(ps_upf%proj_j)
+    SAFE_DEALLOCATE_P(ps_upf%nchannels)
 
     POP_SUB(ps_upf_end)
   end subroutine ps_upf_end
@@ -516,11 +527,6 @@ contains
 
       ierr = xml_get_tag_value(tag, trim(str), ps_upf%proj_np(iproj) - startp + 1, ps_upf%proj(startp:, iproj))
       
-    end do
-
-    ps_upf%kb_nc = 1
-    do ll = 0, ps_upf%l_max
-      ps_upf%kb_nc = max(ps_upf%kb_nc, count(ps_upf%proj_l(1:ps_upf%n_proj) == ll))
     end do
 
     do ip = 1, ps_upf%np

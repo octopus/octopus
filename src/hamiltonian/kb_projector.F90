@@ -89,11 +89,13 @@ contains
     ps => species_ps(a%species)
 
     kb_p%n_s = sm%np
-    if (l == 0 .or. ps%kbc == 1) then
+    
+    if ((.not. ps%hamann .and. l == 0) .or. ps%kbc == 1) then
       n_c = 1
     else ! we have j-dependent projectors
       n_c = 2
     end if
+
     kb_p%n_c = n_c
 
     SAFE_ALLOCATE(kb_p%p (1:kb_p%n_s, 1:2))
@@ -105,7 +107,7 @@ contains
       kb_p%e(ic) = ps%h(l, ic, ic)
     end do
 
-    if (n_c == 2) then
+    if (.not. ps%hamann .and. n_c == 2) then
       ! We need to weight the projectors.
       ! The weights will be included in the KB energies
       kb_p%e(1) = kb_p%e(1)*real(l+1, REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
