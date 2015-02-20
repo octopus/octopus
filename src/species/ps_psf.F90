@@ -51,14 +51,14 @@ module ps_psf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_init(pstm, filename, ispin)
+  subroutine ps_psf_init(pstm, label, ispin)
     type(ps_psf_t),   intent(inout) :: pstm
-    character(len=*), intent(in)    :: filename
+    character(len=*), intent(in)    :: label
     integer,          intent(in)    :: ispin
 
-    character(len=256) :: filename2
+    character(len=256) :: fullpath
     integer :: iunit
-    logical :: found
+    logical :: found, ascii
 
     PUSH_SUB(ps_psf_init)
 
@@ -68,35 +68,37 @@ contains
     pstm%ispin = ispin
 
     ! Find out where the hell the file is.
-    filename2 = trim(filename) // '.vps'
-    inquire(file=filename2, exist=found)
-    message(1) = "Reading pseudopotential from file:"
-    if(found) then
-      write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-      call messages_info(2)
+    ascii = .false.
+    fullpath = trim(label) // '.vps'
+    inquire(file = fullpath, exist = found)
 
-      iunit = io_open(filename2, action='read', form='unformatted', status='old')
-      call ps_psf_file_read(iunit, .false., pstm%psf_file)
-      call io_close(iunit)
-    else
-      filename2 = trim(filename) // '.psf'
-      inquire(file=filename2, exist=found)
-      if(.not.found) then
-        filename2 = trim(conf%share) // "/pseudopotentials/PSF/" // trim(filename) // ".psf"
-        inquire(file=filename2, exist=found)
-        if(.not.found) then
-          message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.psf}' not found"
-          call messages_fatal(1)
-        end if
-      end if
-
-      write(message(2), '(6x,3a)') "'", trim(filename2), "'"
-      call messages_info(2)
-
-      iunit = io_open(filename2, action='read', form='formatted', status='old')
-      call ps_psf_file_read(iunit, .true., pstm%psf_file)
-      call io_close(iunit)
+    if(.not. found) then
+      ascii = .true.
+      fullpath = trim(label) // '.psf'
+      inquire(file = fullpath, exist = found)
     end if
+
+    if(.not. found) then
+      fullpath = trim(conf%share) // "/pseudopotentials/PSF/" // trim(label) // ".psf"
+      inquire(file = fullpath, exist = found)
+    end if
+
+    if(.not. found) then
+      message(1) = "Pseudopotential file '" // trim(label) // "{.vps|.psf}' not found"
+      call messages_fatal(1)
+    end if
+    
+    message(1) = "Reading pseudopotential from file:"
+    write(message(2), '(6x,3a)') "'", trim(fullpath), "'"
+    call messages_info(2)
+
+    if(ascii) then
+      iunit = io_open(fullpath, action='read', form='formatted', status='old')
+    else
+      iunit = io_open(fullpath, action='read', form='unformatted', status='old')
+    end if
+    call ps_psf_file_read(iunit, ascii, pstm%psf_file)
+    call io_close(iunit)
 
     ! Fills the valence configuration data.
     call build_valconf(pstm%psf_file, ispin, pstm%conf)
