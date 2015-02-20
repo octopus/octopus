@@ -189,13 +189,13 @@ contains
     !%Default none
     !%Section Output
     !%Description
-    !% Specifies what to print. The output files go into the <tt>static</tt> directory at the end of most kinds of run,
-    !% except for time-dependent simulations which print only per iteration. The frequency of output per iteration 
-    !% (available for <tt>CalculationMode</tt> = gs, unocc, and td</tt>) is set by <tt>OutputInterval</tt>
-    !% and the directory is set by <tt>OutputIterDir</tt>.
+    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
     !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below; the files will be printed in the directory
-    !% for the run mode. Indices in the filename are labelled as follows:
+    !% the options below. Indices in the filename are labelled as follows:
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
@@ -497,7 +497,7 @@ contains
 
     !%Variable OutputInterval
     !%Type integer
-    !%Default 0
+    !%Default 50
     !%Section Output
     !%Description
     !% The output requested by variable <tt>Output</tt> is written
@@ -508,7 +508,7 @@ contains
     !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
     !% Must be >= 0. If it is 0, then no output is written.
     !%End
-    call parse_integer('OutputInterval', 0, outp%output_interval)
+    call parse_integer('OutputInterval', 50, outp%output_interval)
     call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
