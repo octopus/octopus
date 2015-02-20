@@ -225,6 +225,10 @@ contains
     ! Allocate the species structure.
     SAFE_ALLOCATE(geo%species(1:geo%nspecies))
 
+    do i = 1, geo%nspecies
+      call species_nullify(geo%species(i))
+    end do
+    
     ! Now, read the data.
     k = 0
     geo%only_user_def = .true.

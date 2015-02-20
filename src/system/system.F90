@@ -43,6 +43,7 @@ module system_m
   use poisson_m
   use profiling_m
   use space_m
+  use species_m
   use simul_box_m
   use states_m
   use states_dim_m
@@ -88,7 +89,7 @@ contains
     call messages_obsolete_variable('SystemName')
 
     call space_init(sys%space)
-
+    call species_init_global()
     call geometry_init(sys%geo, sys%space)
     call grid_init_stage_0(sys%gr, sys%geo, sys%space)
     call states_init(sys%st, sys%gr, sys%geo)

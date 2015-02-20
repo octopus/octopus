@@ -44,11 +44,13 @@ module species_m
   public ::                        &
     read_from_default_file,        &
     species_t,                     &
+    species_nullify,               &
     species_set_label,             &
     species_set_type,              &
     species_set_index,             & 
     species_read,                  &
     species_init,                  &
+    species_init_global,           &
     species_read_delta,            &
     species_pot_init,              &
     species_init_from_data_object, &
@@ -68,7 +70,7 @@ module species_m
     species_jthick,                &
     species_sigma,                 &
     species_omega,                 &
-    species_mass,                &
+    species_mass,                  &
     species_rho_string,            &
     species_filename,              &
     species_niwfs,                 &
@@ -103,6 +105,10 @@ module species_m
     SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
     SPECIES_SOFT_COULOMB   = 128              !< soft-Coulomb potential
 
+  integer, public           ::              &
+    PSEUDO_SET_STANDARD = 1,                &
+    PSEUDO_SET_SG15     = 2
+    
   type species_t
     private
     integer :: index                  !< just a counter
@@ -152,15 +158,18 @@ module species_m
     module procedure species_end_species
     module procedure species_end_array
   end interface species_end
- 
+
+  integer :: pseudo_set
+  
 contains
 
   
   ! ---------------------------------------------------------
   subroutine species_nullify(this)
     type(species_t), intent(out) :: this
-    !
+
     PUSH_SUB(species_nullify)
+
     this%index=0
     this%label=""
     this%type=0
@@ -185,10 +194,35 @@ contains
     nullify(this%iwf_i)
     this%lmax=0
     this%lloc=0
+
     POP_SUB(species_nullify)
-    return
   end subroutine species_nullify
- 
+
+  subroutine species_init_global()
+    PUSH_SUB(species_nullify)
+
+    !%Variable PseudopotentialSet
+    !%Type flag
+    !%Default standard
+    !%Section System::Species
+    !%Description
+    !% Selects the set of pseudopotentials used by default.
+    !%
+    !%Option standard 1
+    !% The standard set of Octopus that provides LDA pseudopotentials
+    !% for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
+    !%Option sg15 2
+    !% (experimental) The set of Optimized Norm-Conserving Vanderbilt
+    !% PBE pseudopotentials developed by Schlipf and Gygi.
+    !%End
+
+    call parse_integer('PseudopotentialSet', PSEUDO_SET_STANDARD, pseudo_set)
+
+    if(pseudo_set == PSEUDO_SET_SG15) call messages_experimental('PseudopotentialSet = sg15')
+    
+    POP_SUB(species_nullify)
+  end subroutine species_init_global
+  
   ! ---------------------------------------------------------
   !> Assigns a label to a species_t variable. This should be the
   !! first routine to be called (before species_index, species_read and species_init).
@@ -495,7 +529,7 @@ contains
       if(spec%type == SPECIES_PSPIO) then
         call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin)
+        call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       endif
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
@@ -1228,7 +1262,7 @@ contains
 
     backspace(iunit)
 
-    read(iunit,*) label, mass, type, z, lmax, lloc, def_h, def_rsize
+    read(iunit,*) label, mass, type, spec%filename, z, lmax, lloc, def_h, def_rsize
 
     ASSERT(trim(label) == trim(spec%label))
 

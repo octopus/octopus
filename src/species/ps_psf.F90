@@ -51,11 +51,12 @@ module ps_psf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_init(pstm, label, ispin)
+  subroutine ps_psf_init(pstm, label, ispin, filename)
     type(ps_psf_t),   intent(inout) :: pstm
     character(len=*), intent(in)    :: label
     integer,          intent(in)    :: ispin
-
+    character(len=*), intent(in)    :: filename
+    
     character(len=256) :: fullpath
     integer :: iunit
     logical :: found, ascii
@@ -68,10 +69,17 @@ contains
     pstm%ispin = ispin
 
     ! Find out where the hell the file is.
-    ascii = .false.
-    fullpath = trim(label) // '.vps'
+    
+    ascii = .true.
+    fullpath = trim(conf%share)//'/pseudopotentials/'//trim(filename)
     inquire(file = fullpath, exist = found)
 
+    if(.not. found) then
+      ascii = .false.
+      fullpath = trim(label) // '.vps'
+      inquire(file = fullpath, exist = found)
+    end if
+    
     if(.not. found) then
       ascii = .true.
       fullpath = trim(label) // '.psf'

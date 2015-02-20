@@ -132,14 +132,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
+  subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
     integer,           intent(in)    :: flavour
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
-
+    character(len=*),  intent(in)    :: filename
+    
     integer :: l, ii, ll
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
@@ -160,7 +161,7 @@ contains
 
     select case(flavour)
     case(PS_TYPE_PSF)
-      call ps_psf_init(ps_psf, trim(label), ispin)
+      call ps_psf_init(ps_psf, trim(label), ispin, filename)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
