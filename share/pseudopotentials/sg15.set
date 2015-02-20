@@ -1,5 +1,5 @@
-#Name	Mass	PP		Path				Z	Lmax	Lloc	Spacing	Radius
-H	1.007840000	104	"sg15/H_ONCV_PBE-1.0.upf"		1	-1	-1	0.3	8
+#Name	Mass		PP	Path				Z	Lmax	Lloc	Spacing	Radius
+H	1.007840000	104	"sg15/H_ONCV_PBE-1.0.upf"	1	-1	-1	0.3	8
 He	4.002602000	104	"sg15/He_ONCV_PBE-1.0.upf"	2	-1	-1	0.3	8
 Li	6.938000000	104	"sg15/Li_ONCV_PBE-1.0.upf"	3	-1	-1	0.3	8
 Be	9.012183100	104	"sg15/Be_ONCV_PBE-1.0.upf"	4	-1	-1	0.3	8
