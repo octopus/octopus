@@ -368,9 +368,8 @@ contains
       !% Defines the radius for <tt>BoxShape</tt> = <tt>sphere</tt>,
       !% <tt>cylinder</tt>, or <tt>minimum</tt>.  Must be a positive
       !% number. If not specified, the code will look for values in
-      !% the <tt>Species</tt> block, or, if default pseudopotentials
-      !% are used, the <tt>rsize</tt> column of
-      !% <tt>share/pseudopotentials/defaults</tt>. In these cases, for
+      !% the <tt>Species</tt> block, or, from the default
+      !% pseudopotential parameters.  In these cases, for
       !% <tt>minimum</tt>, a different radius is used for each
       !% species, while for other shapes, the maximum radius is used.
       !%End

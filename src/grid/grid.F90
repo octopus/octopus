@@ -128,11 +128,17 @@ contains
     !%Type float
     !%Section Mesh
     !%Description
-    !% The spacing between the points in the mesh. If using curvilinear
-    !% coordinates, this is a canonical spacing that will be changed locally by the
-    !% transformation. In periodic directions, your spacing may be slightly larger than
-    !% what you request here, since the box size must be an integer multiple of the spacing.
-    !% The default is defined by the species if set in the file <tt>OCTOPUS-HOME/share/pseudopotentials/defaults</tt>,
+    !% The spacing between the points in the mesh. This controls the
+    !% quality of the discretization, smaller spacing gives more
+    !% precise results at the cost of increasing computational cost.
+    !%
+    !% When using curvilinear coordinates, this is a canonical spacing
+    !% that will be changed locally by the transformation. In periodic
+    !% directions, your spacing may be slightly different than what
+    !% you request here, since the box size must be an integer
+    !% multiple of the spacing.
+    !%
+    !% The default value is defined by the species if only default pseudopotential are used
     !% or by the image resolution if <tt>BoxShape = box_image</tt>. Otherwise, there is
     !% no default.
     !%

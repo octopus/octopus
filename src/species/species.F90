@@ -213,13 +213,15 @@ contains
     !% for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
     !%Option sg15 2
     !% (experimental) The set of Optimized Norm-Conserving Vanderbilt
-    !% PBE pseudopotentials developed by Schlipf and Gygi.
+    !% PBE pseudopotentials developed by Schlipf and Gygi (M. Schlipf
+    !% and F. Gygi, (2015) arXiv:1502.00995). This set provides
+    !% pseudopotentials for most elements.
     !%End
 
     call parse_integer('PseudopotentialSet', PSEUDO_SET_STANDARD, pseudo_set)
-
+    call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
     if(pseudo_set == PSEUDO_SET_SG15) call messages_experimental('PseudopotentialSet = sg15')
-    
+
     POP_SUB(species_nullify)
   end subroutine species_init_global
   
@@ -273,15 +275,18 @@ contains
     !% A species is by definition either an "ion" (nucleus + core electrons) described
     !% through a pseudopotential, or a model potential.
     !%
-    !% Note that some common pseudopotentials are distributed with the code in the
-    !% directory <tt>OCTOPUS-HOME/share/pseudopotentials/</tt>. To use these pseudopotentials, you are
-    !% not required to define them explicitly in the <tt>Species</tt> block, as defaults 
-    !% are provided by the program (you can override these defaults in any case). 
-    !% The defaults, including for <tt>Spacing</tt> and <tt>Radius</tt>,
-    !% are found in <tt>OCTOPUS-HOME/share/pseudopotentials/defaults</tt>.
-    !% Additional pseudopotentials can be downloaded from the 
-    !% <a href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
-    !% octopus homepage</a>.
+    !% Note that some sets of pseudopotentials are distributed with
+    !% the code. To use these pseudopotentials, you do not need to define them
+    !% explicitly in the <tt>Species</tt> block, as default parameters
+    !% are provided.
+    !%
+    !% You can select the set for default pseudopotentials using the
+    !% <tt>PseudopotentialSet</tt> variable.
+    !%
+    !% Additional pseudopotentials can be downloaded from the <a
+    !% href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
+    !% octopus homepage</a> or from other sources. As explained below,
+    !% several pseudopotential formats are supported.
     !%
     !% The format of this block is the following: The first field is
     !% the name of the species. The second defines the type of species
