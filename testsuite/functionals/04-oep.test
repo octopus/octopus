@@ -36,7 +36,6 @@ match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.251965
 
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
-# FULL OEP is disabled for the 3.0 release.
 Input: 04-oep.03-jellium-full_exx.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.33301625
 match ; Exchange     ; GREP(static/info, 'Exchange    =', 20) ; -1.03301780
