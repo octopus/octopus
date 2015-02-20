@@ -1,0 +1,11 @@
+CalculationMode = gs
+
+PseudopotentialSet = sg15
+
+%Coordinates
+ 'H' | 0.0 | 0.0 |0.0
+%
+
+ExperimentalFeatures= yes
+
+FromScratch = yes
