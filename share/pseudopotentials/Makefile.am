@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = PSF HGH UPF CPI FHI
+SUBDIRS = PSF HGH UPF CPI FHI sg15
 
 ppdir = $(pkgdatadir)/pseudopotentials
 dist_pp_DATA = defaults

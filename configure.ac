@@ -403,6 +403,7 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/UPF/Makefile
   share/pseudopotentials/CPI/Makefile
   share/pseudopotentials/FHI/Makefile
+  share/pseudopotentials/sg15/Makefile
   share/recipes/Makefile
   share/recipes/en/Makefile
   share/recipes/es/Makefile
