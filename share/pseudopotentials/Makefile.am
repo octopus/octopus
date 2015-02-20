@@ -21,7 +21,7 @@
 
 SUBDIRS = PSF HGH UPF CPI FHI
 
-ppdir = $(pkgdatadir)/PP
+ppdir = $(pkgdatadir)/pseudopotentials
 dist_pp_DATA = defaults
 
 

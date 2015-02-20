@@ -19,7 +19,7 @@
 ##
 ## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-upfdir = $(pkgdatadir)/PP/FHI
+upfdir = $(pkgdatadir)/pseudopotentials/FHI
 
 dist_upf_DATA = \
         C.fhi

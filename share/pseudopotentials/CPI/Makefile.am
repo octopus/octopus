@@ -19,7 +19,7 @@
 ##
 ## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-cpidir = $(pkgdatadir)/PP/CPI
+cpidir = $(pkgdatadir)/pseudopotentials/CPI
 
 dist_cpi_DATA = \
 	C.cpi

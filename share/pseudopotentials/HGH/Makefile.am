@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-hghdir = $(pkgdatadir)/PP/HGH
+hghdir = $(pkgdatadir)/pseudopotentials/HGH
 
 dist_hgh_DATA = \
 	configurations \

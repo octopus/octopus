@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-psfdir = $(pkgdatadir)/PP/PSF
+psfdir = $(pkgdatadir)/pseudopotentials/PSF
 
 dist_psf_DATA = \
 	Ar.psf \
