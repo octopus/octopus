@@ -69,11 +69,15 @@ contains
     pstm%ispin = ispin
 
     ! Find out where the hell the file is.
-    
-    ascii = .true.
-    fullpath = trim(conf%share)//'/pseudopotentials/'//trim(filename)
-    inquire(file = fullpath, exist = found)
 
+    found = .false.
+
+    if(trim(filename) /= '') then
+      ascii = .true.
+      fullpath = trim(conf%share)//'/pseudopotentials/'//trim(filename)
+      inquire(file = fullpath, exist = found)
+    end if
+    
     if(.not. found) then
       ascii = .false.
       fullpath = trim(label) // '.vps'
@@ -87,6 +91,7 @@ contains
     end if
 
     if(.not. found) then
+      ascii = .true.
       fullpath = trim(conf%share) // "/pseudopotentials/PSF/" // trim(label) // ".psf"
       inquire(file = fullpath, exist = found)
     end if

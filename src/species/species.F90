@@ -105,7 +105,7 @@ module species_m
     SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
     SPECIES_SOFT_COULOMB   = 128              !< soft-Coulomb potential
 
-  integer, public           ::              &
+  integer, public, parameter ::             &
     PSEUDO_SET_STANDARD = 1,                &
     PSEUDO_SET_SG15     = 2
     
@@ -159,6 +159,7 @@ module species_m
     module procedure species_end_array
   end interface species_end
 
+  logical :: initialized = .false.
   integer :: pseudo_set
   
 contains
@@ -201,6 +202,8 @@ contains
   subroutine species_init_global()
     PUSH_SUB(species_nullify)
 
+    initialized = .true.
+    
     !%Variable PseudopotentialSet
     !%Type flag
     !%Default standard
@@ -276,6 +279,8 @@ contains
     type(block_t) :: blk
 
     PUSH_SUB(species_read)
+
+    if(.not. initialized) call species_init_global()
 
     spec%has_density = .false. ! there is no density associated
     spec%nlcc      = .false.   ! without non-local core corrections
@@ -454,12 +459,21 @@ contains
       call parse_block_end(blk)
     end if
 
-    ! Find out if the species is in the defaults file.
-    write(fname, '(2a)') trim(conf%share), "/pseudopotentials/defaults"
+    ! Find out if the species is in the pseudo potential set
+    select case(pseudo_set)
+    case(PSEUDO_SET_STANDARD)
+      fname = trim(conf%share)//'/pseudopotentials/standard.set'
+    case(PSEUDO_SET_SG15)
+      fname = trim(conf%share)//'/pseudopotentials/sg15.set'
+    case default
+      ASSERT(.false.)
+    end select
+      
     n_spec_def = max(0, loct_number_of_lines(fname))
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 
     iunit = io_open(fname, action='read', status='old', die=.false.)
+
     if(iunit > 0) then
       read(iunit,*)
 
@@ -472,6 +486,14 @@ contains
       end do default_file
 
       call io_close(iunit)
+
+    else
+
+      call messages_write('Cannot open the octopus internal file:', new_line = .true.)
+      call messages_write(" '"//trim(fname)//"'", new_line = .true.)
+      call messages_write('There is something wrong with your octopus installation.')
+      call messages_fatal()
+      
     end if
 
     if(read_data == 0) then
@@ -498,6 +520,8 @@ contains
 
     PUSH_SUB(species_init)
 
+    if(.not. initialized) call species_init_global()
+    
     print_info_ = .true.
     if(present(print_info)) then
       print_info_ = print_info

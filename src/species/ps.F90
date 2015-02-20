@@ -232,7 +232,7 @@ contains
       call logrid_copy(psp%g, ps%g)
 
     case(PS_TYPE_UPF)
-      call ps_upf_init(ps_upf, trim(label))
+      call ps_upf_init(ps_upf, trim(label), trim(filename))
 
       call valconf_copy(ps%conf, ps_upf%conf)
       ps%z      = z

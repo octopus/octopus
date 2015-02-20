@@ -22,8 +22,10 @@
 SUBDIRS = PSF HGH UPF CPI FHI sg15
 
 ppdir = $(pkgdatadir)/pseudopotentials
-dist_pp_DATA = defaults
 
+dist_pp_DATA =           \
+	standard.set     \
+	sg15.set
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
@@ -35,12 +37,10 @@ check:
 	  fi \
 	done
 
-check-short: check
-check-long: check
-
 clean-local:
 	if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
 	  rm -f $(dist_pp_DATA); \
 	fi
 
-.PHONY: check check-short check-long
+.PHONY: check
+
