@@ -91,8 +91,8 @@ dist_sg15_DATA =                      \
 	Y_ONCV_PBE-1.0.upf            \
 	Zn_ONCV_PBE-1.0.upf           \
 	Zr_ONCV_PBE-1.0.upf           \
-	COPYING
-
+	COPYING                       \
+	README.Octopus
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
