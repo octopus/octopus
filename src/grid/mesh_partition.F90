@@ -148,13 +148,13 @@ contains
 #if !defined(HAVE_METIS)
     if(library == METIS) then
       message(1) = 'METIS was requested, but Octopus was compiled without it.'
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 #endif
 #if !defined(HAVE_PARMETIS)
     if(library == PARMETIS) then
       message(1) = 'PARMETIS was requested, but Octopus was compiled without it.'
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 #endif
 
