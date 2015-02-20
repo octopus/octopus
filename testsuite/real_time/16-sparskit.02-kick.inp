@@ -26,7 +26,6 @@ TDPropagator = crank_nicolson_sparskit
 
 ParallelizationStrategy = par_states + par_domains
 
-# par_domains not implemented
 %ParallelizationGroupRanks
  2 | 2
 %
