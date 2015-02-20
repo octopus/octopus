@@ -447,7 +447,7 @@ contains
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
-    character(len=32) :: dirname
+    character(len=320) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
