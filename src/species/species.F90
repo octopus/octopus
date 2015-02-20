@@ -44,12 +44,9 @@ module species_m
   public ::                        &
     read_from_default_file,        &
     species_t,                     &
-    species_nullify,               &
-    species_set_label,             &
-    species_set_type,              &
-    species_set_index,             & 
-    species_read,                  &
     species_init,                  &
+    species_read,                  &
+    species_build,                 &
     species_init_global,           &
     species_read_delta,            &
     species_pot_init,              &
@@ -227,48 +224,30 @@ contains
   end subroutine species_init_global
   
   ! ---------------------------------------------------------
-  !> Assigns a label to a species_t variable. This should be the
-  !! first routine to be called (before species_index, species_read and species_init).
-  !! This label must match one of the labels given in the %Species block
-  !! in the input file -- or else one of the labels in the defaults file.
+  !> Initializes a species object. This should be the
+  !! first routine to be called (before species_read and species_build).
+  !! The label argument must match one of the labels given in the %Species block
+  !! in the input file or one of the labels in the defaults file.
   ! ---------------------------------------------------------
-  pure subroutine species_set_label(spec, label)
-    type(species_t), intent(inout) :: spec
-    character(len=*), intent(in)   :: label
-    spec%label = trim(label)
-  end subroutine species_set_label
-  ! ---------------------------------------------------------
+  subroutine species_init(this, label, index)
+    type(species_t),  intent(out)   :: this
+    character(len=*), intent(in)    :: label
+    integer,          intent(in)    :: index
 
-  ! ---------------------------------------------------------
-  !> Assigns a type to a species_t variable.
-  ! ---------------------------------------------------------
-  elemental subroutine species_set_type(this, that)
-    type(species_t), intent(inout) :: this
-    integer,         intent(in)    :: that
-    !
-    this%type=that
-    return
-  end subroutine species_set_type
-  ! ---------------------------------------------------------
+    if(.not. initialized) call species_init_global()
 
-  ! ---------------------------------------------------------
-  !> Assigns an index to a species_t variable. This should be the
-  !! second routine to be called (before species_read and species_init),
-  !! when initializing a species_t variable.
-  ! ---------------------------------------------------------
-  pure subroutine species_set_index(spec, k)
-    type(species_t), intent(inout) :: spec
-    integer, intent(in)   :: k
-    spec%index = k
-  end subroutine species_set_index
+    call species_nullify(this)
+    this%label = trim(label)
+    this%index = index
+
+  end subroutine species_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   !> Reads the information (from the input file) about a species_t variable, initializing
-  !! part of it (it has to be completed later with "species_init").
-  !! Note that species_read has to be called only after species_set_label
-  !! and species_set index have been called.
+  !! part of it (it has to be completed later with "species_build").
+  !! Note that species_read has to be called only after species_init has been called.
   ! ---------------------------------------------------------
   subroutine species_read(spec)
     type(species_t), intent(inout) :: spec
@@ -280,15 +259,12 @@ contains
 
     PUSH_SUB(species_read)
 
-    if(.not. initialized) call species_init_global()
-
     spec%has_density = .false. ! there is no density associated
     spec%nlcc      = .false.   ! without non-local core corrections
     spec%def_h     = -M_ONE    ! not defined
     spec%def_rsize = -M_ONE    ! not defined
     spec%user_def  = ""
     read_data   = 0
-
 
     !%Variable Species
     !%Type block
@@ -507,7 +483,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init(spec, ispin, dim, print_info)
+  subroutine species_build(spec, ispin, dim, print_info)
     type(species_t),   intent(inout) :: spec
     integer,           intent(in)    :: ispin
     integer,           intent(in)    :: dim
@@ -518,10 +494,8 @@ contains
     FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
     logical, save :: qso_warning = .false.
 
-    PUSH_SUB(species_init)
+    PUSH_SUB(species_build)
 
-    if(.not. initialized) call species_init_global()
-    
     print_info_ = .true.
     if(present(print_info)) then
       print_info_ = print_info
@@ -655,8 +629,8 @@ contains
     endif
     if(print_info_) call messages_info(1)
 
-    POP_SUB(species_init)
-  end subroutine species_init
+    POP_SUB(species_build)
+  end subroutine species_build
   ! ---------------------------------------------------------
 
   subroutine species_read_delta(spec, zz)
@@ -772,7 +746,11 @@ contains
     integer :: ierr
     !
     PUSH_SUB(species_init_from_data_object)
+
+    if(.not. initialized) call species_init_global()
+
     call species_nullify(this)
+       
     this%index=index
     call json_get(json, "label", this%label, ierr)
     if(ierr/=JSON_OK)then

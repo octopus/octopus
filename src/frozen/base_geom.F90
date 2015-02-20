@@ -60,7 +60,7 @@ module base_geom_m
   use json_m,        only: json_object_t, json_init, json_get, json_end
   use json_m,        only: json_array_t, json_array_iterator_t, json_len, json_next
   use space_m,       only: operator(==), space_t
-  use species_m,     only: LABEL_LEN, species_t, species_label, species_index, species_set_index, species_end
+  use species_m
 
   use config_dict_m, only: &
     CONFIG_DICT_OK,        &

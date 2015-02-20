@@ -225,10 +225,6 @@ contains
     ! Allocate the species structure.
     SAFE_ALLOCATE(geo%species(1:geo%nspecies))
 
-    do i = 1, geo%nspecies
-      call species_nullify(geo%species(i))
-    end do
-    
     ! Now, read the data.
     k = 0
     geo%only_user_def = .true.
@@ -237,8 +233,7 @@ contains
         if(atom_same_species(geo%atom(j), geo%atom(i))) cycle atoms2
       end do
       k = k + 1
-      call species_set_label(geo%species(k), atom_get_label(geo%atom(j)))
-      call species_set_index(geo%species(k), k)
+      call species_init(geo%species(k), atom_get_label(geo%atom(j)), k)
       call species_read(geo%species(k))
       ! these are the species which do not represent atoms
       geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
@@ -259,7 +254,7 @@ contains
       call messages_print_stress(stdout, "Species")
     end if
     do i = 1, geo%nspecies
-      call species_init(geo%species(i), ispin, geo%space%dim, print_info=print_info_)
+      call species_build(geo%species(i), ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
       call messages_print_stress(stdout)
