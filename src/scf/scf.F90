@@ -828,7 +828,6 @@ contains
           write(message(2), '(a)')        '' 
           call messages_info(2)
         end if
-        if(scf%lcao_restricted) call lcao_end(lcao)
         call profiling_out(prof)
         exit
       end if
@@ -867,6 +866,8 @@ contains
       call profiling_out(prof)
     end do !iter
     
+    if(scf%lcao_restricted) call lcao_end(lcao)
+
     if(scf%max_iter > 0 .and. scf%mix_field == MIXPOT) then
       call v_ks_calc(ks, hm, st, geo)
     endif
