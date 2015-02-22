@@ -85,7 +85,7 @@ contains
 
     integer :: iunit, i
     logical :: found
-    character(len=256) :: filename2
+    character(len=MAX_PATH_LEN) :: filename2
 
     PUSH_SUB(hgh_init)
 

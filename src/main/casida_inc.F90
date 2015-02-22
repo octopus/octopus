@@ -721,7 +721,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   R_TYPE, allocatable :: lr_hmat1(:,:,:)
   CMPLX, allocatable :: zdl_rho(:,:)
   FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
-  character(len=100) :: restart_filename
+  character(len=MAX_PATH_LEN) :: restart_filename
   type(restart_t) :: restart_vib
 
   PUSH_SUB(X(casida_forces))
@@ -857,7 +857,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   FLOAT, allocatable :: hvar(:,:,:)
   integer :: ik, ist, jst, iunit, err, ii, aa, num_saved
   type(pert_t) :: ionic_pert
-  character(len=100) :: restart_filename
+  character(len=MAX_PATH_LEN) :: restart_filename
   R_TYPE :: val
   logical :: all_done
   logical, allocatable :: is_saved(:,:,:)

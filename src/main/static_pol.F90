@@ -75,7 +75,7 @@ contains
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
-    character(len=80) :: fname, dir_name
+    character(len=MAX_PATH_LEN) :: fname, dir_name
     character(len=120) :: line(1)
     character :: sign_char
     type(restart_t) :: gs_restart, restart_load, restart_dump

@@ -93,9 +93,9 @@ module restart_m
     integer           :: type      !< Restart type: RESTART_TYPE_DUMP or RESTART_TYPE_LOAD
     logical           :: skip      !< If set to .true., no restart information should be loaded or dumped.
     integer           :: format    !< Format used to store the restart information.
-    character(len=80) :: dir       !< Directory where the restart information is stored.
-    character(len=80) :: pwd       !< The current directory where the restart information is being loaded from or dumped to.
-                                   !! It can be either dir or a subdirectory of dir.
+    character(len=MAX_PATH_LEN) :: dir !< Directory where the restart information is stored.
+    character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
+                                       !! It can be either dir or a subdirectory of dir.
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
@@ -105,8 +105,8 @@ module restart_m
   type restart_data_t
     private
     character(len=20) :: tag
-    character(len=80) :: basedir
-    character(len=80) :: dir
+    character(len=MAX_PATH_LEN) :: basedir
+    character(len=MAX_PATH_LEN) :: dir
     integer :: flags
   end type restart_data_t
 
@@ -190,7 +190,7 @@ contains
 
     logical :: set(RESTART_N_DATA_TYPES)
     integer :: iline, n_cols, data_type
-    character(len=80) :: default_basedir
+    character(len=MAX_PATH_LEN) :: default_basedir
     type(block_t) :: blk
 
     PUSH_SUB(restart_module_init)
@@ -395,7 +395,7 @@ contains
     logical :: grid_changed, grid_reordered, restart_write, dir_exists
     integer :: iunit
     character(len=20) :: tag
-    character(len=80) :: basedir, dirname
+    character(len=MAX_PATH_LEN) :: basedir, dirname
 
     PUSH_SUB(restart_init)
 

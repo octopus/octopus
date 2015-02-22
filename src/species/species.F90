@@ -124,7 +124,7 @@ module species_m
     FLOAT :: omega                  !< harmonic frequency for Hermite polynomials
 
 
-    character(len=200) :: filename !< for the potential read from a file.
+    character(len=MAX_PATH_LEN) :: filename !< for the potential read from a file.
 
 
     FLOAT :: jradius              !< jellium stuff

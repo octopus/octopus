@@ -94,7 +94,7 @@ contains
     character(len=*), intent(in)    :: label
     character(len=*), intent(in)    :: filename
 
-    character(len=256) :: fullpath
+    character(len=MAX_PATH_LEN) :: fullpath
     integer :: iunit, l, ierr, ll
     logical :: found
     logical, allocatable :: found_l(:)    

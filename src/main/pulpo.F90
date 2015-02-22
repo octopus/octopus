@@ -34,7 +34,7 @@ contains
 
   subroutine pulpo_print()
 
-    character(len=256) :: filename
+    character(len=MAX_PATH_LEN) :: filename
 
     PUSH_SUB(pulpo_print)
 

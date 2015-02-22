@@ -1231,7 +1231,7 @@ contains
 
   ! -----------------------------------------------------------
 
-  character(len=256) function messages_clean_path(filename) result(clean_path)
+  character(len=MAX_PATH_LEN) function messages_clean_path(filename) result(clean_path)
     character(len=*), intent(in) :: filename
 
     integer :: pos, start

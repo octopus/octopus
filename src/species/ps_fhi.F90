@@ -54,7 +54,7 @@ contains
     type(ps_fhi_t),   intent(inout) :: ps_fhi
     character(len=*), intent(in)    :: filename
 
-    character(len=256) :: filename2
+    character(len=MAX_PATH_LEN) :: filename2
     integer :: iunit
     logical :: found
 

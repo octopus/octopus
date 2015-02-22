@@ -36,7 +36,6 @@ module path_m
 
   private
   public ::          &
-    max_path_len,    &
     path_isabs,      &
     path_join,       &
     path_expanduser, &
@@ -110,7 +109,7 @@ contains
     character(len=*), intent(in)  :: path
     character(len=*), intent(out) :: xpath
     !
-    character(len=max_path_len) :: home
+    character(len=MAX_PATH_LEN) :: home
     !
     PUSH_SUB(path_expanduser)
     xpath=trim(adjustl(path))
@@ -154,7 +153,7 @@ contains
     character(len=*), intent(in)  :: path
     character(len=*), intent(out) :: resolved_path
     !
-    character(len=max_path_len) :: xpth
+    character(len=MAX_PATH_LEN) :: xpth
     !
     PUSH_SUB(path_realpath)
     call path_expanduser(trim(adjustl(path)), xpth)

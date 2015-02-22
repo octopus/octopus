@@ -126,7 +126,7 @@ module output_m
     integer :: restart_write_interval
 
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
-    character(len=32) :: iter_dir  !< The folder name, if information will be output while iterating.
+    character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)

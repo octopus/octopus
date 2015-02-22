@@ -53,7 +53,7 @@ contains
     type(ps_cpi_t),   intent(inout) :: ps_cpi
     character(len=*), intent(in)    :: filename
 
-    character(len=256) :: filename2
+    character(len=MAX_PATH_LEN) :: filename2
     integer :: iunit
     logical :: found
 

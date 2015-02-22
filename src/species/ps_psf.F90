@@ -57,7 +57,7 @@ contains
     integer,          intent(in)    :: ispin
     character(len=*), intent(in)    :: filename
     
-    character(len=256) :: fullpath
+    character(len=MAX_PATH_LEN) :: fullpath
     integer :: iunit
     logical :: found, ascii
 

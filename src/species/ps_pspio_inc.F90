@@ -30,7 +30,7 @@
     logical :: found, has_kb
     integer :: idir
     character(len=3) :: psp_dir(3) = (/"PSF", "FHI", "UPF"/)
-    character(len=256) :: filename2
+    character(len=MAX_PATH_LEN) :: filename2
     type(pspio_f90_pspdata_t)   :: pspdata
 
     PUSH_SUB(ps_pspio_init)

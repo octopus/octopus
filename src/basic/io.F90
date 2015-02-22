@@ -51,7 +51,7 @@ module io_m
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
-  character(len=512) :: work_dir    !< name of the output directory
+  character(len=MAX_PATH_LEN) :: work_dir    !< name of the output directory
 
 contains
 
@@ -62,7 +62,7 @@ contains
   subroutine io_init(defaults)
     logical, optional, intent(in) :: defaults
 
-    character(len=128) :: filename
+    character(len=MAX_PATH_LEN) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
@@ -264,7 +264,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=512) function io_workpath(path) result(wpath)
+  character(len=MAX_PATH_LEN) function io_workpath(path) result(wpath)
     character(len=*),  intent(in) :: path
 
     PUSH_SUB(io_workpath)
@@ -322,7 +322,7 @@ contains
     type(mpi_grp_t),  intent(in), optional :: grp
 
     character(len=20)  :: status_, form_, position_
-    character(len=512) :: file_
+    character(len=MAX_PATH_LEN) :: file_
     logical            :: die_
     integer            :: iostat
     type(mpi_grp_t)    :: grp_
@@ -435,7 +435,7 @@ contains
 
     integer :: ii, iostat
     logical :: opened, named
-    character(len=50) :: filename
+    character(len=MAX_PATH_LEN) :: filename
     character(len=11) :: form
 
     PUSH_SUB(io_status)
