@@ -251,7 +251,7 @@ contains
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
-    type(output_t),   intent(in)    :: outp           !< Output objetct; Decides the kind, what and where to output
+    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
     logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
                                                       !! If false, it iterates over the filenames
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
@@ -497,6 +497,7 @@ contains
         ! Here, we always iterate folders
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
+        ! FIXME: it is not appropriate to use OutputIterDir to control *input* here
         write(filename, '(a,a,a,a)') trim(outp%iter_dir), trim(folder), trim(basename), ".obf"
         if (mesh%mpi_grp%size > 1) then
           ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
