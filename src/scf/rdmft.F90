@@ -175,7 +175,8 @@ contains
    
     if(conv) then 
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      call messages_info(1)
+      write(message(2),'(a,es15.5)')  'The total energy is ', energy_occ
+      call messages_info(2)
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'The energy difference between the last two iterations is ', abs(energy_occ-energy)
