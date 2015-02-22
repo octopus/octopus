@@ -526,11 +526,9 @@ contains
     !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
-      call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
-      call io_mkdir(outp%iter_dir)
-      call add_last_slash(outp%iter_dir)
-    endif
+    call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
+    call io_mkdir(outp%iter_dir)
+    call add_last_slash(outp%iter_dir)
 
     !%Variable RestartWriteInterval
     !%Type integer
