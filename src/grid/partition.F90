@@ -187,8 +187,7 @@ contains
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE) 
       ! Only one rank per partition group should write the partition restart information
       ! Otherwise, more than once is trying to be written data
-      if (mod(mpi_world%rank, mpi_world%size/partition%mpi_grp%size) == 0 .or. &
-           partition%mpi_grp%size == mpi_world%size) then
+      if (mod(mpi_world%rank, mpi_world%size/partition%mpi_grp%size) == 0) then
         call io_binary_write_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
              partition%np_local, partition%part, err)
         call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
