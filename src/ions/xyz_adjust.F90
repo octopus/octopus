@@ -359,7 +359,7 @@ contains
     per(1) = -f2(2)
     per(2) =  f2(1)
     per(3) = M_ZERO
-    r = sqrt(sum(per**2))
+    r = sqrt(sum(per(1:3)**2))
     if(r > M_ZERO) then
       per = per/r
     else
