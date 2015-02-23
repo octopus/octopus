@@ -362,7 +362,7 @@ contains
     per(3) = M_ZERO
     r = sqrt(sum(per(1:3)**2))
     if(r > M_ZERO) then
-      per = per/r
+      per(1:3) = per(1:3)/r
     else
       per(2) = M_ONE
     end if
