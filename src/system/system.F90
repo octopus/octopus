@@ -156,7 +156,7 @@ contains
     call multicomm_end(sys%mc)
 
     call poisson_end(psolver)
-    call v_ks_end(sys%ks, sys%gr)
+    call v_ks_end(sys%ks)
     
     call output_end(sys%outp)
     

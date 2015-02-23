@@ -545,9 +545,8 @@ contains
   end subroutine hamiltonian_init
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_end(hm, gr)
+  subroutine hamiltonian_end(hm)
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
 
     PUSH_SUB(hamiltonian_end)
 

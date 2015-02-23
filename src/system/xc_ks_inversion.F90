@@ -168,16 +168,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_end(ks_inv, gr)
+  subroutine xc_ks_inversion_end(ks_inv)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
-    type(grid_t),            intent(in)    :: gr
 
     PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
       call eigensolver_end(ks_inv%eigensolver)
-      call hamiltonian_end(ks_inv%aux_hm, gr)
+      call hamiltonian_end(ks_inv%aux_hm)
       call states_end(ks_inv%aux_st)
     end if
 
