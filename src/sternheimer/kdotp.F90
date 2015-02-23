@@ -101,6 +101,8 @@ contains
     character(len=100)   :: str_tmp
     real(8)              :: errornorm
     type(restart_t)      :: restart_load, restart_dump
+	
+    type(pert_t)            :: pert2  ! for the second direction in second-order kdotp
 
     PUSH_SUB(kdotp_lr_run)
 
@@ -129,6 +131,7 @@ contains
 
     if(calc_2nd_order) then
       call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
+      call pert_init(pert2, PERTURBATION_KDOTP, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     endif
@@ -279,15 +282,17 @@ contains
           write(message(1), '(3a)') 'Info: Calculating second-order response in the ', index2axis(idir2), &
             '-direction.' 
           call messages_info(1)
+		  
+          call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
             call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
-              1, M_ZERO, M_ZERO, kdotp_vars%perturbation, kdotp_vars%perturbation, &
+              1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
             call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
-              1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, kdotp_vars%perturbation, &
+              1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           endif
