@@ -117,7 +117,7 @@ contains
       !% This variable decides which multipole moments are printed out for
       !% <tt>OutputMatrixElements = ks_multipoles</tt>:
       !%
-      !% In 3D, if, for example, OutputMEMultipoles = 1, then the program will print three 
+      !% In 3D, if, for example, <tt>OutputMEMultipoles = 1</tt>, then the program will print three 
       !% files, <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
@@ -126,7 +126,7 @@ contains
       !% <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2), containing the X and
       !% Y dipole matrix elements.
       !%
-      !% In 1D, if, for example, OutputMEMultipoles = 2, the program will print two files, cotaining the
+      !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% X and X**2 matrix elements between Kohn-Sham states.
       !%End
       call parse_integer('OutputMEMultipoles', 1, this%ks_multipoles)
