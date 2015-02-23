@@ -42,7 +42,14 @@ dnl @version 2003-01-19
 dnl @license AllPermissive
 
 AC_DEFUN([ACX_PATH_METIS], [
-  AC_MSG_CHECKING(for METIS library)
+
+AC_MSG_CHECKING(for METIS library)
+
+# METIS is only useful in parallel.
+if test x"$acx_mpi_ok" != xyes; then
+  AC_MSG_RESULT([not used without MPI])
+else
+
   AC_REQUIRE([AC_PROG_CC])
   #
   # User hints...
@@ -137,8 +144,6 @@ AC_DEFUN([ACX_PATH_METIS], [
       fi
     fi
 		
-    # tell automake
-    AM_CONDITIONAL(METIS, test x$METIS_LIB = x1)
     if test x = x"$METIS_LIB" ; then
       with_metis=no
             
@@ -166,4 +171,6 @@ AC_DEFUN([ACX_PATH_METIS], [
     fi
 
     AC_SUBST(LIBS_METIS_5)
+
+fi
 ])dnl ACX_PATH_METIS
