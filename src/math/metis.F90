@@ -114,13 +114,13 @@ module metis_m
       integer,     intent(in)  :: nparts     !< This is used to specify the number of sub-domains that are desired. Note 
                                              !! that the number of sub-domains is independent of the number of processors 
                                              !! that call this routine.
-      REAL_SINGLE, intent(in)  :: tpwgts     !< An array of size ncon × nparts that is used to specify the fraction of vertex 
+      REAL_SINGLE, intent(in)  :: tpwgts     !< An array of size ncon x nparts that is used to specify the fraction of vertex 
                                              !! weight that should be distributed to each sub-domain for each balance 
                                              !! constraint. If all of the sub-domains are to be of the same size for every 
-                                             !! vertex weight, then each of the ncon × nparts elements should be set to
+                                             !! vertex weight, then each of the ncon x nparts elements should be set to
                                              !! a value of 1/nparts. If ncon is greater than 1, the target sub-domain weights
                                              !! for each sub-domain are stored contiguously (similar to the vwgt array). 
-                                             !! Note that the sum of all of the tpwgts for a give vertex weight should be one.
+                                             !! Note that the sum of all of the tpwgts for a given vertex weight should be one.
       REAL_SINGLE, intent(in)  :: ubvec      !< An array of size ncon that is used to specify the imbalance tolerance for each 
                                              !! vertex weight, with 1 being perfect balance and nparts being perfect imbalance.
                                              !! A value of 1.05 for each of the ncon weights is recommended.
