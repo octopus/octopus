@@ -59,6 +59,7 @@ module output_me_m
     !> If output_ksdipole, this number sets up which matrix elements will
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
+    !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
   end type output_me_t
 
@@ -114,10 +115,19 @@ contains
       !%Section Output
       !%Description
       !% This variable decides which multipole moments are printed out for
-      !% <tt>OutputMatrixElements = ks_multipoles</tt>: <i>e.g.</i>, if 1, then the
-      !% program will print three files, <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
+      !% <tt>OutputMatrixElements = ks_multipoles</tt>:
+      !%
+      !% In 3D, if, for example, OutputMEMultipoles = 1, then the program will print three 
+      !% files, <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
+      !%
+      !% In 2D, this variable is ignored: it will always print two files, 
+      !% <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2), containing the X and
+      !% Y dipole matrix elements.
+      !%
+      !% In 1D, if, for example, OutputMEMultipoles = 2, the program will print two files, cotaining the
+      !% X and X**2 matrix elements between Kohn-Sham states.
       !%End
       call parse_integer('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
@@ -154,19 +164,47 @@ contains
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
-        do ll = 1, this%ks_multipoles
-          do mm = -ll, ll
+        select case(gr%sb%dim)
+        case(3)
+          do ll = 1, this%ks_multipoles
+            do mm = -ll, ll
+              write(fname,'(i4)') id
+              write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
+              if (states_are_real(st)) then
+                call doutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+              else
+                call zoutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+              end if
+
+              id = id + 1
+            end do
+          end do
+        case(2)
+          do ll = 1, 2
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
             else
-              call zoutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+            end if
+
+            id = id + 1
+
+          end do
+        case(1)
+          do ll = 1, this%ks_multipoles
+            write(fname,'(i4)') id
+            write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
+            if (states_are_real(st)) then
+              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+            else
+              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
             end if
 
             id = id + 1
           end do
-        end do
+        end select
       end do
     end if
 
