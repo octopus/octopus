@@ -201,13 +201,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
+    FLOAT,               intent(in)    :: target_rho(:,:) !< (1:gr%mesh%np, 1:nspin)
+    integer,             intent(in)    :: nspin
+    type(hamiltonian_t), intent(inout) :: aux_hm
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: aux_hm
     type(eigensolver_t), intent(inout) :: eigensolver
-    integer, intent(in)      :: nspin
-    FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
-    integer, intent(in)      :: asymptotics
+    integer,             intent(in)    :: asymptotics
            
     integer :: ii, jj, asym1, asym2 
     integer :: np
@@ -226,6 +226,11 @@ contains
     
     sqrtrho = M_ZERO
     smalldensity = 5d-6
+
+    if(any(target_rho(:,:) < -M_EPSILON)) then
+      write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
+      call messages_warning(1)
+    endif
     
     do jj = 1, nspin
       do ii = 1, gr%der%mesh%np
