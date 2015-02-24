@@ -112,7 +112,7 @@ program casida_spectrum
   call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMaxEnergy'), cs%max_energy, unit = units_out%energy)
 
   identity = M_ZERO
-  do idir = 1, cs%space%dim
+  do idir = 1, MAX_DIM
     identity(idir, idir) = M_ONE
   enddo
 
