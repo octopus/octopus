@@ -490,7 +490,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
   if(comm /= MPI_COMM_NULL .and. comm /= 0) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
+    ! Add a barrier to ensure that the processes are synchronized
     call MPI_Barrier(comm, mpi_err)
   end if
 
@@ -517,7 +517,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
-  R_TYPE,                     intent(in)  :: ff(:)  ! ff(mesh%np_global)
+  R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
   type(geometry_t), optional, intent(in)  :: geo
