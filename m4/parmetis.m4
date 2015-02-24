@@ -28,12 +28,12 @@ AC_MSG_CHECKING(for ParMETIS library)
 if test x"$acx_mpi_ok" != xyes; then
   AC_MSG_RESULT([requires MPI])
   acx_parmetis_ok=no
-fi
-
-if test x"$acx_external_metis" != xyes; then
-  # To compile ParMETIS, you needed external METIS. So, no point in depending on internal METIS here.
-  AC_MSG_RESULT([requires external METIS])
-  acx_parmetis_ok=no
+else
+  if test x"$acx_external_metis" != xyes; then
+    # To compile ParMETIS, you needed external METIS. So, no point in depending on internal METIS here.
+    AC_MSG_RESULT([requires external METIS])
+    acx_parmetis_ok=no
+  fi
 fi
 
 if test x"$acx_parmetis_ok" != xno; then
@@ -56,8 +56,8 @@ if test x"$acx_parmetis_ok" != xno; then
     PARMETIS_CFLAGS="-I$with_parmetis_prefix/include"
     LIBS_PARMETIS="-L$with_parmetis_prefix/lib -lparmetis"
 
-    CFLAGS="$CFLAGS $PARMETIS_CFLAGS"
-    LIBS="$LIBS $LIBS_PARMETIS $LIBS_METIS_5"
+    CFLAGS="$CFLAGS $PARMETIS_CFLAGS $METIS_CFLAGS"
+    LIBS="$LIBS $LIBS_PARMETIS $LIBS_METIS"
 
     AC_LANG_SAVE
     AC_LANG_C
