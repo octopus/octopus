@@ -216,11 +216,11 @@ contains
     do
       if(is_complex) then
         read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir), im_tm(idir), idir = 1, cs%space%dim), ff(cs%space%dim+1)
-        im_tm(:) = units_to_atomic(units_out%length, im_tm(:))
+        im_tm(1:cs%space%dim) = units_to_atomic(units_out%length, im_tm(1:cs%space%dim))
       else
         read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir),              idir = 1, cs%space%dim), ff(cs%space%dim+1)
       endif
-      re_tm(:) = units_to_atomic(units_out%length, re_tm(:))
+      re_tm(1:cs%space%dim) = units_to_atomic(units_out%length, re_tm(1:cs%space%dim))
       ! ff, the last column, is a dimensionless number
 
       if(ios < 0) then
