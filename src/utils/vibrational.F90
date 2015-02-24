@@ -43,7 +43,7 @@
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
-    type(spec_t) :: spectrum
+    type(spectrum_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
     FLOAT :: ww, curtime, vaftime, deltat
     integer :: ifreq, max_freq
@@ -225,7 +225,7 @@
     call batch_init(vafb, 1)
     call batch_add_state(vafb, vaf)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, deltat, vafb)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
 
     call batch_init(ftvafb, 1)
     call batch_add_state(ftvafb, ftvaf)

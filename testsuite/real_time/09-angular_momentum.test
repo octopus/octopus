@@ -117,16 +117,16 @@ match ; Beta   1 ; LINE(rotatory_strength, 15, 41) ; -0.00000000E+00
 
 match ; Energy 2 ; LINE(rotatory_strength, 31, 1)  ;  0.58798921E-02
 match ; R      2 ; LINE(rotatory_strength, 31, 21) ; -0.48425452E-04
-match ; Beta   2 ; LINE(rotatory_strength, 31, 41) ; -0.95072727E-01
+match ; Beta   2 ; LINE(rotatory_strength, 31, 41) ; -0.96425663E-01
 
 match ; Energy 3 ; LINE(rotatory_strength, 1002, 1)  ; 0.36271584E+00
 match ; R      3 ; LINE(rotatory_strength, 1002, 21) ; -0.23108112E-03
-match ; Beta   3 ; LINE(rotatory_strength, 1002, 41) ; -0.63858791E-01
+match ; Beta   3 ; LINE(rotatory_strength, 1002, 41) ; -0.62839487E-01
 
 match ; Energy 4 ; LINE(rotatory_strength, 1706, 1)  ;  0.62143109E+00
 match ; R      4 ; LINE(rotatory_strength, 1706, 21) ; -0.41373255E-03
-match ; Beta   4 ; LINE(rotatory_strength, 1706, 41) ;  0.46676199E-04
+match ; Beta   4 ; LINE(rotatory_strength, 1706, 41) ;  0.22561692E-03
 
 match ; Energy 5 ; LINE(rotatory_strength, 2015, 1)  ;  0.73498651E+00
 match ; R      5 ; LINE(rotatory_strength, 2015, 21) ; -0.40713142E-03 
-match ; Beta   5 ; LINE(rotatory_strength, 2015, 41) ;  0.23320309E-01
+match ; Beta   5 ; LINE(rotatory_strength, 2015, 41) ;  0.22943144E-01
