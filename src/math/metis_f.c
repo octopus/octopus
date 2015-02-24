@@ -34,7 +34,11 @@
 
 
 #ifdef HAVE_METIS
- 
+
+#ifdef METIS_USE_DOUBLEPRECISION
+  #error METIS must be compiled in single precision for Octopus.
+#endif
+
 void FC_FUNC_(oct_metis_setdefaultoptions, OCT_METIS_SETDEFAULTOPTIONS)
      (idx_t *options)
 {
