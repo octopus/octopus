@@ -38,7 +38,7 @@ program propagation_spectrum
   integer :: in_file(3), out_file(3), ref_file, eq_axes, nspin, &
     lmax, time_steps, ierr
   logical :: calculate_tensor, reference_multipoles
-  type(spec_t) :: spectrum
+  type(spectrum_t) :: spectrum
   type(unit_system_t) :: file_units
   character(len=80) :: refmultipoles
 

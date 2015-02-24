@@ -36,7 +36,7 @@ program harmonic_spectrum
 
   integer :: mode, ierr, ar
   FLOAT :: w0, vec(1:3)
-  type(spec_t) :: spectrum
+  type(spectrum_t) :: spectrum
   character :: pol
   logical :: get_maxima
 

@@ -44,7 +44,7 @@ program dielectric_function
   FLOAT   :: dt, tt, ww, n0
   FLOAT, allocatable :: vecpot(:, :), vecpot0(:), ftreal(:, :), ftimag(:, :)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :), fullmat(:, :)
-  type(spec_t)      :: spectrum
+  type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
   type(space_t)     :: space
   type(geometry_t)  :: geo
@@ -144,7 +144,7 @@ program dielectric_function
     call batch_add_state(ftimagb, ftimag(0:,  ii))
   end do
 
-  call signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, dt, vecpotb)
+  call signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, M_ZERO, dt, vecpotb)
 
   call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
     istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)

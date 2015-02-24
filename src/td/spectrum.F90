@@ -46,7 +46,7 @@ module spectrum_m
 
   private
   public ::                        &
-    spec_t,                        &
+    spectrum_t,                    &
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
@@ -86,7 +86,7 @@ module spectrum_m
     SPECTRUM_FOURIER            = 1,  &
     SPECTRUM_COMPRESSED_SENSING = 2
 
-  type spec_t
+  type spectrum_t
     FLOAT   :: start_time          !< start time for the transform
     FLOAT   :: end_time            !< when to stop the transform
     FLOAT   :: energy_step         !< step in energy mesh
@@ -98,7 +98,7 @@ module spectrum_m
     integer :: method              !< fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
     type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
-  end type spec_t
+  end type spectrum_t
 
   !> Module variables, necessary to compute the function hsfunction, called by
   !! the C function loct_1dminimize
@@ -113,9 +113,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_init(spectrum, default_energy_step, default_max_energy)
-    type(spec_t),           intent(inout) :: spectrum
-    FLOAT,        optional, intent(in)    :: default_energy_step
-    FLOAT,        optional, intent(in)    :: default_max_energy
+    type(spectrum_t),           intent(inout) :: spectrum
+    FLOAT,            optional, intent(in)    :: default_energy_step
+    FLOAT,            optional, intent(in)    :: default_max_energy
 
     FLOAT :: fdefault
 
@@ -281,9 +281,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_tensor(spectrum, out_file, in_file)
-    type(spec_t), intent(inout) :: spectrum
-    integer,      intent(in)    :: out_file
-    integer,      intent(in)    :: in_file(:)
+    type(spectrum_t), intent(inout) :: spectrum
+    integer,          intent(in)    :: out_file
+    integer,          intent(in)    :: in_file(:)
 
     integer :: nspin, energy_steps, ie, is, equiv_axes, n_files, trash
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
@@ -532,7 +532,7 @@ contains
   subroutine spectrum_cross_section(in_file, out_file, spectrum, ref_file)
     integer,           intent(in)    :: in_file
     integer,           intent(in)    :: out_file
-    type(spec_t),      intent(inout) :: spectrum
+    type(spectrum_t),  intent(inout) :: spectrum
     integer, optional, intent(in)    :: ref_file
 
     character(len=20) :: header_string
@@ -629,12 +629,11 @@ contains
     end if
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb, &
-					 kick_time=kick%time)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
     if(cmplxscl) then
       call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_EXP, spectrum%noise, &
         istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
-    else        
+    else
       call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
         istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
     end if
@@ -810,7 +809,7 @@ contains
   subroutine spectrum_dipole_power(in_file, out_file, spectrum)
     integer,           intent(in)    :: in_file
     integer,           intent(in)    :: out_file
-    type(spec_t),      intent(inout) :: spectrum
+    type(spectrum_t),  intent(inout) :: spectrum
 
     character(len=20) :: header_string
     integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, ii, isp, no_e, ie, idir
@@ -856,7 +855,7 @@ contains
     call batch_init(transformb_cos, 3, 1, nspin, transform_cos)
     call batch_init(transformb_sin, 3, 1, nspin, transform_sin)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, spectrum%start_time, dt, dipoleb)
 
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
          istart + 1, iend + 1, spectrum%start_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, transformb_cos)
@@ -917,9 +916,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_dyn_structure_factor(in_file_sin, in_file_cos, out_file, spectrum)
-    integer,      intent(in)    :: in_file_sin, in_file_cos
-    integer,      intent(in)    :: out_file
-    type(spec_t), intent(inout) :: spectrum
+    integer,          intent(in)    :: in_file_sin, in_file_cos
+    integer,          intent(in)    :: out_file
+    type(spectrum_t), intent(inout) :: spectrum
 
     character(len=20) :: header_string
     integer :: time_steps, time_steps_sin, time_steps_cos
@@ -1073,9 +1072,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_rotatory_strength(in_file, out_file, spectrum)
-    integer,      intent(in)    :: in_file
-    integer,      intent(in)    :: out_file
-    type(spec_t), intent(inout) :: spectrum
+    integer,          intent(in)    :: in_file
+    integer,          intent(in)    :: out_file
+    type(spectrum_t), intent(inout) :: spectrum
 
     integer :: istart, iend, ntiter, ie, idir, time_steps, no_e, nspin, trash, it
     FLOAT :: dump, dt, energy
@@ -1121,7 +1120,7 @@ contains
     call batch_add_state(respb, resp)
     call batch_add_state(imspb, imsp)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, angularb)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, angularb, 1, no_e + 1, spectrum%energy_step, respb)
@@ -1393,7 +1392,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_ar_from_acc(out_file, spectrum, vec, w0)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t), intent(inout) :: spectrum
     FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
 
@@ -1500,7 +1499,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_ar_from_mult(out_file, spectrum, vec, w0)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t), intent(inout) :: spectrum
     FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
 
@@ -1592,7 +1591,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_mult(out_file, spectrum, pol, vec, w0)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t), intent(inout) :: spectrum
     character,        intent(in)    :: pol
     FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
@@ -1713,7 +1712,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs_from_acc(out_file, spectrum, pol, vec, w0)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t),     intent(inout) :: spectrum
     character,        intent(in)    :: pol
     FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
@@ -1816,7 +1815,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_hs(out_file, spectrum, pol, w0)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t), intent(inout) :: spectrum
     character,        intent(in)    :: pol
     FLOAT,  optional, intent(in)    :: w0
 
@@ -1871,7 +1870,7 @@ contains
 
   subroutine spectrum_hs_output(out_file, spectrum, pol, no_e, sp)
     character(len=*), intent(in)    :: out_file
-    type(spec_t),     intent(inout) :: spectrum
+    type(spectrum_t), intent(inout) :: spectrum
     character,        intent(in)    :: pol
     integer,          intent(in)    :: no_e
     FLOAT,            intent(in)    :: sp(0:no_e)
@@ -2090,61 +2089,49 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function, window, &
-						 kick_time)
+  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, t0, time_step, time_function)
     integer,            intent(in)    :: damp_type
     FLOAT,              intent(in)    :: damp_factor    
     integer,            intent(in)    :: time_start
     integer,            intent(in)    :: time_end
+    FLOAT,              intent(in)    :: t0
     FLOAT,              intent(in)    :: time_step
     type(batch_t),      intent(inout) :: time_function
-    logical, optional,  intent(in)    :: window
-    FLOAT, optional, 	intent(in)    :: kick_time
 
     integer :: itime, ii
-    FLOAT   :: total_time, time, weight
-    FLOAT   :: kick_time_
-    logical :: window_
-
+    FLOAT   :: time, weight
 
     PUSH_SUB(signal_damp)
-
-    window_ = optional_default(window, .false.)
-    kick_time_ = optional_default(kick_time, M_ZERO)
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
 
-    total_time = time_step*(time_end - time_start + 1)
-
     do itime = time_start, time_end
-      time = time_step*(itime - time_start)
-
-      if(window_) time = abs(2*time - total_time)
+      time = time_step*(itime-1)
 
       ! Gets the damp function
       select case(damp_type)
       case(SPECTRUM_DAMP_NONE)
         weight = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
-    		if (time < kick_time_) then
-    			weight = M_ONE
-    		else
-    			weight = exp(-(time-kick_time_)*damp_factor)
-    		endif
+        if (time < t0) then
+          weight = M_ONE
+        else
+          weight = exp(-(time - t0)*damp_factor)
+        endif
       case(SPECTRUM_DAMP_POLYNOMIAL)
-    		if (time < kick_time_) then
-    			weight = M_ONE
-    		else
-    			weight = M_ONE - M_THREE*( (time-kick_time_)/(total_time-kick_time_) )**2 + &
-    					 M_TWO*( (time-kick_time_)/(total_time-kick_time_) )**3
-    		endif
+        if (time < t0) then
+          weight = M_ONE
+        else
+          weight = M_ONE - M_THREE*( (time - t0)/(time_step*(time_end - 1) - t0) )**2 + &
+               M_TWO*( (time - t0)/(time_step*(time_end - 1) - t0) )**3
+        endif
       case(SPECTRUM_DAMP_GAUSSIAN)
-    		if (time < kick_time_) then
-    			weight = M_ONE
-    		else
-    			weight = exp(-(time-kick_time_)**2*damp_factor**2)
-    		endif
+        if (time < t0) then
+          weight = M_ONE
+        else
+          weight = exp(-(time - t0)**2*damp_factor**2)
+        endif
       end select
             
       if(batch_type(time_function) == TYPE_CMPLX) then
@@ -2190,7 +2177,7 @@ contains
     type(cmplxscl_t), optional, intent(in)    :: cmplxscl
 
     integer :: itime, ienergy, ii
-    FLOAT   :: time, energy!, kernel
+    FLOAT   :: energy!, kernel
     CMPLX :: ez, eidt
     type(compressed_sensing_t) :: cs
     logical :: cmplxft ! perform complex Fourier Transform?
@@ -2239,9 +2226,8 @@ contains
           end if
 
           eidt = exp(M_zI * energy * time_step )
-          ez = exp(-M_zI * energy * t0)
+          ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
           do itime = time_start, time_end
-            time = time_step*(itime - time_start)
             do ii = 1, time_function%nst_linear
               energy_function%states_linear(ii)%dpsi(ienergy) = &
                 energy_function%states_linear(ii)%dpsi(ienergy) + &
@@ -2258,9 +2244,8 @@ contains
           end if
 
           eidt = exp(M_zI * energy * time_step)
-          ez = exp(-M_zI * energy * t0)
+          ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
           do itime = time_start, time_end
-            time = time_step*(itime - time_start)
             do ii = 1, time_function%nst_linear
               energy_function%states_linear(ii)%dpsi(ienergy) = &
                 energy_function%states_linear(ii)%dpsi(ienergy) + &
@@ -2274,9 +2259,8 @@ contains
           if(cmplxft) then
 
             eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
-            ez = exp(-M_zI * energy * t0)
+            ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end
-              time = time_step*(itime - time_start)
               do ii = 1, time_function%nst_linear
                 energy_function%states_linear(ii)%dpsi(ienergy) = &
                   energy_function%states_linear(ii)%dpsi(ienergy) + &
@@ -2288,9 +2272,8 @@ contains
           else
 
             eidt = exp( -energy * time_step)
-            ez = exp(-M_zI * energy * t0)
+            ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end
-              time = time_step*(itime - time_start)
               do ii = 1, time_function%nst_linear
                 energy_function%states_linear(ii)%dpsi(ienergy) = &
                   energy_function%states_linear(ii)%dpsi(ienergy) + &

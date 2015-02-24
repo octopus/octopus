@@ -32,7 +32,7 @@ program rotational_strength
 
   implicit none
 
-  type(spec_t) :: spectrum
+  type(spectrum_t) :: spectrum
   integer :: in_file, out_file, ierr
 
   ! Initialize stuff
