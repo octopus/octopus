@@ -73,8 +73,9 @@ module system_m
 contains
 
   !----------------------------------------------------------
-  subroutine system_init(sys)
+  subroutine system_init(sys, calc_mode_id)
     type(system_t), intent(out) :: sys
+    integer,        intent(in)  :: calc_mode_id !< calculation mode
 
     type(profile_t), save :: prof
     PUSH_SUB(system_init)
@@ -105,7 +106,7 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
-    call output_init(sys%outp, sys%gr%sb, sys%st%nst)
+    call output_init(sys%outp, sys%gr%sb, sys%st%nst, calc_mode_id)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
     call elf_init()

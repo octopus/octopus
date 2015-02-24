@@ -21,6 +21,7 @@
 
 module output_m
   use basins_m
+  use calc_mode_m
   use cube_function_m
   use cube_m
   use current_m
@@ -170,15 +171,16 @@ module output_m
 
 contains
 
-  subroutine output_init(outp, sb, nst)
+  subroutine output_init(outp, sb, nst, calc_mode_id)
     type(output_t),       intent(out) :: outp
     type(simul_box_t),    intent(in)  :: sb
     integer,              intent(in)  :: nst
+    integer,              intent(in)  :: calc_mode_id
 
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how
+    integer :: what_no_how, default_output_interval
 
     PUSH_SUB(output_init)
 
@@ -497,18 +499,25 @@ contains
 
     !%Variable OutputInterval
     !%Type integer
-    !%Default 50
     !%Section Output
     !%Description
     !% The output requested by variable <tt>Output</tt> is written
     !% to the directory <tt>OutputIterDir</tt>
     !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% Default is 0, except for <tt>CalculationMode = td</tt> or <tt>opt_control</tt>, in which case it is 50.
     !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
     !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
     !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
     !% Must be >= 0. If it is 0, then no output is written.
     !%End
-    call parse_integer('OutputInterval', 50, outp%output_interval)
+
+    if(calc_mode_id == CM_TD .or. calc_mode_id == CM_OPT_CONTROL) then
+      default_output_interval = 50
+    else
+      default_output_interval = 0
+    endif
+
+    call parse_integer('OutputInterval', default_output_interval, outp%output_interval)
     call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."

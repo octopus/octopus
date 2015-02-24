@@ -150,7 +150,7 @@ program oct_test
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys)
+    call system_init(sys, CM_NONE)
     call poisson_test(sys%gr%mesh)
     call system_end(sys)
 
@@ -164,7 +164,7 @@ program oct_test
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys)
+    call system_init(sys, CM_NONE)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -201,7 +201,7 @@ program oct_test
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_set_scalapack_compat()
 
-    call system_init(sys)
+    call system_init(sys, CM_NONE)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -231,7 +231,7 @@ program oct_test
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys)
+    call system_init(sys, CM_NONE)
 
     call messages_write('Info: Testing real interpolation routines')
     call messages_new_line()

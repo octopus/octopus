@@ -24,6 +24,7 @@ program oct_local_multipoles
   use basins_m
   use box_m
   use box_union_m
+  use calc_mode_m
   use command_line_m
   use geometry_m
   use global_m
@@ -84,7 +85,7 @@ program oct_local_multipoles
   call messages_print_stress(stdout)
     
   call unit_system_init()
-  call system_init(sys)
+  call system_init(sys, CM_NONE)
   call simul_box_init(sb, sys%geo, sys%space)
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
 

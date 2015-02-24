@@ -20,6 +20,7 @@
 #include "global.h"
 
 module run_m
+  use calc_mode_m
   use casida_m
   use em_resp_m
   use epot_m
@@ -67,24 +68,6 @@ module run_m
   integer :: calc_mode_id
 
   integer, parameter :: LR = 1, FD = 2
-
-  integer, public, parameter ::   &
-    CM_NONE               =   0,  &
-    CM_GS                 =   1,  &
-    CM_UNOCC              =   2,  &
-    CM_TD                 =   3,  &
-    CM_GEOM_OPT           =   5,  &
-    CM_OPT_CONTROL        =   7,  &
-    CM_LR_POL             =   8,  &
-    CM_CASIDA             =   9,  &
-    CM_VDW                =  11,  &
-    CM_PHONONS_LR         =  12,  &
-    CM_ONE_SHOT           =  14,  &
-    CM_KDOTP              =  15,  &
-    CM_GCM                =  16,  &
-    CM_DUMMY              =  17,  &
-    CM_INVERTKDS          =  18,  &
-    CM_PULPO_A_FEIRA      =  99
 
 contains
 
@@ -241,7 +224,7 @@ contains
       call fft_all_init()
 
       call unit_system_init()
-      call system_init(sys)
+      call system_init(sys, cm)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       
       call messages_print_stress(stdout, 'Approximate memory requirements')
