@@ -22,10 +22,9 @@
 module space_m
 
   use global_m
+  use json_m
   use messages_m
   use parser_m
-
-  use json_m, only: JSON_OK, json_object_t, json_init, json_set, json_get
 
   implicit none
 
@@ -66,7 +65,9 @@ contains
   subroutine space_init_simple(this, dim)
     type(space_t),     intent(inout) :: this
     integer, optional, intent(in)    :: dim
-    !
+
+    PUSH_SUB(space_init_simple)
+    
     if(present(dim))then
       this%dim=dim
     else
@@ -81,69 +82,72 @@ contains
       call parse_integer('Dimensions', default_ndim, this%dim)
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call input_error('Dimensions')
-    return
+
+    POP_SUB(space_init_simple)
   end subroutine space_init_simple
 
   ! ---------------------------------------------------------
   subroutine space_init_data_object(this, config)
     type(space_t),       intent(out) :: this
     type(json_object_t), intent(in)  :: config
-    !
+
     integer :: ndim, ierr
-    !
+
+    PUSH_SUB(space_init_data_object)
+    
     call json_get(config, "dimensions", ndim, ierr=ierr)
     if(ierr/=JSON_OK)ndim=default_ndim
     call space_init_simple(this, ndim)
-    return
+
+    POP_SUB(space_init_data_object)
   end subroutine space_init_data_object
 
   ! ---------------------------------------------------------
   subroutine space_create_data_object(this, config)
     type(space_t),       intent(in)  :: this
     type(json_object_t), intent(out) :: config
-    !
+
+    PUSH_SUB(space_create_data_object)
+    
     call json_init(config)
     call json_set(config, "dimensions", this%dim)
-    return
+
+    POP_SUB(space_create_data_object)
   end subroutine space_create_data_object
 
   ! ---------------------------------------------------------
   elemental subroutine space_copy(this_out, this_in)
     type(space_t), intent(inout) :: this_out
     type(space_t), intent(in)    :: this_in
-    !
+
     this_out%dim=this_in%dim
-    return
   end subroutine space_copy
 
   ! -----------------------------------------------------
   elemental function space_equal(sa, sb) result(eqv)
     type(space_t), intent(in) :: sa
     type(space_t), intent(in) :: sb
-    !
+
     logical :: eqv
-    !
+
     eqv=(sa%dim==sb%dim)
-    return
   end function space_equal
   
   ! -----------------------------------------------------
   elemental function space_not_equal(sa, sb) result(neqv)
     type(space_t), intent(in) :: sa
     type(space_t), intent(in) :: sb
-    !
+    
     logical :: neqv
-    !
+
     neqv=(sa%dim/=sb%dim)
-    return
   end function space_not_equal
 
   ! ---------------------------------------------------------
   elemental subroutine space_end(this)
     type(space_t), intent(inout) :: this
-    !
+
     this%dim=0
-    return
   end subroutine space_end
 
 end module space_m

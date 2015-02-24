@@ -182,6 +182,8 @@ contains
     character(len=256) :: string
     logical :: is_complex
 
+    PUSH_SUB(calc_broad)
+    
     nsteps = int((cs%max_energy - cs%min_energy) / cs%energy_step)
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
@@ -261,6 +263,7 @@ contains
     call io_close(iunit)
 
     SAFE_DEALLOCATE_A(spectrum)
+    POP_SUB(calc_broad)
   end subroutine calc_broad
 
 end program casida_spectrum
