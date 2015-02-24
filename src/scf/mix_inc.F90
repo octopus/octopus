@@ -151,10 +151,10 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
     end function dotp
   end interface
   
-  FLOAT, parameter :: w0 = CNST(0.01)
+  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
   R_TYPE    :: gamma, x
-  R_TYPE, allocatable :: beta(:, :), work(:), w(:)
+  R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
   
@@ -167,9 +167,6 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   
   SAFE_ALLOCATE(beta(1:iter_used, 1:iter_used))
   SAFE_ALLOCATE(work(1:iter_used))
-  SAFE_ALLOCATE(   w(1:iter_used))
-
-  w  = M_FIVE
   
   ! compute matrix beta
   beta = M_ZERO
@@ -178,12 +175,12 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
       beta(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          beta(i, j) = beta(i, j) + w(i)*w(j)*dotp(df(:, k, l, j), df(:, k, l, i))
+          beta(i, j) = beta(i, j) + ww * ww * dotp(df(:, k, l, j), df(:, k, l, i))
         end do
       end do
       beta(j, i) = beta(i, j)
     end do
-    beta(i, i) = w0**2 + w(i)**2
+    beta(i, i) = w0**2 + ww**2
   end do
   
   ! invert matrix beta
@@ -205,16 +202,15 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   do i = 1, iter_used
     gamma = M_ZERO
     do j = 1, iter_used
-      gamma = gamma + beta(j, i)*w(j)*work(j)
+      gamma = gamma + beta(j, i)*ww*work(j)
     end do
 
-    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - w(i)*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
+    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
         dv(1:d1, 1:d2, 1:d3, i))
   end do
   
   SAFE_DEALLOCATE_A(beta)
   SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(w)
   
   POP_SUB(X(broyden_extrapolation))
 end subroutine X(broyden_extrapolation)
