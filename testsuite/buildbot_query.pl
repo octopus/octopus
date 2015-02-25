@@ -11,7 +11,7 @@ $match = "J1 1st iteration";
 
 # options specifying setup for Octopus
 $bbpath = "http://www.tddft.org/programs/octopus/buildbot";
-$shell_num = 4;
+$shell_num = 3;
 
 print "URL: $bbpath\n";
 print "Input file: $inputfile\n";
