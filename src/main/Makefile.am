@@ -36,8 +36,8 @@ oct_test_LDADD = \
         $(top_builddir)/src/hamiltonian/libhamiltonian.a \
         $(top_builddir)/src/xc/libxc.a                   \
         $(top_builddir)/src/poisson/libpoisson.a         \
-        $(top_builddir)/src/frozen/libfrozen.a           \
         $(top_builddir)/src/states/libstates.a           \
+        $(top_builddir)/src/frozen/libfrozen.a           \
         $(top_builddir)/src/grid/libgrid.a               \
         $(top_builddir)/src/ions/libions.a               \
         $(top_builddir)/src/species/libspecies.a         \
