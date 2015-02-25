@@ -1072,7 +1072,7 @@ contains
 #ifdef HAVE_MPI
       if(gr%mesh%parallel_in_domains) then
         ! Broadcast the eigenvalues to all the nodes
-        call MPI_Bcast(eval(1), size(eval), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(eval(1), size(eval), MPI_FLOAT, 0, gr%mesh%mpi_grp%comm, mpi_err)
         ! We will not broadcast the eigenvectors at this point, because we do not
         ! want all the processes to store the full matrix at the same time, as this
         ! can use a lot of memory space.
