@@ -45,10 +45,9 @@ else
     acx_metis_save_CFLAGS="$CFLAGS"
     acx_metis_save_LIBS="$LIBS"
 
-    if test -f "$with_metis_prefix/include/metis.h"; then
-      lib_path="lib"
-      include_path="include"
-    fi
+    # normal situation: "$with_metis_prefix/include/metis.h"
+    lib_path="lib"
+    include_path="include"
     if test -f "$with_metis_prefix/include/metis/metis.h"; then
       lib_path="lib"
       include_path="include/metis"
