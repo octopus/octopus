@@ -27,10 +27,6 @@
 ! the user of the module, this internal representation is hidden; one just
 ! works with what are called hereafter "spline functions".
 !
-! WARNINGS:
-!  * The problem of precision has been disregarded, so it probably does not
-!    work if the code is compiled with single precision. To be fixed.
-!
 ! To define a function, one must supply a set {x(i),y(i)} of pairs of values
 ! -- the abscissa and the value of the function.
 !
