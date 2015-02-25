@@ -8,7 +8,7 @@ AC_ARG_WITH(libxc-prefix, [AS_HELP_STRING([--with-libxc-prefix=DIR], [Directory 
 # Set FCFLAGS_LIBXC only if not set from environment
 if test x"$FCFLAGS_LIBXC" = x; then
   case $with_libxc_prefix in
-    "") FCFLAGS_LIBXC="-I/usr/include" ;;
+    "") FCFLAGS_LIBXC="$ax_cv_f90_modflag/usr/include" ;;
     *)  FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
   esac
 fi

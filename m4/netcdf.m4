@@ -6,7 +6,7 @@ AC_ARG_WITH(netcdf-prefix, [AS_HELP_STRING([--with-netcdf-prefix=DIR], [Director
 case $with_netcdf_prefix in
   no ) acx_netcdf_ok=disabled ;;
   "") if test x$FCFLAGS_NETCDF == x; then
-    FCFLAGS_NETCDF="-I/usr/include"
+    FCFLAGS_NETCDF="$ax_cv_f90_modflag/usr/include"
   fi;;
   *) LIBS_NETCDF="-L$with_netcdf_prefix/lib"; FCFLAGS_NETCDF="$ax_cv_f90_modflag$with_netcdf_prefix/include" ;;
 esac
