@@ -1791,7 +1791,7 @@ contains
   end subroutine json_array_copy
 
   recursive subroutine json_array_end(this)
-    type(json_array_t), target, intent(inout) :: this
+    type(json_array_t), intent(inout) :: this
     !
     type(json_value_t), pointer :: value
     !
@@ -3129,13 +3129,12 @@ contains
     character(len=*),             intent(out)   :: name
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t), pointer :: member
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: value
     type(json_null_t),   pointer :: jtype
     !
     PUSH_SUB(json_object_iterator_next_null)
-    nullify(member, ident, value, jtype)
+    nullify(ident, value, jtype)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3157,13 +3156,12 @@ contains
     logical,                      intent(out)   :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t),  pointer :: member
     type(json_string_t),  pointer :: ident
     type(json_value_t),   pointer :: value
     type(json_logical_t), pointer :: jtype
     !
     PUSH_SUB(json_object_iterator_next_logical)
-    nullify(member, ident, value, jtype)
+    nullify(ident, value, jtype)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3185,13 +3183,12 @@ contains
     integer,                      intent(out)   :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t),  pointer :: member
     type(json_string_t),  pointer :: ident
     type(json_value_t),   pointer :: value
     type(json_integer_t), pointer :: jtype
     !
     PUSH_SUB(json_object_iterator_next_integer)
-    nullify(member, ident, value, jtype)
+    nullify(ident, value, jtype)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3213,13 +3210,12 @@ contains
     real(kind=wp),                intent(out)   :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t), pointer :: member
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: value
     type(json_real_t),   pointer :: jtype
     !
     PUSH_SUB(json_object_iterator_next_real)
-    nullify(member, ident, value, jtype)
+    nullify(ident, value, jtype)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3241,13 +3237,12 @@ contains
     character(len=*),             intent(out)   :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t), pointer :: member
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: value
     type(json_string_t), pointer :: jtype
     !
     PUSH_SUB(json_object_iterator_next_string)
-    nullify(member, ident, value, jtype)
+    nullify(ident, value, jtype)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3269,12 +3264,11 @@ contains
     type(json_array_t),          pointer        :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t), pointer :: member
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: value
     !
     PUSH_SUB(json_object_iterator_next_array)
-    nullify(member, ident, value)
+    nullify(ident, value)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3293,12 +3287,11 @@ contains
     type(json_object_t),         pointer        :: that
     integer,                      intent(out)   :: ierr
     !
-    type(json_member_t), pointer :: member
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: value
     !
     PUSH_SUB(json_object_iterator_next_object)
-    nullify(member, ident, value)
+    nullify(ident, value)
     ierr=JSON_STOP_ERROR
     if(json_object_iterator_isdef(this))then
       call json_object_iterator_next_value(this, ident, value, ierr)
@@ -3555,8 +3548,8 @@ contains
   end function json_object_hash
 
   recursive subroutine json_object_string(this, string)
-    type(json_object_t), target, intent(in)    :: this
-    type(json_string_t),         intent(inout) :: string
+    type(json_object_t), intent(in)    :: this
+    type(json_string_t), intent(inout) :: string
     !
     type(json_object_iterator_t) :: iter
     type(json_member_t), pointer :: member
@@ -3633,7 +3626,7 @@ contains
     integer                           :: i
     !
     PUSH_SUB(json_object_pop)
-    member=>null()
+    nullify(member)
     do i = 1, this%size
       if(associated(this%table(i)%head))then
         node=>this%table(i)%head
@@ -3683,7 +3676,7 @@ contains
       else
         SAFE_ALLOCATE(node)
         node%member=>member
-        node%next=>null()
+        nullify(node%next)
         this%table(n)%head=>node
         this%used=this%used+1
       end if
