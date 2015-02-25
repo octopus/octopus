@@ -42,9 +42,9 @@ else
 
   if test x"$acx_external_metis" != xdisabled; then
   
-    dnl Backup LIBS and FCFLAGS
+    dnl Backup CFLAGS and LIBS
     acx_metis_save_CFLAGS="$CFLAGS"
-    acx_metis_save_LDFLAGS="$LDFLAGS"
+    acx_metis_save_LIBS="$LIBS"
 
     if test -f "$with_metis_prefix/include/metis.h"; then
       lib_path="lib"
@@ -60,11 +60,11 @@ else
       include_path="Lib"
     fi
     
-    METIS_INCLUDE="-I$with_metis_prefix/$include_path"
-    METIS_LDFLAGS="-L$with_metis_prefix/$lib_path -lmetis"
+    METIS_CFLAGS="-I$with_metis_prefix/$include_path"
+    LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis"
 
-    CFLAGS="$CFLAGS $METIS_INCLUDE"
-    LDFLAGS="$LDFLAGS $METIS_LDFLAGS"
+    CFLAGS="$CFLAGS $METIS_CFLAGS"
+    LIBS="$LIBS $LIBS_METIS"
 
     AC_LANG_SAVE
     AC_LANG_C
@@ -80,10 +80,10 @@ METIS_SetDefaultOptions(options);
     ])], [acx_external_metis=yes], [])
 
     AC_LANG_RESTORE
-    AC_MSG_RESULT([$acx_external_metis ($METIS_INCLUDE $METIS_LDFLAGS)])
+    AC_MSG_RESULT([$acx_external_metis ($METIS_CFLAGS $LIBS_METIS)])
 
     CFLAGS="$acx_metis_save_CFLAGS"
-    LDFLAGS="$acx_metis_save_LDFLAGS"
+    LIBS="$acx_metis_save_LIBS"
   fi
 
   if test x"$acx_external_metis" = xno ; then
@@ -105,15 +105,14 @@ METIS_SetDefaultOptions(options);
       AC_MSG_WARN(Octopus will be compiled without METIS support)
     fi
 
-    METIS_INCLUDE=""
-    LIBS_METIS_5=""
+    METIS_CFLAGS=""
+    LIBS_METIS=""
   else
-    LIBS_METIS_5="$METIS_LDFLAGS"
     acx_internal_metis=no
     AC_DEFINE(HAVE_METIS,1,[This is defined when we should compile with METIS support (default).])
   fi
 
-  AC_SUBST(METIS_INCLUDE)
-  AC_SUBST(LIBS_METIS_5)
+  AC_SUBST(METIS_CFLAGS)
+  AC_SUBST(LIBS_METIS)
 fi
 ])dnl ACX_PATH_METIS
