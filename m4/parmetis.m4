@@ -41,10 +41,9 @@ if test x"$acx_parmetis_ok" != xno; then
     [AC_HELP_STRING([--with-parmetis-prefix],
     [Directory where ParMETIS library was installed])])
 
-    # FIXME: accept setting by environment variables too
   case $with_parmetis_prefix in
     no ) acx_parmetis_ok=disabled ;;
-    "") with_parmetis_prefix="/usr/include" ;;
+    "") with_parmetis_prefix="/usr" ;;
   esac
 
   if test x"$acx_parmetis_ok" != xdisabled; then
@@ -53,8 +52,12 @@ if test x"$acx_parmetis_ok" != xno; then
     acx_parmetis_save_CFLAGS="$CFLAGS"
     acx_parmetis_save_LIBS="$LIBS"
 
-    PARMETIS_CFLAGS="-I$with_parmetis_prefix/include"
-    LIBS_PARMETIS="-L$with_parmetis_prefix/lib -lparmetis"
+    if test "x${PARMETIS_CFLAGS+set}" != xset ; then
+      PARMETIS_CFLAGS="-I$with_parmetis_prefix/include"
+    fi
+    if test "x${LIBS_PARMETIS+set}" != xset ; then
+      LIBS_PARMETIS="-L$with_parmetis_prefix/lib -lparmetis"
+    fi
 
     CFLAGS="$CFLAGS $PARMETIS_CFLAGS $METIS_CFLAGS"
     LIBS="$LIBS $LIBS_PARMETIS $LIBS_METIS"
@@ -77,18 +80,20 @@ ParMETIS_V3_PartKway(idx, idx, idx, NULL, NULL, idx, idx, idx, idx, real, real, 
 
     CFLAGS="$acx_parmetis_save_CFLAGS"
     LIBS="$acx_parmetis_save_LIBS"
-  fi
-
-  if test x"$acx_parmetis_ok" = xyes; then
-    HAVE_PARMETIS=1
-    AC_DEFINE(HAVE_PARMETIS, 1, [Defined if you have the PARMETIS library.])
   else
-    AC_MSG_WARN(Octopus will be compiled without PARMETIS support)
-    PARMETIS_CFLAGS=""
-    LIBS_PARMETIS=""
+    AC_MSG_RESULT([no])
   fi
-
-  AC_SUBST(PARMETIS_CFLAGS)
-  AC_SUBST(LIBS_PARMETIS)
 fi
+
+if test x"$acx_parmetis_ok" = xyes; then
+  HAVE_PARMETIS=1
+  AC_DEFINE(HAVE_PARMETIS, 1, [Defined if you have the PARMETIS library.])
+else
+  AC_MSG_WARN(Octopus will be compiled without PARMETIS support)
+  PARMETIS_CFLAGS=""
+  LIBS_PARMETIS=""
+fi
+
+AC_SUBST(PARMETIS_CFLAGS)
+AC_SUBST(LIBS_PARMETIS)
 ])

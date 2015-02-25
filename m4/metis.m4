@@ -34,10 +34,9 @@ else
     [AC_HELP_STRING([--with-metis-prefix],
     [Directory where external METIS library was installed (must be single-precision)])])
 
-    # FIXME: accept setting by environment variables too
   case $with_metis_prefix in
     no ) acx_external_metis=disabled ;;
-    "") with_metis_prefix="/usr/include" ;;
+    "") with_metis_prefix="/usr" ;;
   esac
 
   if test x"$acx_external_metis" != xdisabled; then
@@ -60,8 +59,12 @@ else
       include_path="Lib"
     fi
     
-    METIS_CFLAGS="-I$with_metis_prefix/$include_path"
-    LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis"
+    if test "x${METIS_CFLAGS+set}" != xset ; then
+      METIS_CFLAGS="-I$with_metis_prefix/$include_path"
+    fi
+    if test "x${LIBS_METIS+set}" != xset ; then
+      LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis"
+    fi
 
     CFLAGS="$CFLAGS $METIS_CFLAGS"
     LIBS="$LIBS $LIBS_METIS"
@@ -88,14 +91,14 @@ METIS_SetDefaultOptions(options);
 
   if test x"$acx_external_metis" = xno ; then
     dnl METIS was not found to link with, but is included in the distribution
-
+  
     dnl We disable METIS support only if the user is requesting this explicitly
     AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis], [Do not compile with internal METIS domain-partitioning library.]),[acx_internal_metis=$enableval],[acx_internal_metis=yes])
-
+  
     AC_MSG_CHECKING([whether METIS included in Octopus is enabled])
-
+  
     AC_MSG_RESULT([$acx_internal_metis])
-
+  
     if test x"$acx_internal_metis" = xyes; then
       HAVE_METIS=1
       HAVE_COMP_METIS=1
@@ -104,15 +107,18 @@ METIS_SetDefaultOptions(options);
     else
       AC_MSG_WARN(Octopus will be compiled without METIS support)
     fi
-
-    METIS_CFLAGS=""
-    LIBS_METIS=""
   else
     acx_internal_metis=no
     AC_DEFINE(HAVE_METIS,1,[This is defined when we should compile with METIS support (default).])
   fi
-
-  AC_SUBST(METIS_CFLAGS)
-  AC_SUBST(LIBS_METIS)
 fi
+
+if test x"$acx_external_metis" = xno; then
+  METIS_CFLAGS=""
+  LIBS_METIS=""
+fi
+
+AC_SUBST(METIS_CFLAGS)
+AC_SUBST(LIBS_METIS)
+
 ])dnl ACX_PATH_METIS
