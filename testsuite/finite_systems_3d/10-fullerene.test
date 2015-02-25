@@ -16,7 +16,7 @@ match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -141.1
 match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -94.55595344
 match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.38926436
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   280.72712553
-match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8229.01045005
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8229.01032302
 
 match ; Eigenvalue  10     ; GREP(static/info, ' 10   --', 13) ;  -0.600974 
 match ; Eigenvalue  20     ; GREP(static/info, ' 20   --', 13) ;  -0.522288
