@@ -29,8 +29,8 @@ AC_DEFUN([ACX_PATH_PARMETIS],[
   #
   # User hints ...
   #
-  AC_ARG_WITH([parmetis],
-    [AC_HELP_STRING([--with-parmetis],[user defined path to ParMETIS library])],
+  AC_ARG_WITH([parmetis-prefix],
+    [AC_HELP_STRING([--with-parmetis-prefix],[Directory where external ParMETIS library was installed])],
     [
       # --with-parmetis supersedes $PARMETIS
       PARMETIS=""
