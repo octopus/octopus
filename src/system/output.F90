@@ -1208,7 +1208,8 @@ contains
     ! deallocate everything
     call cube_function_free_fs(cube, cf)
     call dcube_function_free_rs(cube, cf)
-
+    call cube_end(cube)
+    
     if(states_are_real(st)) then
       SAFE_DEALLOCATE_P(dpsi)
     else
