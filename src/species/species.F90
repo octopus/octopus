@@ -1130,13 +1130,15 @@ contains
 
     PUSH_SUB(species_nl_projector)
 
-    uv(1:np) = x(1:np, 0)
-    call spline_eval_vec(spec%ps%kb(l, i), np, uv)
+    if(np > 0) then
+      uv(1:np) = x(1:np, 0)
+      call spline_eval_vec(spec%ps%kb(l, i), np, uv)
 
-    do ip = 1, np
-      call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
-      uv(ip) = uv(ip) * ylm
-    enddo
+      do ip = 1, np
+        call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
+        uv(ip) = uv(ip) * ylm
+      enddo
+    endif
 
     POP_SUB(species_nl_projector)
   end subroutine species_nl_projector
