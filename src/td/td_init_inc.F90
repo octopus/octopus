@@ -197,7 +197,7 @@ subroutine td_init(td, sys, hm)
 
   call messages_obsolete_variable('TDScissor')
 
-  call propagator_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
+  call propagator_init(sys%gr, sys%st, td%tr, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
   if(td%dynamics == BO)  call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
   if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then

@@ -197,13 +197,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, st, hm, tr, dt, max_iter, have_fields)
+  subroutine propagator_init(gr, st, tr, have_fields)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(in)    :: hm
     type(propagator_t),  intent(inout) :: tr
-    FLOAT,               intent(in)    :: dt
-    integer,             intent(in)    :: max_iter
     !> whether there is an associated "field"
     !! that must be propagated (currently ions
     !! or a gauge field).
@@ -538,7 +535,7 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, ions, geo, &
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, nt, ions, geo, &
     gauge_force, scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
@@ -548,7 +545,6 @@ contains
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
     FLOAT,                           intent(in)    :: mu
-    integer,                         intent(in)    :: max_iter
     integer,                         intent(in)    :: nt
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo

@@ -31,7 +31,7 @@ subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
   type(states_t), pointer :: chi
   FLOAT, pointer :: q(:, :), p(:, :)
 
-  integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, iatom, idim, ip
+  integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, iatom, idim
   CMPLX, allocatable :: zphi(:, :, :, :), zchi(:, :, :, :), dvpsi(:, :, :)
   type(states_t) :: hst, stphi, inh, hchi, stchi
   logical :: propagate_chi
