@@ -86,9 +86,9 @@ module domain_m
     module procedure domain_iterator_end
   end interface domain_end
 
-  integer, parameter :: DOMAIN_OK          = DOMAIN_HASH_OK
-  integer, parameter :: DOMAIN_KEY_ERROR   = DOMAIN_HASH_KEY_ERROR
-  integer, parameter :: DOMAIN_EMPTY_ERROR = DOMAIN_HASH_EMPTY_ERROR
+  integer, public, parameter :: DOMAIN_OK          = DOMAIN_HASH_OK
+  integer, public, parameter :: DOMAIN_KEY_ERROR   = DOMAIN_HASH_KEY_ERROR
+  integer, public, parameter :: DOMAIN_EMPTY_ERROR = DOMAIN_HASH_EMPTY_ERROR
 
 contains
   

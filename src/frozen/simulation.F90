@@ -130,9 +130,9 @@ module simulation_m
     module procedure simulation_iterator_end
   end interface simulation_end
 
-  integer, parameter :: SIMULATION_OK          = SIMULATION_HASH_OK
-  integer, parameter :: SIMULATION_KEY_ERROR   = SIMULATION_HASH_KEY_ERROR
-  integer, parameter :: SIMULATION_EMPTY_ERROR = SIMULATION_HASH_EMPTY_ERROR
+  integer, public, parameter :: SIMULATION_OK          = SIMULATION_HASH_OK
+  integer, public, parameter :: SIMULATION_KEY_ERROR   = SIMULATION_HASH_KEY_ERROR
+  integer, public, parameter :: SIMULATION_EMPTY_ERROR = SIMULATION_HASH_EMPTY_ERROR
 
 contains
 
@@ -266,8 +266,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine simulation_get_simul_box(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(simul_box_t), pointer             :: that
+    type(simulation_t), intent(in) :: this
+    type(simul_box_t), pointer     :: that
     !
     PUSH_SUB(simulation_get_simul_box)
     nullify(that)
@@ -279,8 +279,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine simulation_get_mesh(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(mesh_t),      pointer             :: that
+    type(simulation_t), intent(in) :: this
+    type(mesh_t),      pointer     :: that
     !
     PUSH_SUB(simulation_get_mesh)
     nullify(that)

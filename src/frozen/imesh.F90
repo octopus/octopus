@@ -45,6 +45,7 @@ contains
     !
     PUSH_SUB(mesh_copy)
     ASSERT(.false.)
+    this=that
     POP_SUB(mesh_copy)
     return
   end subroutine mesh_copy

@@ -85,7 +85,7 @@ contains
         this%do=.true.
         this%n=size(r)
         SAFE_ALLOCATE(this%r(this%n))
-        this%r=r
+        this%r(1:this%n)=r
       end if
     end if
     POP_SUB(translation_init)
@@ -117,7 +117,7 @@ contains
     if(that%do)then
       this%n=that%n
       SAFE_ALLOCATE(this%r(this%n))
-      this%r=that%r
+      this%r(1:this%n)=that%r
       this%do=.true.
     end if
     POP_SUB(translation_copy)

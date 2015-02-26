@@ -117,8 +117,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine storage_init_copy(this, that)
-    type(storage_t),         intent(out) :: this
-    type(storage_t), target, intent(in)  :: that
+    type(storage_t), intent(out) :: this
+    type(storage_t), intent(in)  :: that
     !
     PUSH_SUB(storage_init_copy)
     ASSERT(that%ndim>0)

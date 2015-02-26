@@ -28,7 +28,7 @@ module igrid_m
   interface grid_get
     module procedure igrid_get_simul_box
     module procedure igrid_get_mesh
-    module procedure igrid_get_der
+    !module procedure igrid_get_der
   end interface grid_get
 
 contains
@@ -84,6 +84,7 @@ contains
     !
     PUSH_SUB(grid_copy)
     ASSERT(.false.)
+    this=that
     POP_SUB(grid_copy)
     return
   end subroutine grid_copy

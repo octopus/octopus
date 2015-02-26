@@ -194,11 +194,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine intrpl_init_1d(this, sim, vals, type, default)
-    type(intrpl_t),                      intent(out) :: this
-    type(simulation_t),          target, intent(in)  :: sim
-    real(kind=wp), dimension(:), target, intent(in)  :: vals
-    integer,                   optional, intent(in)  :: type
-    real(kind=wp),             optional, intent(in)  :: default
+    type(intrpl_t),              intent(out) :: this
+    type(simulation_t),          intent(in)  :: sim
+    real(kind=wp), dimension(:), intent(in)  :: vals
+    integer,           optional, intent(in)  :: type
+    real(kind=wp),     optional, intent(in)  :: default
     !
     PUSH_SUB(intrpl_init_1d)
     call intrpl_init_common(this, sim, 1, type, default)
@@ -210,11 +210,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine intrpl_init_2d(this, sim, vals, type, default)
-    type(intrpl_t),                        intent(out) :: this
-    type(simulation_t),            target, intent(in)  :: sim
-    real(kind=wp), dimension(:,:), target, intent(in)  :: vals
-    integer,                     optional, intent(in)  :: type
-    real(kind=wp),               optional, intent(in)  :: default
+    type(intrpl_t),                intent(out) :: this
+    type(simulation_t),            intent(in)  :: sim
+    real(kind=wp), dimension(:,:), intent(in)  :: vals
+    integer,             optional, intent(in)  :: type
+    real(kind=wp),       optional, intent(in)  :: default
     !
     integer :: i
     !
