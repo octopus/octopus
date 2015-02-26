@@ -18,9 +18,9 @@ dnl may be needed for cross-compiling, when compilation and compute nodes are di
   acx_zdotc_ok=yes
 
   AC_RUN_IFELSE([AC_LANG_PROGRAM([],[
-complex*16, allocatable :: f1(:), f2(:)
-complex*16 :: result1, result2
-complex*16, external :: zdotc
+complex(8), allocatable :: f1(:), f2(:)
+complex(8) :: result1, result2
+complex(8), external :: zdotc
 integer :: nn, ii
 
 nn=100
