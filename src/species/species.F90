@@ -25,6 +25,7 @@ module species_m
   use json_m
   use loct_m
   use loct_math_m
+  use loct_pointer_m
   use logrid_m
   use math_m
   use messages_m
@@ -80,6 +81,7 @@ module species_m
     species_real_nl_projector,     &
     species_nl_projector,          &
     species_get_iwf_radius,        &
+    species_copy,                  &
     species_end
 
   integer, public, parameter :: LABEL_LEN=15
@@ -780,6 +782,12 @@ contains
       call messages_fatal(1)
       return
     end if
+    call json_get(json, "mass", this%mass, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "mass" from species data object.'
+      call messages_fatal(1)
+      return
+    end if
     this%has_density=.false.
     this%user_def=""
     nullify(this%ps)
@@ -810,6 +818,7 @@ contains
     call json_set(json, "label", trim(adjustl(this%label)))
     call json_set(json, "type", this%type)
     call json_set(json, "z_val", this%z_val)
+    call json_set(json, "mass", this%mass)
     call json_set(json, "def_rsize", this%def_rsize)
     POP_SUB(species_create_data_object)
     return
@@ -1162,6 +1171,51 @@ contains
   end function species_get_iwf_radius
   ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
+  subroutine species_copy(this, that, index)
+    type(species_t),         intent(inout) :: this
+    type(species_t), target, intent(in)    :: that
+    integer,       optional, intent(in)    :: index
+    !
+    PUSH_SUB(species_copy)
+    call species_end(this)
+    if(present(index))then
+      this%index=index
+    else
+      this%index=that%index
+    end if
+    this%label=that%label
+    this%type=that%type
+    this%z=that%z
+    this%z_val=that%z_val
+    this%mass=that%mass
+    this%has_density=that%has_density
+    this%user_def=that%user_def
+    this%omega=that%omega
+    this%filename=that%filename
+    this%jradius=that%jradius
+    this%jthick=that%jthick
+    !> To be implemented.
+    !> ps_t has no copy procedure.
+    nullify(this%ps)
+    if(associated(that%ps))this%ps=>that%ps
+    this%nlcc=that%nlcc
+    this%sigma=that%sigma
+    this%rho=that%rho
+    this%def_rsize=that%def_rsize
+    this%def_h=that%def_h
+    this%niwfs=that%niwfs
+    nullify(this%iwf_l, this%iwf_m, this%iwf_i)
+    call loct_pointer_copy(this%iwf_l, that%iwf_l)
+    call loct_pointer_copy(this%iwf_m, that%iwf_m)
+    call loct_pointer_copy(this%iwf_i, that%iwf_i)
+    this%lmax=that%lmax
+    this%lloc=that%lloc
+    POP_SUB(species_copy)
+    return
+  end subroutine species_copy
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine species_end_species(spec)
