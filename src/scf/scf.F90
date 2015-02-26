@@ -743,8 +743,10 @@ contains
         ! mix input and output densities and compute new potential
         if(.not. cmplxscl) then
           call dmixing(scf%smix, rhoin, rhoout, rhonew, dmf_dotp_aux)
-          if(minval(rhonew(1:gr%fine%mesh%np, 1, 1:nspin)) < -M_EPSILON) then
-            write(message(1),*) 'Negative density after mixing. Minimum value = ', minval(rhonew(1:gr%fine%mesh%np, 1, 1:nspin))
+          ! for spinors, having components 3 or 4 be negative is not unphysical
+          if(minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels)) < -CNST(1e-6)) then
+            write(message(1),*) 'Negative density after mixing. Minimum value = ', &
+              minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels))
             call messages_warning(1)
           endif
           st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
