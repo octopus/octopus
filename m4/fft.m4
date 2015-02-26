@@ -22,13 +22,8 @@ AC_DEFUN([ACX_FFT],
 [
   acx_fft_ok=no
 
-  if test "x${SINGLE_PRECISION}" != x; then
-    fft_func="sfftw_plan_dft_1d"
-    fft_libs="fftw3f"
-  else
-    fft_func="dfftw_plan_dft_1d"
-    fft_libs="fftw3"
-  fi
+  fft_func="dfftw_plan_dft_1d"
+  fft_libs="fftw3"
 
   dnl Check if the library was given in the command line
   if test $acx_fft_ok = no; then
