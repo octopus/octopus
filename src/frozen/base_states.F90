@@ -118,6 +118,7 @@ module base_states_m
   end interface base_states_set
 
   interface base_states_get
+    module procedure base_states_get_states
     module procedure base_states_get_info
     module procedure base_states_get_config
     module procedure base_states_get_simulation
@@ -298,24 +299,24 @@ contains
   end subroutine base_states__add__
     
   ! ---------------------------------------------------------
-  subroutine base_states__get__(this, name, that)
-    type(base_states_t),  intent(inout) :: this
-    character(len=*),     intent(in)    :: name
-    type(base_states_t), pointer        :: that
+  subroutine base_states_get_states(this, name, that)
+    type(base_states_t),  intent(in) :: this
+    character(len=*),     intent(in) :: name
+    type(base_states_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_states__get__)
+    PUSH_SUB(base_states_get_states)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_states_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_STATES_OK)nullify(that)
     end if
-    POP_SUB(base_states__get__)
+    POP_SUB(base_states_get_states)
     return
-  end subroutine base_states__get__
+  end subroutine base_states_get_states
 
   ! ---------------------------------------------------------
   elemental subroutine base_states_set_charge(this, that)

@@ -6,7 +6,7 @@ module base_external_m
   use messages_m
   use profiling_m
 
-  use atom_m,    only: atom_t, atom_classical_t
+  use atom_m,    only: atom_t
   use kinds_m,   only: wp
   use species_m, only: species_zval
 

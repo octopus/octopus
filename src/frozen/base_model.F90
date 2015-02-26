@@ -105,8 +105,7 @@ module base_model_m
     base_model__start__,  &
     base_model__update__, &
     base_model__stop__,   &
-    base_model__add__,    &
-    base_model__get__
+    base_model__add__
 
   public ::            &
     base_model_init,   &
@@ -149,6 +148,7 @@ module base_model_m
   end interface base_model_init
 
   interface base_model_get
+    module procedure base_model_get_model
     module procedure base_model_get_config
     module procedure base_model_get_simulation
     module procedure base_model_get_system
@@ -243,11 +243,14 @@ contains
     type(geometry_t),  pointer :: geo
     !
     PUSH_SUB(base_model__start__)
+    nullify(geom, geo)
     call base_system_get(this%sys, geom)
     ASSERT(associated(geom))
     call base_geom_get(geom, geo)
     ASSERT(associated(geo))
+    nullify(geom)
     call simulation_start(this%sim, grid, geo)
+    nullify(geo)
     call base_system__start__(this%sys, this%sim)
     call base_hamiltonian__start__(this%hm, this%sim)
     POP_SUB(base_model__start__)
@@ -371,24 +374,24 @@ contains
   end subroutine base_model__add__
 
   ! ---------------------------------------------------------
-  subroutine base_model__get__(this, name, that)
-    type(base_model_t),  intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_model_t), pointer        :: that
+  subroutine base_model_get_model(this, name, that)
+    type(base_model_t),  intent(in) :: this
+    character(len=*),    intent(in) :: name
+    type(base_model_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_model__get__)
+    PUSH_SUB(base_model_get_model)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_model_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_MODEL_OK)nullify(that)
     end if
-    POP_SUB(base_model__get__)
+    POP_SUB(base_model_get_model)
     return
-  end subroutine base_model__get__
+  end subroutine base_model_get_model
 
   ! ---------------------------------------------------------
   subroutine base_model_get_config(this, that)

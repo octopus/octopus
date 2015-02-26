@@ -71,7 +71,6 @@ module base_handle_m
     base_handle__update__, &
     base_handle__stop__,   &
     base_handle__add__,    &
-    base_handle__get__,    &
     base_handle__copy__,   &
     base_handle__end__
 
@@ -122,6 +121,7 @@ module base_handle_m
   end interface base_handle_next
 
   interface base_handle_get
+    module procedure base_handle_get_handle
     module procedure base_handle_get_type
     module procedure base_handle_get_config
     module procedure base_handle_get_model
@@ -252,8 +252,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
-    type(base_handle_t),    intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
+    type(base_handle_t), intent(inout) :: this
+    type(grid_t),        intent(in)    :: grid
     !
     PUSH_SUB(base_handle_start)
     call base_model__start__(this%model, grid)
@@ -375,24 +375,24 @@ contains
   end subroutine base_handle__add__
 
   ! ---------------------------------------------------------
-  subroutine base_handle__get__(this, name, that)
-    type(base_handle_t),  intent(inout) :: this
-    character(len=*),     intent(in)    :: name
-    type(base_handle_t), pointer        :: that
+  subroutine base_handle_get_handle(this, name, that)
+    type(base_handle_t),  intent(in) :: this
+    character(len=*),     intent(in) :: name
+    type(base_handle_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_handle__get__)
+    PUSH_SUB(base_handle_get_handle)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_handle_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_HANDLE_OK)nullify(that)
     end if
-    POP_SUB(base_handle__get__)
+    POP_SUB(base_handle_get_handle)
     return
-  end subroutine base_handle__get__
+  end subroutine base_handle_get_handle
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_type(this, that)

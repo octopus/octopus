@@ -60,7 +60,7 @@ module base_geom_m
   use json_m,        only: json_object_t, json_init, json_get, json_end
   use json_m,        only: json_array_t, json_array_iterator_t, json_len, json_next
   use space_m,       only: operator(==), space_t
-  use species_m
+  use species_m,     only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
 
   use config_dict_m, only: &
     CONFIG_DICT_OK,        &
@@ -167,6 +167,7 @@ module base_geom_m
   end interface base_geom_next
 
   interface base_geom_get
+    module procedure base_geom_get_geom
     module procedure base_geom_get_config
     module procedure base_geom_get_space
     module procedure base_geom_get_geometry
@@ -245,8 +246,8 @@ contains
       nullify(spec)
       call base_geom_next(iter, spec, ierr)
       ASSERT(ierr==0)
-      call species_set_index(spec, indx)
-      geo%species(indx)=spec
+      call species_init(geo%species(indx), "", 0)
+      call species_copy(geo%species(indx), spec, indx)
     end do
     do indx=1, geo%natoms
       nullify(atom, spec)
@@ -373,24 +374,24 @@ contains
   end subroutine base_geom__add__
 
   ! ---------------------------------------------------------
-  subroutine base_geom__get__(this, name, that)
-    type(base_geom_t),  intent(inout) :: this
-    character(len=*),   intent(in)    :: name
-    type(base_geom_t), pointer        :: that
+  subroutine base_geom_get_geom(this, name, that)
+    type(base_geom_t),  intent(in) :: this
+    character(len=*),   intent(in) :: name
+    type(base_geom_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_geom__get__)
+    PUSH_SUB(base_geom_get_geom)
     nullify(that)
     call config_dict_get(this%cdct, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_geom_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_GEOM_OK)nullify(that)
     end if
-    POP_SUB(base_geom__get__)
+    POP_SUB(base_geom_get_geom)
     return
-  end subroutine base_geom__get__
+  end subroutine base_geom_get_geom
 
   ! ---------------------------------------------------------
   subroutine base_geom_get_config(this, that)

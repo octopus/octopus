@@ -101,6 +101,7 @@ module base_term_m
   end interface base_term_set
 
   interface base_term_get
+    module procedure base_term_get_term
     module procedure base_term_get_info
     module procedure base_term_get_config
     module procedure base_term_get_system
@@ -199,24 +200,24 @@ contains
   end subroutine base_term__add__
 
   ! ---------------------------------------------------------
-  subroutine base_term__get__(this, name, that)
-    type(base_term_t),  intent(inout) :: this
-    character(len=*),   intent(in)    :: name
-    type(base_term_t), pointer        :: that
+  subroutine base_term_get_term(this, name, that)
+    type(base_term_t),  intent(in) :: this
+    character(len=*),   intent(in) :: name
+    type(base_term_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_term__get__)
+    PUSH_SUB(base_term_get_term)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_term_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_TERM_OK)nullify(that)
     end if
-    POP_SUB(base_term__get__)
+    POP_SUB(base_term_get_term)
     return
-  end subroutine base_term__get__
+  end subroutine base_term_get_term
 
   ! ---------------------------------------------------------
   elemental subroutine base_term_set_energy(this, that)

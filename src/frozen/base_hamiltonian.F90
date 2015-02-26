@@ -110,8 +110,7 @@ module base_hamiltonian_m
     base_hamiltonian__start__,  &
     base_hamiltonian__update__, &
     base_hamiltonian__stop__,   &
-    base_hamiltonian__add__,    &
-    base_hamiltonian__get__
+    base_hamiltonian__add__
 
   public ::                  &
     base_hamiltonian_init,   &
@@ -652,9 +651,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__get__(this, name, that)
-    type(base_hamiltonian_t),  intent(inout) :: this
-    character(len=*),          intent(in)    :: name
-    type(base_hamiltonian_t), pointer        :: that
+    type(base_hamiltonian_t),  intent(in) :: this
+    character(len=*),          intent(in) :: name
+    type(base_hamiltonian_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
@@ -671,35 +670,32 @@ contains
   end subroutine base_hamiltonian__get__
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_hterm(this, name, that, ierr)
-    type(base_hamiltonian_t), intent(in)  :: this
-    character(len=*),         intent(in)  :: name
-    type(hterm_t),           pointer      :: that
-    integer,        optional, intent(out) :: ierr
+  subroutine base_hamiltonian_get_hterm(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(hterm_t),           pointer     :: that
     !
-    integer :: jerr
+    integer :: ierr
     !
     PUSH_SUB(base_hamiltonian_get_hterm)
     nullify(that)
-    call hterm_dict_get(this%dict, name, that, jerr)
-    if(jerr/=HTERM_DICT_OK)nullify(that)
-    if(present(ierr))ierr=jerr
+    call hterm_dict_get(this%dict, name, that, ierr)
+    if(ierr/=HTERM_DICT_OK)nullify(that)
     POP_SUB(base_hamiltonian_get_hterm)
     return
   end subroutine base_hamiltonian_get_hterm
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_term(this, name, that, ierr)
-    type(base_hamiltonian_t), intent(in)  :: this
-    character(len=*),         intent(in)  :: name
-    type(base_term_t),       pointer      :: that
-    integer,        optional, intent(out) :: ierr
+  subroutine base_hamiltonian_get_term(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_term_t),       pointer     :: that
     !
     type(hterm_t), pointer :: htrm
     !
     PUSH_SUB(base_hamiltonian_get_term)
     nullify(that, htrm)
-    call base_hamiltonian_get_hterm(this, name, htrm, ierr)
+    call base_hamiltonian_get_hterm(this, name, htrm)
     if(associated(htrm))&
       call hterm_get(htrm, that)
     nullify(htrm)
@@ -708,17 +704,16 @@ contains
   end subroutine base_hamiltonian_get_term
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_potn(this, name, that, ierr)
-    type(base_hamiltonian_t), intent(in)  :: this
-    character(len=*),         intent(in)  :: name
-    type(base_potential_t),  pointer      :: that
-    integer,        optional, intent(out) :: ierr
+  subroutine base_hamiltonian_get_potn(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_potential_t),  pointer     :: that
     !
     type(hterm_t), pointer :: htrm
     !
     PUSH_SUB(base_hamiltonian_get_potn)
     nullify(that, htrm)
-    call base_hamiltonian_get_hterm(this, name, htrm, ierr)
+    call base_hamiltonian_get_hterm(this, name, htrm)
     if(associated(htrm))&
       call hterm_get(htrm, that)
     nullify(htrm)
@@ -727,20 +722,21 @@ contains
   end subroutine base_hamiltonian_get_potn
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_hmlt(this, name, that, ierr)
-    type(base_hamiltonian_t),  intent(in)  :: this
-    character(len=*),          intent(in)  :: name
-    type(base_hamiltonian_t), pointer      :: that
-    integer,         optional, intent(out) :: ierr
+  subroutine base_hamiltonian_get_hmlt(this, name, that)
+    type(base_hamiltonian_t),  intent(in) :: this
+    character(len=*),          intent(in) :: name
+    type(base_hamiltonian_t), pointer     :: that
     !
     type(hterm_t), pointer :: htrm
     !
     PUSH_SUB(base_hamiltonian_get_hmlt)
     nullify(that, htrm)
-    call base_hamiltonian_get_hterm(this, name, htrm, ierr)
+    call base_hamiltonian_get_hterm(this, name, htrm)
     if(associated(htrm))&
       call hterm_get(htrm, that)
     nullify(htrm)
+    if(.not.associated(that))&
+      call base_hamiltonian__get__(this, name, that)
     POP_SUB(base_hamiltonian_get_hmlt)
     return
   end subroutine base_hamiltonian_get_hmlt

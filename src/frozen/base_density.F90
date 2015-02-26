@@ -122,6 +122,7 @@ module base_density_m
   end interface base_density_init
 
   interface base_density_get
+    module procedure base_density_get_density
     module procedure base_density_get_info
     module procedure base_density_get_config
     module procedure base_density_get_simulation
@@ -363,24 +364,24 @@ contains
   end subroutine base_density__add__
 
   ! ---------------------------------------------------------
-  subroutine base_density__get__(this, name, that)
-    type(base_density_t),  intent(inout) :: this
-    character(len=*),      intent(in)    :: name
-    type(base_density_t), pointer        :: that
+  subroutine base_density_get_density(this, name, that)
+    type(base_density_t),  intent(in) :: this
+    character(len=*),      intent(in) :: name
+    type(base_density_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_density__get__)
+    PUSH_SUB(base_density_get_density)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_density_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_DENSITY_OK)nullify(that)
     end if
-    POP_SUB(base_density__get__)
+    POP_SUB(base_density_get_density)
     return
-  end subroutine base_density__get__
+  end subroutine base_density_get_density
 
   ! ---------------------------------------------------------
   elemental function base_density_get_size(this) result(that)

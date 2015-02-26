@@ -89,8 +89,7 @@ module base_system_m
     base_system__start__,  &
     base_system__update__, &
     base_system__stop__,   &
-    base_system__add__,    &
-    base_system__get__
+    base_system__add__
 
   public ::             &
     base_system_init,   &
@@ -145,6 +144,7 @@ module base_system_m
   end interface base_system_set
 
   interface base_system_get
+    module procedure base_system_get_system
     module procedure base_system_get_config
     module procedure base_system_get_simulation
     module procedure base_system_get_space
@@ -353,24 +353,24 @@ contains
   end subroutine base_system__add__
 
   ! ---------------------------------------------------------
-  subroutine base_system__get__(this, name, that)
-    type(base_system_t),  intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_system_t), pointer        :: that
+  subroutine base_system_get_system(this, name, that)
+    type(base_system_t),  intent(in) :: this
+    character(len=*),     intent(in) :: name
+    type(base_system_t), pointer     :: that
     !
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_system__get__)
+    PUSH_SUB(base_system_get_system)
     nullify(that)
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_system_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_SYSTEM_OK)nullify(that)
     end if
-    POP_SUB(base_system__get__)
+    POP_SUB(base_system_get_system)
     return
-  end subroutine base_system__get__
+  end subroutine base_system_get_system
 
   ! ---------------------------------------------------------
   subroutine base_system_set_simulation(this, that)
