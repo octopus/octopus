@@ -653,20 +653,6 @@ contains
   end subroutine geometry_end
 
   ! ---------------------------------------------------------
-  !> This function returns .true. if two atoms are too close.
-  !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
-  logical function geometry_atoms_are_too_close(geo, atomic_species_only) result(too_close)
-    type(geometry_t), intent(in) :: geo
-    logical,          intent(in) :: atomic_species_only
-
-    PUSH_SUB(geometry_atoms_are_too_close)
-
-    too_close = (geometry_min_distance(geo, atomic_species_only) < CNST(1.0e-5) .and. geo%natoms > 1)
-
-    POP_SUB(geometry_atoms_are_too_close)
-  end function geometry_atoms_are_too_close
-
-  ! ---------------------------------------------------------
   logical function geometry_species_time_dependent(geo) result(time_dependent)
     type(geometry_t), intent(in) :: geo
 
