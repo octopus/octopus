@@ -310,7 +310,7 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen 1073741824
+    !%Option frozen_system 1073741824
     !% Generates input for a frozen calculation.
     !%End
     call parse_integer('Output', 0, outp%what)
@@ -659,7 +659,7 @@ contains
     end if
     
     if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir))//"config.json")
+      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), "config.json")
     end if
 
     POP_SUB(output_all)
