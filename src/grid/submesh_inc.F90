@@ -134,8 +134,8 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
               mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
           end forall
 #else
-        message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
-        call messages_fatal(1)
+          message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
+          call messages_fatal(1)
 #endif
 
         end if
