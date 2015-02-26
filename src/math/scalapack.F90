@@ -97,7 +97,7 @@ module scalapack_m
       implicit none
       integer            ia, info, ja, lwork, m, n
       integer            desca
-      complex*16         a, tau, work
+      complex(8)         a, tau, work
     end subroutine pzgeqrf
   end interface scalapack_geqrf
   
@@ -122,7 +122,7 @@ module scalapack_m
       implicit none
       integer            ia, info, ja, k, lwork, m, n
       integer            desca
-      complex*16         a, tau, work
+      complex(8)         a, tau, work
     end subroutine pzungqr
   end interface scalapack_orgqr
   
@@ -140,7 +140,7 @@ module scalapack_m
       implicit none
       integer            ia, ib, info, ja, jb, n, nrhs
       integer            desca, descb, ipiv
-      complex*16         a, b
+      complex(8)         a, b
     end subroutine pzgesv
   end interface
   
