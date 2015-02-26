@@ -40,7 +40,7 @@ contains
     type(json_object_t),   intent(in)  :: config
     !
     character(len=MAX_PATH_LEN) :: dir, file
-    integer                     :: ierr, order
+    integer                     :: ierr
     !
     PUSH_SUB(fio_simul_box_init)
     call json_get(config, "dir", dir, ierr)

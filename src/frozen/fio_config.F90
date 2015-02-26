@@ -9,14 +9,16 @@ module fio_config_m
   use curvilinear_m, only: CURV_METHOD_UNIFORM
   use intrpl_m,      only: NEAREST
   use io_m,          only: io_open, io_close
-  use json_m,        only: JSON_OK, json_object_t, json_array_t, json_update
-  use json_m,        only: json_isdef, json_len, json_init, json_set, json_get, json_append, json_copy, json_end
+  use json_m,        only: JSON_OK, json_isdef, json_len, json_object_t, json_array_t, json_update
+  use json_m,        only: json_object_t, json_array_t, json_array_iterator_t
+  use json_m,        only: json_init, json_next, json_set, json_get, json_append, json_copy, json_end
   use json_parser_m, only: json_parser_t, json_parser_init, json_parser_end
   use json_parser_m, only: json_parser_parse, json_parser_error
   use kinds_m,       only: wp
   use loct_m,        only: loct_dir_exists
   use parser_m,      only: block_t, parse_block_string, parse_block_integer
-  use path_m,        only: path_join
+  use path_m,        only: path_isabs, path_realpath, path_getcwd, path_join
+  use species_m,     only: SPECIES_FROZEN
 
   use base_hamiltonian_m, only: &
     HMLT_TYPE_POTN,             &
@@ -44,14 +46,12 @@ module fio_config_m
   character(len=*), public, parameter :: input_mesh_dir      = "./restart/"//GS_DIR
   character(len=*), public, parameter :: input_mesh_file     = "mesh"
   character(len=*), public, parameter :: input_static_dir    = "./"//STATIC_DIR
-  character(len=*), public, parameter :: input_density_file  = "mesh"
   character(len=*), public, parameter :: input_external_file = "v0.obf"
 
 contains
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_get_dir(topdir, reldir, outdir)
-    use path_m
     character(len=*), intent(in)  :: topdir
     character(len=*), intent(in)  :: reldir
     character(len=*), intent(out) :: outdir
@@ -80,7 +80,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_get_file(topdir, reldir, outdir, file)
-    use path_m
     character(len=*), intent(in)  :: topdir
     character(len=*), intent(in)  :: reldir
     character(len=*), intent(out) :: outdir
@@ -216,25 +215,46 @@ contains
   end subroutine fio_config_parse_space
 
   ! ---------------------------------------------------------
+  subroutine fio_config_parse_species(this)
+    type(json_object_t), intent(inout) :: this
+    !
+    call json_set(this, "type", SPECIES_FROZEN)
+    return
+  end subroutine fio_config_parse_species
+
+  ! ---------------------------------------------------------
   subroutine fio_config_parse_geometry(this)
     type(json_object_t), intent(inout) :: this
     !
-    type(json_array_t), pointer :: list
-    integer                     :: n, ierr
+    type(json_object_t), pointer :: cnfg
+    type(json_array_t),  pointer :: list
+    type(json_array_iterator_t)  :: iter
+    integer                      :: n, ierr
     !
-    nullify(list)
+    nullify(cnfg, list)
     call json_get(this, "nspecies", n, ierr)
     ASSERT((ierr==JSON_OK).and.(n>0))
     call json_get(this, "species", list, ierr)
     ASSERT((ierr==JSON_OK).and.(json_len(list)==n))
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call fio_config_parse_species(cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg, list)
     call json_get(this, "natoms", n, ierr)
     ASSERT((ierr==JSON_OK).and.(n>0))
     call json_get(this, "atom", list, ierr)
     ASSERT((ierr==JSON_OK).and.(json_len(list)==n))
+    nullify(list)
     call json_get(this, "ncatoms", n, ierr)
     if((ierr==JSON_OK).and.(n>0))then
       call json_get(this, "catom", list, ierr)
       ASSERT((ierr==JSON_OK).and.(json_len(list)==n))
+      nullify(list)
     end if
     return
   end subroutine fio_config_parse_geometry
@@ -244,35 +264,32 @@ contains
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
     !
-    type(json_array_t),                            pointer :: list
-    character(len=MAX_PATH_LEN), dimension(:), allocatable :: files
-    character(len=MAX_PATH_LEN)                            :: idir, odir, file
-    integer                                                :: indx, nspin, ierr
+    type(json_array_t), pointer :: list
+    character(len=MAX_PATH_LEN) :: idir, odir, file
+    integer                     :: indx, nspin, ierr
     !
     nullify(list)
     call json_get(this, "nspin", nspin, ierr)
     if(ierr/=JSON_OK)nspin=default_nspin
     ASSERT(nspin>0)
     call json_set(this, "nspin", nspin)
-    SAFE_ALLOCATE(files(nspin))
     call json_get(this, "dir", idir, ierr)
     if(ierr/=JSON_OK)idir=input_static_dir
     call json_get(this, "files", list, ierr)
-    if(ierr==JSON_OK)then
-      ASSERT(json_len(list)==nspin)
-    else
+    if(ierr/=JSON_OK)then
       SAFE_ALLOCATE(list)
       call json_init(list)
       call json_set(this, "files", list)
-      do indx=1, nspin
-        if(nspin>1)then
+      if(nspin>1)then
+        do indx=1, nspin
           write(unit=file, fmt="(a,i1,a)") "density-sp", indx, ".obf"
-        else
-          file="density.obf"
-        end if
-        call json_append(list, trim(adjustl(file)))
-      end do
+          call json_append(list, trim(adjustl(file)))
+        end do
+      else
+        call json_append(list, "density.obf")
+      end if
     end if
+    ASSERT(json_len(list)==nspin)
     do indx=1, nspin
       call json_get(list, indx, file, ierr)
       ASSERT(ierr==JSON_OK)

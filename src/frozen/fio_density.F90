@@ -12,9 +12,6 @@ module fio_density_m
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
-  use fio_simulation_m, only: &
-    fio_simulation_t
-
   use base_density_m, only: &
     base_density__update__
 

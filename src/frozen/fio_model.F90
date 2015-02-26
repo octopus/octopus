@@ -7,12 +7,8 @@ module fio_model_m
   use profiling_m
 
   use geometry_m, only: geometry_t
-  use json_m,     only: JSON_OK, json_object_t, json_get
   use mpi_m,      only: mpi_grp_t
   use space_m,    only: space_t
-
-  use fio_grid_m, only: &
-    fio_grid_t
 
   use base_geom_m, only:           &
     fio_geom_t   => base_geom_t,   &

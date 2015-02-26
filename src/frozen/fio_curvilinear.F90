@@ -36,6 +36,12 @@ module fio_curvilinear_m
     fio_curvilinear_copy, &
     fio_curvilinear_end
 
+  public ::              &
+    CURV_METHOD_UNIFORM, &
+    CURV_METHOD_GYGI,    &
+    CURV_METHOD_BRIGGS,  &
+    CURV_METHOD_MODINE
+
 contains
 
   ! ---------------------------------------------------------

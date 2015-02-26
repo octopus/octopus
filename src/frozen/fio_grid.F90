@@ -6,15 +6,20 @@ module fio_grid_m
   use messages_m
   use profiling_m
 
-  use geometry_m, only: geometry_t
-  use json_m,     only: JSON_OK, json_object_t, json_get
-  use kinds_m,    only: wp
-  use mpi_m,      only: mpi_grp_t
+  use boundaries_m,     only: boundaries_t
+  use derivatives_m,    only: derivatives_t
+  use double_grid_m,    only: double_grid_nullify
+  use geometry_m,       only: geometry_t
+  use json_m,           only: JSON_OK, json_object_t, json_get
+  use kinds_m,          only: wp
+  use multigrid_m,      only: multigrid_level_t
+  use mpi_m,            only: mpi_grp_t
+  use stencil_m,        only: stencil_t
+  use transfer_table_m, only: transfer_table_t
 
   use igrid_m, only:          &
     fio_grid_t   => grid_t,   &
-    fio_grid_get => grid_get, &
-    fio_grid_end => grid_end
+    fio_grid_get => grid_get
 
   use fio_simul_box_m, only: &
     fio_simul_box_t,         &
@@ -34,6 +39,9 @@ module fio_grid_m
     fio_curvilinear_copy,      &
     fio_curvilinear_end
 
+  use fio_curvilinear_m, only: &
+    CURV_METHOD_UNIFORM
+
   implicit none
 
   private
@@ -46,6 +54,86 @@ module fio_grid_m
 
 contains
   
+  ! ---------------------------------------------------------
+  subroutine transfer_table_nullify(this)
+    type(transfer_table_t), intent(out) :: this
+    !
+    PUSH_SUB(transfer_table_nullify)
+    this%n_coarse=0
+    this%n_fine=0
+    this%n_fine1=0
+    this%n_fine2=0
+    this%n_fine4=0
+    this%n_fine8=0
+    nullify(this%to_coarse, this%to_fine1, this%to_fine2, this%to_fine4, this%to_fine8, this%fine_i)
+    POP_SUB(transfer_table_nullify)
+    return
+  end subroutine transfer_table_nullify
+
+  ! ---------------------------------------------------------
+  subroutine multigrid_level_nullify(this)
+    type(multigrid_level_t), intent(out) :: this
+    !
+    PUSH_SUB(multigrid_level_nullify)
+    call transfer_table_nullify(this%tt)
+    nullify(this%mesh, this%der)
+    POP_SUB(multigrid_level_nullify)
+    return
+  end subroutine multigrid_level_nullify
+
+  ! ---------------------------------------------------------
+  subroutine boundaries_nullify(this)
+    type(boundaries_t), intent(out) :: this
+    !
+    PUSH_SUB(boundaries_nullify)
+    nullify(this%mesh, this%per_points)
+    this%nper=0
+#ifdef HAVE_MPI
+    nullify(this%per_send, this%per_recv, this%nsend, this%nrecv)
+#endif
+    !this%buff_per_points
+    !this%buff_per_send
+    !this%buff_per_recv
+    !this%buff_nsend
+    !this%buff_nrecv
+    POP_SUB(boundaries_nullify)
+    return
+  end subroutine boundaries_nullify
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_nullify(this)
+    type(derivatives_t), intent(out) :: this
+    !
+    PUSH_SUB(derivatives_nullify)
+    call boundaries_nullify(this%boundaries)
+    nullify(this%mesh, this%op, this%lapl, this%grad, this%finer, this%coarser, this%to_finer, this%to_coarser)
+    this%dim=0
+    this%order=0
+    this%stencil_type=0
+    this%masses=M_ZERO
+    this%np_zero_bc=0
+    this%zero_bc=.false.
+    this%periodic_bc=.false.
+    this%lapl_cutoff=M_ZERO
+    this%n_ghost=0
+#if defined(HAVE_MPI)
+    this%comm_method=0
+#endif
+    POP_SUB(derivatives_nullify)
+  end subroutine derivatives_nullify
+
+  !-------------------------------------------------------  
+  subroutine stencil_nullify(this)
+    type(stencil_t), intent(out) :: this
+    !
+    PUSH_SUB(stencil_nullify)
+    this%center=-1
+    this%size=0
+    nullify(this%points)
+    POP_SUB(stencil_nullify)
+    return
+  end subroutine stencil_nullify
+
   ! ---------------------------------------------------------
   subroutine fio_grid_init(this, geo, mpi_grp, config)
     type(fio_grid_t), target, intent(out) :: this
@@ -70,6 +158,10 @@ contains
     ASSERT(ierr==JSON_OK)
     call fio_mesh_init(this%mesh, this%sb, this%cv, mpi_grp, cnfg)
     nullify(cnfg)
+    call multigrid_level_nullify(this%fine)
+    call derivatives_nullify(this%der)
+    call double_grid_nullify(this%dgrid)
+    call stencil_nullify(this%stencil)
     this%have_fine_mesh=.false.
     this%fine%mesh=>this%mesh
     this%fine%der=>this%der
@@ -84,9 +176,14 @@ contains
     type(fio_grid_t),         intent(in)  :: that
     !
     PUSH_SUB(fio_grid_copy)
+    ASSERT(.not.that%have_fine_mesh)
     call fio_simul_box_copy(this%sb, that%sb)
     call fio_mesh_copy(this%mesh, that%mesh)
     call fio_curvilinear_copy(this%cv, that%cv)
+    call multigrid_level_nullify(this%fine)
+    call derivatives_nullify(this%der)
+    call double_grid_nullify(this%dgrid)
+    call stencil_nullify(this%stencil)
     this%have_fine_mesh=.false.
     this%fine%mesh=>this%mesh
     this%fine%der=>this%der
@@ -94,6 +191,23 @@ contains
     POP_SUB(fio_grid_copy)
     return
   end subroutine fio_grid_copy
+
+  !-------------------------------------------------------------------
+  subroutine fio_grid_end(this)
+    type(fio_grid_t), intent(inout) :: this
+    !
+    PUSH_SUB(fio_grid_end)
+    call fio_mesh_end(this%mesh)
+    call fio_curvilinear_end(this%cv)
+    call fio_simul_box_end(this%sb)
+    call multigrid_level_nullify(this%fine)
+    call derivatives_nullify(this%der)
+    call double_grid_nullify(this%dgrid)
+    call stencil_nullify(this%stencil)
+    this%have_fine_mesh=.false.
+    nullify(this%fine%mesh, this%fine%der, this%mgrid)
+    POP_SUB(fio_grid_end)
+  end subroutine fio_grid_end
 
 end module fio_grid_m
 

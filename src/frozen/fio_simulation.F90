@@ -69,7 +69,6 @@ contains
     type(fio_simulation_t), intent(inout) :: this
     !
     type(fio_grid_t), pointer :: grid
-    integer                   :: ierr
     !
     PUSH_SUB(fio_simulation_stop)
     nullify(grid)

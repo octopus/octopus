@@ -49,7 +49,7 @@ contains
     type(json_object_t),   intent(in)  :: config
     !
     character(len=MAX_PATH_LEN) :: dir
-    integer                     :: indx, ierr
+    integer                     :: ierr
     integer                     :: i11, i21, i12, i22, i13, i23
     !
     PUSH_SUB(fio_index_init)
@@ -77,10 +77,6 @@ contains
   subroutine fio_index_end(this)
     type(index_t), intent(inout) :: this
     !
-    character(len=MAX_PATH_LEN) :: dir
-    integer                     :: indx, ierr
-    integer                     :: i11, i21, i12, i22, i13, i23
-    !
     PUSH_SUB(fio_index_end)
     if(this%is_hypercube)call hypercube_end(this%hypercube)
     this%is_hypercube=.false.
@@ -104,15 +100,15 @@ contains
     type(curvilinear_t),   target, intent(in)  :: cv
     type(json_object_t),           intent(in)  :: config
     !
-    integer :: i, ierr
+    integer :: ierr
     !
     PUSH_SUB(fio_mesh__init__)
     ASSERT(.not.sb%mr_flag)
     this%sb=>sb
     this%cv=>cv
+    this%spacing=0.0_wp
     call json_get(config, "spacing", this%spacing(1:sb%dim), ierr=ierr)
     ASSERT(ierr==JSON_OK)
-    this%spacing=(/this%spacing(1:sb%dim),(0.0_wp,i=sb%dim+1,MAX_DIM)/)
     POP_SUB(fio_mesh__init__)
     return
   end subroutine fio_mesh__init__
