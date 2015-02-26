@@ -754,9 +754,9 @@ contains
     type(species_t),     intent(out) :: this
     integer,             intent(in)  :: index
     type(json_object_t), intent(in)  :: json
-    !
+
     integer :: ierr
-    !
+
     PUSH_SUB(species_init_from_data_object)
 
     if(.not. initialized) call species_init_global()
@@ -803,8 +803,8 @@ contains
     nullify(this%iwf_l)
     nullify(this%iwf_m)
     nullify(this%iwf_i)
+
     POP_SUB(species_init_from_data_object)
-    return
   end subroutine species_init_from_data_object
   ! ---------------------------------------------------------
 
@@ -812,16 +812,17 @@ contains
   subroutine species_create_data_object(this, json)
     type(species_t),     intent(in)  :: this
     type(json_object_t), intent(out) :: json
-    !
+
     PUSH_SUB(species_create_data_object)
+
     call json_init(json)
     call json_set(json, "label", trim(adjustl(this%label)))
     call json_set(json, "type", this%type)
     call json_set(json, "z_val", this%z_val)
     call json_set(json, "mass", this%mass)
     call json_set(json, "def_rsize", this%def_rsize)
+
     POP_SUB(species_create_data_object)
-    return
   end subroutine species_create_data_object
   ! ---------------------------------------------------------
 
@@ -1138,7 +1139,6 @@ contains
     enddo
 
     POP_SUB(species_nl_projector)
-
   end subroutine species_nl_projector
   ! ---------------------------------------------------------
 
@@ -1177,8 +1177,9 @@ contains
     type(species_t),         intent(inout) :: this
     type(species_t), target, intent(in)    :: that
     integer,       optional, intent(in)    :: index
-    !
+
     PUSH_SUB(species_copy)
+
     call species_end(this)
     if(present(index))then
       this%index=index
@@ -1212,16 +1213,17 @@ contains
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
     this%lmax=that%lmax
     this%lloc=that%lloc
+
     POP_SUB(species_copy)
-    return
   end subroutine species_copy
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine species_end_species(spec)
     type(species_t), intent(inout) :: spec
-    !
+    
     PUSH_SUB(species_end_species)
+
     if (species_is_ps(spec)) then 
       if(associated(spec%ps)) then 
         call ps_end(spec%ps)
@@ -1231,8 +1233,8 @@ contains
     SAFE_DEALLOCATE_P(spec%iwf_l)
     SAFE_DEALLOCATE_P(spec%iwf_m)
     SAFE_DEALLOCATE_P(spec%iwf_i)
+
     POP_SUB(species_end_species)
-    return
   end subroutine species_end_species
   ! ---------------------------------------------------------
 

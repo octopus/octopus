@@ -75,8 +75,9 @@ contains
   
   subroutine double_grid_nullify(this)
     type(double_grid_t), intent(out) :: this
-    !
+
     PUSH_SUB(double_grid_nullify)
+
     this%order=0
     this%npoints=0
     this%spacing_divisor=0
@@ -85,8 +86,8 @@ contains
     this%nn=0
     this%use_double_grid=.false.
     nullify(this%co)
+
     POP_SUB(double_grid_nullify)
-    return
   end subroutine double_grid_nullify
   
   subroutine double_grid_init(this, sb)
