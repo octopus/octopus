@@ -193,7 +193,10 @@ contains
 
     ! vector computer with memory banks:
     if (ncache == 0) then
-      allocate(trig(2,8192),after(20),now(20),before(20))
+      SAFE_ALLOCATE(trig(1:2,1:8192))
+      SAFE_ALLOCATE(after(1:20))
+      SAFE_ALLOCATE(now(1:20))
+      SAFE_ALLOCATE(before(1:20))
 
       call ctrig(n3,trig,after,before,now,isign,ic)
       nfft=nd1*n2
@@ -256,7 +259,11 @@ contains
       iam = 0
       ! iam = omp_get_thread_num()
 
-      allocate(zw(2,ncache/4,2),trig(2,1024),after(20),now(20),before(20))
+      SAFE_ALLOCATE(zw(1:2,1:ncache/4,1:2))
+      SAFE_ALLOCATE(trig(1:2,1:1024))
+      SAFE_ALLOCATE(after(1:20))
+      SAFE_ALLOCATE(now(1:20))
+      SAFE_ALLOCATE(before(1:20))
 
       inzet=inzee
       ! TRANSFORM ALONG Z AXIS
@@ -416,7 +423,11 @@ contains
       endif
       inzet=3-inzet
 
-      deallocate(zw,trig,after,now,before)
+      SAFE_DEALLOCATE_A(zw)
+      SAFE_DEALLOCATE_A(trig)
+      SAFE_DEALLOCATE_A(after)
+      SAFE_DEALLOCATE_A(now)
+      SAFE_DEALLOCATE_A(before)
       if (iam == 0) inzee=inzet
       !$omp end parallel  
 
@@ -4405,12 +4416,25 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   if (mod(n2,4) == 0) lzt=lzt+1
   
   !Allocations
-  allocate(trig1(2,8192),after1(7),now1(7),before1(7), &
-       trig2(2,8192),after2(7),now2(7),before2(7), &
-       trig3(2,8192),after3(7),now3(7),before3(7), &
-       zw(2,ncache/4,2),zt(2,lzt,n1), &
-       zmpi2(2,n1,nd2/nproc,nd3),cosinarr(2,n3/2))
-  if (nproc > 1) allocate(zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc))
+  SAFE_ALLOCATE(trig1(1:2,1:8192))
+  SAFE_ALLOCATE(after1(1:7))
+  SAFE_ALLOCATE(now1(1:7))
+  SAFE_ALLOCATE(before1(1:7))
+  SAFE_ALLOCATE(trig2(1:2,1:8192))
+  SAFE_ALLOCATE(after2(1:7))
+  SAFE_ALLOCATE(now2(1:7))
+  SAFE_ALLOCATE(before2(1:7))
+  SAFE_ALLOCATE(trig3(1:2,1:8192))
+  SAFE_ALLOCATE(after3(1:7))
+  SAFE_ALLOCATE(now3(1:7))
+  SAFE_ALLOCATE(before3(1:7))
+  SAFE_ALLOCATE(zw(1:2,1:ncache/4,1:2))
+  SAFE_ALLOCATE(zt(1:2,1:lzt,1:n1))
+  SAFE_ALLOCATE(zmpi2(1:2,1:n1,1:nd2/nproc,1:nd3))
+  SAFE_ALLOCATE(cosinarr(1:2,1:n3/2))
+  if (nproc > 1) then
+    SAFE_ALLOCATE(zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc))
+  endif
   
   !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
   call ctrig(n3/2,trig3,after3,before3,now3,1,ic3)
@@ -4543,11 +4567,25 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   end do
 
   !De-allocations
-  deallocate(trig1,after1,now1,before1, &
-       trig2,after2,now2,before2, &
-       trig3,after3,now3,before3, &
-       zmpi2,zw,zt,cosinarr)
-  if (nproc > 1) deallocate(zmpi1)
+  SAFE_DEALLOCATE_A(trig1)
+  SAFE_DEALLOCATE_A(after1)
+  SAFE_DEALLOCATE_A(now1)
+  SAFE_DEALLOCATE_A(before1)
+  SAFE_DEALLOCATE_A(trig2)
+  SAFE_DEALLOCATE_A(after2)
+  SAFE_DEALLOCATE_A(now2)
+  SAFE_DEALLOCATE_A(before2)
+  SAFE_DEALLOCATE_A(trig3)
+  SAFE_DEALLOCATE_A(after3)
+  SAFE_DEALLOCATE_A(now3)
+  SAFE_DEALLOCATE_A(before3)
+  SAFE_DEALLOCATE_A(zmpi2)
+  SAFE_DEALLOCATE_A(zw)
+  SAFE_DEALLOCATE_A(zt)
+  SAFE_DEALLOCATE_A(cosinarr)
+  if (nproc > 1) then
+    SAFE_DEALLOCATE_A(zmpi1)
+  endif
 #endif
 end subroutine kernelfft
 
