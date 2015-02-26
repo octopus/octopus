@@ -46,10 +46,11 @@ module double_grid_m
   
   private
   
-  public ::              &
-       double_grid_t,    &
-       double_grid_init, &
-       double_grid_end,  &
+  public ::                         &
+       double_grid_t,               &
+       double_grid_nullify,         &
+       double_grid_init,            &
+       double_grid_end,             &
        double_grid_apply_local,     &
        double_grid_apply_non_local, &
        double_grid_get_rmax,        &
@@ -71,6 +72,22 @@ module double_grid_m
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
 
 contains
+  
+  subroutine double_grid_nullify(this)
+    type(double_grid_t), intent(out) :: this
+    !
+    PUSH_SUB(double_grid_nullify)
+    this%order=0
+    this%npoints=0
+    this%spacing_divisor=0
+    this%interpolation_min=0
+    this%interpolation_max=0
+    this%nn=0
+    this%use_double_grid=.false.
+    nullify(this%co)
+    POP_SUB(double_grid_nullify)
+    return
+  end subroutine double_grid_nullify
   
   subroutine double_grid_init(this, sb)
     type(double_grid_t), intent(out) :: this
