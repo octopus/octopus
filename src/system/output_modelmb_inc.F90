@@ -53,7 +53,7 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
   ! make sure directory exists
   call io_mkdir(trim(dir))
   ! all model mb stuff should be in this directory
-  dirname = trim(dir)//'modelmb'
+  dirname = trim(dir)//'/modelmb'
   call io_mkdir(trim(dirname))
 
   SAFE_ALLOCATE(wf(1:gr%mesh%np))
