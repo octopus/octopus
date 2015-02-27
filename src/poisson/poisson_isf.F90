@@ -366,6 +366,8 @@ contains
     integer :: n1, n2, n3, nd1, nd2, nd3, n1h, nd1h
     integer :: inzee, i_sign
 
+    PUSH_SUB(psolver_kernel)
+    
     !Dimension of the FFT
     call calculate_dimensions(n01, n02, n03, n1, n2, n3)
 
@@ -403,6 +405,7 @@ contains
     call zarray_out(n01, n02, n03, nd1h, nd2, nd3, rhopot, zarray(1, 1, inzee), factor)
 
     SAFE_DEALLOCATE_A(zarray)
+    POP_SUB(psolver_kernel)
   end subroutine psolver_kernel
   !!***
 
@@ -443,6 +446,8 @@ contains
     integer :: i1,i2,i3,j1,j2,j3, ouzee,n1h,n2h,n3h
     integer :: si1,si2,si3
 
+    PUSH_SUB(kernel_application)
+    
     n1h = n1/2
     n2h = n2/2
     n3h = n3/2
@@ -886,6 +891,7 @@ contains
     SAFE_DEALLOCATE_A(cos_array)
     SAFE_DEALLOCATE_A(sin_array)
 
+    POP_SUB(kernel_application)
   end subroutine kernel_application
 
   !!****h* BigDFT/norm_ind
@@ -972,6 +978,8 @@ contains
 
     integer :: i1,i2,i3,n01h,nd1hm,nd3hm,nd2hm
 
+    PUSH_SUB(zarray_in)
+    
     !Half the size of n01
     n01h=n01/2
     nd1hm=(nd1-1)/2
@@ -1002,6 +1010,8 @@ contains
         end do
       end do
     end if
+
+    POP_SUB(zarray_in)
   end subroutine zarray_in
   !!***
 
@@ -1024,7 +1034,9 @@ contains
     real(8), intent(in)    :: factor
     
     integer :: i1,i2,i3
-    !
+    
+    PUSH_SUB(zarray_out)
+
     do i3=1,n03
       do i2=1,n02
         do i1=1,n01
@@ -1033,6 +1045,7 @@ contains
       end do
     end do
 
+    POP_SUB(zarray_out)
   end subroutine zarray_out
   !!***
 
@@ -1095,6 +1108,8 @@ contains
     integer :: i,n_iter,i1,i2,i3,i_kern
     integer :: i01,i02,i03,inkee,n1h,n2h,n3h,nd1h
 
+    PUSH_SUB(build_kernel)
+    
     !Number of integration points : 2*itype_scf*n_points
     n_scf=2*itype_scf*n_points
     !Dimensions of Kernel
@@ -1220,6 +1235,7 @@ contains
       karrayhalf(1,1,inkee),karrayout)
 
     SAFE_DEALLOCATE_A(karrayhalf)
+    POP_SUB(build_kernel)
   end subroutine Build_Kernel
   !!***
 
@@ -1238,6 +1254,9 @@ contains
     integer, intent(out) :: nfft1,nfft2,nfft3
 
     integer :: i1,i2,i3,l1
+
+    PUSH_SUB(calculate_dimensions)
+
     !Test 2*n01, 2*n02, 2*n03
     !write(*,*) 'in dimensions_fft',n01,n02,n03
     i1=2*n01
@@ -1269,6 +1288,8 @@ contains
     !nd2 = nfft2 + modulo(nfft2+1,2)
     !nd3 = nfft3 + modulo(nfft3+1,2)
     !write(*,*) 'out dimensions_fft',nfft1,nfft2,nfft3
+
+    POP_SUB(calculate_dimensions)
   end subroutine calculate_dimensions
   !!***
 
@@ -1289,6 +1310,9 @@ contains
 
     real(8), dimension(:), allocatable :: karray
     integer :: i1,i2,i3,nd1h,n1h,n2h,n3h
+
+    PUSH_SUB(karrayhalf_in)
+
     !Body
     n1h=nfft1/2
     n2h=nfft2/2
@@ -1328,6 +1352,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(karray)
+    POP_SUB(karrayhalf_in)
   end subroutine karrayhalf_in
   !!***
 
@@ -1350,6 +1375,9 @@ contains
     real(8), dimension(:), allocatable :: cos_array,sin_array
     integer :: i1,i2,i3,ind1,ind2,nd1h,n1h,n2h,n3h
     real(8) :: rfe,ife,rfo,ifo,cp,sp,rk,ik,a,b,c,d,pi2
+
+    PUSH_SUB(kernel_recon)
+
     !Body
     n1h=nfft1/2
     n2h=nfft2/2
@@ -1397,6 +1425,8 @@ contains
 
     SAFE_DEALLOCATE_A(cos_array)
     SAFE_DEALLOCATE_A(sin_array)
+
+    POP_SUB(kernel_recon)
   end subroutine kernel_recon
   !!***
 
@@ -1443,6 +1473,8 @@ contains
 
     integer :: l1,l2,l3
 
+    PUSH_SUB(par_calculate_dimensions)
+    
     !dimensions of the density in the real space, inverted for convenience
 
     m1=n01
@@ -1506,6 +1538,7 @@ contains
       goto 250
     endif
 
+    POP_SUB(par_calculate_dimensions)
   end subroutine par_calculate_dimensions
   !!***
 
@@ -1556,10 +1589,13 @@ contains
     integer, intent(in) :: comm
     
     integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
+
+    PUSH_SUB(par_psolver_kernel)
     
     call par_calculate_dimensions(n01, n02, n03, m1, m2, m3, n1, n2, n3, md1, md2, md3, nd1, nd2, nd3, nproc)
     call pconvxc_off(m1, m2, m3, n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, iproc, nproc, rhopot, kernelLOC, hgrid, comm)
-    
+
+    POP_SUB(par_psolver_kernel)
   end subroutine par_psolver_kernel
   !!***
 
@@ -1615,6 +1651,8 @@ contains
     integer, dimension(:,:), allocatable :: gather_arr
     type(profile_t), save :: prof
 
+    PUSH_SUB(pconvxc_off)
+
     !factor to be used to keep unitarity
     scal=hgrid**3/real(n1*n2*n3,8)
 
@@ -1656,6 +1694,7 @@ contains
     SAFE_DEALLOCATE_A(lrhopot)
     SAFE_DEALLOCATE_A(gather_arr)
 
+    POP_SUB(pconvxc_off)
 #endif
   end subroutine pconvxc_off
 !!***
@@ -1685,6 +1724,8 @@ contains
 
     integer :: j1,j2,j3,jp2
 
+    PUSH_SUB(enterdensity)
+    
     !Body
     do jp2=0,md2/nproc-1
       j2=iproc*(md2/nproc)+jp2
@@ -1711,6 +1752,7 @@ contains
       end if
     end do
 
+    POP_SUB(enterdensity)
   end subroutine enterdensity
   !!***
 
@@ -1774,6 +1816,8 @@ contains
     integer :: i,n_iter,i1,i2,i3,i_kern
     integer :: i01,i02,i03,n1h,n2h,n3h
 
+    PUSH_SUB(par_build_kernel)
+    
     !Number of integration points : 2*itype_scf*n_points
     n_scf=2*itype_scf*n_points
     !Set karray
@@ -1983,7 +2027,7 @@ contains
     !De-allocations
     SAFE_DEALLOCATE_A(karray)
     SAFE_DEALLOCATE_A(karrayfour)
-    
+    POP_SUB(par_build_kernel)
   end subroutine par_build_kernel
   !!***
 
@@ -1999,6 +2043,8 @@ contains
 
     integer :: iunit, i, idx
 
+    PUSH_SUB(gequad)
+
     ur_gauss = 1.0_8
     dr_gauss = 1.0e-08_8
     acc_gauss = 1.0e-08_8
@@ -2011,6 +2057,7 @@ contains
     
     call io_close(iunit)
 
+    POP_SUB(gequad)
   end subroutine gequad
 
 end module poisson_isf_m
