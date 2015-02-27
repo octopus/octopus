@@ -85,12 +85,13 @@ subroutine X(run_sternheimer)()
     !search for the density of the closest frequency, including negative
     closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
     call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
-    sigma_alt = 1
-    if(closest_omega * frequency < M_ZERO) opp_freq = .true.
-    if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
     
     !attempt to read 
     if(ierr == 0) then 
+      sigma_alt = 1
+      if(closest_omega * frequency < M_ZERO) opp_freq = .true.
+      if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
+      
       call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
         restart_load, em_rho_tag(closest_omega, idir), ierr)
       

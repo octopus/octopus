@@ -395,7 +395,7 @@ The value found is returned in the freq argument.
 ierr results:
 0 : value found
 1 : no matching file found
-2 : cannot open the directory
+2 : cannot open the directory or function not available
  
 */
 
@@ -448,10 +448,13 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
       } else continue;
 
 
-      /* if this is the first number we found or the value is closer than previous */
-      if ( !found_something || (fabs(fabs(min)-fabs(*freq)) > fabs(fabs(read_value)-fabs(*freq))) ) {
+      /* if this is the first number we found */
+      if ( !found_something ) {
 	min = read_value;
 	found_something = 1;
+      } else if (fabs(fabs(min)-fabs(*freq)) > fabs(fabs(read_value)-fabs(*freq)) ) {
+      /* if the value is closer than previous */
+	min = read_value;
       }
     }
 
@@ -468,7 +471,8 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
 
 #else
 #warning directory search not compiled
-  fprintf(stderr, "Warning: Directory search not implemented.\n");
+  fprintf(stderr, "Warning: Directory search not available since certain C functions are not available.\n");
+  *ierr = 2;
 #endif
 
 }
