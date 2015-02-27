@@ -172,6 +172,9 @@ contains
   !! of the execution.
   ! ---------------------------------------------------------
   subroutine print_header()
+#ifdef HAVE_FC_COMPILER_VERSION
+    use iso_fortran_env
+#endif
     
     character(len=256) :: sys_name
     
@@ -204,7 +207,12 @@ contains
     message(2) = &
          "C compiler flags       : "//trim(conf%cflags)
     message(3) = &
+#ifdef HAVE_FC_COMPILER_VERSION
+         "Fortran compiler       : "//trim(conf%fc) &
+         //" ("//compiler_version()//")"
+#else
          "Fortran compiler       : "//trim(conf%fc)
+#endif
     message(4) = &
          "Fortran compiler flags : "//trim(conf%fcflags)
     call messages_info(4)

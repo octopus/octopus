@@ -203,6 +203,9 @@ ACX_FORTRAN_LOC
 dnl check whether we have or not a compiler that allows for very long lines...
 ACX_LONG_FORTRAN_LINES
 
+dnl check whether the compiler supports compiler_version intrinsic.
+ACX_FC_COMPILER_VERSION
+
 dnl check whether the Fortran 90 compiler accepts line markers cast by the preprocessor.
 ACX_F90_ACCEPTS_LINE_NUMBERS
 

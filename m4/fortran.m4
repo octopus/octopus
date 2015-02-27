@@ -168,3 +168,24 @@ AC_DEFUN([ACX_FORTRAN_LOC], [
       AC_MSG_RESULT(no)
     ])
 ])
+
+#
+# Check for Fortran 2008's COMPILER_VERSION
+# ----------------------------------------------------------
+
+AC_DEFUN([ACX_FC_COMPILER_VERSION],
+[
+AC_MSG_CHECKING([for Fortran compiler_version intrinsic])
+
+AC_LINK_IFELSE(
+    AC_LANG_PROGRAM( [], [[
+    use iso_fortran_env
+    implicit none
+    print *, trim (compiler_version())
+    ]]),
+    [AC_MSG_RESULT(yes)
+     AC_DEFINE(HAVE_FC_COMPILER_VERSION, 1,
+               [Fortran compiler supports the compiler_version intrinsic])],
+    [AC_MSG_RESULT(no)]
+  )
+])
