@@ -157,7 +157,7 @@ live_density.o		: live_density.F90 base_density.o
 live_states.o		: live_states.F90 live_density.o base_states.o
 live_system.o		: live_system.F90 live_states.o base_system.o
 live_external.o		: live_external.F90 base_external.o
-live_hamiltonian.o	: live_hamiltonian.F90 live_external.o base_hamiltonian.o
+live_hamiltonian.o	: live_hamiltonian.F90 live_external.o live_system.o base_hamiltonian.o
 live_model.o		: live_model.F90 live_system.o base_model.o
 live_handle.o		: live_handle.F90 base_handle.o
 live_config.o		: live_config.F90 live_handle.o base_config.o

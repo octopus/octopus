@@ -16,6 +16,10 @@ module frozen_density_m
 
   use intrpl_m, only: NEAREST
 
+  use simulation_m, only: &
+    simulation_t,         &
+    simulation_get
+
   use fio_density_m, only: &
     fio_density_t,         &
     fio_density_init,      &
@@ -25,10 +29,6 @@ module frozen_density_m
 
   use fio_density_m, only: &
     fio_density_intrpl_t
-
-  use simulation_m, only: &
-    simulation_t,         &
-    simulation_get
 
   use base_density_m, only:                          &
     frozen_density_start  => base_density__start__,  &

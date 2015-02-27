@@ -6,13 +6,11 @@ module live_config_m
   use messages_m
   use profiling_m
 
-  use curvilinear_m, only: CURV_METHOD_UNIFORM, curvilinear_t
-  use geometry_m,    only: geometry_t, geometry_create_data_object
-  use intrpl_m,      only: NEAREST
-  use json_m,        only: JSON_OK, json_object_t
-  use json_m,        only: json_init, json_set, json_get, json_del
-  use kinds_m,       only: wp
-  use mesh_m,        only: mesh_t
+  use geometry_m, only: geometry_t, geometry_create_data_object
+  use intrpl_m,   only: NEAREST
+  use json_m,     only: JSON_OK, json_object_t
+  use json_m,     only: json_init, json_set, json_get, json_del
+  use kinds_m,    only: wp
 
   use base_hamiltonian_m, only: &
     HMLT_TYPE_POTN,             &

@@ -27,8 +27,10 @@ module frozen_handle_m
     frozen_model_t
 
   use base_handle_m, only: &
+    base_handle__update__
+
+  use base_handle_m, only: &
     base_handle_init,      &
-    base_handle_update,    &
     base_handle_next,      &
     base_handle_end
 
@@ -122,7 +124,7 @@ contains
       call fio_handle_stop(hndl)
     end do
     call base_handle_end(iter)
-    call base_handle_update(this)
+    call base_handle__update__(this)
     nullify(hndl, cnfg)
     POP_SUB(frozen_handle_update)
     return

@@ -6,9 +6,7 @@ module frozen_model_m
   use messages_m
   use profiling_m
 
-  use grid_m,  only: grid_t
   use json_m,  only: JSON_OK, json_object_t, json_get
-  use space_m, only: space_t
 
   use fio_system_m, only: &
     fio_system_t
