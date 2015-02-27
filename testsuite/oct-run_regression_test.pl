@@ -456,16 +456,16 @@ sub run_match_new {
   die255("ERROR: Have to run before matching\n") if !$test{"run"} && !opt_m;
 
   # parse match line
-  my ($line, $match, $pre_command, $ref_value, $off);
+  my ($line, $match, $match_command, $shell_command, $ref_value, $off);
   $line = $_[0];
   $line =~ s/\\;/_COLUMN_/g;
-  ($match, $name, $pre_command, $ref_value) = split(/;/, $line);
-  $pre_command =~ s/_COLUMN_/;/g;
+  ($match, $name, $match_command, $ref_value) = split(/;/, $line);
+  $match_command =~ s/_COLUMN_/;/g;
   $ref_value =~ s/^\s*//;
   $ref_value =~ s/\s*$//;
 
   # parse command
-  $pre_command =~ /\s*(\w+)\s*\((.*)\)/;
+  $match_command =~ /\s*(\w+)\s*\((.*)\)/;
 
   my $func = $1;
   my $params = $2;
@@ -481,25 +481,25 @@ sub run_match_new {
 
   if($func eq "SHELL"){ # function SHELL(shell code)
     check_num_args(1, 1, $#par, $func);
-    $pre_command = $par[0];
+    $shell_command = $par[0];
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
     check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
       $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
-      $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1)' $par[0]";
+      $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1)' $par[0]";
     } else {
-      $pre_command = "awk '(NR==$par[1])' $par[0]";
+      $shell_command = "awk '(NR==$par[1])' $par[0]";
     }
-    $pre_command .= " | cut -b $par[2]-";
+    $shell_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
     check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
       $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
-      $pre_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
+      $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
     } else {
-      $pre_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
+      $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
     }
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
@@ -510,8 +510,8 @@ sub run_match_new {
 	$off = 0;
     }
     # -a means even if the file is considered binary due to a stray funny character, it will work
-    $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
-    $pre_command .= " | cut -b $par[2]-";
+    $shell_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
+    $shell_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -521,13 +521,13 @@ sub run_match_new {
 	$off = 0;
     }
     # -a means even if the file is considered binary due to a stray funny character, it will work
-    $pre_command = "grep -a -A$off $par[1] $par[0]";
-    $pre_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
+    $shell_command = "grep -a -A$off $par[1] $par[0]";
+    $shell_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     check_num_args(1, 1, $#par, $func);
-    $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
+    $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
 
   }else{ # error
     printf STDERR "Unknown command '$func'\n";
@@ -536,11 +536,11 @@ sub run_match_new {
 
   # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
   # otherwise the error comes only if the last step failed.
-  $value = qx(cd $matchdir && $pre_command);
+  $value = qx(cd $matchdir && $shell_command);
   # Perl gives error code shifted, for some reason.
   $exit_code = $? >> 8;
   if($exit_code) {
-      print STDERR "Match command failed: $pre_command\n";
+      print STDERR "Match command failed: $shell_command\n";
       return 0;
   }
 
@@ -553,12 +553,12 @@ sub run_match_new {
   }
 
   if(length($value) == 0) {
-      print STDERR "Match command returned nothing: $pre_command\n";
+      print STDERR "Match command returned nothing: $shell_command\n";
       return 0;
   }
 
   if(!looks_like_number($value)) {
-      print STDERR "Match command returned non-numeric value '$value': $pre_command\n";
+      print STDERR "Match command returned non-numeric value '$value': $shell_command\n";
       return 0;
   }
 
