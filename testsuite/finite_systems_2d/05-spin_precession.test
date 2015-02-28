@@ -11,11 +11,11 @@ Enabled    : Yes
 
 Input: 05-spin_precession.01-ground_state.inp
 
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 0.24999997
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.24999997
 
 Input: 05-spin_precession.02-time_propagation.inp
 
-match ; <Sx> (t=T/4) ; LINE(td.general/spin, -1, 29) ; 2.304949036240e-05
-match ; <Sy> (t=T/4) ; LINE(td.general/spin, -1, 49) ; 4.999999994628e-01
+match ; <Sx> (t=T/4) ; LINEFIELD(td.general/spin, -1, 3) ; 2.304949036240e-05
+match ; <Sy> (t=T/4) ; LINEFIELD(td.general/spin, -1, 4) ; 4.999999994628e-01
 
 match ; max density 3; LINEFIELD(output_iter/td.0000025/density-sp3.xsf, 5009, 1); 0.033548793354394

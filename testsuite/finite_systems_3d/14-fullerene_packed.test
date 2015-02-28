@@ -8,27 +8,27 @@ Enabled    : Yes
 
 Processors: 4
 Input: 14-fullerene_packed.01-gs.inp
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -363.91398457
-match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  3706.61771965
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -101.18321570
-match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4002.26397735
-match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -139.89199304
-match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -93.64322112
-match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.33328310
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   288.24155580
-match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8246.79555589
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -363.91398457
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 3706.61771965
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -101.18321570
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 4002.26397735
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -139.89199304
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -93.64322112
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -13.33328310
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 288.24155580
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -8246.79555589
 
-match ; Eigenvalue  10     ; GREP(static/info, ' 10   --', 13) ;  -0.728015
-match ; Eigenvalue  20     ; GREP(static/info, ' 20   --', 13) ;  -0.646886
-match ; Eigenvalue  30     ; GREP(static/info, ' 30   --', 13) ;  -0.576279
-match ; Eigenvalue  40     ; GREP(static/info, ' 40   --', 13) ;  -0.506850
-match ; Eigenvalue  50     ; GREP(static/info, ' 50   --', 13) ;  -0.427892
-match ; Eigenvalue  60     ; GREP(static/info, ' 60   --', 13) ;  -0.391399
-match ; Eigenvalue  70     ; GREP(static/info, ' 70   --', 13) ;  -0.346811
-match ; Eigenvalue  80     ; GREP(static/info, ' 80   --', 13) ;  -0.318199
-match ; Eigenvalue  90     ; GREP(static/info, ' 90   --', 13) ;  -0.275120
-match ; Eigenvalue 100     ; GREP(static/info, '100   --', 13) ;  -0.233342
-match ; Eigenvalue 110     ; GREP(static/info, '110   --', 13) ;  -0.163360
-match ; Eigenvalue 120     ; GREP(static/info, '120   --', 13) ;  -0.119440
-match ; Eigenvalue 130     ; GREP(static/info, '130   --', 13) ;   0.009299
-match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.068463
+match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.728015
+match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.646886
+match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.576279
+match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.506850
+match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.427892
+match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.391399
+match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.346811
+match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.318199
+match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.275120
+match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.233342
+match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; -0.163360
+match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; -0.119440
+match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ; 0.009299
+match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ; 0.068463

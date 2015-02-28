@@ -18,14 +18,14 @@ Enabled    : Yes
 Input: 09-morse.01-gs.inp
 Input: 09-morse.02-unocc.inp
 
-match ; 'E[nu=0]' ; GREP(static/eigenvalues, ' 1   -- ', 12) ; -0.190472
-match ; 'E[nu=1]' ; GREP(static/eigenvalues, ' 2   -- ', 12) ; -0.173229
-match ; 'E[nu=2]' ; GREP(static/eigenvalues, ' 3   -- ', 12) ; -0.156805
-match ; 'E[nu=6]' ; GREP(static/eigenvalues, ' 7   -- ', 12) ; -0.099285
+match ; 'E[nu=0]' ; GREPFIELD(static/eigenvalues, ' 1   -- ', 3) ; -0.190472
+match ; 'E[nu=1]' ; GREPFIELD(static/eigenvalues, ' 2   -- ', 3) ; -0.173229
+match ; 'E[nu=2]' ; GREPFIELD(static/eigenvalues, ' 3   -- ', 3) ; -0.156805
+match ; 'E[nu=6]' ; GREPFIELD(static/eigenvalues, ' 7   -- ', 3) ; -0.099285
 
 Input: 09-morse.03-td.inp
 
-match ; '<Psi(T)|Psi(0)> (niter)' ; LINE(td.general/projections, -1,  1) ; 1654
-match ; '<Psi(T)|Psi(0)>  (time)' ; LINE(td.general/projections, -1,  9) ; 4.135000000000e+02
-match ; '<Psi(T)|Psi(0)>  (proj)' ; LINE(td.general/projections, -1, 29) ; -9.760443910921e-01
+match ; '<Psi(T)|Psi(0)> (niter)' ; LINEFIELD(td.general/projections, -1, 1) ; 1654
+match ; '<Psi(T)|Psi(0)>  (time)' ; LINEFIELD(td.general/projections, -1, 2) ; 4.135000000000e+02
+match ; '<Psi(T)|Psi(0)>  (proj)' ; LINEFIELD(td.general/projections, -1, 3) ; -9.760443910921e-01
 

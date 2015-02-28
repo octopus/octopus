@@ -14,7 +14,7 @@ Enabled    : Yes
 # 
 
 Input: 04-jellium.01-ground_state.inp
-match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -0.57652032
-match ; Eigenvalue [s] ; GREP(static/info, '1   --', 13) ; -0.167698
-match ; Eigenvalue [p] ; GREP(static/info, '2   --', 13) ; -0.122636
+match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -0.57652032
+match ; Eigenvalue [s] ; GREPFIELD(static/info, '1   --', 3) ; -0.167698
+match ; Eigenvalue [p] ; GREPFIELD(static/info, '2   --', 3) ; -0.122636
 

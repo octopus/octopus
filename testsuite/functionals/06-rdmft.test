@@ -9,10 +9,10 @@ Enabled    : Yes
 Processors: 4
 
 Input: 06-rdmft.01-oep.inp
-match ; OEP energy                    ; GREP(static/info, 'Total       =', 20)   ; -1.23959074
-match ; OEP eigenvalue                ; GREP(static/info, '  1   --', 13) ;   -0.633895
+match ; OEP energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.23959074
+match ; OEP eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.633895
 
 Input: 06-rdmft.02-gs.inp
 Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREP(out, 'occ minim = ',     30) ; -1.15657
-match ; RDMFT converged energy                                        ; GREP(out, 'total energy is ',     20) ; -1.85307 
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15657
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ; -1.85307

@@ -7,64 +7,64 @@ TestGroups : short-run, linear_response
 Enabled    : Yes
 
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
-match ; Eigenvalues  ; GREP(static/info, '1   --', 12)        ;  -1.167612
-match ; Dipole       ; GREP(static/info, '<y>', 14)           ;   3.65917E-01
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -16.06685186
+match ; Eigenvalues  ; GREPFIELD(static/info, '1   --', 3) ; -1.167612
+match ; Dipole       ; GREPFIELD(static/info, '<y>', 3) ; 3.65917E-01
 
 Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
-match ; Polarizability XX w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 15.248041
-match ; Polarizability YY w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 3, 25) ; 12.333210
-match ; Polarizability ZZ w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 23.149122
+match ; Polarizability XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 2, 1) ; 15.248041
+match ; Polarizability YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 3, 2) ; 12.333210
+match ; Polarizability ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 4, 3) ; 23.149122
 
-match ; Polarizability XX w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 2,  5) ; 15.943344
-match ; Polarizability YY w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 3, 25) ; 12.856808
-match ; Polarizability ZZ w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 4, 45) ; 29.766976
+match ; Polarizability XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 2, 1) ; 15.943344
+match ; Polarizability YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 3, 2) ; 12.856808
+match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) ; 29.766976
 
-match ; Born charge O  XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 3,  5) ; -0.151322
-match ; Born charge O  YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 4, 25) ; -0.349310
-match ; Born charge O  ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5, 45) ; -0.032368
+match ; Born charge O  XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 3, 1) ; -0.151322
+match ; Born charge O  YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 4, 2) ; -0.349310
+match ; Born charge O  ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 5, 3) ; -0.032368
 match ; Born charge diff  w=0.0    ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  4) ;  0.008769
 
-match ; Born charge O  XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 3,  5) ; -0.196726
-match ; Born charge O  YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 4, 25) ; -0.408311
-match ; Born charge O  ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5, 45) ;  0.145284
+match ; Born charge O  XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 3, 1) ; -0.196726
+match ; Born charge O  YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 4, 2) ; -0.408311
+match ; Born charge O  ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 5, 3) ; 0.145284
 match ; Born charge diff  w=0.0    ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  4) ; -0.057861
 
 Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
-match ; Polarizability XX w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 15.241500
-match ; Polarizability YY w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 3, 25) ; 12.328310
-match ; Polarizability ZZ w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 23.105771
+match ; Polarizability XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 2, 1) ; 15.241500
+match ; Polarizability YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 3, 2) ; 12.328310
+match ; Polarizability ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 4, 3) ; 23.105771
 
-match ; Polarizability XX w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 2,  5) ; 15.933969
-match ; Polarizability YY w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 3, 25) ; 12.849790
-match ; Polarizability ZZ w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 4, 45) ; 29.441098
+match ; Polarizability XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 2, 1) ; 15.933969
+match ; Polarizability YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 3, 2) ; 12.849790
+match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) ; 29.441098
 
-match ; Cross sect. (avg) w=0.1    ; LINE(em_resp/freq_0.1000/cross_section, -1, 25) ; 0.68980239E-02
-match ; Cross sect. (ani) w=0.1    ; LINE(em_resp/freq_0.1000/cross_section, -1, 45) ; 0.13986866E-01
+match ; Cross sect. (avg) w=0.1    ; LINEFIELD(em_resp/freq_0.1000/cross_section, -1, 2) ; 0.68980239E-02
+match ; Cross sect. (ani) w=0.1    ; LINEFIELD(em_resp/freq_0.1000/cross_section, -1, 3) ; 0.13986866E-01
 
-match ; Born charge O  XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5,  5) ; -0.150899
-match ; Born charge O  YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 6, 25) ; -0.348757
-match ; Born charge O  ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 7, 45) ; -0.033190
+match ; Born charge O  XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 5, 1) ; -0.150899
+match ; Born charge O  YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 6, 2) ; -0.348757
+match ; Born charge O  ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 7, 3) ; -0.033190
 match ; Born charge diff  w=0.0    ; GREPFIELD(em_resp/freq_0.0000/Born_charges, "Discrepancy",  3,  5) ;  0.009350
 
-match ; Born charge O  XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5) ; -0.196159
-match ; Born charge O  YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.407578
-match ; Born charge O  ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ;  0.132121
+match ; Born charge O  XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 5, 1) ; -0.196159
+match ; Born charge O  YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 6, 2) ; -0.407578
+match ; Born charge O  ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/Born_charges, 7, 3) ; 0.132121
 match ; Born charge diff  w=0.1    ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ; -0.056346
 
-match ; Born charge O  XX w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 5,  5) ; -0.366367
-match ; Born charge O  YY w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 6, 25) ; -0.625975
-match ; Born charge O  ZZ w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 7, 45) ; -1.699907
+match ; Born charge O  XX w=-0.2   ; LINEFIELD(em_resp/freq_-0.2000/Born_charges, 5, 1) ; -0.366367
+match ; Born charge O  YY w=-0.2   ; LINEFIELD(em_resp/freq_-0.2000/Born_charges, 6, 2) ; -0.625975
+match ; Born charge O  ZZ w=-0.2   ; LINEFIELD(em_resp/freq_-0.2000/Born_charges, 7, 3) ; -1.699907
 match ; Born charge diff  w=-0.2   ; GREPFIELD(em_resp/freq_-0.2000/Born_charges, "Discrepancy", 3,  5) ; -0.155682
 
 Precision : 0.02
-match ; Hyperpolarizability w=0.0    ; GREP(em_resp/freq_0.0000/beta, 'beta // y', 10) ; -0.23080418E+02
-match ; Hyperpolarizability w=0.1 Re ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 10) ;  0.86792097E+02
-match ; Hyperpolarizability w=0.1 Im ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 32) ; -0.44353707E+00
+match ; Hyperpolarizability w=0.0    ; GREPFIELD(em_resp/freq_0.0000/beta, 'beta // y', 4) ; -0.23080418E+02
+match ; Hyperpolarizability w=0.1 Re ; GREPFIELD(em_resp/freq_0.1000/beta, 'beta // y', 4) ; 0.86792097E+02
+match ; Hyperpolarizability w=0.1 Im ; GREPFIELD(em_resp/freq_0.1000/beta, 'beta // y', 5) ; -0.44353707E+00
 
 Input: 02-h2o_pol_lr.04_h2o_susc.inp
 Precision : 0.001
-match; Paramagnetic susceptibility ; LINE(em_resp/freq_0.0000/susceptibility,  5, 25) ;   30.003216
-match; Diamagnetic susceptibility  ; LINE(em_resp/freq_0.0000/susceptibility, 11, 25) ; -215.363250
-match; Total susceptibility        ; LINE(em_resp/freq_0.0000/susceptibility, 17, 25) ; -185.360035
+match; Paramagnetic susceptibility ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 5, 3) ; 30.003216
+match; Diamagnetic susceptibility  ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 11, 3) ; -215.363250
+match; Total susceptibility        ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 17, 3) ; -185.360035

@@ -21,10 +21,10 @@ Enabled    : Yes
 Input: 08-laser.01-ground_state.inp
 
 Input: 08-laser.02-length_gauge.inp
-match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
-match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.334845206979e-04
+match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01
+match ; <Z>(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 6) ; -1.334845206979e-04
 
 Input: 08-laser.03-velocity_gauge.inp
-match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
-match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.332345613504e-04
+match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01
+match ; <Z>(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 6) ; -1.332345613504e-04
 

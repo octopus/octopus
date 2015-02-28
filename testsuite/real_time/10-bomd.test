@@ -9,36 +9,36 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 10-bomd.01-gs.inp
-match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60616403
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -10.60616403
 
 Processors : 4
 Input      : 10-bomd.02-td.inp
-match ; Energy [step 1] ; LINE(td.general/energy, -4, 30) ; -1.058417462752e+01
-match ; Energy [step 2] ; LINE(td.general/energy, -3, 30) ; -1.058408596792e+01
-match ; Energy [step 3] ; LINE(td.general/energy, -2, 30) ; -1.058401620415e+01
-match ; Energy [step 4] ; LINE(td.general/energy, -1, 30) ; -1.058396333592e+01
+match ; Energy [step 1] ; LINEFIELD(td.general/energy, -4, 3) ; -1.058417462752e+01
+match ; Energy [step 2] ; LINEFIELD(td.general/energy, -3, 3) ; -1.058408596792e+01
+match ; Energy [step 3] ; LINEFIELD(td.general/energy, -2, 3) ; -1.058401620415e+01
+match ; Energy [step 4] ; LINEFIELD(td.general/energy, -1, 3) ; -1.058396333592e+01
 
-match ; Forces [step 1] ; LINE(td.general/coordinates, -4, 270) ; -1.523708765618e-01
-match ; Forces [step 2] ; LINE(td.general/coordinates, -3, 270) ; -1.717135132303e-01
-match ; Forces [step 3] ; LINE(td.general/coordinates, -2, 270) ; -1.903002371581e-01
-match ; Forces [step 4] ; LINE(td.general/coordinates, -1, 270) ; -2.077139969362e-01
+match ; Forces [step 1] ; LINEFIELD(td.general/coordinates, -4, 15) ; -1.523708765618e-01
+match ; Forces [step 2] ; LINEFIELD(td.general/coordinates, -3, 15) ; -1.717135132303e-01
+match ; Forces [step 3] ; LINEFIELD(td.general/coordinates, -2, 15) ; -1.903002371581e-01
+match ; Forces [step 4] ; LINEFIELD(td.general/coordinates, -1, 15) ; -2.077139969362e-01
 
 Processors : 4
 Input      : 10-bomd.03-td_restart.inp
 
-match ; Energy [step 1] ; LINE(td.general/energy, -4, 30) ; -1.058392336457e+01
-match ; Energy [step 2] ; LINE(td.general/energy, -3, 30) ; -1.058389327330e+01
-match ; Energy [step 3] ; LINE(td.general/energy, -2, 30) ; -1.058387137910e+01
-match ; Energy [step 4] ; LINE(td.general/energy, -1, 30) ; -1.058385664439e+01
+match ; Energy [step 1] ; LINEFIELD(td.general/energy, -4, 3) ; -1.058392336457e+01
+match ; Energy [step 2] ; LINEFIELD(td.general/energy, -3, 3) ; -1.058389327330e+01
+match ; Energy [step 3] ; LINEFIELD(td.general/energy, -2, 3) ; -1.058387137910e+01
+match ; Energy [step 4] ; LINEFIELD(td.general/energy, -1, 3) ; -1.058385664439e+01
 
-match ; Forces [step 1] ; LINE(td.general/coordinates, -4, 270) ; -2.235263850789e-01
-match ; Forces [step 2] ; LINE(td.general/coordinates, -3, 270) ; -2.372650478674e-01
-match ; Forces [step 3] ; LINE(td.general/coordinates, -2, 270) ; -2.485570059367e-01
-match ; Forces [step 4] ; LINE(td.general/coordinates, -1, 270) ; -2.570433048265e-01
+match ; Forces [step 1] ; LINEFIELD(td.general/coordinates, -4, 15) ; -2.235263850789e-01
+match ; Forces [step 2] ; LINEFIELD(td.general/coordinates, -3, 15) ; -2.372650478674e-01
+match ; Forces [step 3] ; LINEFIELD(td.general/coordinates, -2, 15) ; -2.485570059367e-01
+match ; Forces [step 4] ; LINEFIELD(td.general/coordinates, -1, 15) ; -2.570433048265e-01
 
 Util       : oct-xyz-anim
 Input      : 10-bomd.04-xyz-anim.inp
-match ; Coordinates  2 2 1 ; LINE(td.general/movie.xyz,  8, 20);  1.181302
-match ; Coordinates  2 2 2 ; LINE(td.general/movie.xyz,  8, 36);  0.0
-match ; Coordinates  8 1 1 ; LINE(td.general/movie.xyz, 23, 20); -1.146508
-match ; Coordinates  8 1 3 ; LINE(td.general/movie.xyz, 23, 48);  0.0
+match ; Coordinates  2 2 1 ; LINEFIELD(td.general/movie.xyz, 8, 2) ; 1.181302
+match ; Coordinates  2 2 2 ; LINEFIELD(td.general/movie.xyz, 8, 3) ; 0.0
+match ; Coordinates  8 1 1 ; LINEFIELD(td.general/movie.xyz, 23, 2) ; -1.146508
+match ; Coordinates  8 1 3 ; LINEFIELD(td.general/movie.xyz, 23, 4) ; 0.0

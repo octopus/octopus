@@ -7,9 +7,9 @@ Enabled    : Yes
 # asymmetric quantum well
 Input: 09-density+current.01-ground_state.inp
 
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
-match ; Eigenvalue   ; GREP(static/info, '1   --',        12) ; -0.620616
-match ; Eigenvalue   ; GREP(static/info, '2   --',        12) ; -0.463839
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.62061608
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.620616
+match ; Eigenvalue   ; GREPFIELD(static/info, '2   --', 3) ; -0.463839
 
 
 # optimize overlap of density and minimize
@@ -19,8 +19,8 @@ Input: 09-density+current.02-oct.inp
 
 Precision : 0.000001
 
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  -1.10646288
-match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.22634836
+match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; -1.10646288
+match ; J2 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 4) ; -0.22634836
 
 
 # optimize overlap of density and minimize
@@ -33,5 +33,5 @@ Input: 09-density+current.03-tdoct.inp
 
 Precision : 0.000001
 
-match ; J1 1st iteration ; GREP(opt-control/convergence, '##        1 ', 40) ; -1.44008466
-match ; J2 1st iteration ; GREP(opt-control/convergence, '##        1 ', 60) ; -0.06419693
+match ; J1 1st iteration ; GREPFIELD(opt-control/convergence, '##        1 ', 4) ; -1.44008466
+match ; J2 1st iteration ; GREPFIELD(opt-control/convergence, '##        1 ', 5) ; -0.06419693

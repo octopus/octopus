@@ -17,8 +17,8 @@ Enabled    : Yes
 #
 # First, we have to get the ground state and the first excited state.
 Input: 06-zbr98.01-ground_state.inp
-match ; Total energy ; GREP(static/info, ' Total ', 23) ; -0.19047202
-match ; Eigenvalue 2 ; GREP(static/info, '2   --' , 13) ; -0.173229
+match ; Total energy ; GREPFIELD(static/info, ' Total ', 3) ; -0.19047202
+match ; Eigenvalue 2 ; GREPFIELD(static/info, '2   --', 3) ; -0.173229
 
 # Then, the OCT run. It goes only until the first iteration; in order to obtain
 # the convergence history presented in Fig. 1, one should go up to 20 iterations.
@@ -35,4 +35,4 @@ match ; Eigenvalue 2 ; GREP(static/info, '2   --' , 13) ; -0.173229
 # iterations depends on numerical noise.
 Input: 06-zbr98.02-oct.inp
 Precision : 0.01
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.99839827
+match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; 0.99839827

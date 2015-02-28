@@ -9,4 +9,4 @@ Enabled    : Yes
 Precision : 0.005
 
 Input: 13-hartree_3d_mg.01-multigrid.inp
-match ; Multigrid     ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00330663
+match ; Multigrid     ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00330663

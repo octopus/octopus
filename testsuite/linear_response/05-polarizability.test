@@ -8,29 +8,29 @@ Enabled    : Yes
 
 
 Input: 05-polarizability.01-gs.inp
-match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -11.40377627
+match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -11.40377627
 # due to the perversity of Methfessel-Paxton, occupations can be outside [0,2] and entropy can be negative
-match ; Free energy    ; GREP(static/info, 'Free        =', 20) ; -11.32666634
-match ; Eigenvalue     ; GREP(static/info, '1   --', 12) ;  -3.178226
-match ; Occupation     ; GREP(static/info, '1   --', 28) ;   2.032697
-match ; Eigenvalue     ; GREP(static/info, '2   --', 12) ;  -1.836886
-match ; Occupation     ; GREP(static/info, '2   --', 28) ;  -0.032680
+match ; Free energy    ; GREPFIELD(static/info, 'Free        =', 3) ; -11.32666634
+match ; Eigenvalue     ; GREPFIELD(static/info, '1   --', 3) ; -3.178226
+match ; Occupation     ; GREPFIELD(static/info, '1   --', 4) ; 2.032697
+match ; Eigenvalue     ; GREPFIELD(static/info, '2   --', 3) ; -1.836886
+match ; Occupation     ; GREPFIELD(static/info, '2   --', 4) ; -0.032680
 match ; Fermi energy   ; GREPFIELD(static/info, 'Fermi energy =', 4) ; -2.712932
 
 Input: 05-polarizability.02-sternheimer.inp
 Precision: 0.0015
-match ; Polarizability xx ; LINE(em_resp/freq_0.0000/alpha, 2,  1) ; 48.662972
-match ; Polarizability yy ; LINE(em_resp/freq_0.0000/alpha, 3, 28) ; 27.001112
-match ; Polarizability zz ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 27.001112
+match ; Polarizability xx ; LINEFIELD(em_resp/freq_0.0000/alpha, 2, 1) ; 48.662972
+match ; Polarizability yy ; LINEFIELD(em_resp/freq_0.0000/alpha, 3, 2) ; 27.001112
+match ; Polarizability zz ; LINEFIELD(em_resp/freq_0.0000/alpha, 4, 3) ; 27.001112
 
 Input: 05-polarizability.03-finite-diff.inp
-match ; Polarizability xx ; LINE(em_resp_fd/alpha, 2,  1) ; 48.663362
-match ; Polarizability yy ; LINE(em_resp_fd/alpha, 3, 28) ; 27.001859
-match ; Polarizability zz ; LINE(em_resp_fd/alpha, 4, 45) ; 27.001852
+match ; Polarizability xx ; LINEFIELD(em_resp_fd/alpha, 2, 1) ; 48.663362
+match ; Polarizability yy ; LINEFIELD(em_resp_fd/alpha, 3, 2) ; 27.001859
+match ; Polarizability zz ; LINEFIELD(em_resp_fd/alpha, 4, 3) ; 27.001852
 
-match ; Born charge xx ; LINE(em_resp_fd/Born_charges, 3,  5) ; 0.002287
-match ; Born charge yy ; LINE(em_resp_fd/Born_charges, 4, 25) ; 0.004818
-match ; Born charge zz ; LINE(em_resp_fd/Born_charges, 5, 45) ; 0.004802
+match ; Born charge xx ; LINEFIELD(em_resp_fd/Born_charges, 3, 1) ; 0.002287
+match ; Born charge yy ; LINEFIELD(em_resp_fd/Born_charges, 4, 2) ; 0.004818
+match ; Born charge zz ; LINEFIELD(em_resp_fd/Born_charges, 5, 3) ; 0.004802
 # the Born charges should all be zero by symmetry, if the calculation were converged
 match ; Born charge diff; GREPFIELD(em_resp_fd/Born_charges, "Discrepancy", 3,  4) ; 0.003975
 

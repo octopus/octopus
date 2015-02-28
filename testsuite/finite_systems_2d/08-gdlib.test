@@ -9,7 +9,7 @@ Enabled    : Yes
 
 Input : 08-gdlib.01-gs.inp
 
-match ; Total energy ; GREP(static/info, 'Total       =', 20);   0.50252348
-match ; Eigenvalue   ; GREP(static/info, ' 1   --',       13);   0.502523
-match ; Dipole x     ; GREP(static/info, '<x> =',         12);   1.03804E+00
-match ; Dipole y     ; GREP(static/info, '<y> =',         12);  -1.02525E+00
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.50252348
+match ; Eigenvalue   ; GREPFIELD(static/info, ' 1   --', 3) ; 0.502523
+match ; Dipole x     ; GREPFIELD(static/info, '<x> =', 3) ; 1.03804E+00
+match ; Dipole y     ; GREPFIELD(static/info, '<y> =', 3) ; -1.02525E+00

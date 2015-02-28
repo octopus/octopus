@@ -8,4 +8,4 @@ Enabled    : Yes
 
 Precision : 0.005
 Input: 12-hartree_direct_3d.01.inp
-match ; Direct3D      ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00974749
+match ; Direct3D      ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00974749

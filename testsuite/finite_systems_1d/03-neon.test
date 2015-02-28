@@ -10,7 +10,7 @@ Enabled    : No
 # interaction) with LDA
 
 Input      : 03-neon.01-gs.inp
-match ; Total energy  ; GREP(static/info, 'Total       =', 20) ; -61.16048724
+match ; Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -61.16048724
 match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   -- ',  3) ; -0.528192
 match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.039716
 

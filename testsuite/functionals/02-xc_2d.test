@@ -7,14 +7,14 @@ TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 02-xc_2d.00-hartree.inp
-match ; Hartree energy                           ; GREP(static/info, 'Total       =', 20)   ;  1.11152575
-match ; Hartree eigenvalues sum                  ; GREP(static/info, 'Eigenvalues =', 20)   ;  1.42855062
-match ; Hartree kinetic energy                   ; GREP(static/info, 'Kinetic     =', 20)   ;  0.31638757
-match ; Hartree external energy                  ; GREP(static/info, 'External    =', 20)   ;  0.47811330
-match ; Hartree eigenvalue 1 up                  ; GREP(static/info, '  1   up', 13) ; 0.607023
-match ; Hartree eigenvalue 2 up                  ; GREP(static/info, '  2   up', 13) ; 0.821527
-match ; Hartree eigenvalue 1 dn                  ; GREP(static/info, '  1   dn', 13) ; 1.156287
-match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn', 13) ; 1.221884
+match ; Hartree energy                           ; GREPFIELD(static/info, 'Total       =', 3) ; 1.11152575
+match ; Hartree eigenvalues sum                  ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.42855062
+match ; Hartree kinetic energy                   ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31638757
+match ; Hartree external energy                  ; GREPFIELD(static/info, 'External    =', 3) ; 0.47811330
+match ; Hartree eigenvalue 1 up                  ; GREPFIELD(static/info, '  1   up', 3) ; 0.607023
+match ; Hartree eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; 0.821527
+match ; Hartree eigenvalue 1 dn                  ; GREPFIELD(static/info, '  1   dn', 3) ; 1.156287
+match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; 1.221884
 
 # This tests the Hartree-Fock implementation. It reproduces one number
 # given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chosen
@@ -35,43 +35,43 @@ match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn',
 # could be due to the use of an underconverged basis set in the paper.
 
 Input: 02-xc_2d.01-hf.inp
-match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ;  1.04191861
-match ; Hartree-Fock eigenvalues sum             ; GREP(static/info, 'Eigenvalues =', 20)   ;  1.31401934
-match ; Hartree-Fock kinetic energy              ; GREP(static/info, 'Kinetic     =', 20)   ;  0.31688385
-match ; Hartree-Fock external energy             ; GREP(static/info, 'External    =', 20)   ;  0.45293349
-match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ; 0.537515
-match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up', 13) ; 0.776505
-match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ; 1.169397
-match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ; 1.224726
+match ; Hartree-Fock energy                      ; GREPFIELD(static/info, 'Total       =', 3) ; 1.04191861
+match ; Hartree-Fock eigenvalues sum             ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.31401934
+match ; Hartree-Fock kinetic energy              ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31688385
+match ; Hartree-Fock external energy             ; GREPFIELD(static/info, 'External    =', 3) ; 0.45293349
+match ; Hartree-Fock eigenvalue 1 up             ; GREPFIELD(static/info, '  1   up', 3) ; 0.537515
+match ; Hartree-Fock eigenvalue 2 up             ; GREPFIELD(static/info, '  2   up', 3) ; 0.776505
+match ; Hartree-Fock eigenvalue 1 dn             ; GREPFIELD(static/info, '  1   dn', 3) ; 1.169397
+match ; Hartree-Fock eigenvalue 2 dn             ; GREPFIELD(static/info, '  2   dn', 3) ; 1.224726
 
 # We use the wave-functions obtained to test the 2D XC functionals
 
 Input: 02-xc_2d.lda_amgb.inp
-match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.62342504
-match ; LDA AMGB Correlation                   ; GREP(static/info, 'Correlation =', 20)   ; -0.03534534
-match ; LDA AMGB Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97730047
+match ; LDA Exchange                           ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.62342504
+match ; LDA AMGB Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03534534
+match ; LDA AMGB Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97730047
 
 Input: 02-xc_2d.gga_b86.inp
-match ; GGA 2D B86 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.66569035
-match ; GGA 2D B86 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.96106957
+match ; GGA 2D B86 Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.66569035
+match ; GGA 2D B86 Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96106957
 
 Input: 02-xc_2d.gga_b86_mgc.inp
-match ; GGA 2D B86 MGC Exchange                ; GREP(static/info, 'Exchange    =', 20)   ; -0.65901733
-match ; GGA 2D B86 MGC Int[n*v_xc]             ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.96391509
+match ; GGA 2D B86 MGC Exchange                ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.65901733
+match ; GGA 2D B86 MGC Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96391509
 
 Input: 02-xc_2d.gga_b88.inp
-match ; GGA 2D B88 Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.67040364
-match ; GGA 2D B88 Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97950183
+match ; GGA 2D B88 Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.67040364
+match ; GGA 2D B88 Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97950183
 
 Input: 02-xc_2d.gga_pbe.inp
-match ; GGA 2D PBE Exchange                    ; GREP(static/info, 'Exchange    =', 20)   ; -0.67022789
-match ; GGA 2D PBE Int[n*v_xc]                 ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.97796406
+match ; GGA 2D PBE Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.67022789
+match ; GGA 2D PBE Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97796406
 
 # From PRM 2008 paper: "a spin-polarized extension of the present functional is still missing"
 # Though Octopus and libxc do not flag a problem when running spin-polarized,
 # we will do SCF from scratch spin-unpolarized. Restarting from spin-polarized Hartree-Fock like the others
 # would mean deliberately misunderstanding the restart wavefunctions.
 Input: 02-xc_2d.lda_prm.inp
-match ; LDA Exchange                           ; GREP(static/info, 'Exchange    =', 20)   ; -0.40774389
-match ; LDA PRM Correlation                    ; GREP(static/info, 'Correlation =', 20)   ; -0.11830011
-match ; LDA PRM Int[n*v_xc]                    ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.75815185
+match ; LDA Exchange                           ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.40774389
+match ; LDA PRM Correlation                    ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.11830011
+match ; LDA PRM Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.75815185

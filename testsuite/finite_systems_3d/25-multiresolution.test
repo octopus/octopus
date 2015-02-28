@@ -7,6 +7,6 @@ Enabled    : Yes
 Processors: 1
 # segfaults on two processors
 Input: 25-multiresolution.01-Hatom.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ;-0.50007431
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50007431
 
 

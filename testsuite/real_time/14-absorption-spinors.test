@@ -11,70 +11,70 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 14-absorption-spinors.01-gs.inp
-match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -6.13619673
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -6.13619673
 
 Processors : 4
 Input      : 14-absorption-spinors.02-td.inp
-match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -6.136196726297e+00
-match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -6.135815719165e+00
-match ; Energy [step  50] ; LINE(td.general/energy,  -51, 30) ; -6.135815703470e+00
-match ; Energy [step  75] ; LINE(td.general/energy,  -26, 30) ; -6.135815686249e+00
-match ; Energy [step 100] ; LINE(td.general/energy,   -1, 30) ; -6.135815663056e+00
+match ; Energy [step   1] ; LINEFIELD(td.general/energy, -101, 3) ; -6.136196726297e+00
+match ; Energy [step  25] ; LINEFIELD(td.general/energy, -76, 3) ; -6.135815719165e+00
+match ; Energy [step  50] ; LINEFIELD(td.general/energy, -51, 3) ; -6.135815703470e+00
+match ; Energy [step  75] ; LINEFIELD(td.general/energy, -26, 3) ; -6.135815686249e+00
+match ; Energy [step 100] ; LINEFIELD(td.general/energy, -1, 3) ; -6.135815663056e+00
 
 Processors : 4
 Input      : 14-absorption-spinors.03-td-restart.inp
-match ; Energy [step 100] ; LINE(td.general/energy, -101, 30) ; -6.135815663056e+00
-match ; Energy [step 125] ; LINE(td.general/energy,  -76, 30) ; -6.135815648321e+00
-match ; Energy [step 150] ; LINE(td.general/energy,  -51, 30) ; -6.135815624898e+00
-match ; Energy [step 175] ; LINE(td.general/energy,  -26, 30) ; -6.135815609749e+00
-match ; Energy [step 200] ; LINE(td.general/energy,   -1, 30) ; -6.135815588126e+00
+match ; Energy [step 100] ; LINEFIELD(td.general/energy, -101, 3) ; -6.135815663056e+00
+match ; Energy [step 125] ; LINEFIELD(td.general/energy, -76, 3) ; -6.135815648321e+00
+match ; Energy [step 150] ; LINEFIELD(td.general/energy, -51, 3) ; -6.135815624898e+00
+match ; Energy [step 175] ; LINEFIELD(td.general/energy, -26, 3) ; -6.135815609749e+00
+match ; Energy [step 200] ; LINEFIELD(td.general/energy, -1, 3) ; -6.135815588126e+00
 
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.04-spectrum.inp
-match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.960585
-match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 15.572831
+match ; Electronic sum rule ; GREPFIELD(cross_section_vector.1, 'Electronic sum rule', 6) ; 0.960585
+match ; Polarizability sum rule ; GREPFIELD(cross_section_vector.1, 'Polarizability (sum rule)', 6) ; 15.572831
 
 Precision : 1e-6
 
-match ; Energy      1 ; LINE(cross_section_tensor,  -91, 1) ; 1.0
-match ; Sigma       1 ; LINE(cross_section_tensor,  -91, 21) ; 0.56246021E-01
-match ; Anisotropy  1 ; LINE(cross_section_tensor,  -91, 41) ; 0.63732726E-01
+match ; Energy      1 ; LINEFIELD(cross_section_tensor, -91, 1) ; 1.0
+match ; Sigma       1 ; LINEFIELD(cross_section_tensor, -91, 2) ; 0.56246021E-01
+match ; Anisotropy  1 ; LINEFIELD(cross_section_tensor, -91, 3) ; 0.63732726E-01
 
-match ; Energy      2 ; LINE(cross_section_tensor,  -81, 1) ; 2.0
-match ; Sigma       2 ; LINE(cross_section_tensor,  -81, 21) ; 0.19585513E+00
-match ; Anisotropy  2 ; LINE(cross_section_tensor,  -81, 41) ; 0.21104105E+00
+match ; Energy      2 ; LINEFIELD(cross_section_tensor, -81, 1) ; 2.0
+match ; Sigma       2 ; LINEFIELD(cross_section_tensor, -81, 2) ; 0.19585513E+00
+match ; Anisotropy  2 ; LINEFIELD(cross_section_tensor, -81, 3) ; 0.21104105E+00
 
-match ; Energy      3 ; LINE(cross_section_tensor,  -71, 1) ; 3.0
-match ; Sigma       3 ; LINE(cross_section_tensor,  -71, 21) ; 0.33557795E+00
-match ; Anisotropy  3 ; LINE(cross_section_tensor,  -71, 41) ; 0.33920083E+00
+match ; Energy      3 ; LINEFIELD(cross_section_tensor, -71, 1) ; 3.0
+match ; Sigma       3 ; LINEFIELD(cross_section_tensor, -71, 2) ; 0.33557795E+00
+match ; Anisotropy  3 ; LINEFIELD(cross_section_tensor, -71, 3) ; 0.33920083E+00
 
-match ; Energy      4 ; LINE(cross_section_tensor,  -61, 1) ; 4.0
-match ; Sigma       4 ; LINE(cross_section_tensor,  -61, 21) ; 0.37636389E+00
-match ; Anisotropy  4 ; LINE(cross_section_tensor,  -61, 41) ; 0.35722339E+00
+match ; Energy      4 ; LINEFIELD(cross_section_tensor, -61, 1) ; 4.0
+match ; Sigma       4 ; LINEFIELD(cross_section_tensor, -61, 2) ; 0.37636389E+00
+match ; Anisotropy  4 ; LINEFIELD(cross_section_tensor, -61, 3) ; 0.35722339E+00
 
-match ; Energy      5 ; LINE(cross_section_tensor,  -51, 1) ; 5.0
-match ; Sigma       5 ; LINE(cross_section_tensor,  -51, 21) ; 0.28304861E+00
-match ; Anisotropy  5 ; LINE(cross_section_tensor,  -51, 41) ; 0.25444606E+00
+match ; Energy      5 ; LINEFIELD(cross_section_tensor, -51, 1) ; 5.0
+match ; Sigma       5 ; LINEFIELD(cross_section_tensor, -51, 2) ; 0.28304861E+00
+match ; Anisotropy  5 ; LINEFIELD(cross_section_tensor, -51, 3) ; 0.25444606E+00
 
-match ; Energy      6 ; LINE(cross_section_tensor,  -41, 1) ; 6.0
-match ; Sigma       6 ; LINE(cross_section_tensor,  -41, 21) ; 0.12591270E+00
-match ; Anisotropy  6 ; LINE(cross_section_tensor,  -41, 41) ; 0.10916252E+00
+match ; Energy      6 ; LINEFIELD(cross_section_tensor, -41, 1) ; 6.0
+match ; Sigma       6 ; LINEFIELD(cross_section_tensor, -41, 2) ; 0.12591270E+00
+match ; Anisotropy  6 ; LINEFIELD(cross_section_tensor, -41, 3) ; 0.10916252E+00
 
-match ; Energy      7 ; LINE(cross_section_tensor,  -31, 1) ; 7.0
-match ; Sigma       7 ; LINE(cross_section_tensor,  -31, 21) ; 0.15098727E-01
-match ; Anisotropy  7 ; LINE(cross_section_tensor,  -31, 41) ; 0.15970004E-01
+match ; Energy      7 ; LINEFIELD(cross_section_tensor, -31, 1) ; 7.0
+match ; Sigma       7 ; LINEFIELD(cross_section_tensor, -31, 2) ; 0.15098727E-01
+match ; Anisotropy  7 ; LINEFIELD(cross_section_tensor, -31, 3) ; 0.15970004E-01
 
-match ; Energy      8 ; LINE(cross_section_tensor,  -21, 1) ; 8.0
-match ; Sigma       8 ; LINE(cross_section_tensor,  -21, 21) ; -0.69104770E-02
-match ; Anisotropy  8 ; LINE(cross_section_tensor,  -21, 41) ; 0.90351143E-02
+match ; Energy      8 ; LINEFIELD(cross_section_tensor, -21, 1) ; 8.0
+match ; Sigma       8 ; LINEFIELD(cross_section_tensor, -21, 2) ; -0.69104770E-02
+match ; Anisotropy  8 ; LINEFIELD(cross_section_tensor, -21, 3) ; 0.90351143E-02
 
-match ; Energy      9 ; LINE(cross_section_tensor,  -11, 1) ; 9.0
-match ; Sigma       9 ; LINE(cross_section_tensor,  -11, 21) ; 0.13468894E-01
-match ; Anisotropy  9 ; LINE(cross_section_tensor,  -11, 41) ; 0.20659983E-01
+match ; Energy      9 ; LINEFIELD(cross_section_tensor, -11, 1) ; 9.0
+match ; Sigma       9 ; LINEFIELD(cross_section_tensor, -11, 2) ; 0.13468894E-01
+match ; Anisotropy  9 ; LINEFIELD(cross_section_tensor, -11, 3) ; 0.20659983E-01
 
-match ; Energy     10 ; LINE(cross_section_tensor,   -1, 1) ;  10.0
-match ; Sigma      10 ; LINE(cross_section_tensor,   -1, 21) ; 0.18987382E-01
-match ; Anisotropy 10 ; LINE(cross_section_tensor,   -1, 41) ; 0.19635516E-01
+match ; Energy     10 ; LINEFIELD(cross_section_tensor, -1, 1) ; 10.0
+match ; Sigma      10 ; LINEFIELD(cross_section_tensor, -1, 2) ; 0.18987382E-01
+match ; Anisotropy 10 ; LINEFIELD(cross_section_tensor, -1, 3) ; 0.19635516E-01
 
 
 
