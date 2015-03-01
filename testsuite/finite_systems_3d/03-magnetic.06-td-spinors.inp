@@ -5,7 +5,7 @@ CalculationMode = td
 %
 
 %Species
- 'Al' | species_ps_hgh | 26.89 | 13
+ 'Al' | species_ps_hgh | default_mass | 13
 %
 
 Radius = 6.0

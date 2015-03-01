@@ -3,7 +3,7 @@ fromScratch = yes
 ExperimentalFeatures = yes
 
 %Species
-  "F" | species_ps_upf | 18.998 | 9
+  "F" | species_ps_upf | default_mass | 9
 %                                                                                          
 
 %Coordinates
