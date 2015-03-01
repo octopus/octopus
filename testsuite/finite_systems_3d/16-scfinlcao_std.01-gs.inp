@@ -19,9 +19,9 @@ theta = 108.23 * pi / 180
 %
 
 %Species
- 'C' | species_ps_psf | 12.0107 |  6 | 3 | 0
- 'H' | species_ps_psf | 1.00794 |  1 | 3 | 0
- 'Cl' | species_ps_psf | 35.4527 | 17 | 3 | 0
+ 'C'  | species_ps_psf | default_mass |  6 | 3 | 0
+ 'H'  | species_ps_psf | default_mass |  1 | 3 | 0
+ 'Cl' | species_ps_psf | default_mass | 17 | 3 | 0
 %
 
 Spacing = 0.25

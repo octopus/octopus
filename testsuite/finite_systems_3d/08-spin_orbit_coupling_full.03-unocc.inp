@@ -9,7 +9,7 @@ Radius  = 5.0
 Spacing = 0.35
 
 %Species
- "Xe" | species_ps_upf | 131.29 | 54
+ "Xe" | species_ps_upf | default_mass | 54
 %
 
 %Coordinates

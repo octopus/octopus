@@ -3,7 +3,7 @@ CalculationMode = gs
 FromScratch = yes
 
 %Species
-  "He" | species_ps_hgh | 4.0026020 | 2
+  "He" | species_ps_hgh | default_mass | 2
 %
 
 %Coordinates
