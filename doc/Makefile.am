@@ -28,12 +28,6 @@ man_MANS = octopus.1 oct-atomic_occupations.1 oct-casida_spectrum.1 oct-center-g
 EXTRA_DIST = \
 	$(man_MANS:.1=.pod) \
 	update.el           \
-	img/cosine.eps      \
-	img/cover.ps        \
-	img/gaussian.eps    \
-	img/octosex.eps     \
-	img/octosex.jpg     \
-	img/ramp.eps        \
 	ChangeLog.2001.gz   \
 	ChangeLog.2002.gz   \
 	ChangeLog.2003.gz   \
