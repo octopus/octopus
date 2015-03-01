@@ -425,7 +425,7 @@ contains
     !% Octopus will try to guess the mass of this species. For
     !% pseudopotential and full-potential species, Octopus will guess
     !% the element from the name of species. For other species the
-    !% default mass is 0.0.
+    !% default mass is 1.0.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1408,7 +1408,7 @@ contains
           call element_end(element)
 
         case default
-          spec%mass = 0.0
+          spec%mass = 1.0
 
         end select
 
