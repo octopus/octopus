@@ -400,7 +400,6 @@ AC_CONFIG_FILES([Makefile
   src/utils/Makefile
   scripts/Makefile
   doc/Makefile
-  doc/pdf/Makefile
   doc/html/Makefile
   doc/html/icons/Makefile
   doc/html/js/Makefile
