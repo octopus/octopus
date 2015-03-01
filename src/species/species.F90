@@ -451,6 +451,11 @@ contains
     if(row>=0) then
       call read_from_block(blk, row, spec, read_data)
       call parse_block_end(blk)
+
+      ASSERT(read_data > 0)
+
+      POP_SUB(species_read)
+      return
     end if
 
     ! Find out if the species is in the pseudo potential set
