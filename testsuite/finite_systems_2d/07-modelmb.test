@@ -17,11 +17,11 @@ match ; Density matrix 3 ; LINEFIELD(static/modelmb/densmatr_ip001_imb03, 5151, 
 
 Input : 07-modelmb.02-td.inp
 
-match ; Energy         [step   1]; LINEFIELD(td.general/energy, -201, 4) ; -1.271322167167e+00
-match ; Energy         [step  50]; LINEFIELD(td.general/energy, -151, 4) ; -1.261322168663e+00
-match ; Energy         [step 100]; LINEFIELD(td.general/energy, -101, 4) ; -1.261322168663e+00
-match ; Energy         [step 150]; LINEFIELD(td.general/energy, -51, 4) ; -1.261322168663e+00
-match ; Energy         [step 200]; LINEFIELD(td.general/energy, -1, 4) ; -1.261322168663e+00
+match ; Energy         [step   1]; LINEFIELD(td.general/energy, -201, 3) ; -1.271322167167e+00
+match ; Energy         [step  50]; LINEFIELD(td.general/energy, -151, 3) ; -1.261322168663e+00
+match ; Energy         [step 100]; LINEFIELD(td.general/energy, -101, 3) ; -1.261322168663e+00
+match ; Energy         [step 150]; LINEFIELD(td.general/energy,  -51, 3) ; -1.261322168663e+00
+match ; Energy         [step 200]; LINEFIELD(td.general/energy,   -1, 3) ; -1.261322168663e+00
 match ; Density matrix [step  50]; LINEFIELD(output_iter/td.0000050/modelmb/densmatr_ip001_imb01, 5151, 3) ; 8.223E-01
 match ; Density matrix [step 100]; LINEFIELD(output_iter/td.0000100/modelmb/densmatr_ip001_imb01, 5151, 3) ; 8.215E-01
 match ; Density matrix [step 150]; LINEFIELD(output_iter/td.0000150/modelmb/densmatr_ip001_imb01, 5151, 3) ; 8.210E-01
