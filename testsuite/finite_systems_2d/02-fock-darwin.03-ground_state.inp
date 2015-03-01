@@ -86,7 +86,7 @@ ExperimentalFeatures = yes
 omega = 1.78033780231
 
 %Species
-"qd" | species_user_defined | 1.0 | 8 | "0.5*omega^2*r^2"
+"qd" | species_user_defined | default_mass | 8 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

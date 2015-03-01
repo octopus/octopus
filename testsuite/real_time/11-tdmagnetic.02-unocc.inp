@@ -6,7 +6,7 @@ omega0 = 1.0
 dist = 3.0
 
 %Species
-"qd" | species_user_defined | 1.0 | 1 | "0.5*omega0*min((x-dist/2)^2+y^2,(x+dist/2)^2+y^2-0.02)"
+"qd" | species_user_defined | default_mass | 1 | "0.5*omega0*min((x-dist/2)^2+y^2,(x+dist/2)^2+y^2-0.02)"
 %
 
 ExtraStates = 1

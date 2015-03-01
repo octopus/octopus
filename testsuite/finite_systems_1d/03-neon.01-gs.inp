@@ -10,7 +10,7 @@ Spacing = 0.2
 Radius = 50.0
 
 %Species
-  "Neon1D" | species_user_defined | 1 | 10 | "-10/sqrt(0.25 + x^2)"
+  "Neon1D" | species_user_defined | default_mass | 10 | "-10/sqrt(0.25 + x^2)"
 %
 
 %Coordinates

@@ -13,7 +13,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | species_user_defined | 1.0 | 2 | "0"
+"qd" | species_user_defined | default_mass | 2 | "0"
 %
 
 %Coordinates

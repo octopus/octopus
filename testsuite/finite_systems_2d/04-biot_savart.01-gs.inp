@@ -8,7 +8,7 @@ Radius = 6.0
 TheoryLevel = independent_particles
 
 %Species
-  "ring" | species_user_defined | 1.0 | 1 | "-20.0/cosh(10.0*(r-3.0))^2"
+  "ring" | species_user_defined | default_mass | 1 | "-20.0/cosh(10.0*(r-3.0))^2"
 %
 
 %Coordinates
