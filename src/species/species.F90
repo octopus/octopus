@@ -1338,30 +1338,24 @@ contains
     type(species_t), intent(inout) :: spec
 
     character(len=LABEL_LEN) :: label
-    FLOAT :: mass, z, def_h, def_rsize
-    integer :: lloc, lmax
-    integer :: type
+    type(element_t) :: element
 
     PUSH_SUB(read_from_default_file)
 
     backspace(iunit)
 
-    read(iunit,*) label, mass, type, spec%filename, z, lmax, lloc, def_h, def_rsize
+    read(iunit,*) label, spec%type, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
 
     ASSERT(trim(label) == trim(spec%label))
 
-    if(read_data == 0) then ! The Species was not supplied in the block.
-      spec%mass    = mass
-      spec%type      = type
-    end if
-    if(read_data < 4) spec%z         = z
-    if(read_data < 5) spec%lmax      = lmax
-    if(read_data < 6) spec%lloc      = lloc
-    if(read_data < 7) spec%def_h     = def_h
-    if(read_data < 8) spec%def_rsize = def_rsize
-
     read_data = 8
 
+    ! get the mass for this element
+    call element_init(element, label)
+    ASSERT(element_valid(element))
+    spec%mass = element_mass(element)
+    call element_end(element)
+    
     POP_SUB(read_from_default_file)
   end subroutine read_from_default_file
   ! ---------------------------------------------------------
