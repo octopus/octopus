@@ -20,6 +20,7 @@
 #include "global.h"
 
 module species_m
+  use element_m
   use global_m
   use io_m
   use json_m
@@ -420,6 +421,11 @@ contains
     !% </math>
     !%
     !% The parameter <i>a</i> should be given in the fifth column.
+    !%Option default_mass -1000
+    !% Octopus will try to guess the mass of this species. For
+    !% pseudopotential and full-potential species, Octopus will guess
+    !% the element from the name of species. For other species the
+    !% default mass is 0.0.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1363,8 +1369,9 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols
-
+    integer :: ncols, ii
+    type(element_t) :: element
+    
     PUSH_SUB(read_from_block)
 
     ncols = parse_block_cols(blk, row)
@@ -1377,6 +1384,42 @@ contains
     ! are reading a mass.
     if(spec%type < 0) then
       call parse_block_float(blk, row, 2, spec%mass)
+
+      if(abs(spec%mass - (-CNST(1000.0))) < M_EPSILON) then
+
+        select case(-spec%type)
+        case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
+          SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+          
+          do ii = 1, len(spec%label)
+            if( iachar(spec%label(ii:ii)) >= iachar('a') .and. iachar(spec%label(ii:ii)) <= iachar('z') ) cycle
+            if( iachar(spec%label(ii:ii)) >= iachar('A') .and. iachar(spec%label(ii:ii)) <= iachar('Z') ) cycle
+            exit
+          end do
+
+          call element_init(element, spec%label(1:ii - 1))
+          
+          if(.not. element_valid(element)) then
+            call messages_write('Cannot find mass for species '//trim(spec%label)//'.')
+            call messages_fatal()
+          end if
+          
+          spec%mass = element_mass(element)
+        
+          call element_end(element)
+
+        case default
+          spec%mass = 0.0
+
+        end select
+
+        call messages_write('Info: default mass for species '//trim(spec%label)//':')
+        call messages_write(spec%mass)
+        call messages_write(' amu')
+        call messages_info()
+
+      end if
+      
     else
       call parse_block_float(blk, row, 1, spec%mass)
       call parse_block_integer(blk, row, 2, spec%type)
