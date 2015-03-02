@@ -54,7 +54,7 @@ contains
     integer :: iunit, nelement, ii
     character(len=MAX_PATH_LEN) :: fname
 
-    PUSH_SUB('element_init')
+    PUSH_SUB(element_init)
     
     this%valid = .false.
 
@@ -78,7 +78,7 @@ contains
     
     call io_close(iunit)
 
-    POP_SUB('element_init')
+    POP_SUB(element_init)
   end subroutine element_init
   
   ! -----------------------------------
@@ -86,11 +86,11 @@ contains
   subroutine element_end(this)
     type(element_t),   intent(inout) :: this
 
-    PUSH_SUB('element_end')
+    PUSH_SUB(element_end)
     
     this%valid = .false.
 
-    POP_SUB('element_end')
+    POP_SUB(element_end)
   end subroutine element_end
 
   ! ------------------------------------
