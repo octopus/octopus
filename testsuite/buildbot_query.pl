@@ -5,9 +5,13 @@
 # Parses the HTML status pages.
 # Tested with BuildBot 0.7.12, 0.8.5, 0.8.8
 
-# modify these to choose the input file and match you want to search for
-$inputfile = "01-asym_doublewell.04-oct_run.inp";
-$match = "J1 1st iteration";
+if(@ARGV < 2) {
+  print "Please use 'buildbot_query.pl <inputfile> <match> [localfiles] '\n";
+  exit;
+}
+
+$inputfile = shift @ARGV;
+$match = shift @ARGV;
 
 # options specifying setup for Octopus
 $bbpath = "http://www.tddft.org/programs/octopus/buildbot";
