@@ -465,6 +465,8 @@ contains
           call batch_init(psib, st%d%dim, states_block_min(st, ib), n, psi)
           call density_calc_accumulate(dens_calc, ik, psib)
           call batch_end(psib)
+          SAFE_DEALLOCATE_A(psi)
+          
           exit
 
         end if
@@ -518,6 +520,14 @@ contains
     end do
 
 #endif
+  
+    ! fix total charge 
+    st%qtot = M_ZERO
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        st%qtot = st%qtot + staux%occ(n+ist, ik)
+      end do
+    end do
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%eigenval)
