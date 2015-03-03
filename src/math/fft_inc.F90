@@ -62,6 +62,9 @@ subroutine X(fft_forward)(fft, in, out, norm)
       if (all(fft_array(slot)%fs_n /= 0)) then
         ASSERT(fft_array(slot)%fs_data(1,1,1) == out(1,1,1))
       end if
+      n1 = max(1, fft_array(slot)%rs_n(1))
+      n2 = max(1, fft_array(slot)%rs_n(2))
+      n3 = max(1, fft_array(slot)%rs_n(3))
 #ifdef R_TREAL
       if (fft_array(slot)%rs_n(1) > fft_array(slot)%rs_n_global(1)) then
         do kk = 1, n3
