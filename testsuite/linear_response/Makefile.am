@@ -41,11 +41,13 @@ dist_share_DATA = \
 	04-vib_modes.01-ground_state.inp         \
 	04-vib_modes.02-vib_modes.inp            \
 	04-vib_modes.022-vib_modes_restart.inp   \
-	04-vib_modes.03-vib_modes_fd.inp         \
 	04-vib_modes.test                        \
 	05-polarizability.01-gs.inp              \
 	05-polarizability.02-sternheimer.inp     \
 	05-polarizability.03-finite-diff.inp     \
-	05-polarizability.test
+	05-polarizability.test                   \
+	06-vib_modes_fd.01-ground_state.inp      \
+	06-vib_modes_fd.01-vib_modes_fd.inp      \
+	06-vib_modes_fd.test                        
 
 CLEANFILES = *~ *.bak

@@ -3,7 +3,7 @@
 
 Test       : LiH vibrational frequency
 Program    : octopus
-TestGroups : long-run, linear_response
+TestGroups : short-run, linear_response
 Enabled    : Yes
 
 Processors : 4
@@ -29,9 +29,3 @@ Precision : 1e-5
 match ; Infrared Intensity      ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.30478623
 Precision : 1.5e-8
 match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5)  ; -0.0180422361169
-
-Input: 04-vib_modes.03-vib_modes_fd.inp
-Precision : 0.003
-match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_fd, 1, 2) ; 1421.733195 
-Precision : 1e-6
-match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5)  ; -0.0182039000224
