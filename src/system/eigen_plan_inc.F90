@@ -59,17 +59,15 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   FLOAT :: xx
 
   ! Some hard-coded parameters.
-  integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
 
   PUSH_SUB(X(eigensolver_plan))
 
-  !  n          = mesh%np*st%d%dim
   dim        = st%d%dim
   ned        = st%nst
   nec        = 0
   maxmatvecs = niter*st%d%nik*st%nst
-  me         = ned + winsiz - 1
+  me         = ned + st%d%block_size - 1
 
   ! Allocate memory
   ! Careful: aux has to range from 1 to gr%mesh%np_part because it is input to
@@ -118,14 +116,14 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
     if(nec >= ned)           exit outer_loop ! :)   Already converged!
     if(matvec >= maxmatvecs) exit outer_loop ! :(   Maximum number of mat-vec operation surpassed...
 
-    if (d1 <= winsiz) then !start from beginning
-      blk = winsiz
+    if (d1 <= st%d%block_size) then !start from beginning
+      blk = st%d%block_size
     else                   !restart to work on another set of eigen-pairs
       blk = min(krylov/2, d1)
     end if
 
     !copy next set of Ritz vector/initial guesses to vv
-    do ist = 1, winsiz
+    do ist = 1, st%d%block_size
       do idim = 1, dim
         call lalg_copy(gr%mesh%np, eigenvec(:, idim, nec+ist), vv(:, idim, ist))
       end do
@@ -195,7 +193,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       call lalg_eigensolve(d2, hevec, tmp)
 
       ! Store the Ritz values as approximate eigenvalues.
-      call lalg_copy(winsiz, tmp, eigenval(nec + 1:nec + winsiz))
+      call lalg_copy(st%d%block_size, tmp, eigenval(nec + 1:nec + st%d%block_size))
 
       if ( d2+1 <= krylov .and. matvec < maxmatvecs) then
         ! In this case, compute only the lowest Ritz eigenpair.
@@ -208,43 +206,43 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         ! If the first Ritz eigen-pair converged, compute all
         ! Ritz vectors and the residual norms.
         if(res(nec + 1)<tol) then
-          do ist = 2, winsiz
+          do ist = 2, st%d%block_size
             call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, ist), &
                  R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
           end do
-          do ist = 2, winsiz
+          do ist = 2, st%d%block_size
             call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, ist), &
                  R_TOTYPE(M_ZERO), vv(:, :, ist))
           end do
-          do ist = 2, winsiz
+          do ist = 2, st%d%block_size
             call residual(vv(:, :, ist), eigenvec(:, :, nec+ist), tmp(ist), av(:, :, ist), res(nec+ist))
           end do
         end if
         d1 = d2
       else
-        do ist = 1, winsiz
+        do ist = 1, st%d%block_size
           call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, ist), &
                R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
         end do
-        do ist = 1, winsiz
+        do ist = 1, st%d%block_size
           call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, ist), &
                R_TOTYPE(M_ZERO), vv(:, :, ist))
         end do
-        do ist = 1, winsiz
+        do ist = 1, st%d%block_size
           do idim = 1, dim
             call lalg_copy(gr%mesh%np, vv(:, idim, ist), av(:, idim, ist))
             call lalg_copy(gr%mesh%np, eigenvec(:, idim, nec + ist), vv(:, idim, ist))
           end do
-          call residual(av(:, :, ist), vv(:, :, ist), tmp(ist), av(:, :, winsiz+ist), res(nec+ist))
+          call residual(av(:, :, ist), vv(:, :, ist), tmp(ist), av(:, :, st%d%block_size+ist), res(nec+ist))
         end do
 
-        ! Forms the first winsiz rows of H = V^T A V
-        do ist = 1, winsiz
+        ! Forms the first st%d%block_size rows of H = V^T A V
+        do ist = 1, st%d%block_size
           do ii = 1, ist
             ham(ii, ist) = X(mf_dotp)(gr%mesh, dim, vv(:, :, ii), av(:, :, ist))
           end do
         end do
-        d1 = winsiz
+        d1 = st%d%block_size
       end if
       blk = 1
 
@@ -254,7 +252,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       ! compares its eigenvalue to the previous one, swapping them if
       ! necessary.
       nconv = 0
-      ordering: do ist = nec + 1, nec + winsiz - 1
+      ordering: do ist = nec + 1, nec + st%d%block_size - 1
         if(res(ist) >= tol) exit ordering
         nconv = nconv + 1
         do jst = ist, 2, -1
