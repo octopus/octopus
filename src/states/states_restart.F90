@@ -140,7 +140,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing)
+  subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
     type(states_t),       intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
@@ -149,17 +149,20 @@ contains
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)  :: lr
     integer,    optional, intent(in)  :: st_start_writing
+    logical,    optional, intent(in)  :: verbose
 
     integer :: iunit_wfns, iunit_occs, iunit_states
     integer :: err, err2(2), ik, idir, ist, idim, itot
     character(len=80) :: filename, filename1
     character(len=300) :: lines(3)
-    logical :: lr_wfns_are_associated, should_write, cmplxscl
+    logical :: lr_wfns_are_associated, should_write, cmplxscl, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
 
     PUSH_SUB(states_dump)
+
+    verbose_ = optional_default(verbose, .true.)
 
     ierr = 0
 
@@ -168,8 +171,10 @@ contains
       return
     end if
 
-    message(1) = "Info: Writing states."
-    call print_date(trim(message(1))//' ')
+    if(verbose_) then
+      message(1) = "Info: Writing states."
+      call print_date(trim(message(1))//' ')
+    end if
 
     call profiling_in(prof_write, "RESTART_WRITE")
 
@@ -304,8 +309,10 @@ contains
     call restart_close(restart, iunit_wfns)
     call restart_close(restart, iunit_occs)
 
-    message(1) = "Info: Finished writing states."
-    call print_date(trim(message(1))//' ')
+    if(verbose_) then
+      message(1) = "Info: Finished writing states."
+      call print_date(trim(message(1))//' ')
+    end if
 
     call restart_unblock_signals()
 

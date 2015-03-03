@@ -1124,7 +1124,7 @@ contains
       if(prop%iter(j)  ==  iter) then
         write(dirname,'(a,i4.4)') trim(prop%dirname), j
         call restart_open_dir(prop%restart_dump, dirname, err)
-        if (err == 0) call states_dump(prop%restart_dump, psi, gr, err, iter)
+        if (err == 0) call states_dump(prop%restart_dump, psi, gr, err, iter, verbose = .false.)
         if (err /= 0) then
           message(1) = "Unable to write wavefunctions to '"//trim(dirname)//"'."
           call messages_warning(1)
