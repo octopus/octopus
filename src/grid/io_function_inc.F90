@@ -1372,8 +1372,9 @@ end function X(interpolate_isolevel)
     call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
-    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) &
-              cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
+      cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+    end forall
 
     ! Paraview likes BigEndian binaries
     call io_binary_write(trim(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
