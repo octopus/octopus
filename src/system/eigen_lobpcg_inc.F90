@@ -299,7 +299,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   call batch_end(hpsib)
 
   niter = niter+lnst
-  call X(blockt_mul)(psi, h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
+  call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
 
   SAFE_ALLOCATE(ritz_vec(1:nst, 1:nst))
   no_bof = .false.
@@ -398,7 +398,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Since h_dir also has to be modified (to avoid a full calculation of
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
     if(iter > 1) then
-      call X(blockt_mul)(dir, dir, nuc_tmp, xpsi1=UC, xpsi2=UC, symm=.true.)
+      call X(blockt_mul)(gr%mesh, st, st_start, dir, dir, nuc_tmp, xpsi1=UC, xpsi2=UC, symm=.true.)
       call profiling_in(C_PROFILING_LOBPCG_CHOL)
       no_bof = .false.
       call lalg_cholesky(nuc, nuc_tmp, bof=no_bof)
@@ -435,7 +435,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Rayleigh-Ritz procedure.
     ! gram_h matrix.
     if(explicit_gram) then
-      call X(blockt_mul)(h_psi, psi, gram_h(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
+      call X(blockt_mul)(gr%mesh, st, st_start, h_psi, psi, gram_h(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
     else
       ! (1, 1)-block: eigenvalues on diagonal.
       gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -445,28 +445,29 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end if
 
     ! (1, 2)-block: (H |psi>)^+ res.
-    call X(blockt_mul)(h_psi, res, gram_h(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
+    call X(blockt_mul)(gr%mesh, st, st_start, h_psi, res, gram_h(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
 
     ! (2, 2)-block: res^+ (H res).
-    call X(blockt_mul)(res, h_res, gram_h(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
+    call X(blockt_mul)(gr%mesh, st, st_start, res, h_res, gram_h(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
 
     if(iter > 1) then
       ! (1, 3)-block: (H |psi>)^+ dir.
-      call X(blockt_mul)(h_psi, dir, gram_h(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, h_psi, dir, gram_h(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
 
       ! (2, 3)-block: (H res)^+ dir.
-      call X(blockt_mul)(h_res, dir, gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, h_res, dir, gram_h(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
 
       ! (3, 3)-block: dir^+ (H dir)
-      call X(blockt_mul)(dir, h_dir, gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
+      call X(blockt_mul)(gr%mesh, st, st_start, dir, h_dir, &
+        gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
     end if
 
     ! gram_i matrix.
     ! Diagonal blocks.
     if(explicit_gram) then
-      call X(blockt_mul)(psi, psi, gram_i(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
-      call X(blockt_mul)(res, res, gram_i(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC)
-      call X(blockt_mul)(dir, dir, gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, psi, psi, gram_i(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
+      call X(blockt_mul)(gr%mesh, st, st_start, res, res, gram_i(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, dir, dir, gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
     else
       ! Unit matrices on diagonal blocks.
       gram_i = R_TOTYPE(M_ZERO)
@@ -476,14 +477,14 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end if
 
     ! (1, 2)-block: <psi| res.
-    call X(blockt_mul)(psi, res, gram_i(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
+    call X(blockt_mul)(gr%mesh, st, st_start, psi, res, gram_i(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
 
     if(iter > 1) then
       ! (1, 3)-block: <psi| dir.
-      call X(blockt_mul)(psi, dir, gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, psi, dir, gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
 
       ! (2, 3)-block: res^+ dir.
-      call X(blockt_mul)(res, dir, gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
+      call X(blockt_mul)(gr%mesh, st, st_start, res, dir, gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
     end if
 
     call profiling_in(C_PROFILING_LOBPCG_ESOLVE)
@@ -727,25 +728,6 @@ contains
 
   end subroutine X(lobpcg_apply_constraints)
 
-
-  ! ---------------------------------------------------------
-  subroutine X(blockt_mul)(psi1, psi2, res, xpsi1, xpsi2, symm)
-    R_TYPE,            intent(in)  :: psi1(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
-    R_TYPE,            intent(in)  :: psi2(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
-    R_TYPE,            intent(out) :: res(:, :)
-    integer,           intent(in)  :: xpsi1(:)
-    integer,           intent(in)  :: xpsi2(:)
-    logical, optional, intent(in)  :: symm
-
-    PUSH_SUB(X(lobpcg).X(blockt_mul))
-
-    call states_blockt_mul(gr%mesh, st, st_start, st_start, &
-      psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
-
-    POP_SUB(X(lobpcg).X(blockt_mul))
-  end subroutine X(blockt_mul)
-
-
   ! ---------------------------------------------------------
   subroutine X(block_matr_mul_add)(alpha, psi, matr, beta, res, xpsi, xres)
     R_TYPE,  intent(in)    :: alpha
@@ -782,6 +764,25 @@ contains
   end subroutine X(block_matr_mul)
 end subroutine X(lobpcg)
 
+
+! ---------------------------------------------------------
+subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2, symm)
+  type(mesh_t),      intent(in)  :: mesh
+  type(states_t),    intent(in)  :: st
+  integer,           intent(in)  :: st_start
+  R_TYPE,            intent(in)  :: psi1(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE,            intent(in)  :: psi2(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE,            intent(out) :: res(:, :)
+  integer,           intent(in)  :: xpsi1(:)
+  integer,           intent(in)  :: xpsi2(:)
+  logical, optional, intent(in)  :: symm
+  
+  PUSH_SUB(X(blockt_mul))
+  
+  call states_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
+  
+  POP_SUB(X(blockt_mul))
+end subroutine X(blockt_mul)
 
 !! Local Variables:
 !! mode: f90
