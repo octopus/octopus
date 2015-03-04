@@ -332,7 +332,7 @@ contains
     ! output frequencies and eigenvectors
     iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
     do imat = 1, this%num_modes
-      write(iunit, '(i6,f14.5)') imat, units_from_atomic(unit_invcm, this%freq(imat))
+      write(iunit, '(i6,f17.8)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
