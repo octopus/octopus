@@ -231,7 +231,7 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, err
+    integer :: ipart, err, np, type, file_size
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
@@ -243,6 +243,29 @@ contains
     write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)
     call messages_info(1)
     
+    ! Check if the file exists and has the proper size (only world root)
+    if (mpi_world%rank == 0) then
+      call get_info_binary(np, type, file_size, err, filename)
+    end if
+
+#ifdef HAVE_MPI
+    ! All nodes need to know the result
+    call MPI_Bcast(err, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+    call MPI_Bcast(file_size, 1, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+#endif
+
+    if (err /= 0) then
+      ierr = ierr + 4
+      POP_SUB(partition_load)
+      return
+    end if
+    ! The size of the file  is not as big as np_global
+    if ((file_size - 64) / FC_INTEGER_SIZE /= partition%np_global) then
+      ierr = ierr + 8
+      POP_SUB(partition_load)
+      return
+    end if
+
     ! Calculate displacements for reading
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(sdispls(1:partition%npart))

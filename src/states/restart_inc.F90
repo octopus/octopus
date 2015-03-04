@@ -64,7 +64,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
 
-  integer :: ip, np, offset
+  integer :: ip, np, offset, file_size
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
@@ -88,7 +88,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (restart_has_map(restart)) then
-    call io_binary_get_info(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, ierr)
+    call io_binary_get_info(trim(restart%pwd)//'/'//trim(filename)//'.obf', np, file_size, ierr)
 
     if (ierr /= 0) then
       POP_SUB(X(restart_read_mesh_function))

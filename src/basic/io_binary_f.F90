@@ -61,9 +61,10 @@ module io_binary_m
   end interface io_binary_read_parallel
 
   interface
-    subroutine get_info_binary(np, type, ierr, fname)
-      integer,             intent(out)   :: np
-      integer,             intent(out)   :: type
+    subroutine get_info_binary(np, type, file_size, ierr, fname)
+      integer,             intent(out)   :: np        !< Number of points of the mesh, written in the header
+      integer,             intent(out)   :: type      !< Type of number
+      integer,             intent(out)   :: file_size !< The actual size of the file
       integer,             intent(out)   :: ierr      
       character(len=*),    intent(in)    :: fname
     end subroutine get_info_binary
@@ -160,12 +161,12 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer :: read_np, number_type
+    integer :: read_np, number_type, file_size
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_binary)
 
-    call get_info_binary(read_np, number_type, ierr, fname)
+    call get_info_binary(read_np, number_type, file_size, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (in_debug_mode) then
@@ -195,12 +196,12 @@ contains
     complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer :: read_np, number_type
+    integer :: read_np, number_type, file_size
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_parallel)
 
-    call get_info_binary(read_np, number_type, ierr, fname)
+    call get_info_binary(read_np, number_type, file_size, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (in_debug_mode) then
@@ -221,16 +222,17 @@ contains
 
   !------------------------------------------------------
 
-  subroutine io_binary_get_info(fname, np, ierr)
+  subroutine io_binary_get_info(fname, np, file_size, ierr)
     character(len=*),    intent(in)    :: fname
     integer,             intent(out)   :: np
+    integer,             intent(out)   :: file_size
     integer,             intent(out)   :: ierr
 
     integer :: type
     
     PUSH_SUB(io_binary_get_info)
 
-    call get_info_binary(np, type, ierr, trim(fname))
+    call get_info_binary(np, type, file_size, ierr, trim(fname))
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info

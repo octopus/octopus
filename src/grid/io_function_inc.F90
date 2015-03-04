@@ -101,7 +101,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
 
-  integer :: ip, np, ii, jj, kk
+  integer :: ip, np, ii, jj, kk, file_size
   integer(8) :: dims(3)
   FLOAT, allocatable :: x_in(:, :)
   FLOAT, allocatable :: x_out(:, :)
@@ -162,7 +162,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
     if(present(map)) then
 
-      call io_binary_get_info(filename, np, ierr)
+      call io_binary_get_info(filename, np, file_size, ierr)
 
       if (ierr == 0) then
         SAFE_ALLOCATE(read_ff(1:np))
