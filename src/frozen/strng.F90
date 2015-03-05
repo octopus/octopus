@@ -16,12 +16,13 @@ module strng_m
     operator(==), &
     operator(/=)
 
-  public ::         &
+  public ::        &
     strng_init,    &
     strng_len,     &
     strng_hash,    &
-    strng_get,     &
     strng_set,     &
+    strng_get,     &
+    strng_pop,     &
     strng_append,  &
     strng_tolower, &
     strng_toupper, &
@@ -235,18 +236,21 @@ contains
   end subroutine strng_init_strng
 
   ! ---------------------------------------------------------
-  elemental subroutine strng_pop(this, char)
-    type(strng_t), intent(inout) :: this
-    character,      intent(out)   :: char
+  elemental subroutine strng_set(this, i, char, ierr)
+    type(strng_t),    intent(inout) :: this
+    integer,           intent(in)    :: i
+    character,         intent(in)    :: char
+    integer, optional, intent(out)   :: ierr
     !
-    char=""
-    if(this%len>0)then
-      char=this%value(this%len)
-      this%value(this%len)=""
-      this%len=this%len-1
+    if(present(ierr))ierr=STRNG_INDEX_ERROR
+    if(strng_isdef(this))then
+      if((0<i).and.(i<=this%len))then
+        this%value(i)=char
+        if(present(ierr))ierr=STRNG_OK
+      end if
     end if
     return
-  end subroutine strng_pop
+  end subroutine strng_set
 
   ! ---------------------------------------------------------
   elemental subroutine strng_get_char(this, i, value, ierr)
@@ -289,21 +293,18 @@ contains
   end subroutine strng_get_strng
 
   ! ---------------------------------------------------------
-  elemental subroutine strng_set(this, i, char, ierr)
-    type(strng_t),    intent(inout) :: this
-    integer,           intent(in)    :: i
-    character,         intent(in)    :: char
-    integer, optional, intent(out)   :: ierr
+  elemental subroutine strng_pop(this, char)
+    type(strng_t), intent(inout) :: this
+    character,      intent(out)   :: char
     !
-    if(present(ierr))ierr=STRNG_INDEX_ERROR
-    if(strng_isdef(this))then
-      if((0<i).and.(i<=this%len))then
-        this%value(i)=char
-        if(present(ierr))ierr=STRNG_OK
-      end if
+    char=""
+    if(this%len>0)then
+      char=this%value(this%len)
+      this%value(this%len)=""
+      this%len=this%len-1
     end if
     return
-  end subroutine strng_set
+  end subroutine strng_pop
 
   ! ---------------------------------------------------------
   subroutine strng_append_char(this, char)

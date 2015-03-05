@@ -48,6 +48,11 @@ module TEMPLATE(single_m)
 #endif
 #if !defined(SINGLE_INCLUDE_BODY)
 
+  type :: TEMPLATE(single_t)
+    private
+    type(SINGLE_TYPE_NAME), pointer :: value =>null()
+  end type TEMPLATE(single_t)
+
   interface TEMPLATE(single_init)
     module procedure INTERNAL(single_init_value)
     module procedure INTERNAL(single_init_single)
@@ -63,11 +68,6 @@ module TEMPLATE(single_m)
     module procedure INTERNAL(single_set_null)
     module procedure INTERNAL(single_set_value)
   end interface TEMPLATE(single_set)
-
-  type :: TEMPLATE(single_t)
-    private
-    type(SINGLE_TYPE_NAME), pointer :: value =>null()
-  end type TEMPLATE(single_t)
 
 #endif
 #if !defined(SINGLE_INCLUDE_HEADER) && !defined(SINGLE_INCLUDE_BODY)

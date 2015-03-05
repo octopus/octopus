@@ -57,6 +57,9 @@ module storage_m
     private
     type(simulation_t),                pointer :: sim     =>null()
     type(mesh_t),                      pointer :: mesh    =>null()
+    logical                                    :: alloc   = .true.
+    logical                                    :: full    = .true.
+    logical                                    :: fine    = .false.
     integer                                    :: ndim    = 0
     real(kind=wp)                              :: default = 0.0_wp
     real(kind=wp), dimension(:,:), allocatable :: data
@@ -98,12 +101,19 @@ module storage_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine storage_init_simple(this, ndim, default)
+  subroutine storage_init_simple(this, ndim, default, full, allocate)
     type(storage_t),         intent(out) :: this
     integer,       optional, intent(in)  :: ndim
     real(kind=wp), optional, intent(in)  :: default
+    logical,       optional, intent(in)  :: full
+    logical,       optional, intent(in)  :: allocate
     !
     PUSH_SUB(storage_init_simple)
+    nullify(this%sim, this%mesh)
+    this%full=.true.
+    if(present(full))this%full=full
+    this%alloc=.true.
+    if(present(allocate))this%alloc=allocate
     this%ndim=1
     if(present(ndim))then
       ASSERT(ndim>0)
@@ -121,18 +131,20 @@ contains
     type(storage_t), intent(in)  :: that
     !
     PUSH_SUB(storage_init_copy)
-    ASSERT(that%ndim>0)
     ASSERT(associated(that%sim))
-    call storage_init_simple(this, that%ndim, that%default)
-    call storage_start(this, that%sim)
+    ASSERT(associated(that%mesh))
+    ASSERT(that%ndim>0)
+    call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
+    call storage_start(this, that%sim, that%fine)
     POP_SUB(storage_init_copy)
     return
   end subroutine storage_init_copy
 
   ! ---------------------------------------------------------
-  subroutine storage_start(this, sim)
+  subroutine storage_start(this, sim, fine)
     type(storage_t),            intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
+    logical,          optional, intent(in)    :: fine
     !
     type(grid_t), pointer :: grid
     !
@@ -140,13 +152,29 @@ contains
     nullify(grid)
     ASSERT(.not.associated(this%sim))
     ASSERT(.not.associated(this%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(.not.allocated(this%data))
     this%sim=>sim
+    this%fine=.false.
+    if(present(fine))this%fine=fine
     call simulation_get(sim, grid)
     ASSERT(associated(grid))
-    this%mesh=>grid%mesh
+    if(this%fine)then
+      this%mesh=>grid%fine%mesh
+    else
+      this%mesh=>grid%mesh
+    end if
     nullify(grid)
+    ASSERT(this%mesh%np>0)
     ASSERT(this%mesh%np_part>0)
-    SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
+    ASSERT(this%mesh%np<this%mesh%np_part)
+    if(this%alloc)then
+      if(this%full)then
+        SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
+      else
+        SAFE_ALLOCATE(this%data(this%mesh%np,this%ndim))
+      end if
+    end if
     call storage_reset(this)
     POP_SUB(storage_start)
     return
@@ -160,12 +188,20 @@ contains
     !
     PUSH_SUB(storage_update)
     ASSERT(associated(this%sim))
-    this%data(this%mesh%np+1:,:)=0.0_wp
+    ASSERT(associated(this%mesh))
+    ASSERT(this%ndim>0)
+    if(this%alloc)then
+      if(this%full)then
+        do indx=this%mesh%np+1, size(this%data,dim=1)
+          this%data(indx,:)=0.0_wp
+        end do
+      end if
 #if defined(HAVE_MPI)
-    do indx = 1, this%ndim
-      call dvec_ghost_update(this%mesh%vp, this%data(:,indx))
-    end do
+      do indx = 1, this%ndim
+        call dvec_ghost_update(this%mesh%vp, this%data(:,indx))
+      end do
 #endif
+    end if
     POP_SUB(storage_update)
     return
   end subroutine storage_update
@@ -177,21 +213,31 @@ contains
     PUSH_SUB(storage_stop)
     ASSERT(associated(this%sim))
     ASSERT(associated(this%mesh))
-    SAFE_DEALLOCATE_A(this%data)
+    ASSERT(this%ndim>0)
+    if(this%alloc)then
+      SAFE_DEALLOCATE_A(this%data)
+    end if
     POP_SUB(storage_stop)
     return
   end subroutine storage_stop
 
   ! ---------------------------------------------------------
-  subroutine storage_reset(this)
-    type(storage_t), intent(inout) :: this
+  subroutine storage_reset(this, default)
+    type(storage_t),         intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: default
+    !
+    real(kind=wp) :: dflt
     !
     PUSH_SUB(storage_reset)
     ASSERT(associated(this%sim))
     ASSERT(associated(this%mesh))
-    this%data=this%default
-    if(abs(this%default)>0.0_wp)&
+    ASSERT(this%ndim>0)
+    if(this%alloc)then
+      dflt=this%default
+      if(present(default))dflt=default
+      this%data(1:this%mesh%np,:)=dflt
       call storage_update(this)
+    end if
     POP_SUB(storage_reset)
     return
   end subroutine storage_reset
@@ -206,14 +252,20 @@ contains
     PUSH_SUB(storage_accumulate)
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(that%mesh))
     ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(that%ndim>0)
     ASSERT(this%ndim==that%ndim)
     ASSERT(this%default.equal.that%default)
+    if(this%alloc.and.that%alloc)then
+      do indx = 1, this%mesh%np
+        this%data(indx,:)=this%data(indx,:)+that%data(indx,:)
+      end do
+      call storage_update(this)
+    end if
     POP_SUB(storage_accumulate)
-    do indx = 1, this%mesh%np
-      this%data(indx,:)=this%data(indx,:)+that%data(indx,:)
-    end do
-    call storage_update(this)
     return
   end subroutine storage_accumulate
 
@@ -261,7 +313,8 @@ contains
     !
     PUSH_SUB(storage_get_storage_1d)
     nullify(that)
-    if(associated(this%mesh))then
+    if(allocated(this%data))then
+      ASSERT(this%alloc)
       ASSERT(this%ndim==1)
       that=>this%data(:,1)
     end if
@@ -276,7 +329,9 @@ contains
     !
     PUSH_SUB(storage_get_storage_md)
     nullify(that)
-    if(associated(this%mesh))then
+    if(allocated(this%data))then
+      ASSERT(this%alloc)
+      ASSERT(this%ndim>0)
       that=>this%data
     end if
     POP_SUB(storage_get_storage_md)
@@ -284,48 +339,21 @@ contains
   end subroutine storage_get_storage_md
 
   ! ---------------------------------------------------------
-  elemental function storage_conform(this, that) result(rslt)
-    type(storage_t), intent(in) :: this
-    type(storage_t), intent(in) :: that
-    !
-    logical :: rslt
-    !
-    rslt=.false.
-    if((this%ndim>0).and.(that%ndim>0))then
-      if(this%ndim==that%ndim)then
-        if((associated(this%mesh)).and.(associated(that%mesh)))then
-          if(associated(this%mesh,that%mesh))then
-            rslt=((allocated(this%data)).and.(allocated(that%data)))
-          end if
-        endif
-      end if
-    end if
-    return
-  end function storage_conform
-
-  ! ---------------------------------------------------------
   subroutine storage_copy_storage(this, that)
-    type(storage_t),         intent(inout) :: this
-    type(storage_t), target, intent(in)    :: that
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
     !
     PUSH_SUB(storage_copy_storage)
-    if(storage_conform(this,that))then
-      this%default=that%default
-    else
-      call storage_end(this)
-      if(that%ndim>0)then
-        this%ndim=that%ndim
-        this%default=that%default
-        if(associated(that%mesh))then
-          this%sim =>that%sim
-          this%mesh=>that%mesh
-          SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
+    call storage_end(this)
+    if(that%ndim>0)then
+      call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
+      if(associated(that%sim).and.associated(that%mesh))then
+        call storage_start(this, that%sim, that%fine)
+        if(that%alloc)then
+          this%data(1:this%mesh%np,:)=that%data(1:this%mesh%np,:)
+          call storage_update(this)
         end if
       end if
-    end if
-    if(allocated(this%data))then
-      this%data(1:this%mesh%np,:)=that%data(1:that%mesh%np,:)
-      call storage_update(this)
     end if
     POP_SUB(storage_copy_storage)
     return
@@ -336,10 +364,15 @@ contains
     type(storage_t), intent(inout) :: this
     !
     PUSH_SUB(storage_end_storage)
-    SAFE_DEALLOCATE_A(this%data)
-    this%default=0.0_wp
+    nullify(this%sim, this%mesh)
+    this%full=.true.
+    this%fine=.false.
     this%ndim=0
-    nullify(this%mesh, this%sim)
+    this%default=0.0_wp
+    if(this%alloc)then
+      SAFE_DEALLOCATE_A(this%data)
+    end if
+    this%alloc=.true.
     POP_SUB(storage_end_storage)
     return
   end subroutine storage_end_storage
@@ -351,9 +384,12 @@ contains
     integer,       optional, intent(in)  :: type
     !
     PUSH_SUB(storage_intrpl_init)
-    ASSERT(allocated(that%data))
-    this%self=>that
-    call intrpl_init(this%intrp, that%sim, that%data, type=type, default=that%default)
+    nullify(this%self)
+    if(allocated(that%data))then
+      ASSERT(that%alloc)
+      this%self=>that
+      call intrpl_init(this%intrp, that%sim, that%data, type=type, default=that%default)
+    end if
     POP_SUB(storage_intrpl_init)
     return
   end subroutine storage_intrpl_init
@@ -366,7 +402,9 @@ contains
     integer,                      intent(out) :: ierr
     !
     PUSH_SUB(storage_intrpl_eval_1d)
-    call intrpl_eval(this%intrp, x, val, ierr)
+    ierr=STORAGE_INTRPL_NI
+    if(associated(this%self))&
+      call intrpl_eval(this%intrp, x, val, ierr)
     POP_SUB(storage_intrpl_eval_1d)
     return
   end subroutine storage_intrpl_eval_1d
@@ -379,7 +417,9 @@ contains
     integer,                      intent(out) :: ierr
     !
     PUSH_SUB(storage_intrpl_eval_md)
-    call intrpl_eval(this%intrp, x, val, ierr)
+    ierr=STORAGE_INTRPL_NI
+    if(associated(this%self))&
+      call intrpl_eval(this%intrp, x, val, ierr)
     POP_SUB(storage_intrpl_eval_md)
     return
   end subroutine storage_intrpl_eval_md
@@ -390,8 +430,11 @@ contains
     type(storage_intrpl_t), intent(in)    :: that
     !
     PUSH_SUB(storage_intrpl_copy)
-    this%self=>that%self
-    call intrpl_copy(this%intrp, that%intrp)
+    call storage_intrpl_end(this)
+    if(associated(that%self))then
+      this%self=>that%self
+      call intrpl_copy(this%intrp, that%intrp)
+    end if
     POP_SUB(storage_intrpl_copy)
     return
   end subroutine storage_intrpl_copy
@@ -401,8 +444,9 @@ contains
     type(storage_intrpl_t), intent(inout) :: this
     !
     PUSH_SUB(storage_intrpl_end)
+    if(associated(this%self))&
+      call intrpl_end(this%intrp)
     nullify(this%self)
-    call intrpl_end(this%intrp)
     POP_SUB(storage_intrpl_end)
     return
   end subroutine storage_intrpl_end

@@ -7,7 +7,6 @@ module igrid_m
   use profiling_m
 
   use derivatives_m, only: derivatives_t
-  use json_m,        only: json_object_t
   use mesh_m,        only: mesh_t
   use simul_box_m,   only: simul_box_t
 
@@ -20,7 +19,6 @@ module igrid_m
   private
   public ::    &
     grid_t,    &
-    grid_init, &
     grid_get,  &
     grid_copy, &
     grid_end
@@ -33,17 +31,6 @@ module igrid_m
 
 contains
   
-  ! ---------------------------------------------------------
-  subroutine grid_init(this, config)
-    type(grid_t),                  intent(out) :: this
-    type(json_object_t), optional, intent(in)  :: config
-    !
-    PUSH_SUB(grid_init)
-    ASSERT(.false.)
-    POP_SUB(grid_init)
-    return
-  end subroutine grid_init
-
   ! ---------------------------------------------------------
   subroutine igrid_get_simul_box(this, that)
     type(grid_t),       target, intent(in) :: this

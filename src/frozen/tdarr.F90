@@ -75,7 +75,6 @@ module TEMPLATE(darr_m)
 
   public ::                     &
     TEMPLATE(DARR_OK),          &
-    TEMPLATE(DARR_SIZE_ERROR),  &
     TEMPLATE(DARR_INDEX_ERROR), &
     TEMPLATE(DARR_EMPTY_ERROR)
 
@@ -94,9 +93,8 @@ module TEMPLATE(darr_m)
   integer,       parameter :: INTERNAL(DARR_SIZE)   = DARR_INITIAL_SIZE
 
   integer, parameter :: TEMPLATE(DARR_OK)          = 0
-  integer, parameter :: TEMPLATE(DARR_SIZE_ERROR)  =-1
-  integer, parameter :: TEMPLATE(DARR_INDEX_ERROR) =-2
-  integer, parameter :: TEMPLATE(DARR_EMPTY_ERROR) =-3
+  integer, parameter :: TEMPLATE(DARR_INDEX_ERROR) =-1
+  integer, parameter :: TEMPLATE(DARR_EMPTY_ERROR) =-2
 
   type :: TEMPLATE(darr_t)
     private
