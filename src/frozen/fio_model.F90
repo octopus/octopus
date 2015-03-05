@@ -33,12 +33,14 @@ module fio_model_m
     fio_hamiltonian_stop,      &
     fio_hamiltonian_end
 
-  use base_model_m, only:              &
-    fio_model_t    => base_model_t,    &
-    fio_model_init => base_model_init, &
-    fio_model_get  => base_model_get,  &
-    fio_model_copy => base_model_copy, &
-    fio_model_end  => base_model_end
+  use base_model_m, only:                 &
+    fio_model_init => base_model__init__, &
+    fio_model_copy => base_model__copy__, &
+    fio_model_end  => base_model__end__
+
+  use base_model_m, only:            &
+    fio_model_t   => base_model_t,   &
+    fio_model_get => base_model_get
 
   implicit none
 

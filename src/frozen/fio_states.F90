@@ -11,15 +11,15 @@ module fio_states_m
     fio_density_update
 
   use base_states_m, only:                    &
+    fio_states_init  => base_states__init__,  &
     fio_states_start => base_states__start__, &
-    fio_states_stop  => base_states__stop__
+    fio_states_stop  => base_states__stop__,  &
+    fio_states_copy  => base_states__copy__,  &
+    fio_states_end   => base_states__end__
 
-  use base_states_m, only:               &
-    fio_states_t    => base_states_t,    &
-    fio_states_init => base_states_init, &
-    fio_states_get  => base_states_get,  &
-    fio_states_copy => base_states_copy, &
-    fio_states_end  => base_states_end
+  use base_states_m, only:             &
+    fio_states_t   => base_states_t,   &
+    fio_states_get => base_states_get
 
   implicit none
 

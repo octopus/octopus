@@ -152,6 +152,16 @@ module base_potential_m
     type(storage_intrpl_t)          :: intrp
   end type base_potential_intrpl_t
 
+  interface base_potential__init__
+    module procedure base_potential__init__potential
+    module procedure base_potential_intrpl_init
+  end interface base_potential__init__
+
+  interface base_potential__end__
+    module procedure base_potential__end__potential
+    module procedure base_potential_intrpl_end
+  end interface base_potential__end__
+
   interface base_potential_init
     module procedure base_potential_init_potential
     module procedure base_potential_init_copy
@@ -266,7 +276,7 @@ contains
   end subroutine base_potential__inull__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__init__(this, sys, config)
+  subroutine base_potential__init__potential(this, sys, config)
     type(base_potential_t),      intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
@@ -274,7 +284,7 @@ contains
     integer :: nspin, ierr
     logical :: alloc
     !
-    PUSH_SUB(base_potential__init__)
+    PUSH_SUB(base_potential__init__potential)
     call base_potential__inull__(this)
     this%config=>config
     this%sys=>sys
@@ -286,9 +296,9 @@ contains
     call config_dict_init(this%dict)
     call base_potential_hash_init(this%hash)
     call base_potential_list_init(this%list)
-    POP_SUB(base_potential__init__)
+    POP_SUB(base_potential__init__potential)
     return
-  end subroutine base_potential__init__
+  end subroutine base_potential__init__potential
 
   ! ---------------------------------------------------------
   subroutine base_potential_init_potential(this, sys, config)
@@ -672,18 +682,18 @@ contains
   end subroutine base_potential_copy_potential
 
   ! ---------------------------------------------------------
-  subroutine base_potential__end__(this)
+  subroutine base_potential__end__potential(this)
     type(base_potential_t), intent(inout) :: this
     !
-    PUSH_SUB(base_potential__end__)
+    PUSH_SUB(base_potential__end__potential)
     call base_potential__inull__(this)
     call storage_end(this%data)
     call config_dict_end(this%dict)
     call base_potential_hash_end(this%hash)
     call base_potential_list_end(this%list)
-    POP_SUB(base_potential__end__)
+    POP_SUB(base_potential__end__potential)
     return
-  end subroutine base_potential__end__
+  end subroutine base_potential__end__potential
 
   ! ---------------------------------------------------------
   recursive subroutine base_potential_end_potential(this)

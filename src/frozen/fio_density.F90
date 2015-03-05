@@ -16,16 +16,16 @@ module fio_density_m
     base_density__update__
 
   use base_density_m, only:                     &
+    fio_density_init  => base_density__init__,  &
     fio_density_start => base_density__start__, &
-    fio_density_stop  => base_density__stop__
+    fio_density_stop  => base_density__stop__,  &
+    fio_density_copy  => base_density__copy__,  &
+    fio_density_end   => base_density__end__
 
   use base_density_m, only:                &
     fio_density_t    => base_density_t,    &
-    fio_density_init => base_density_init, &
     fio_density_eval => base_density_eval, &
-    fio_density_get  => base_density_get,  &
-    fio_density_copy => base_density_copy, &
-    fio_density_end  => base_density_end
+    fio_density_get  => base_density_get
 
   use base_density_m, only:                        &
     fio_density_intrpl_t => base_density_intrpl_t

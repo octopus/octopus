@@ -10,7 +10,7 @@ module fio_handle_m
   use mpi_m,  only: mpi_grp_t
 
   use base_handle_m, only: &
-    base_handle_init
+    base_handle__init__
 
   use base_handle_m, only:                  &
     fio_handle_copy => base_handle__copy__, &
@@ -53,9 +53,10 @@ contains
     integer :: type
     !
     PUSH_SUB(fio_handle_init)
-    call base_handle_init(this, config)
+    call base_handle__init__(this, config)
     call fio_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_FNIO)
+    call base_handle__init__(this)
     POP_SUB(fio_handle_init)
     return
   end subroutine fio_handle_init

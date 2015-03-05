@@ -103,6 +103,16 @@ module base_density_m
     type(storage_intrpl_t)        :: intrp
   end type base_density_intrpl_t
  
+  interface base_density__init__
+    module procedure base_density__init__density
+    module procedure base_density_intrpl_init
+  end interface base_density__init__
+
+  interface base_density__end__
+    module procedure base_density__end__density
+    module procedure base_density_intrpl_end
+  end interface base_density__end__
+
   interface base_density_init
     module procedure base_density_init_density
     module procedure base_density_iterator_init
@@ -211,14 +221,14 @@ contains
   end subroutine base_density__inull__
 
   ! ---------------------------------------------------------
-  subroutine base_density__init__(this, config)
+  subroutine base_density__init__density(this, config)
     type(base_density_t), target, intent(out) :: this
     type(json_object_t),  target, intent(in)  :: config
     !
     integer :: nspin, ierr
     logical :: alloc
     !
-    PUSH_SUB(base_density__init__)
+    PUSH_SUB(base_density__init__density)
     call base_density__inull__(this)
     this%config=>config
     call json_get(this%config, "nspin", nspin, ierr)
@@ -236,9 +246,9 @@ contains
     call config_dict_init(this%dict)
     call base_density_hash_init(this%hash)
     call base_density_list_init(this%list)
-    POP_SUB(base_density__init__)
+    POP_SUB(base_density__init__density)
     return
-  end subroutine base_density__init__
+  end subroutine base_density__init__density
 
   ! ---------------------------------------------------------
   subroutine base_density_init_density(this, config)
@@ -703,10 +713,10 @@ contains
   end subroutine base_density_copy_density
 
   ! ---------------------------------------------------------
-  subroutine base_density__end__(this)
+  subroutine base_density__end__density(this)
     type(base_density_t), intent(inout) :: this
 
-    PUSH_SUB(base_density__end__)
+    PUSH_SUB(base_density__end__density)
 
     if(base_density_get_nspin(this)>1)then
       call storage_end(this%total)
@@ -718,8 +728,8 @@ contains
     call base_density_hash_end(this%hash)
     call base_density_list_end(this%list)
 
-    POP_SUB(base_density__end__)
-  end subroutine base_density__end__
+    POP_SUB(base_density__end__density)
+  end subroutine base_density__end__density
 
   ! ---------------------------------------------------------
   recursive subroutine base_density_end_density(this)

@@ -15,16 +15,16 @@ module fio_external_m
     base_external__update__
 
   use base_external_m, only:                      &
+    fio_external_init  => base_external__init__,  &
     fio_external_start => base_external__start__, &
-    fio_external_stop  => base_external__stop__
+    fio_external_stop  => base_external__stop__,  &
+    fio_external_copy  => base_external__copy__,  &
+    fio_external_end   => base_external__end__
 
   use base_external_m, only:                 &
     fio_external_t    => base_external_t,    &
-    fio_external_init => base_external_init, &
     fio_external_eval => base_external_eval, &
-    fio_external_get  => base_external_get,  &
-    fio_external_copy => base_external_copy, &
-    fio_external_end  => base_external_end
+    fio_external_get  => base_external_get
 
   use base_external_m, only:                         &
     fio_external_intrpl_t => base_external_intrpl_t

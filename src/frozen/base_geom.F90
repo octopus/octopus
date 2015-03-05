@@ -171,6 +171,7 @@ module base_geom_m
   interface base_geom__init__
     module procedure base_geom__init__begin
     module procedure base_geom__init__finish
+    module procedure base_geom_iterator_init
   end interface base_geom__init__
 
   interface base_geom__copy__

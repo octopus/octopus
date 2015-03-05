@@ -23,14 +23,14 @@ module fio_hamiltonian_m
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                         &
+    fio_hamiltonian_init  => base_hamiltonian__init__,  &
     fio_hamiltonian_start => base_hamiltonian__start__, &
-    fio_hamiltonian_stop  => base_hamiltonian__stop__
+    fio_hamiltonian_stop  => base_hamiltonian__stop__,  &
+    fio_hamiltonian_copy  => base_hamiltonian__copy__,  &
+    fio_hamiltonian_end   => base_hamiltonian__end__
 
-  use base_hamiltonian_m, only:                    &
-    fio_hamiltonian_t    => base_hamiltonian_t,    &
-    fio_hamiltonian_init => base_hamiltonian_init, &
-    fio_hamiltonian_copy => base_hamiltonian_copy, &
-    fio_hamiltonian_end  => base_hamiltonian_end
+  use base_hamiltonian_m, only:              &
+    fio_hamiltonian_t => base_hamiltonian_t
 
   implicit none
 

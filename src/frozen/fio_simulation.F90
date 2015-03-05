@@ -17,14 +17,16 @@ module fio_simulation_m
     fio_grid_end
 
   use simulation_m, only: &
-    simulation_start
+    simulation__start__
 
-  use simulation_m, only:                   &
-    fio_simulation_t    => simulation_t,    &
-    fio_simulation_init => simulation_init, &
-    fio_simulation_copy => simulation_copy, &
-    fio_simulation_get  => simulation_get,  &
-    fio_simulation_end  => simulation_end
+  use simulation_m, only:                      &
+    fio_simulation_init => simulation__init__, &
+    fio_simulation_copy => simulation__copy__, &
+    fio_simulation_end  => simulation__end__
+
+  use simulation_m, only:                 &
+    fio_simulation_t   => simulation_t,   &
+    fio_simulation_get => simulation_get
 
   implicit none
 
@@ -58,7 +60,7 @@ contains
     ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(grid)
     call fio_grid_init(grid, geo, mpi_grp, gcfg)
-    call simulation_start(this, grid, geo)
+    call simulation__start__(this, grid, geo)
     nullify(grid, scfg, gcfg)
     POP_SUB(fio_simulation_start)
     return

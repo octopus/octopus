@@ -22,17 +22,17 @@ module output_fio_m
   use species_m,     only: SPECIES_FROZEN
   use states_m,      only: states_t
 
-  ! use base_hamiltonian_m, only: &
-  !   HMLT_TYPE_POTN,             &
-  !   HMLT_TYPE_HMLT
+  use base_hamiltonian_m, only: &
+    HMLT_TYPE_POTN,             &
+    HMLT_TYPE_HMLT
 
-  ! use base_config_m, only: &
-  !   base_config_parse
+  use base_config_m, only: &
+    base_config_parse
 
-  ! use fio_config_m, only: &
-  !   input_mesh_dir,       &
-  !   input_mesh_file,      &
-  !   input_external_file
+  use fio_config_m, only: &
+    input_mesh_dir,       &
+    input_mesh_file,      &
+    input_external_file
 
   implicit none
 
@@ -54,8 +54,8 @@ contains
     call json_get(this, "dimensions", idim, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(idim==sb%dim)
-    !call json_set(this, "dir", input_mesh_dir)
-    !call json_set(this, "file", input_mesh_file)
+    call json_set(this, "dir", input_mesh_dir)
+    call json_set(this, "file", input_mesh_file)
     POP_SUB(output_parse_config_simul_box)
     return
   end subroutine output_parse_config_simul_box
@@ -87,8 +87,8 @@ contains
     do indx=1, mesh%sb%dim
       call json_append(list, mesh%spacing(indx))
     end do
-    !call json_set(this, "dir", input_mesh_dir)
-    !call json_set(this, "file", input_mesh_file)
+    call json_set(this, "dir", input_mesh_dir)
+    call json_set(this, "file", input_mesh_file)
     POP_SUB(output_parse_config_mesh)
     return
   end subroutine output_parse_config_mesh
@@ -277,9 +277,9 @@ contains
     !
     PUSH_SUB(output_parse_config_external)
     call json_get(this, "type", type, ierr)
-    !if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
+    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
     call json_set(this, "dir", trim(adjustl(dir)))
-    !call json_set(this, "file", input_external_file)
+    call json_set(this, "file", input_external_file)
     POP_SUB(output_parse_config_external)
     return
   end subroutine output_parse_config_external
@@ -296,7 +296,7 @@ contains
     PUSH_SUB(output_parse_config_hamiltonian)
     nullify(cnfg)
     call json_get(this, "type", type, ierr)
-    !if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
+    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
     call json_get(this, "external", cnfg, ierr)
     if(ierr/=JSON_OK)then
       SAFE_ALLOCATE(cnfg)
@@ -358,7 +358,7 @@ contains
     call path_join(dir, file, fnam)
     iunit=io_open(fnam, action='write')
     if(iunit>0)then
-      !call base_config_parse(config, geo%space%dim, st%d%nspin)
+      call base_config_parse(config, geo%space%dim, st%d%nspin)
       call json_get(config, "model", cnfg, ierr)
       ASSERT(ierr==JSON_OK)
       call output_parse_config_model(cnfg, gr, geo, st, hm, dir)
