@@ -1,5 +1,9 @@
 #include "global.h"
 
+#undef LIST_TEMPLATE_NAME
+#undef LIST_TYPE_NAME
+#undef LIST_TYPE_MODULE_NAME
+
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME
 #undef HASH_KEY_TYPE_NAME
@@ -12,6 +16,12 @@
 #undef HASH_INCLUDE_PREFIX
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
+
+#define LIST_TEMPLATE_NAME base_term
+#define LIST_INCLUDE_PREFIX
+#include "tlist.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
 
 #define HASH_TEMPLATE_NAME base_term
 #define HASH_KEY_TEMPLATE_NAME json
@@ -52,10 +62,15 @@ module base_term_m
 
   private
   public ::              &
+    base_term__init__,   &
     base_term__update__, &
-    base_term__add__
+    base_term__add__,    &
+    base_term__copy__,   &
+    base_term__end__
 
   public ::               &
+    base_term_new,        &
+    base_term_del,        &
     base_term_init,       &
     base_term_update,     &
     base_term_next,       &
@@ -66,6 +81,12 @@ module base_term_m
     base_term_copy,       &
     base_term_end
 
+#define LIST_TEMPLATE_NAME base_term
+#define LIST_INCLUDE_HEADER
+#include "tlist.F90"
+#undef LIST_INCLUDE_HEADER
+#undef LIST_TEMPLATE_NAME
+
 #define HASH_INCLUDE_HEADER
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
@@ -74,9 +95,11 @@ module base_term_m
     private
     type(json_object_t), pointer :: config =>null()
     type(base_system_t), pointer :: sys    =>null()
+    type(base_term_t),   pointer :: prnt   =>null()
     real(kind=wp)                :: energy = 0.0_wp
     type(config_dict_t)          :: dict
     type(base_term_hash_t)       :: hash
+    type(base_term_list_t)       :: list
   end type base_term_t
 
   type, public :: base_term_iterator_t
@@ -123,23 +146,93 @@ module base_term_m
 
 contains
 
+#define LIST_TEMPLATE_NAME base_term
+#define LIST_INCLUDE_BODY
+#include "tlist.F90"
+#undef LIST_INCLUDE_BODY
+#undef LIST_TEMPLATE_NAME
+
 #define HASH_INCLUDE_BODY
 #include "thash.F90"
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_term_init_term(this, sys, config)
+  subroutine base_term_new(this, that)
+    type(base_term_t),  target, intent(inout) :: this
+    type(base_term_t), pointer                :: that
+    !
+    PUSH_SUB(base_term_new)
+    nullify(that)
+    SAFE_ALLOCATE(that)
+    that%prnt=>this
+    call base_term_list_push(this%list, that)
+    POP_SUB(base_term_new)
+    return
+  end subroutine base_term_new
+
+  ! ---------------------------------------------------------
+  subroutine base_term__idel__(this)
+    type(base_term_t), pointer :: this
+    !
+    PUSH_SUB(base_term__idel__)
+    SAFE_DEALLOCATE_P(this)
+    nullify(this)
+    POP_SUB(base_term__idel__)
+    return
+  end subroutine base_term__idel__
+
+  ! ---------------------------------------------------------
+  subroutine base_term_del(this)
+    type(base_term_t), pointer :: this
+    !
+    PUSH_SUB(base_term_del)
+    if(associated(this))then
+      if(associated(this%prnt))then
+        call base_term_list_del(this%prnt%list, this)
+        call base_term_end(this)
+        call base_term__idel__(this)
+      end if
+    end if
+    POP_SUB(base_term_del)
+    return
+  end subroutine base_term_del
+
+  ! ---------------------------------------------------------
+  subroutine base_term__inull__(this)
+    type(base_term_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_term__inull__)
+    nullify(this%config, this%sys, this%prnt)
+    this%energy=0.0_wp
+    POP_SUB(base_term__inull__)
+    return
+  end subroutine base_term__inull__
+
+  ! ---------------------------------------------------------
+  subroutine base_term__init__(this, sys, config)
     type(base_term_t),           intent(out) :: this
-    type(base_system_t),      target, intent(in)  :: sys
+    type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(base_term_init_term)
-    ASSERT(.not.associated(this%config))
+    PUSH_SUB(base_term__init__)
+    call base_term__inull__(this)
     this%config=>config
     this%sys=>sys
-    this%energy=0.0_wp
     call config_dict_init(this%dict)
     call base_term_hash_init(this%hash)
+    call base_term_list_init(this%list)
+    POP_SUB(base_term__init__)
+    return
+  end subroutine base_term__init__
+
+  ! ---------------------------------------------------------
+  subroutine base_term_init_term(this, sys, config)
+    type(base_term_t),   intent(out) :: this
+    type(base_system_t), intent(in)  :: sys
+    type(json_object_t), intent(in)  :: config
+    !
+    PUSH_SUB(base_term_init_term)
+    call base_term__init__(this, sys, config)
     POP_SUB(base_term_init_term)
     return
   end subroutine base_term_init_term
@@ -287,29 +380,76 @@ contains
   end subroutine base_term_get_system
 
   ! ---------------------------------------------------------
-  subroutine base_term_copy_term(this, that)
+  subroutine base_term__copy__(this, that)
     type(base_term_t), intent(out) :: this
     type(base_term_t), intent(in)  :: that
     !
+    PUSH_SUB(base_term__copy__)
+    call  base_term__end__(this)
+    if(associated(that%config).and.associated(that%sys))&
+      call base_term__init__(this, that%sys, that%config)
+    POP_SUB(base_term__copy__)
+    return
+  end subroutine base_term__copy__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_term_copy_term(this, that)
+    type(base_term_t), intent(inout) :: this
+    type(base_term_t), intent(in)    :: that
+    !
+    type(base_term_iterator_t)   :: iter
+    type(base_term_t),   pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
     PUSH_SUB(base_term_copy_term)
-    this%config=>that%config
-    this%sys=>that%sys
-    this%energy=that%energy
-    call config_dict_copy(this%dict, that%dict)
-    call base_term_hash_copy(this%hash, that%hash)
+    nullify(cnfg, osub, isub)
+    call base_term_end(this)
+    call base_term__copy__(this, that)
+    call base_term_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_term_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_TERM_OK)exit
+      call base_term_new(this, osub)
+      call base_term_copy(osub, isub)
+      call base_term__add__(this, osub, cnfg)
+    end do
+    call base_term_end(iter)
+    nullify(cnfg, osub, isub)
     POP_SUB(base_term_copy_term)
     return
   end subroutine base_term_copy_term
 
   ! ---------------------------------------------------------
-  subroutine base_term_end_term(this)
+  subroutine base_term__end__(this)
     type(base_term_t), intent(inout) :: this
     !
-    PUSH_SUB(base_term_end_term)
-    nullify(this%config, this%sys)
-    this%energy=0.0_wp
+    PUSH_SUB(base_term__end__)
+    call base_term__inull__(this)
     call config_dict_end(this%dict)
     call base_term_hash_end(this%hash)
+    call base_term_list_end(this%list)
+    POP_SUB(base_term__end__)
+    return
+  end subroutine base_term__end__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_term_end_term(this)
+    type(base_term_t), intent(inout) :: this
+    !
+    type(base_term_t), pointer :: subs
+    !
+    PUSH_SUB(base_term_end_term)
+    do
+      nullify(subs)
+      call base_term_list_pop(this%list, subs)
+      if(.not.associated(subs))exit
+      call base_term_end(subs)
+      call base_term__idel__(subs)
+    end do
+    nullify(subs)
+    call base_term__end__(this)
     POP_SUB(base_term_end_term)
     return
   end subroutine base_term_end_term

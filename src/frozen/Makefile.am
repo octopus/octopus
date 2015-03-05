@@ -33,7 +33,7 @@ libfrozen_a_SOURCES =		\
 	domain.F90		\
 	simulation.F90		\
 	intrpl.F90		\
-	storage.F90		#\
+	storage.F90		\
 	base_geom.F90		\
 	base_density.F90	\
 	base_states.F90		\
@@ -44,7 +44,7 @@ libfrozen_a_SOURCES =		\
 	base_hamiltonian.F90	\
 	base_model.F90		\
 	base_handle.F90		\
-	base_config.F90		\
+	base_config.F90		#\
 	fio_simul_box.F90	\
 	fio_curvilinear.F90	\
 	fio_mesh.F90		\
@@ -117,17 +117,17 @@ simulation.o	: simulation.F90 domain.o config_dict.o igrid.o basis.o
 intrpl.o 	: intrpl.F90 simulation.o domain.o basis.o
 storage.o 	: storage.F90 intrpl.o simulation.o basis.o
 
-# base_geom.o 		: base_geom.F90 strng.o basis.o config_dict.o
-# base_density.o 		: base_density.F90 simulation.o storage.o strng.o 
-# base_states.o 		: base_states.F90 base_density.o simulation.o
-# base_system.o 		: base_system.F90 base_states.o simulation.o base_geom.o 
-# base_term.o 		: base_term.F90 base_system.o
-# base_potential.o	: base_potential.F90 base_system.o storage.o 
-# base_external.o 	: base_external.F90 base_potential.o 
-# base_hamiltonian.o 	: base_hamiltonian.F90 base_potential.o base_term.o base_system.o 
-# base_model.o 		: base_model.F90 base_hamiltonian.o base_system.o simulation.o config_dict.o
-# base_handle.o 		: base_handle.F90 base_model.o intrpl.o config_dict.o
-# base_config.o 		: base_config.F90 base_handle.o intrpl.o 
+base_geom.o 		: base_geom.F90 strng.o basis.o config_dict.o
+base_density.o 		: base_density.F90 simulation.o storage.o strng.o 
+base_states.o 		: base_states.F90 base_density.o simulation.o
+base_system.o 		: base_system.F90 base_states.o simulation.o base_geom.o 
+base_term.o 		: base_term.F90 base_system.o
+base_potential.o	: base_potential.F90 base_system.o storage.o 
+base_external.o 	: base_external.F90 base_potential.o 
+base_hamiltonian.o 	: base_hamiltonian.F90 base_potential.o base_term.o base_system.o 
+base_model.o 		: base_model.F90 base_hamiltonian.o base_system.o simulation.o config_dict.o
+base_handle.o 		: base_handle.F90 base_model.o intrpl.o config_dict.o
+base_config.o 		: base_config.F90 base_handle.o intrpl.o 
 
 # fio_simul_box.o 	: fio_simul_box.F90 base_geom.o
 # fio_curvilinear.o 	: fio_curvilinear.F90 fio_simul_box.o base_geom.o

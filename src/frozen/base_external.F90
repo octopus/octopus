@@ -30,15 +30,20 @@ module base_external_m
     base_potential_eval
 
   use base_potential_m, only:                            &
+    base_external__init__   => base_potential__init__,   &
     base_external__start__  => base_potential__start__,  &
     base_external__update__ => base_potential__update__, &
     base_external__stop__   => base_potential__stop__,   &
     base_external__reset__  => base_potential__reset__,  &
     base_external__acc__    => base_potential__acc__,    &
-    base_external__add__    => base_potential__add__
+    base_external__add__    => base_potential__add__,    &
+    base_external__copy__   => base_potential__copy__,   &
+    base_external__end__    => base_potential__end__
 
   use base_potential_m, only:                      &
     base_external_t      => base_potential_t,      &
+    base_external_new    => base_potential_new,    &
+    base_external_del    => base_potential_del,    &
     base_external_init   => base_potential_init,   &
     base_external_start  => base_potential_start,  &
     base_external_update => base_potential_update, &
@@ -64,15 +69,20 @@ module base_external_m
 
   private
   public ::                  &
+    base_external__init__,   &
     base_external__start__,  &
     base_external__update__, &
     base_external__stop__,   &
     base_external__reset__,  &
     base_external__acc__,    &
-    base_external__add__
+    base_external__add__,    &
+    base_external__copy__,   &
+    base_external__end__
 
   public ::               &
     base_external_t,      &
+    base_external_new,    &
+    base_external_del,    &
     base_external_init,   &
     base_external_start,  &
     base_external_update, &

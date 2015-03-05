@@ -1,5 +1,9 @@
 #include "global.h"
  
+#undef LIST_TEMPLATE_NAME
+#undef LIST_TYPE_NAME
+#undef LIST_TYPE_MODULE_NAME
+
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME
 #undef HASH_KEY_TYPE_NAME
@@ -12,6 +16,12 @@
 #undef HASH_INCLUDE_PREFIX
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
+
+#define LIST_TEMPLATE_NAME base_system
+#define LIST_INCLUDE_PREFIX
+#include "tlist.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
 
 #define HASH_TEMPLATE_NAME base_system
 #define HASH_KEY_TEMPLATE_NAME json
@@ -60,26 +70,26 @@ module base_system_m
 
   use base_geom_m, only: &
     base_geom__init__,   &
-    base_geom__add__
+    base_geom__add__,    &
+    base_geom__copy__,   &
+    base_geom__end__
 
   use base_geom_m, only: &
     base_geom_t,         &
-    base_geom_get,       &
-    base_geom_copy,      &
-    base_geom_end
+    base_geom_get
 
   use base_states_m, only: &
+    base_states__init__,   &
     base_states__start__,  &
     base_states__update__, &
     base_states__stop__,   &
-    base_states__add__
+    base_states__add__,    &
+    base_states__copy__,   &
+    base_states__end__
 
   use base_states_m, only: &
     base_states_t,         &
-    base_states_init,      &
-    base_states_get,       &
-    base_states_copy,      &
-    base_states_end
+    base_states_get
 
   implicit none
 
@@ -89,9 +99,13 @@ module base_system_m
     base_system__start__,  &
     base_system__update__, &
     base_system__stop__,   &
-    base_system__add__
+    base_system__add__,    &
+    base_system__copy__,   &
+    base_system__end__
 
   public ::             &
+    base_system_new,    &
+    base_system_del,    &
     base_system_init,   &
     base_system_start,  &
     base_system_update, &
@@ -102,6 +116,12 @@ module base_system_m
     base_system_copy,   &
     base_system_end
 
+#define LIST_TEMPLATE_NAME base_system
+#define LIST_INCLUDE_HEADER
+#include "tlist.F90"
+#undef LIST_INCLUDE_HEADER
+#undef LIST_TEMPLATE_NAME
+
 #define HASH_INCLUDE_HEADER
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
@@ -110,11 +130,13 @@ module base_system_m
     private
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
+    type(base_system_t), pointer :: prnt   =>null()
     type(space_t)                :: space
     type(base_geom_t)            :: geom
     type(base_states_t)          :: st
     type(config_dict_t)          :: dict
     type(base_system_hash_t)     :: hash
+    type(base_system_list_t)     :: list
   end type base_system_t
 
   type, public :: base_system_iterator_t
@@ -126,7 +148,12 @@ module base_system_m
   interface base_system__init__
     module procedure base_system__init__begin
     module procedure base_system__init__finish
- end interface base_system__init__
+  end interface base_system__init__
+
+  interface base_system__copy__
+    module procedure base_system__copy__begin
+    module procedure base_system__copy__finish
+  end interface base_system__copy__
 
   interface base_system_init
     module procedure base_system_init_system
@@ -168,32 +195,105 @@ module base_system_m
 
 contains
 
+#define LIST_TEMPLATE_NAME base_system
+#define LIST_INCLUDE_BODY
+#include "tlist.F90"
+#undef LIST_INCLUDE_BODY
+#undef LIST_TEMPLATE_NAME
+
 #define HASH_INCLUDE_BODY
 #include "thash.F90"
 #undef HASH_INCLUDE_BODY
 
+  subroutine base_system_new(this, that)
+    type(base_system_t),  target, intent(inout) :: this
+    type(base_system_t), pointer                :: that
+    !
+    PUSH_SUB(base_system_new)
+    nullify(that)
+    SAFE_ALLOCATE(that)
+    that%prnt=>this
+    call base_system_list_push(this%list, that)
+    POP_SUB(base_system_new)
+    return
+  end subroutine base_system_new
+
   ! ---------------------------------------------------------
-  subroutine base_system__init__begin(this, config)
+  subroutine base_system__idel__(this)
+    type(base_system_t), pointer :: this
+    !
+    PUSH_SUB(base_system__idel__)
+    SAFE_DEALLOCATE_P(this)
+    nullify(this)
+    POP_SUB(base_system__idel__)
+    return
+  end subroutine base_system__idel__
+
+  ! ---------------------------------------------------------
+  subroutine base_system_del(this)
+    type(base_system_t), pointer :: this
+    !
+    PUSH_SUB(base_system_del)
+    if(associated(this))then
+      if(associated(this%prnt))then
+        call base_system_list_del(this%prnt%list, this)
+        call base_system_end(this)
+        call base_system__idel__(this)
+      end if
+    end if
+    POP_SUB(base_system_del)
+    return
+  end subroutine base_system_del
+
+  ! ---------------------------------------------------------
+  subroutine base_system__inull__(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_system__inull__)
+    nullify(this%config, this%sim, this%prnt)
+    POP_SUB(base_system__inull__)
+    return
+  end subroutine base_system__inull__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__iinit__(this, config)
     type(base_system_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
     !
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
     !
-    PUSH_SUB(base_system__init__begin)
+    PUSH_SUB(base_system__iinit__)
+    nullify(cnfg)
+    call base_system__inull__(this)
     this%config=>config
-    nullify(this%sim, cnfg)
     call json_get(this%config, "space", cnfg, ierr)
     if(ierr==JSON_OK)call space_init(this%space, cnfg)
     nullify(cnfg)
+    call config_dict_init(this%dict)
+    call base_system_hash_init(this%hash)
+    call base_system_list_init(this%list)
+    POP_SUB(base_system__iinit__)
+    return
+  end subroutine base_system__iinit__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__init__begin(this, config)
+    type(base_system_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: config
+    !
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system__init__begin)
+    nullify(cnfg)
+    call base_system__iinit__(this, config)
     call json_get(this%config, "geometry", cnfg, ierr)
     if(ierr==JSON_OK)call base_geom__init__(this%geom, this%space, cnfg)
     nullify(cnfg)
     call json_get(this%config, "states", cnfg, ierr)
-    if(ierr==JSON_OK)call base_states_init(this%st, cnfg)
+    if(ierr==JSON_OK)call base_states__init__(this%st, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_system_hash_init(this%hash)
     POP_SUB(base_system__init__begin)
     return
   end subroutine base_system__init__begin
@@ -221,14 +321,25 @@ contains
   end subroutine base_system_init_system
 
   ! ---------------------------------------------------------
-  subroutine base_system__start__(this, sim)
+  subroutine base_system__istart__(this, sim)
     type(base_system_t),        intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
-    PUSH_SUB(base_system__start__)
+    PUSH_SUB(base_system__istart__)
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
+    POP_SUB(base_system__istart__)
+    return
+  end subroutine base_system__istart__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__start__(this, sim)
+    type(base_system_t), intent(inout) :: this
+    type(simulation_t),  intent(in)    :: sim
+    !
+    PUSH_SUB(base_system__start__)
+    call base_system__istart__(this, sim)
     call base_states__start__(this%st, sim)
     POP_SUB(base_system__start__)
     return
@@ -444,33 +555,116 @@ contains
   end subroutine base_system_get_states
 
   ! ---------------------------------------------------------
-  subroutine base_system_copy_system(this, that)
+  subroutine base_system__icopy__(this, that)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
     !
-    PUSH_SUB(base_system__copy___system)
-    this%config=>that%config
-    this%sim=>that%sim
-    call base_geom_copy(this%geom, that%geom)
-    call space_copy(this%space, that%space)
-    call base_states_copy(this%st, that%st)
-    call config_dict_copy(this%dict, that%dict)
-    call base_system_hash_copy(this%hash, that%hash)
-    POP_SUB(base_system__copy_system)
+    PUSH_SUB(base_system__icopy__)
+    call base_system__iend__(this)
+    if(associated(that%config))then
+      call base_system__iinit__(this, that%config)
+      if(associated(that%sim))&
+        call base_system__istart__(this, that%sim)
+    end if
+    POP_SUB(base_system__icopy__)
+    return
+  end subroutine base_system__icopy__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__copy__begin(this, that)
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_system__copy__begin)
+    call base_system__icopy__(this, that)
+    call base_geom__copy__(this%geom, that%geom)
+    call base_states__copy__(this%st, that%st)
+    POP_SUB(base_system__copy__begin)
+    return
+  end subroutine base_system__copy__begin
+
+  ! ---------------------------------------------------------
+  subroutine base_system__copy__finish(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_system__copy__finish)
+    call base_geom__copy__(this%geom)
+    POP_SUB(base_system__copy__finish)
+    return
+  end subroutine base_system__copy__finish
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_copy_system(this, that)
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
+    !
+    type(base_system_iterator_t) :: iter
+    type(base_system_t), pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system_copy_system)
+    nullify(cnfg, osub, isub)
+    call base_system_end(this)
+    call base_system__copy__(this, that)
+    call base_system_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_system_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call base_system_new(this, osub)
+      call base_system_copy(osub, isub)
+      call base_system__add__(this, osub, cnfg)
+    end do
+    call base_system_end(iter)
+    call base_system__copy__(this)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_system_copy_system)
     return
   end subroutine base_system_copy_system
 
   ! ---------------------------------------------------------
-  subroutine base_system_end_system(this)
+  subroutine base_system__iend__(this)
     type(base_system_t), intent(inout) :: this
     !
-    PUSH_SUB(base_system_end_system)
-    nullify(this%config, this%sim)
+    PUSH_SUB(base_system__iend__)
+    call base_system__inull__(this)
     call space_end(this%space)
-    call base_geom_end(this%geom)
-    call base_states_end(this%st)
     call config_dict_end(this%dict)
     call base_system_hash_end(this%hash)
+    call base_system_list_end(this%list)
+    POP_SUB(base_system__iend__)
+    return
+  end subroutine base_system__iend__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__end__(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_system__end__)
+    call base_system__iend__(this)
+    call base_geom__end__(this%geom)
+    call base_states__end__(this%st)
+    POP_SUB(base_system__end__)
+    return
+  end subroutine base_system__end__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_end_system(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    type(base_system_t), pointer :: subs
+    !
+    PUSH_SUB(base_system_end_system)
+    do
+      nullify(subs)
+      call base_system_list_pop(this%list, subs)
+      if(.not.associated(subs))exit
+      call base_system_end(subs)
+      call base_system__idel__(subs)
+    end do
+    nullify(subs)
+    call base_system__end__(this)
     POP_SUB(base_system_end_system)
     return
   end subroutine base_system_end_system
