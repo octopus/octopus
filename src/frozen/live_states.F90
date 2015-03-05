@@ -7,16 +7,16 @@ module live_states_m
   use profiling_m
 
   use base_states_m, only:                       &
+    live_states_init   => base_states__init__,   &
     live_states_start  => base_states__start__,  &
     live_states_update => base_states__update__, &
-    live_states_stop   => base_states__stop__
+    live_states_stop   => base_states__stop__,   &
+    live_states_copy   => base_states__copy__,   &
+    live_states_end    => base_states__end__
 
-  use base_states_m, only:                &
-    live_states_t    => base_states_t,    &
-    live_states_init => base_states_init, &
-    live_states_get  => base_states_get,  &
-    live_states_copy => base_states_copy, &
-    live_states_end  => base_states_end
+  use base_states_m, only:              &
+    live_states_t   => base_states_t,   &
+    live_states_get => base_states_get
 
   implicit none
 

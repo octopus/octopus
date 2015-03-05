@@ -7,16 +7,16 @@ module live_system_m
   use profiling_m
 
   use base_system_m, only:                       &
+    live_system_init   => base_system__init__,   &
     live_system_start  => base_system__start__,  &
     live_system_update => base_system__update__, &
-    live_system_stop   => base_system__stop__
+    live_system_stop   => base_system__stop__,   &
+    live_system_copy   => base_system__copy__,   &
+    live_system_end    => base_system__end__
 
-  use base_system_m, only:                &
-    live_system_t    => base_system_t,    &
-    live_system_init => base_system_init, &
-    live_system_get  => base_system_get,  &
-    live_system_copy => base_system_copy, &
-    live_system_end  => base_system_end
+  use base_system_m, only:              &
+    live_system_t   => base_system_t,   &
+    live_system_get => base_system_get
 
   implicit none
 

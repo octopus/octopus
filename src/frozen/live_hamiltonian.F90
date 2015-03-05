@@ -21,15 +21,15 @@ module live_hamiltonian_m
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                            &
+    live_hamiltonian_init   => base_hamiltonian__init__,   &
     live_hamiltonian_start  => base_hamiltonian__start__,  &
     live_hamiltonian_update => base_hamiltonian__update__, &
-    live_hamiltonian_stop   => base_hamiltonian__stop__
+    live_hamiltonian_stop   => base_hamiltonian__stop__,   &
+    live_hamiltonian_copy   => base_hamiltonian__copy__,   &
+    live_hamiltonian_end    => base_hamiltonian__end__
 
-  use base_hamiltonian_m, only:                     &
-    live_hamiltonian_t    => base_hamiltonian_t,    &
-    live_hamiltonian_init => base_hamiltonian_init, &
-    live_hamiltonian_copy => base_hamiltonian_copy, &
-    live_hamiltonian_end  => base_hamiltonian_end
+  use base_hamiltonian_m, only:               &
+    live_hamiltonian_t => base_hamiltonian_t
 
   implicit none
 

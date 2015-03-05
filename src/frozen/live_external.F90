@@ -7,17 +7,17 @@ module live_external_m
   use profiling_m
 
   use base_external_m, only:                         &
+    live_external_init   => base_external__init__,   &
     live_external_start  => base_external__start__,  &
     live_external_update => base_external__update__, &
-    live_external_stop   => base_external__stop__
+    live_external_stop   => base_external__stop__,   &
+    live_external_copy   => base_external__copy__,   &
+    live_external_end    => base_external__end__
 
   use base_external_m, only:                  &
     live_external_t    => base_external_t,    &
-    live_external_init => base_external_init, &
     live_external_eval => base_external_eval, &
-    live_external_get  => base_external_get,  &
-    live_external_copy => base_external_copy, &
-    live_external_end  => base_external_end
+    live_external_get  => base_external_get
 
   use base_external_m, only:                         &
     live_external_intrpl_t => base_external_intrpl_t

@@ -65,7 +65,7 @@ libfrozen_a_SOURCES =		\
 	frozen_hamiltonian.F90	\
 	frozen_model.F90	\
 	frozen_handle.F90	\
-	frozen_config.F90	#\
+	frozen_config.F90	\
 	live_density.F90	\
 	live_states.F90		\
 	live_system.F90		\
@@ -73,7 +73,7 @@ libfrozen_a_SOURCES =		\
 	live_hamiltonian.F90	\
 	live_model.F90		\
 	live_handle.F90		\
-	live_config.F90		\
+	live_config.F90		#\
 	ssys_density.F90	\
 	ssys_states.F90		\
 	ssys_system.F90		\
@@ -152,14 +152,14 @@ frozen_model.o 		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_mod
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o base_handle.o
 frozen_config.o 	: frozen_config.F90 frozen_handle.o base_config.o
 
-# live_density.o		: live_density.F90 base_density.o
-# live_states.o		: live_states.F90 live_density.o base_states.o
-# live_system.o		: live_system.F90 live_states.o base_system.o
-# live_external.o		: live_external.F90 base_external.o
-# live_hamiltonian.o	: live_hamiltonian.F90 live_external.o live_system.o base_hamiltonian.o
-# live_model.o		: live_model.F90 live_system.o base_model.o
-# live_handle.o		: live_handle.F90 base_handle.o
-# live_config.o		: live_config.F90 live_handle.o base_config.o
+live_density.o		: live_density.F90 base_density.o
+live_states.o		: live_states.F90 live_density.o base_states.o
+live_system.o		: live_system.F90 live_states.o base_system.o
+live_external.o		: live_external.F90 base_external.o
+live_hamiltonian.o	: live_hamiltonian.F90 live_external.o live_system.o base_hamiltonian.o
+live_model.o		: live_model.F90 live_system.o base_model.o
+live_handle.o		: live_handle.F90 base_handle.o
+live_config.o		: live_config.F90 live_handle.o base_config.o
 
 # ssys_density.o		: ssys_density.F90 base_density.o
 # ssys_states.o		: ssys_states.F90 ssys_density.o base_states.o
