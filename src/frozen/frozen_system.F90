@@ -22,16 +22,16 @@ module frozen_system_m
     frozen_states_t
 
   use base_system_m, only:                         &
+    frozen_system_init   => base_system__init__,   &
     frozen_system_start  => base_system__start__,  &
     frozen_system_update => base_system__update__, &
-    frozen_system_stop   => base_system__stop__
+    frozen_system_stop   => base_system__stop__,   &
+    frozen_system_copy   => base_system__copy__,   &
+    frozen_system_end    => base_system__end__
 
-  use base_system_m, only:                  &
-    frozen_system_t    => base_system_t,    &
-    frozen_system_init => base_system_init, &
-    frozen_system_get  => base_system_get,  &
-    frozen_system_copy => base_system_copy, &
-    frozen_system_end  => base_system_end
+  use base_system_m, only:                &
+    frozen_system_t   => base_system_t,   &
+    frozen_system_get => base_system_get
 
   implicit none
 

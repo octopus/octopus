@@ -31,15 +31,15 @@ module frozen_hamiltonian_m
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                              &
+    frozen_hamiltonian_init   => base_hamiltonian__init__,   &
     frozen_hamiltonian_start  => base_hamiltonian__start__,  &
     frozen_hamiltonian_update => base_hamiltonian__update__, &
-    frozen_hamiltonian_stop   => base_hamiltonian__stop__
+    frozen_hamiltonian_stop   => base_hamiltonian__stop__,   &
+    frozen_hamiltonian_copy   => base_hamiltonian__copy__,   &
+    frozen_hamiltonian_end    => base_hamiltonian__end__
 
-  use base_hamiltonian_m, only:                       &
-    frozen_hamiltonian_t    => base_hamiltonian_t,    &
-    frozen_hamiltonian_init => base_hamiltonian_init, &
-    frozen_hamiltonian_copy => base_hamiltonian_copy, &
-    frozen_hamiltonian_end  => base_hamiltonian_end
+  use base_hamiltonian_m, only:                 &
+    frozen_hamiltonian_t => base_hamiltonian_t
 
   implicit none
 

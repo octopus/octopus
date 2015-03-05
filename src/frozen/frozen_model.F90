@@ -31,16 +31,16 @@ module frozen_model_m
     frozen_hamiltonian_t
 
   use base_model_m, only:                        &
+    frozen_model_init   => base_model__init__,   &
     frozen_model_start  => base_model__start__,  &
     frozen_model_update => base_model__update__, &
-    frozen_model_stop   => base_model__stop__
+    frozen_model_stop   => base_model__stop__,   &
+    frozen_model_copy   => base_model__copy__,   &
+    frozen_model_end    => base_model__end__
 
-  use base_model_m, only:                 &
-    frozen_model_t    => base_model_t,    &
-    frozen_model_init => base_model_init, &
-    frozen_model_get  => base_model_get,  &
-    frozen_model_copy => base_model_copy, &
-    frozen_model_end  => base_model_end
+  use base_model_m, only:               &
+    frozen_model_t   => base_model_t,   &
+    frozen_model_get => base_model_get
 
   implicit none
 

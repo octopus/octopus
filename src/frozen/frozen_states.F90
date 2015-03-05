@@ -22,16 +22,16 @@ module frozen_states_m
     frozen_density_t
 
   use base_states_m, only:                         & 
+    frozen_states_init   => base_states__init__,   &
     frozen_states_start  => base_states__start__,  &
     frozen_states_update => base_states__update__, &
-    frozen_states_stop   => base_states__stop__
+    frozen_states_stop   => base_states__stop__,   &
+    frozen_states_copy   => base_states__copy__,   &
+    frozen_states_end    => base_states__end__
 
-  use base_states_m, only:                  & 
-    frozen_states_t    => base_states_t,    &
-    frozen_states_init => base_states_init, &
-    frozen_states_get  => base_states_get,  &
-    frozen_states_copy => base_states_copy, &
-    frozen_states_end  => base_states_end
+  use base_states_m, only:                & 
+    frozen_states_t   => base_states_t,   &
+    frozen_states_get => base_states_get
 
   implicit none
 

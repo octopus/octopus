@@ -31,17 +31,17 @@ module frozen_density_m
     fio_density_intrpl_t
 
   use base_density_m, only:                          &
+    frozen_density_init   => base_density__init__,   &
     frozen_density_start  => base_density__start__,  &
     frozen_density_update => base_density__update__, &
-    frozen_density_stop   => base_density__stop__
+    frozen_density_stop   => base_density__stop__,   &
+    frozen_density_copy   => base_density__copy__,   &
+    frozen_density_end    => base_density__end__
 
   use base_density_m, only:                   &
     frozen_density_t    => base_density_t,    &
-    frozen_density_init => base_density_init, &
     frozen_density_eval => base_density_eval, &
-    frozen_density_get  => base_density_get,  &
-    frozen_density_copy => base_density_copy, &
-    frozen_density_end  => base_density_end
+    frozen_density_get  => base_density_get
 
   use base_density_m, only:                           &
     frozen_density_intrpl_t => base_density_intrpl_t

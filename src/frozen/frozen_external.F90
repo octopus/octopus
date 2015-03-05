@@ -28,17 +28,17 @@ module frozen_external_m
     simulation_get
 
   use base_external_m, only:                           &
+    frozen_external_init   => base_external__init__,   &
     frozen_external_start  => base_external__start__,  &
     frozen_external_update => base_external__update__, &
-    frozen_external_stop   => base_external__stop__
+    frozen_external_stop   => base_external__stop__,   &
+    frozen_external_copy   => base_external__copy__,   &
+    frozen_external_end    => base_external__end__
 
   use base_external_m, only:                    &
     frozen_external_t    => base_external_t,    &
-    frozen_external_init => base_external_init, &
     frozen_external_eval => base_external_eval, &
-    frozen_external_get  => base_external_get,  &
-    frozen_external_copy => base_external_copy, &
-    frozen_external_end  => base_external_end
+    frozen_external_get  => base_external_get
 
   use base_external_m, only:                            &
     frozen_external_intrpl_t => base_external_intrpl_t

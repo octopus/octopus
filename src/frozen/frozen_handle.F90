@@ -36,13 +36,13 @@ module frozen_handle_m
 
   use base_handle_m, only:                       &
     frozen_handle_start => base_handle__start__, &
-    frozen_handle_stop  => base_handle__stop__,  &
-    frozen_handle_copy  => base_handle__copy__,  &
-    frozen_handle_end   => base_handle__end__
+    frozen_handle_stop  => base_handle__stop__
 
-  use base_handle_m, only:                &
-    frozen_handle_t   => base_handle_t,   &
-    frozen_handle_get => base_handle_get
+  use base_handle_m, only:                   &
+    frozen_handle_t    => base_handle_t,     &
+    frozen_handle_get  => base_handle_get,   &
+    frozen_handle_copy => base_handle_copy,  &
+    frozen_handle_end  => base_handle_end
 
   use base_handle_m, only:  &
     BASE_HANDLE_OK,         &
@@ -74,7 +74,7 @@ contains
     integer :: type
     !
     PUSH_SUB(frozen_handle_init)
-    call base_handle_init(this, fio_handle_init, config)
+    call base_handle_init(this, config, fio_handle_init)
     call frozen_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_FRZN)
     POP_SUB(frozen_handle_init)
