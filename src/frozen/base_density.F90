@@ -173,32 +173,35 @@ contains
   subroutine base_density_new(this, that)
     type(base_density_t),  target, intent(inout) :: this
     type(base_density_t), pointer                :: that
-    !
+
     PUSH_SUB(base_density_new)
+
     nullify(that)
     SAFE_ALLOCATE(that)
     that%prnt=>this
     call base_density_list_push(this%list, that)
+
     POP_SUB(base_density_new)
-    return
   end subroutine base_density_new
 
   ! ---------------------------------------------------------
   subroutine base_density__idel__(this)
     type(base_density_t), pointer :: this
-    !
+
     PUSH_SUB(base_density__idel__)
+
     SAFE_DEALLOCATE_P(this)
     nullify(this)
+
     POP_SUB(base_density__idel__)
-    return
   end subroutine base_density__idel__
 
   ! ---------------------------------------------------------
   subroutine base_density_del(this)
     type(base_density_t), pointer :: this
-    !
+
     PUSH_SUB(base_density_del)
+
     if(associated(this))then
       if(associated(this%prnt))then
         call base_density_list_del(this%prnt%list, this)
@@ -206,29 +209,31 @@ contains
         call base_density__idel__(this)
       end if
     end if
+
     POP_SUB(base_density_del)
-    return
   end subroutine base_density_del
 
   ! ---------------------------------------------------------
   subroutine base_density__inull__(this)
     type(base_density_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_density__inull__)
+
     nullify(this%config, this%sim, this%total, this%prnt)
+
     POP_SUB(base_density__inull__)
-    return
   end subroutine base_density__inull__
 
   ! ---------------------------------------------------------
   subroutine base_density__init__density(this, config)
     type(base_density_t), target, intent(out) :: this
     type(json_object_t),  target, intent(in)  :: config
-    !
+
     integer :: nspin, ierr
     logical :: alloc
-    !
+
     PUSH_SUB(base_density__init__density)
+
     call base_density__inull__(this)
     this%config=>config
     call json_get(this%config, "nspin", nspin, ierr)
@@ -246,19 +251,20 @@ contains
     call config_dict_init(this%dict)
     call base_density_hash_init(this%hash)
     call base_density_list_init(this%list)
+
     POP_SUB(base_density__init__density)
-    return
   end subroutine base_density__init__density
 
   ! ---------------------------------------------------------
   subroutine base_density_init_density(this, config)
     type(base_density_t), intent(out) :: this
     type(json_object_t),  intent(in)  :: config
-    !
+
     PUSH_SUB(base_density_init_density)
+
     call base_density__init__(this, config)
+
     POP_SUB(base_density_init_density)
-    return
   end subroutine base_density_init_density
 
   ! ---------------------------------------------------------
@@ -334,7 +340,7 @@ contains
   ! ---------------------------------------------------------
   recursive subroutine base_density_update(this)
     type(base_density_t), intent(inout) :: this
-    !
+
     type(base_density_iterator_t) :: iter
     type(base_density_t), pointer :: subs
     integer                       :: ierr
@@ -686,7 +692,7 @@ contains
   recursive subroutine base_density_copy_density(this, that)
     type(base_density_t), intent(inout) :: this
     type(base_density_t), intent(in)    :: that
-    !
+
     type(base_density_iterator_t) :: iter
     type(base_density_t), pointer :: osub, isub
     type(json_object_t),  pointer :: cnfg
