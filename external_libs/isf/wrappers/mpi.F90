@@ -81,6 +81,7 @@ module wrapper_MPI
      module procedure mpibcast_c1,mpibcast_d1,mpibcast_d2,mpibcast_i1
   end interface mpibcast
 
+#ifdef HAVE_MPI2
   interface mpi_get_to_allgatherv
      module procedure mpi_get_to_allgatherv_double
   end interface mpi_get_to_allgatherv
@@ -89,13 +90,14 @@ module wrapper_MPI
     module procedure mpiget_d0
   end interface mpiget
 
-  interface mpitypesize
-    module procedure mpitypesize_d0, mpitypesize_d1
-  end interface mpitypesize
-
   interface mpiwindow
     module procedure mpiwindow_d0
   end interface mpiwindow
+#endif
+
+  interface mpitypesize
+    module procedure mpitypesize_d0, mpitypesize_d1
+  end interface mpitypesize
 
   !> Interface for MPI_ALLGATHERV routine
   interface mpiallgatherv
@@ -1081,6 +1083,7 @@ contains
    end if
   end subroutine mpiinfofree
 
+#ifdef HAVE_MPI2
   function mpiwindow_d0(size,base,comm) result(window)
     use dictionaries, only: f_err_throw,f_err_define
     implicit none
@@ -1215,6 +1218,7 @@ contains
     end if
 
   end subroutine mpi_get_to_allgatherv_double
+#endif
 
   
   subroutine mpiiallred_double(sendbuf, recvbuf, ncount, datatype, op, comm, request)
@@ -1333,7 +1337,7 @@ subroutine gather_timings(ndata,nproc,mpi_comm,src,dest)
 
 end subroutine gather_timings
 
-
+#ifdef HAVE_MPI2
 !> used by get_to_allgatherv to pass the good addresses to the mpiget wrapper
 subroutine getall_d(nproc,recvcounts,displs,window,nrecvbuffer,recvbuffer)
   use wrapper_MPI, only: mpiget, mpi_address_kind
@@ -1353,7 +1357,7 @@ subroutine getall_d(nproc,recvcounts,displs,window,nrecvbuffer,recvbuffer)
   end do
 
 end subroutine getall_d
-
+#endif
 
 
 !> Activates the nesting for UNBLOCK_COMMS performance case
