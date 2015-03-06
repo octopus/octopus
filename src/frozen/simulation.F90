@@ -117,7 +117,7 @@ module simulation_m
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
     type(geometry_t),    pointer :: geo    =>null()
-    type(grid_t),        pointer :: gr     =>null()
+    type(grid_t),        pointer :: grid   =>null()
     type(simulation_t),  pointer :: prnt   =>null()
     type(domain_t)               :: domain
     type(config_dict_t)          :: dict
@@ -131,8 +131,14 @@ module simulation_m
     type(simulation_hash_iterator_t) :: iter
   end type simulation_iterator_t
 
+  interface simulation__init__
+    module procedure simulation__init__simulation
+    module procedure simulation__init__copy
+  end interface simulation__init__
+
   interface simulation_init
     module procedure simulation_init_simulation
+    module procedure simulation_init_copy
     module procedure simulation_iterator_init
   end interface simulation_init
 
@@ -219,7 +225,7 @@ contains
     type(simulation_t), intent(inout) :: this
     !
     PUSH_SUB(simulation__inull__)
-    nullify(this%config, this%space, this%geo, this%gr, this%prnt)
+    nullify(this%config, this%space, this%geo, this%grid, this%prnt)
     POP_SUB(simulation__inull__)
     return
   end subroutine simulation__inull__
@@ -242,17 +248,31 @@ contains
   end subroutine simulation__iinit__
 
   ! ---------------------------------------------------------
-  subroutine simulation__init__(this, space, config)
+  subroutine simulation__init__simulation(this, space, config)
     type(simulation_t),  intent(out) :: this
     type(space_t),       intent(in)  :: space
     type(json_object_t), intent(in)  :: config
     !
-    PUSH_SUB(simulation__init__)
+    PUSH_SUB(simulation__init__simulation)
     call simulation__iinit__(this, space, config)
     call domain__init__(this%domain)
-    POP_SUB(simulation__init__)
+    POP_SUB(simulation__init__simulation)
     return
-  end subroutine simulation__init__
+  end subroutine simulation__init__simulation
+
+  ! ---------------------------------------------------------
+  subroutine simulation__init__copy(this, that)
+    type(simulation_t),  intent(out) :: this
+    type(simulation_t),  intent(in)  :: that
+    !
+    PUSH_SUB(simulation__init__copy)
+    if(associated(that%config).and.associated(that%space))then
+      call simulation__iinit__(this, that%space, that%config)
+      call domain__init__(this%domain)
+    end if
+    POP_SUB(simulation__init__copy)
+    return
+  end subroutine simulation__init__copy
 
   ! ---------------------------------------------------------
   subroutine simulation_init_simulation(this, space, config)
@@ -267,6 +287,34 @@ contains
   end subroutine simulation_init_simulation
 
   ! ---------------------------------------------------------
+  recursive subroutine simulation_init_copy(this, that)
+    type(simulation_t), intent(out) :: this
+    type(simulation_t), intent(in)  :: that
+    !
+    type(simulation_iterator_t)  :: iter
+    type(simulation_t),  pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(simulation_init_copy)
+    nullify(cnfg, osub, isub)
+    call simulation__init__(this, that)
+    call simulation_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call simulation_next(iter, cnfg, isub, ierr)
+      if(ierr/=SIMULATION_OK)exit
+      call simulation_new(this, osub)
+      call simulation_init(osub, isub)
+      call simulation__add__(this, osub, cnfg)
+    end do
+    call simulation_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(simulation_init_copy)
+    return
+  end subroutine simulation_init_copy
+
+  ! ---------------------------------------------------------
   subroutine simulation__istart__(this, grid, geo)
     type(simulation_t),       intent(inout) :: this
     type(grid_t),     target, intent(in)    :: grid
@@ -276,32 +324,42 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
     ASSERT(.not.associated(this%geo))
-    ASSERT(.not.associated(this%gr))
-    this%gr=>grid
+    ASSERT(.not.associated(this%grid))
+    this%grid=>grid
     this%geo=>geo
-    ASSERT(this%gr%sb%dim==this%space%dim)
+    ASSERT(this%grid%sb%dim==this%space%dim)
     POP_SUB(simulation__istart__)
     return
   end subroutine simulation__istart__
 
   ! ---------------------------------------------------------
   subroutine simulation__start__(this, grid, geo)
-    type(simulation_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
-    type(geometry_t),   intent(in)    :: geo
+    type(simulation_t),         intent(inout) :: this
+    type(grid_t),     optional, intent(in)    :: grid
+    type(geometry_t), optional, intent(in)    :: geo
     !
     PUSH_SUB(simulation__start__)
-    call simulation__istart__(this, grid, geo)
-    call domain__start__(this%domain, this%gr%sb, this%geo)
+    if(present(grid).and.present(geo))then
+      call simulation__istart__(this, grid, geo)
+      call domain__start__(this%domain, grid%sb, geo)
+    else
+      if((.not.associated(this%grid)).and.(.not.associated(this%geo)))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%geo))
+        ASSERT(associated(this%prnt%grid))
+        call simulation__istart__(this, this%prnt%grid, this%prnt%geo)
+      end if
+      call domain__start__(this%domain)
+    end if
     POP_SUB(simulation__start__)
     return
   end subroutine simulation__start__
 
   ! ---------------------------------------------------------
   subroutine simulation_start(this, grid, geo)
-    type(simulation_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
-    type(geometry_t),   intent(in)    :: geo
+    type(simulation_t),         intent(inout) :: this
+    type(grid_t),     optional, intent(in)    :: grid
+    type(geometry_t), optional, intent(in)    :: geo
     !
     PUSH_SUB(simulation_start)
     call simulation__start__(this, grid, geo)
@@ -359,8 +417,8 @@ contains
     type(grid_t), target, intent(in)    :: that
     !
     PUSH_SUB(simulation_set_grid)
-    ASSERT(.not.associated(this%gr))
-    this%gr=>that
+    ASSERT(.not.associated(this%grid))
+    this%grid=>that
     POP_SUB(simulation_set_grid)
     return
   end subroutine simulation_set_grid
@@ -431,8 +489,8 @@ contains
     !
     PUSH_SUB(simulation_get_simul_box)
     nullify(that)
-    if(associated(this%gr))&
-      call grid_get(this%gr, that)
+    if(associated(this%grid))&
+      call grid_get(this%grid, that)
     POP_SUB(simulation_get_simul_box)
     return
   end subroutine simulation_get_simul_box
@@ -444,8 +502,8 @@ contains
     !
     PUSH_SUB(simulation_get_mesh)
     nullify(that)
-    if(associated(this%gr))&
-      call grid_get(this%gr, that)
+    if(associated(this%grid))&
+      call grid_get(this%grid, that)
     POP_SUB(simulation_get_mesh)
     return
   end subroutine simulation_get_mesh
@@ -457,8 +515,8 @@ contains
     !
     PUSH_SUB(simulation_get_grid)
     nullify(that)
-    if(associated(this%gr))&
-      that=>this%gr
+    if(associated(this%grid))&
+      that=>this%grid
     POP_SUB(simulation_get_grid)
     return
   end subroutine simulation_get_grid
@@ -483,8 +541,8 @@ contains
     call simulation__iend__(this)
     if(associated(that%config).and.associated(that%space))then
       call simulation__iinit__(this, that%space, that%config)
-      if(associated(that%gr).and.associated(that%geo))&
-        call simulation__istart__(this, that%gr, that%geo)
+      if(associated(that%grid).and.associated(that%geo))&
+        call simulation__istart__(this, that%grid, that%geo)
     end if
     POP_SUB(simulation__icopy__)
     return

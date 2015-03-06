@@ -128,6 +128,7 @@ module base_handle_m
   interface base_handle__init__
     module procedure base_handle__init__begin
     module procedure base_handle__init__finish
+    module procedure base_handle__init__copy
   end interface base_handle__init__
 
   interface base_handle__copy__
@@ -138,6 +139,7 @@ module base_handle_m
   interface base_handle_init
     module procedure base_handle_init_handle
     module procedure base_handle_init_pass
+    module procedure base_handle_init_copy
     module procedure base_handle_iterator_init
   end interface base_handle_init
 
@@ -281,6 +283,20 @@ contains
   end subroutine base_handle__init__finish
 
   ! ---------------------------------------------------------
+  subroutine base_handle__init__copy(this, that)
+    type(base_handle_t), intent(out) :: this
+    type(base_handle_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_handle__init__copy)
+    if(associated(that%config))then
+      call base_handle__iinit__(this, that%config)
+      call base_model__init__(this%model, that%model)
+    end if
+    POP_SUB(base_handle__init__copy)
+    return
+  end subroutine base_handle__init__copy
+
+  ! ---------------------------------------------------------
   recursive subroutine base_handle_init_handle(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
@@ -334,6 +350,35 @@ contains
   end subroutine base_handle_init_pass
 
   ! ---------------------------------------------------------
+  recursive subroutine base_handle_init_copy(this, that)
+    type(base_handle_t), intent(out) :: this
+    type(base_handle_t), intent(in)  :: that
+    !
+    type(base_handle_iterator_t) :: iter
+    type(base_handle_t), pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_handle_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_handle__init__(this, that)
+    call base_handle_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_handle_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_HANDLE_OK)exit
+      call base_handle_new(this, osub)
+      call base_handle_init(osub, isub)
+      call base_handle__add__(this, osub, cnfg)
+    end do
+    call base_handle_end(iter)
+    call base_handle__init__(this)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_handle_init_copy)
+    return
+  end subroutine base_handle_init_copy
+
+  ! ---------------------------------------------------------
   subroutine base_handle__istart__(this)
     type(base_handle_t), intent(inout) :: this
     !
@@ -345,8 +390,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
-    type(base_handle_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: grid
+    type(base_handle_t),    intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
     !
     PUSH_SUB(base_handle__start__)
     call base_handle__istart__(this)
@@ -357,8 +402,8 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_start(this, grid)
-    type(base_handle_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: grid
+    type(base_handle_t),    intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
     !
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: subs

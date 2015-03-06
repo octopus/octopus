@@ -105,6 +105,7 @@ module base_density_m
  
   interface base_density__init__
     module procedure base_density__init__density
+    module procedure base_density__init__copy
     module procedure base_density_intrpl_init
   end interface base_density__init__
 
@@ -115,6 +116,7 @@ module base_density_m
 
   interface base_density_init
     module procedure base_density_init_density
+    module procedure base_density_init_copy
     module procedure base_density_iterator_init
     module procedure base_density_intrpl_init
   end interface base_density_init
@@ -256,6 +258,19 @@ contains
   end subroutine base_density__init__density
 
   ! ---------------------------------------------------------
+  subroutine base_density__init__copy(this, that)
+    type(base_density_t), intent(out) :: this
+    type(base_density_t), intent(in)  :: that
+
+    PUSH_SUB(base_density__init__copy)
+
+    if(associated(that%config))&
+      call base_density__init__(this, that%config)
+
+    POP_SUB(base_density__init__copy)
+  end subroutine base_density__init__copy
+
+  ! ---------------------------------------------------------
   subroutine base_density_init_density(this, config)
     type(base_density_t), intent(out) :: this
     type(json_object_t),  intent(in)  :: config
@@ -268,11 +283,40 @@ contains
   end subroutine base_density_init_density
 
   ! ---------------------------------------------------------
-  subroutine base_density__start__(this, sim)
+  recursive subroutine base_density_init_copy(this, that)
+    type(base_density_t), intent(out) :: this
+    type(base_density_t), intent(in)    :: that
+
+    type(base_density_iterator_t) :: iter
+    type(base_density_t), pointer :: osub, isub
+    type(json_object_t),  pointer :: cnfg
+    integer                       :: ierr
+
+    PUSH_SUB(base_density_init_copy)
+
+    nullify(cnfg, osub, isub)
+    call base_density__init__(this, that)
+    call base_density_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_density_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_DENSITY_OK)exit
+      call base_density_new(this, osub)
+      call base_density_init(osub, isub)
+      call base_density__add__(this, osub, cnfg)
+    end do
+    call base_density_end(iter)
+    nullify(cnfg, osub, isub)
+
+    POP_SUB(base_density_init_copy)
+  end subroutine base_density_init_copy
+
+  ! ---------------------------------------------------------
+  subroutine base_density__istart__(this, sim)
     type(base_density_t),       intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    PUSH_SUB(base_density__start__)
+    PUSH_SUB(base_density__istart__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
@@ -281,13 +325,33 @@ contains
       call storage_start(this%total, sim, fine=.true.)
     call storage_start(this%data, sim, fine=.true.)
 
+    POP_SUB(base_density__istart__)
+  end subroutine base_density__istart__
+
+  ! ---------------------------------------------------------
+  subroutine base_density__start__(this, sim)
+    type(base_density_t),         intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
+
+    PUSH_SUB(base_density__start__)
+
+    if(present(sim))then
+      call base_density__istart__(this, sim)
+    else
+      if(.not.associated(this%sim))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%sim))
+        call base_density__istart__(this, this%prnt%sim)
+      end if
+    end if
+
     POP_SUB(base_density__start__)
   end subroutine base_density__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_density_start(this, sim)
-    type(base_density_t), intent(inout) :: this
-    type(simulation_t),   intent(in)    :: sim
+    type(base_density_t),         intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
 
     type(base_density_iterator_t) :: iter
     type(base_density_t), pointer :: subs

@@ -171,6 +171,7 @@ module base_geom_m
   interface base_geom__init__
     module procedure base_geom__init__begin
     module procedure base_geom__init__finish
+    module procedure base_geom__init__copy
     module procedure base_geom_iterator_init
   end interface base_geom__init__
 
@@ -181,6 +182,7 @@ module base_geom_m
 
   interface base_geom_init
     module procedure base_geom_init_geom
+    module procedure base_geom_init_copy
     module procedure base_geom_iterator_init
   end interface base_geom_init
 
@@ -403,6 +405,18 @@ contains
   end subroutine base_geom__init__finish
 
   ! ---------------------------------------------------------
+  subroutine base_geom__init__copy(this, that)
+    type(base_geom_t), intent(out) :: this
+    type(base_geom_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_geom__init__copy)
+    if(associated(that%config).and.associated(that%space))&
+      call base_geom__init__(this, that%space, that%config)
+    POP_SUB(base_geom__init__copy)
+    return
+  end subroutine base_geom__init__copy
+
+  ! ---------------------------------------------------------
   subroutine base_geom_init_geom(this, space, config)
     type(base_geom_t),   intent(out) :: this
     type(space_t),       intent(in)  :: space
@@ -414,6 +428,35 @@ contains
     POP_SUB(base_geom_init_geom)
     return
   end subroutine base_geom_init_geom
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_geom_init_copy(this, that)
+    type(base_geom_t), intent(out) :: this
+    type(base_geom_t), intent(in)  :: that
+    !
+    type(base_geom_iterator_t)   :: iter
+    type(base_geom_t),   pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_geom_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_geom__init__(this, that)
+    call base_geom_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_geom_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_GEOM_OK)exit
+      call base_geom_new(this, osub)
+      call base_geom_init(osub, isub)
+      call base_geom__add__(this, osub, cnfg)
+    end do
+    call base_geom_end(iter)
+    call base_geom__init__(this)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_geom_init_copy)
+    return
+  end subroutine base_geom_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_geom__add__(this, that, config)

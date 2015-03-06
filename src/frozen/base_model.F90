@@ -66,13 +66,13 @@ module base_model_m
 
   use simulation_m, only: &
     simulation__init__,   &
+    simulation__start__,  &
     simulation__add__,    &
     simulation__copy__,   &
     simulation__end__
 
   use simulation_m, only: &
     simulation_t,         &
-    simulation_start,     &
     simulation_set,       &
     simulation_get
 
@@ -162,6 +162,7 @@ module base_model_m
   interface base_model__init__
     module procedure base_model__init__begin
     module procedure base_model__init__finish
+    module procedure base_model__init__copy
   end interface base_model__init__
 
   interface base_model__copy__
@@ -171,6 +172,7 @@ module base_model_m
 
   interface base_model_init
     module procedure base_model_init_model
+    module procedure base_model_init_copy
     module procedure base_model_iterator_init
   end interface base_model_init
 
@@ -319,6 +321,22 @@ contains
   end subroutine base_model__init__finish
 
   ! ---------------------------------------------------------
+  subroutine base_model__init__copy(this, that)
+    type(base_model_t), intent(out) :: this
+    type(base_model_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_model__init__copy)
+    if(associated(that%config))then
+      call base_model__iinit__(this, that%config)
+      call simulation__init__(this%sim, that%sim)
+      call base_system__init__(this%sys, that%sys)
+      call base_hamiltonian__init__(this%hm, that%hm)
+    end if
+    POP_SUB(base_model__init__copy)
+    return
+  end subroutine base_model__init__copy
+
+  ! ---------------------------------------------------------
   subroutine base_model_init_model(this, config)
     type(base_model_t),  intent(out) :: this
     type(json_object_t), intent(in)  :: config
@@ -329,6 +347,35 @@ contains
     POP_SUB(base_model_init_model)
     return
   end subroutine base_model_init_model
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_model_init_copy(this, that)
+    type(base_model_t), intent(out) :: this
+    type(base_model_t), intent(in)  :: that
+    !
+    type(base_model_iterator_t)  :: iter
+    type(base_model_t),  pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_model_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_model__init__(this, that)
+    call base_model_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_model_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_MODEL_OK)exit
+      call base_model_new(this, osub)
+      call base_model_init(osub, isub)
+      call base_model__add__(this, osub, cnfg)
+    end do
+    call base_model_end(iter)
+    call base_model__init__(this)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_model_init_copy)
+    return
+  end subroutine base_model_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_model__istart__(this)
@@ -342,8 +389,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_model__start__(this, grid)
-    type(base_model_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
+    type(base_model_t),     intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
     !
     type(base_geom_t), pointer :: geom
     type(geometry_t),  pointer :: geo
@@ -351,13 +398,17 @@ contains
     PUSH_SUB(base_model__start__)
     nullify(geom, geo)
     call base_model__istart__(this)
-    call base_system_get(this%sys, geom)
-    ASSERT(associated(geom))
-    call base_geom_get(geom, geo)
-    ASSERT(associated(geo))
-    nullify(geom)
-    call simulation_start(this%sim, grid, geo)
-    nullify(geo)
+    if(present(grid))then
+      call base_system_get(this%sys, geom)
+      ASSERT(associated(geom))
+      call base_geom_get(geom, geo)
+      ASSERT(associated(geo))
+      nullify(geom)
+      call simulation__start__(this%sim, grid, geo)
+      nullify(geo)
+    else
+      call simulation__start__(this%sim)
+    end if
     call base_system__start__(this%sys, this%sim)
     call base_hamiltonian__start__(this%hm, this%sim)
     POP_SUB(base_model__start__)
@@ -366,8 +417,8 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_start(this, grid)
-    type(base_model_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
+    type(base_model_t),     intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
     !
     type(base_model_iterator_t) :: iter
     type(base_model_t), pointer :: subs

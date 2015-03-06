@@ -124,8 +124,14 @@ module base_states_m
     type(base_states_hash_iterator_t) :: iter
   end type base_states_iterator_t
 
+  interface base_states__init__
+    module procedure base_states__init__states
+    module procedure base_states__init__copy
+  end interface base_states__init__
+
   interface base_states_init
     module procedure base_states_init_states
+    module procedure base_states_init_copy
     module procedure base_states_iterator_init
   end interface base_states_init
 
@@ -246,22 +252,36 @@ contains
   end subroutine base_states__iinit__
     
   ! ---------------------------------------------------------
-  subroutine base_states__init__(this, config)
+  subroutine base_states__init__states(this, config)
     type(base_states_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
     !
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
     !
-    PUSH_SUB(base_states__init__)
+    PUSH_SUB(base_states__init__states)
     nullify(cnfg)
     call base_states__iinit__(this, config)
     call json_get(this%config, "density", cnfg, ierr)
     if(ierr==JSON_OK)call base_density__init__(this%density, cnfg)
     nullify(cnfg)
-    POP_SUB(base_states__init__)
+    POP_SUB(base_states__init__states)
     return
-  end subroutine base_states__init__
+  end subroutine base_states__init__states
+    
+  ! ---------------------------------------------------------
+  subroutine base_states__init__copy(this, that)
+    type(base_states_t), intent(out) :: this
+    type(base_states_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_states__init__copy)
+    if(associated(that%config))then
+      call base_states__iinit__(this, that%config)
+      call base_density__init__(this%density, that%density)
+    end if
+    POP_SUB(base_states__init__copy)
+    return
+  end subroutine base_states__init__copy
     
   ! ---------------------------------------------------------
   subroutine base_states_init_states(this, config)
@@ -274,6 +294,34 @@ contains
     return
   end subroutine base_states_init_states
     
+  ! ---------------------------------------------------------
+  recursive subroutine base_states_init_copy(this, that)
+    type(base_states_t), intent(out) :: this
+    type(base_states_t), intent(in)  :: that
+    !
+    type(base_states_iterator_t) :: iter
+    type(base_states_t), pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_states_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_states__init__(this, that)
+    call base_states_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_states_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_STATES_OK)exit
+      call base_states_new(this, osub)
+      call base_states_init(osub, isub)
+      call base_states__add__(this, osub, cnfg)
+    end do
+    call base_states_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_states_init_copy)
+    return
+  end subroutine base_states_init_copy
+
   ! ---------------------------------------------------------
   subroutine base_states__istart__(this, sim)
     type(base_states_t),        intent(inout) :: this
@@ -289,11 +337,19 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states__start__(this, sim)
-    type(base_states_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_states_t),          intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
     !
     PUSH_SUB(base_states__start__)
-    call base_states__istart__(this, sim)
+    if(present(sim))then
+      call base_states__istart__(this, sim)
+    else
+      if(.not.associated(this%sim))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%sim))
+        call base_states__istart__(this, this%prnt%sim)
+      end if
+    end if
     call base_density__start__(this%density, sim)
     POP_SUB(base_states__start__)
     return
@@ -301,8 +357,8 @@ contains
     
   ! ---------------------------------------------------------
   recursive subroutine base_states_start(this, sim)
-    type(base_states_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_states_t),          intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
     !
     type(base_states_iterator_t) :: iter
     type(base_states_t), pointer :: subs
@@ -516,8 +572,8 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states__icopy__(this, that)
-    type(base_states_t), intent(out) :: this
-    type(base_states_t), intent(in)  :: that
+    type(base_states_t), intent(inout) :: this
+    type(base_states_t), intent(in)    :: that
     !
     PUSH_SUB(base_states__icopy__)
     call base_states__iend__(this)
@@ -533,8 +589,8 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states__copy__(this, that)
-    type(base_states_t), intent(out) :: this
-    type(base_states_t), intent(in)  :: that
+    type(base_states_t), intent(inout) :: this
+    type(base_states_t), intent(in)    :: that
     !
     PUSH_SUB(base_states__copy__)
     call base_states__icopy__(this, that)

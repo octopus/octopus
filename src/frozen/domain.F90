@@ -38,8 +38,8 @@ module domain_m
   use messages_m
   use profiling_m
 
-  use json_m,   only: operator(==), json_object_t, json_hash
-  use kinds_m,  only: wp
+  use json_m,  only: operator(==), json_object_t, json_hash
+  use kinds_m, only: wp
 
   use kinds_m,     only: wp
   use geometry_m,  only: geometry_t
@@ -107,6 +107,7 @@ module domain_m
 
   interface domain_init
     module procedure domain_init_domain
+    module procedure domain_init_copy
     module procedure domain_iterator_init
   end interface domain_init
 
@@ -157,6 +158,17 @@ contains
   end subroutine domain_new
 
   ! ---------------------------------------------------------
+  subroutine domain__idel__(this)
+    type(domain_t), pointer :: this
+    !
+    PUSH_SUB(domain__idel__)
+    SAFE_DEALLOCATE_P(this)
+    nullify(this)
+    POP_SUB(domain__idel__)
+    return
+  end subroutine domain__idel__
+
+  ! ---------------------------------------------------------
   subroutine domain_del(this)
     type(domain_t), pointer :: this
     !
@@ -165,7 +177,7 @@ contains
       if(associated(this%prnt))then
         call domain_list_del(this%prnt%list, this)
         call domain_end(this)
-        SAFE_DEALLOCATE_P(this)
+        call domain__idel__(this)
       end if
     end if
     POP_SUB(domain_del)
@@ -206,25 +218,74 @@ contains
   end subroutine domain_init_domain
 
   ! ---------------------------------------------------------
-  subroutine domain__start__(this, sb, geo)
+  recursive subroutine domain_init_copy(this, that)
+    type(domain_t), intent(out) :: this
+    type(domain_t), intent(in)  :: that
+    !
+    type(domain_iterator_t)      :: iter
+    type(domain_t),      pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(domain_init_copy)
+    nullify(cnfg, osub, isub)
+    call domain__init__(this)
+    call domain_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call domain_next(iter, cnfg, isub, ierr)
+      if(ierr/=DOMAIN_OK)exit
+      call domain_new(this, osub)
+      call domain_init(osub, isub)
+      call domain__add__(this, osub, cnfg)
+    end do
+    call domain_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(domain_init_copy)
+    return
+  end subroutine domain_init_copy
+
+  ! ---------------------------------------------------------
+  subroutine domain__istart__(this, sb, geo)
     type(domain_t),            intent(out) :: this
     type(simul_box_t), target, intent(in)  :: sb
     type(geometry_t),  target, intent(in)  :: geo
     !
-    PUSH_SUB(domain__start__)
+    PUSH_SUB(domain__istart__)
     ASSERT(.not.associated(this%sb))
     ASSERT(.not.associated(this%geo))
     this%sb=>sb
     this%geo=>geo
+    POP_SUB(domain__istart__)
+    return
+  end subroutine domain__istart__
+
+  ! ---------------------------------------------------------
+  subroutine domain__start__(this, sb, geo)
+    type(domain_t),              intent(out) :: this
+    type(simul_box_t), optional, intent(in)  :: sb
+    type(geometry_t),  optional, intent(in)  :: geo
+    !
+    PUSH_SUB(domain__start__)
+    if(present(sb).and.present(geo))then
+      call domain__istart__(this, sb, geo)
+    else
+      if((.not.associated(this%sb)).and.(.not.associated(this%geo)))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%sb))
+        ASSERT(associated(this%prnt%geo))
+        call domain__istart__(this, this%prnt%sb, this%prnt%geo)
+      end if
+    end if
     POP_SUB(domain__start__)
     return
   end subroutine domain__start__
 
   ! ---------------------------------------------------------
   subroutine domain_start(this, sb, geo)
-    type(domain_t),    intent(out) :: this
-    type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
+    type(domain_t),              intent(out) :: this
+    type(simul_box_t), optional, intent(in)  :: sb
+    type(geometry_t),  optional, intent(in)  :: geo
     !
     PUSH_SUB(domain_start)
     call domain__start__(this, sb, geo)
@@ -362,7 +423,7 @@ contains
       call domain_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call domain_end(subs)
-      SAFE_DEALLOCATE_P(subs)
+      call domain__idel__(subs)
     end do
     nullify(subs)
     call domain__end__(this)

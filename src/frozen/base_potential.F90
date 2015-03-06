@@ -154,6 +154,7 @@ module base_potential_m
 
   interface base_potential__init__
     module procedure base_potential__init__potential
+    module procedure base_potential__init__copy
     module procedure base_potential_intrpl_init
   end interface base_potential__init__
 
@@ -301,6 +302,18 @@ contains
   end subroutine base_potential__init__potential
 
   ! ---------------------------------------------------------
+  subroutine base_potential__init__copy(this, that)
+    type(base_potential_t), intent(out) :: this
+    type(base_potential_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_potential__init__copy)
+    if(associated(that%config).and.associated(that%sys))&
+      call base_potential__init__(this, that%sys, that%config)
+    POP_SUB(base_potential__init__copy)
+    return
+  end subroutine base_potential__init__copy
+
+  ! ---------------------------------------------------------
   subroutine base_potential_init_potential(this, sys, config)
     type(base_potential_t), intent(out) :: this
     type(base_system_t),    intent(in)  :: sys
@@ -313,38 +326,70 @@ contains
   end subroutine base_potential_init_potential
 
   ! ---------------------------------------------------------
-  subroutine base_potential_init_copy(this, that)
+  recursive subroutine base_potential_init_copy(this, that)
     type(base_potential_t), intent(out) :: this
     type(base_potential_t), intent(in)  :: that
     !
+    type(base_potential_iterator_t) :: iter
+    type(base_potential_t), pointer :: osub, isub
+    type(json_object_t),    pointer :: cnfg
+    integer                         :: ierr
+    !
     PUSH_SUB(base_potential_init_copy)
-    ASSERT(associated(that%config))
-    ASSERT(associated(that%sys))
-    ASSERT(associated(that%sim))
-    call base_potential__init__(this, that%sys, that%config)
-    call base_potential__start__(this, that%sim)
+    nullify(cnfg, osub, isub)
+    call base_potential__init__(this, that)
+    call base_potential_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_potential_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_POTENTIAL_OK)exit
+      call base_potential_new(this, osub)
+      call base_potential_init(osub, isub)
+      call base_potential__add__(this, osub, cnfg)
+    end do
+    call base_potential_end(iter)
+    nullify(cnfg, osub, isub)
     POP_SUB(base_potential_init_copy)
     return
   end subroutine base_potential_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_potential__start__(this, sim)
+  subroutine base_potential__istart__(this, sim)
     type(base_potential_t),     intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
     !
-    PUSH_SUB(base_potential__start__)
+    PUSH_SUB(base_potential__istart__)
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
     call storage_start(this%data, sim)
+    POP_SUB(base_potential__istart__)
+    return
+  end subroutine base_potential__istart__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__start__(this, sim)
+    type(base_potential_t),       intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
+    !
+    PUSH_SUB(base_potential__start__)
+    if(present(sim))then
+      call base_potential__istart__(this, sim)
+    else
+      if(.not.associated(this%sim))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%sim))
+        call base_potential__istart__(this, this%prnt%sim)
+      end if
+    end if
     POP_SUB(base_potential__start__)
     return
   end subroutine base_potential__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_potential_start(this, sim)
-    type(base_potential_t), intent(inout) :: this
-    type(simulation_t),     intent(in)    :: sim
+    type(base_potential_t),       intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
     !
     type(base_potential_iterator_t) :: iter
     type(base_potential_t), pointer :: subs

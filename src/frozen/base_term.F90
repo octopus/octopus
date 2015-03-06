@@ -108,8 +108,14 @@ module base_term_m
     type(base_term_hash_iterator_t) :: iter
   end type base_term_iterator_t
 
+  interface base_term__init__
+    module procedure base_term__init__term
+    module procedure base_term__init__copy
+  end interface base_term__init__
+
   interface base_term_init
     module procedure base_term_init_term
+    module procedure base_term_init_copy
     module procedure base_term_iterator_init
   end interface base_term_init
 
@@ -209,21 +215,33 @@ contains
   end subroutine base_term__inull__
 
   ! ---------------------------------------------------------
-  subroutine base_term__init__(this, sys, config)
+  subroutine base_term__init__term(this, sys, config)
     type(base_term_t),           intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
     !
-    PUSH_SUB(base_term__init__)
+    PUSH_SUB(base_term__init__term)
     call base_term__inull__(this)
     this%config=>config
     this%sys=>sys
     call config_dict_init(this%dict)
     call base_term_hash_init(this%hash)
     call base_term_list_init(this%list)
-    POP_SUB(base_term__init__)
+    POP_SUB(base_term__init__term)
     return
-  end subroutine base_term__init__
+  end subroutine base_term__init__term
+
+  ! ---------------------------------------------------------
+  subroutine base_term__init__copy(this, that)
+    type(base_term_t), intent(out) :: this
+    type(base_term_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_term__init__copy)
+    if(associated(that%config).and.associated(that%sys))&
+      call base_term__init__(this, that%sys, that%config)
+    POP_SUB(base_term__init__copy)
+    return
+  end subroutine base_term__init__copy
 
   ! ---------------------------------------------------------
   subroutine base_term_init_term(this, sys, config)
@@ -236,6 +254,34 @@ contains
     POP_SUB(base_term_init_term)
     return
   end subroutine base_term_init_term
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_term_init_copy(this, that)
+    type(base_term_t), intent(out) :: this
+    type(base_term_t), intent(in)  :: that
+    !
+    type(base_term_iterator_t)   :: iter
+    type(base_term_t),   pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_term_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_term__init__(this, that)
+    call base_term_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_term_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_TERM_OK)exit
+      call base_term_new(this, osub)
+      call base_term_init(osub, isub)
+      call base_term__add__(this, osub, cnfg)
+    end do
+    call base_term_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_term_init_copy)
+    return
+  end subroutine base_term_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_term__update__(this)
@@ -381,8 +427,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_term__copy__(this, that)
-    type(base_term_t), intent(out) :: this
-    type(base_term_t), intent(in)  :: that
+    type(base_term_t), intent(inout) :: this
+    type(base_term_t), intent(in)    :: that
     !
     PUSH_SUB(base_term__copy__)
     call  base_term__end__(this)

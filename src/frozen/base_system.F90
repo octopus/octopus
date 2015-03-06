@@ -148,6 +148,7 @@ module base_system_m
   interface base_system__init__
     module procedure base_system__init__begin
     module procedure base_system__init__finish
+    module procedure base_system__init__copy
   end interface base_system__init__
 
   interface base_system__copy__
@@ -157,6 +158,7 @@ module base_system_m
 
   interface base_system_init
     module procedure base_system_init_system
+    module procedure base_system_init_copy
     module procedure base_system_iterator_init
   end interface base_system_init
 
@@ -309,6 +311,21 @@ contains
   end subroutine base_system__init__finish
 
   ! ---------------------------------------------------------
+  subroutine base_system__init__copy(this, that)
+    type(base_system_t), intent(out) :: this
+    type(base_system_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_system__init__copy)
+    if(associated(that%config))then
+      call base_system__iinit__(this, that%config)
+      call base_geom__init__(this%geom, that%geom)
+      call base_states__init__(this%st, that%st)
+    end if
+    POP_SUB(base_system__init__copy)
+    return
+  end subroutine base_system__init__copy
+
+  ! ---------------------------------------------------------
   subroutine base_system_init_system(this, config)
     type(base_system_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
@@ -319,6 +336,35 @@ contains
     POP_SUB(base_system_init_system)
     return
   end subroutine base_system_init_system
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_init_copy(this, that)
+    type(base_system_t), intent(out) :: this
+    type(base_system_t), intent(in)  :: that
+    !
+    type(base_system_iterator_t) :: iter
+    type(base_system_t), pointer :: osub, isub
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_system_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_system__init__(this, that)
+    call base_system_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_system_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call base_system_new(this, osub)
+      call base_system_init(osub, isub)
+      call base_system__add__(this, osub, cnfg)
+    end do
+    call base_system_end(iter)
+    call base_system__init__(this)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_system_init_copy)
+    return
+  end subroutine base_system_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_system__istart__(this, sim)
@@ -335,11 +381,19 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_system__start__(this, sim)
-    type(base_system_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_system_t),          intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
     !
     PUSH_SUB(base_system__start__)
-    call base_system__istart__(this, sim)
+    if(present(sim))then
+      call base_system__istart__(this, sim)
+    else
+      if(.not.associated(this%sim))then
+        ASSERT(associated(this%prnt))
+        ASSERT(associated(this%prnt%sim))
+        call base_system__istart__(this, this%prnt%sim)
+      end if
+    end if
     call base_states__start__(this%st, sim)
     POP_SUB(base_system__start__)
     return
@@ -347,8 +401,8 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine base_system_start(this, sim)
-    type(base_system_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_system_t),          intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
     !
     type(base_system_iterator_t) :: iter
     type(base_system_t), pointer :: subs
