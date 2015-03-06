@@ -115,17 +115,6 @@ module math_m
   end interface sort
   !------------------------------------------------------------------------------
 
-  !> Euler McLaurin Integration constants
-  FLOAT, public, parameter :: EMcLCoeff(1:5) =  &
-    (/                                          &
-    CNST(    95.0)/CNST(288.0),                 &
-    CNST(   317.0)/CNST(240.0),                 &
-    CNST(    23.0)/CNST( 30.0),                 &
-    CNST(   793.0)/CNST(720.0),                 &
-    CNST(   157.0)/CNST(160.0)                  &
-    /)
-
-
   !> This operator is .true. if the two operands are approximately
   !! equal (i.e. equal to within APP_THRESHOLD). For arrays, all
   !! elements have to be approximately equal.
