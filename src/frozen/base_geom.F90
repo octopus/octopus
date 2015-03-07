@@ -63,13 +63,14 @@ module base_geom_m
   use json_m,   only: operator(==), json_object_t, json_hash
   use kinds_m,  only: wp
 
-  use atom_m,    only: atom_t, atom_set_species, atom_get_label, atom_end
-  use basis_m,   only: basis_t, basis_init, basis_to_external, basis_end
-  use json_m,    only: JSON_OK
-  use json_m,    only: json_object_t, json_init, json_get, json_end
-  use json_m,    only: json_array_t, json_array_iterator_t, json_len, json_next
-  use space_m,   only: operator(==), space_t
-  use species_m, only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
+  use atom_m,        only: atom_t, atom_set_species, atom_get_label, atom_end
+  use basis_m,       only: basis_t, basis_init, basis_to_external, basis_end
+  use distributed_m, only: distributed_nullify
+  use json_m,        only: JSON_OK
+  use json_m,        only: json_object_t, json_init, json_get, json_end
+  use json_m,        only: json_array_t, json_array_iterator_t, json_len, json_next
+  use space_m,       only: operator(==), space_t
+  use species_m,     only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
 
   use config_dict_m, only: &
     CONFIG_DICT_OK,        &
@@ -85,7 +86,6 @@ module base_geom_m
 
   use geometry_m, only:             &
     geometry_t,                     &
-    geometry_nullify,               &
     geometry_init_from_data_object, &
     geometry_end
 
@@ -268,7 +268,7 @@ contains
     integer                    :: indx, ierr
     !
     PUSH_SUB(base_geom_build_geometry)
-    call geometry_nullify(geo)
+    !call geometry_end(geo)
     geo%natoms=atom_list_len(this%alst)
     ASSERT(geo%natoms>0)
     SAFE_ALLOCATE(geo%atom(geo%natoms))
@@ -295,6 +295,17 @@ contains
     end do
     call base_geom_end(iter)
     nullify(atom, spec)
+    geo%ncatoms=0
+    geo%catom=>null()
+    geo%only_user_def=.false.
+    geo%species_time_dependent=.false.
+    geo%kinetic_energy=M_ZERO
+    geo%nlpp=.false.
+    geo%nlcc=.false.
+    call distributed_nullify(geo%atoms_dist, geo%natoms)
+    nullify(geo%ionic_interaction_type)
+    nullify(geo%ionic_interaction_parameter)
+    geo%reduced_coordinates=.false.
     POP_SUB(base_geom_build_geometry)
     return
   end subroutine base_geom_build_geometry
@@ -385,7 +396,6 @@ contains
       end if
       nullify(this%pgeo)
       SAFE_ALLOCATE(this%pgeo)
-      call geometry_nullify(this%pgeo)
       call base_geom_build_geometry(this, this%pgeo, this%space)
     else
       this%pgeo=>this%igeo
