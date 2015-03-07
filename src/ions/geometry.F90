@@ -116,7 +116,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_nullify(this)
-    type(geometry_t), intent(out) :: this
+    type(geometry_t), intent(inout) :: this
 
     PUSH_SUB(geometry_nullify)
 
@@ -430,13 +430,15 @@ contains
     type(geometry_t),      intent(out) :: this
     type(space_t), target, intent(in)  :: space
     type(json_object_t),   intent(in)  :: json
-    !
+
     type(json_object_t), pointer :: spec, atom
     type(json_array_t),  pointer :: species, atoms
     character(len=LABEL_LEN)     :: label
     integer                      :: i, j, ierr
-    !
+
     PUSH_SUB(geometry_init_from_data_object)
+
+    call geometry_nullify(this)
     this%space=>space
     call json_get(json, "nspecies", this%nspecies, ierr)
     if(ierr/=JSON_OK)then
@@ -519,17 +521,8 @@ contains
       end if
       call atom_classical_init_from_data_object(this%catom(i), atom)
     end do
-    this%only_user_def=.false.
-    this%species_time_dependent=.false.
-    this%kinetic_energy=M_ZERO
-    this%nlpp=.false.
-    this%nlcc=.false.
-    call distributed_nullify(this%atoms_dist, this%natoms)
-    nullify(this%ionic_interaction_type)
-    nullify(this%ionic_interaction_parameter)
-    this%reduced_coordinates=.false.
+
     POP_SUB(geometry_init_from_data_object)
-    return
   end subroutine geometry_init_from_data_object
 
   ! ---------------------------------------------------------
