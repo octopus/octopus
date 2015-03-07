@@ -268,7 +268,7 @@ contains
     integer                    :: indx, ierr
     !
     PUSH_SUB(base_geom_build_geometry)
-    call geometry_end(geo)
+    !call geometry_end(geo)
     geo%natoms=atom_list_len(this%alst)
     ASSERT(geo%natoms>0)
     SAFE_ALLOCATE(geo%atom(geo%natoms))

@@ -510,6 +510,7 @@ contains
     !
     PUSH_SUB(INTERNAL(hash_get_list_pair))
     call INTERNAL(hash_get_list)(this, key, list)
+    ASSERT(associated(list))
     call EXTERNAL(LIST,init)(iter, list)
     do
       nullify(pair, pkey)

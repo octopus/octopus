@@ -611,8 +611,10 @@ contains
     !
     PUSH_SUB(INTERNAL(list_iterator_init))
     nullify(this%prev, this%node, this%next)
-    this%node=>that%head
-    this%next=>this%node%next
+    if(associated(that%head))then
+       this%node=>that%head
+       this%next=>this%node%next
+    end if
     POP_SUB(INTERNAL(list_iterator_init))
     return
   end subroutine INTERNAL(list_iterator_init)
@@ -633,9 +635,13 @@ contains
       prev=>this%prev
       node=>this%node
       next=>this%next
-      this%prev=>this%node
-      this%node=>this%next
-      this%next=>this%node%next
+      if(associated(this%next))then
+        this%prev=>this%node
+        this%node=>this%next
+        this%next=>this%node%next
+      else
+        call INTERNAL(list_iterator_end)(this)
+      end if
     end if
     POP_SUB(INTERNAL(list_iterator_next_node))
     return
@@ -722,9 +728,12 @@ contains
     type(TEMPLATE(list_iterator_t)), intent(in)    :: that
     !
     PUSH_SUB(INTERNAL(list_iterator_copy))
-    nullify(this%node)
-    if(associated(that%node))&
+    call INTERNAL(list_iterator_end)(this)
+    if(associated(that%node))then
+      this%prev=>that%prev
       this%node=>that%node
+      this%next=>that%next
+    end if
     POP_SUB(INTERNAL(list_iterator_copy))
     return
   end subroutine INTERNAL(list_iterator_copy)
@@ -733,7 +742,7 @@ contains
   elemental subroutine INTERNAL(list_iterator_end)(this)
     type(TEMPLATE(list_iterator_t)), intent(inout) :: this
     !
-    nullify(this%node)
+    nullify(this%prev, this%node, this%next)
     return
   end subroutine INTERNAL(list_iterator_end)
 
