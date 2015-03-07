@@ -47,6 +47,7 @@ module geometry_m
   private
   public ::                          &
     geometry_t,                      &
+    geometry_nullify,                &
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
@@ -113,6 +114,29 @@ module geometry_m
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine geometry_nullify(this)
+    type(geometry_t), intent(out) :: this
+
+    PUSH_SUB(geometry_nullify)
+
+    nullify(this%space, this%atom, this%catom, this%species)
+    this%natoms=0
+    this%ncatoms=0
+    this%nspecies=0
+    this%only_user_def=.false.
+    this%species_time_dependent=.false.
+    this%kinetic_energy=M_ZERO
+    this%nlpp=.false.
+    this%nlcc=.false.
+    call distributed_nullify(this%atoms_dist, 0)
+    nullify(this%ionic_interaction_type, this%ionic_interaction_parameter)
+    this%reduced_coordinates=.false.
+    this%periodic_dim=0
+    this%lsize=M_ZERO
+
+    POP_SUB(geometry_nullify)
+  end subroutine geometry_nullify
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)
