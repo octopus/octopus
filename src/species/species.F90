@@ -1425,9 +1425,8 @@ contains
       
       call messages_write('Found  a species  with the old format.  Please update', new_line = .true.)
       call messages_write('the Species block to the new format, where the second', new_line = .true.)
-      call messages_write('column indicates the type of the species  rather than', new_line = .true.)
-      call messages_write('the mass.')
-      call messages_warning()
+      call messages_write('column indicates the type of the species.')
+      call messages_fatal()
     end if
 
     ! now we convert back to positive
