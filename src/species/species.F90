@@ -107,7 +107,8 @@ module species_m
 
   integer, public, parameter ::             &
     PSEUDO_SET_STANDARD = 1,                &
-    PSEUDO_SET_SG15     = 2
+    PSEUDO_SET_SG15     = 2,                &
+    PSEUDO_SET_HGH      = 3
     
   type species_t
     private
@@ -221,11 +222,14 @@ contains
     !% PBE pseudopotentials developed by Schlipf and Gygi (M. Schlipf
     !% and F. Gygi, (2015) arXiv:1502.00995). This set provides
     !% pseudopotentials for most elements.
+    !%Option hgh 3
+    !% (experimental) The set of Hartwigsen-Goedecker-Hutter pseudopotentials.
     !%End
 
     call parse_integer('PseudopotentialSet', PSEUDO_SET_STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
     if(pseudo_set == PSEUDO_SET_SG15) call messages_experimental('PseudopotentialSet = sg15')
+    if(pseudo_set == PSEUDO_SET_HGH) call messages_experimental('PseudopotentialSet = hgh')
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -464,6 +468,8 @@ contains
       fname = trim(conf%share)//'/pseudopotentials/standard.set'
     case(PSEUDO_SET_SG15)
       fname = trim(conf%share)//'/pseudopotentials/sg15.set'
+    case(PSEUDO_SET_HGH)
+      fname = trim(conf%share)//'/pseudopotentials/hgh.set'
     case default
       ASSERT(.false.)
     end select
@@ -1368,7 +1374,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols, ii
+    integer :: ncols
     type(element_t) :: element
     
     PUSH_SUB(read_from_block)
@@ -1390,13 +1396,7 @@ contains
         case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
           SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
           
-          do ii = 1, len(spec%label)
-            if( iachar(spec%label(ii:ii)) >= iachar('a') .and. iachar(spec%label(ii:ii)) <= iachar('z') ) cycle
-            if( iachar(spec%label(ii:ii)) >= iachar('A') .and. iachar(spec%label(ii:ii)) <= iachar('Z') ) cycle
-            exit
-          end do
-
-          call element_init(element, spec%label(1:ii - 1))
+          call element_init(element, spec%label)
           
           if(.not. element_valid(element)) then
             call messages_write('Cannot find mass for species '//trim(spec%label)//'.')

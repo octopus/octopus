@@ -51,11 +51,18 @@ contains
     type(element_t),   intent(out)   :: this
     character(len=*),  intent(in)    :: label
 
-    integer :: iunit, nelement, ii
+    integer :: iunit, nelement, ii, ilend
     character(len=MAX_PATH_LEN) :: fname
 
     PUSH_SUB(element_init)
     
+    do ilend = 1, len(label)
+      if( iachar(label(ilend:ilend)) >= iachar('a') .and. iachar(label(ilend:ilend)) <= iachar('z') ) cycle
+      if( iachar(label(ilend:ilend)) >= iachar('A') .and. iachar(label(ilend:ilend)) <= iachar('Z') ) cycle
+      exit
+    end do
+    ilend = ilend - 1
+          
     this%valid = .false.
 
     fname = trim(conf%share)//'/pseudopotentials/elements'
@@ -70,7 +77,7 @@ contains
 
     do ii = 1, nelement
       read(iunit, *) this%symbol, this%atomic_number, this%mass
-      if(trim(this%symbol) == trim(label)) then
+      if(trim(this%symbol) == label(1:ilend)) then
         this%valid = .true.
         exit
       end if
