@@ -2,9 +2,9 @@ CalculationMode = gs
 
 FromScratch = yes
 
-%Species
-  "He" | species_ps_hgh | default_mass | 2
-%
+PseudopotentialSet = hgh
+
+ExperimentalFeatures = yes
 
 %Coordinates
   "He" | 0 | 0 | 0 

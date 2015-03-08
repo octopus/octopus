@@ -10,9 +10,9 @@ BoxShape = minimum
 Radius  = 5.0
 Spacing = 0.35
 
-%Species
- "Xe" | species_ps_hgh | default_mass | 54
-%
+PseudopotentialSet = hgh
+
+ExperimentalFeatures = yes
 
 %Coordinates
   "Xe" | -1.5 | 0 | 0 
