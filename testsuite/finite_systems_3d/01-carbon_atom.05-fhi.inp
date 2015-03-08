@@ -15,7 +15,7 @@ units = ev_angstrom
 %
 
 %Species
-"C" | species_ps_fhi | default_mass | 6 | 1 | 1
+"C" | species_ps_fhi | default_mass | 6 | lmax | 1 | lloc | 1
 %
 
 spacing = 0.19

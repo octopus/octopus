@@ -12,7 +12,7 @@ Spacing = a/10
 %
 
 %Species
- 'Li' | species_ps_psf | 6.941 | 3 | 2 | 0
+ 'Li' | species_ps_psf | default_mass | 3 | lmax | 2 | lloc | 0
 %
 
 BoxShape = parallelepiped

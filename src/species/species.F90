@@ -109,6 +109,12 @@ module species_m
     PSEUDO_SET_STANDARD = 1,                &
     PSEUDO_SET_SG15     = 2,                &
     PSEUDO_SET_HGH      = 3
+
+  integer, parameter         ::             &
+    SPECIES_FLAG_RADIUS       = -10001,      &
+    SPECIES_FLAG_SPACING      = -10002,      &
+    SPECIES_FLAG_LMAX         = -10003,      &
+    SPECIES_FLAG_LLOC         = -10004
     
   type species_t
     private
@@ -430,6 +436,14 @@ contains
     !% pseudopotential and full-potential species, Octopus will guess
     !% the element from the name of species. For other species the
     !% default mass is 1.0.
+    !%Option min_radius -10001
+    !% The minimum radius of the box required for this species to be properly converged.
+    !%Option max_spacing -10002
+    !% The maximum spacing required for this species for converged results.
+    !%Option lmax -10003
+    !% The maximum angular momentum of the pseudopotential.
+    !%Option lloc -10004
+    !% The component of the pseudopotenital to be considered local.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1374,7 +1388,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols
+    integer :: ncols, icol, flag
     type(element_t) :: element
     
     PUSH_SUB(read_from_block)
@@ -1432,43 +1446,46 @@ contains
     ! now we convert back to positive
     spec%type = -spec%type
 
+    read_data = 3
+    
     select case(spec%type)
 
     case(SPECIES_SOFT_COULOMB)
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_float(blk, row, 4, spec%sc_alpha)
-      read_data = 5
+      read_data = read_data + 2
 
     case(SPECIES_USDEF) ! user-defined
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%user_def)
       call conv_to_C_string(spec%user_def)
-      read_data = 5
+      read_data = read_data + 2
 
     case(SPECIES_FROM_FILE)
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%filename)
-      read_data = 5
+      read_data = read_data + 2
 
     case(SPECIES_JELLIUM)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
+      read_data = read_data + 1
       if(ncols > 4) then
         call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
         if(spec%jradius <= M_ZERO) call input_error('Species')
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
-        read_data = 5
+        read_data = read_data + 1
       else
         spec%jradius = M_HALF
-        read_data = 4
       endif
       spec%Z_val = spec%Z
 
     case(SPECIES_JELLIUM_SLAB)
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium slab
       call parse_block_float(blk, row, 4, spec%jthick) ! thickness of the jellium slab
+      read_data = read_data + 2
       if(spec%jthick <= M_ZERO) call input_error('Species')
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
       spec%Z_val = spec%Z
@@ -1477,7 +1494,7 @@ contains
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
       call parse_block_float(blk, row, 3, spec%Z)
       spec%Z_val = spec%Z
-      read_data = 4
+      read_data = read_data + 1
       
       if (parse_block_cols(blk, row) <= 4) then
         spec%sigma = CNST(0.25)
@@ -1490,45 +1507,11 @@ contains
       call parse_block_float(blk, row, 3, spec%Z)
       call parse_block_string(blk, row, 4, spec%rho)
       spec%Z_val = spec%Z
-      read_data = 5
+      read_data = read_data + 2
 
     case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
       call parse_block_float(blk, row, 3, spec%Z)
-      read_data = 4
-
-      if(spec%type == SPECIES_PS_PSF .or. spec%type == SPECIES_PS_CPI .or. spec%type == SPECIES_PS_FHI) then
-        if(ncols > 4) then
-          call parse_block_integer(blk, row, 4, spec%lmax)
-          read_data = 5
-        end if
-
-        if(ncols > 5) then
-          call parse_block_integer(blk, row, 5, spec%lloc)
-          read_data = 6
-        end if
-
-        if(ncols > 5 .and. spec%lloc > spec%lmax) then
-          message(1) = "lloc > lmax in Species block for " // trim(spec%label) // "."
-          call messages_fatal(1)
-        endif
-      endif
-
-      if(ncols > read_data) then
-        call parse_block_float(blk, row, read_data, spec%def_h)
-        spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
-        read_data = read_data + 1
-      end if
-
-      if(ncols > read_data) then
-        call parse_block_float(blk, row, read_data, spec%def_rsize)
-        spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
-        read_data = read_data + 1
-      end if
-
-      if(ncols > read_data) then
-        message(1) = "Too many columns in Species block for " // trim(spec%label) // "."
-        call messages_fatal(1)
-      endif
+      read_data = read_data + 1
 
     case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
@@ -1538,11 +1521,37 @@ contains
       call parse_block_string(blk, row, 4, spec%filename)
       call parse_block_integer(blk, row, 5, spec%lmax)
       call parse_block_integer(blk, row, 6, spec%lloc)
-      read_data = 8
+      read_data = read_data + 4
 
     case default
       call input_error('Species')
     end select
+
+    icol = read_data
+    do
+
+      print*, icol, ncols
+      if(icol >= ncols) exit
+
+      call parse_block_integer(blk, row, icol, flag)
+      print*, "flag ", flag
+      
+      select case(flag)
+      case(SPECIES_FLAG_RADIUS)
+        call parse_block_float(blk, row, icol + 1, spec%def_h)
+      case(SPECIES_FLAG_SPACING)
+        call parse_block_float(blk, row, icol + 1, spec%def_rsize)
+      case(SPECIES_FLAG_LMAX)
+        call parse_block_integer(blk, row, icol + 1, spec%lmax)
+      case(SPECIES_FLAG_LLOC)
+        call parse_block_integer(blk, row, icol + 1, spec%lloc)
+      case default
+        call messages_write('Unknown flag in species block')
+        call messages_fatal()
+      end select
+
+      icol = icol + 2        
+    end do
 
     POP_SUB(read_from_block)
   end subroutine read_from_block
