@@ -1357,10 +1357,10 @@ contains
     read_data = 8
 
     ! get the mass for this element
-    call element_init(element, label)
-    ASSERT(element_valid(element))
-    spec%mass = element_mass(element)
-    call element_end(element)
+    call element%init(label)
+    ASSERT(element%valid())
+    spec%mass = element%mass()
+    call element%end()
     
     POP_SUB(read_from_default_file)
   end subroutine read_from_default_file
@@ -1396,16 +1396,16 @@ contains
         case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
           SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
           
-          call element_init(element, spec%label)
+          call element%init(spec%label)
           
-          if(.not. element_valid(element)) then
+          if(.not. element%valid()) then
             call messages_write('Cannot find mass for species '//trim(spec%label)//'.')
             call messages_fatal()
           end if
           
-          spec%mass = element_mass(element)
+          spec%mass = element%mass()
         
-          call element_end(element)
+          call element%end()
 
         case default
           spec%mass = 1.0

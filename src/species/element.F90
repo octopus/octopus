@@ -30,25 +30,27 @@ module element_m
 
   private
   public ::             &
-    element_t,          &
-    element_init,       &
-    element_end,        &
-    element_mass,       &
-    element_valid
+    element_t
 
   type element_t
-    logical          :: valid
+    private
+    logical          :: valid_
     integer          :: atomic_number
     character(len=3) :: symbol
-    FLOAT            :: mass
+    FLOAT            :: mass_
+  contains
+    procedure        :: init
+    procedure        :: end
+    procedure        :: valid
+    procedure        :: mass
   end type element_t
   
 contains
 
   ! -----------------------------------
 
-  subroutine element_init(this, label)
-    type(element_t),   intent(out)   :: this
+  subroutine init(this, label)
+    class(element_t),   intent(out)   :: this
     character(len=*),  intent(in)    :: label
 
     integer :: iunit, nelement, ii, ilend
@@ -63,7 +65,7 @@ contains
     end do
     ilend = ilend - 1
           
-    this%valid = .false.
+    this%valid_ = .false.
 
     fname = trim(conf%share)//'/pseudopotentials/elements'
     
@@ -76,9 +78,9 @@ contains
     read(iunit, *)
 
     do ii = 1, nelement
-      read(iunit, *) this%symbol, this%atomic_number, this%mass
+      read(iunit, *) this%symbol, this%atomic_number, this%mass_
       if(trim(this%symbol) == label(1:ilend)) then
-        this%valid = .true.
+        this%valid_ = .true.
         exit
       end if
     end do
@@ -86,35 +88,35 @@ contains
     call io_close(iunit)
 
     POP_SUB(element_init)
-  end subroutine element_init
+  end subroutine init
   
   ! -----------------------------------
 
-  subroutine element_end(this)
-    type(element_t),   intent(inout) :: this
+  subroutine end(this)
+    class(element_t),   intent(inout) :: this
 
     PUSH_SUB(element_end)
     
-    this%valid = .false.
+    this%valid_ = .false.
 
     POP_SUB(element_end)
-  end subroutine element_end
+  end subroutine end
 
   ! ------------------------------------
 
-  pure FLOAT function element_mass(this) result(mass)
-    type(element_t),   intent(in)    :: this
+  pure FLOAT function mass(this)
+    class(element_t),   intent(in)    :: this
 
-    mass = this%mass
-  end function element_mass
+    mass = this%mass_
+  end function mass
 
   ! ------------------------------------
 
-  pure logical function element_valid(this) result(valid)
-    type(element_t),   intent(in)    :: this
+  pure logical function valid(this)
+    class(element_t),   intent(in)    :: this
 
-    valid = this%valid
-  end function element_valid
+    valid = this%valid_
+  end function valid
   
 end module element_m
 
