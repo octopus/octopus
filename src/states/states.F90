@@ -79,7 +79,7 @@ module states_m
     states_priv_t,                    &
     states_init,                      &
     states_look,                      &
-    states_add_states,                &
+    states_add_substates,             &
     states_densities_init,            &
     states_exec_init,                 &
     states_allocate_wfns,             &
@@ -573,19 +573,19 @@ contains
   !> Sets the pointer to the substates
   !> must be called before states_densities_init
   ! ---------------------------------------------------------
-  subroutine states_add_states(this, st)
+  subroutine states_add_substates(this, st)
     type(states_t),              intent(inout) :: this
     type(ssys_states_t), target, intent(in)    :: st
 
-    PUSH_SUB(states_add_states)
+    PUSH_SUB(states_add_substates)
 
     !> Substates are not compatible with complex scaling for now.
     ASSERT(.not.(this%cmplxscl%space.or.this%cmplxscl%time))
     ASSERT(.not.associated(this%subsys_st))
     this%subsys_st=>st
 
-    POP_SUB(states_add_states)
-  end subroutine states_add_states
+    POP_SUB(states_add_substates)
+  end subroutine states_add_substates
  
   ! ---------------------------------------------------------
   !> Reads the 'states' file in the restart directory, and finds out
@@ -1542,6 +1542,8 @@ contains
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
+    
+    !> Deallocates or nullifies pointer.
     call ssys_states_del(st%subsys_st)
 
     SAFE_DEALLOCATE_P(st%occ)
