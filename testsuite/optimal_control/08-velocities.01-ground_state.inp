@@ -31,9 +31,9 @@ TheoryLevel = independent_particles
 #"atom1" | species_user_defined | "-1/sqrt(a^2+(x)^2)" | valence | 1
 #%
 
-a = 0.758^2
+a = 0.758
 %Species
-"atom1" | species_soft_coulomb | a | valence | 1 
+"atom1" | species_soft_coulomb | softening | a | valence | 1 
 %
 
 %Coordinates

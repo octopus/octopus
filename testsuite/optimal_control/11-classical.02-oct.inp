@@ -15,8 +15,8 @@ Radius =  9.0
 TheoryLevel = independent_particles
 
 %Species
-"sc"  | species_soft_coulomb | 1.0 | mass | 10*0.0005485799110 | valence | 1
-"sc2" | species_soft_coulomb | 1.0 | mass | 10*0.0005485799110 | valence | 2
+"sc"  | species_soft_coulomb | softening | 1.0 | mass | 10*0.0005485799110 | valence | 1
+"sc2" | species_soft_coulomb | softening | 1.0 | mass | 10*0.0005485799110 | valence | 2
 %
 
 %Coordinates

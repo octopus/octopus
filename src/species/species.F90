@@ -118,7 +118,8 @@ module species_m
     SPECIES_FLAG_MASS              = -10005,     &
     SPECIES_FLAG_VALENCE           = -10006,     &
     SPECIES_FLAG_JELLIUM_RADIUS    = -10007,     &
-    SPECIES_FLAG_GAUSSIAN_WIDTH    = -10008
+    SPECIES_FLAG_GAUSSIAN_WIDTH    = -10008,     &
+    SPECIES_FLAG_SOFTENING         = -10009
   
   type species_t
     private
@@ -310,27 +311,30 @@ contains
     !% octopus homepage</a> or from other sources. As explained below,
     !% several pseudopotential formats are supported.
     !%
-    !% The format of this block is the following: The first field is
-    !% the name of the species. The second defines the type of species
-    !% (the valid options are detailed below). The third is the atomic
-    !% mass (in atomic mass units, <i>i.e.</i> the mass of a proton is
-    !% roughly one). The fourth is the atomic number (or valence charge
-    !% for non-atomic species).  Some types may need some parameters
-    !% given in the remaining fields of the row.  Note:
-    !% pseudopotentials may only be used in 3D.
+    !% Note: pseudopotentials may only be used in 3D.
     !%
-    !% In 3D, <i>e.g.</i>
+    !% The format of this block is the following: The first field is a
+    !% string that defines the name of the species. The second field
+    !% defines the type of species (the valid options are detailed
+    !% below).
+    !%
+    !% Then a list of parameters follows. The parameters are specified
+    !% by a first field with the parameter name and the field that
+    !% follows with the value of the parameter.
+    !%
+    !% This is an example of possible species:
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | species_ps_psf         |  15.9994 |  8 | 1 | 1
-    !% <br>&nbsp;&nbsp;'H'       | species_ps_hgh         |   1.0079 |  1
-    !% <br>&nbsp;&nbsp;'Xe'      | species_ps_upf         | 131.29   | 54
-    !% <br>&nbsp;&nbsp;'C'       | species_ps_qso         |  12.01   | 12
-    !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        |  23.2    |  8 | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density |  17.0    |  6 | "exp(-r/a)"
-    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   |   0.0    |  8 | "1/2*r^2"
-    !% <br>&nbsp;&nbsp;'H_all'   | species_full_delta     |   1.0079 |  1
-    !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |   1.0079 |  1
+    !% <br>&nbsp;&nbsp;'O'       | species_ps_psf         | lmax |  1 | lloc | 1
+    !% <br>&nbsp;&nbsp;'H'       | species_ps_hgh         
+    !% <br>&nbsp;&nbsp;'Xe'      | species_ps_upf         | mass | 131.29
+    !% <br>&nbsp;&nbsp;'C'       | species_ps_qso         
+    !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
+    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density |  "exp(-r/a)" | mass | 17.0 | valence | 6
+    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | "1/2*r^2" | valence | 8
+    !% <br>&nbsp;&nbsp;'He_all'  | species_full_delta
+    !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |  gaussian_width |  0.2
+    !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%
     !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
@@ -431,10 +435,10 @@ contains
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
     !% <math>
-    !% v(r) = - z_val / sqrt( a + r^2)
+    !% v(r) = - z_val / sqrt(a^2 + r^2)
     !% </math>
     !%
-    !% The parameter <i>a</i> should be given in the fifth column.
+    !% The value of a should be given by the mandatory 'softening' parameter.
     !%Option min_radius -10001
     !% The minimum radius of the box required for this species to be properly converged.
     !%Option max_spacing -10002
@@ -455,6 +459,8 @@ contains
     !% The width of the gaussian in units of spacing used to represent
     !% the nuclear charge for species_full_gaussian. If not present,
     !% the default is 0.25.
+    !%Option softening -10009
+    !% The softnening parameter a for species_soft_coulomb in units of length.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1428,8 +1434,6 @@ contains
 
     case(SPECIES_SOFT_COULOMB)
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, read_data, spec%sc_alpha)
-      read_data = read_data + 1
 
     case(SPECIES_USDEF) ! user-defined
       spec%Z=M_ZERO
@@ -1469,6 +1473,7 @@ contains
 
     spec%mass = -CNST(1.0)
     spec%z_val = -CNST(1.0)
+    spec%sc_alpha = -CNST(1.0)
     
     icol = read_data
     do
@@ -1506,6 +1511,10 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%sigma)
         if(spec%sigma <= M_ZERO) call input_error('Species')
 
+      case(SPECIES_FLAG_SOFTENING)
+        call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
+        spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
+
       case default
         call input_error('Species')
         
@@ -1514,6 +1523,11 @@ contains
       icol = icol + 2        
     end do
 
+    if(spec%type == SPECIES_SOFT_COULOMB .and. spec%sc_alpha <= CNST(0.0)) then
+      call messages_write("The mandatory 'softening' parameter is missing for species "//trim(spec%label)//'.')
+      call messages_fatal()
+    end if
+    
     select case(spec%type)
     case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
       SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
