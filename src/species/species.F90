@@ -110,11 +110,12 @@ module species_m
     PSEUDO_SET_SG15     = 2,                &
     PSEUDO_SET_HGH      = 3
 
-  integer, parameter         ::             &
+  integer, parameter         ::              &
     SPECIES_FLAG_RADIUS       = -10001,      &
     SPECIES_FLAG_SPACING      = -10002,      &
     SPECIES_FLAG_LMAX         = -10003,      &
-    SPECIES_FLAG_LLOC         = -10004
+    SPECIES_FLAG_LLOC         = -10004,      &
+    SPECIES_FLAG_MASS         = -10005
     
   type species_t
     private
@@ -444,6 +445,9 @@ contains
     !% The maximum angular momentum of the pseudopotential.
     !%Option lloc -10004
     !% The component of the pseudopotenital to be considered local.
+    !%Option mass -10005
+    !% The mass of the species in atomic mass units, <i>i.e.</i> the mass of a proton is
+    !% roughly one. 
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1529,12 +1533,9 @@ contains
 
     icol = read_data
     do
-
-      print*, icol, ncols
       if(icol >= ncols) exit
 
       call parse_block_integer(blk, row, icol, flag)
-      print*, "flag ", flag
       
       select case(flag)
       case(SPECIES_FLAG_RADIUS)
@@ -1545,6 +1546,8 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%lmax)
       case(SPECIES_FLAG_LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
+      case(SPECIES_FLAG_MASS)
+        call parse_block_float(blk, row, icol + 1, spec%mass)
       case default
         call messages_write('Unknown flag in species block')
         call messages_fatal()
