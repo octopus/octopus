@@ -1402,7 +1402,7 @@ contains
     if(associated(stin%subsys_st))then
       !> Allocate and copy substates.
       call ssys_states_new(stout%subsys_st, stin%subsys_st)
-      if(exclude_wfns)then
+      if(exclude_wfns_)then
         call ssys_states_init(stout%subsys_st, stin%subsys_st)
       else
         call ssys_states_copy(stout%subsys_st, stin%subsys_st)
