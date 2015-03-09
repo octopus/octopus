@@ -13,7 +13,7 @@ ExtraStates = 4
 TheoryLevel = independent_particles
 
 %Species
-"Zero" | species_user_defined | 22.1 | 2 | "0"
+"Zero" | species_user_defined | default_mass | 2 | "0" | mass | 22.1
 %
 
 %Coordinates

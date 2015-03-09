@@ -9,7 +9,7 @@ Spacing = 0.6
 Radius = 50.0
 
 %Species
-"Li1D" | species_user_defined | 6 | 3 | "-3/sqrt(1+(x)^2)"
+"Li1D" | species_user_defined | default_mass | 3 | "-3/sqrt(1+(x)^2)"
 %
 
 %Coordinates

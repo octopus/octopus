@@ -11,7 +11,7 @@ fromScratch = yes
 
 a = 1
 %Species
-  "Helium1D" | species_user_defined | 2 | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
+  "Helium1D" | species_user_defined | default_mass | 1 | "-2/sqrt(a+(x)^2) -2/sqrt(a+(y)^2)+1/sqrt(a+(x-y)^2)" 
 %
 
 %Coordinates

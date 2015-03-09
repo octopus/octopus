@@ -33,7 +33,7 @@ TheoryLevel = independent_particles
 
 a = 0.758^2
 %Species
-"atom1" | species_soft_coulomb | 1 | 1 | a
+"atom1" | species_soft_coulomb | default_mass | 1 | a
 %
 
 %Coordinates
