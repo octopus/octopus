@@ -24,10 +24,10 @@ FromScratch = yes
 
 r_s = 3.28
 N_electrons = 8
-jellium_radius = r_s * (N_electrons)^(1.0/3.0)
+jradius = r_s * (N_electrons)^(1.0/3.0)
 
 %Species
-"jellium" | species_jellium | jellium_radius | valence | N_electrons
+"jellium" | species_jellium | jellium_radius | jradius | valence | N_electrons
 %
 
 %Coordinates

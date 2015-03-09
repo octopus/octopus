@@ -110,13 +110,14 @@ module species_m
     PSEUDO_SET_SG15     = 2,                &
     PSEUDO_SET_HGH      = 3
 
-  integer, parameter         ::              &
-    SPECIES_FLAG_RADIUS        = -10001,     &
-    SPECIES_FLAG_SPACING       = -10002,     &
-    SPECIES_FLAG_LMAX          = -10003,     &
-    SPECIES_FLAG_LLOC          = -10004,     &
-    SPECIES_FLAG_MASS          = -10005,     &
-    SPECIES_FLAG_VALENCE       = -10006
+  integer, parameter               ::            &
+    SPECIES_FLAG_RADIUS            = -10001,     &
+    SPECIES_FLAG_SPACING           = -10002,     &
+    SPECIES_FLAG_LMAX              = -10003,     &
+    SPECIES_FLAG_LLOC              = -10004,     &
+    SPECIES_FLAG_MASS              = -10005,     &
+    SPECIES_FLAG_VALENCE           = -10006,     &
+    SPECIES_FLAG_JELLIUM_RADIUS    = -10007
   
   type species_t
     private
@@ -446,6 +447,9 @@ contains
     !% roughly one.
     !%Option valence -10006
     !% The number of electrons of the species.
+    !%Option jellium_radius -10007
+    !% The radius of jellium sphere. If this value is not specified,
+    !% the default of 0.5 bohr is used.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1434,15 +1438,8 @@ contains
       read_data = read_data + 1
 
     case(SPECIES_JELLIUM)
-      if(ncols > 3) then
-        call parse_block_float(blk, row, read_data, spec%jradius)! radius of the jellium sphere
-        if(spec%jradius <= M_ZERO) call input_error('Species')
-        spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
-        read_data = read_data + 1
-      else
-        spec%jradius = M_HALF
-      endif
-
+      spec%jradius = CNST(0.5)
+        
     case(SPECIES_JELLIUM_SLAB)
       call parse_block_float(blk, row, read_data, spec%jthick) ! thickness of the jellium slab
       read_data = read_data + 1
@@ -1482,19 +1479,31 @@ contains
       call parse_block_integer(blk, row, icol, flag)
       
       select case(flag)
+
       case(SPECIES_FLAG_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%def_h)
+
       case(SPECIES_FLAG_SPACING)
         call parse_block_float(blk, row, icol + 1, spec%def_rsize)
+
       case(SPECIES_FLAG_LMAX)
         call parse_block_integer(blk, row, icol + 1, spec%lmax)
+
       case(SPECIES_FLAG_LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
+
       case(SPECIES_FLAG_MASS)
         call parse_block_float(blk, row, icol + 1, spec%mass)
+
       case(SPECIES_FLAG_VALENCE)
         call parse_block_float(blk, row, icol + 1, spec%z_val)
         spec%z = spec%z_val
+
+      case(SPECIES_FLAG_JELLIUM_RADIUS)
+        call parse_block_float(blk, row, icol + 1, spec%jradius)
+        spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
+        if(spec%jradius <= M_ZERO) call input_error('Species')
+
       case default
         call messages_write('Unknown flag in species block')
         call messages_fatal()
