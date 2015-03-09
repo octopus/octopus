@@ -72,6 +72,12 @@ module base_handle_m
     base_model_t,         &
     base_model_get
 
+#define TEMPLATE_NAME base_handle
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -119,12 +125,6 @@ module base_handle_m
     type(base_handle_list_t)     :: list
   end type base_handle_t
 
-  type, public :: base_handle_iterator_t
-    private
-    type(base_handle_t),      pointer :: self =>null()
-    type(base_handle_hash_iterator_t) :: iter
-  end type base_handle_iterator_t
-
   interface base_handle__init__
     module procedure base_handle__init__begin
     module procedure base_handle__init__finish
@@ -140,14 +140,7 @@ module base_handle_m
     module procedure base_handle_init_handle
     module procedure base_handle_init_pass
     module procedure base_handle_init_copy
-    module procedure base_handle_iterator_init
   end interface base_handle_init
-
-  interface base_handle_next
-    module procedure base_handle_iterator_next_config_handle
-    module procedure base_handle_iterator_next_config
-    module procedure base_handle_iterator_next_handle
-  end interface base_handle_next
 
   interface base_handle_get
     module procedure base_handle_get_handle
@@ -158,19 +151,21 @@ module base_handle_m
 
   interface base_handle_copy
     module procedure base_handle_copy_handle
-    module procedure base_handle_iterator_copy
   end interface base_handle_copy
 
   interface base_handle_end
     module procedure base_handle_end_handle
-    module procedure base_handle_iterator_end
   end interface base_handle_end
-
-  integer, public, parameter :: HNDL_NAME_LEN = CONFIG_DICT_NAME_LEN
 
   integer, public, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_HASH_OK
   integer, public, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
   integer, public, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_handle
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -500,8 +495,8 @@ contains
     type(base_handle_t), intent(in)    :: that
     type(json_object_t), intent(in)    :: config
     !
-    character(len=HNDL_NAME_LEN) :: name
-    integer                      :: ierr
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    integer                             :: ierr
     !
     PUSH_SUB(base_handle__add__)
     ASSERT(associated(this%config))
@@ -691,77 +686,11 @@ contains
     return
   end subroutine base_handle_end_handle
 
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_init(this, that)
-    type(base_handle_iterator_t), intent(out) :: this
-    type(base_handle_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(base_handle_iterator_init)
-    this%self=>that
-    call base_handle_hash_init(this%iter, that%hash)
-    POP_SUB(base_handle_iterator_init)
-    return
-  end subroutine base_handle_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_next_config_handle(this, config, that, ierr)
-    type(base_handle_iterator_t), intent(inout) :: this
-    type(json_object_t),         pointer        :: config
-    type(base_handle_t),         pointer        :: that
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_handle_iterator_next_config_handle)
-    call base_handle_hash_next(this%iter, config, that, ierr)
-    POP_SUB(base_handle_iterator_next_config_handle)
-    return
-  end subroutine base_handle_iterator_next_config_handle
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_next_config(this, that, ierr)
-    type(base_handle_iterator_t), intent(inout) :: this
-    type(json_object_t),         pointer        :: that
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_handle_iterator_next_config)
-    call base_handle_hash_next(this%iter, that, ierr)
-    POP_SUB(base_handle_iterator_next_config)
-    return
-  end subroutine base_handle_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_next_handle(this, that, ierr)
-    type(base_handle_iterator_t), intent(inout) :: this
-    type(base_handle_t),         pointer        :: that
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_handle_iterator_next_handle)
-    call base_handle_hash_next(this%iter, that, ierr)
-    POP_SUB(base_handle_iterator_next_handle)
-    return
-  end subroutine base_handle_iterator_next_handle
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_copy(this, that)
-    type(base_handle_iterator_t), intent(inout) :: this
-    type(base_handle_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(base_handle_iterator_copy)
-    this%self=>that%self
-    call base_handle_hash_copy(this%iter, that%iter)
-    POP_SUB(base_handle_iterator_copy)
-    return
-  end subroutine base_handle_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_iterator_end(this)
-    type(base_handle_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_handle_iterator_end)
-    nullify(this%self)
-    call base_handle_hash_end(this%iter)
-    POP_SUB(base_handle_iterator_end)
-    return
-  end subroutine base_handle_iterator_end
+#define TEMPLATE_NAME base_handle
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
 end module base_handle_m
 

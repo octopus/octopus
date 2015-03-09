@@ -81,21 +81,17 @@ libfrozen_a_SOURCES =		\
 	ssys_hamiltonian.F90	\
 	ssys_model.F90		\
 	ssys_handle.F90		\
-	ssys_config.F90		#\
-	frozen_ionic.F90         \
-	solver.F90               \
-	hartree.F90              \
-	frozen_parse.F90         
+	ssys_config.F90
 
 noinst_HEADERS =		\
 	util.h			\
 	template.h		\
 	tsingle.F90		\
-	tpair.F90		\
 	tdarr.F90		\
 	tlist.F90		\
 	thash.F90		\
-	tdict.F90
+	tdict.F90		\
+	iterator_code.F90		
 
 include $(srcdir)/../common-rules.make
 
@@ -167,7 +163,7 @@ ssys_states.o		: ssys_states.F90 ssys_density.o base_states.o
 ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 # ssys_external.o		: ssys_external.F90 base_external.o
 # ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_external.o base_hamiltonian.o
-# ssys_model.o		: ssys_model.F90 ssys_system.o base_model.o
+# ssys_model.o		: ssys_model.F90 ssys_hamiltonian.F90 ssys_system.o base_model.o
 # ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
-# ssys_config.o		: ssys_config.F90 live_config.o frozen_config.o fio_config.F90 base_config.o functional.o
+# ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o frozen_config.o fio_config.F90 base_config.o functional.o
 

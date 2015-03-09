@@ -63,18 +63,13 @@ module base_geom_m
   use json_m,   only: operator(==), json_object_t, json_hash
   use kinds_m,  only: wp
 
-  use atom_m,        only: atom_t, atom_set_species, atom_get_label, atom_end
-  use basis_m,       only: basis_t, basis_init, basis_to_external, basis_end
-  use distributed_m, only: distributed_nullify
-  use json_m,        only: JSON_OK
-  use json_m,        only: json_object_t, json_init, json_get, json_end
-  use json_m,        only: json_array_t, json_array_iterator_t, json_len, json_next
-  use space_m,       only: operator(==), space_t
-  use species_m,     only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
+  use atom_m,    only: atom_t, atom_set_species, atom_get_label, atom_end
+  use basis_m,   only: basis_t, basis_init, basis_to_external, basis_end
+  use json_m,    only: JSON_OK
+  use json_m,    only: json_object_t, json_init, json_get, json_end
+  use json_m,    only: json_array_t, json_array_iterator_t, json_len, json_next
+  use space_m,   only: operator(==), space_t
+  use species_m, only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
 
   use config_dict_m, only: &
     config_dict_t,         &
@@ -84,8 +79,16 @@ module base_geom_m
     config_dict_copy,      &
     config_dict_end
 
+  use config_dict_m, only:  &
+    config_dict_iterator_t
+
+  use config_dict_m, only: &
+    CONFIG_DICT_OK,        &
+    CONFIG_DICT_NAME_LEN
+
   use geometry_m, only:             &
     geometry_t,                     &
+    geometry_nullify,               &
     geometry_init_from_data_object, &
     geometry_end
 
@@ -118,6 +121,14 @@ module base_geom_m
 
   use species_dict_m, only:  &
     species_dict_iterator_t
+
+#define TEMPLATE_NAME base_geom
+#define EXCLUDE_TYPE
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef EXCLUDE_TYPE
+#undef TEMPLATE_NAME
 
   implicit none
 
@@ -156,16 +167,17 @@ module base_geom_m
     type(geometry_t)             :: igeo
     type(atom_list_t)            :: alst
     type(species_dict_t)         :: sdct
-    type(config_dict_t)          :: cdct
+    type(config_dict_t)          :: dict
     type(base_geom_hash_t)       :: hash
-    type(base_geom_list_t)       :: slst
+    type(base_geom_list_t)       :: list
   end type base_geom_t
 
   type, public :: base_geom_iterator_t
     private
-    type(atom_list_iterator_t)      :: aitr
-    type(species_dict_iterator_t)   :: sitr
-    type(base_geom_hash_iterator_t) :: hitr
+    type(base_geom_t),    pointer :: self =>null()
+    type(atom_list_iterator_t)    :: aitr
+    type(species_dict_iterator_t) :: sitr
+    type(config_dict_iterator_t)  :: iter
   end type base_geom_iterator_t
 
   interface base_geom__init__
@@ -189,9 +201,6 @@ module base_geom_m
   interface base_geom_next
     module procedure base_geom_iterator_next_atom
     module procedure base_geom_iterator_next_species
-    module procedure base_geom_iterator_next_config_geom
-    module procedure base_geom_iterator_next_config
-    module procedure base_geom_iterator_next_geom
     module procedure base_geom_iterator_next_geometry
   end interface base_geom_next
 
@@ -215,6 +224,14 @@ module base_geom_m
   integer, public, parameter :: BASE_GEOM_OK          = BASE_GEOM_HASH_OK
   integer, public, parameter :: BASE_GEOM_KEY_ERROR   = BASE_GEOM_HASH_KEY_ERROR
   integer, public, parameter :: BASE_GEOM_EMPTY_ERROR = BASE_GEOM_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_geom
+#define EXCLUDE_TYPE
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef EXCLUDE_TYPE
+#undef TEMPLATE_NAME
 
 contains
 
@@ -268,7 +285,7 @@ contains
     integer                    :: indx, ierr
     !
     PUSH_SUB(base_geom_build_geometry)
-    !call geometry_end(geo)
+    call geometry_nullify(geo)
     geo%natoms=atom_list_len(this%alst)
     ASSERT(geo%natoms>0)
     SAFE_ALLOCATE(geo%atom(geo%natoms))
@@ -295,17 +312,6 @@ contains
     end do
     call base_geom_end(iter)
     nullify(atom, spec)
-    geo%ncatoms=0
-    geo%catom=>null()
-    geo%only_user_def=.false.
-    geo%species_time_dependent=.false.
-    geo%kinetic_energy=M_ZERO
-    geo%nlpp=.false.
-    geo%nlcc=.false.
-    call distributed_nullify(geo%atoms_dist, geo%natoms)
-    nullify(geo%ionic_interaction_type)
-    nullify(geo%ionic_interaction_parameter)
-    geo%reduced_coordinates=.false.
     POP_SUB(base_geom_build_geometry)
     return
   end subroutine base_geom_build_geometry
@@ -319,7 +325,7 @@ contains
     nullify(that)
     SAFE_ALLOCATE(that)
     that%prnt=>this
-    call base_geom_list_push(this%slst, that)
+    call base_geom_list_push(this%list, that)
     POP_SUB(base_geom_new)
     return
   end subroutine base_geom_new
@@ -342,7 +348,7 @@ contains
     PUSH_SUB(base_geom_del)
     if(associated(this))then
       if(associated(this%prnt))then
-        call base_geom_list_del(this%prnt%slst, this)
+        call base_geom_list_del(this%prnt%list, this)
         call base_geom_end(this)
         call base_geom__idel__(this)
       end if
@@ -374,9 +380,9 @@ contains
     call geometry_init_from_data_object(this%igeo, this%space, config)
     call atom_list_init(this%alst)
     call species_dict_init(this%sdct, this%igeo%nspecies)
-    call config_dict_init(this%cdct)
+    call config_dict_init(this%dict)
     call base_geom_hash_init(this%hash)
-    call base_geom_list_init(this%slst)
+    call base_geom_list_init(this%list)
     call base_geom_build_geom(this, this%igeo)
     POP_SUB(base_geom__init__begin)
     return
@@ -396,6 +402,7 @@ contains
       end if
       nullify(this%pgeo)
       SAFE_ALLOCATE(this%pgeo)
+      call geometry_nullify(this%pgeo)
       call base_geom_build_geometry(this, this%pgeo, this%space)
     else
       this%pgeo=>this%igeo
@@ -476,7 +483,7 @@ contains
     nullify(geo, cnfg, list)
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%cdct, trim(adjustl(name)), config)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_geom_hash_set(this%hash, config, that)
     call base_geom_get(that, geo)
     ASSERT(associated(geo))
@@ -512,7 +519,7 @@ contains
     !
     PUSH_SUB(base_geom_get_geom)
     nullify(that)
-    call config_dict_get(this%cdct, trim(adjustl(name)), config, ierr)
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_geom_hash_get(this%hash, config, that, ierr)
       if(ierr/=BASE_GEOM_OK)nullify(that)
@@ -669,9 +676,9 @@ contains
     call base_geom__inull__(this)
     call base_geom__end__list(this%alst)
     call base_geom__end__dict(this%sdct)
-    call config_dict_end(this%cdct)
+    call config_dict_end(this%dict)
     call base_geom_hash_end(this%hash)
-    call base_geom_list_end(this%slst)
+    call base_geom_list_end(this%list)
     POP_SUB(base_geom__end__)
     return
   end subroutine base_geom__end__
@@ -685,7 +692,7 @@ contains
     PUSH_SUB(base_geom_end_geom)
     do
       nullify(subs)
-      call base_geom_list_pop(this%slst, subs)
+      call base_geom_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_geom_end(subs)
       call base_geom__idel__(subs)
@@ -699,12 +706,13 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geom_iterator_init(this, that)
     type(base_geom_iterator_t), intent(out) :: this
-    type(base_geom_t),          intent(in)  :: that
+    type(base_geom_t),  target, intent(in)  :: that
     !
     PUSH_SUB(base_geom_iterator_init)
+    this%self=>that
     call atom_list_init(this%aitr, that%alst)
     call species_dict_init(this%sitr, that%sdct)
-    call base_geom_hash_init(this%hitr, that%hash)
+    call config_dict_init(this%iter, that%dict)
     POP_SUB(base_geom_iterator_init)
     return
   end subroutine base_geom_iterator_init
@@ -734,43 +742,6 @@ contains
   end subroutine base_geom_iterator_next_species
 
   ! ---------------------------------------------------------
-  subroutine base_geom_iterator_next_config_geom(this, config, geom, ierr)
-    type(base_geom_iterator_t), intent(inout) :: this
-    type(json_object_t),       pointer        :: config
-    type(base_geom_t),         pointer        :: geom
-    integer,          optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_geom_iterator_next_config_geom)
-    call base_geom_hash_next(this%hitr, config, geom, ierr)
-    POP_SUB(base_geom_iterator_next_config_geom)
-    return
-  end subroutine base_geom_iterator_next_config_geom
-
-  ! ---------------------------------------------------------
-  subroutine base_geom_iterator_next_config(this, config, ierr)
-    type(base_geom_iterator_t), intent(inout) :: this
-    type(json_object_t),       pointer        :: config
-    integer,          optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_geom_iterator_next_config)
-    call base_geom_hash_next(this%hitr, config, ierr)
-    POP_SUB(base_geom_iterator_next_config)
-    return
-  end subroutine base_geom_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_geom_iterator_next_geom(this, geom, ierr)
-    type(base_geom_iterator_t), intent(inout) :: this
-    type(base_geom_t),         pointer        :: geom
-    integer,          optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_geom_iterator_next_geom)
-    call base_geom_hash_next(this%hitr, geom, ierr)
-    POP_SUB(base_geom_iterator_next_geom)
-    return
-  end subroutine base_geom_iterator_next_geom
-
-  ! ---------------------------------------------------------
   subroutine base_geom_iterator_next_geometry(this, geo, ierr)
     type(base_geom_iterator_t), intent(inout) :: this
     type(geometry_t),          pointer        :: geo
@@ -780,22 +751,31 @@ contains
     !
     PUSH_SUB(base_geom_iterator_next_geometry)
     nullify(geo, geom)
-    call base_geom_hash_next(this%hitr, geom, ierr)
+    call base_geom_next(this, geom, ierr)
     call base_geom_get(geom, geo)
     nullify(geom)
     POP_SUB(base_geom_iterator_next_geometry)
     return
   end subroutine base_geom_iterator_next_geometry
 
+#define TEMPLATE_NAME base_geom
+#define EXCLUDE_TYPE
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef EXCLUDE_TYPE
+#undef TEMPLATE_NAME
+
   ! ---------------------------------------------------------
   subroutine base_geom_iterator_copy(this, that)
-    type(base_geom_iterator_t), intent(out) :: this
-    type(base_geom_iterator_t), intent(in)  :: that
+    type(base_geom_iterator_t),         intent(out) :: this
+    type(base_geom_iterator_t), target, intent(in)  :: that
     !
     PUSH_SUB(base_geom_iterator_copy)
+    this%self=>that%self
     call atom_list_copy(this%aitr, that%aitr)
     call species_dict_copy(this%sitr, that%sitr)
-    call base_geom_hash_copy(this%hitr, that%hitr)
+    call config_dict_copy(this%iter, that%iter)
     POP_SUB(base_geom_iterator_copy)
     return
   end subroutine base_geom_iterator_copy
@@ -804,9 +784,10 @@ contains
   elemental subroutine base_geom_iterator_end(this)
     type(base_geom_iterator_t), intent(inout) :: this
     !
+    nullify(this%self)
     call atom_list_end(this%aitr)
     call species_dict_end(this%sitr)
-    call base_geom_hash_end(this%hitr)
+    call config_dict_end(this%iter)
     return
   end subroutine base_geom_iterator_end
 

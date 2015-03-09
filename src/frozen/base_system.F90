@@ -91,6 +91,12 @@ module base_system_m
     base_states_t,         &
     base_states_get
 
+#define TEMPLATE_NAME base_system
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -139,12 +145,6 @@ module base_system_m
     type(base_system_list_t)     :: list
   end type base_system_t
 
-  type, public :: base_system_iterator_t
-    private
-    type(base_system_t),      pointer :: self =>null()
-    type(base_system_hash_iterator_t) :: iter
-  end type base_system_iterator_t
-
   interface base_system__init__
     module procedure base_system__init__begin
     module procedure base_system__init__finish
@@ -159,14 +159,7 @@ module base_system_m
   interface base_system_init
     module procedure base_system_init_system
     module procedure base_system_init_copy
-    module procedure base_system_iterator_init
   end interface base_system_init
-
-  interface base_system_next
-    module procedure base_system_iterator_next_config_system
-    module procedure base_system_iterator_next_config
-    module procedure base_system_iterator_next_system
-  end interface base_system_next
 
   interface base_system_set
     module procedure base_system_set_simulation
@@ -183,17 +176,21 @@ module base_system_m
 
   interface base_system_copy
     module procedure base_system_copy_system
-    module procedure base_system_iterator_copy
   end interface base_system_copy
 
   interface base_system_end
     module procedure base_system_end_system
-    module procedure base_system_iterator_end
   end interface base_system_end
 
   integer, public, parameter :: BASE_SYSTEM_OK          = BASE_SYSTEM_HASH_OK
   integer, public, parameter :: BASE_SYSTEM_KEY_ERROR   = BASE_SYSTEM_HASH_KEY_ERROR
   integer, public, parameter :: BASE_SYSTEM_EMPTY_ERROR = BASE_SYSTEM_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_system
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -723,77 +720,11 @@ contains
     return
   end subroutine base_system_end_system
 
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_init(this, that)
-    type(base_system_iterator_t), intent(out) :: this
-    type(base_system_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(base_system_iterator_init)
-    this%self=>that
-    call base_system_hash_init(this%iter, that%hash)
-    POP_SUB(base_system_iterator_init)
-    return
-  end subroutine base_system_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_next_config_system(this, config, system, ierr)
-    type(base_system_iterator_t), intent(inout) :: this
-    type(json_object_t),         pointer        :: config
-    type(base_system_t),         pointer        :: system
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_system_iterator_next_config_system)
-    call base_system_hash_next(this%iter, config, system, ierr)
-    POP_SUB(base_system_iterator_next_config_system)
-    return
-  end subroutine base_system_iterator_next_config_system
-
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_next_config(this, that, ierr)
-    type(base_system_iterator_t), intent(inout) :: this
-    type(json_object_t),         pointer        :: that
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_system_iterator_next_config)
-    call base_system_hash_next(this%iter, that, ierr)
-    POP_SUB(base_system_iterator_next_config)
-    return
-  end subroutine base_system_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_next_system(this, that, ierr)
-    type(base_system_iterator_t), intent(inout) :: this
-    type(base_system_t),         pointer        :: that
-    integer,            optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_system_iterator_next_system)
-    call base_system_hash_next(this%iter, that, ierr)
-    POP_SUB(base_system_iterator_next_system)
-    return
-  end subroutine base_system_iterator_next_system
-
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_copy(this, that)
-    type(base_system_iterator_t), intent(inout) :: this
-    type(base_system_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(base_system_iterator_copy)
-    this%self=>that%self
-    call base_system_hash_copy(this%iter, that%iter)
-    POP_SUB(base_system_iterator_copy)
-    return
-  end subroutine base_system_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_system_iterator_end(this)
-    type(base_system_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_system_iterator_end)
-    nullify(this%self)
-    call base_system_hash_end(this%iter)
-    POP_SUB(base_system_iterator_end)
-    return
-  end subroutine base_system_iterator_end
+#define TEMPLATE_NAME base_system
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
 end module base_system_m
 

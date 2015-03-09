@@ -60,6 +60,12 @@ module domain_m
     config_dict_copy,      &
     config_dict_end
 
+#define TEMPLATE_NAME domain
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -99,37 +105,28 @@ module domain_m
     type(domain_list_t)        :: list
   end type domain_t
 
-  type, public :: domain_iterator_t
-    private
-    type(domain_t),      pointer :: self =>null()
-    type(domain_hash_iterator_t) :: iter
-  end type domain_iterator_t
-
   interface domain_init
     module procedure domain_init_domain
     module procedure domain_init_copy
-    module procedure domain_iterator_init
   end interface domain_init
-
-  interface domain_next
-    module procedure domain_iterator_next_config_domain
-    module procedure domain_iterator_next_config
-    module procedure domain_iterator_next_domain
-  end interface domain_next
 
   interface domain_copy
     module procedure domain_copy_domain
-    module procedure domain_iterator_copy
   end interface domain_copy
 
   interface domain_end
     module procedure domain_end_domain
-    module procedure domain_iterator_end
   end interface domain_end
 
   integer, public, parameter :: DOMAIN_OK          = DOMAIN_HASH_OK
   integer, public, parameter :: DOMAIN_KEY_ERROR   = DOMAIN_HASH_KEY_ERROR
   integer, public, parameter :: DOMAIN_EMPTY_ERROR = DOMAIN_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME domain
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
   
@@ -431,77 +428,11 @@ contains
     return
   end subroutine domain_end_domain
 
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_init(this, that)
-    type(domain_iterator_t), intent(out) :: this
-    type(domain_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(domain_iterator_init)
-    this%self=>that
-    call domain_hash_init(this%iter, that%hash)
-    POP_SUB(domain_iterator_init)
-    return
-  end subroutine domain_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_next_config_domain(this, config, sim, ierr)
-    type(domain_iterator_t), intent(inout) :: this
-    type(json_object_t),    pointer        :: config
-    type(domain_t),         pointer        :: sim
-    integer,       optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(domain_iterator_next_config_domain)
-    call domain_hash_next(this%iter, config, sim, ierr)
-    POP_SUB(domain_iterator_next_config_domain)
-    return
-  end subroutine domain_iterator_next_config_domain
-
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_next_config(this, that, ierr)
-    type(domain_iterator_t), intent(inout) :: this
-    type(json_object_t),    pointer        :: that
-    integer,       optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(domain_iterator_next_config)
-    call domain_hash_next(this%iter, that, ierr)
-    POP_SUB(domain_iterator_next_config)
-    return
-  end subroutine domain_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_next_domain(this, that, ierr)
-    type(domain_iterator_t), intent(inout) :: this
-    type(domain_t),         pointer        :: that
-    integer,       optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(domain_iterator_next_domain)
-    call domain_hash_next(this%iter, that, ierr)
-    POP_SUB(domain_iterator_next_domain)
-    return
-  end subroutine domain_iterator_next_domain
-
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_copy(this, that)
-    type(domain_iterator_t), intent(inout) :: this
-    type(domain_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(domain_iterator_copy)
-    this%self=>that%self
-    call domain_hash_copy(this%iter, that%iter)
-    POP_SUB(domain_iterator_copy)
-    return
-  end subroutine domain_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine domain_iterator_end(this)
-    type(domain_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(domain_iterator_end)
-    nullify(this%self)
-    call domain_hash_end(this%iter)
-    POP_SUB(domain_iterator_end)
-    return
-  end subroutine domain_iterator_end
+#define TEMPLATE_NAME domain
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
 end module domain_m
 

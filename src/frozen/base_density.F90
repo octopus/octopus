@@ -91,12 +91,6 @@ module base_density_m
     type(base_density_list_t)     :: list
   end type base_density_t
 
-  type, public :: base_density_iterator_t
-    private
-    type(base_density_t),      pointer :: self =>null()
-    type(base_density_hash_iterator_t) :: iter
-  end type base_density_iterator_t
-
   type, public :: base_density_intrpl_t
     private
     type(base_density_t), pointer :: self =>null()
@@ -117,7 +111,6 @@ module base_density_m
   interface base_density_init
     module procedure base_density_init_density
     module procedure base_density_init_copy
-    module procedure base_density_iterator_init
     module procedure base_density_intrpl_init
   end interface base_density_init
 
@@ -130,12 +123,6 @@ module base_density_m
     module procedure base_density_get_density_2d
   end interface base_density_get
 
-  interface base_density_next
-    module procedure base_density_iterator_next_config_density
-    module procedure base_density_iterator_next_config
-    module procedure base_density_iterator_next_density
-  end interface base_density_next
-
   interface base_density_eval
     module procedure base_density_intrpl_eval_1d
     module procedure base_density_intrpl_eval_2d
@@ -143,13 +130,11 @@ module base_density_m
 
   interface base_density_copy
     module procedure base_density_copy_density
-    module procedure base_density_iterator_copy
     module procedure base_density_intrpl_copy
   end interface base_density_copy
 
   interface base_density_end
     module procedure base_density_end_density
-    module procedure base_density_iterator_end
     module procedure base_density_intrpl_end
   end interface base_density_end
 
@@ -158,6 +143,12 @@ module base_density_m
   integer, public, parameter :: BASE_DENSITY_OK          = BASE_DENSITY_HASH_OK
   integer, public, parameter :: BASE_DENSITY_KEY_ERROR   = BASE_DENSITY_HASH_KEY_ERROR
   integer, public, parameter :: BASE_DENSITY_EMPTY_ERROR = BASE_DENSITY_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_density
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -499,8 +490,8 @@ contains
     type(base_density_t), intent(in)    :: that
     type(json_object_t),  intent(in)    :: config
 
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
+    character(len=BASE_DENSITY_NAME_LEN) :: name
+    integer                              :: ierr
 
     PUSH_SUB(base_density__add__)
 
@@ -822,83 +813,11 @@ contains
     POP_SUB(base_density_end_density)
   end subroutine base_density_end_density
 
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_init(this, that)
-    type(base_density_iterator_t), intent(out) :: this
-    type(base_density_t),  target, intent(in)  :: that
-
-    PUSH_SUB(base_density_iterator_init)
-
-    this%self => that
-    call base_density_hash_init(this%iter, that%hash)
-
-    POP_SUB(base_density_iterator_init)
-  end subroutine base_density_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_next_config_density(this, config, that, ierr)
-    type(base_density_iterator_t), intent(inout) :: this
-    type(json_object_t),          pointer        :: config
-    type(base_density_t),         pointer        :: that
-    integer,             optional, intent(out)   :: ierr
-
-    PUSH_SUB(base_density_iterator_next_config_density)
-
-    call base_density_hash_next(this%iter, config, that, ierr)
-
-    POP_SUB(base_density_iterator_next_config_density)
-  end subroutine base_density_iterator_next_config_density
-
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_next_config(this, that, ierr)
-    type(base_density_iterator_t), intent(inout) :: this
-    type(json_object_t),          pointer        :: that
-    integer,             optional, intent(out)   :: ierr
-
-    PUSH_SUB(base_density_iterator_next_config)
-
-    call base_density_hash_next(this%iter, that, ierr)
-
-    POP_SUB(base_density_iterator_next_config)
-  end subroutine base_density_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_next_density(this, that, ierr)
-    type(base_density_iterator_t), intent(inout) :: this
-    type(base_density_t),         pointer        :: that
-    integer,             optional, intent(out)    :: ierr
-
-    PUSH_SUB(base_density_iterator_next_density)
-
-    call base_density_hash_next(this%iter, that, ierr)
-
-    POP_SUB(base_density_iterator_next_density)
-  end subroutine base_density_iterator_next_density
-
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_copy(this, that)
-    type(base_density_iterator_t), intent(inout) :: this
-    type(base_density_iterator_t), intent(in)    :: that
-
-    PUSH_SUB(base_density_iterator_copy)
-
-    this%self=>that%self
-    call base_density_hash_copy(this%iter, that%iter)
-
-    POP_SUB(base_density_iterator_copy)
-  end subroutine base_density_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_density_iterator_end(this)
-    type(base_density_iterator_t), intent(inout) :: this
-
-    PUSH_SUB(base_density_iterator_end)
-
-    nullify(this%self)
-    call base_density_hash_end(this%iter)
-
-    POP_SUB(base_density_iterator_end)
-  end subroutine base_density_iterator_end
+#define TEMPLATE_NAME base_density
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_density_intrpl_init(this, that, type)

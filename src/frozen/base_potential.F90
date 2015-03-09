@@ -84,6 +84,12 @@ module base_potential_m
   use base_system_m, only: &
     base_system_t
 
+#define TEMPLATE_NAME base_potential
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -140,12 +146,6 @@ module base_potential_m
     type(base_potential_list_t)     :: list
   end type base_potential_t
 
-  type, public :: base_potential_iterator_t
-    private
-    type(base_potential_t),      pointer :: self =>null()
-    type(base_potential_hash_iterator_t) :: iter
-  end type base_potential_iterator_t
-
   type, public :: base_potential_intrpl_t
     private
     type(base_potential_t), pointer :: self =>null()
@@ -166,7 +166,6 @@ module base_potential_m
   interface base_potential_init
     module procedure base_potential_init_potential
     module procedure base_potential_init_copy
-    module procedure base_potential_iterator_init
     module procedure base_potential_intrpl_init
   end interface base_potential_init
 
@@ -185,12 +184,6 @@ module base_potential_m
     module procedure base_potential_intrpl_get
   end interface base_potential_get
 
-  interface base_potential_next
-    module procedure base_potential_iterator_next_config_potential
-    module procedure base_potential_iterator_next_config
-    module procedure base_potential_iterator_next_potential
-  end interface base_potential_next
-
   interface base_potential_eval
     module procedure base_potential_intrpl_eval_1d
     module procedure base_potential_intrpl_eval_md
@@ -198,19 +191,23 @@ module base_potential_m
 
   interface base_potential_copy
     module procedure base_potential_copy_potential
-    module procedure base_potential_iterator_copy
     module procedure base_potential_intrpl_copy
   end interface base_potential_copy
 
   interface base_potential_end
     module procedure base_potential_end_potential
-    module procedure base_potential_iterator_end
     module procedure base_potential_intrpl_end
   end interface base_potential_end
 
   integer, public, parameter :: BASE_POTENTIAL_OK          = BASE_POTENTIAL_HASH_OK
   integer, public, parameter :: BASE_POTENTIAL_KEY_ERROR   = BASE_POTENTIAL_HASH_KEY_ERROR
   integer, public, parameter :: BASE_POTENTIAL_EMPTY_ERROR = BASE_POTENTIAL_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_potential
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -760,77 +757,11 @@ contains
     return
   end subroutine base_potential_end_potential
 
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_init(this, that)
-    type(base_potential_iterator_t), intent(out) :: this
-    type(base_potential_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(base_potential_iterator_init)
-    This%self=>that
-    call base_potential_hash_init(this%iter, that%hash)
-    POP_SUB(base_potential_iterator_init)
-    return
-  end subroutine base_potential_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_next_config_potential(this, config, that, ierr)
-    type(base_potential_iterator_t), intent(inout) :: this
-    type(json_object_t),            pointer        :: config
-    type(base_potential_t),         pointer        :: that
-    integer,               optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_potential_iterator_next_config_potential)
-    call base_potential_hash_next(this%iter, config, that, ierr)
-    POP_SUB(base_potential_iterator_next_config_potential)
-    return
-  end subroutine base_potential_iterator_next_config_potential
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_next_config(this, that, ierr)
-    type(base_potential_iterator_t), intent(inout) :: this
-    type(json_object_t),            pointer        :: that
-    integer,               optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_potential_iterator_next_config)
-    call base_potential_hash_next(this%iter, that, ierr)
-    POP_SUB(base_potential_iterator_next_config)
-    return
-  end subroutine base_potential_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_next_potential(this, that, ierr)
-    type(base_potential_iterator_t), intent(inout) :: this
-    type(base_potential_t),         pointer        :: that
-    integer,               optional, intent(out)    :: ierr
-    !
-    PUSH_SUB(base_potential_iterator_next_potential)
-    call base_potential_hash_next(this%iter, that, ierr)
-    POP_SUB(base_potential_iterator_next_potential)
-    return
-  end subroutine base_potential_iterator_next_potential
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_copy(this, that)
-    type(base_potential_iterator_t), intent(inout) :: this
-    type(base_potential_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(base_potential_iterator_copy)
-    this%self=>that%self
-    call base_potential_hash_copy(this%iter, that%iter)
-    POP_SUB(base_potential_iterator_copy)
-    return
-  end subroutine base_potential_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_iterator_end(this)
-    type(base_potential_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_potential_iterator_end)
-    nullify(this%self)
-    call base_potential_hash_end(this%iter)
-    POP_SUB(base_potential_iterator_end)
-    return
-  end subroutine base_potential_iterator_end
+#define TEMPLATE_NAME base_potential
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_potential_intrpl_init(this, that, type)

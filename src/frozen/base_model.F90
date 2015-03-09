@@ -107,6 +107,12 @@ module base_model_m
     base_hamiltonian_t,         &
     base_hamiltonian_get
 
+#define TEMPLATE_NAME base_model
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -153,12 +159,6 @@ module base_model_m
     type(base_model_list_t)      :: list
   end type base_model_t
 
-  type, public :: base_model_iterator_t
-    private
-    type(base_model_t),      pointer :: self =>null()
-    type(base_model_hash_iterator_t) :: iter
-  end type base_model_iterator_t
-
   interface base_model__init__
     module procedure base_model__init__begin
     module procedure base_model__init__finish
@@ -173,7 +173,6 @@ module base_model_m
   interface base_model_init
     module procedure base_model_init_model
     module procedure base_model_init_copy
-    module procedure base_model_iterator_init
   end interface base_model_init
 
   interface base_model_get
@@ -184,25 +183,23 @@ module base_model_m
     module procedure base_model_get_hamiltonian
   end interface base_model_get
 
-  interface base_model_next
-    module procedure base_model_iterator_next_config_model
-    module procedure base_model_iterator_next_config
-    module procedure base_model_iterator_next_model
-  end interface base_model_next
-
   interface base_model_copy
     module procedure base_model_copy_model
-    module procedure base_model_iterator_copy
   end interface base_model_copy
 
   interface base_model_end
     module procedure base_model_end_model
-    module procedure base_model_iterator_end
   end interface base_model_end
 
   integer, public, parameter :: BASE_MODEL_OK          = BASE_MODEL_HASH_OK
   integer, public, parameter :: BASE_MODEL_KEY_ERROR   = BASE_MODEL_HASH_KEY_ERROR
   integer, public, parameter :: BASE_MODEL_EMPTY_ERROR = BASE_MODEL_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_model
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -713,77 +710,11 @@ contains
     return
   end subroutine base_model_end_model
 
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_init(this, that)
-    type(base_model_iterator_t), intent(out) :: this
-    type(base_model_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(base_model_iterator_init)
-    this%self=>that
-    call base_model_hash_init(this%iter, that%hash)
-    POP_SUB(base_model_iterator_init)
-    return
-  end subroutine base_model_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_next_config_model(this, config, that, ierr)
-    type(base_model_iterator_t), intent(inout) :: this
-    type(json_object_t),        pointer        :: config
-    type(base_model_t),         pointer        :: that
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_model_iterator_next_config_model)
-    call base_model_hash_next(this%iter, config, that, ierr)
-    POP_SUB(base_model_iterator_next_config_model)
-    return
-  end subroutine base_model_iterator_next_config_model
-
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_next_config(this, that, ierr)
-    type(base_model_iterator_t), intent(inout) :: this
-    type(json_object_t),        pointer        :: that
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_model_iterator_next_config)
-    call base_model_hash_next(this%iter, that, ierr)
-    POP_SUB(base_model_iterator_next_config)
-    return
-  end subroutine base_model_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_next_model(this, that, ierr)
-    type(base_model_iterator_t), intent(inout) :: this
-    type(base_model_t),         pointer        :: that
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(base_model_iterator_next_model)
-    call base_model_hash_next(this%iter, that, ierr)
-    POP_SUB(base_model_iterator_next_model)
-    return
-  end subroutine base_model_iterator_next_model
-
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_copy(this, that)
-    type(base_model_iterator_t), intent(inout) :: this
-    type(base_model_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(base_model_iterator_copy)
-    this%self=>that%self
-    call base_model_hash_copy(this%iter, that%iter)
-    POP_SUB(base_model_iterator_copy)
-    return
-  end subroutine base_model_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_model_iterator_end(this)
-    type(base_model_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_model_iterator_end)
-    nullify(this%self)
-    call base_model_hash_end(this%iter)
-    POP_SUB(base_model_iterator_end)
-    return
-  end subroutine base_model_iterator_end
+#define TEMPLATE_NAME base_model
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
 end module base_model_m
 

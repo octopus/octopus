@@ -82,6 +82,12 @@ module simulation_m
   use domain_m, only: &
     domain_t
 
+#define TEMPLATE_NAME domain
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
   implicit none
 
   private
@@ -125,12 +131,6 @@ module simulation_m
     type(simulation_list_t)      :: list
   end type simulation_t
 
-  type, public :: simulation_iterator_t
-    private
-    type(simulation_t),      pointer :: self =>null()
-    type(simulation_hash_iterator_t) :: iter
-  end type simulation_iterator_t
-
   interface simulation__init__
     module procedure simulation__init__simulation
     module procedure simulation__init__copy
@@ -139,7 +139,6 @@ module simulation_m
   interface simulation_init
     module procedure simulation_init_simulation
     module procedure simulation_init_copy
-    module procedure simulation_iterator_init
   end interface simulation_init
 
   interface simulation_set
@@ -158,25 +157,23 @@ module simulation_m
     module procedure simulation_get_domain
   end interface simulation_get
 
-  interface simulation_next
-    module procedure simulation_iterator_next_config_simulation
-    module procedure simulation_iterator_next_config
-    module procedure simulation_iterator_next_simulation
-  end interface simulation_next
-
   interface simulation_copy
     module procedure simulation_copy_simulation
-    module procedure simulation_iterator_copy
   end interface simulation_copy
 
   interface simulation_end
     module procedure simulation_end_simulation
-    module procedure simulation_iterator_end
   end interface simulation_end
 
   integer, parameter :: SIMULATION_OK          = SIMULATION_HASH_OK
   integer, parameter :: SIMULATION_KEY_ERROR   = SIMULATION_HASH_KEY_ERROR
   integer, parameter :: SIMULATION_EMPTY_ERROR = SIMULATION_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME simulation
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
 
 contains
 
@@ -633,77 +630,11 @@ contains
     return
   end subroutine simulation_end_simulation
 
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_init(this, that)
-    type(simulation_iterator_t), intent(out) :: this
-    type(simulation_t),  target, intent(in)  :: that
-    !
-    PUSH_SUB(simulation_iterator_init)
-    this%self=>that
-    call simulation_hash_init(this%iter, that%hash)
-    POP_SUB(simulation_iterator_init)
-    return
-  end subroutine simulation_iterator_init
-
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_next_config_simulation(this, config, sim, ierr)
-    type(simulation_iterator_t), intent(inout) :: this
-    type(json_object_t),        pointer        :: config
-    type(simulation_t),         pointer        :: sim
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(simulation_iterator_next_config_simulation)
-    call simulation_hash_next(this%iter, config, sim, ierr)
-    POP_SUB(simulation_iterator_next_config_simulation)
-    return
-  end subroutine simulation_iterator_next_config_simulation
-
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_next_config(this, that, ierr)
-    type(simulation_iterator_t), intent(inout) :: this
-    type(json_object_t),        pointer        :: that
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(simulation_iterator_next_config)
-    call simulation_hash_next(this%iter, that, ierr)
-    POP_SUB(simulation_iterator_next_config)
-    return
-  end subroutine simulation_iterator_next_config
-
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_next_simulation(this, that, ierr)
-    type(simulation_iterator_t), intent(inout) :: this
-    type(simulation_t),         pointer        :: that
-    integer,           optional, intent(out)   :: ierr
-    !
-    PUSH_SUB(simulation_iterator_next_simulation)
-    call simulation_hash_next(this%iter, that, ierr)
-    POP_SUB(simulation_iterator_next_simulation)
-    return
-  end subroutine simulation_iterator_next_simulation
-
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_copy(this, that)
-    type(simulation_iterator_t), intent(inout) :: this
-    type(simulation_iterator_t), intent(in)    :: that
-    !
-    PUSH_SUB(simulation_iterator_copy)
-    this%self=>that%self
-    call simulation_hash_copy(this%iter, that%iter)
-    POP_SUB(simulation_iterator_copy)
-    return
-  end subroutine simulation_iterator_copy
-
-  ! ---------------------------------------------------------
-  subroutine simulation_iterator_end(this)
-    type(simulation_iterator_t), intent(inout) :: this
-    !
-    PUSH_SUB(simulation_iterator_end)
-    nullify(this%self)
-    call simulation_hash_end(this%iter)
-    POP_SUB(simulation_iterator_end)
-    return
-  end subroutine simulation_iterator_end
+#define TEMPLATE_NAME simulation
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
 
 end module simulation_m
 
