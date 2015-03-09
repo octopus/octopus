@@ -20,7 +20,7 @@ ExperimentalFeatures = yes
 %
 
 %Species
-'H1D' | species_user_defined | default_mass | 1 | '-1.0/(abs(x)+0.002)'
+'H1D' | species_user_defined |  1 | '-1.0/(abs(x)+0.002)'
 %
 
 %UserDefinedStates

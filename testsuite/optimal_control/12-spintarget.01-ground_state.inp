@@ -76,7 +76,7 @@ omega = omega_Ha * (epsilon^2/meff)
 #d0    = 0.960634589
 
 %Species
-"potential" | species_user_defined | default_mass | 1 | "0.5*omega^2*r^2"
+"potential" | species_user_defined |  1 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

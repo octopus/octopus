@@ -28,7 +28,7 @@ d0 = 2.0
 e0 = 6.0
 
 %Species
- 'BARRIERS' | species_user_defined | default_mass | 5 | "a0 * (-1.0/(1.0 + exp(-2.0*c0*(r*eith-d0))) + 1.0/(1.0 + exp(-2.0*c0*(r*eith+d0))) - e0*exp(-(r*eith)^2/b0))"
+ 'BARRIERS' | species_user_defined |  5 | "a0 * (-1.0/(1.0 + exp(-2.0*c0*(r*eith-d0))) + 1.0/(1.0 + exp(-2.0*c0*(r*eith+d0))) - e0*exp(-(r*eith)^2/b0))"
 %
 
 %Coordinates

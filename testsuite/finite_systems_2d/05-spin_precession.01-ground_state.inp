@@ -5,7 +5,7 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | species_user_defined | default_mass | 1 | "0.5*omega^2*r^2"
+"qd" | species_user_defined |  1 | "0.5*omega^2*r^2"
 %
 
 %Coordinates

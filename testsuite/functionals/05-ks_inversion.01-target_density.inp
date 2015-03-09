@@ -14,7 +14,7 @@ spacing = 0.05
 # define system
 a=1.0
 %Species
-'He1D' | species_user_defined | default_mass | 2 |"-2/sqrt(x^2+a^2)" 
+'He1D' | species_user_defined |  2 |"-2/sqrt(x^2+a^2)" 
 %
 
 %Coordinates

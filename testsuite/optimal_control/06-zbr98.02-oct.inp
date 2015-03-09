@@ -44,7 +44,7 @@ K = mu * 1822.8885
 ParticleMass = K
 
 %Species
-"morse" | species_user_defined | default_mass | 1 | "D*(exp(-beta*x)-1)^2 - D"
+"morse" | species_user_defined |  1 | "D*(exp(-beta*x)-1)^2 - D"
 %
 
 %Coordinates

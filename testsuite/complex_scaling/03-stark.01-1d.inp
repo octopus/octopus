@@ -26,8 +26,8 @@ eith = exp(i * ComplexScalingTheta)
 d0 = 1
 
 %Species
- 'ATOM' | species_user_defined | default_mass | 3 | "-4 * exp(-0.5*(x*eith)^2)"
- 'FIELD' | species_user_defined | default_mass | 0 | "0.3 * (x + d0) * eith"
+ 'ATOM' | species_user_defined |  3 | "-4 * exp(-0.5*(x*eith)^2)"
+ 'FIELD' | species_user_defined |  0 | "0.3 * (x + d0) * eith"
 %
 
 %Coordinates

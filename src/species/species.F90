@@ -432,11 +432,6 @@ contains
     !% </math>
     !%
     !% The parameter <i>a</i> should be given in the fifth column.
-    !%Option default_mass -1000
-    !% Octopus will try to guess the mass of this species. For
-    !% pseudopotential and full-potential species, Octopus will guess
-    !% the element from the name of species. For other species the
-    !% default mass is 1.0.
     !%Option min_radius -10001
     !% The minimum radius of the box required for this species to be properly converged.
     !%Option max_spacing -10002
@@ -1405,42 +1400,7 @@ contains
     ! To detect the old species block format, options are represented
     ! as negative values. If we get a non-negative value we know we
     ! are reading a mass.
-    if(spec%type < 0) then
-      call parse_block_float(blk, row, 2, spec%mass)
-
-      if(abs(spec%mass - (-CNST(1000.0))) < M_EPSILON) then
-
-        select case(-spec%type)
-        case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
-          SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
-          
-          call element_init(element, spec%label)
-          
-          if(.not. element_valid(element)) then
-            call messages_write('Cannot find mass for species '//trim(spec%label)//'.')
-            call messages_fatal()
-          end if
-          
-          spec%mass = element_mass(element)
-        
-          call element_end(element)
-
-        case default
-          spec%mass = 1.0
-
-        end select
-
-        call messages_write('Info: default mass for species '//trim(spec%label)//':')
-        call messages_write(spec%mass)
-        call messages_write(' amu')
-        call messages_info()
-
-      end if
-      
-    else
-      call parse_block_float(blk, row, 1, spec%mass)
-      call parse_block_integer(blk, row, 2, spec%type)
-      
+    if(spec%type >= 0) then
       call messages_write('Found  a species  with the old format.  Please update', new_line = .true.)
       call messages_write('the Species block to the new format, where the second', new_line = .true.)
       call messages_write('column indicates the type of the species.')
@@ -1450,34 +1410,34 @@ contains
     ! now we convert back to positive
     spec%type = -spec%type
 
-    read_data = 3
+    read_data = 2
     
     select case(spec%type)
 
     case(SPECIES_SOFT_COULOMB)
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, 3, spec%Z_val)
-      call parse_block_float(blk, row, 4, spec%sc_alpha)
+      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
+      call parse_block_float(blk, row, read_data + 1, spec%sc_alpha)
       read_data = read_data + 2
 
     case(SPECIES_USDEF) ! user-defined
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, 3, spec%Z_val)
-      call parse_block_string(blk, row, 4, spec%user_def)
+      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
+      call parse_block_string(blk, row, read_data + 1, spec%user_def)
       call conv_to_C_string(spec%user_def)
       read_data = read_data + 2
 
     case(SPECIES_FROM_FILE)
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, 3, spec%Z_val)
-      call parse_block_string(blk, row, 4, spec%filename)
+      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
+      call parse_block_string(blk, row, read_data + 1, spec%filename)
       read_data = read_data + 2
 
     case(SPECIES_JELLIUM)
-      call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
+      call parse_block_float(blk, row, read_data, spec%Z)      ! charge of the jellium sphere
       read_data = read_data + 1
-      if(ncols > 4) then
-        call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
+      if(ncols > 3) then
+        call parse_block_float(blk, row, read_data, spec%jradius)! radius of the jellium sphere
         if(spec%jradius <= M_ZERO) call input_error('Species')
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
         read_data = read_data + 1
@@ -1487,50 +1447,48 @@ contains
       spec%Z_val = spec%Z
 
     case(SPECIES_JELLIUM_SLAB)
-      call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium slab
-      call parse_block_float(blk, row, 4, spec%jthick) ! thickness of the jellium slab
+      call parse_block_float(blk, row, read_data + 0, spec%Z)      ! charge of the jellium slab
+      call parse_block_float(blk, row, read_data + 1, spec%jthick) ! thickness of the jellium slab
       read_data = read_data + 2
       if(spec%jthick <= M_ZERO) call input_error('Species')
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
       spec%Z_val = spec%Z
-      read_data = 5
 
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
-      call parse_block_float(blk, row, 3, spec%Z)
+      call parse_block_float(blk, row, read_data, spec%Z)
       spec%Z_val = spec%Z
       read_data = read_data + 1
       
       if (parse_block_cols(blk, row) <= 4) then
         spec%sigma = CNST(0.25)
       else
-        call parse_block_float(blk, row, 4, spec%sigma)
+        call parse_block_float(blk, row, read_data, spec%sigma)
         if(spec%sigma <= M_ZERO) call input_error('Species')
+        read_data = read_data + 1
       end if
 
     case(SPECIES_CHARGE_DENSITY)
-      call parse_block_float(blk, row, 3, spec%Z)
-      call parse_block_string(blk, row, 4, spec%rho)
+      call parse_block_float(blk, row, read_data + 0, spec%Z)
+      call parse_block_string(blk, row, read_data + 1, spec%rho)
       spec%Z_val = spec%Z
       read_data = read_data + 2
 
     case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
-      call parse_block_float(blk, row, 3, spec%Z)
+      call parse_block_float(blk, row, read_data + 0, spec%Z)
       read_data = read_data + 1
 
     case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
-      !for the moment we will read lmax and lloc, even if they are not necessary,
-      !and we will not get any data from the default values
-      call parse_block_float(blk, row, 3, spec%z)
-      call parse_block_string(blk, row, 4, spec%filename)
-      call parse_block_integer(blk, row, 5, spec%lmax)
-      call parse_block_integer(blk, row, 6, spec%lloc)
-      read_data = read_data + 4
+      call parse_block_float(blk, row, read_data + 0, spec%z)
+      call parse_block_string(blk, row, read_data + 1, spec%filename)
+      read_data = read_data + 2
 
     case default
       call input_error('Species')
     end select
 
+    spec%mass = -CNST(1.0)
+    
     icol = read_data
     do
       if(icol >= ncols) exit
@@ -1556,6 +1514,36 @@ contains
       icol = icol + 2        
     end do
 
+    
+    if(spec%mass < CNST(0.0)) then
+
+      select case(-spec%type)
+      case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
+        SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+        
+        call element_init(element, spec%label)
+        
+        if(.not. element_valid(element)) then
+          call messages_write('Cannot find mass for species '//trim(spec%label)//'.')
+          call messages_fatal()
+        end if
+        
+        spec%mass = element_mass(element)
+        
+        call element_end(element)
+        
+      case default
+        spec%mass = 1.0
+        
+      end select
+      
+      call messages_write('Info: default mass for species '//trim(spec%label)//':')
+      call messages_write(spec%mass)
+      call messages_write(' amu')
+      call messages_info()
+      
+    end if
+      
     POP_SUB(read_from_block)
   end subroutine read_from_block
   ! ---------------------------------------------------------

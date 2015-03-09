@@ -28,12 +28,12 @@ TheoryLevel = independent_particles
 
 #a = 0.758
 #%Species
-#"atom1" | species_user_defined | default_mass | 1 | "-1/sqrt(a^2+(x)^2)"
+#"atom1" | species_user_defined |  1 | "-1/sqrt(a^2+(x)^2)"
 #%
 
 a = 0.758^2
 %Species
-"atom1" | species_soft_coulomb | default_mass | 1 | a
+"atom1" | species_soft_coulomb |  1 | a
 %
 
 %Coordinates

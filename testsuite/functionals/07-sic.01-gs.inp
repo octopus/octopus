@@ -6,7 +6,7 @@ CalculationMode = gs
 FromScratch = yes
 
 %Species
- "Ar" | species_ps_hgh | default_mass | 18
+ "Ar" | species_ps_hgh |  18
 %
 
 %Coordinates

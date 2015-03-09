@@ -19,7 +19,7 @@ Radius =  10.0
 # System
 # ------------------
 %Species
-"ADW1D" | species_user_defined | default_mass | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+"ADW1D" | species_user_defined |  1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
 %
 
 %Coordinates

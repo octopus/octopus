@@ -7,7 +7,7 @@ Spacing = 0.05
 Radius = 10
 
 %Species
-"Hydrogen1D" | species_user_defined | default_mass | 1 | "-1/sqrt(1+(x)^2)"
+"Hydrogen1D" | species_user_defined |  1 | "-1/sqrt(1+(x)^2)"
 %
 
 %Coordinates
