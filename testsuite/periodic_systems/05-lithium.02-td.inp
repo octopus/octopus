@@ -14,7 +14,7 @@ Spacing = a/10
 %
 
 %Species
- 'Li' | species_ps_psf |  3 | lmax | 2 | lloc | 0
+ 'Li' | species_ps_psf | lmax | 2 | lloc | 0
 %
 
 BoxShape = parallelepiped

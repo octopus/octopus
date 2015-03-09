@@ -29,7 +29,7 @@ v = 0.9
 k=1.0
 
 %Species
-'Cosh2e' | species_user_defined |  2 |"-v/(cosh(k*x)^2)-v/(cosh(k*y)^2)+b/(cosh(k*(x-y))^2)" 
+'Cosh2e' | species_user_defined | "-v/(cosh(k*x)^2)-v/(cosh(k*y)^2)+b/(cosh(k*(x-y))^2)" | valence | 2
 %
 
 %Coordinates

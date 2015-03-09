@@ -14,7 +14,7 @@ Radius = 200.0
 TheoryLevel = independent_particles
 
 %Species
-"Hydrogen1D" | species_user_defined |  1 | "-1/sqrt(1+(x)^2)"
+"Hydrogen1D" | species_user_defined | "-1/sqrt(1+(x)^2)" | valence | 1
 %
 
 %Coordinates

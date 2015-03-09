@@ -111,12 +111,13 @@ module species_m
     PSEUDO_SET_HGH      = 3
 
   integer, parameter         ::              &
-    SPECIES_FLAG_RADIUS       = -10001,      &
-    SPECIES_FLAG_SPACING      = -10002,      &
-    SPECIES_FLAG_LMAX         = -10003,      &
-    SPECIES_FLAG_LLOC         = -10004,      &
-    SPECIES_FLAG_MASS         = -10005
-    
+    SPECIES_FLAG_RADIUS        = -10001,     &
+    SPECIES_FLAG_SPACING       = -10002,     &
+    SPECIES_FLAG_LMAX          = -10003,     &
+    SPECIES_FLAG_LLOC          = -10004,     &
+    SPECIES_FLAG_MASS          = -10005,     &
+    SPECIES_FLAG_VALENCE       = -10006
+  
   type species_t
     private
     integer :: index                  !< just a counter
@@ -442,7 +443,9 @@ contains
     !% The component of the pseudopotenital to be considered local.
     !%Option mass -10005
     !% The mass of the species in atomic mass units, <i>i.e.</i> the mass of a proton is
-    !% roughly one. 
+    !% roughly one.
+    !%Option valence -10006
+    !% The number of electrons of the species.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1416,26 +1419,21 @@ contains
 
     case(SPECIES_SOFT_COULOMB)
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
-      call parse_block_float(blk, row, read_data + 1, spec%sc_alpha)
-      read_data = read_data + 2
+      call parse_block_float(blk, row, read_data, spec%sc_alpha)
+      read_data = read_data + 1
 
     case(SPECIES_USDEF) ! user-defined
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
-      call parse_block_string(blk, row, read_data + 1, spec%user_def)
+      call parse_block_string(blk, row, read_data, spec%user_def)
       call conv_to_C_string(spec%user_def)
-      read_data = read_data + 2
+      read_data = read_data + 1
 
     case(SPECIES_FROM_FILE)
       spec%Z=M_ZERO
-      call parse_block_float(blk, row, read_data + 0, spec%Z_val)
-      call parse_block_string(blk, row, read_data + 1, spec%filename)
-      read_data = read_data + 2
+      call parse_block_string(blk, row, read_data, spec%filename)
+      read_data = read_data + 1
 
     case(SPECIES_JELLIUM)
-      call parse_block_float(blk, row, read_data, spec%Z)      ! charge of the jellium sphere
-      read_data = read_data + 1
       if(ncols > 3) then
         call parse_block_float(blk, row, read_data, spec%jradius)! radius of the jellium sphere
         if(spec%jradius <= M_ZERO) call input_error('Species')
@@ -1444,22 +1442,16 @@ contains
       else
         spec%jradius = M_HALF
       endif
-      spec%Z_val = spec%Z
 
     case(SPECIES_JELLIUM_SLAB)
-      call parse_block_float(blk, row, read_data + 0, spec%Z)      ! charge of the jellium slab
-      call parse_block_float(blk, row, read_data + 1, spec%jthick) ! thickness of the jellium slab
-      read_data = read_data + 2
+      call parse_block_float(blk, row, read_data, spec%jthick) ! thickness of the jellium slab
+      read_data = read_data + 1
       if(spec%jthick <= M_ZERO) call input_error('Species')
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
-      spec%Z_val = spec%Z
 
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
-      call parse_block_float(blk, row, read_data, spec%Z)
-      spec%Z_val = spec%Z
-      read_data = read_data + 1
       
-      if (parse_block_cols(blk, row) <= 4) then
+      if (parse_block_cols(blk, row) <= 2) then
         spec%sigma = CNST(0.25)
       else
         call parse_block_float(blk, row, read_data, spec%sigma)
@@ -1468,26 +1460,20 @@ contains
       end if
 
     case(SPECIES_CHARGE_DENSITY)
-      call parse_block_float(blk, row, read_data + 0, spec%Z)
       call parse_block_string(blk, row, read_data + 1, spec%rho)
-      spec%Z_val = spec%Z
-      read_data = read_data + 2
-
-    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
-      call parse_block_float(blk, row, read_data + 0, spec%Z)
       read_data = read_data + 1
 
-    case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
+    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
 
-      call parse_block_float(blk, row, read_data + 0, spec%z)
+    case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
       call parse_block_string(blk, row, read_data + 1, spec%filename)
-      read_data = read_data + 2
 
     case default
       call input_error('Species')
     end select
 
     spec%mass = -CNST(1.0)
+    spec%z_val = -CNST(1.0)
     
     icol = read_data
     do
@@ -1506,6 +1492,9 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
       case(SPECIES_FLAG_MASS)
         call parse_block_float(blk, row, icol + 1, spec%mass)
+      case(SPECIES_FLAG_VALENCE)
+        call parse_block_float(blk, row, icol + 1, spec%z_val)
+        spec%z = spec%z_val
       case default
         call messages_write('Unknown flag in species block')
         call messages_fatal()
@@ -1514,36 +1503,49 @@ contains
       icol = icol + 2        
     end do
 
-    
-    if(spec%mass < CNST(0.0)) then
+    select case(spec%type)
+    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
+      SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+      
+      call element_init(element, spec%label)
+      
+      if(.not. element_valid(element)) then
+        call messages_write('Cannot determine the element for species '//trim(spec%label)//'.')
+        call messages_fatal()
+      end if
 
-      select case(-spec%type)
-      case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
-        SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+      spec%z = element_atomic_number(element)
+
+      if(spec%type == SPECIES_FULL_DELTA .or. spec%type == SPECIES_FULL_GAUSSIAN) then
+        spec%z_val = spec%z
+      end if
         
-        call element_init(element, spec%label)
-        
-        if(.not. element_valid(element)) then
-          call messages_write('Cannot find mass for species '//trim(spec%label)//'.')
-          call messages_fatal()
-        end if
-        
+      if(spec%mass < CNST(0.0)) then
         spec%mass = element_mass(element)
+        call messages_write('Info: default mass for species '//trim(spec%label)//':')
+        call messages_write(spec%mass)
+        call messages_write(' amu.')
+        call messages_info()
+      end if
         
-        call element_end(element)
+      call element_end(element)
         
-      case default
+    case default
+      if(spec%mass < CNST(0.0)) then
         spec%mass = 1.0
-        
-      end select
+        call messages_write('Info: default mass for species '//trim(spec%label)//':')
+        call messages_write(spec%mass)
+        call messages_write(' amu.')
+        call messages_info()
+      end if
+
+      if(spec%z_val < CNST(0.0)) then
+        call messages_write('Cannot determine valence for species '//trim(spec%label)//'.')
+        call messages_fatal()
+      end if
       
-      call messages_write('Info: default mass for species '//trim(spec%label)//':')
-      call messages_write(spec%mass)
-      call messages_write(' amu')
-      call messages_info()
-      
-    end if
-      
+    end select
+    
     POP_SUB(read_from_block)
   end subroutine read_from_block
   ! ---------------------------------------------------------

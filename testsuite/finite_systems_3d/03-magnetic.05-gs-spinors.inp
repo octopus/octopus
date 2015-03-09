@@ -5,7 +5,7 @@ CalculationMode = gs
 %
 
 %Species
- 'Al' | species_ps_hgh |  13
+ 'Al' | species_ps_hgh
 %
 
 Radius = 6.0

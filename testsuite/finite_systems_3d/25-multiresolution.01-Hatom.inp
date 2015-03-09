@@ -2,7 +2,7 @@
  'H_f' | 0 | 0 | 0
 %
 %Species 
- 'H_f' | species_full_delta |  1
+ 'H_f' | species_full_delta
 %
 
 Boxshape = sphere

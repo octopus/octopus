@@ -29,12 +29,13 @@ module element_m
   implicit none
 
   private
-  public ::             &
-    element_t,          &
-    element_init,       &
-    element_end,        &
-    element_mass,       &
-    element_valid
+  public ::                    &
+    element_t,                 &
+    element_init,              &
+    element_end,               &
+    element_mass,              &
+    element_valid,             &
+    element_atomic_number
 
   type element_t
     logical          :: valid
@@ -82,7 +83,7 @@ contains
         exit
       end if
     end do
-    
+
     call io_close(iunit)
 
     POP_SUB(element_init)
@@ -115,6 +116,14 @@ contains
 
     valid = this%valid
   end function element_valid
+
+  ! ------------------------------------
+
+  pure integer function element_atomic_number(this) result(atomic_number)
+    type(element_t),   intent(in)    :: this
+
+    atomic_number = this%atomic_number
+  end function element_atomic_number
   
 end module element_m
 

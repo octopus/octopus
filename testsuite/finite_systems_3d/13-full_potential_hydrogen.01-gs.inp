@@ -5,7 +5,7 @@
  'H_f' | 0 | 0 | 0
 %
 %Species 
- 'H_f' | species_full_gaussian |  1 
+ 'H_f' | species_full_gaussian
 %
 
 Radius = 8.0

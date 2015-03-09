@@ -21,7 +21,7 @@ Radius =  8.0
 # System
 # ------------------
 %Species
-"doublewell" | species_user_defined |  1 | "1/64*(x)^4-1/4*(x)^2"
+"doublewell" | species_user_defined | "1/64*(x)^4-1/4*(x)^2" | valence | 1
 %
 
 %Coordinates
