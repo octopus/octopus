@@ -39,7 +39,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   call X(subarray_gather)(vp%sendpoints, v_local, ghost_send)
 
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(ghost_send(1), vp%np_ghost_neigh_partno(1), vp%sdispls(1),           &
+  call MPI_Alltoallv(ghost_send(1), vp%scounts(1), vp%sdispls(1),           &
     R_MPITYPE, v_local(vp%np_local+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE,    &
     vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
@@ -136,32 +136,32 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 #ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
     do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+      if(vp%scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
       call MPI_Isend(handle%X(send_buffer)(1 + (vp%sendpos(ipart) - 1)*v_local%pack%size(1)), &
-        vp%np_ghost_neigh_partno(ipart)*v_local%pack%size(1), &
+        vp%scounts(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 #endif
 
   case(BATCH_PACKED)
     do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+      if(vp%scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
       call MPI_Isend(handle%ghost_send%pack%X(psi)(1, vp%sendpos(ipart)), &
-        vp%np_ghost_neigh_partno(ipart)*v_local%pack%size(1), &
+        vp%scounts(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
       do ipart = 1, vp%npart
-        if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+        if(vp%scounts(ipart) == 0) cycle
         handle%nnb = handle%nnb + 1
         tag = ii
-        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%np_ghost_neigh_partno(ipart), &
+        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%scounts(ipart), &
           R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
     end do
