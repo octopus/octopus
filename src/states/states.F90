@@ -61,6 +61,8 @@ module states_m
   use smear_m
   use states_group_m
   use states_dim_m
+  use ssys_density_m
+  use ssys_states_m
   use symmetrizer_m
   use types_m
   use unit_m
@@ -77,6 +79,7 @@ module states_m
     states_priv_t,                    &
     states_init,                      &
     states_look,                      &
+    states_add_states,                &
     states_densities_init,            &
     states_exec_init,                 &
     states_allocate_wfns,             &
@@ -185,6 +188,9 @@ module states_m
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
 
+    !> Subsystem states.
+    type(ssys_states_t), pointer :: subsys_st
+    
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
     logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
@@ -269,6 +275,7 @@ contains
     nullify(st%user_def_states)
     nullify(st%rho, st%current)
     nullify(st%rho_core, st%frozen_rho)
+    nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
@@ -562,6 +569,24 @@ contains
     POP_SUB(states_init)
   end subroutine states_init
 
+  ! ---------------------------------------------------------
+  !> Sets the pointer to the substates
+  !> must be called before states_densities_init
+  ! ---------------------------------------------------------
+  subroutine states_add_states(this, st)
+    type(states_t),              intent(inout) :: this
+    type(ssys_states_t), target, intent(in)    :: st
+
+    PUSH_SUB(states_add_states)
+
+    !> Substates are not compatible with complex scaling for now.
+    ASSERT(.not.(this%cmplxscl%space.or.this%cmplxscl%time))
+    ASSERT(.not.associated(this%subsys_st))
+    this%subsys_st=>st
+
+    POP_SUB(states_add_states)
+  end subroutine states_add_states
+ 
   ! ---------------------------------------------------------
   !> Reads the 'states' file in the restart directory, and finds out
   !! the nik, dim, and nst contained in it.
@@ -1209,14 +1234,21 @@ contains
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
-    FLOAT :: size
+    type(ssys_density_t), pointer :: density
+    FLOAT                         :: fsize
 
     PUSH_SUB(states_densities_init)
 
-
-    SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
-    st%zrho%Re = M_ZERO    
-    st%rho => st%zrho%Re 
+    if(associated(st%subsys_st))then
+      call ssys_states_start(st%subsys_st)
+      call ssys_states_get(st%subsys_st, density)
+      ASSERT(associated(density))
+      call ssys_density_get(density, st%zrho%Re)
+    else
+      SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      st%zrho%Re = M_ZERO
+    end if
+    st%rho => st%zrho%Re
     if( st%cmplxscl%space) then
       SAFE_ALLOCATE(st%zrho%Im(1:gr%fine%mesh%np_part, 1:st%d%nspin))
       st%zrho%Im = M_ZERO
@@ -1231,10 +1263,10 @@ contains
       end if
     end if
 
-    size = gr%mesh%np_part*CNST(8.0)*st%d%block_size
+    fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size
 
     call messages_write('Info: states-block size = ')
-    call messages_write(size, fmt = '(f10.1)', align_left = .true., units = unit_megabytes, print_units = .true.)
+    call messages_write(fsize, fmt = '(f10.1)', align_left = .true., units = unit_megabytes, print_units = .true.)
     call messages_info()
 
     POP_SUB(states_densities_init)
@@ -1351,7 +1383,8 @@ contains
     logical, optional,      intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
     logical, optional,      intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
 
-    logical :: exclude_wfns_
+    type(ssys_density_t), pointer :: density
+    logical                       :: exclude_wfns_
 
     PUSH_SUB(states_copy)
 
@@ -1366,13 +1399,29 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
+    if(associated(stin%subsys_st))then
+      !> Allocate and copy substates.
+      call ssys_states_new(stout%subsys_st, stin%subsys_st)
+      if(exclude_wfns)then
+        call ssys_states_init(stout%subsys_st, stin%subsys_st)
+      else
+        call ssys_states_copy(stout%subsys_st, stin%subsys_st)
+      end if
+    end if
+
     if(.not. exclude_wfns_) then
       call loct_pointer_copy(stout%dpsi, stin%dpsi)
 
       !cmplxscl
       call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
       stout%zpsi => stout%psi%zR
-      call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
+      if(associated(stout%subsys_st))then
+        call ssys_states_get(stout%subsys_st, density)
+        ASSERT(associated(density))
+        call ssys_density_get(density, stout%zrho%Re)
+      else
+        call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
+      end if
       stout%rho => stout%zrho%Re
       if(stin%cmplxscl%space) then
         call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
@@ -1493,6 +1542,7 @@ contains
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
+    call ssys_states_del(st%subsys_st)
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
