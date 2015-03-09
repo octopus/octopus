@@ -117,7 +117,8 @@ module species_m
     SPECIES_FLAG_LLOC              = -10004,     &
     SPECIES_FLAG_MASS              = -10005,     &
     SPECIES_FLAG_VALENCE           = -10006,     &
-    SPECIES_FLAG_JELLIUM_RADIUS    = -10007
+    SPECIES_FLAG_JELLIUM_RADIUS    = -10007,     &
+    SPECIES_FLAG_GAUSSIAN_WIDTH    = -10008
   
   type species_t
     private
@@ -450,6 +451,10 @@ contains
     !%Option jellium_radius -10007
     !% The radius of jellium sphere. If this value is not specified,
     !% the default of 0.5 bohr is used.
+    !%Option gaussian_width -10008
+    !% The width of the gaussian in units of spacing used to represent
+    !% the nuclear charge for species_full_gaussian. If not present,
+    !% the default is 0.25.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1447,14 +1452,7 @@ contains
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
 
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
-      
-      if (parse_block_cols(blk, row) <= 2) then
-        spec%sigma = CNST(0.25)
-      else
-        call parse_block_float(blk, row, read_data, spec%sigma)
-        if(spec%sigma <= M_ZERO) call input_error('Species')
-        read_data = read_data + 1
-      end if
+      spec%sigma = CNST(0.25)
 
     case(SPECIES_CHARGE_DENSITY)
       call parse_block_string(blk, row, read_data + 1, spec%rho)
@@ -1504,9 +1502,13 @@ contains
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
         if(spec%jradius <= M_ZERO) call input_error('Species')
 
+      case(SPECIES_FLAG_GAUSSIAN_WIDTH)
+        call parse_block_float(blk, row, icol + 1, spec%sigma)
+        if(spec%sigma <= M_ZERO) call input_error('Species')
+
       case default
-        call messages_write('Unknown flag in species block')
-        call messages_fatal()
+        call input_error('Species')
+        
       end select
 
       icol = icol + 2        
