@@ -168,7 +168,7 @@ contains
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
     call parse_integer('FilterPotentials', PS_FILTER_NONE, filter)
-    if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')
+    if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
@@ -313,7 +313,7 @@ contains
       !%End
       call parse_integer('StaticMagneticField2DGauge', 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
-        call input_error('StaticMagneticField2DGauge')
+        call messages_input_error('StaticMagneticField2DGauge')
 
       SAFE_ALLOCATE(ep%B_field(1:3))
       do idir = 1, 3
@@ -321,13 +321,13 @@ contains
       end do
       select case(gr%sb%dim)
       case(1)
-        call input_error('StaticMagneticField')
+        call messages_input_error('StaticMagneticField')
       case(2)
         if(gr%sb%periodic_dim == 2) then
           message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
           call messages_fatal(1)
         endif
-        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
+        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
       case(3)
         ! Consider cross-product below: if grx(1:sb%periodic_dim) is used, it is not ok.
         ! Therefore, if idir is periodic, B_field for all other directions must be zero.
@@ -411,7 +411,7 @@ contains
     !% Spin-orbit.
     !%End
     call parse_integer('RelativisticCorrection', NOREL, ep%reltype)
-    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
+    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
       call messages_fatal(1)
@@ -447,7 +447,7 @@ contains
     !%End
     call parse_logical('IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
-      if(gr%sb%periodic_dim > 0) call input_error('IgnoreExternalIons')
+      if(gr%sb%periodic_dim > 0) call messages_input_error('IgnoreExternalIons')
     end if
 
     !%Variable ForceTotalEnforce
@@ -842,7 +842,7 @@ contains
           if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge * (rr**4 - rc**4) / (rr**5 - rc**5)
         case default
-          call input_error('ClassicalPotential')
+          call messages_input_error('ClassicalPotential')
         end select
       end do
     end do

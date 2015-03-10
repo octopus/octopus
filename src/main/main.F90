@@ -115,7 +115,7 @@ program octopus
   end if
 
   call parse_integer('CalculationMode', CM_GS, inp_calc_mode)
-  if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
+  if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error('CalculationMode')
 
   ! Now we can initialize the I/O
   call io_init()

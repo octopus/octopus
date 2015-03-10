@@ -667,7 +667,7 @@ contains
         call messages_info(3)
       end if
     case default
-      call input_error('Species')
+      call messages_input_error('Species')
     end select
 
     if(.not. species_is_ps(spec)) then
@@ -1452,7 +1452,7 @@ contains
     case(SPECIES_JELLIUM_SLAB)
       call parse_block_float(blk, row, read_data, spec%jthick) ! thickness of the jellium slab
       read_data = read_data + 1
-      if(spec%jthick <= M_ZERO) call input_error('Species')
+      if(spec%jthick <= M_ZERO) call messages_input_error('Species')
       spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
 
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
@@ -1468,7 +1468,7 @@ contains
       call parse_block_string(blk, row, read_data + 1, spec%filename)
 
     case default
-      call input_error('Species')
+      call messages_input_error('Species', "Unknown type for species '"//trim(spec%label)//"'")
     end select
 
     spec%mass = -CNST(1.0)
@@ -1505,18 +1505,18 @@ contains
       case(SPECIES_FLAG_JELLIUM_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%jradius)
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
-        if(spec%jradius <= M_ZERO) call input_error('Species')
+        if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
 
       case(SPECIES_FLAG_GAUSSIAN_WIDTH)
         call parse_block_float(blk, row, icol + 1, spec%sigma)
-        if(spec%sigma <= M_ZERO) call input_error('Species')
+        if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
 
       case(SPECIES_FLAG_SOFTENING)
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
         spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
 
       case default
-        call input_error('Species')
+        call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
         
       end select
 

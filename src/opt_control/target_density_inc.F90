@@ -102,7 +102,7 @@
         else
           message(1) = '"OCTTargetDensityState" has to be specified as block.'
           call messages_info(1)
-          call input_error('OCTTargetDensity')
+          call messages_input_error('OCTTargetDensity')
         end if
 
       else
@@ -291,7 +291,7 @@
       else
         message(1) = '"OCTSpatialCurrWeight" has to be specified as a block.'
         call messages_info(1)
-        call input_error('OCTEvalBoxCurrTg')
+        call messages_input_error('OCTEvalBoxCurrTg')
       end if
     end if
 

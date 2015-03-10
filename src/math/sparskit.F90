@@ -117,7 +117,7 @@ contains
     !%End
     call parse_integer('SPARSKITSolver', SK_BCG, sk%solver_type)
     if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
-      call input_error('SPARSKITSolver')
+      call messages_input_error('SPARSKITSolver')
     end if
 
     !%Variable SPARSKITKrylovSubspaceSize

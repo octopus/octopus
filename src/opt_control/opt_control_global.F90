@@ -155,7 +155,7 @@ contains
     !% <b>28</b>, 649-664 (2008)].
     !%End
     call parse_integer('OCTScheme', oct_algorithm_zr98, oct%algorithm)
-    if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
+    if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call messages_input_error('OCTScheme')
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
     ! time, some others make only sense if the control functions are parameterized.

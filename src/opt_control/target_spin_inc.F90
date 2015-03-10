@@ -59,14 +59,14 @@
       else
         message(1) = '"OCTTargetSpin" has to be specified as block.'
         call messages_info(1)
-        call input_error('OCTTargetSpin')
+        call messages_input_error('OCTTargetSpin')
       end if
 
     else
       message(1) = 'Error: if "OCTTargetOperator = oct_tg_spin", then you must'
       message(2) = 'supply one "OCTTargetSpin" block.'
       call messages_info(2)
-      call input_error('OCTTargetSpin')
+      call messages_input_error('OCTTargetSpin')
     end if
 
 

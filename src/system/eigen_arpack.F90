@@ -132,7 +132,7 @@ contains
     !% twice the number of eigenvectors (which is the number of states) 
     !%End 
     call parse_integer('EigensolverArnoldiVectors', 2*nst, this%arnoldi_vectors) 
-    if(this%arnoldi_vectors - nst < M_TWO) call input_error('EigensolverArnoldiVectors') 
+    if(this%arnoldi_vectors - nst < M_TWO) call messages_input_error('EigensolverArnoldiVectors') 
     call messages_print_var_value(stdout, "EigensolverArnoldiVectors", this%arnoldi_vectors)
     
     !%Variable EigensolverArpackSort
@@ -155,7 +155,7 @@ contains
        this%sort /= "LR"  .and. &
        this%sort /= "SR"  .and. &
        this%sort /= "LI"  .and. &
-       this%sort /= "SI") call input_error('EigensolverArpackSort')
+       this%sort /= "SI") call messages_input_error('EigensolverArpackSort')
     call messages_print_var_value(stdout, "EigensolverArpackSort", this%sort)
     
 
@@ -175,7 +175,7 @@ contains
     !%End
     call parse_integer('EigensolverArpackInitialResid', 2, this%init_resid)
     if(.not.varinfo_valid_option('EigensolverArpackInitialResid', this%init_resid))&
-       call input_error('EigensolverArpackInitialResid')
+       call messages_input_error('EigensolverArpackInitialResid')
     call messages_print_var_option(stdout, "EigensolverArpackInitialResid", this%init_resid)
 
 #else 

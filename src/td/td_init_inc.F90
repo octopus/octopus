@@ -171,10 +171,10 @@ subroutine td_init(td, sys, hm)
   !%End
 
   call parse_integer('TDDynamics', EHRENFEST, td%dynamics)
-  if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
+  if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
   if(td%dynamics .ne. EHRENFEST) then
-    if(.not.ion_dynamics_ions_move(td%ions)) call input_error('TDDynamics')
+    if(.not.ion_dynamics_ions_move(td%ions)) call messages_input_error('TDDynamics')
   end if
 
   !%Variable RecalculateGSDuringEvolution

@@ -225,7 +225,7 @@ contains
 
     call parse_integer('ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode, is_flag=.true.)) then
-      call input_error('ProfilingMode')
+      call messages_input_error('ProfilingMode')
     end if
 
     in_profiling_mode = (prof_vars%mode > 0)

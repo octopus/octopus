@@ -218,7 +218,7 @@ contains
     !% also slow it down or yield wrong results (especially for spin-polarized calculations).
     !%End
     call parse_integer('LCAOStart', mode_default, this%mode)
-    if(.not.varinfo_valid_option('LCAOStart', this%mode)) call input_error('LCAOStart')
+    if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error('LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
 
@@ -1089,7 +1089,7 @@ contains
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
       call parse_integer('GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
-      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
+      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
 

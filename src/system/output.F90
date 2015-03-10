@@ -334,7 +334,7 @@ contains
     endif
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call input_error('Output')
+      call messages_input_error('Output')
     end if
 
     if(iand(outp%what, C_OUTPUT_MMB) /= 0) then

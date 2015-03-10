@@ -196,10 +196,10 @@ contains
     default = OP_VEC
 
     call parse_integer('OperateDouble', default, dfunction_global)
-    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call input_error('OperateDouble')
+    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
 
     call parse_integer('OperateComplex', default, zfunction_global)
-    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call input_error('OperateComplex')
+    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
 
 
     !%Variable OperateSingle
@@ -229,10 +229,10 @@ contains
     !%End
     
     call parse_integer('OperateSingle', OP_FORTRAN, sfunction_global)
-    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call input_error('OperateSingle')
+    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
     
     call parse_integer('OperateComplexSingle', OP_FORTRAN, cfunction_global)
-    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call input_error('OperateComplexSingle')
+    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then

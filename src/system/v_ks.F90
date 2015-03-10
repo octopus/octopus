@@ -166,7 +166,7 @@ contains
     !% (Not fully implemented) Reduced Density Matrix functional theory
     !%End
     call parse_integer('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
-    if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
+    if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
 
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
@@ -221,7 +221,7 @@ contains
         !% C. Legrand et al. J. Phys. B 35, 1115 (2002). 
         !%End
         call parse_integer('SICCorrection', sic_none, ks%sic_type)
-        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
+        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)

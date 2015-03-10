@@ -328,7 +328,7 @@ contains
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
     call parse_integer('SpinComponents', UNPOLARIZED, st%d%ispin)
-    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
+    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
@@ -713,21 +713,21 @@ contains
       if(ncols > st%nst) then
         message(1) = "Too many columns in block Occupations."
         call messages_warning(1)
-        call input_error("Occupations")
+        call messages_input_error("Occupations")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
         message(1) = "Wrong number of rows in block Occupations."
         call messages_warning(1)
-        call input_error("Occupations")
+        call messages_input_error("Occupations")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
           message(1) = "All rows in block Occupations must have the same number of columns."
           call messages_warning(1)
-          call input_error("Occupations")
+          call messages_input_error("Occupations")
         endif
       enddo
 
@@ -914,12 +914,12 @@ contains
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
         ! This checks (B).
-        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call input_error('InitialSpins')
+        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
       end do
       call parse_block_end(blk)
       ! This checks (A). In fact (A) follows from (B), so maybe this is not necessary...
       if(any(abs(st%spin(:, :, :)) > M_HALF)) then
-        call input_error('InitialSpins')
+        call messages_input_error('InitialSpins')
       end if
       st%fixed_spins = .true.
       do i = 2, st%d%nik
@@ -1350,7 +1350,7 @@ contains
 
     call parse_integer('StatesOrthogonalization', default, st%d%orth_method)
 
-    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
+    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
     if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")

@@ -279,7 +279,7 @@ contains
     if(associated(hm%vberry)) mixdefault = MIXPOT
 
     call parse_integer('MixField', mixdefault, scf%mix_field)
-    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call input_error('MixField')
+    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
     if (scf%mix_field == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then

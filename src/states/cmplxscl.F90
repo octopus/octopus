@@ -91,7 +91,7 @@ contains
     !%End
     call parse_integer('ComplexScaling', CMPLXSCL_NONE, cmplxscl_flags)
     if(.not.varinfo_valid_option('ComplexScaling', cmplxscl_flags, is_flag = .true.)) then
-      call input_error('ComplexScaling')
+      call messages_input_error('ComplexScaling')
     end if
 
     this%space = iand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
@@ -111,7 +111,7 @@ contains
       !% Allowed values must be in the range 0 <= \theta < \pi/4. 
       !%End
       call parse_float('ComplexScalingTheta', CNST(0.3), this%theta)
-      if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call input_error('ComplexScalingTheta')
+      if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call messages_input_error('ComplexScalingTheta')
     else
       this%theta = M_ZERO
     endif

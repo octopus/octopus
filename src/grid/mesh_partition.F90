@@ -181,7 +181,7 @@ contains
     else if (stencil_to_use == LAPLACIAN) then
       call stencil_copy(lapl_stencil, stencil)
     else
-      call input_error('MeshPartitionStencil')
+      call messages_input_error('MeshPartitionStencil')
     end if
 
     ! Shortcut to the global number of vertices

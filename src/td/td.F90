@@ -451,7 +451,7 @@ contains
           else
             message(1) = '"TransformStates" has to be specified as block.'
             call messages_info(1)
-            call input_error('TransformStates')
+            call messages_input_error('TransformStates')
           end if
         end if
 

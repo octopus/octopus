@@ -246,7 +246,7 @@ contains
 
     call parse_integer('TDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
+    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
 
     do iout = 1, OUT_MAX
       writ%out(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)

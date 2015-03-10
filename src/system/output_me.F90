@@ -103,7 +103,7 @@ contains
 
     call parse_integer('OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
-      call input_error('OutputMatrixElements')
+      call messages_input_error('OutputMatrixElements')
     end if
 
     if(sb%dim /= 2 .and. sb%dim /= 3) this%what = iand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))

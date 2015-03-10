@@ -147,7 +147,7 @@ contains
       
       call parse_integer('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
-           call input_error('MagneticGaugeCorrection')
+           call messages_input_error('MagneticGaugeCorrection')
 
     end if
 

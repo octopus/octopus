@@ -428,7 +428,7 @@ contains
         end if
         call parse_block_float(blk, row, 2, rsize)
         rsize = units_from_atomic(units_inp%length**(-1), rsize)
-        if(rsize < M_ZERO) call input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error('radius')
         call parse_block_string(blk, row, 3, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -437,7 +437,7 @@ contains
       case(SPHERE)
         call parse_block_float(blk, row, 2, rsize)
         rsize = units_from_atomic(units_inp%length**(-1), rsize)
-        if(rsize < M_ZERO) call input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error('radius')
         do ic = 1, dim 
           call parse_block_float(blk, row, 2 + ic, center(ic))
           center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
@@ -445,7 +445,7 @@ contains
       case(CYLINDER)
         call parse_block_float(blk, row, 2, rsize)
         rsize = units_from_atomic(units_inp%length**(-1), rsize)
-        if(rsize < M_ZERO) call input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error('radius')
         call parse_block_float(blk, row, 3, xsize)
         do ic = 1, dim 
           call parse_block_float(blk, row, 3 + ic, center(ic))
@@ -600,7 +600,7 @@ contains
         if (extra_write) then
           call parse_integer('LDOutputHow', 0, how)
           if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-            call input_error('LDOutputHow')
+            call messages_input_error('LDOutputHow')
           end if
           filename = 'basinsmap'
           call dio_function_output(how, &
@@ -691,7 +691,7 @@ contains
     if (extra_write) then
       call parse_integer('LDOutputHow', 0, how)
       if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-        call input_error('LDOutputHow')
+        call messages_input_error('LDOutputHow')
       end if
       SAFE_ALLOCATE(dble_domain_map(nd, sys%gr%mesh%np))
       do ip = 1, sys%gr%mesh%np

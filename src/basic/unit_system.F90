@@ -152,16 +152,16 @@ contains
 
     if(parse_is_defined('Units')) then
       call parse_integer('Units', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('Units')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('Units')
       cinp = cc
       cout = cc
     else
       ! note that we check the value is valid for the 'Units' variable
       call parse_integer('UnitsInput', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsInput')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsInput')
       cinp = cc
       call parse_integer('UnitsOutput', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsOutput')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
       cout = cc
     end if
 
@@ -238,7 +238,7 @@ contains
     case (UNITS_EVA)
       call unit_system_init_eV_Ang(uu)
     case default
-      call input_error('Units')
+      call messages_input_error('Units')
     end select
 
     POP_SUB(unit_system_get)

@@ -268,7 +268,7 @@ contains
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P.Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_integer('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
-      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
+      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
       !%Variable GOTolerance
@@ -304,7 +304,7 @@ contains
       endif
       call parse_float('GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
-      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
+      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
       
       !%Variable GOStep
       !%Type float
@@ -368,7 +368,7 @@ contains
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
       call parse_integer('GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
-      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call input_error('GOObjective')
+      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
       call loct_rm("geom/optimization.log")

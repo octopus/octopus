@@ -249,7 +249,7 @@ contains
     !% Phase-space filter. Implementation not complete.
     !%End
     call parse_integer('PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
-    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call input_error('PESMaskMode')
+    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
     select case(mask%mode)
@@ -279,7 +279,7 @@ contains
     !% Free plane-wave propagation.   
     !%End
     call parse_integer('PESMaskPropagator', VOLKOV, mask%sw_evolve)
-    if(.not.varinfo_valid_option('PESMaskPropagator', mask%sw_evolve)) call input_error('PESMaskPropagator')
+    if(.not.varinfo_valid_option('PESMaskPropagator', mask%sw_evolve)) call messages_input_error('PESMaskPropagator')
     call messages_print_var_option(stdout, "PESMaskPropagator", mask%sw_evolve)
     
     !%Variable PESMaskStartTime 
@@ -325,7 +325,10 @@ contains
     !%End
     call parse_integer('PESMaskPlaneWaveProjection', PW_MAP_BARE_FFT, mask%pw_map_how)
     
-    if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) call input_error('PESMaskPlaneWaveProjection')
+    if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
+      call messages_input_error('PESMaskPlaneWaveProjection')
+    end if
+    
     call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
 
     if (mask%pw_map_how ==  PW_MAP_PFFT .and. (.not. mask%mesh%parallel_in_domains)) then
@@ -579,7 +582,7 @@ contains
     !%Error function. Not Implemented.
     !%End
     call parse_integer('PESMaskShape', defaultMask, mask%shape)
-    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call input_error('PESMaskShape')
+    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
     !%Variable PESMaskSize

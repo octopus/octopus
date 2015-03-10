@@ -126,7 +126,7 @@ contains
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !%End
     call parse_integer(trim(prefix)//'TypeOfMixing', def, smix%scheme)
-    if(.not.varinfo_valid_option('TypeOfMixing', smix%scheme)) call input_error('TypeOfMixing')
+    if(.not.varinfo_valid_option('TypeOfMixing', smix%scheme)) call messages_input_error('TypeOfMixing')
     call messages_print_var_option(stdout, "TypeOfMixing", smix%scheme)
 
     !%Variable Mixing
@@ -139,7 +139,7 @@ contains
     !%End
     if (smix%scheme == MIX_LINEAR .or. smix%scheme == MIX_BROYDEN) then
       call parse_float(trim(prefix)//'Mixing', CNST(0.3), smix%alpha)
-      if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call input_error('Mixing')
+      if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
     end if
 
     !%Variable MixNumberSteps
@@ -153,7 +153,7 @@ contains
     !%End
     if (smix%scheme == MIX_GRPULAY .or. smix%scheme == MIX_BROYDEN) then
       call parse_integer(trim(prefix)//'MixNumberSteps', 3, smix%ns)
-      if(smix%ns <= 1) call input_error('MixNumberSteps')
+      if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
     else
       smix%ns = 0
     end if

@@ -129,7 +129,7 @@ contains
         else if (functl%id == XC_RDMFT_XC_M) then
           functl%family = XC_FAMILY_RDMFT  
         else
-          call input_error('XCFunctional')
+          call messages_input_error('XCFunctional')
         end if
       end if
     end if

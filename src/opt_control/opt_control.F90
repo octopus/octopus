@@ -198,7 +198,7 @@ contains
         call messages_info(1)
         call scheme_newuoa()
     case default
-      call input_error('OCTScheme')
+      call messages_input_error('OCTScheme')
     end select
 
     ! do final test run: propagate initial state with optimal field

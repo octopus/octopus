@@ -151,7 +151,7 @@ contains
     !%End
     
     call parse_integer('Thermostat', THERMO_NONE, this%thermostat)
-    if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call input_error('Thermostat')
+    if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
     if(this%thermostat /= THERMO_NONE) then

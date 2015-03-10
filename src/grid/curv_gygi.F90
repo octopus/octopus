@@ -108,9 +108,9 @@ contains
     !%End
     call parse_float('CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
-    if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
-    if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')
-    if(cv%beta<=M_ZERO)  call input_error('CurvGygiBeta')
+    if(cv%a<=M_ZERO)     call messages_input_error('CurvGygiA')
+    if(cv%alpha<=M_ZERO) call messages_input_error('CurvGygiAlpha')
+    if(cv%beta<=M_ZERO)  call messages_input_error('CurvGygiBeta')
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))

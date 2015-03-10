@@ -202,7 +202,7 @@ contains
     !%End
     call parse_integer('OutputHow', 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-      call input_error('OutputHow')
+      call messages_input_error('OutputHow')
     end if
 
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then

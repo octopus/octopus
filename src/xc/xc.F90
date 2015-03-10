@@ -213,7 +213,7 @@ contains
       !%End
       call parse_integer('MGGAimplementation', 1, xcs%mGGA_implementation)
       if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
-        call input_error('xcs%mGGA_implementation')
+        call messages_input_error('xcs%mGGA_implementation')
       
 
       call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')

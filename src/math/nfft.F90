@@ -149,11 +149,11 @@ contains
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
     call parse_integer('NFFTPrecompute', nfft%precompute, nfft%precompute)
-     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call input_error('NFFTPrecompute')
+     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 
 !     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute, is_flag=.true.)) then
-!       call input_error('NFFTPrecompute')
+!       call messages_input_error('NFFTPrecompute')
 !     end if
 
 

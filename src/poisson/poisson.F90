@@ -244,7 +244,7 @@ contains
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
     call parse_integer('PoissonSolver', default_solver, this%method)
-    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call input_error('PoissonSolver')
+    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
    
     select case(this%method)
     case (POISSON_DIRECT_SUM)
@@ -326,7 +326,7 @@ contains
       end select
 
       call parse_integer('PoissonFFTKernel', default_kernel, this%kernel)
-      if(.not.varinfo_valid_option('PoissonFFTKernel', this%method)) call input_error('PoissonFFTKernel')
+      if(.not.varinfo_valid_option('PoissonFFTKernel', this%method)) call messages_input_error('PoissonFFTKernel')
 
       call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 

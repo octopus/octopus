@@ -143,10 +143,10 @@ contains
       !% wrong.
       !%End
       call parse_float('TDLanczosTol', CNST(1e-5), te%lanczos_tol)
-      if (te%lanczos_tol <= M_ZERO) call input_error('TDLanczosTol')
+      if (te%lanczos_tol <= M_ZERO) call messages_input_error('TDLanczosTol')
 
     case default
-      call input_error('TDExponentialMethod')
+      call messages_input_error('TDExponentialMethod')
     end select
     call messages_print_var_option(stdout, 'TDExponentialMethod', te%exp_method)
 
@@ -161,7 +161,7 @@ contains
       !% it is the Lanczos-subspace dimension.
       !%End
       call parse_integer('TDExpOrder', 4, te%exp_order)
-      if (te%exp_order < 2) call input_error('TDExpOrder')
+      if (te%exp_order < 2) call messages_input_error('TDExpOrder')
 
     end if
 

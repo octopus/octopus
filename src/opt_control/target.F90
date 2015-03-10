@@ -247,7 +247,7 @@ contains
     !%End
     call parse_integer('OCTTargetOperator', oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
-      call input_error('OCTTargetOperator')
+      call messages_input_error('OCTTargetOperator')
 
     call states_copy(tg%st, stin)
     call states_deallocate_wfns(tg%st)

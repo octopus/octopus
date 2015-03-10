@@ -202,7 +202,7 @@ contains
     !% assumptions.
     !%End
     call parse_integer('FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
-    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
+    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
      
 !    !%Variable FFTPlanTimeLimit
 !    !%Type float

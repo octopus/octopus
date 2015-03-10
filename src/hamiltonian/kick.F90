@@ -196,9 +196,9 @@ contains
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
-      if (nspin == UNPOLARIZED) call input_error('TDDeltaStrengthMode')
+      if (nspin == UNPOLARIZED) call messages_input_error('TDDeltaStrengthMode')
     case default
-      call input_error('TDDeltaStrengthMode')
+      call messages_input_error('TDDeltaStrengthMode')
     end select
 
     if(parse_is_defined('TDDeltaUserDefined')) then
@@ -245,7 +245,7 @@ contains
         call parse_block_integer(blk, irow - 1, 0, kick%l(irow))
         call parse_block_integer(blk, irow - 1, 1, kick%m(irow))
         call parse_block_float(blk, irow - 1, 2, kick%weight(irow))
-        if( (kick%l(irow) < 0) .or. (abs(kick%m(irow)) > abs(kick%l(irow))) ) call input_error('TDkickFunction')
+        if( (kick%l(irow) < 0) .or. (abs(kick%m(irow)) > abs(kick%l(irow))) ) call messages_input_error('TDkickFunction')
       end do
 
     else
@@ -283,7 +283,7 @@ contains
 
       call parse_integer('TDPolarizationDirection', 0, kick%pol_dir)
 
-      if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call input_error('TDPolarizationDirection')
+      if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
       
       !%Variable TDPolarization
       !%Type block
@@ -324,7 +324,7 @@ contains
       if(parse_block('TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
         
-        if(n_rows < dim) call input_error('TDPolarization')
+        if(n_rows < dim) call messages_input_error('TDPolarization')
         
         do irow = 1, n_rows
           do idir = 1, 3

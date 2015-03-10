@@ -202,7 +202,7 @@ contains
         sb%periodic_dim = geo%periodic_dim
       endif
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
-        call input_error('PeriodicDimensions')
+        call messages_input_error('PeriodicDimensions')
 
       if(sb%periodic_dim > 0 .and. sb%periodic_dim < sb%dim) then
         call messages_experimental('Support for mixed periodicity systems')
@@ -246,7 +246,7 @@ contains
           call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
         end do
 
-        if (sb%hr_area%num_areas /= 1) call input_error('MultiResolutionArea')
+        if (sb%hr_area%num_areas /= 1) call messages_input_error('MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
@@ -334,16 +334,16 @@ contains
       !%End
 
       call parse_integer('BoxShape', MINIMUM, sb%box_shape)
-      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
+      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
-        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
+        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error('BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
           call messages_fatal(1)
         endif
-        if(sb%periodic_dim > 1) call input_error('BoxShape')
+        if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -351,7 +351,7 @@ contains
         sb%box_shape = SPHERE
 
       ! Cannot use images in 1D or 3D
-      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
+      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error('BoxShape')
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
@@ -376,7 +376,7 @@ contains
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
         call parse_float('Radius', def_rsize, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO) call input_error('radius')
+        if(sb%rsize < M_ZERO) call messages_input_error('radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
 
@@ -388,7 +388,7 @@ contains
 
         default=sb%rsize
         call parse_float('radius', default, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
+        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error('Radius')
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -438,7 +438,7 @@ contains
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block('Lsize', blk) == 0) then
-          if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
+          if(parse_block_cols(blk,0) < sb%dim) call messages_input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
             if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
@@ -448,7 +448,7 @@ contains
         else if ((parse_is_defined('Lsize'))) then
           call parse_float('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(sb%lsize(1)  ==  -M_ONE) then
-            call input_error('Lsize')
+            call messages_input_error('Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)

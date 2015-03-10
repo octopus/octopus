@@ -293,7 +293,7 @@ contains
         call parse_integer('ParallelizationStrategy', default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
-          call input_error('ParallelizationStrategy')
+          call messages_input_error('ParallelizationStrategy')
         end if
 
         if(mc%par_strategy /= iand(mc%par_strategy, parallel_mask)) then

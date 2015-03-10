@@ -125,7 +125,7 @@ contains
     !%End
     call parse_integer('PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
-       call input_error('PoissonSolverMGRestrictionMethod')
+       call messages_input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
 
     !%Variable PoissonSolverMGRelaxationMethod
@@ -149,7 +149,7 @@ contains
     end if
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
-      call input_error('PoissonSolverMGRelaxationMethod')
+      call messages_input_error('PoissonSolverMGRelaxationMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", this%relaxation_method)
 
     !%Variable PoissonSolverMGRelaxationFactor

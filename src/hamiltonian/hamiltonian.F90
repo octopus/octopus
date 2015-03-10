@@ -399,7 +399,7 @@ contains
     !% A mask is applied to the wavefunctions at the boundaries.
     !%End
     call parse_integer('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
-    if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
+    if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call messages_input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
 
     nullify(hm%ab_pot)
@@ -426,7 +426,7 @@ contains
     if(parse_block('MassScaling', blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > gr%sb%dim) then
-          call input_error("MassScaling")
+          call messages_input_error("MassScaling")
         end if
         iline = 1 ! just deal with 1 line - should be generalized
         do icol = 1, ncols

@@ -110,7 +110,7 @@ contains
     !%End
 
     call parse_integer('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
-    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call input_error('CurrentDensity')
+    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) &
       call messages_experimental("CurrentDensity /= gradient_corrected")
 

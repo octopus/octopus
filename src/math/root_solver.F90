@@ -111,7 +111,7 @@ contains
     !%End
     call parse_integer('RootSolver', ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
-      call input_error('RootSolver')
+      call messages_input_error('RootSolver')
     end if
 
     !%Variable RootSolverMaxIter

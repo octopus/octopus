@@ -179,7 +179,7 @@ contains
 
     call parse_integer('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
-      call input_error('PhotoElectronSpectrum')
+      call messages_input_error('PhotoElectronSpectrum')
     end if
     
     pes%calc_rc = iand(photoelectron_flags, PHOTOELECTRON_RC) /= 0

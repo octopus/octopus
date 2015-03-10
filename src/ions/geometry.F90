@@ -271,7 +271,7 @@ contains
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
     call parse_integer('SpinComponents', 1, ispin)
-    if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
+    if(.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error('SpinComponents')
     ispin = min(2, ispin)
 
     if(print_info_) then
@@ -301,7 +301,7 @@ contains
       end if
     end do
     if (geo%species_time_dependent .and. .not. spec_user_defined) then
-      call input_error('SpeciesTimeDependent')
+      call messages_input_error('SpeciesTimeDependent')
     end if
 
     !  assign species

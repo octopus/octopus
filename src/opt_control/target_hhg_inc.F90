@@ -80,7 +80,7 @@
       else
         message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
         call messages_info(1)
-        call input_error('OCTOptimizeHarmonicSpectrum')
+        call messages_input_error('OCTOptimizeHarmonicSpectrum')
       end if
     else
       write(message(1), '(a)') 'If "OCTTargetMode = oct_targetmode_hhg", you must supply an'

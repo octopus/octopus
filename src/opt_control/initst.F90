@@ -95,7 +95,7 @@ contains
     !% Start in a userdefined state.
     !%End
     call parse_integer('OCTInitialState', oct_is_groundstate, istype)
-    if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
@@ -169,13 +169,13 @@ contains
         else
           message(1) = '"OCTInitialTransformStates" has to be specified as block.'
           call messages_info(1)
-          call input_error('OCTInitialTransformStates')
+          call messages_input_error('OCTInitialTransformStates')
         end if
       else
         message(1) = 'Error: if "OCTInitialState = oct_is_gstransformation", then you must'
         message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
         call messages_info(2)
-        call input_error('OCTInitialTransformStates')
+        call messages_input_error('OCTInitialTransformStates')
       end if
 
 

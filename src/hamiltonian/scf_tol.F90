@@ -158,7 +158,7 @@ contains
       call parse_integer(str, SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
-      call input_error('LRTolScheme')
+      call messages_input_error('LRTolScheme')
 
     !%Variable LRTolInitTol
     !%Type float

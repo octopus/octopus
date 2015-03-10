@@ -137,8 +137,11 @@ contains
     !%End
 
     call parse_integer('PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
-    if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) call input_error('PropagationSpectrumType')
 
+    if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) then
+      call messages_input_error('PropagationSpectrumType')
+    end if
+      
     !%Variable SpectrumMethod
     !%Type integer
     !%Default fourier
@@ -153,7 +156,7 @@ contains
     !%End
     call parse_integer('SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
-      call input_error('SpectrumMethod')
+      call messages_input_error('SpectrumMethod')
     endif
 
     !%Variable SpectrumSignalNoise
@@ -193,7 +196,10 @@ contains
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
 
     call parse_integer('PropagationSpectrumDampMode', default, spectrum%damp)
-    if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) call input_error('PropagationSpectrumDampMode')
+
+    if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) then
+      call messages_input_error('PropagationSpectrumDampMode')
+    end if
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
       message(1) = 'Using damping with compressed sensing, this is not required'
@@ -216,7 +222,7 @@ contains
     !%End
     call parse_integer('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
-      call input_error('PropagationSpectrumTransform')
+      call messages_input_error('PropagationSpectrumTransform')
     endif
 
     !%Variable PropagationSpectrumStartTime

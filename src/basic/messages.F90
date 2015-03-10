@@ -48,7 +48,7 @@ module messages_m
     epoch_time_diff,            &
     alloc_error,                &
     dealloc_error,              &
-    input_error,                &
+    messages_input_error,       &
     push_sub,                   &
     pop_sub,                    &
     messages_print_stress,      &
@@ -568,14 +568,33 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine input_error(var)
-    character(len=*), intent(in) :: var
+  subroutine messages_input_error(var, details)
+    character(len=*),           intent(in) :: var
+    character(len=*), optional, intent(in) :: details
 
-    if(mpi_grp_is_root(mpi_world)) call varinfo_print(stdout, var)
-    message(1) = "Input error in variable " // trim(var)
-    call messages_fatal(1, only_root_writes = .true.)
+    type(block_t) :: blk
+    
+    if(parse_block(var, blk) == 0) then
+      call messages_write('Input error in the input block %'// trim(var))
+    else
+      call messages_write('Input error in the input variable '// trim(var))
+    end if
+    
+    if(present(details)) then
+      call messages_write(':', new_line = .true.)
+      call messages_new_line()
+      call messages_write('  '//trim(details)//'.', new_line = .true.)
+    else
+      call messages_write('.', new_line = .true.)
+    end if
+    
+    call messages_new_line()
+    
+    call messages_write('You can get the documentation of the variable with the command:', new_line = .true.)
+    call messages_write('  oct-help -p '//trim(var))
+    call messages_fatal()
 
-  end subroutine input_error
+  end subroutine messages_input_error
   ! ---------------------------------------------------------
 
 

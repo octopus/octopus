@@ -77,13 +77,13 @@
       else
         message(1) = '"OCTTargetTransformStates" has to be specified as block.'
         call messages_info(1)
-        call input_error('OCTTargetTransformStates')
+        call messages_input_error('OCTTargetTransformStates')
       end if
     else
       message(1) = 'Error: if "OCTTargetOperator = oct_tg_superposition", then you must'
       message(2) = 'supply one "OCTTargetTransformStates" block to create the superposition.'
       call messages_info(2)
-      call input_error('OCTTargetTransformStates')
+      call messages_input_error('OCTTargetTransformStates')
     end if
 
     POP_SUB(target_init_gstransformation)

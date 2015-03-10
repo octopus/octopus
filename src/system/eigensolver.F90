@@ -351,7 +351,7 @@ contains
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
       call parse_float('EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
+      if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
@@ -397,7 +397,7 @@ contains
       !% twice the number of eigenvectors (which is the number of states) 
       !%End 
       call parse_integer('EigensolverArnoldiVectors', 2*st%nst, eigens%arnoldi_vectors) 
-      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigensolverArnoldiVectors') 
+      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call messages_input_error('EigensolverArnoldiVectors') 
 
       eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
 
@@ -428,7 +428,7 @@ contains
 #endif
 
     case default
-      call input_error('Eigensolver')
+      call messages_input_error('Eigensolver')
     end select
 
     call messages_print_stress(stdout, 'Eigensolver')
@@ -459,7 +459,7 @@ contains
     !% increase it if you know what you are doing).
     !%End
     call parse_integer('EigensolverMaxIter', default_iter, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
+    if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
       call messages_write('You have specified a large number of eigensolver iterations (')

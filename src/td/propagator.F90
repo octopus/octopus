@@ -324,7 +324,7 @@ contains
     default_propagator = PROP_ETRS
 
     call parse_integer('TDPropagator', default_propagator, tr%method)
-    if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
+    if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
 
     select case(tr%method)
     case(PROP_ETRS)
@@ -387,7 +387,7 @@ contains
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       call messages_experimental("explicit Runge-Kutta 4 propagator")
     case default
-      call input_error('TDPropagator')
+      call messages_input_error('TDPropagator')
     end select
     call messages_print_var_option(stdout, 'TDPropagator', tr%method)
 
@@ -434,7 +434,7 @@ contains
 
     call parse_integer('TDStepsWithSelfConsistency', 3, tr%scf_propagation_steps)
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
-    if(tr%scf_propagation_steps < 0) call input_error('TDStepsWithSelfConsistency')
+    if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency')
 
     !%Variable TDSCFThreshold
     !%Type float
