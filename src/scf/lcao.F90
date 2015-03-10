@@ -23,6 +23,7 @@ module lcao_m
   use atom_m
   use batch_m
   use blacs_proc_grid_m
+  use frozen_density_m
   use geometry_m
   use global_m
   use grid_m
@@ -48,6 +49,8 @@ module lcao_m
   use scalapack_m
   use species_m
   use species_pot_m
+  use ssys_density_m
+  use ssys_states_m
   use states_m
   use states_calc_m
   use states_dim_m
@@ -1049,9 +1052,12 @@ contains
     integer,           intent(in)    :: nspin, spin_channels
     FLOAT,             intent(out)   :: rho(:, :)
 
-    integer :: ia, is, idir, gmd_opt
+    integer :: ia, is, ip, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
+    type(ssys_density_t),   pointer :: subsys_density
+    type(frozen_density_t), pointer :: frozen_density
+    FLOAT,  dimension(:,:), pointer :: pdensity
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
     logical :: parallelized_in_atoms
@@ -1301,6 +1307,23 @@ contains
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call messages_info(1)
+
+    nullify(subsys_density, frozen_density, pdensity)
+    if(associated(st%subsys_st))then
+      !> Add the frozen density.
+      call ssys_states_get(st%subsys_st, subsys_density)
+      ASSERT(associated(subsys_density))
+      call ssys_density_get(subsys_density, "frozen", frozen_density)
+      ASSERT(associated(frozen_density))
+      call frozen_density_get(frozen_density, pdensity)
+      ASSERT(associated(pdensity))
+      do is= 1, nspin
+        forall(ip=1:gr%fine%mesh%np)
+          rho(ip,is)=rho(ip,is)+pdensity(ip,is)
+        end forall
+      end do
+      nullify(subsys_density, frozen_density, pdensity)
+    end if
 
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(lcao_guess_density)
