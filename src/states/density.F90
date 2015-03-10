@@ -21,6 +21,7 @@
 
 module density_m
   use blas_m
+  use base_density_m
   use batch_m
   use c_pointer_m
 #ifdef HAVE_OPENCL
@@ -32,6 +33,7 @@ module density_m
   use grid_m
   use io_m
   use kpoints_m
+  use live_density_m
   use loct_m
   use math_m
   use mesh_m
@@ -46,6 +48,8 @@ module density_m
   use smear_m
   use states_m
   use states_dim_m
+  use ssys_density_m
+  use ssys_states_m
   use symmetrizer_m
   use types_m
   use unit_m
@@ -67,13 +71,15 @@ module density_m
     states_total_density
 
   type density_calc_t
-    FLOAT,          pointer :: density(:, :)
-    FLOAT,          pointer :: Imdensity(:, :)
-    type(states_t), pointer :: st
-    type(grid_t),   pointer :: gr
-    type(opencl_mem_t)      :: buff_density
-    integer                 :: pnp
-    logical                 :: packed
+    FLOAT,                pointer :: density(:, :)
+    FLOAT,                pointer :: Imdensity(:, :)
+    FLOAT,                pointer :: total_density(:, :)
+    type(states_t),       pointer :: st
+    type(grid_t),         pointer :: gr
+    type(ssys_density_t), pointer :: subsys_density
+    type(opencl_mem_t)            :: buff_density
+    integer                       :: pnp
+    logical                       :: packed
   end type density_calc_t
 
 contains
@@ -85,12 +91,26 @@ contains
     FLOAT,                target,   intent(out)   :: density(:, :)
     FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
+    type(live_density_t), pointer :: live_density
+
     PUSH_SUB(density_calc_init)
 
-    this%density => density
     this%st => st
     this%gr => gr
-
+    nullify(this%density, this%Imdensity, this%total_density, this%subsys_density, live_density)
+    if(associated(this%st%subsys_st))then
+      !> Set the pointers to the total and live densities.
+      ASSERT(.not.present(Imdensity))
+      this%total_density => density
+      call ssys_states_get(this%st%subsys_st, this%subsys_density)
+      ASSERT(associated(this%subsys_density))
+      call ssys_density_get(this%subsys_density, "live", live_density)
+      ASSERT(associated(live_density))
+      call live_density_get(live_density, this%density)
+      ASSERT(associated(this%density))
+    else
+      this%density => density
+    end if
     this%density = M_ZERO
 
     if(present(Imdensity)) then
@@ -312,10 +332,12 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
-    integer :: ispin
+    type(ssys_density_iterator_t)   :: iter
+    type(base_density_t),   pointer :: base_density
+    FLOAT,  dimension(:,:), pointer :: pdensity
+    integer :: ispin, ip, ierr
     type(profile_t), save :: reduce_prof
 #ifdef HAVE_OPENCL
-    integer :: ip
     FLOAT, allocatable :: fdensity(:)
 #endif
 
@@ -364,6 +386,28 @@ contains
 
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(tmpdensity)
+    end if
+
+    nullify(base_density, pdensity)
+    if(associated(this%subsys_density))then
+      !> Calculate the total density.
+      this%total_density=M_ZERO
+      call ssys_density_init(iter, this%subsys_density)
+      do
+        nullify(base_density, pdensity)
+        call ssys_density_next(iter, base_density, ierr)
+        if(ierr/=BASE_DENSITY_OK)exit
+        ASSERT(associated(base_density))
+        call base_density_get(base_density, pdensity)
+        ASSERT(associated(pdensity))
+        do ispin = 1, this%st%d%nspin
+          forall(ip=1:this%gr%fine%mesh%np)
+            this%total_density(ip,ispin)=this%total_density(ip,ispin)+pdensity(ip,ispin)
+          end forall
+        end do
+      end do
+      call ssys_density_end(iter)
+      nullify(base_density, pdensity)
     end if
 
     POP_SUB(density_calc_end)
