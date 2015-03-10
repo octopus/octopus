@@ -25,14 +25,20 @@ subroutine output_states(st, gr, geo, dir, outp)
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
-  integer :: ik, ist, idim, idir, is, ierr, ip
-  character(len=80) :: fname
+  integer :: ik, ist, idim, idir, is, ierr, ip, nspin
+  character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
+  type(ssys_density_iterator_t)        :: iter
+  type(ssys_density_t),        pointer :: subsys_density
+  type(base_density_t),        pointer :: base_density
+  character(len=BASE_DENSITY_NAME_LEN) :: name
+  FLOAT,  dimension(:,:),      pointer :: pdensity
   FLOAT, allocatable :: dtmp(:), elf(:,:)
   CMPLX, allocatable :: ztmp(:)
 
   PUSH_SUB(output_states)
 
+  nullify(subsys_density, base_density, pdensity)
   if(iand(outp%what, C_OUTPUT_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
@@ -52,6 +58,32 @@ subroutine output_states(st, gr, geo, dir, outp)
           st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end if
     end do
+    if(associated(st%subsys_st))then
+      call ssys_states_get(st%subsys_st, subsys_density)
+      ASSERT(associated(subsys_density))
+      call ssys_density_init(iter, subsys_density)
+      do
+        nullify(base_density, pdensity)
+        call ssys_density_next(iter, name, base_density, ierr)
+        if(ierr/=SSYS_DENSITY_OK)exit
+        ASSERT(associated(base_density))
+        call base_density_get(base_density, pdensity)
+        ASSERT(associated(pdensity))
+        call base_density_get(base_density, nspin=nspin)
+        ASSERT(nspin>0)
+        do is = 1, nspin
+          if(nspin>1) then
+            write(fname, "(a,i1,'-',a)") "density-sp", is, trim(adjustl(name))
+          else
+            write(fname, "(a,'-',a)") "density", trim(adjustl(name))
+          end if
+          call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+            pdensity(:,is), fn_unit, ierr, geo=geo, grp=st%dom_st_kpt_mpi_grp)
+        end do
+      end do 
+      call ssys_density_end(iter)
+      nullify(subsys_density, base_density, pdensity)
+    end if    
   end if
 
   if(iand(outp%what, C_OUTPUT_POL_DENSITY) /= 0) then
