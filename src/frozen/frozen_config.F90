@@ -10,6 +10,7 @@ module frozen_config_m
   use json_m, only: json_init, json_set, json_get, json_del
 
   use base_hamiltonian_m, only: &
+    HMLT_TYPE_TERM,             &
     HMLT_TYPE_POTN,             &
     HMLT_TYPE_HMLT
 
@@ -50,6 +51,17 @@ contains
   end subroutine frozen_config_parse_external
 
   ! ---------------------------------------------------------
+  subroutine frozen_config_parse_ionic(this)
+    type(json_object_t), intent(inout) :: this
+    !
+    integer :: type, ierr
+    !
+    call json_get(this, "type", type, ierr)
+    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_TERM)
+    return
+  end subroutine frozen_config_parse_ionic
+
+  ! ---------------------------------------------------------
   subroutine frozen_config_parse_hamiltonian(this)
     type(json_object_t), intent(inout) :: this
     !
@@ -66,6 +78,14 @@ contains
       call json_set(this, "external", cnfg)
     end if
     call frozen_config_parse_external(cnfg)
+    nullify(cnfg)
+    call json_get(this, "ionic", cnfg, ierr)
+    if(ierr/=JSON_OK)then
+      SAFE_ALLOCATE(cnfg)
+      call json_init(cnfg)
+      call json_set(this, "ionic", cnfg)
+    end if
+    call frozen_config_parse_ionic(cnfg)
     nullify(cnfg)
     return
   end subroutine frozen_config_parse_hamiltonian

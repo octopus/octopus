@@ -18,6 +18,10 @@ module ssys_hamiltonian_m
     ssys_external_t,         &
     ssys_external_update
 
+  use ssys_ionic_m, only: &
+    ssys_ionic_t,         &
+    ssys_ionic_update
+
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
@@ -67,6 +71,7 @@ module ssys_hamiltonian_m
     module procedure ssys_hamiltonian_get_simulation
     module procedure ssys_hamiltonian_get_system
     module procedure ssys_hamiltonian_get_external
+    module procedure ssys_hamiltonian_get_ionic
   end interface ssys_hamiltonian_get
 
 contains
@@ -76,13 +81,18 @@ contains
     type(ssys_hamiltonian_t), intent(inout) :: this
     !
     type(ssys_external_t), pointer :: pext
+    type(ssys_ionic_t),    pointer :: pion
     !
     PUSH_SUB(ssys_hamiltonian_update)
-    nullify(pext)
+    nullify(pext, pion)
     call ssys_hamiltonian_get(this, pext)
     ASSERT(associated(pext))
     call ssys_external_update(pext)
     nullify(pext)
+    call ssys_hamiltonian_get(this, pion)
+    ASSERT(associated(pion))
+    call ssys_ionic_update(pion)
+    nullify(pion)
     POP_SUB(ssys_hamiltonian_update)
     return
   end subroutine ssys_hamiltonian_update
@@ -130,6 +140,17 @@ contains
     POP_SUB(ssys_hamiltonian_get_external)
     return
   end subroutine ssys_hamiltonian_get_external
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_ionic(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(ssys_ionic_t),      pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_ionic)
+    call base_hamiltonian_get(this, "ionic", that)
+    POP_SUB(ssys_hamiltonian_get_ionic)
+    return
+  end subroutine ssys_hamiltonian_get_ionic
 
 end module ssys_hamiltonian_m
 

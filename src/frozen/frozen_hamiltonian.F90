@@ -27,6 +27,9 @@ module frozen_hamiltonian_m
   use frozen_external_m, only: &
     frozen_external_t
 
+  use frozen_ionic_m, only: &
+    frozen_ionic_t
+
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
@@ -62,6 +65,7 @@ module frozen_hamiltonian_m
     module procedure frozen_hamiltonian_get_simulation
     module procedure frozen_hamiltonian_get_system
     module procedure frozen_hamiltonian_get_external
+    module procedure frozen_hamiltonian_get_ionic
   end interface frozen_hamiltonian_get
 
 contains
@@ -130,6 +134,17 @@ contains
     POP_SUB(frozen_hamiltonian_get_external)
     return
   end subroutine frozen_hamiltonian_get_external
+
+  ! ---------------------------------------------------------
+  subroutine frozen_hamiltonian_get_ionic(this, that)
+    type(frozen_hamiltonian_t), intent(in) :: this
+    type(frozen_ionic_t),      pointer     :: that
+    !
+    PUSH_SUB(frozen_hamiltonian_get_ionic)
+    call base_hamiltonian_get(this, "ionic", that)
+    POP_SUB(frozen_hamiltonian_get_ionic)
+    return
+  end subroutine frozen_hamiltonian_get_ionic
 
 end module frozen_hamiltonian_m
 

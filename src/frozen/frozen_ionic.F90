@@ -1,36 +1,34 @@
 #include "global.h"
 
-#define TEMPLATE_NAME frozen
-#define SUBTEMPLATE_NAME fio
-#include "tionic_term.F90"
-#undef SUBTEMPLATE_NAME
-#undef TEMPLATE_NAME
-
 module frozen_ionic_m
 
-  use frozen_ionic_term_m, only:                                       &
-    frozen_ionic_t               => frozen_ionic_term_t,               &
-    frozen_ionic_init            => frozen_ionic_term_init,            &
-    frozen_ionic_update          => frozen_ionic_term_update,          &
-    frozen_ionic_get             => frozen_ionic_term_get,             &
-    frozen_ionic_get_energy      => frozen_ionic_term_get_energy,      &
-    frozen_ionic_get_interaction => frozen_ionic_term_get_interaction, &
-    frozen_ionic_copy            => frozen_ionic_term_copy,            &
-    frozen_ionic_end             => frozen_ionic_term_end
+  use global_m
+  use messages_m
+  use profiling_m
 
-   implicit none
+  use base_ionic_m, only:                        &
+    frozen_ionic_init   => base_ionic__init__,   &
+    frozen_ionic_update => base_ionic__update__, &
+    frozen_ionic_copy   => base_ionic__copy__,   &
+    frozen_ionic_end    => base_ionic__end__
+
+  use base_ionic_m, only:                 &
+    frozen_ionic_t    => base_ionic_t,    &
+    frozen_ionic_calc => base_ionic_calc, &
+    frozen_ionic_get  => base_ionic_get
+
+  implicit none
 
   private
-  public ::                       &
-    frozen_ionic_t,               &
-    frozen_ionic_init,            &
-    frozen_ionic_update,          &
-    frozen_ionic_get,             &
-    frozen_ionic_get_energy,      &
-    frozen_ionic_get_interaction, &
-    frozen_ionic_copy,            &
+  public ::              &
+    frozen_ionic_t,      &
+    frozen_ionic_init,   &
+    frozen_ionic_update, &
+    frozen_ionic_calc,   &
+    frozen_ionic_get,    &
+    frozen_ionic_copy,   &
     frozen_ionic_end
-  
+
 end module frozen_ionic_m
 
 !! Local Variables:
