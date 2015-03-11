@@ -60,6 +60,9 @@ module base_external_m
   use base_potential_m, only:                          &
     base_external_intrpl_t => base_potential_intrpl_t
 
+  use base_potential_m, only:                          &
+    BASE_EXTERNAL_NAME_LEN => BASE_POTENTIAL_NAME_LEN
+
   use base_potential_m, only:                                &
     BASE_EXTERNAL_OK          => BASE_POTENTIAL_OK,          &
     BASE_EXTERNAL_KEY_ERROR   => BASE_POTENTIAL_KEY_ERROR,   &
@@ -99,6 +102,9 @@ module base_external_m
 
   public ::                 &
     base_external_intrpl_t
+
+  public ::                 &
+    BASE_EXTERNAL_NAME_LEN
 
   public ::                    &
     BASE_EXTERNAL_OK,          &

@@ -16,6 +16,8 @@ module ssys_system_m
 
   use base_system_m, only:                &
     ssys_system_t    => base_system_t,    &
+    ssys_system_new  => base_system_new,  &
+    ssys_system_del  => base_system_del,  &
     ssys_system_init => base_system_init, &
     ssys_system_next => base_system_next, &
     ssys_system_get  => base_system_get,  &
@@ -35,6 +37,8 @@ module ssys_system_m
   private
   public ::             &
     ssys_system_t,      &
+    ssys_system_new,    &
+    ssys_system_del,    &
     ssys_system_init,   &
     ssys_system_start,  &
     ssys_system_update, &

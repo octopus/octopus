@@ -119,7 +119,8 @@ module TEMPLATE(dict_m)
 
   interface TEMPLATE(dict_init)
     module procedure INTERNAL(hash_init)
-    module procedure INTERNAL(hash_iterator_init)
+    module procedure INTERNAL(hash_iterator_init_hash)
+    module procedure INTERNAL(hash_iterator_init_iterator)
   end interface TEMPLATE(dict_init)
 
   interface TEMPLATE(dict_pop)

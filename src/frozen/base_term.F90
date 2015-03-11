@@ -74,17 +74,15 @@ module base_term_m
     base_term__copy__,   &
     base_term__end__
 
-  public ::               &
-    base_term_new,        &
-    base_term_del,        &
-    base_term_init,       &
-    base_term_update,     &
-    base_term_next,       &
-    base_term_set,        &
-    base_term_get,        &
-    base_term_get_energy, &
-    base_term_set_energy, &
-    base_term_copy,       &
+  public ::           &
+    base_term_new,    &
+    base_term_del,    &
+    base_term_init,   &
+    base_term_update, &
+    base_term_next,   &
+    base_term_set,    &
+    base_term_get,    &
+    base_term_copy,   &
     base_term_end
 
 #define LIST_TEMPLATE_NAME base_term

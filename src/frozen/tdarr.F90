@@ -389,7 +389,7 @@ contains
     type(TEMPLATE(darr_iterator_t)), intent(in)  :: that
     !
     PUSH_SUB(INTERNAL(darr_iterator_init_iterator))
-    call INTERNAL(darr_iterator_init_darr)(this, that%darr)
+    call INTERNAL(darr_iterator_copy)(this, that)
     POP_SUB(INTERNAL(darr_iterator_init_iterator))
     return
   end subroutine INTERNAL(darr_iterator_init_iterator)

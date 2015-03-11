@@ -184,7 +184,8 @@ module base_geom_m
     module procedure base_geom__init__begin
     module procedure base_geom__init__finish
     module procedure base_geom__init__copy
-    module procedure base_geom_iterator_init
+    module procedure base_geom_iterator_init_geom
+    module procedure base_geom_iterator_init_iterator
   end interface base_geom__init__
 
   interface base_geom__copy__
@@ -195,7 +196,8 @@ module base_geom_m
   interface base_geom_init
     module procedure base_geom_init_geom
     module procedure base_geom_init_copy
-    module procedure base_geom_iterator_init
+    module procedure base_geom_iterator_init_geom
+    module procedure base_geom_iterator_init_iterator
   end interface base_geom_init
 
   interface base_geom_next
@@ -704,18 +706,29 @@ contains
   end subroutine base_geom_end_geom
 
   ! ---------------------------------------------------------
-  subroutine base_geom_iterator_init(this, that)
+  subroutine base_geom_iterator_init_geom(this, that)
     type(base_geom_iterator_t), intent(out) :: this
     type(base_geom_t),  target, intent(in)  :: that
     !
-    PUSH_SUB(base_geom_iterator_init)
+    PUSH_SUB(base_geom_iterator_init_geom)
     this%self=>that
     call atom_list_init(this%aitr, that%alst)
     call species_dict_init(this%sitr, that%sdct)
     call config_dict_init(this%iter, that%dict)
-    POP_SUB(base_geom_iterator_init)
+    POP_SUB(base_geom_iterator_init_geom)
     return
-  end subroutine base_geom_iterator_init
+  end subroutine base_geom_iterator_init_geom
+
+  ! ---------------------------------------------------------
+  subroutine base_geom_iterator_init_iterator(this, that)
+    type(base_geom_iterator_t), intent(out) :: this
+    type(base_geom_iterator_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_geom_iterator_init_iterator)
+    call base_geom_iterator_copy(this, that)
+    POP_SUB(base_geom_iterator_init_iterator)
+    return
+  end subroutine base_geom_iterator_init_iterator
 
   ! ---------------------------------------------------------
   subroutine base_geom_iterator_next_atom(this, atom, ierr)

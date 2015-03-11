@@ -181,7 +181,8 @@ module TEMPLATE(hash_m)
 
   interface TEMPLATE(hash_init)
     module procedure INTERNAL(hash_init)
-    module procedure INTERNAL(hash_iterator_init)
+    module procedure INTERNAL(hash_iterator_init_hash)
+    module procedure INTERNAL(hash_iterator_init_iterator)
   end interface TEMPLATE(hash_init)
 
   interface TEMPLATE(hash_next)
@@ -639,7 +640,7 @@ contains
     integer                           :: ierr
     !
     PUSH_SUB(TEMPLATE(hash_extend))
-    call INTERNAL(hash_iterator_init)(iter, that)
+    call INTERNAL(hash_iterator_init_hash)(iter, that)
     do
       nullify(key, val)
       call INTERNAL(hash_iterator_next_item)(iter, key, val, ierr)
@@ -697,14 +698,14 @@ contains
   end subroutine INTERNAL(hash_end)
 
   ! ---------------------------------------------------------
-  subroutine INTERNAL(hash_iterator_init)(this, that)
+  subroutine INTERNAL(hash_iterator_init_hash)(this, that)
     type(TEMPLATE(hash_iterator_t)), intent(out) :: this
     type(TEMPLATE(hash_t)),  target, intent(in)  :: that
     !
     type(EXTERNAL(LIST,t)), pointer :: plst
     integer                         :: ierr
     !
-    PUSH_SUB(INTERNAL(hash_iterator_init))
+    PUSH_SUB(INTERNAL(hash_iterator_init_hash))
     nullify(plst)
     call INTERNAL(hash_iterator_end)(this)
     if(that%used>0)then
@@ -716,9 +717,20 @@ contains
       call EXTERNAL(LIST,init)(this%itrl, plst)
       nullify(plst)
     end if
-    POP_SUB(INTERNAL(hash_iterator_init))
+    POP_SUB(INTERNAL(hash_iterator_init_hash))
     return
-  end subroutine INTERNAL(hash_iterator_init)
+  end subroutine INTERNAL(hash_iterator_init_hash)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(hash_iterator_init_iterator)(this, that)
+    type(TEMPLATE(hash_iterator_t)), intent(out) :: this
+    type(TEMPLATE(hash_iterator_t)), intent(in)  :: that
+    !
+    PUSH_SUB(INTERNAL(hash_iterator_init_iterator))
+    call INTERNAL(hash_iterator_copy)(this, that)
+    POP_SUB(INTERNAL(hash_iterator_init_iterator))
+    return
+  end subroutine INTERNAL(hash_iterator_init_iterator)
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(hash_iterator_next_pair)(this, that)
@@ -810,6 +822,7 @@ contains
     type(TEMPLATE(hash_iterator_t)), intent(in)  :: that
     !
     PUSH_SUB(INTERNAL(hash_iterator_copy))
+    call INTERNAL(hash_iterator_end)(this)
     this%hash=>that%hash
     call EXTERNAL(DARR,copy)(this%itrd, that%itrd)
     call EXTERNAL(LIST,copy)(this%itrl, that%itrl)

@@ -84,7 +84,8 @@ module TEMPLATE(list_m)
 
   interface TEMPLATE(list_init)
     module procedure INTERNAL(list_init)
-    module procedure INTERNAL(list_iterator_init)
+    module procedure INTERNAL(list_iterator_init_list)
+    module procedure INTERNAL(list_iterator_init_iterator)
   end interface TEMPLATE(list_init)
 
   interface TEMPLATE(list_next)
@@ -207,7 +208,7 @@ contains
     PUSH_SUB(TEMPLATE(list_index))
     icnt=0
     index=0
-    call INTERNAL(list_iterator_init)(iter, this)
+    call INTERNAL(list_iterator_init_list)(iter, this)
     do
       nullify(pval)
       call INTERNAL(list_iterator_next)(iter, pval, ierr)
@@ -237,7 +238,7 @@ contains
     !
     PUSH_SUB(INTERNAL(list_walk_node))
     nullify(prev, node, next)
-    call INTERNAL(list_iterator_init)(iter, this)
+    call INTERNAL(list_iterator_init_list)(iter, this)
     do
       nullify(prev, node, next)
       call INTERNAL(list_iterator_next_node)(iter, prev, node, next, jerr)
@@ -271,7 +272,7 @@ contains
     jerr=TEMPLATE(LIST_INDEX_ERROR)
     if((0<index).and.(index<=this%size))then
       indx=1
-      call INTERNAL(list_iterator_init)(iter, this)
+      call INTERNAL(list_iterator_init_list)(iter, this)
       do
         nullify(prev, node, next)
         call INTERNAL(list_iterator_next_node)(iter, prev, node, next, jerr)
@@ -558,7 +559,7 @@ contains
     integer                         :: ierr
     !
     PUSH_SUB(TEMPLATE(list_extend))
-    call INTERNAL(list_iterator_init)(iter, that)
+    call INTERNAL(list_iterator_init_list)(iter, that)
     do
       nullify(pval)
       call INTERNAL(list_iterator_next)(iter, pval, ierr)
@@ -605,19 +606,30 @@ contains
   end subroutine INTERNAL(list_end)
 
   ! ---------------------------------------------------------
-  subroutine INTERNAL(list_iterator_init)(this, that)
+  subroutine INTERNAL(list_iterator_init_list)(this, that)
     type(TEMPLATE(list_iterator_t)), intent(out) :: this
     type(TEMPLATE(list_t)),          intent(in)  :: that
     !
-    PUSH_SUB(INTERNAL(list_iterator_init))
-    nullify(this%prev, this%node, this%next)
+    PUSH_SUB(INTERNAL(list_iterator_init_list))
+    call INTERNAL(list_iterator_end)(this)
     if(associated(that%head))then
        this%node=>that%head
        this%next=>this%node%next
     end if
-    POP_SUB(INTERNAL(list_iterator_init))
+    POP_SUB(INTERNAL(list_iterator_init_list))
     return
-  end subroutine INTERNAL(list_iterator_init)
+  end subroutine INTERNAL(list_iterator_init_list)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(list_iterator_init_iterator)(this, that)
+    type(TEMPLATE(list_iterator_t)), intent(out) :: this
+    type(TEMPLATE(list_iterator_t)), intent(in)  :: that
+    !
+    PUSH_SUB(INTERNAL(list_iterator_init_iterator))
+    call INTERNAL(list_iterator_copy)(this, that)
+    POP_SUB(INTERNAL(list_iterator_init_iterator))
+    return
+  end subroutine INTERNAL(list_iterator_init_iterator)
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_iterator_next_node)(this, prev, node, next, ierr)
