@@ -352,7 +352,7 @@ contains
       SAFE_ALLOCATE(cube%Lfs(1:nn, 1:3))
 
       temp = M_TWO * M_PI / (nn * spacing(1))
-
+!temp = M_PI / (nn * spacing(1))
       do ii = 1, nn
         if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
           !The Fourier space is shrunk by the enlarge factor

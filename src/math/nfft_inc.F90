@@ -17,14 +17,14 @@
 !!
 !! $Id$
 
-subroutine X(nfft_forward)(nfft, in, out)
+subroutine X(nfft_forward1)(nfft, in, out)
   type(nfft_t), intent(in)  :: nfft
   R_TYPE,        intent(in)  :: in(:,:,:)
   CMPLX,        intent(out) :: out(:,:,:)
 
   integer :: ix, iy, iz, MM(3)
 
-  PUSH_SUB(X(nfft_forward))
+  PUSH_SUB(X(nfft_forward1))
     
   select case(nfft%dim)
     case (1)
@@ -52,9 +52,7 @@ subroutine X(nfft_forward)(nfft, in, out)
     end do
   end do
 
-
   call oct_nfft_trafo(nfft%plan)
-
 
   do ix = 1, MM(1)
     do iy = 1, MM(2)
@@ -64,20 +62,20 @@ subroutine X(nfft_forward)(nfft, in, out)
     end do
   end do
 
-  POP_SUB(X(nfft_forward))
+  POP_SUB(X(nfft_forward1))
     
-end subroutine X(nfft_forward)
+end subroutine X(nfft_forward1)
 
 
 ! ---------------------------------------------------------
-subroutine X(nfft_backward)(nfft, in, out)
+subroutine X(nfft_backward1)(nfft, in, out)
   type(nfft_t), intent(in)  :: nfft
   CMPLX,        intent(in)  :: in (:,:,:)
   R_TYPE,        intent(out) :: out(:,:,:)
 
   integer :: ix, iy, iz, MM(3)
 
-  PUSH_SUB(X(nfft_backward))
+  PUSH_SUB(X(nfft_backward1))
 
   select case(nfft%dim)
     case (1)
@@ -117,6 +115,6 @@ subroutine X(nfft_backward)(nfft, in, out)
 
   out = out/nfft%norm
 
-  POP_SUB(X(nfft_backward))
+  POP_SUB(X(nfft_backward1))
 
-end subroutine X(nfft_backward)
+end subroutine X(nfft_backward1)

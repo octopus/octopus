@@ -51,6 +51,7 @@ module scf_m
   use preconditioners_m
   use profiling_m
   use restart_m
+  use scdm_m
   use simul_box_m
   use smear_m
   use species_m
@@ -598,6 +599,13 @@ contains
     itime = loct_clock()
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
+
+      ! reset scdm flag
+       scdm_is_local = .false.
+       ! this is stupid should be done in init and isnt even neede, except for .cube files
+       scdm_geo = geo
+ 
+
 
       ! this initialization seems redundant but avoids improper optimization at -O3 by PGI 7 on chum,
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp

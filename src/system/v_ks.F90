@@ -720,11 +720,11 @@ contains
         if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+             if(.not.hm%EXX)   call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
+                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           else
-            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+             if(.not.hm%EXX)  call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
+                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           end if
         endif
 
