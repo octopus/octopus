@@ -229,6 +229,7 @@ contains
     !
     PUSH_SUB(output_parse_config_states)
     nullify(cnfg)
+    call json_set(this, "charge", st%qtot)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call output_parse_config_density(cnfg, st, dir)
