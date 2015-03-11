@@ -1,0 +1,138 @@
+#include "global.h"
+
+module ssys_hamiltonian_m
+
+  use global_m
+  use messages_m
+  use profiling_m
+
+  use json_m, only: json_object_t
+
+  use simulation_m, only: &
+    simulation_t
+
+  use ssys_system_m, only: &
+    ssys_system_t
+
+  use ssys_external_m, only: &
+    ssys_external_t,         &
+    ssys_external_update
+
+  use base_hamiltonian_m, only: &
+    base_hamiltonian_get
+
+  use base_hamiltonian_m, only:                          &
+    ssys_hamiltonian_start => base_hamiltonian__start__, &
+    ssys_hamiltonian_stop  => base_hamiltonian__stop__
+
+  use base_hamiltonian_m, only:                     &
+    ssys_hamiltonian_t    => base_hamiltonian_t,    &
+    ssys_hamiltonian_init => base_hamiltonian_init, &
+    ssys_hamiltonian_next => base_hamiltonian_next, &
+    ssys_hamiltonian_copy => base_hamiltonian_copy, &
+    ssys_hamiltonian_end  => base_hamiltonian_end
+
+  use base_hamiltonian_m, only:                                 &
+    ssys_hamiltonian_iterator_t => base_hamiltonian_iterator_t
+
+  use base_hamiltonian_m, only:                                   &
+    SSYS_HAMILTONIAN_OK          => BASE_HAMILTONIAN_OK,          &
+    SSYS_HAMILTONIAN_KEY_ERROR   => BASE_HAMILTONIAN_KEY_ERROR,   &
+    SSYS_HAMILTONIAN_EMPTY_ERROR => BASE_HAMILTONIAN_EMPTY_ERROR
+
+  implicit none
+
+  private
+  public ::                  &
+    ssys_hamiltonian_t,      &
+    ssys_hamiltonian_init,   &
+    ssys_hamiltonian_start,  &
+    ssys_hamiltonian_update, &
+    ssys_hamiltonian_stop,   &
+    ssys_hamiltonian_next,   &
+    ssys_hamiltonian_get,    &
+    ssys_hamiltonian_copy,   &
+    ssys_hamiltonian_end
+
+  public ::                      &
+    ssys_hamiltonian_iterator_t
+
+  public ::                       &
+    SSYS_HAMILTONIAN_OK,          &
+    SSYS_HAMILTONIAN_KEY_ERROR,   &
+    SSYS_HAMILTONIAN_EMPTY_ERROR
+
+  interface ssys_hamiltonian_get
+    module procedure ssys_hamiltonian_get_config
+    module procedure ssys_hamiltonian_get_simulation
+    module procedure ssys_hamiltonian_get_system
+    module procedure ssys_hamiltonian_get_external
+  end interface ssys_hamiltonian_get
+
+contains
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_update(this)
+    type(ssys_hamiltonian_t), intent(inout) :: this
+    !
+    type(ssys_external_t), pointer :: pext
+    !
+    PUSH_SUB(ssys_hamiltonian_update)
+    nullify(pext)
+    call ssys_hamiltonian_get(this, pext)
+    ASSERT(associated(pext))
+    call ssys_external_update(pext)
+    nullify(pext)
+    POP_SUB(ssys_hamiltonian_update)
+    return
+  end subroutine ssys_hamiltonian_update
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_config(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(json_object_t),     pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_config)
+    call base_hamiltonian_get(this, that)
+    POP_SUB(ssys_hamiltonian_get_config)
+    return
+  end subroutine ssys_hamiltonian_get_config
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_system(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(ssys_system_t),     pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_system)
+    call base_hamiltonian_get(this, that)
+    POP_SUB(ssys_hamiltonian_get_system)
+    return
+  end subroutine ssys_hamiltonian_get_system
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_simulation(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(simulation_t),      pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_simulation)
+    call base_hamiltonian_get(this, that)
+    POP_SUB(ssys_hamiltonian_get_simulation)
+    return
+  end subroutine ssys_hamiltonian_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_external(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(ssys_external_t),   pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_external)
+    call base_hamiltonian_get(this, "external", that)
+    POP_SUB(ssys_hamiltonian_get_external)
+    return
+  end subroutine ssys_hamiltonian_get_external
+
+end module ssys_hamiltonian_m
+
+!! Local Variables:
+!! mode: f90
+!! End:
