@@ -242,8 +242,8 @@ contains
       end select
 
       !Photoelectron stuff 
-      if(td%pesv%calc_rc .or. td%pesv%calc_mask ) &
-        call pes_calc(td%pesv, gr%mesh, st, mod(iter, sys%outp%output_interval), td%dt, iter)
+      if(td%pesv%calc_rc .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
+        call pes_calc(td%pesv, gr%mesh, st, mod(iter, sys%outp%output_interval), td%dt, iter, gr, hm)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 

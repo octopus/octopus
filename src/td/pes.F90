@@ -31,6 +31,7 @@ module pes_m
   use parser_m
   use pes_mask_m
   use pes_rc_m
+  use pes_flux_m
   use profiling_m
   use restart_m
   use simul_box_m
@@ -57,13 +58,17 @@ module pes_m
 
     logical :: calc_mask
     type(pes_mask_t) :: mask
+
+    logical :: calc_flux
+    type(pes_flux_t) :: flux
     
   end type pes_t
 
   integer, parameter ::     &
     PHOTOELECTRON_NONE = 0, &
     PHOTOELECTRON_RC   = 2, &
-    PHOTOELECTRON_MASK = 4
+    PHOTOELECTRON_MASK = 4, &
+    PHOTOELECTRON_FLUX = 8
 
 contains
 
@@ -175,6 +180,8 @@ contains
     !% Calculate the photo-electron spectrum using the mask method.
     !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
     !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
+    !%Option pes_flux 8
+    !% Calculate the photo-electron spectrum using the t-surff technique.
     !%End
 
     call parse_integer('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
@@ -184,9 +191,10 @@ contains
     
     pes%calc_rc = iand(photoelectron_flags, PHOTOELECTRON_RC) /= 0
     pes%calc_mask = iand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
+    pes%calc_flux = iand(photoelectron_flags, PHOTOELECTRON_FLUX) /= 0
 
     !Header Photoelectron info
-    if(pes%calc_rc .or. pes%calc_mask) then 
+    if(pes%calc_rc .or. pes%calc_mask .or. pes%calc_flux) then 
       write(str, '(a,i5)') 'Photoelectron'
       call messages_print_stress(stdout, trim(str))
     end if 
@@ -194,10 +202,11 @@ contains
     
     if(pes%calc_rc) call pes_rc_init(pes%rc, mesh, st, save_iter)
     if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
+    if(pes%calc_flux) call pes_flux_init(pes%flux, mesh, st, hm)
 
 
     !Footer Photoelectron info
-    if(pes%calc_rc .or. pes%calc_mask) then 
+    if(pes%calc_rc .or. pes%calc_mask .or. pes%calc_flux) then 
       call messages_print_stress(stdout)
     end if 
 
@@ -213,24 +222,28 @@ contains
 
     if(pes%calc_rc)   call pes_rc_end  (pes%rc)
     if(pes%calc_mask) call pes_mask_end(pes%mask)
+    if(pes%calc_flux) call pes_flux_end(pes%flux)
 
     POP_SUB(pes_end)
   end subroutine pes_end
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, mesh, st, ii, dt, iter)
+  subroutine pes_calc(pes, mesh, st, ii, dt, iter, gr, hm)
     type(pes_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: ii
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
+    type(hamiltonian_t), intent(in)    :: hm
 
     PUSH_SUB(pes_calc)
 
     if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
+    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc
