@@ -34,14 +34,14 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   PUSH_SUB(X(vec_ghost_update))
 
-  nsend = subarray_size(vp%sendpoints)
+  nsend = subarray_size(vp%ghost_spoints)
   SAFE_ALLOCATE(ghost_send(1:nsend))
-  call X(subarray_gather)(vp%sendpoints, v_local, ghost_send)
+  call X(subarray_gather)(vp%ghost_spoints, v_local, ghost_send)
 
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(ghost_send(1), vp%scounts(1), vp%sdispls(1),           &
-    R_MPITYPE, v_local(vp%np_local+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE,    &
-    vp%comm, mpi_err)
+  call MPI_Alltoallv(ghost_send(1), vp%ghost_scounts(1), vp%ghost_sdispls(1), R_MPITYPE, &
+       v_local(vp%np_local+1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
+       vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
   SAFE_DEALLOCATE_A(ghost_send)
@@ -78,37 +78,37 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
 
     do ipart = 1, vp%npart
-      if(vp%rcounts(ipart) == 0) cycle
+      if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = 1 + vp%rdispls(ipart)*v_local%pack%size(1)
-      call MPI_Irecv(handle%X(recv_buffer)(pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, ipart - 1, tag, &
-        vp%comm, handle%requests(handle%nnb), mpi_err)
+      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack%size(1)
+      call MPI_Irecv(handle%X(recv_buffer)(pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
+           ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 #endif
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
     do ipart = 1, vp%npart
-      if(vp%rcounts(ipart) == 0) cycle
+      if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = vp%np_local + 1 + vp%rdispls(ipart)
-      call MPI_Irecv(v_local%pack%X(psi)(1, pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, ipart - 1, tag, &
-        vp%comm, handle%requests(handle%nnb), mpi_err)
+      pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
+      call MPI_Irecv(v_local%pack%X(psi)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
+           ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
       do ipart = 1, vp%npart
-        if(vp%rcounts(ipart) == 0) cycle
+        if(vp%ghost_rcounts(ipart) == 0) cycle
         
         handle%nnb = handle%nnb + 1
         tag = ii
-        pos = vp%np_local + 1 + vp%rdispls(ipart)
-        call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
+        pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
+        call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
         vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
     end do
@@ -117,12 +117,12 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
 
   call batch_init(handle%ghost_send, 1, v_local%nst_linear)
-  call X(batch_new)(handle%ghost_send, 1, v_local%nst_linear, subarray_size(vp%sendpoints))
+  call X(batch_new)(handle%ghost_send, 1, v_local%nst_linear, subarray_size(vp%ghost_spoints))
 
   if(batch_is_packed(v_local)) call batch_pack(handle%ghost_send, copy = .false.)
 
   !now collect the data for sending
-  call X(subarray_gather_batch)(vp%sendpoints, v_local, handle%ghost_send)
+  call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
 
 #ifdef HAVE_OPENCL
   if(batch_status(v_local) == BATCH_CL_PACKED) then
@@ -136,33 +136,33 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 #ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
     do ipart = 1, vp%npart
-      if(vp%scounts(ipart) == 0) cycle
+      if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
-      call MPI_Isend(handle%X(send_buffer)(1 + (vp%sendpos(ipart) - 1)*v_local%pack%size(1)), &
-        vp%scounts(ipart)*v_local%pack%size(1), &
+      call MPI_Isend(handle%X(send_buffer)(1 + (vp%ghost_sendpos(ipart) - 1)*v_local%pack%size(1)), &
+        vp%ghost_scounts(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 #endif
 
   case(BATCH_PACKED)
     do ipart = 1, vp%npart
-      if(vp%scounts(ipart) == 0) cycle
+      if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
-      call MPI_Isend(handle%ghost_send%pack%X(psi)(1, vp%sendpos(ipart)), &
-        vp%scounts(ipart)*v_local%pack%size(1), &
+      call MPI_Isend(handle%ghost_send%pack%X(psi)(1, vp%ghost_sendpos(ipart)), &
+        vp%ghost_scounts(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
       do ipart = 1, vp%npart
-        if(vp%scounts(ipart) == 0) cycle
+        if(vp%ghost_scounts(ipart) == 0) cycle
         handle%nnb = handle%nnb + 1
         tag = ii
-        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%sendpos(ipart)), vp%scounts(ipart), &
-          R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
+        call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%ghost_sendpos(ipart)), &
+             vp%ghost_scounts(ipart), R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
     end do
   end select

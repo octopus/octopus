@@ -1003,7 +1003,7 @@ contains
     jpart =  mesh%vp%partno
     do ipart = 1, mesh%vp%npart
       if (ipart == jpart) cycle
-      if (mesh%vp%scounts(ipart) /= 0) nnb = nnb + 1
+      if (mesh%vp%ghost_scounts(ipart) /= 0) nnb = nnb + 1
     end do
     ASSERT(nnb >= 0 .and. nnb < mesh%vp%npart)
 

@@ -115,13 +115,13 @@ module par_vec_m
     !> Partition number of the
     !! current process
     integer          :: partno              
-    type(subarray_t) :: sendpoints
-    integer, pointer :: sendpos(:)
+    type(subarray_t) :: ghost_spoints     !< Ghost points that actual process must send to the neighbours
+    integer, pointer :: ghost_sendpos(:)  !< The positions of the points for the ghost communication
 
-    integer, pointer :: rdispls(:)
-    integer, pointer :: sdispls(:)
-    integer, pointer :: rcounts(:)
-    integer, pointer :: scounts(:)
+    integer, pointer :: ghost_rdispls(:)  !< Ghost points receive displacements 
+    integer, pointer :: ghost_sdispls(:)  !< Ghost points send displacements 
+    integer, pointer :: ghost_rcounts(:)  !< Number of ghost points to receive
+    integer, pointer :: ghost_scounts(:)  !< Number of ghost points to send
 
     ! The following members are set independent of the processs.
     integer                 :: npart                !< Number of partitions.
@@ -275,8 +275,8 @@ contains
     SAFE_ALLOCATE(np_bndry_tmp(1:npart))
     SAFE_ALLOCATE(xbndry_tmp(1:npart))
     SAFE_ALLOCATE(vp%global(1:npart))
-    SAFE_ALLOCATE(vp%rcounts(1:npart))
-    SAFE_ALLOCATE(vp%scounts(1:npart))
+    SAFE_ALLOCATE(vp%ghost_rcounts(1:npart))
+    SAFE_ALLOCATE(vp%ghost_scounts(1:npart))
 
     ! Count number of points for each process.
     ! Local points.
@@ -333,12 +333,12 @@ contains
     SAFE_ALLOCATE(vp%send_count(1:npart))
     vp%send_count = 0
 
-    vp%total     = 0
-    vp%scounts   = 0
-    vp%rcounts   = 0
-    vp%np_ghost  = 0
-    ip           = 0
-    inode        = vp%partno
+    vp%total           = 0
+    vp%ghost_scounts   = 0
+    vp%ghost_rcounts   = 0
+    vp%np_ghost        = 0
+    ip                 = 0
+    inode              = vp%partno
 
     SAFE_ALLOCATE(points(1:vp%np_local))
     SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
@@ -439,7 +439,7 @@ contains
           ! Mark point ip as ghost point for inode from part(index).
           call iihash_insert(ghost_flag(inode), points(ip), part_inner(ip))
           ! Increase number of ghost points of inode from part(index).
-          vp%rcounts(part_inner(ip)) = vp%rcounts(part_inner(ip))+1
+          vp%ghost_rcounts(part_inner(ip)) = vp%ghost_rcounts(part_inner(ip))+1
           ! Increase total number of ghostpoints of inode.
           vp%np_ghost = vp%np_ghost + 1
           ! One more ghost point.
@@ -457,7 +457,7 @@ contains
           if(.not.found) then
             call iihash_insert(ghost_flag(inode), &
               points_bndry(ip)+np_global, part_bndry(ip))
-            vp%rcounts(part_bndry(ip)) = vp%rcounts(part_bndry(ip))+1
+            vp%ghost_rcounts(part_bndry(ip)) = vp%ghost_rcounts(part_bndry(ip))+1
             vp%np_ghost = vp%np_ghost + 1
             vp%total = vp%total + 1
           end if
@@ -475,8 +475,8 @@ contains
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
     vp%total = tmp
     
-    call MPI_Alltoall(vp%rcounts(1), 1, MPI_INTEGER, &
-         vp%scounts(1), 1, MPI_INTEGER, &
+    call MPI_Alltoall(vp%ghost_rcounts(1), 1, MPI_INTEGER, &
+         vp%ghost_scounts(1), 1, MPI_INTEGER, &
          comm, mpi_err)
 
     ! Set index tables xghost and xghost_neigh. 
@@ -501,7 +501,7 @@ contains
     tmp = xghost_tmp(inode)
     xghost_neigh_back(1) = xghost_tmp(inode)
     do jnode = 2, npart
-      tmp = tmp + vp%rcounts(jnode - 1)
+      tmp = tmp + vp%ghost_rcounts(jnode - 1)
       xghost_neigh_back(jnode) = tmp
     end do
     ! xghost_neigh_partno is the transposed of xghost_neigh_back
@@ -531,7 +531,7 @@ contains
     SAFE_ALLOCATE(size_v(1:npart))
     do inode = 1, npart
        init = xghost_neigh_back(inode)
-       size = vp%rcounts(inode)
+       size = vp%ghost_rcounts(inode)
 
        call mpi_debug_in(comm, C_MPI_ALLGATHER)
        call MPI_Allgather(init, 1, MPI_INTEGER, &
@@ -738,18 +738,18 @@ contains
 
       PUSH_SUB(vec_init.init_send_points)
 
-      SAFE_ALLOCATE(vp%sendpos(1:vp%npart))
+      SAFE_ALLOCATE(vp%ghost_sendpos(1:vp%npart))
 
-      total = sum(vp%scounts(1:vp%npart))
+      total = sum(vp%ghost_scounts(1:vp%npart))
 
       SAFE_ALLOCATE(displacements(1:total))
         
       jj = 0
       ! Iterate over all possible receivers.
       do ipart = 1, vp%npart
-        vp%sendpos(ipart) = jj + 1
+        vp%ghost_sendpos(ipart) = jj + 1
         ! Iterate over all ghost points that ipart wants.
-        do ii = 0, vp%scounts(ipart) - 1
+        do ii = 0, vp%ghost_scounts(ipart) - 1
           ! Get global number kk of i-th ghost point.
           kk = vp%ghost(xghost_neigh_partno(ipart) + ii)
           ! Lookup up local number of point kk
@@ -758,7 +758,7 @@ contains
         end do
       end do
 
-      call subarray_init(vp%sendpoints, total, displacements)
+      call subarray_init(vp%ghost_spoints, total, displacements)
 
       SAFE_DEALLOCATE_A(displacements)
       SAFE_DEALLOCATE_P(xghost_neigh_partno)
@@ -772,16 +772,16 @@ contains
       ! each partition r wants to have from the current partiton
       ! vp%partno.
       
-      SAFE_ALLOCATE(vp%sdispls(1:vp%npart))
-      SAFE_ALLOCATE(vp%rdispls(1:vp%npart))
+      SAFE_ALLOCATE(vp%ghost_sdispls(1:vp%npart))
+      SAFE_ALLOCATE(vp%ghost_rdispls(1:vp%npart))
 
-      vp%sdispls(1) = 0
+      vp%ghost_sdispls(1) = 0
       do ipart = 2, vp%npart
-        vp%sdispls(ipart) = vp%sdispls(ipart - 1) + vp%scounts(ipart - 1)
+        vp%ghost_sdispls(ipart) = vp%ghost_sdispls(ipart - 1) + vp%ghost_scounts(ipart - 1)
       end do
 
       ! This is like in vec_scatter/gather.
-      vp%rdispls(1:vp%npart) = xghost_neigh_back(1:vp%npart) - vp%xghost
+      vp%ghost_rdispls(1:vp%npart) = xghost_neigh_back(1:vp%npart) - vp%xghost
       SAFE_DEALLOCATE_P(xghost_neigh_back)
       
       POP_SUB(vec_init.init_send_points)
@@ -799,13 +799,13 @@ contains
 
     PUSH_SUB(vec_end)
 
-    call subarray_end(vp%sendpoints)
+    call subarray_end(vp%ghost_spoints)
 
-    SAFE_DEALLOCATE_P(vp%rdispls)
-    SAFE_DEALLOCATE_P(vp%sdispls)
-    SAFE_DEALLOCATE_P(vp%rcounts)
-    SAFE_DEALLOCATE_P(vp%scounts)
-    SAFE_DEALLOCATE_P(vp%sendpos)    
+    SAFE_DEALLOCATE_P(vp%ghost_rdispls)
+    SAFE_DEALLOCATE_P(vp%ghost_sdispls)
+    SAFE_DEALLOCATE_P(vp%ghost_rcounts)
+    SAFE_DEALLOCATE_P(vp%ghost_scounts)
+    SAFE_DEALLOCATE_P(vp%ghost_sendpos)    
     SAFE_DEALLOCATE_P(vp%send_disp)
     SAFE_DEALLOCATE_P(vp%recv_disp)
     SAFE_DEALLOCATE_P(vp%part_vec)
