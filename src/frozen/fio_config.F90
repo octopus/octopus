@@ -308,9 +308,13 @@ contains
     character(len=*),    intent(in)    :: dirname
     !
     type(json_object_t), pointer :: cnfg
+    real(kind=wp)                :: charge
     integer                      :: ierr
     !
     nullify(cnfg)
+    call json_get(this, "charge", charge, ierr)
+    ASSERT(ierr==JSON_OK)
+    ASSERT(charge>0.0_wp)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call fio_config_parse_density(cnfg, dirname)
