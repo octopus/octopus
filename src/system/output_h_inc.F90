@@ -28,7 +28,11 @@
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, err, idir
-    character(len=80) :: fname
+    character(len=MAX_PATH_LEN) :: fname
+    type(ssys_external_iterator_t)        :: iter
+    type(base_external_t),        pointer :: base_external
+    character(len=BASE_EXTERNAL_NAME_LEN) :: name
+    FLOAT,          dimension(:), pointer :: potential
     FLOAT, allocatable :: v0(:,:), nxc(:)
     FLOAT, allocatable :: current(:, :, :)
 
@@ -47,6 +51,23 @@
 
       if(hm%ep%classical_pot > 0) then
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
+      end if
+
+      if(associated(hm%ep%subsys_external))then
+        call ssys_external_init(iter, hm%ep%subsys_external)
+        do
+          nullify(base_external, potential)
+          call ssys_external_next(iter, name, base_external, err)
+          if(err/=SSYS_EXTERNAL_OK)exit
+          ASSERT(associated(base_external))
+          call base_external_get(base_external, potential)
+          ASSERT(associated(potential))
+          write(fname, "(a,'-',a)") "v0", trim(adjustl(name))
+          call dio_function_output(outp%how, dir, fname, der%mesh, &
+            potential, units_out%energy, err, geo = geo, grp = grp)
+        end do
+        call ssys_external_end(iter)
+        nullify(base_external, potential)
       end if
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then

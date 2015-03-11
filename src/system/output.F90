@@ -21,6 +21,7 @@
 
 module output_m
   use base_density_m
+  use base_external_m
   use basins_m
   use calc_mode_m
   use cube_function_m
@@ -65,6 +66,7 @@ module output_m
   use simul_box_m
   use smear_m
   use ssys_density_m
+  use ssys_external_m
   use ssys_states_m
   use string_m
   use species_m
