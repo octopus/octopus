@@ -677,7 +677,6 @@ contains
       call hterm__inew__(htrm)
       ASSERT(associated(htrm))
       call hterm__init__(htrm, sys, cnfg)
-      print *, "hm: ", trim(adjustl(name))
       call hterm_dict_set(this%hdct, trim(adjustl(name)), htrm)
     end do
     call json_end(iter)
