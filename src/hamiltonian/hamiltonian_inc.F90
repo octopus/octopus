@@ -184,9 +184,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
             exx_coef = 0.25
          endif
          ! to apply the scdm exact exchange we need the state on the global mesh
-         SAFE_ALLOCATE(psi_global(der%mesh%np_global,hm%hf_st%d%dim))
+         SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
          ! global hpsi, should not be neccesary once mesh and scdm state parallelization conincide
-         SAFE_ALLOCATE(hpsi_global(der%mesh%np_global,hm%hf_st%d%dim))
+         SAFE_ALLOCATE(hpsi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
          !
          do ii = 1,psib%nst
             psi_global(:,:) = M_ZERO
@@ -211,6 +211,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 #endif
             !
          enddo
+         SAFE_DEALLOCATE_A(psi_global)
+         SAFE_DEALLOCATE_A(hpsi_global)
          !
       else
          ! standard HF 
@@ -457,9 +459,9 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
       if(hm%cmplxscl%space) psi2 = R_CONJ(psi2)
 
       do idim = 1, hm%hf_st%d%dim
-         forall(ip = 1:der%mesh%np)
-            rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-         end forall
+        forall(ip = 1:der%mesh%np)
+          rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
+        end forall
       end do
 
       call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
@@ -468,12 +470,12 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
       if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
       do idim = 1, hm%hf_st%d%dim
-         forall(ip = 1:der%mesh%np)
-            hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
-         end forall
+        forall(ip = 1:der%mesh%np)
+          hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
+        end forall
       end do
 
-   end do
+    end do
   end do
 
   SAFE_DEALLOCATE_A(rho)
@@ -527,9 +529,9 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
               do l=1,scdm%box_size*2+1
                  ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
                  rho_l(ip) = R_CONJ(scdm%X(psi)(ip,count))*psi(scdm%box(j,k,l,count), 1)
-              enddo
-           enddo
-        enddo
+              end do
+           end do
+        end do
         !
         call X(poisson_solve)(scdm%poisson, pot_l, rho_l, all_nodes=.false.)
         !
@@ -544,9 +546,9 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
                     ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
                     hpsi(scdm%box(j,k,l,count),idim) = &
                          hpsi(scdm%box(j,k,l,count),idim) - exx_coef*ff*scdm%X(psi)(ip,count)*pot_l(ip)
-                 enddo
-              enddo
-           enddo
+                 end do
+              end do
+           end do
         end do
         !
      end do
@@ -560,7 +562,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 #if HAVE_MPI
      call MPI_Allreduce(temp_state_global, hpsi, der%mesh%np_global, R_MPITYPE, MPI_SUM, der%mesh%vp%comm, mpi_err)
 #endif
-  endif
+  end if
   !
   POP_SUB(X(scdm_exchange_operator))
 end subroutine X(scdm_exchange_operator)

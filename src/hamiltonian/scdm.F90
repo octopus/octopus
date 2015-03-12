@@ -1,7 +1,6 @@
 #include "global.h"
 
 module scdm_m
-! module list is copied from hamiltonian
   use batch_m
   use batch_ops_m
   use blas_m
@@ -11,12 +10,8 @@ module scdm_m
   use cmplxscl_m
   use cube_m
   use cube_function_m
-!  use datasets_m
   use derivatives_m
-  use energy_m
-!  use hamiltonian_base_m
-!  use epot_m
-!  use gauge_field_m
+!  use energy_m
   use fft_m
   use nfft_m
   use geometry_m
@@ -28,7 +23,6 @@ module scdm_m
   use io_function_m
   use kpoints_m
   use lalg_basic_m
-!  use lasers_m
   use math_m
   use mesh_m
   use mesh_cube_map_m
@@ -38,15 +32,12 @@ module scdm_m
   use mpi_lib_m
   use multicomm_m
   use opencl_m
-! use ob_interface_m
-!  use ob_lead_m
   use opencl_m
   use par_vec_m
   use parser_m
   use poisson_m
   use poisson_fft_m
   use profiling_m
-!  use projector_m
   use simul_box_m
   use smear_m
   use states_m
@@ -126,6 +117,7 @@ module scdm_m
     integer :: box(3)
     FLOAT :: dummy, enlarge
     !
+    PUSH_SUB(scdm_init)
     ! check if already initialized
     if(scdm_is_init) return
     !
@@ -151,7 +143,7 @@ module scdm_m
     call parse_logical('SCDM_verbose', .false., scdm%verbose)
     !
     ! allocate centers
-    SAFE_ALLOCATE(scdm%center(3,scdm%st%nst))
+    SAFE_ALLOCATE(scdm%center(1:3,1:scdm%st%nst))
     !
     ! make a cube around the center points
     ! with side length NOTE: this should be dynamic
@@ -161,27 +153,27 @@ module scdm_m
     scdm%box_size = 0
     do i=1,3
        scdm%box_size = max(scdm%box_size,ceiling(scdm%rcut/der%mesh%spacing(i)))
-    enddo
+    end do
     !
     if(scdm%root.and.scdm%verbose) then
        call messages_print_var_value(stdout,'SCDM box_size', scdm%box_size)
        call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*0.529177249)
-    endif
+    end if
 !    scdm%full_box = (2*(2*scdm%box_size+1))**3
 scdm%full_box = (2*scdm%box_size+1)**3
     !check if scdm is not bigger than fft-grid of full simualtion cell  
     if(scdm%full_box.gt.der%mesh%np_global) then
        message(1) = 'SCDM box larger than mesh, no point in using it'
        call messages_fatal(1,only_root_writes = .true.)
-    endif
+    end if
     dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
     if(scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
-    SAFE_ALLOCATE(scdm%box(scdm%box_size*2+1,scdm%box_size*2+1,scdm%box_size*2+1,scdm%st%nst))
+    SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,scdm%st%nst))
     !
     ! the localzied states defined in the box are distributed over state index
-    SAFE_ALLOCATE(istart(der%mesh%mpi_grp%size))
-    SAFE_ALLOCATE(iend(der%mesh%mpi_grp%size))
-    SAFE_ALLOCATE(ilsize(der%mesh%mpi_grp%size))
+    SAFE_ALLOCATE(istart(1:der%mesh%mpi_grp%size))
+    SAFE_ALLOCATE(iend(1:der%mesh%mpi_grp%size))
+    SAFE_ALLOCATE(ilsize(1:der%mesh%mpi_grp%size))
     !
     call multicomm_divide_range(st%nst,der%mesh%mpi_grp%size, istart, iend, lsize=ilsize)
     scdm%st_start = istart(der%mesh%vp%rank+1)
@@ -193,23 +185,23 @@ scdm%full_box = (2*scdm%box_size+1)**3
     ! root process holds all states NOTE: this is not great... clearly ... but will go away when SCDM procedure is parallel
     if(.not.states_are_real(st)) then
        if(scdm%root) then
-          SAFE_ALLOCATE(scdm%st%zpsi(der%mesh%np_global, scdm%st%d%dim, scdm%st%nst, scdm%st%d%nik))
+          SAFE_ALLOCATE(scdm%st%zpsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%st%nst,1:scdm%st%d%nik))
        else
-          SAFE_ALLOCATE(scdm%st%zpsi(der%mesh%np_global, scdm%st%d%dim, scdm%lnst, scdm%st%d%nik))
-       endif
+          SAFE_ALLOCATE(scdm%st%zpsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%lnst,1:scdm%st%d%nik))
+       end if
        ! localized SCDM states defined on box twice their size for coulomb truncation
-       SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,scdm%lnst))
+       SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%lnst))
     else ! real
        if(scdm%root) then
-          SAFE_ALLOCATE(scdm%st%dpsi(der%mesh%np_global, scdm%st%d%dim, scdm%st%nst, scdm%st%d%nik))
+          SAFE_ALLOCATE(scdm%st%dpsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%st%nst, 1:scdm%st%d%nik))
        else
-          SAFE_ALLOCATE(scdm%st%dpsi(der%mesh%np_global, scdm%st%d%dim, scdm%lnst, scdm%st%d%nik))
-       endif
+          SAFE_ALLOCATE(scdm%st%dpsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%lnst, 1:scdm%st%d%nik))
+       end if
        ! localized SCDM states defined on box twice their size for coulomb truncation
-       SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,scdm%lnst))
-    endif
+       SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%lnst))
+    end if
     !
-    SAFE_ALLOCATE(scdm%periodic(scdm%lnst))
+    SAFE_ALLOCATE(scdm%periodic(1:scdm%lnst))
     !
     ! create a mesh object for the small box (for now each scdm state is in the same box, should be dynamic)
     ! only initialize values needed in the following (e.g. by poisson_fft_init)
@@ -217,8 +209,8 @@ scdm%full_box = (2*scdm%box_size+1)**3
     SAFE_ALLOCATE(scdm%boxmesh%sb)
     scdm%boxmesh%sb%periodic_dim = 0
     scdm%boxmesh%sb%dim = 3
-    scdm%boxmesh%sb%klattice_primitive(:,:) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
-    scdm%boxmesh%sb%rlattice_primitive(:,:) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+    scdm%boxmesh%sb%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+    scdm%boxmesh%sb%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
     !
     !set mesh points with double size for coulomb truncation
     scdm%boxmesh%np = scdm%full_box
@@ -228,21 +220,17 @@ scdm%full_box = (2*scdm%box_size+1)**3
     ! set index type of mesh
     scdm%boxmesh%idx%is_hypercube = .false.
     ! mesh has to be centered around zero with left overhang otherwise mesh_cub_map doesn't seem to work
-!    scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size*2+1)
-!    scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size*2+1)-1
-scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size)
-scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size) 
+    scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size)
+    scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size) 
     !
     scdm%boxmesh%idx%dim = 3
     scdm%boxmesh%idx%ll(:) = scdm%boxmesh%idx%nr(2,:) - scdm%boxmesh%idx%nr(1,:) + 1
 !???
     scdm%boxmesh%idx%enlarge(:) = 0
-    SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz(scdm%boxmesh%np,scdm%boxmesh%idx%dim))
+    SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz(1:scdm%boxmesh%np,1:scdm%boxmesh%idx%dim))
     ! need to copy indices because otherwise line gets too long (precompiler???)
-!    i=-(scdm%box_size*2+1)
-!    j=(scdm%box_size*2+1)-1
-i=-(scdm%box_size)
-j=(scdm%box_size)
+    i=-(scdm%box_size)
+    j=(scdm%box_size)
     SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz_inv(i:j,i:j,i:j))
     !
     ip = 0
@@ -254,9 +242,9 @@ j=(scdm%box_size)
              scdm%boxmesh%idx%lxyz(ip,2) = j
              scdm%boxmesh%idx%lxyz(ip,3) = k
              scdm%boxmesh%idx%lxyz_inv(i,j,k) = ip
-          enddo
-       enddo
-    enddo
+          end do
+       end do
+    end do
     call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
     !
     ! create a cube object for the small box, with double size for coulomb truncation
@@ -269,10 +257,10 @@ j=(scdm%box_size)
     ! without nfft we have to double the box 
 #ifndef HAVE_NFFT
    if(der%mesh%sb%periodic_dim.gt.0) call messages_not_implemented("periodic SSCDM  without NFFT library")  
-   box(:) = scdm%boxmesh%idx%ll(:)*2
+   box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
    call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
 # else ! nfft case
-    box(:) = scdm%boxmesh%idx%ll(:) +2
+    box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
     if(der%mesh%sb%periodic_dim.eq.3) then
        !enlargement factor to fit he simulationbox boundary
 ! ??? not sure
@@ -280,7 +268,7 @@ j=(scdm%box_size)
        !
     else ! non-periodic case
        enlarge = M_TWO
-    endif
+    end if
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, &
                fft_type=FFT_COMPLEX, fft_library=FFTLIB_NFFT, &
                tp_enlarge=enlarge,spacing=der%mesh%spacing)
@@ -312,6 +300,7 @@ j=(scdm%box_size)
     !
     call messages_write('done SCDM init')
     !
+    POP_SUB(scdm_init)
   end subroutine scdm_init
 
   subroutine dRRQR(n,np,KSt,JPVT)
@@ -326,13 +315,14 @@ j=(scdm%box_size)
     FLOAT              :: TAU(n)
     FLOAT, allocatable ::  work(:)
     !
+    PUSH_SUB(dRRQR)
     ! dummy call to obtain dimension of work
     allocate(work(1))
     call DGEQP3( n,np, KSt, n, JPVT, TAU, WORK, -1, INFO )
     if(INFO.ne.0) then
        print *, 'Illegal argument in DGEQP3: ', INFO
        stop
-    endif
+    end if
     ! Note: scalapack routine is called P?GEQPF()
     !
     lwork = work(1)
@@ -346,8 +336,9 @@ j=(scdm%box_size)
     if(INFO.ne.0)then
        print *, 'Illegal argument in DGEQP3: ', INFO
        stop
-    endif
+    end if
     !
+    POP_SUB(dRRQR)
   end subroutine dRRQR
 
   subroutine zRRQR(n,np,KSt,JPVT)
@@ -363,13 +354,14 @@ j=(scdm%box_size)
     CMPLX, allocatable :: work(:)
     FLOAT              :: rwork(2*np)
     !
+    PUSH_SUB(zRRQR)
     ! dummy call to obtain dimension of work
     allocate(work(1))
     call ZGEQP3( n,np, KSt, n, JPVT, TAU, WORK, -1, RWORK, INFO )
     if(INFO.ne.0) then
        print *, 'Illegal argument in ZGEQP3: ', INFO
        stop
-    endif
+    end if
     ! Note: scalapack routine is called P?GEQPF()
     !
     lwork = work(1)
@@ -383,8 +375,9 @@ j=(scdm%box_size)
     if(INFO.ne.0)then
        print *, 'Illegal argument in ZGEQP3: ', INFO
        stop
-    endif
+    end if
     !
+    POP_SUB(zRRQR)
   end subroutine zRRQR
 
   subroutine check_periodic_box(idx,center,size,periodic)
@@ -400,6 +393,7 @@ j=(scdm%box_size)
     ! internal
     integer :: ix(3), corner(3,8), i1, idim
     !
+    PUSH_SUB(check_periodic_box)
     periodic = .false.
     !
     ! make the sign pattern for corners
@@ -420,11 +414,12 @@ j=(scdm%box_size)
           if(ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
              periodic = .true. 
              return
-          endif
-       enddo
+          end if
+       end do
        !
-    enddo
+    end do
     !
+    POP_SUB(check_periodic_box)
   end subroutine check_periodic_box
 
 

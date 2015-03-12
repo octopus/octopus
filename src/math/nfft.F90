@@ -423,6 +423,8 @@ contains
 
     CMPLX, allocatable :: zin(:,:,:)
     integer:: b(6)
+
+    PUSH_SUB(dnfft_forward)
     
     b(1) = lbound(in, dim=1)
     b(2) = ubound(in, dim=1)
@@ -438,6 +440,7 @@ contains
 
     deallocate(zin)
 !     SAxFE_DEALLOCATE_A(zin)
+    POP_SUB(dnfft_forward)
   end subroutine dnfft_forward
 
 !--------------------------------------------  
@@ -445,8 +448,9 @@ contains
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in(:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
-    
+    PUSH_SUB(znfft_forward)
     call znfft_forward1(nfft, in, out)
+    POP_SUB(znfft_forward)
   end subroutine znfft_forward
   
 !--------------
@@ -457,6 +461,8 @@ contains
 
     CMPLX, allocatable :: zout(:,:,:)
     integer:: b(6)
+
+    PUSH_SUB(dnfft_backward)
 
     b(1) = lbound(out, dim=1)
     b(2) = ubound(out, dim=1)
@@ -470,14 +476,16 @@ contains
     call znfft_backward1(nfft, in, zout)
     out = zout
     deallocate(zout)
+    POP_SUB(dnfft_backward)
   end subroutine dnfft_backward
   
   subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
-    
+    PUSH_SUB(znfft_backward)
     call znfft_backward1(nfft, in, out)
+    POP_SUB(znfft_backward)
   end subroutine znfft_backward
 
 #include "undef.F90"

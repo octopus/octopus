@@ -25,6 +25,7 @@ integer :: nn(3)
     character(len=50) :: name
     type(cube_function_t) :: cf
     !
+    PUSH_SUB(X(scdm_localize))
     ! check if already localized
     if(scdm_is_local) return
     !
@@ -51,7 +52,7 @@ integer :: nn(3)
           call vec_gather(mesh%vp, 0, state_global, st%X(psi)(1:mesh%np,st%d%dim,i,st%d%nik))
 #endif
           if(scdm%root) KSt(i,:)  = st%occ(i,1)*state_global(:)
-       enddo
+       end do
        SAFE_DEALLOCATE_A(state_global)
     else
        ! serial
@@ -60,7 +61,7 @@ integer :: nn(3)
           ! this call is necessary becasue we want to have only np not np_part
            call states_get_state(st, mesh, i, st%d%nik, temp_state)
            KSt(i,:) = st%occ(i,1)*temp_state(:,1)
-       enddo
+       end do
        SAFE_DEALLOCATE_A(temp_state)
     endif
     !
@@ -88,8 +89,8 @@ integer :: nn(3)
        do i=1,nval
           do v=1,nval
              SCDM_temp(:,i) = SCDM_temp(:,i) + KSt_original(v,:)*R_CONJ(KSt_original(v,JPVT(i)))
-          enddo
-       enddo
+          end do
+       end do
        !
        call cpu_time(t1)
        if(scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul1:',t1-t2)
@@ -104,7 +105,7 @@ integer :: nn(3)
                 Pcc(i,j) = Pcc(i,j)+ KSt_original(v,JPVT(i))*R_CONJ(KSt_original(v,JPVT(j)))
              enddo
           enddo
-       enddo
+       end do
        !
        call cpu_time(t2)
        if(scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul2:',t2-t1)
@@ -134,9 +135,9 @@ integer :: nn(3)
           do j=1,nval
              do v=1,nval
                 scdm%st%X(psi)(i,1,v,1) = scdm%st%X(psi)(i,1,v,1) + SCDM_temp(i,j)*Pcc(j,v)
-             enddo
-          enddo
-       enddo
+             end do
+          end do
+       end do
        !
        SAFE_DEALLOCATE_A(SCDM_temp)
        call cpu_time(t1)
@@ -147,7 +148,7 @@ integer :: nn(3)
                (sqrt(dot_product(scdm%st%X(psi)(:,1,v,1),scdm%st%X(psi)(:,1,v,1))*mesh%volume_element))
                !this should be used ../X(mf_nrm2)(mesh,scdm%st%X(psi)(:,1,v,1))
                ! but doensnt work with parallelization
-       enddo
+       end do
        call cpu_time(t2)
        if(scdm%verbose) call messages_print_var_value(stdout,  'time: norms',t2-t1)
        !
@@ -174,9 +175,9 @@ integer :: nn(3)
           do i=1,3
              scdm%center(i,v) = sum(scdm%st%X(psi)(:,st%d%dim,v,scdm%st%d%nik)*R_CONJ(scdm%st%X(psi)(:,st%d%dim,v,scdm%st%d%nik))* &
                        mesh%idx%lxyz(1:mesh%np_global,i)*mesh%spacing(i))*mesh%volume_element
-          enddo
+          end do
           write(127,*) scdm%center(:,v)
-       enddo
+       end do
        close(127)
        call cpu_time(t2)
        if(scdm%verbose) call messages_print_var_value(stdout, 'time: find centers',t2-t1)
@@ -184,7 +185,9 @@ integer :: nn(3)
     !
 !---! --------------------- SERIAL END ------------------------------------
     !
+#if HAVE_MPI
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+#endif
     !
     ! distribute the localized states
     count = 0
@@ -202,9 +205,9 @@ integer :: nn(3)
        if(i.ge.scdm%st_start.and.i.le.scdm%st_end) then
           count = count +1
           scdm%st%X(psi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik) = temp_state(:,1)
-       endif
+       end if
        !
-    enddo
+    end do
     SAFE_DEALLOCATE_A(temp_state)
     !
 #if HAVE_MPI
@@ -222,7 +225,7 @@ integer :: nn(3)
        ! find integer index of center
        do i=1,3
           icenter(i) = scdm%center(i,v)/mesh%spacing(i)
-       enddo
+       end do
        ! find index of center in the mesh
        ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
        !
@@ -248,8 +251,8 @@ integer :: nn(3)
                       if(ix(idim).lt.mesh%idx%nr(1,idim).or.ix(idim).gt.mesh%idx%nr(2,idim)) then
                          outside = .true.
                          exit
-                      endif
-                   enddo
+                      end if
+                   end do
                    !
                    if(outside) then 
                       ! map point to equivalent one in cell
@@ -258,20 +261,20 @@ integer :: nn(3)
                             ix(idim) = ix(idim)+mesh%idx%ll(idim)
                          elseif( ix(idim).gt.mesh%idx%nr(2,idim) ) then
                             ix(idim) = ix(idim)-mesh%idx%ll(idim)
-                         endif
-                      enddo
-                   endif
+                         end if
+                      end do
+                   end if
                    ! indices of box are 1-based
                    j1=i1+scdm%box_size+1
                    j2=i2+scdm%box_size+1
                    j3=i3+scdm%box_size+1
                    scdm%box(j1,j2,j3,count) = mesh%idx%lxyz_inv(ix(1),ix(2),ix(3))
                    !
-                enddo!i3
-             enddo!i2
-          enddo!i1
+                end do!i3
+             end do!i2
+          end do!i1
           !
-       endif
+       end if
        !
        ! copy points to box
        ! this box refers to the global mesh
@@ -282,9 +285,9 @@ integer :: nn(3)
 !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
 ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
                 scdm%X(psi)(ip,count) = scdm%st%X(psi)(scdm%box(j,k,l,count),st%d%dim,count,scdm%st%d%nik)
-             enddo
-          enddo
-       enddo
+             end do
+          end do
+       end do
        !
        ! compue localization error
        error_tmp = error_tmp + M_ONE - dot_product(scdm%X(psi)(:,count),scdm%X(psi)(:,count))*mesh%volume_element
@@ -305,7 +308,7 @@ ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
 !          enddo
 !       endif
        !
-   enddo
+   end do
    !
 #if HAVE_MPI
    error = M_ZERO
@@ -315,7 +318,6 @@ ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
 #endif
    if(scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM localization error:', error/st%nst)
    !
-   call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
    call cpu_time(t2)
    if(scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'time: copy box',t2-t1)
    !
@@ -400,43 +402,45 @@ ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
     call cpu_time(t1)
     if(scdm%root.and.scdm%verbose) call messages_print_var_value(stdout,  'time: all SCDM',t1-t0)
     !
-    return
+!    return
     !
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
     !
     ! this is to comupte exchange energy, in priciple... not operational
-    SAFE_ALLOCATE(rho(1:mesh%np_part))
-    SAFE_ALLOCATE(rho2(1:mesh%np_part))
-    SAFE_ALLOCATE(pot(1:mesh%np_part))
+ !   SxAFE_ALLOCATE(rho(1:mesh%np_part))
+ !   SxAFE_ALLOCATE(rho2(1:mesh%np_part))
+ !   SxAFE_ALLOCATE(pot(1:mesh%np_part))
+ !   !
+ !   exx = 0.
+ !   do i=1,nval
+ !      do j=1,i
+ !         temp(:) = (scdm%center(:,i)- scdm%center(:,j))/mesh%spacing(:)
+!!          if(sqrt(dot_product(temp,temp)).le.2.*scdm%rcut) then
+ !            !
+ !            rho(:) = scdm%st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*scdm%st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
+!!rho(:) = st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
+ !            rho2(:) = rho(:)
+ !            pot(:) = 0.
+ !            call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+ !            !
+ !            ! catch diagonals for double counting
+ !            if(i.ne.j) then
+ !               exx = exx - 0.5*dot_product(pot(:),rho2(:))*mesh%volume_element
+ !            else
+ !               exx = exx - 0.25*dot_product(pot(:),rho2(:))*mesh%volume_element
+ !            endif
+!!          endif
+ !         !
+ !      enddo
+ !   enddo
+ !   !
+ !   call messages_print_var_value(stdout,'exx[eV] = ', exx*27.211396132)
+ !   SxAFE_DEALLOCATE_A(rho)
+ !   SxAFE_DEALLOCATE_A(rho2)
+ !   SxAFE_DEALLOCATE_A(pot)
     !
-    exx = 0.
-    do i=1,nval
-       do j=1,i
-          temp(:) = (scdm%center(:,i)- scdm%center(:,j))/mesh%spacing(:)
-!          if(sqrt(dot_product(temp,temp)).le.2.*scdm%rcut) then
-             !
-             rho(:) = scdm%st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*scdm%st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
-!rho(:) = st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
-             rho2(:) = rho(:)
-             pot(:) = 0.
-             call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
-             !
-             ! catch diagonals for double counting
-             if(i.ne.j) then
-                exx = exx - 0.5*dot_product(pot(:),rho2(:))*mesh%volume_element
-             else
-                exx = exx - 0.25*dot_product(pot(:),rho2(:))*mesh%volume_element
-             endif
-!          endif
-          !
-       enddo
-    enddo
-    !
-    call messages_print_var_value(stdout,'exx[eV] = ', exx*27.211396132)
-    SAFE_DEALLOCATE_A(rho)
-    SAFE_DEALLOCATE_A(rho2)
-    SAFE_DEALLOCATE_A(pot)
+    POP_SUB(X(scdm_localize))
     !
   end subroutine X(scdm_localize)
 
@@ -450,6 +454,7 @@ ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
     R_TYPE,pointer  :: work(:)
     FLOAT           :: temp
     !
+    PUSH_SUB(X(invert))
     call X(getrf)( n, n, A, n, ipiv, ierror )
     if( ierror.eq.0 ) then
        !workspace query
@@ -459,10 +464,12 @@ ip = (j-1)*((scdm%box_size*2+1))**2+(k-1)*((scdm%box_size*2+1)) + l
        call X(getri)( n, A, n, ipiv, work, lwork, ierror )
     else
        stop 'Terminating due to failed LU decomp'
-    endif
+    end if
     if (ierror.ne.0) then
        stop 'Terminating due to failed inversion'
-    endif
+    end if
     deallocate(work)
+    !
+    POP_SUB(X(invert))
     !
   end subroutine X(invert)
