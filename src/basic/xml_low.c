@@ -26,7 +26,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define XML_FILE_DEBUG
+/*#define XML_FILE_DEBUG*/
 
 typedef struct {
   FILE * xml_file;

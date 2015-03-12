@@ -484,10 +484,11 @@ contains
     if(startp == 2) ps_upf%drdi(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_RAB', ps_upf%np - startp + 1, ps_upf%drdi(startp:))
     call check_error(ierr)
-    
-    do ip = 1, ps_upf%np
-      write(12, *) ip, ps_upf%r(ip), ps_upf%drdi(ip)
-    end do
+
+    !disabled debug output    
+    !    do ip = 1, ps_upf%np
+    !      write(12, *) ip, ps_upf%r(ip), ps_upf%drdi(ip)
+    !    end do
     
     call xml_tag_end(tag)
 
@@ -504,9 +505,10 @@ contains
         ps_upf%r(3), ps_upf%v_local(2), ps_upf%v_local(3))
     end if
 
-    do ip = 1, ps_upf%np
-      write(13, *) ip, ps_upf%r(ip), ps_upf%v_local(ip)
-    end do
+    !disabled debug output
+    !    do ip = 1, ps_upf%np
+    !      write(13, *) ip, ps_upf%r(ip), ps_upf%v_local(ip)
+    !    end do
     
     call xml_tag_end(tag)
 
@@ -539,9 +541,10 @@ contains
       
     end do
 
-    do ip = 1, ps_upf%np
-      write(14, *) ip, ps_upf%r(ip), ps_upf%proj(ip, :)
-    end do
+    !disabled debug output
+    !   do ip = 1, ps_upf%np
+    !     write(14, *) ip, ps_upf%r(ip), ps_upf%proj(ip, :)
+    !   end do
 
     ! DIJ
     ierr = xml_file_tag(upf2_file, 'PP_DIJ', 0, proj_tag)
@@ -601,10 +604,10 @@ contains
     end do
 
     call xml_tag_end(tag)
-
-    do ip = 1, ps_upf%np
-      write(15, *) ip, ps_upf%r(ip), ps_upf%wfs(ip, :)
-    end do
+    !disabled debug output
+    !   do ip = 1, ps_upf%np
+    !     write(15, *) ip, ps_upf%r(ip), ps_upf%wfs(ip, :)
+    !   end do
     
     !Valence charge
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
@@ -616,9 +619,10 @@ contains
     
     call xml_tag_end(tag)
 
-    do ip = 1, ps_upf%np
-      write(16, *) ip, ps_upf%r(ip), ps_upf%rho(ip)
-    end do
+    !disabled debug output
+    !   do ip = 1, ps_upf%np
+    !     write(16, *) ip, ps_upf%r(ip), ps_upf%rho(ip)
+    !   end do
     
     !Non-linear core-corrections not supported at the moment
     nullify(ps_upf%core_density)
