@@ -221,7 +221,7 @@ scdm%full_box = (2*scdm%box_size+1)**3
     scdm%boxmesh%np_part_global = scdm%boxmesh%np_global
     ! set index type of mesh
     scdm%boxmesh%idx%is_hypercube = .false.
-    ! mesh has to be centered around zero with left overhang otherwise mesh_cub_map doesn't seem to work
+    ! mesh has to be centered around zero with left overhang otherwise mesh_cub_map does not seem to work
     scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size)
     scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size) 
     !
