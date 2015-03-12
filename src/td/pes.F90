@@ -268,6 +268,8 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, st)
+
     POP_SUB(pes_output)
   end subroutine pes_output
 

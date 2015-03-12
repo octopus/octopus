@@ -28,6 +28,7 @@ module pes_flux_m
     pes_flux_init,             &
     pes_flux_end,              &
     pes_flux_calc,             &
+    pes_flux_output,           &
     pes_flux_init_boundaries,  &
     pes_flux_apply_boundaries
 
@@ -116,8 +117,6 @@ contains
 !      call input_error('SurffShape')
 !    call messages_print_var_option(stdout, "SurffShape", flux%srfcshape)
 
-    ! output
-    call parse_integer('PESSurfaceOutput', 1, flux%output)
 
     ! surface
     SAFE_ALLOCATE(border(1:MAX_DIM))
@@ -260,7 +259,6 @@ contains
     FLOAT              :: dmin
     CMPLX, allocatable :: gzpsi(:,:)
     CMPLX, allocatable :: fluxx(:)
-    FLOAT, allocatable :: summ(:)
     FLOAT, allocatable :: vp(:)
     CMPLX, allocatable :: wf(:,:,:,:), gwf(:,:,:,:,:)
     FLOAT              :: phi, kk
@@ -280,9 +278,6 @@ contains
 
     SAFE_ALLOCATE(fluxx(1:mesh%sb%dim))
     fluxx = M_z0
-
-    SAFE_ALLOCATE(summ(1:flux%nkpnts))
-    summ = M_ZERO
 
     SAFE_ALLOCATE(vp(1:mesh%sb%dim))
     vp = M_ZERO
@@ -350,33 +345,7 @@ contains
    
 !      write(*,*) 'test03'
    
-      ! sum over all states, spins, etc.  & write out (put this in pes_flux_output & add mpi_communication)
-      do ikp = 1, flux%nkpnts
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              summ(ikp) = summ(ikp) + real(flux%spctramp(ikp, idim, ist, ik))**2 + aimag(flux%spctramp(ikp, idim, ist, ik))**2
-            end do
-          end do
-        end do
-      end do
 
-      if(mod(iter, flux%output) == 0) then
-        open(unit=300,position='rewind')
-        ikp = 0
-        do iph = 0, flux%nphi
-          phi = iph * flux%delphi + flux%phimin
-          do ikk = 1, flux%nk
-            kk = ikk * flux%delk
-            ikp = ikp + 1
-            write(300,'(2f18.10, 1e18.10)') kk, phi, summ(ikp)
-          end do
-          write(300,*)
-          if(mesh%sb%dim == 1) write(300,*)
-        end do
-        flush(300)
-        close(300)
-      end if
 
     end if   ! flux%interval
 
@@ -386,7 +355,6 @@ contains
     SAFE_DEALLOCATE_A(gwf)
     SAFE_DEALLOCATE_A(gzpsi)
     SAFE_DEALLOCATE_A(fluxx)
-    SAFE_DEALLOCATE_A(summ)
     SAFE_DEALLOCATE_A(vp)
 
 !    write(*,*) 'end flux calc.'
@@ -478,5 +446,52 @@ contains
 
     POP_SUB(pes_flux_getsrfc)
   end subroutine pes_flux_getsrfc
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_output(flux, mesh, st)
+    type(pes_flux_t), intent(inout)    :: flux
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_t),      intent(in)    :: st
+
+    integer            :: ikp, ikk, iph, iunit, idim, ik, ist
+    FLOAT              :: phi, kk
+    FLOAT, allocatable :: summ(:)
+
+    PUSH_SUB(pes_flux_output)
+
+    SAFE_ALLOCATE(summ(1:flux%nkpnts))
+    summ = M_ZERO
+
+    ! sum over all states, spins, etc.  & write out (put this in pes_flux_output & add mpi_communication)
+    do ikp = 1, flux%nkpnts
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            summ(ikp) = summ(ikp) + &
+              real(flux%spctramp(ikp, idim, ist, ik))**2 + aimag(flux%spctramp(ikp, idim, ist, ik))**2
+          end do
+        end do
+      end do
+    end do
+
+    iunit = io_open('td.general/PESflux_map.z=0', action='write', position='rewind')
+
+    ikp = 0
+    do iph = 0, flux%nphi
+      phi = iph * flux%delphi + flux%phimin
+      do ikk = 1, flux%nk
+        kk = ikk * flux%delk
+        ikp = ikp + 1
+        write(iunit,'(2f18.10, 1e18.10)') kk, phi, summ(ikp)
+      end do
+      write(iunit,'(1x)')
+      if(mesh%sb%dim == 1) write(iunit,'(1x)')
+    end do
+
+    call io_close(iunit)
+    SAFE_DEALLOCATE_A(summ)
+
+    POP_SUB(pes_flux_output)
+  end subroutine pes_flux_output
 
 end module pes_flux_m
