@@ -127,7 +127,9 @@ module scdm_m
                    call messages_not_implemented("SCDM with mixed-periodicity")  
     !
 !    scdm%root = (der%mesh%vp%rank == 0)
+#if HAVE_MPI
     call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
+#endif
     scdm%root = (rank ==0)
     !
     ! inherit some indices from st
