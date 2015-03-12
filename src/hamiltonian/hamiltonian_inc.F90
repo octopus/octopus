@@ -169,60 +169,60 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   if (iand(TERM_OTHERS, terms_) /= 0) then
 
    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK.or.hm%EXX) then
-      !
-      ASSERT(.not. batch_is_packed(hpsib))
-      !
-      if(hm%EXX)  then
-         !
-         call scdm_init(hm%hf_st, der,scdm)
-         call X(scdm_localize)(hm%hf_st, der%mesh,scdm)
-         !
-         ! is EXX used with Hartree Fock?
-         if(hm%theory_level == HARTREE_FOCK) then
-            exx_coef = hm%exx_coef  !i.e. = 1.
-         else !i.e. PBE0, this should be more general
-            exx_coef = 0.25
-         endif
-         ! to apply the scdm exact exchange we need the state on the global mesh
-         SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
-         ! global hpsi, should not be neccesary once mesh and scdm state parallelization conincide
-         SAFE_ALLOCATE(hpsi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
-         !
-         do ii = 1,psib%nst
-            psi_global(:,:) = M_ZERO
+     !
+     ASSERT(.not. batch_is_packed(hpsib))
+     !
+     if(hm%EXX)  then
+       !
+       call scdm_init(hm%hf_st, der,scdm)
+       call X(scdm_localize)(hm%hf_st, der%mesh,scdm)
+       !
+       ! is EXX used with Hartree Fock?
+       if(hm%theory_level == HARTREE_FOCK) then
+         exx_coef = hm%exx_coef  !i.e. = 1.
+       else !i.e. PBE0, this should be more general
+         exx_coef = 0.25
+       endif
+       ! to apply the scdm exact exchange we need the state on the global mesh
+       SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
+       ! global hpsi, should not be neccesary once mesh and scdm state parallelization conincide
+       SAFE_ALLOCATE(hpsi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
+       !
+       do ii = 1,psib%nst
+         psi_global(:,:) = M_ZERO
 #if HAVE_MPI
-            call vec_gather(der%mesh%vp, 0, psi_global(1:der%mesh%np_global,1),epsib%states(ii)%X(psi)(:,1) )
-            call MPI_Bcast(psi_global(1,1),der%mesh%np_global , R_MPITYPE, 0, der%mesh%mpi_grp%comm, mpi_err)
+         call vec_gather(der%mesh%vp, 0, psi_global(1:der%mesh%np_global,1),epsib%states(ii)%X(psi)(:,1) )
+         call MPI_Bcast(psi_global(1,1),der%mesh%np_global , R_MPITYPE, 0, der%mesh%mpi_grp%comm, mpi_err)
 #endif
-            !
-            ! use globel hpsi for now
-            hpsi_global(:,:) = M_ZERO
-#if HAVE_MPI
-            call vec_gather(der%mesh%vp, 0, hpsi_global(1:der%mesh%np_global,1),hpsib%states(ii)%X(psi)(:,1) )
-#endif
-            !
-            ! call with global hpsi
-            call X(scdm_exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef)
-            ! call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef) 
-            ! this is how the call shoudl look like
-            !
-#if HAVE_MPI
-            call vec_scatter(der%mesh%vp,0, hpsi_global(1:der%mesh%np_global,1), hpsib%states(ii)%X(psi)(:,1))
-#endif
-            !
-         enddo
-         SAFE_DEALLOCATE_A(psi_global)
-         SAFE_DEALLOCATE_A(hpsi_global)
          !
-      else
-         ! standard HF 
-         do ii = 1,psib%nst
-            call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), &
-                   hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik,hm%exx_coef)
-         end do
-      end if
+         ! use globel hpsi for now
+         hpsi_global(:,:) = M_ZERO
+#if HAVE_MPI
+         call vec_gather(der%mesh%vp, 0, hpsi_global(1:der%mesh%np_global,1),hpsib%states(ii)%X(psi)(:,1) )
+#endif
+         !
+         ! call with global hpsi
+         call X(scdm_exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef)
+         ! call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef) 
+         ! this is how the call shoudl look like
+         !
+#if HAVE_MPI
+         call vec_scatter(der%mesh%vp,0, hpsi_global(1:der%mesh%np_global,1), hpsib%states(ii)%X(psi)(:,1))
+#endif
+         !
+       end do
+       SAFE_DEALLOCATE_A(psi_global)
+       SAFE_DEALLOCATE_A(hpsi_global)
+       !
+     else
+       ! standard HF 
+       do ii = 1,psib%nst
+         call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), &
+              hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik,hm%exx_coef)
+       end do
+     end if
    endif
-
+   
    if(hm%theory_level == RDMFT ) then
       ASSERT(.not. batch_is_packed(hpsib))
       do ii = 1, psib%nst
