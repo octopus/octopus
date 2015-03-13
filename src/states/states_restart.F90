@@ -35,6 +35,7 @@ module states_restart_m
   use multigrid_m
   use parser_m
   use profiling_m
+  use par_vec_m
   use restart_m
   use simul_box_m
   use smear_m
@@ -151,14 +152,14 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states
+    integer :: iunit_wfns, iunit_occs, iunit_states, root, chunk, iwt, ii
     integer :: err, err2(2), ik, idir, ist, idim, itot
-    character(len=80) :: filename, filename1
+    character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, cmplxscl, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
-    FLOAT,  allocatable :: dpsi(:)
-    CMPLX,  allocatable :: zpsi(:)
+    FLOAT,  allocatable :: dpsi(:), rff_global(:)
+    CMPLX,  allocatable :: zpsi(:), zff_global(:)
 
     PUSH_SUB(states_dump)
 
@@ -219,12 +220,15 @@ contains
 
     if(states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
+      SAFE_ALLOCATE(rff_global(1:gr%mesh%np_global))
     else
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+      SAFE_ALLOCATE(zff_global(1:gr%mesh%np_global))
     end if
 
-
     itot = 1
+    root = 0
+    chunk = 0
     err2 = 0
     do ik = 1, st%d%nik
       kpoint = M_ZERO
@@ -232,7 +236,13 @@ contains
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
+          chunk = chunk + 1
+          root = mod(itot-1,gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
+          if (root == gr%mesh%mpi_grp%rank) then
+            filename_tmp = filename
+          end if
+          
           if (st%have_left_states) filename1 = 'L'//trim(filename) !cmplxscl
 
           write(lines(1), '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
@@ -263,11 +273,29 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err)
+                  if (gr%mesh%parallel_in_domains) then
+                    call vec_gather(gr%mesh%vp, root, rff_global, dpsi)
+                  else
+                    rff_global = dpsi
+                  end if
+                  if (chunk == gr%mesh%mpi_grp%size .or. ist == st%d%nik*st%nst*st%d%dim) then
+                    do iwt = 1, chunk
+                      if (iwt-1 == gr%mesh%mpi_grp%rank) then
+                        call drestart_write_mesh_function(restart, trim(filename_tmp)          , &
+                             gr%mesh, rff_global, err, root = iwt-1, is_global = .true.)
+                      end if
+                    end do
+                    chunk = 0
+                  end if
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err)
-                  if (st%have_left_states) then!cmplxscl
+                  if (gr%mesh%parallel_in_domains) then
+                    call vec_gather(gr%mesh%vp, root, zff_global, zpsi)
+                  else
+                    zff_global = zpsi
+                  end if
+                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root, is_global = .true.)
+                  if(st%have_left_states) then!cmplxscl
                     call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
                     call zrestart_write_mesh_function(restart, filename1, gr%mesh, zpsi, err)
                   end if
@@ -286,14 +314,16 @@ contains
           end if
 
           itot = itot + 1
-        end do
-      end do
-    end do
+        end do ! st%d%dim
+      end do ! st%nst
+    end do ! st%d%nik
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
 
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(rff_global)
+    SAFE_DEALLOCATE_A(zff_global)
 
     lines(1) = '%'
     call restart_write(restart, iunit_occs, lines, 1, err)

@@ -437,7 +437,7 @@ end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp)
+subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
@@ -447,54 +447,64 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
   integer,                    intent(out) :: ierr
   type(geometry_t), optional, intent(in)  :: geo
   type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  integer,          optional, intent(in)  :: root !< which process is going to write the data
+  logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
 
+  logical :: is_global_
 #if defined(HAVE_MPI)
   logical :: i_am_root
-  integer :: comm
+  integer :: root_, comm
   R_TYPE, pointer :: ff_global(:)
 #endif
 
   PUSH_SUB(X(io_function_output))
-
-  ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+  ierr = 0
+  is_global_ = optional_default(is_global, .false.)
+  if (is_global_) then
+    ASSERT(ubound(ff, dim = 1) == mesh%np_global .or. ubound(ff, dim = 1) == mesh%np_part_global)
+  else
+    ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+  end if
 
 #if defined(HAVE_MPI)
 
   i_am_root = .true.
   comm = MPI_COMM_NULL
-
+  root_ = optional_default(root, 0)
   if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-
-    !note: here we are gathering data that we won`t write if grp is
-    !present, but to avoid it we will have to find out all if the
-    !processes are members of the domain line where the root of grp
-    !lives
-    call vec_gather(mesh%vp, 0, ff_global, ff)
-
-    i_am_root = (mesh%vp%rank == 0)
     comm = mesh%vp%comm
+    i_am_root = (mesh%vp%rank == root_)
+    if (.not. is_global_) then
+      SAFE_ALLOCATE(ff_global(1:mesh%np_global))
+
+      !note: here we are gathering data that we won`t write if grp is
+      !present, but to avoid it we will have to find out all if the
+      !processes are members of the domain line where the root of grp
+      !lives
+      call vec_gather(mesh%vp, root_, ff_global, ff)
+    else
+      ff_global => ff
+    end if
   else
     ff_global => ff
   end if
 
   if(present(grp)) then
-    i_am_root = i_am_root .and. (grp%rank == 0)
+    i_am_root = i_am_root .and. (grp%rank == root_)
     comm = grp%comm
   end if
 
   if(i_am_root) then
     call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, geo = geo)
   end if
-
-  if(comm /= MPI_COMM_NULL .and. comm /= 0) then
+  if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the processes are synchronized
+    ! Add a barrier to ensure that the process are synchronized
     call MPI_Barrier(comm, mpi_err)
   end if
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. .not. is_global_) then
     SAFE_DEALLOCATE_P(ff_global)
   else
     nullify(ff_global)

@@ -20,28 +20,34 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, use_mpi_grp)
+subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, use_mpi_grp, root, is_global)
   type(restart_t),  intent(in)  :: restart
   character(len=*), intent(in)  :: filename
   type(mesh_t),     intent(in)  :: mesh
   R_TYPE,           intent(in)  :: ff(:)
   integer,          intent(out) :: ierr
-  logical, optional, intent(in)  :: use_mpi_grp
+  logical, optional, intent(in) :: use_mpi_grp
+  integer, optional, intent(in) :: root !< which process is going to write the data
+  logical, optional, intent(in) :: is_global
 
-  logical         :: use_mpi_grp_
+  integer :: root_
+  logical :: is_global_
+  logical :: use_mpi_grp_
 
   PUSH_SUB(X(restart_write_mesh_function))
 
+  root_ = optional_default(root, 0)
+  is_global_ = optional_default(is_global, .false.)
   use_mpi_grp_ = optional_default(use_mpi_grp, .false.)
-
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
   ASSERT(restart%has_mesh)
   if (use_mpi_grp_) then
     call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
-         grp=restart%mpi_grp)
+         grp=restart%mpi_grp, root = root_, is_global = is_global_)
   else
-    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr)
+    call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
+         root = root_, is_global = is_global_)
   ! all restart files are in atomic units
   end if
 
