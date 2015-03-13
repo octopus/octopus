@@ -274,7 +274,9 @@ contains
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
                   if (gr%mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
                     call vec_gather(gr%mesh%vp, root, rff_global, dpsi)
+#endif
                   else
                     rff_global = dpsi
                   end if
@@ -290,7 +292,9 @@ contains
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
                   if (gr%mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
                     call vec_gather(gr%mesh%vp, root, zff_global, zpsi)
+#endif
                   else
                     zff_global = zpsi
                   end if
