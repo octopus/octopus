@@ -21,10 +21,10 @@
 
 module epot_m
   use atom_m
+  use base_ionic_m
   use comm_m
   use derivatives_m
   use double_grid_m
-  use frozen_external_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -58,6 +58,7 @@ module epot_m
   use spline_filter_m
   use ssys_external_m
   use ssys_hamiltonian_m
+  use ssys_ionic_m
   use states_m
   use states_dim_m
   use submesh_m
@@ -93,6 +94,9 @@ module epot_m
 
     ! Subsystems external potential.
     type(ssys_external_t), pointer :: subsys_external
+
+    ! Subsystems ionic term.
+    type(ssys_ionic_t), pointer :: subsys_ionic
 
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -184,12 +188,14 @@ contains
       call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
     end do
 
-    ! Sets the pointer to the subsystem.
-    nullify(ep%subsys_external)
+    ! Sets the pointers to the subsystems terms.
+    nullify(ep%subsys_external, ep%subsys_ionic)
     if(present(subsys_hm))then
       ASSERT(.not.cmplxscl)
       call ssys_hamiltonian_get(subsys_hm, ep%subsys_external)
       ASSERT(associated(ep%subsys_external))
+      call ssys_hamiltonian_get(subsys_hm, ep%subsys_ionic)
+      ASSERT(associated(ep%subsys_ionic))
     end if
 
     ! Local part of the pseudopotentials
@@ -541,7 +547,7 @@ contains
     else
       SAFE_DEALLOCATE_P(ep%vpsl)
     end if
-    nullify(ep%subsys_external)
+    nullify(ep%subsys_external, ep%subsys_ionic)
 
     SAFE_DEALLOCATE_P(ep%Imvpsl)!cmplxscl
 
@@ -959,8 +965,10 @@ contains
     FLOAT, parameter :: alpha = CNST(1.1313708)
     !
     FLOAT, dimension(sb%dim) :: r, f
-    FLOAT :: rr, dd, zi, zj, epsilon, sigma
-    integer :: iatom, jatom, natom, iindex, jindex
+    FLOAT :: e, rr, dd, zi, zj, epsilon, sigma
+    integer :: iatom, jatom, natom, iindex, jindex, ierr
+    type(ssys_ionic_iterator_t) :: iter
+    type(base_ionic_t), pointer :: base_ionic
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof
     logical,  allocatable :: in_box(:)
@@ -969,6 +977,21 @@ contains
     PUSH_SUB(ion_interaction_calculate)
 
     energy = M_ZERO
+    nullify(base_ionic)
+    if(associated(ep%subsys_ionic))then
+      ! Get the subsystems interaction energy.
+      call ssys_ionic_init(iter, ep%subsys_ionic)
+      do
+        nullify(base_ionic)
+        call ssys_ionic_next(iter, base_ionic, ierr)
+        if(ierr/=BASE_IONIC_OK)exit
+        ASSERT(associated(base_ionic))
+        call base_ionic_get(base_ionic, energy=e)
+        energy=energy+e
+      end do
+      call ssys_ionic_end(iter)
+      nullify(base_ionic)
+    end if
     force(1:sb%dim,1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
@@ -996,6 +1019,21 @@ contains
       do iatom = 1, geo%natoms
         if(ep%ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
+        end if
+        if(associated(ep%subsys_ionic))then
+          ! Calculate the interaction forces and energies.
+          call ssys_ionic_init(iter, ep%subsys_ionic)
+          do
+            nullify(base_ionic)
+            call ssys_ionic_next(iter, base_ionic, ierr)
+            if(ierr/=BASE_IONIC_OK)exit
+            ASSERT(associated(base_ionic))
+            call base_ionic_calc(base_ionic, geo%atom(iatom), e, f)
+            energy=energy+e
+            force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+f(1:sb%dim)
+          end do
+          call ssys_ionic_end(iter)
+          nullify(base_ionic)
         end if
         spci=>geo%atom(iatom)%species
         zi=species_zval(spci)
