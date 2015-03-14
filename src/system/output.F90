@@ -143,38 +143,8 @@ module output_m
   end type output_t
 
   integer, parameter, public ::              &
-    C_OUTPUT_POTENTIAL       =         1,    &
-    C_OUTPUT_DENSITY         =         2,    &
-    C_OUTPUT_WFS             =         4,    &
-    C_OUTPUT_WFS_SQMOD       =         8,    &
-    C_OUTPUT_GEOMETRY        =        16,    &
-    C_OUTPUT_CURRENT         =        32,    &
-    C_OUTPUT_ELF             =        64,    &
-    C_OUTPUT_ELF_BASINS      =       128,    &
-    C_OUTPUT_ELF_FS          =       256,    &
-    C_OUTPUT_BADER           =       512,    &
-    C_OUTPUT_EL_PRESSURE     =      1024,    &
-    C_OUTPUT_MATRIX_ELEMENTS =      2048,    &
-    C_OUTPUT_POL_DENSITY     =      4096,    &
-    C_OUTPUT_R               =      8192,    &
-    C_OUTPUT_KED             =     16384,    &
-    C_OUTPUT_J_FLOW          =     32768,    &
-    C_OUTPUT_DOS             =     65536,    &
-    C_OUTPUT_TPA             =    131072,    &
-    C_OUTPUT_FORCES          =    262144,    &
-    C_OUTPUT_WFS_FOURIER     =    524288,    &
-    C_OUTPUT_XC_DENSITY      =   1048576,    &
-    C_OUTPUT_PES_WFS         =   2097152,    &
-    C_OUTPUT_PES_DENSITY     =   4194304,    &
-    C_OUTPUT_PES             =   8388608,    &
-    C_OUTPUT_BERKELEYGW      =  16777216,    &
-    C_OUTPUT_KICK_FUNCTION   =  33554432,    &
-    C_OUTPUT_TD_POTENTIAL    =  67108864,    &
-    C_OUTPUT_MMB             = 134217728,    &
-    C_OUTPUT_MMB_WFS         = 268435456,    &
-    C_OUTPUT_MMB_DEN         = 536870912,    &
-    C_OUTPUT_FROZEN          =1073741824
-
+    OPTION_J_FLOW          =     32768
+  
 contains
 
   subroutine output_init(outp, sb, nst, calc_mode_id)
@@ -190,8 +160,6 @@ contains
 
     PUSH_SUB(output_init)
 
-! TODO: make this list automatically coherent with the values defined above in C_OUTPUT_XXX
-! double definition is crappy
     !%Variable Output
     !%Type flag
     !%Default none
@@ -321,19 +289,19 @@ contains
     !%End
     call parse_integer('Output', 0, outp%what)
 
-    if(iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
+    if(iand(outp%what, OPTION_ELF_FS) /= 0) then
       call messages_experimental("ELF in Fourier space")
     endif
 
-    if(iand(outp%what, C_OUTPUT_WFS_FOURIER) /= 0) then
+    if(iand(outp%what, OPTION_WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, C_OUTPUT_ELF) /= 0 .or. iand(outp%what, C_OUTPUT_elf_basins) /= 0 &
-       .or. iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
+    if(iand(outp%what, OPTION_ELF) /= 0 .or. iand(outp%what, OPTION_ELF_BASINS) /= 0 &
+       .or. iand(outp%what, OPTION_ELF_FS) /= 0) then
        if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = iand(outp%what, not(C_OUTPUT_ELF + C_OUTPUT_ELF_BASINS + C_OUTPUT_ELF_FS))
+         outp%what = iand(outp%what, not(OPTION_ELF + OPTION_ELF_BASINS + OPTION_ELF_FS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
        endif
@@ -343,15 +311,15 @@ contains
       call messages_input_error('Output')
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB) /= 0) then
+    if(iand(outp%what, OPTION_MMB) /= 0) then
       call messages_experimental("Model many-body state analysis")
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB_WFS) /= 0) then
+    if(iand(outp%what, OPTION_MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0) then
+    if(iand(outp%what, OPTION_MMB_DEN) /= 0) then
       call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -360,7 +328,7 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, C_OUTPUT_WFS) /= 0  .or.  iand(outp%what, C_OUTPUT_WFS_SQMOD) /= 0 ) then
+    if(iand(outp%what, OPTION_WFS) /= 0  .or.  iand(outp%what, OPTION_WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -378,7 +346,7 @@ contains
     end if
 
     if(parse_block('CurrentThroughPlane', blk) == 0) then
-      outp%what = ior(outp%what, C_OUTPUT_J_FLOW)
+      outp%what = ior(outp%what, OPTION_J_FLOW)
 
       !%Variable CurrentThroughPlane
       !%Type block
@@ -495,11 +463,11 @@ contains
       end select
     end if
 
-    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) /= 0) then
+    if(iand(outp%what, OPTION_MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, sb)
     end if
 
-    if(iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
+    if(iand(outp%what, OPTION_BERKELEYGW) /= 0) then
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
@@ -562,8 +530,8 @@ contains
     call messages_obsolete_variable("OutputDuringSCF", "OutputInterval")
 
     ! these kinds of Output do not have a how
-    what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &
-      C_OUTPUT_TPA + C_OUTPUT_MMB + C_OUTPUT_MMB_DEN + C_OUTPUT_J_FLOW
+    what_no_how = OPTION_MATRIX_ELEMENTS + OPTION_BERKELEYGW + OPTION_DOS + &
+      OPTION_TPA + OPTION_MMB + OPTION_MMB_DEN + OPTION_J_FLOW
 
     ! we are using a what that has a how.
     if(iand(outp%what, not(what_no_how)) /= 0) then
@@ -572,14 +540,14 @@ contains
       outp%how = 0
     endif
 
-    if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
+    if(iand(outp%what, OPTION_FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
-      outp%what = ior(outp%what, C_OUTPUT_POTENTIAL)
-      outp%what = ior(outp%what, C_OUTPUT_DENSITY)
+      outp%what = ior(outp%what, OPTION_POTENTIAL)
+      outp%what = ior(outp%what, OPTION_DENSITY)
       outp%how  = ior(outp%how,  C_OUTPUT_HOW_BINARY)
     endif
 
-    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
+    if(iand(outp%what, OPTION_CURRENT) /= 0) then
       call current_init(outp%current_calculator)
     end if
 
@@ -593,7 +561,7 @@ contains
 
     PUSH_SUB(output_end)
     
-    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
+    if(iand(outp%what, OPTION_CURRENT) /= 0) then
       call current_end(outp%current_calculator)
     end if
 
@@ -622,7 +590,7 @@ contains
       call io_mkdir(dir)
     endif
 
-    if(iand(outp%what, C_OUTPUT_R) /= 0) then
+    if(iand(outp%what, OPTION_MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
@@ -635,7 +603,7 @@ contains
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 
-    if(iand(outp%what, C_OUTPUT_GEOMETRY) /= 0) then
+    if(iand(outp%what, OPTION_GEOMETRY) /= 0) then
       if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       endif
@@ -648,11 +616,11 @@ contains
       endif
     end if
 
-    if(iand(outp%what, C_OUTPUT_FORCES) /= 0) then
+    if(iand(outp%what, OPTION_FORCES) /= 0) then
       call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
     endif
 
-    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) /= 0) then
+    if(iand(outp%what, OPTION_MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
@@ -660,11 +628,11 @@ contains
       call output_etsf(st, gr, geo, dir, outp)
     end if
 
-    if (iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
+    if (iand(outp%what, OPTION_BERKELEYGW) /= 0) then
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(iand(outp%what, C_OUTPUT_FROZEN) /= 0) then
+    if(iand(outp%what, OPTION_FROZEN_SYSTEM) /= 0) then
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), "config.json")
     end if
 
@@ -697,13 +665,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, C_OUTPUT_ELF) /= 0 .or. iand(outp%what, C_OUTPUT_ELF_BASINS) /= 0) then
+    if(iand(outp%what, OPTION_ELF) /= 0 .or. iand(outp%what, OPTION_ELF_BASINS) /= 0) then
       ASSERT(gr%mesh%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, C_OUTPUT_ELF) /= 0) then
+      if(iand(outp%what, OPTION_ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, geo = geo)
@@ -719,12 +687,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, C_OUTPUT_ELF_BASINS) /= 0) &
+      if(iand(outp%what, OPTION_ELF_BASINS) /= 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Second, ELF in Fourier space.
-    if(iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
+    if(iand(outp%what, OPTION_ELF_FS) /= 0) then
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'elf_fs-sp', is
@@ -735,7 +703,7 @@ contains
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, C_OUTPUT_BADER) /= 0) then
+    if(iand(outp%what, OPTION_BADER) /= 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -749,7 +717,7 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, C_OUTPUT_EL_PRESSURE) /= 0) then
+    if(iand(outp%what, OPTION_EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)
