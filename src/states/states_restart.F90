@@ -1007,11 +1007,11 @@ contains
     character(len=150) :: filename
     CMPLX, allocatable :: zpsi(:, :)
 
-    integer, parameter ::      &
-      state_from_formula  = 1, &
-      state_from_file     = 0, &
-      normalize_yes       = 1, &
-      normalize_no        = 0
+    integer, parameter ::           &
+      STATE_FROM_FORMULA  = 1,      &
+      STATE_FROM_FILE     = -10010, &
+      NORMALIZE_YES       = 1,      &
+      NORMALIZE_NO        = 0
 
     PUSH_SUB(states_read_user_def_orbitals)
 
@@ -1052,7 +1052,7 @@ contains
     !% The sixth (optional) column indicates whether <tt>Octopus</tt> should renormalize
     !% the orbital. The default (no sixth column given) is to renormalize.
     !%
-    !%Option file 0
+    !%Option file -10010
     !% Read initial orbital from file. 
     !% Accepted file formats, detected by extension: obf, ncdf and csv (real only).
     !%Option formula 1
@@ -1100,7 +1100,7 @@ contains
 
               select case(state_from)
 
-              case(state_from_formula)
+              case(STATE_FROM_FORMULA)
                 ! parse formula string
                 call parse_block_string(                            &
                   blk, ib - 1, 4, st%user_def_states(id, is, ik))
@@ -1124,7 +1124,7 @@ contains
                   zpsi(ip, 1) = psi_re + M_zI * psi_im
                 end do
 
-              case(state_from_file)
+              case(STATE_FROM_FILE)
                 ! The input format can be coded in column four now. As it is
                 ! not used now, we just say "file".
                 ! Read the filename.
@@ -1158,8 +1158,8 @@ contains
                 normalize = 1
               end if
               select case(normalize)
-              case(normalize_no)
-              case(normalize_yes)
+              case(NORMALIZE_NO)
+              case(NORMALIZE_YES)
                 call states_get_state(st, mesh, is, ik, zpsi)
                 call zstates_normalize_orbital(mesh, st%d%dim, zpsi)
                 call states_set_state(st, mesh, is, ik, zpsi)
