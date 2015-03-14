@@ -87,7 +87,9 @@ foreach $F90file (@F90){
       do {
 	s/^\s*!%//; s/\s*$//;
 
-	if(/^Option\s+(\S+)\s+(\S+)/){
+	if(/^Option\s+(\S+)\s+bit\((\S+)\)/){
+	  put_opt($1, (1<<($2)));
+	} elsif(/^Option\s+(\S+)\s+(\S+)/){
 	  put_opt($1, $2);
 	}
 

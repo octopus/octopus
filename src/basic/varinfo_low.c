@@ -61,7 +61,7 @@ char *get_token(char *s, char **dest)
     return s;
   }
 
-  for(s1=s; isalnum(*s1) || *s1=='_' || *s1=='-'; s1++);
+  for(s1=s; isalnum(*s1) || *s1=='_' || *s1=='-' || *s1 == '('; s1++);
   len=s1-s;
   
 #ifdef HAVE_STRNDUP
@@ -285,8 +285,13 @@ void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
   }else{
     *name = (*opt)->name;
     *desc = (*opt)->desc;
-    if((*opt)->value)
-      *value = atoi((*opt)->value);
+    if((*opt)->value){
+      if(strncmp("bit", (*opt)->value, 3) == 0){
+	*value = (1<<atoi((*opt)->value + 4));
+      } else {
+	*value = atoi((*opt)->value);
+      }
+    }
     else
       *value = 0;
   }

@@ -208,58 +208,58 @@ contains
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>density + potential</tt>
-    !%Option potential 1
+    !%Option potential  bit(0)
     !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
     !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
     !% <tt>vh</tt> for the Hartree potential, <tt>vks</tt> for the local part of the Kohn-Sham potential, and
     !% <tt>vxc-</tt> for the exchange-correlation potentials. For <tt>vks</tt> and <tt>vxc</tt>,
     !% a suffix for spin is added in the spin-polarized case.
-    !%Option density 2
+    !%Option density bit(1)
     !% Outputs density. The output file is called <tt>density-</tt>, or <tt>lr_density-</tt> in linear response.
-    !%Option wfs 4
+    !%Option wfs bit(2)
     !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
-    !%Option wfs_sqmod 8
+    !%Option wfs_sqmod bit(3)
     !% Outputs modulus squared of the wavefunctions. 
     !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
-    !%Option geometry 16
+    !%Option geometry bit(4)
     !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
     !% If <tt>OutputHow = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
     !% file <tt>crystal.xyz</tt> is written with a supercell geometry if the system is periodic;
     !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputHow = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
-    !%Option current 32
+    !%Option current bit(5)
     !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
     !% For linear response, the filename is <tt>lr_current-</tt>.
-    !%Option ELF 64
+    !%Option ELF bit(6)
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
     !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,
     !% as <tt>lr_elf_D-</tt>. Only in 2D and 3D.
-    !%Option ELF_basins 128
+    !%Option ELF_basins bit(7)
     !% Outputs basins of attraction of the ELF. The output file is called
     !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
-    !%Option ELF_FS 256
+    !%Option ELF_FS bit(8)
     !% Outputs electron localization function in Fourier space (experimental). The output file is called
     !% <tt>elf_FS-</tt>. Only in 2D and 3D.
-    !%Option Bader 512
+    !%Option Bader bit(9)
     !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
     !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory</i> (Oxford Univ. Press, Oxford, 1990).
-    !%Option el_pressure 1024
+    !%Option el_pressure bit(10)
     !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
-    !%Option matrix_elements 2048
+    !%Option matrix_elements bit(11)
     !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
     !% be controlled by the <tt>OutputMatrixElements</tt> variable.
-    !%Option pol_density 4096
+    !%Option pol_density bit(12)
     !% Outputs dipole-moment density <tt>dipole_density-</tt>, or polarizability density <tt>alpha_density-</tt>
     !% in linear response. If <tt>ResponseMethod = finite_differences</tt>, the hyperpolarizability density
     !% <tt>beta_density-</tt> is also printed.
-    !%Option mesh_r 8192
+    !%Option mesh_r bit(13)
     !% Outputs values of the coordinates over the grid. Files
     !% will be called <tt>mesh_r-</tt> followed by the direction.
-    !%Option kinetic_energy_density 16384
+    !%Option kinetic_energy_density bit(14)
     !% Outputs kinetic-energy density, defined as:
     !%
     !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
@@ -274,49 +274,49 @@ contains
     !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
-    !%Option dos 65536
+    !%Option dos bit(16)
     !% Outputs density of states. See <tt>DOSEnergyMax</tt>, <tt>DOSEnergyMin</tt>, <tt>DOSEnergyPoints</tt>,
     !% and <tt>DOSGamma</tt>.
-    !%Option tpa 131072
+    !%Option tpa bit(17)
     !% Outputs transition-potential approximation (TPA) matrix elements, using q-vector specified
     !% by <tt>MomentumTransfer</tt>.
-    !%Option forces 262144
+    !%Option forces bit(18)
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
-    !%Option wfs_fourier 524288
+    !%Option wfs_fourier bit(19)
     !% (Experimental) Outputs wavefunctions in Fourier space. This is
     !% only implemented for the ETSF file format output. The file will
     !% be called <tt>wfs-pw-etsf.nc</tt>.  
-    !%Option xc_density 1048576
+    !%Option xc_density bit(20)
     !% Outputs the XC density, which is the charge density that
     !% generates the XC potential. (This is <math>-1/4\pi</math> times
     !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
-    !%Option PES_wfs 2097152
+    !%Option PES_wfs bit(21)
     !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
     !% plus the orbital number.
-    !%Option PES_density 4194304
+    !%Option PES_density bit(22)
     !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
     !% spin-polarized calculation is performed. 
-    !%Option PES 8388608   
+    !%Option PES bit(23)
     !% Outputs the time-dependent photoelectron spectrum.
-    !%Option BerkeleyGW 16777216
+    !%Option BerkeleyGW bit(24)
     !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
-    !%Option delta_perturbation 33554432
+    !%Option delta_perturbation bit(25)
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
-    !%Option external_td_potential 67108864
+    !%Option external_td_potential bit(26)
     !% Outputs the (scalar) time-dependent potential.
-    !%Option mmb 134217728
+    !%Option mmb bit(27)
     !% This flag turns on the output for model many-body calculations, for
     !% particles described in the <tt>DescribeParticlesModelMB</tt> block.
-    !%Option mmb_wfs 268435456
+    !%Option mmb_wfs bit(28)
     !% Triggers the ModelMB wavefunctions to be output for each state.
-    !%Option mmb_den 536870912
+    !%Option mmb_den bit(29)
     !% Triggers the ModelMB density matrix to be output for each state, and the particles
     !% specified by the <tt>DensitytoCalc</tt> block. Calculates, and outputs, the reduced density
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen_system 1073741824
+    !%Option frozen_system bit(30)
     !% Generates input for a frozen calculation.
     !%End
     call parse_integer('Output', 0, outp%what)
