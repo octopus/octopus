@@ -84,31 +84,18 @@ contains
     character(len=*), intent(in)  :: filename
 
     integer :: iunit, i
-    logical :: found
-    character(len=MAX_PATH_LEN) :: filename2
 
     PUSH_SUB(hgh_init)
 
-    filename2 =  filename // '.hgh'
-    inquire(file=filename2, exist=found)
-    if(.not.found) then
-      filename2 = trim(conf%share) // "/pseudopotentials/HGH/" // filename // ".hgh"
-      inquire(file=filename2, exist=found)
-      if(.not.found) then
-        message(1) = "Pseudopotential file '" // trim(filename) // ".hgh' not found!"
-        call messages_fatal(1)
-      end if
-    end if
-
     message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(filename2), "'"
+    write(message(2), '(6x,3a)') "'", trim(filename), "'"
     call messages_info(2)
 
-    iunit = io_open(filename2, action='read', form='formatted', status='old')
+    iunit = io_open(trim(filename), action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
-      message(1) = 'Error reading hgh file!'
-      call messages_fatal(1)
+      call messages_write('Error reading hgh file')
+      call messages_fatal()
     end if
     call io_close(iunit)
 

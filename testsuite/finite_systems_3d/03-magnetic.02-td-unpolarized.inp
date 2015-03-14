@@ -4,9 +4,8 @@ CalculationMode = td
  'Al' | 0.0 | 0.0 | 0.0
 %
 
-%Species
- 'Al' | species_ps_hgh
-%
+PseudopotentialSet = hgh
+ExperimentalFeatures = yes
 
 Radius = 6.0
 Spacing = 0.5

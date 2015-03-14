@@ -161,7 +161,7 @@ contains
 
     select case(flavour)
     case(PS_TYPE_PSF)
-      call ps_psf_init(ps_psf, trim(label), ispin, filename)
+      call ps_psf_init(ps_psf, ispin, filename)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
@@ -185,10 +185,10 @@ contains
       call valconf_null(ps%conf)
 
       if(flavour == PS_TYPE_CPI) then
-        call ps_cpi_init(ps_cpi, trim(label))
+        call ps_cpi_init(ps_cpi, trim(filename))
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
-        call ps_fhi_init(ps_fhi, trim(label))
+        call ps_fhi_init(ps_fhi, trim(filename))
         ps%conf%p      = ps_fhi%ps_grid%no_l_channels
       endif
 
@@ -220,7 +220,7 @@ contains
       endif
 
     case(PS_TYPE_HGH)
-      call hgh_init(psp, trim(label))
+      call hgh_init(psp, trim(filename))
       call valconf_copy(ps%conf, psp%conf)
 
       ps%z        = z
@@ -232,7 +232,7 @@ contains
       call logrid_copy(psp%g, ps%g)
 
     case(PS_TYPE_UPF)
-      call ps_upf_init(ps_upf, trim(label), trim(filename))
+      call ps_upf_init(ps_upf, trim(filename))
 
       call valconf_copy(ps%conf, ps_upf%conf)
       ps%z      = z
@@ -250,7 +250,7 @@ contains
       ps%g%r2ofi = ps%g%rofi**2
 
     case(PS_TYPE_QSO)
-      call ps_qso_init(ps_qso, trim(label))
+      call ps_qso_init(ps_qso, trim(filename))
 
       call valconf_null(ps%conf)
 

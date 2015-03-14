@@ -6,7 +6,7 @@ FromScratch = yes
 CalculationMode = gs
 
 %Species
- "He" | species_ps_hgh
+ "He" | species_ps_hgh | db_file | "HGH/He.hgh"
 %
 
 %Coordinates

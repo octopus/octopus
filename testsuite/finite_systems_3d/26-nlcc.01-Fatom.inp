@@ -3,7 +3,7 @@ fromScratch = yes
 ExperimentalFeatures = yes
 
 %Species
-  "F" | species_ps_upf
+ "F" | species_ps_upf | db_file | "UPF/F.UPF"
 %                                                                                          
 
 %Coordinates

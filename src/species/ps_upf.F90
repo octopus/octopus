@@ -89,12 +89,10 @@ module ps_upf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_upf_init(ps_upf, label, filename)
+  subroutine ps_upf_init(ps_upf, filename)
     type(ps_upf_t),   intent(inout) :: ps_upf
-    character(len=*), intent(in)    :: label
     character(len=*), intent(in)    :: filename
 
-    character(len=MAX_PATH_LEN) :: fullpath
     integer :: iunit, l, ierr, ll
     logical :: found
     logical, allocatable :: found_l(:)    
@@ -103,34 +101,19 @@ contains
     
     PUSH_SUB(ps_upf_init)
 
-    found = .false.
-
-    if(trim(filename) /= '') then
-      ! Find out the file and read it.
-      fullpath = trim(conf%share)//'/pseudopotentials/'//trim(filename)
-      inquire(file=fullpath, exist=found)
-    end if
-    
-    if(.not. found) then
-      fullpath = trim(label) // '.UPF'
-      inquire(file=fullpath, exist=found)
-    end if
-      
-    if(.not. found) then
-      fullpath = trim(conf%share) // "/pseudopotentials/UPF/" // trim(label) // ".UPF"
-      inquire(file=fullpath, exist=found)
-    end if
-    
-    if(.not.found) then
-      message(1) = "Pseudopotential file '" // trim(label) // ".UPF' not found"
-      call messages_fatal(1)
-    end if
 
     message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(fullpath), "'"
+    write(message(2), '(6x,3a)') "'", trim(filename), "'"
     call messages_info(2)
+
+    inquire(file=filename, exist=found)
+
+    if(.not.found) then
+      call messages_write('UPF pseudopotential file not found')
+      call messages_fatal()
+    end if
     
-    ierr = xml_file_init(upf2_file, trim(fullpath))
+    ierr = xml_file_init(upf2_file, trim(filename))
     ierr = xml_file_tag(upf2_file, 'UPF', 0, tag)
     
     if(ierr == 0) then
@@ -143,7 +126,7 @@ contains
       ! not found, version 1
       call xml_file_end(upf2_file)
    
-      iunit = io_open(fullpath, action='read', form='formatted', status='old')
+      iunit = io_open(trim(filename), action='read', form='formatted', status='old')
       call ps_upf_file_read(iunit, ps_upf)
       call io_close(iunit)
     end if
@@ -407,7 +390,7 @@ contains
     type(xml_file_t), intent(inout) :: upf2_file
     type(ps_upf_t),   intent(inout) :: ps_upf
 
-    integer :: ierr, startp, iproj, dij_size, iwfs, ip
+    integer :: ierr, startp, iproj, dij_size, iwfs
     character(len=200) :: str
     type(xml_tag_t)    :: tag, proj_tag, wfs_tag
     FLOAT :: mesh_min

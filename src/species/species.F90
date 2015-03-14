@@ -449,7 +449,12 @@ contains
     !% the nuclear charge for species_full_gaussian. If not present,
     !% the default is 0.25.
     !%Option softening -10009
-    !% The softnening parameter a for species_soft_coulomb in units of length.
+    !% The softening parameter a for species_soft_coulomb in units of length.
+    !%Option file -10010
+    !% The path for the file that describes the species.
+    !%Option db_file -10011
+    !% The path for the file, in the Octopus directory of
+    !% pseudopotentials, that describes the species.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1372,6 +1377,8 @@ contains
 
     read(iunit,*) label, spec%type, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
 
+    spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
+    
     ASSERT(trim(label) == trim(spec%label))
 
     read_data = 8
@@ -1454,7 +1461,6 @@ contains
     case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
 
     case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
-      call parse_block_string(blk, row, read_data + 1, spec%filename)
 
     case default
       call messages_input_error('Species', "Unknown type for species '"//trim(spec%label)//"'")
@@ -1513,6 +1519,13 @@ contains
           call messages_input_error('Species', 'softening can only be used with species_soft_coulomb')
         end if
 
+      case(OPTION_FILE)
+        call parse_block_string(blk, row, icol + 1, spec%filename)
+
+      case(OPTION_DB_FILE)
+        call parse_block_string(blk, row, icol + 1, spec%filename)
+        spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
+        
       case default
         call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
         
@@ -1529,6 +1542,10 @@ contains
     select case(spec%type)
     case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
       SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+
+      if(spec%filename == '' .and. spec%type /= SPECIES_FULL_DELTA .and. spec%type /= SPECIES_FULL_GAUSSIAN) then
+        call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")
+      end if
       
       call element_init(element, spec%label)
       

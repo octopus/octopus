@@ -54,7 +54,6 @@ contains
     type(ps_fhi_t),   intent(inout) :: ps_fhi
     character(len=*), intent(in)    :: filename
 
-    character(len=MAX_PATH_LEN) :: filename2
     integer :: iunit
     logical :: found
 
@@ -65,23 +64,18 @@ contains
     SAFE_ALLOCATE(ps_fhi%ps_grid)
     SAFE_ALLOCATE(ps_fhi%conf)
 
-    ! Find out where the hell the file is.
-    filename2 = trim(filename) // '.fhi'
-    inquire(file=filename2, exist=found)
+    inquire(file = filename, exist = found)
+
     if(.not.found) then
-      filename2 = trim(conf%share) // "/pseudopotentials/FHI/" // trim(filename) // ".fhi"
-      inquire(file=filename2, exist=found)
-      if(.not.found) then
-        message(1) = "Pseudopotential file '" // trim(filename) // ".fhi' not found"
-        call messages_fatal(1)
-      end if
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
+      call messages_fatal()
     end if
 
     message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(filename2), "'"
+    write(message(2), '(6x,3a)') "'", trim(filename), "'"
     call messages_info(2)
 
-    iunit = io_open(filename2, action='read', form='formatted', status='old')
+    iunit = io_open(filename, action='read', form='formatted', status='old')
     call ps_fhi_file_read(iunit, ps_fhi%fhi_file)
     call ps_cpi_file_read(iunit, ps_fhi%cpi_file)
     call io_close(iunit)

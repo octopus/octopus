@@ -5,9 +5,8 @@ CalculationMode = gs
 
 FromScratch = yes
 
-%Species
- "Ar" | species_ps_hgh
-%
+PseudopotentialSet = hgh
+ExperimentalFeatures = yes
 
 %Coordinates
   "Ar" | 0 | 0 | 0

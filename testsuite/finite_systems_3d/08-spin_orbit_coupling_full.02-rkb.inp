@@ -10,7 +10,7 @@ Radius  = 5.0
 Spacing = 0.35
 
 %Species
- "Xe" | species_ps_upf
+ "Xe" | species_ps_upf | db_file | "UPF/Xe.UPF"
 %
 
 %Coordinates

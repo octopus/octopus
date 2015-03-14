@@ -51,9 +51,8 @@ module ps_psf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_init(pstm, label, ispin, filename)
+  subroutine ps_psf_init(pstm, ispin, filename)
     type(ps_psf_t),   intent(inout) :: pstm
-    character(len=*), intent(in)    :: label
     integer,          intent(in)    :: ispin
     character(len=*), intent(in)    :: filename
     
@@ -72,32 +71,14 @@ contains
 
     found = .false.
 
-    if(trim(filename) /= '') then
-      ascii = .true.
-      fullpath = trim(conf%share)//'/pseudopotentials/'//trim(filename)
-      inquire(file = fullpath, exist = found)
-    end if
-    
-    if(.not. found) then
-      ascii = .false.
-      fullpath = trim(label) // '.vps'
-      inquire(file = fullpath, exist = found)
-    end if
-    
-    if(.not. found) then
-      ascii = .true.
-      fullpath = trim(label) // '.psf'
-      inquire(file = fullpath, exist = found)
-    end if
+    ASSERT(trim(filename) /= '')
+
+    ascii = .true.
+    fullpath = trim(filename)
+    inquire(file = fullpath, exist = found)
 
     if(.not. found) then
-      ascii = .true.
-      fullpath = trim(conf%share) // "/pseudopotentials/PSF/" // trim(label) // ".psf"
-      inquire(file = fullpath, exist = found)
-    end if
-
-    if(.not. found) then
-      message(1) = "Pseudopotential file '" // trim(label) // "{.vps|.psf}' not found"
+      message(1) = "Pseudopotential file '" // trim(fullpath) // " not found"
       call messages_fatal(1)
     end if
     

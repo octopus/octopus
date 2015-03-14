@@ -61,14 +61,10 @@ contains
     
     PUSH_SUB(ps_qso_init)
 
-    ierr = xml_file_init(qso_file, trim(filename)// '.xml')
-
-    if(ierr /= 0) ierr = xml_file_init(qso_file, trim(filename)// '.XML')
-
-    if(ierr /= 0) ierr = xml_file_init(qso_file, trim(conf%share) // "/pseudopotentials/qso/" // trim(filename) // ".xml")
+    ierr = xml_file_init(qso_file, trim(filename))
 
     if(ierr /= 0) then
-      call messages_write("Pseudopotential file '" // trim(filename) // ".xml' not found")
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
       call messages_fatal()
     end if    
 
