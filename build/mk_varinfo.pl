@@ -129,7 +129,7 @@ close(OUT_text);
 close(OUT_orig);
 
 print_opt();
-
+print_header();
 
 #####################################################
 # tries to put an option in global %opt
@@ -158,7 +158,7 @@ sub print_opt{
 
 #####################################################
 # prints %opt to src/include/options.h
-sub print_opt{
+sub print_header{
   open(OUT, ">$include/options.h");
   my $key;
   foreach $key (sort(keys %opt)) {
