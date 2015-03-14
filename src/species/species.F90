@@ -1506,14 +1506,23 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%jradius)
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
         if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
-
+        if(spec%type /= SPECIES_JELLIUM) then
+          call messages_input_error('Species', 'jellium_radius can only be used with species_jellium')
+        end if
+        
       case(SPECIES_FLAG_GAUSSIAN_WIDTH)
         call parse_block_float(blk, row, icol + 1, spec%sigma)
         if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
+        if(spec%type /= SPECIES_FULL_GAUSSIAN) then
+          call messages_input_error('Species', 'gaussian_width can only be used with species_full_gaussian')
+        end if
 
       case(SPECIES_FLAG_SOFTENING)
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
         spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
+        if(spec%type /= SPECIES_SOFT_COULOMB) then
+          call messages_input_error('Species', 'softening can only be used with species_soft_coulomb')
+        end if
 
       case default
         call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
