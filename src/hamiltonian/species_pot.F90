@@ -210,13 +210,15 @@ contains
         end if
       end if
 
-    case (SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO, SPECIES_PS_CPI, SPECIES_PS_FHI)
+    case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
       
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
-      if(ps_niwfs(ps) > 0 .and. species_type(species) /= SPECIES_PS_CPI .and. species_type(species) /= SPECIES_PS_CPI) then
+      if(ps_niwfs(ps) > 0 .and. &
+        ps_type(species_ps(species)) /= PS_TYPE_CPI .and. ps_type(species_ps(species)) /= PS_TYPE_CPI) then
+        
         call periodic_copy_init(pp, sb, atom%x, &
           range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
@@ -312,7 +314,7 @@ contains
     
     select case(species_type(species))
 
-    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
+    case(SPECIES_PSEUDO, SPECIES_PSPIO)
       ps => species_ps(species)
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
@@ -675,7 +677,7 @@ contains
 
         end do
 
-      case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
+      case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
         ps => species_ps(species)
 

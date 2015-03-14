@@ -36,7 +36,7 @@ ParallelizationStrategy = par_kpoints
 %
 
 %Species
- 'B' | species_ps_hgh | db_file | "HGH/B.hgh"
+ 'B' | species_pseudo | db_file | "HGH/B.hgh"
 %
 
 %Coordinates

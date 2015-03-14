@@ -91,12 +91,7 @@ module species_m
     SPECIES_JELLIUM        = 3,             & !< jellium sphere.
     SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
     SPECIES_FROZEN         = 5,             & !< frozen species.
-    SPECIES_PS_PSF         = PS_TYPE_PSF,   & !< SIESTA pseudopotential
-    SPECIES_PS_HGH         = PS_TYPE_HGH,   & !< HGH pseudopotential
-    SPECIES_PS_CPI         = PS_TYPE_CPI,   & !< FHI pseudopotential (cpi format)
-    SPECIES_PS_FHI         = PS_TYPE_FHI,   & !< FHI pseudopotential (ABINIT6 format)
-    SPECIES_PS_UPF         = PS_TYPE_UPF,   & !< UPF pseudopotential
-    SPECIES_PS_QSO         = PS_TYPE_QSO,   & !< QSO pseudopotential
+    SPECIES_PSEUDO         = 7,             & !< pseudopotential
     SPECIES_PSPIO          = 110,           & !< pseudopotential parsed by pspio library
     SPECIES_USDEF          = 123,           & !< user-defined function for local potential
     SPECIES_FULL_GAUSSIAN  = 124,           & !< full-potential atom
@@ -314,10 +309,10 @@ contains
     !% This is an example of possible species:
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | species_ps_psf         | lmax |  1 | lloc | 1
-    !% <br>&nbsp;&nbsp;'H'       | species_ps_hgh         
-    !% <br>&nbsp;&nbsp;'Xe'      | species_ps_upf         | mass | 131.29
-    !% <br>&nbsp;&nbsp;'C'       | species_ps_qso         
+    !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | lmax |  1 | lloc | 1
+    !% <br>&nbsp;&nbsp;'H'       | species_pseudo         
+    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29
+    !% <br>&nbsp;&nbsp;'C'       | species_pseudo         
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
     !% <br>&nbsp;&nbsp;'rho'     | species_charge_density |  "exp(-r/a)" | mass | 17.0 | valence | 6
     !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | "1/2*r^2" | valence | 8
@@ -340,48 +335,9 @@ contains
     !%Option species_jellium_slab  -4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
-    !%Option species_ps_psf  -100
-    !% Troullier-Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
-    !% read from a <tt>.psf</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/octopus/pseudopotentials/PSF</tt> directory.
-    !% Columns 5 and 6 are the maximum
-    !% <i>l</i>-component of the pseudopotential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option species_ps_hgh  -101
-    !% Hartwigsen-Goedecker-Hutter pseudopotentials. No extra columns,
-    !% as they are not necessary to define the HGH pseudopotential.
-    !%Option species_ps_cpi  -102
-    !% Fritz-Haber pseudopotential: the pseudopotential will be
-    !% read from a <tt>.cpi</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/CPI</tt> directory.
-    !% Columns 5 and 6 are the maximum
-    !% <i>l</i>-component of the pseudopotential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
-    !%Option species_ps_fhi  -103
-    !% Fritz-Haber pseudopotential (<tt>ABINIT6</tt> format): the pseudopotential will be
-    !% read from a <tt>.fhi</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/FHI</tt> directory.
-    !% Columns 5 and 6 are the maximum
-    !% <i>l</i>-component of the pseudopotential to consider in the
-    !% calculation, and the <i>l</i>-component to consider as local.
-    !% Note that you can use the pseudopotentials from <tt>ABINIT</tt> homepage.
-    !%Option species_ps_upf  -104
-    !% UPF format: the pseudopotential will be
-    !% read from a <tt>.UPF</tt> file, either in the working
-    !% directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> directory.
-    !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
-    !% consider in the calculation and the <i>l</i>-component to consider as
-    !% local are indicated in the pseudopotential file and cannot be changed.
-    !% Note that version 2.0 or any later version of the UPF file format are not supported.
-    !%Option species_ps_qso  -105
-    !% (experimental) The quantum-simulation.org XML pseudo-potential
-    !% format used by qbox. The pseudopotential will be read from a
-    !% <tt>.xml</tt> file, either in the working directory or in the
-    !% <tt>OCTOPUS-HOME/share/pseudopotentials/qso</tt> directory.  No extra
-    !% columns, as the maximum <i>l</i>-component of the
-    !% pseudopotential to consider in the calculation and the
-    !% <i>l</i>-component to consider as local are indicated in the
-    !% pseudopotential file.
+    !%Option species_pseudo  -7
+    !% The species is a pseudopotential. The pseudopotential file must
+    !% be defined by the 'file' or 'db_file' paramaters.
     !%Option species_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> 
@@ -546,7 +502,6 @@ contains
     logical :: print_info_
     integer :: i
     FLOAT   :: pot_re, pot_im, xx(MAX_DIM), rr
-    logical, save :: qso_warning = .false.
 
     PUSH_SUB(species_build)
 
@@ -569,12 +524,7 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
-    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, SPECIES_PSPIO)
-
-      if(spec%type == SPECIES_PS_QSO .and. .not. qso_warning) then
-        call messages_experimental('QSO pseudopotential support')
-        qso_warning = .true.
-      end if
+    case(SPECIES_PSEUDO, SPECIES_PSPIO)
 
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
@@ -661,7 +611,7 @@ contains
         call messages_info(3)
       end if
     case default
-      call messages_input_error('Species')
+      call messages_input_error('Species', 'Unknown species type')
     end select
 
     if(.not. species_is_ps(spec)) then
@@ -1056,14 +1006,7 @@ contains
   logical pure function species_is_ps(spec)
     type(species_t), intent(in) :: spec
     
-    species_is_ps = &
-         ( spec%type == SPECIES_PS_PSF) .or. &
-         ( spec%type == SPECIES_PS_HGH) .or. &
-         ( spec%type == SPECIES_PS_CPI) .or. &
-         ( spec%type == SPECIES_PS_FHI) .or. &
-         ( spec%type == SPECIES_PS_UPF) .or. &
-         ( spec%type == SPECIES_PS_QSO) .or. &
-         ( spec%type == SPECIES_PSPIO)
+    species_is_ps = spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO
  
   end function species_is_ps
 
@@ -1375,7 +1318,9 @@ contains
 
     backspace(iunit)
 
-    read(iunit,*) label, spec%type, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
+    spec%type = SPECIES_PSEUDO
+    
+    read(iunit,*) label, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
 
     spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
     
@@ -1458,7 +1403,7 @@ contains
       call parse_block_string(blk, row, read_data + 1, spec%rho)
       read_data = read_data + 1
 
-    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO) ! a pseudopotential file
+    case(SPECIES_PSEUDO)
 
     case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
@@ -1540,8 +1485,7 @@ contains
     end if
     
     select case(spec%type)
-    case(SPECIES_PS_PSF, SPECIES_PS_HGH, SPECIES_PS_CPI, SPECIES_PS_FHI, SPECIES_PS_UPF, SPECIES_PS_QSO, &
-      SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+    case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
 
       if(spec%filename == '' .and. spec%type /= SPECIES_FULL_DELTA .and. spec%type /= SPECIES_FULL_GAUSSIAN) then
         call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")

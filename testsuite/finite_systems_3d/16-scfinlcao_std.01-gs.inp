@@ -19,9 +19,9 @@ theta = 108.23 * pi / 180
 %
 
 %Species
- 'C'  | species_ps_psf | db_file | "PSF/C.psf"  | lmax | 3 | lloc | 0
- 'H'  | species_ps_psf | db_file | "PSF/H.psf"  | lmax | 3 | lloc | 0
- 'Cl' | species_ps_psf | db_file | "PSF/Cl.psf" | lmax | 3 | lloc | 0
+ 'C'  | species_pseudo | db_file | "PSF/C.psf"  | lmax | 3 | lloc | 0
+ 'H'  | species_pseudo | db_file | "PSF/H.psf"  | lmax | 3 | lloc | 0
+ 'Cl' | species_pseudo | db_file | "PSF/Cl.psf" | lmax | 3 | lloc | 0
 %
 
 Spacing = 0.25

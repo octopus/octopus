@@ -10,7 +10,7 @@ units = ev_angstrom
 %
 
 %Species
-"C" | species_ps_cpi | db_file | "CPI/C.cpi" | lmax | 1 | lloc | 1
+"C" | species_pseudo | db_file | "CPI/C.cpi" | lmax | 1 | lloc | 1
 %
 
 spacing = 0.19

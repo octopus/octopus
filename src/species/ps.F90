@@ -54,7 +54,8 @@ module ps_m
     ps_derivatives,             &
     ps_debug,                   &
     ps_niwfs,                   &
-    ps_end
+    ps_end,                     &
+    ps_type
 
   integer, parameter, public :: &
     PS_TYPE_PSF = 100,          &
@@ -253,6 +254,9 @@ contains
       ps%g%r2ofi = ps%g%rofi**2
 
     case(PS_TYPE_QSO)
+
+      call messages_experimental('QSO pseudopotential support')
+
       call ps_qso_init(ps_qso, trim(filename))
 
       call valconf_null(ps%conf)
@@ -1082,9 +1086,15 @@ contains
     
     POP_SUB(ps_get_type)    
   end function ps_get_type
+
+  pure integer function ps_type(ps)
+    type(ps_t), intent(in) :: ps
+
+    ps_type = ps%flavour
+  end function ps_type
   
 #include "ps_pspio_inc.F90"
-
+ 
 end module ps_m
 
 !! Local Variables:
