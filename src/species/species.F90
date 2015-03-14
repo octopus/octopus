@@ -304,26 +304,29 @@ contains
     !%
     !% Then a list of parameters follows. The parameters are specified
     !% by a first field with the parameter name and the field that
-    !% follows with the value of the parameter.
+    !% follows with the value of the parameter. Some parameters are
+    !% specific to a certain species while others are accepted by all
+    !% species. These are 'mass', 'max_spacing', and 'max_radius'.
     !%
     !% This is an example of possible species:
     !%
     !% <tt>%Species
-    !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | lmax |  1 | lloc | 1
-    !% <br>&nbsp;&nbsp;'H'       | species_pseudo         
-    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29
-    !% <br>&nbsp;&nbsp;'C'       | species_pseudo         
+    !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
+    !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.hgh'
+    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | file | db_file | "UPF/Xe.UPF"
+    !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density |  "exp(-r/a)" | mass | 17.0 | valence | 6
+    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | "exp(-r/a)" | mass | 17.0 | valence | 6
     !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | "1/2*r^2" | valence | 8
     !% <br>&nbsp;&nbsp;'He_all'  | species_full_delta
     !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |  gaussian_width |  0.2
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%
-    !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
-    !% fields: default spacing, and default radius (used for minimum simulation box if the
-    !% radius is not specified).
+    !%Option species_pseudo  -7
+    !% The species is a pseudopotential. The pseudopotential file must
+    !% be defined by the 'file' or 'db_file' paramaters. Optional
+    !% arguments are 'lmax' and 'lloc'.
     !%Option species_user_defined -123
     !% Species with user-defined potential. In this case, the fifth
     !% field is a string with a mathematical expression that defines the
@@ -335,9 +338,6 @@ contains
     !%Option species_jellium_slab  -4
     !% Jellium slab: the fifth field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
-    !%Option species_pseudo  -7
-    !% The species is a pseudopotential. The pseudopotential file must
-    !% be defined by the 'file' or 'db_file' paramaters.
     !%Option species_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> 
@@ -1370,22 +1370,19 @@ contains
     spec%type = -spec%type
 
     read_data = 2
-    
+
+    spec%Z=M_ZERO
+
     select case(spec%type)
 
     case(SPECIES_SOFT_COULOMB)
-      spec%Z=M_ZERO
 
     case(SPECIES_USDEF) ! user-defined
-      spec%Z=M_ZERO
       call parse_block_string(blk, row, read_data, spec%user_def)
       call conv_to_C_string(spec%user_def)
       read_data = read_data + 1
 
     case(SPECIES_FROM_FILE)
-      spec%Z=M_ZERO
-      call parse_block_string(blk, row, read_data, spec%filename)
-      read_data = read_data + 1
 
     case(SPECIES_JELLIUM)
       spec%jradius = CNST(0.5)
@@ -1483,14 +1480,16 @@ contains
       call messages_write("The mandatory 'softening' parameter is missing for species "//trim(spec%label)//'.')
       call messages_fatal()
     end if
+
+    if(spec%filename == '' .and. &
+      (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE)) then
+      call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")
+    end if
+      
     
     select case(spec%type)
     case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
 
-      if(spec%filename == '' .and. spec%type /= SPECIES_FULL_DELTA .and. spec%type /= SPECIES_FULL_GAUSSIAN) then
-        call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")
-      end if
-      
       call element_init(element, spec%label)
       
       if(.not. element_valid(element)) then
