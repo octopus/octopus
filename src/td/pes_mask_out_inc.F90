@@ -83,7 +83,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(iand(outp%what, C_OUTPUT_PES_DENSITY) /= 0) then
+  if(iand(outp%what, OPTION_PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -97,7 +97,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
 
-  if(iand(outp%what, C_OUTPUT_PES_WFS) /= 0) then
+  if(iand(outp%what, OPTION_PES_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -1628,14 +1628,14 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
  
 
   !Photoelectron wavefunction and density in real space
-  if(iand(outp%what, C_OUTPUT_PES_WFS) /= 0  .or.  iand(outp%what, C_OUTPUT_PES_DENSITY) /= 0 ) then
+  if(iand(outp%what, OPTION_PES_WFS) /= 0  .or.  iand(outp%what, OPTION_PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
   !Write the output in the td.00iter directories
   dir = file 
-  if(iand(outp%what, C_OUTPUT_PES) /= 0 ) then
+  if(iand(outp%what, OPTION_PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 

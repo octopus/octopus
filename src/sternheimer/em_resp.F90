@@ -1053,7 +1053,7 @@ contains
       do idir = 1, gr%sb%dim
         if(states_are_complex(st)) then 
 
-          if(gr%sb%dim == 3 .and. iand(outp%what, C_OUTPUT_ELF) /= 0) then
+          if(gr%sb%dim == 3 .and. iand(outp%what, OPTION_ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
@@ -1065,7 +1065,7 @@ contains
           end do
         else
 
-          if(gr%sb%dim == 3 .and. iand(outp%what, C_OUTPUT_ELF) /= 0) then
+          if(gr%sb%dim == 3 .and. iand(outp%what, OPTION_ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
