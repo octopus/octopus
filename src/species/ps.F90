@@ -132,10 +132,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin, filename)
+  subroutine ps_init(ps, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
-    integer,           intent(in)    :: flavour
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
@@ -152,16 +151,18 @@ contains
     PUSH_SUB(ps_init)
 
     ! Sets the flavour, label, and number of spin channels.
-    ps%flavour = flavour
+    ps%flavour = ps_get_type(filename)
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
-    ! Initialization and processing.
-    ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_QSO)
 
-    ASSERT(ps_get_type(filename) == flavour)
-    
-    select case(ps_get_type(filename))
+    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_QSO)) then
+      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
+      call messages_write("file '"//trim(filename)//"'.")
+      call messages_fatal()
+    end if
+
+    select case(ps%flavour)
     case(PS_TYPE_PSF)
       call ps_psf_init(ps_psf, ispin, filename)
 
@@ -186,7 +187,7 @@ contains
     case(PS_TYPE_CPI, PS_TYPE_FHI)
       call valconf_null(ps%conf)
 
-      if(flavour == PS_TYPE_CPI) then
+      if(ps%flavour == PS_TYPE_CPI) then
         call ps_cpi_init(ps_cpi, trim(filename))
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
@@ -213,7 +214,7 @@ contains
         call messages_fatal(1)
       endif
 
-      if(flavour == PS_TYPE_CPI) then
+      if(ps%flavour == PS_TYPE_CPI) then
         call ps_cpi_process(ps_cpi, ps%l_loc)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
@@ -301,7 +302,7 @@ contains
     call spline_init(ps%core)
 
     ! Now we load the necessary information.
-    select case(flavour)
+    select case(ps%flavour)
     case(PS_TYPE_PSF)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)

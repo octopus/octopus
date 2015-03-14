@@ -581,7 +581,7 @@ contains
       if(spec%type == SPECIES_PSPIO) then
         call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%type, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+        call ps_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       endif
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
