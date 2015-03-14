@@ -159,7 +159,9 @@ contains
     ! Initialization and processing.
     ASSERT(flavour >= PS_TYPE_PSF .and. flavour <= PS_TYPE_QSO)
 
-    select case(flavour)
+    ASSERT(ps_get_type(filename) == flavour)
+    
+    select case(ps_get_type(filename))
     case(PS_TYPE_PSF)
       call ps_psf_init(ps_psf, ispin, filename)
 
@@ -1057,6 +1059,29 @@ contains
   end function ps_niwfs
   ! ---------------------------------------------------------
 
+  integer function ps_get_type(filename) result(type)
+    character(len=*), intent(in) :: filename
+
+    PUSH_SUB(ps_get_type)
+
+    type = 0
+    
+    if(index(filename, ".psf ") /= 0) type = PS_TYPE_PSF
+    if(index(filename, ".PSF ") /= 0) type = PS_TYPE_PSF
+    if(index(filename, ".hgh ") /= 0) type = PS_TYPE_HGH
+    if(index(filename, ".HGH ") /= 0) type = PS_TYPE_HGH
+    if(index(filename, ".cpi ") /= 0) type = PS_TYPE_CPI
+    if(index(filename, ".CPI ") /= 0) type = PS_TYPE_CPI
+    if(index(filename, ".fhi ") /= 0) type = PS_TYPE_FHI
+    if(index(filename, ".FHI ") /= 0) type = PS_TYPE_FHI
+    if(index(filename, ".upf ") /= 0) type = PS_TYPE_UPF
+    if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
+    if(index(filename, ".xml ") /= 0) type = PS_TYPE_QSO
+    if(index(filename, ".XML ") /= 0) type = PS_TYPE_QSO
+    
+    POP_SUB(ps_get_type)    
+  end function ps_get_type
+  
 #include "ps_pspio_inc.F90"
 
 end module ps_m
