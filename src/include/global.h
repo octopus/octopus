@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "config_F90.h"
-
+#include "options.h"  
 
 ! If the compiler accepts long Fortran lines, it is better to use that
 ! capacity, and build all the preprocessor definitions in one line. In

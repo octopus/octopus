@@ -43,6 +43,7 @@ $top_builddir = ($opt_b ? $opt_b : ".");
 
 $src = "$top_srcdir/src";
 $share = "$top_builddir/share";
+$include = "$top_builddir/src/include";
 
 if(!-d $src && !-d $share) {
     print stderr <<"EndOfErrorMsg";
@@ -143,7 +144,6 @@ sub put_opt{
   $opt{$a} = $b;
 }
 
-
 #####################################################
 # prints %opt to share/variables
 sub print_opt{
@@ -151,6 +151,18 @@ sub print_opt{
   my $key;
   foreach $key (sort(keys %opt)) {
     print OUT $key, " = ", $opt{"$key"}, "\n";
+  }
+
+  close(OUT);
+}
+
+#####################################################
+# prints %opt to src/include/options.h
+sub print_opt{
+  open(OUT, ">$include/options.h");
+  my $key;
+  foreach $key (sort(keys %opt)) {
+    print OUT "#define OPTION_", uc $key , " ", $opt{"$key"}, "\n";
   }
 
   close(OUT);

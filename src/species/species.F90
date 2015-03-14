@@ -110,17 +110,6 @@ module species_m
     PSEUDO_SET_SG15     = 2,                &
     PSEUDO_SET_HGH      = 3
 
-  integer, parameter               ::            &
-    SPECIES_FLAG_RADIUS            = -10001,     &
-    SPECIES_FLAG_SPACING           = -10002,     &
-    SPECIES_FLAG_LMAX              = -10003,     &
-    SPECIES_FLAG_LLOC              = -10004,     &
-    SPECIES_FLAG_MASS              = -10005,     &
-    SPECIES_FLAG_VALENCE           = -10006,     &
-    SPECIES_FLAG_JELLIUM_RADIUS    = -10007,     &
-    SPECIES_FLAG_GAUSSIAN_WIDTH    = -10008,     &
-    SPECIES_FLAG_SOFTENING         = -10009
-  
   type species_t
     private
     integer :: index                  !< just a counter
@@ -1483,26 +1472,26 @@ contains
       
       select case(flag)
 
-      case(SPECIES_FLAG_RADIUS)
+      case(OPTION_MIN_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%def_h)
 
-      case(SPECIES_FLAG_SPACING)
+      case(OPTION_MAX_SPACING)
         call parse_block_float(blk, row, icol + 1, spec%def_rsize)
 
-      case(SPECIES_FLAG_LMAX)
+      case(OPTION_LMAX)
         call parse_block_integer(blk, row, icol + 1, spec%lmax)
 
-      case(SPECIES_FLAG_LLOC)
+      case(OPTION_LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
 
-      case(SPECIES_FLAG_MASS)
+      case(OPTION_MASS)
         call parse_block_float(blk, row, icol + 1, spec%mass)
 
-      case(SPECIES_FLAG_VALENCE)
+      case(OPTION_VALENCE)
         call parse_block_float(blk, row, icol + 1, spec%z_val)
         spec%z = spec%z_val
 
-      case(SPECIES_FLAG_JELLIUM_RADIUS)
+      case(OPTION_JELLIUM_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%jradius)
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
         if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
@@ -1510,14 +1499,14 @@ contains
           call messages_input_error('Species', 'jellium_radius can only be used with species_jellium')
         end if
         
-      case(SPECIES_FLAG_GAUSSIAN_WIDTH)
+      case(OPTION_GAUSSIAN_WIDTH)
         call parse_block_float(blk, row, icol + 1, spec%sigma)
         if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
         if(spec%type /= SPECIES_FULL_GAUSSIAN) then
           call messages_input_error('Species', 'gaussian_width can only be used with species_full_gaussian')
         end if
 
-      case(SPECIES_FLAG_SOFTENING)
+      case(OPTION_SOFTENING)
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
         spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
         if(spec%type /= SPECIES_SOFT_COULOMB) then
