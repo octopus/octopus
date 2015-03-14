@@ -21,7 +21,7 @@ Radius =  8.0
 TheoryLevel = independent_particles
 
 %Species
-"doublewell" | species_user_defined | "1/64*(x)^4-1/4*(x)^2" | valence | 1
+"doublewell" | species_user_defined | potential_formula | "1/64*(x)^4-1/4*(x)^2" | valence | 1
 %
 
 TheoryLevel = independent_particles

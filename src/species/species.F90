@@ -119,7 +119,7 @@ module species_m
     logical :: has_density            !< true if the species has an electronic density
 
 
-    character(len=1024) :: user_def !< for the user-defined potential
+    character(len=1024) :: potential_formula !< for the user-defined potential
     FLOAT :: omega                  !< harmonic frequency for Hermite polynomials
 
 
@@ -138,7 +138,7 @@ module species_m
     FLOAT :: sigma                !< If we have an all-electron atom:
 
 
-    character(len=200) :: rho     !< If we have a charge distribution creating the potential:
+    character(len=200) :: density_formula !< If we have a charge distribution creating the potential:
 
 
     FLOAT :: def_rsize, def_h     !< the default values for the spacing and atomic radius
@@ -174,7 +174,7 @@ contains
     this%z_val=M_ZERO
     this%mass=M_ZERO
     this%has_density=.false.
-    this%user_def=""
+    this%potential_formula=""
     this%omega=M_ZERO
     this%filename=""
     this%jradius=M_ZERO
@@ -182,7 +182,7 @@ contains
     nullify(this%ps)
     this%nlcc=.false.
     this%sigma=M_ZERO
-    this%rho=""
+    this%density_formula=""
     this%def_rsize=M_ZERO
     this%def_h=-M_ONE
     this%niwfs=-1
@@ -272,7 +272,7 @@ contains
     spec%nlcc      = .false.   ! without non-local core corrections
     spec%def_h     = -M_ONE    ! not defined
     spec%def_rsize = -M_ONE    ! not defined
-    spec%user_def  = ""
+    spec%potential_formula  = ""
     read_data   = 0
 
     !%Variable Species
@@ -316,8 +316,8 @@ contains
     !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | file | db_file | "UPF/Xe.UPF"
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | "exp(-r/a)" | mass | 17.0 | valence | 6
-    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | "1/2*r^2" | valence | 8
+    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
+    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | potential_formula | "1/2*r^2" | valence | 8
     !% <br>&nbsp;&nbsp;'He_all'  | species_full_delta
     !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |  gaussian_width |  0.2
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
@@ -328,10 +328,14 @@ contains
     !% be defined by the 'file' or 'db_file' paramaters. Optional
     !% arguments are 'lmax' and 'lloc'.
     !%Option species_user_defined -123
-    !% Species with user-defined potential. In this case, the fifth
-    !% field is a string with a mathematical expression that defines the
-    !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
-    !% or <i>r</i> variables).
+    !% Species with user-defined potential. The potential for the
+    !% species is defined by the formula given by the 'potential_formula'
+    !% parameter. The charge associated to this species is given by the 'valence' parameter.
+    !%Option species_charge_density -125
+    !% The potential for this species is created from the distribution
+    !% of charge given by the 'density_formula' parameter. The
+    !% required 'valence' parameter determines the number of electrons
+    !% associated to the species.
     !%Option species_point  -3
     !%Option species_jellium  -3
     !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
@@ -370,9 +374,6 @@ contains
     !% Column 5 is <math>sigma</math>, the width of the Gaussian that should be
     !% small, but you may run into numerical difficulties if it is too
     !% small (0.25 by default).
-    !%Option species_charge_density -125
-    !% The potential is created by a distribution of charge.
-    !% Column 5 is an expression for the charge distribution.
     !%Option species_from_file  -126
     !% The potential is read from a file, whose name is given in column 5.
     !% Accepted file formats, detected by extension: obf, ncdf and csv.
@@ -411,6 +412,12 @@ contains
     !%Option db_file -10011
     !% The path for the file, in the Octopus directory of
     !% pseudopotentials, that describes the species.
+    !%Option potential_formula -10012
+    !% Mathematical expression that defines the potential for species_user_defined. You can use
+    !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
+    !%Option density_formula -10013
+    !% Mathematical expression that defines the charge density for species_charge_density. You can use
+    !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -540,9 +547,9 @@ contains
     case(SPECIES_USDEF)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
-        i = min(237, len_trim(spec%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
-        write(message(2),'(a,a)')      '   Potential = ', trim(spec%user_def(1:i))
-        if(len(trim(spec%user_def)) > 237) then
+        i = min(237, len_trim(spec%potential_formula)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
+        write(message(2),'(a,a)')      '   Potential = ', trim(spec%potential_formula(1:i))
+        if(len(trim(spec%potential_formula)) > 237) then
           message(2) = trim(message(2))//'...'
         end if
         call messages_info(2)
@@ -552,7 +559,7 @@ contains
       xx    = M_ZERO
       xx(1) = CNST(0.01)
       rr    = sqrt(sum(xx**2))
-      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, spec%user_def)
+      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, spec%potential_formula)
       spec%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re )) ! why...?
       ! To avoid problems with constant potentials.
       if(spec%omega <= M_ZERO) spec%omega = CNST(0.1) 
@@ -606,7 +613,7 @@ contains
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a distribution of charge:'
-        write(message(2),'(a,a)')      '   rho = ', trim(spec%rho)
+        write(message(2),'(a,a)')      '   rho = ', trim(spec%density_formula)
         write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
         call messages_info(3)
       end if
@@ -781,7 +788,7 @@ contains
       return
     end if
     this%has_density=.false.
-    this%user_def=""
+    this%potential_formula=""
     nullify(this%ps)
     this%nlcc=.false.
     call json_get(json, "def_rsize", this%def_rsize, ierr)
@@ -950,7 +957,7 @@ contains
   ! ---------------------------------------------------------
   character(len=200) pure function species_rho_string(spec)
     type(species_t), intent(in) :: spec
-    species_rho_string = trim(spec%rho)
+    species_rho_string = trim(spec%density_formula)
   end function species_rho_string
   ! ---------------------------------------------------------
 
@@ -994,7 +1001,7 @@ contains
 
     PUSH_SUB(species_userdef_pot)
     
-    call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%user_def)
+    call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%potential_formula)
     species_userdef_pot = pot_re + M_zI * pot_im  
 
     POP_SUB(species_userdef_pot)
@@ -1179,7 +1186,7 @@ contains
     this%z_val=that%z_val
     this%mass=that%mass
     this%has_density=that%has_density
-    this%user_def=that%user_def
+    this%potential_formula=that%potential_formula
     this%omega=that%omega
     this%filename=that%filename
     this%jradius=that%jradius
@@ -1190,7 +1197,7 @@ contains
     if(associated(that%ps))this%ps=>that%ps
     this%nlcc=that%nlcc
     this%sigma=that%sigma
-    this%rho=that%rho
+    this%density_formula=that%density_formula
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
     this%niwfs=that%niwfs
@@ -1282,7 +1289,7 @@ contains
     write(iunit, '(a,f15.2)') 'mass = ', spec%mass
     bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
-    write(iunit, '(2a)')      'usdef  = ', trim(spec%user_def)
+    write(iunit, '(2a)')      'usdef  = ', trim(spec%potential_formula)
     if (spec%type == SPECIES_JELLIUM) then
       write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
     end if
@@ -1378,9 +1385,6 @@ contains
     case(SPECIES_SOFT_COULOMB)
 
     case(SPECIES_USDEF) ! user-defined
-      call parse_block_string(blk, row, read_data, spec%user_def)
-      call conv_to_C_string(spec%user_def)
-      read_data = read_data + 1
 
     case(SPECIES_FROM_FILE)
 
@@ -1397,8 +1401,6 @@ contains
       spec%sigma = CNST(0.25)
 
     case(SPECIES_CHARGE_DENSITY)
-      call parse_block_string(blk, row, read_data + 1, spec%rho)
-      read_data = read_data + 1
 
     case(SPECIES_PSEUDO)
 
@@ -1467,6 +1469,22 @@ contains
       case(OPTION_DB_FILE)
         call parse_block_string(blk, row, icol + 1, spec%filename)
         spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
+
+      case(OPTION_POTENTIAL_FORMULA)
+        call parse_block_string(blk, row, icol + 1, spec%potential_formula)
+        call conv_to_C_string(spec%potential_formula)
+
+        if(spec%type /= SPECIES_USDEF) then
+          call messages_input_error('Species', 'potential_formula can only be used with species_user_defined')
+        end if
+
+      case(OPTION_DENSITY_FORMULA)
+        call parse_block_string(blk, row, icol + 1, spec%density_formula)
+        call conv_to_C_string(spec%density_formula)
+              
+        if(spec%type /= SPECIES_CHARGE_DENSITY) then
+          call messages_input_error('Species', 'density_formula can only be used with species_charge_density')
+        end if
         
       case default
         call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
@@ -1481,6 +1499,14 @@ contains
       call messages_fatal()
     end if
 
+    if(spec%potential_formula == '' .and. spec%type == SPECIES_USDEF) then
+      call messages_input_error('Species', "The potential_formula parameter is missing for species '"//trim(spec%label)//"'")
+    end if
+
+    if(spec%density_formula == '' .and. spec%type == SPECIES_CHARGE_DENSITY) then
+      call messages_input_error('Species', "The density_formula parameter is missing for species '"//trim(spec%label)//"'")
+    end if
+    
     if(spec%filename == '' .and. &
       (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE)) then
       call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")

@@ -5,7 +5,7 @@ TestMode = derivatives
 "dummy" | 0.0
 %
 %Species
-"dummy" | species_user_defined | "0" | valence | 1
+"dummy" | species_user_defined | potential_formula | "0" | valence | 1
 %
 
 Dimensions = 1

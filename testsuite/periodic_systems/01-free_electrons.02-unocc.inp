@@ -13,7 +13,7 @@ ExtraStates = 4
 TheoryLevel = independent_particles
 
 %Species
-"Zero" | species_user_defined | "0" | mass | 22.1 | valence | 2
+"Zero" | species_user_defined | potential_formula | "0" | mass | 22.1 | valence | 2
 %
 
 %Coordinates

@@ -86,7 +86,7 @@ ExperimentalFeatures = yes
 omega = 1.78033780231
 
 %Species
-"qd" | species_user_defined | "0.5*omega^2*r^2" | valence | 8
+"qd" | species_user_defined | potential_formula | "0.5*omega^2*r^2" | valence | 8
 %
 
 %Coordinates

@@ -16,7 +16,7 @@ ExtraStates = 1
 TheoryLevel = independent_particles
 
 %Species
-  "Neon1D" | species_user_defined | "-10/sqrt(0.25 + x^2)" | valence | 10
+  "Neon1D" | species_user_defined | potential_formula | "-10/sqrt(0.25 + x^2)" | valence | 10
 %
 
 %Coordinates

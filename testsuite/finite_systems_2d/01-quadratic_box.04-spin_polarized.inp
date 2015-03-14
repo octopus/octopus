@@ -13,7 +13,7 @@ FromScratch = yes
 Dimensions = 2
 
 %Species
-"qd" | species_user_defined | "0" | valence | 3
+"qd" | species_user_defined | potential_formula | "0" | valence | 3
 %
 
 %Coordinates

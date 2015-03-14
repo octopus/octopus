@@ -7,7 +7,7 @@ meff = 1.0
 omega = 1.0
 
 %Species
-"qd" | species_user_defined | "0.5*meff*omega^2*r^2" | valence | 20
+"qd" | species_user_defined | potential_formula | "0.5*meff*omega^2*r^2" | valence | 20
 %
 
 %Coordinates

@@ -15,7 +15,7 @@ ExperimentalFeatures = YES
 %
 
 %Species
-'H1D' | species_user_defined | '-1.0/(abs(x)+0.002)' | valence | 1
+'H1D' | species_user_defined | potential_formula | '-1.0/(abs(x)+0.002)' | valence | 1
 %
 
 %UserDefinedStates

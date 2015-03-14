@@ -22,7 +22,7 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | species_user_defined | "0.5*omega^2*r^2" | valence | 20
+"qd" | species_user_defined | potential_formula | "0.5*omega^2*r^2" | valence | 20
 %
 
 %Coordinates
