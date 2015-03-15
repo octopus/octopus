@@ -24,7 +24,6 @@ module epot_m
   use comm_m
   use derivatives_m
   use double_grid_m
-  use frozen_external_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -575,7 +574,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, geo, st, cmplxscl)
-    type(epot_t),             intent(inout) :: ep
+    type(epot_t),     target, intent(inout) :: ep
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(in)    :: geo
     type(states_t),           intent(inout) :: st
