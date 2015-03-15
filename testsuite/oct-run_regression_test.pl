@@ -225,7 +225,7 @@ while ($_ = <TESTSUITE>) {
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit 254;
+	  skip_exit();
       } elsif ( $enabled ne "Yes") {
 	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
@@ -251,7 +251,7 @@ while ($_ = <TESTSUITE>) {
 	  print "\nSkipping test: executable $octopus_exe not available.\n\n";
 	  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 	  if($failures == 0) {
-	      exit 254;
+	      skip_exit();
 	  } else {
 	      exit $failures;
 	      # if a previous step has failed, mark as failed not skipped
@@ -282,7 +282,7 @@ while ($_ = <TESTSUITE>) {
 		    print "Available options: $options_available\n\n";
 		    if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 		    if($failures == 0) {
-			exit 254;
+			skip_exit();
 		    } else {
 			exit $failures;
 			# if a previous step has failed, mark as failed not skipped
@@ -367,7 +367,7 @@ while ($_ = <TESTSUITE>) {
 	    } else {
 	      print "No mpiexec found: Skipping parallel test \n";
 	      if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	      exit 254;
+	      skip_exit();
 	    }
 	  } else {
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
@@ -448,6 +448,8 @@ if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
 print "\n";
 close(TESTSUITE);
+
+print "Status: ".$failures." failures\n\n";
 
 exit $failures;
 
@@ -607,5 +609,11 @@ sub check_num_args {
 
 sub die255 {
     print STDERR $_[0];
+    print "Status: error\n\n";
     exit 255;
+}
+
+sub skip_exit {
+    print "Status: skipped\n\n";
+    exit 254  
 }
