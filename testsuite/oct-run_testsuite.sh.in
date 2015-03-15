@@ -243,6 +243,11 @@ while getopts "hnlp:d:cg:q:" opt ; do
 done
 shift $[ OPTIND - 1 ]
 
+if [ -z $OCT_TEST_NJOBS] ; then
+    if [ -x `which nproc` ] ; then
+	OCT_TEST_NJOBS=`nproc`
+    fi
+fi
 
 # Find testfiles.
 if [ -n "$directory" ]; then
