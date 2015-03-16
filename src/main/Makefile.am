@@ -21,7 +21,7 @@
 
 include $(srcdir)/../common-rules.make
 
-bin_PROGRAMS = octopus oct-test
+bin_PROGRAMS = octopus oct-test octopus_mpi
 
 octopus_SOURCES = \
 	invert_ks.F90 memory.F90 \
@@ -47,6 +47,12 @@ oct_test_LDADD = \
 
 noinst_HEADERS = \
 	casida_inc.F90
+
+octopus_mpi_SOURCES = octopus_mpi.F90
+
+octopus_mpi_LDADD = \
+	$(top_builddir)/src/basic/libbasic.a \
+	$(other_LIBS)
 
 CLEANFILES += octopus oct-test
 
