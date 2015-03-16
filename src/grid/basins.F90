@@ -184,7 +184,7 @@ contains
 
             index = index_from_coords(mesh%idx, point2)
             !From global to local
-#ifdef HAVE_MPI2
+#ifdef HAVE_MPI
             index = vec_global2local(mesh%vp, index, mesh%vp%partno)
 #endif
             if(index <= 0 .or. index > mesh%np) cycle
