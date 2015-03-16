@@ -22,6 +22,7 @@
 module species_m
   use element_m
   use global_m
+  use iihash_m
   use io_m
   use json_m
   use loct_m
@@ -1355,7 +1356,9 @@ contains
 
     integer :: ncols, icol, flag
     type(element_t) :: element
-    
+    type(iihash_t) :: read_parameters
+
+
     PUSH_SUB(read_from_block)
 
     ncols = parse_block_cols(blk, row)
@@ -1413,6 +1416,8 @@ contains
     spec%mass = -CNST(1.0)
     spec%z_val = -CNST(1.0)
     spec%sc_alpha = -CNST(1.0)
+
+    call iihash_init(read_parameters, 10)
     
     icol = read_data
     do
@@ -1423,25 +1428,32 @@ contains
       select case(flag)
 
       case(OPTION_MIN_RADIUS)
+        call check_duplication(OPTION_MIN_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%def_h)
 
       case(OPTION_MAX_SPACING)
+        call check_duplication(OPTION_MAX_SPACING)
         call parse_block_float(blk, row, icol + 1, spec%def_rsize)
 
       case(OPTION_LMAX)
+        call check_duplication(OPTION_LMAX)
         call parse_block_integer(blk, row, icol + 1, spec%lmax)
 
       case(OPTION_LLOC)
+        call check_duplication(OPTION_LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
 
       case(OPTION_MASS)
+        call check_duplication(OPTION_MASS)
         call parse_block_float(blk, row, icol + 1, spec%mass)
 
       case(OPTION_VALENCE)
+        call check_duplication(OPTION_VALENCE)
         call parse_block_float(blk, row, icol + 1, spec%z_val)
         spec%z = spec%z_val
 
       case(OPTION_JELLIUM_RADIUS)
+        call check_duplication(OPTION_JELLIUM_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%jradius)
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
         if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
@@ -1450,6 +1462,7 @@ contains
         end if
         
       case(OPTION_GAUSSIAN_WIDTH)
+        call check_duplication(OPTION_GAUSSIAN_WIDTH)
         call parse_block_float(blk, row, icol + 1, spec%sigma)
         if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
         if(spec%type /= SPECIES_FULL_GAUSSIAN) then
@@ -1457,6 +1470,7 @@ contains
         end if
 
       case(OPTION_SOFTENING)
+        call check_duplication(OPTION_SOFTENING)
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
         spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
         if(spec%type /= SPECIES_SOFT_COULOMB) then
@@ -1464,13 +1478,16 @@ contains
         end if
 
       case(OPTION_FILE)
+        call check_duplication(OPTION_FILE)
         call parse_block_string(blk, row, icol + 1, spec%filename)
 
       case(OPTION_DB_FILE)
+        call check_duplication(OPTION_DB_FILE)
         call parse_block_string(blk, row, icol + 1, spec%filename)
         spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
 
       case(OPTION_POTENTIAL_FORMULA)
+        call check_duplication(OPTION_POTENTIAL_FORMULA)
         call parse_block_string(blk, row, icol + 1, spec%potential_formula)
         call conv_to_C_string(spec%potential_formula)
 
@@ -1479,6 +1496,7 @@ contains
         end if
 
       case(OPTION_DENSITY_FORMULA)
+        call check_duplication(OPTION_DENSITY_FORMULA)
         call parse_block_string(blk, row, icol + 1, spec%density_formula)
         call conv_to_C_string(spec%density_formula)
               
@@ -1493,6 +1511,8 @@ contains
 
       icol = icol + 2        
     end do
+
+    call iihash_end(read_parameters)
 
     if(spec%type == SPECIES_SOFT_COULOMB .and. spec%sc_alpha <= CNST(0.0)) then
       call messages_write("The mandatory 'softening' parameter is missing for species "//trim(spec%label)//'.')
@@ -1556,6 +1576,26 @@ contains
     end select
     
     POP_SUB(read_from_block)
+
+  contains
+    
+    subroutine check_duplication(param)
+      integer, intent(in) :: param
+
+      integer :: tmp
+      logical :: parameter_found
+
+      PUSH_SUB(read_from_block.check_duplication)
+
+      tmp = iihash_lookup(read_parameters, -param, parameter_found)
+      if(parameter_found) then
+        call messages_input_error('Species', "Duplicated parameter in species '"//trim(spec%label)//"'")
+      end if
+      call iihash_insert(read_parameters, -param, 1)
+
+      POP_SUB(read_from_block.check_duplication)
+    end subroutine check_duplication
+    
   end subroutine read_from_block
   ! ---------------------------------------------------------
 
