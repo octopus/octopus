@@ -54,13 +54,14 @@ program oct_local_multipoles
   implicit none
   
   type local_domain_t
-    integer                         :: nd
-    type(box_union_t), allocatable  :: domain(:)
-    character(len=15), allocatable  :: lab(:) 
-    integer, allocatable            :: dshape(:)
-    logical, allocatable            :: inside(:,:)
-    FLOAT, allocatable              :: dcm(:,:)         !< store the center of mass of each domain on the real space.
-    type(local_write_t)             :: writ       
+    integer                         :: nd              !< number of local domains.
+    type(box_union_t), allocatable  :: domain(:)       !< boxes that form each domain.
+    character(len=80), allocatable  :: clist(:)        !< list of centers for each domain.
+    character(len=15), allocatable  :: lab(:)          !< declared name for each domain.
+    integer, allocatable            :: dshape(:)       !< shape of box for each domain.
+    logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
+    FLOAT, allocatable              :: dcm(:,:)        !< store the center of mass of each domain on the real space.
+    type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
   type(system_t)        :: sys
@@ -85,6 +86,7 @@ program oct_local_multipoles
   call messages_print_stress(stdout)
     
   call unit_system_init()
+  call restart_module_init()
   call system_init(sys, CM_NONE)
   call simul_box_init(sb, sys%geo, sys%space)
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
@@ -110,13 +112,14 @@ contains
     type(local_domain_t)           :: local
     integer                        :: err, iter, l_start, l_end, l_step, last_slash
     integer                        :: ia, n_spec_def, read_data, iunit, ispec
-    integer                        :: length
+    integer                        :: length, folder_index
     FLOAT                          :: default_dt, dt
-    character(len=64)              :: filename, folder, folder_default, aux, base_folder, radiifile
+    character(len=MAX_PATH_LEN)    :: filename, folder, folder_default, radiifile
+    character(len=MAX_PATH_LEN)    :: in_folder, restart_folder, basename, frmt, ldrestart_folder
     character(len=15)              :: lab
-    logical                        :: iterate, ldupdate, ldoverwrite
+    logical                        :: iterate, ldupdate, ldoverwrite, ldrestart
     type(kick_t)                   :: kick
-    type(restart_t)                :: restart 
+    type(restart_t)                :: restart, restart_ld
 
     PUSH_SUB(local_domains)
     
@@ -139,19 +142,6 @@ contains
       write(folder,'(a,a1)') trim(folder), '/'
     end if
 
-    ! Guess the base folder (which should change while iterating)
-    base_folder = ""
-    last_slash = index(folder(1:len_trim(folder)-1), '/', .true.)
-    if ( last_slash > 0 ) then
-      base_folder = folder(1:last_slash)
-      folder = folder(last_slash+1:len_trim(folder))
-    end if
-    if (trim(base_folder) == "") base_folder = "./"
-    
-    aux = folder(1:3)
-    if (aux == 'td.') then
-      aux = trim(folder(4:len_trim(folder)-1))
-      read(aux,'(I10.0)')iter
       default_dt = M_ZERO
       call parse_float('TDTimeStep', default_dt, dt, unit = units_inp%time)
       if (dt <= M_ZERO) then
@@ -159,10 +149,6 @@ contains
         write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
         call messages_info(2)
       end if
-    else
-      iter = 0
-      dt = M_ZERO
-    end if
 
     !%Variable LDFilename
     !%Type string
@@ -172,13 +158,13 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_string('LDFilename', 'density', filename)
-    if ( filename == " " ) filename = ""
+    call parse_string('LDFilename', 'density', basename)
+    if ( basename == " " ) basename = ""
     ! Delete the extension if present
-    length = len_trim(filename)
+    length = len_trim(basename)
     if ( length > 4) then
-      if ( filename(length-3:length) == '.obf' ) then
-        filename = trim(filename(1:length-4))
+      if ( basename(length-3:length) == '.obf' ) then
+        basename = trim(basename(1:length-4))
       end if
     end if
 
@@ -249,10 +235,37 @@ contains
       end do
     end if
 
+    !TODO: use standart FromSratch and %RestartOptions 
+    !%Variable LDRestart
+    !%Type logical
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% Restart information will be read from LDRestartFolder
+    !%End
+    call parse_logical('LDRestart', .false., ldrestart)
+
+    if (ldrestart) then
+      write(folder_default,'(a)')'ld.general'
+
+      !%Variable LDRestartFolder
+      !%Type string
+      !%Section Utilities::oct-local_multipoles
+      !%Description
+      !% The folder name where the density used as input file is.
+      !%End
+      call parse_string('LDRestartFolder', folder_default, ldrestart_folder)
+
+      ! Check if the folder is finished by an /
+      if (index(ldrestart_folder, '/', .true.) /= len_trim(ldrestart_folder)) then
+        write(ldrestart_folder,'(a,a1)') trim(ldrestart_folder), '/'
+      end if
+    end if
+
+
     ! Documentation in convert.F90. Variable names changed to avoid conflict with convert utility.
     call parse_logical('LDIterateFolder', .false., iterate)
-    call parse_integer('LDStart', iter, l_start)
-    call parse_integer('LDEnd', iter, l_end)
+    call parse_integer('LDStart', 0, l_start)
+    call parse_integer('LDEnd', 0, l_end)
     call parse_integer('LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
@@ -267,14 +280,50 @@ contains
     end if
 
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%lab, iter, dt)
-    call loct_progress_bar(-1, l_end-l_start) 
+    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+
+    if (ldrestart) then
+      !TODO: check for domains & mesh compatibility 
+      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, &
+         err, dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
+      call local_restart(local, restart_ld)
+      call restart_end(restart_ld)
+    end if
+
+    ! Initialize the restart directory from <tt>LDFolder</tt> value.
+    ! This directory has to have the files 'grid', 'mesh' and 'lxyz.obf'
+    ! and the files that are going to be used, must be inside this folder
+    if (iterate) then
+      ! Delete the last / and find the previous /, if any
+      in_folder = folder(1:len_trim(folder)-1)
+      folder_index = index(in_folder, '/', .true.)
+      restart_folder = in_folder(1:folder_index)
+    else 
+      restart_folder = folder
+    end if
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
+         err, dir=trim(restart_folder), mesh = sys%gr%mesh)
+
+!!$    call loct_progress_bar(-1, l_end-l_start)
     do iter = l_start, l_end, l_step
       if (iterate) then
-        write(folder,'(a,i0.7,a)') folder(1:3),iter,"/"
+        ! Delete the last / and add the corresponding folder number
+        write(in_folder,'(a,i0.7,a)') folder(folder_index+1:len_trim(folder)-1),iter,"/"
+        write(filename, '(a,a,a)') trim(in_folder), trim(basename)
+      else
+        in_folder = "."
+        if ( l_start /= l_end ) then
+          ! Here, we are only considering 10 character long filenames.
+          ! Subtract the initial part given at 'ConvertFilename' from the format and pad
+          ! with zeros.
+          write(frmt,'(a,i0,a)')"(a,i0.",10-len_trim(basename),")"
+          write(filename, fmt=trim(frmt)) trim(basename), iter
+        else 
+          ! Assuming filename is given complete in the 'LDFilename'
+          write(filename, '(a,a,a,a)') trim(in_folder),"/", trim(basename)
+          filename = basename
+        end if
       end if
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
-                      err, dir=trim(base_folder)//trim(folder)) 
       ! FIXME: there is a special function for reading the density. Why not use that?
       ! TODO: Find the function that reads the density. Which one?
       ! FIXME: why only real functions? Please generalize.
@@ -282,22 +331,25 @@ contains
       if(err == 0) &
         call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
-        write(message(1),*) 'While reading density: "', trim(base_folder) // trim(folder), trim(filename), '", error code:', err
+        write(message(1),*) 'While reading density: "', trim(filename), '", error code:', err
         call messages_fatal(1)
       end if
-      call restart_end(restart) 
 
       ! Look for the mesh points inside local domains
-      if(iter == l_start) then
+      ! Read in restart file
+      if(iter == l_start .and. .not.ldrestart) then
+        if (.not.ldrestart) then
         call local_inside_domain(local, sys%st%rho(:,1), .true.)
+        end if
       else
         call local_inside_domain(local, sys%st%rho(:,1), ldupdate)
       end if
 
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-                              sys%gr, sys%st, hm, sys%ks, sys%mc, sys%geo, kick, iter, dt, l_start, ldoverwrite)
+                              sys%gr, sys%st, hm, sys%ks, sys%mc, sys%geo, kick, iter, dt, l_start, l_end, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
+    call restart_end(restart) 
 
     call local_end(local)
     message(1) = 'Info: Exiting local domains'
@@ -357,6 +409,7 @@ contains
     end if
 
     SAFE_ALLOCATE(local%domain(1:local%nd))
+    SAFE_ALLOCATE(local%clist(1:local%nd))
     SAFE_ALLOCATE(local%dshape(1:local%nd))
     SAFE_ALLOCATE(local%lab(1:local%nd))
     SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
@@ -364,7 +417,7 @@ contains
 
     block: do id = 1, local%nd
       call parse_block_string(blk, id-1, 0, local%lab(id))
-      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id))
+      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id))
     end do block
     message(1) = ''
     call messages_info(1)
@@ -387,6 +440,7 @@ contains
     call local_write_end(local%writ)
     SAFE_DEALLOCATE_A(local%lab)
     SAFE_DEALLOCATE_A(local%domain)
+    SAFE_DEALLOCATE_A(local%clist)
     SAFE_DEALLOCATE_A(local%dshape)
     SAFE_DEALLOCATE_A(local%inside)
     SAFE_DEALLOCATE_A(local%dcm)
@@ -395,16 +449,16 @@ contains
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(blk, row, dom, shape)
+  subroutine local_read_from_block(blk, row, dom, shape, clist)
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
     type(box_union_t), intent(inout)     :: dom
     integer,           intent(out)       :: shape
+    character(len=*),   intent(out)      :: clist
     
-    integer           :: dim, ic, idir, nb
-    character(len=80) :: clist
-    FLOAT             :: lgst, val, rsize, xsize
-    FLOAT             :: center(MAX_DIM), lsize(MAX_DIM)
+    integer                     :: dim, ic, idir, nb
+    FLOAT                       :: lgst, val, rsize, xsize
+    FLOAT                       :: center(MAX_DIM), lsize(MAX_DIM)
    
     PUSH_SUB(local_read_from_block)
 
@@ -500,7 +554,7 @@ contains
     FLOAT,             intent(in)    :: rsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
-    character(len=80), intent(in)    :: clist
+    character(len=*), intent(in)    :: clist
 
     integer                  :: ia, ibox, ic, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
@@ -572,7 +626,40 @@ contains
 
     POP_SUB(local_domains_init)
   end subroutine local_domains_init
+  ! ---------------------------------------------------------
+  subroutine local_restart(lcl, restart)
+    type(local_domain_t), intent(inout) :: lcl
+    type(restart_t),      intent(in)    :: restart
 
+    integer                     :: id, ip, iunit, ierr, how
+    character(len=MAX_PATH_LEN) :: filename, folder, tmp
+    FLOAT, allocatable          :: inside(:)
+
+    PUSH_SUB(local_restart)
+    
+    message(1) = 'Info: Reading mesh points inside each local domain'
+    call messages_info(1)
+    SAFE_ALLOCATE(inside(1:sys%gr%mesh%np))
+    !Read local domain information from ldomains.info 
+     folder = restart_dir(restart)
+     filename = "ldomains.info"
+     iunit = io_open(trim(folder)//'/'//trim(filename), action='read',status='old')
+     !read(iunit,'(a25,1x,i5)')tmp ,lcl%nd 
+     read(iunit,'(a25,1x,i5)')tmp ,ierr
+
+     filename = "ldomains"
+     call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
+
+     do ip = 1 , sys%gr%mesh%np
+       do id = 1, lcl%nd
+        if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
+       end do
+     end do
+
+     call io_close(iunit)
+    SAFE_DEALLOCATE_A(inside)
+    POP_SUB(local_restart)
+  end subroutine local_restart
   ! ---------------------------------------------------------
   subroutine local_inside_domain(lcl, ff, update)
     type(local_domain_t),   intent(inout) :: lcl
@@ -583,12 +670,15 @@ contains
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
-    character(len=64)   :: filename, base_folder, folder
+    character(len=MAX_PATH_LEN)   :: filename, base_folder, folder, frmt
+    character(len=140), allocatable  :: lines(:)
     type(restart_t)     :: restart
     
     PUSH_SUB(local_inside_domain)
 
     if (update) then
+      message(1) = 'Info: Assigning mesh points inside each local domain'
+      call messages_info(1)
       SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1)); ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
       if (any(lcl%dshape(:) == BADER)) then
         call add_dens_to_ion_x(ff2,sys%geo)
@@ -605,6 +695,8 @@ contains
           filename = 'basinsmap'
           call dio_function_output(how, &
             trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
+          call dio_function_output(how, &
+            trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
           call io_close(iunit)
         end if
         call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
@@ -619,16 +711,28 @@ contains
       base_folder = "./restart/"
       folder = "ld/"
       filename = "ldomains"
+      write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
+      call messages_info(1)
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
                     ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
       ff2 = M_ZERO
+      SAFE_ALLOCATE(lines(lcl%nd+2))
+      write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd
+      write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)')'#id','label','shape','Atom list','center of mass'
       do id = 1, lcl%nd
+        write(frmt,'(a,i0,a)')'(i3,1x,a15,1x,i5,1x,a80,1x',sys%space%dim,'(f10.6,1x))'
+        write(lines(id+2),fmt=trim(frmt))id, trim(lcl%lab(id)), lcl%dshape(id), trim(lcl%clist(id)),lcl%dcm(1:sys%space%dim, id)
         do ip = 1, sys%gr%mesh%np 
           if (lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
         end do
       end do
       call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
+
+      filename = "ldomains.info"
+      iunit = restart_open(restart, filename)
+      call restart_write(restart, iunit, lines, lcl%nd+2, ierr)
       call restart_end(restart)
+      SAFE_DEALLOCATE_A(lines)
     
       SAFE_DEALLOCATE_A(ff2)
     end if 
@@ -650,7 +754,7 @@ contains
     integer               :: max_check
     integer, allocatable  :: dunit(:), domain_map(:,:)
     FLOAT                 :: dmin
-    FLOAT, allocatable    :: xi(:), dble_domain_map(:,:)
+    FLOAT, allocatable    :: xi(:), dble_domain_map(:,:), domain_mesh(:)
     logical               :: extra_write
     character(len=64)     :: filename
 
@@ -694,11 +798,21 @@ contains
         call messages_input_error('LDOutputHow')
       end if
       SAFE_ALLOCATE(dble_domain_map(nd, sys%gr%mesh%np))
+      SAFE_ALLOCATE(domain_mesh(sys%gr%mesh%np))
+      dble_domain_map = M_ZERO
+      domain_mesh = M_ZERO
       do ip = 1, sys%gr%mesh%np
         do id = 1, nd
-          if (inside(ip, id)) dble_domain_map(id, ip) = DBLE(id)
+          if (inside(ip, id)) then 
+            dble_domain_map(id, ip) = DBLE(id)
+            domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
+          end if
         end do
       end do
+      
+      write(filename,'(a,a,a)')'domain.mesh'
+      call dio_function_output(how, &
+      trim('local.general'), trim(filename), sys%gr%mesh, domain_mesh(:) , unit_one, ierr, geo = sys%geo)
       
       do id = 1, nd
         write(filename,'(a,a,a)')'domain.',trim(lab(id))
@@ -706,6 +820,7 @@ contains
         trim('local.general'), trim(filename), sys%gr%mesh, dble_domain_map(id,:) , unit_one, ierr, geo = sys%geo)
       end do
       SAFE_DEALLOCATE_A(dble_domain_map)
+      SAFE_DEALLOCATE_A(domain_mesh)
     end if
 
     SAFE_DEALLOCATE_A(xi)

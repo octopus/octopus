@@ -208,7 +208,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, & 
-                              hm, ks, mc, geo, kick, iter, dt, l_start, ldoverwrite)
+                              hm, ks, mc, geo, kick, iter, dt, l_start, l_end, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     integer,                intent(in)    :: nd 
     type(box_union_t),      intent(in)    :: domain(:)
@@ -225,6 +225,7 @@ contains
     integer,                intent(in)    :: iter
     FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: l_start
+    integer,                intent(in)    :: l_end
     logical,                intent(in)    :: ldoverwrite
 
     type(profile_t), save :: prof
