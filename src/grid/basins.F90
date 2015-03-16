@@ -183,7 +183,10 @@ contains
             point2(3) = point2(3) + zz
 
             index = index_from_coords(mesh%idx, point2)
-
+            !From global to local
+#ifdef HAVE_MPI2
+            index = vec_global2local(mesh%vp, index, mesh%vp%partno)
+#endif
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle
 
