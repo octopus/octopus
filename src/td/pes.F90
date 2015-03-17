@@ -181,7 +181,10 @@ contains
     !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
     !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
     !%Option pes_flux 8
-    !% Calculate the photo-electron spectrum using the t-surff technique.
+    !% Calculate the photo-electron spectrum using the t-surff technique, i.e., 
+    !% spectra are computed from the electron flux through a surface close to the absorbing 
+    !% boundaries of the box. 
+    !% L. Tao and A. Scrinzi, <i>New Journal of Physics</i> <b>14</b>, 013021 (2012).
     !%End
 
     call parse_integer('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
