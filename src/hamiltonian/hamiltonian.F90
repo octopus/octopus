@@ -61,7 +61,6 @@ module hamiltonian_m
   use simul_box_m
   use smear_m
   use species_m
-  use ssys_hamiltonian_m
   use states_m
   use states_dim_m
   use types_m
@@ -123,7 +122,6 @@ module hamiltonian_m
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
-    type(ssys_hamiltonian_t), pointer :: subsys_hm !< Subsystems Hamiltonian.
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
@@ -222,14 +220,13 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, subsys_hm)
-    type(hamiltonian_t),                        intent(out)   :: hm
-    type(grid_t),                       target, intent(inout) :: gr
-    type(geometry_t),                   target, intent(inout) :: geo
-    type(states_t),                     target, intent(inout) :: st
-    integer,                                    intent(in)    :: theory_level
-    integer,                                    intent(in)    :: xc_family
-    type(ssys_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family)
+    type(hamiltonian_t),      intent(out)   :: hm
+    type(grid_t),     target, intent(inout) :: gr
+    type(geometry_t), target, intent(inout) :: geo
+    type(states_t),   target, intent(inout) :: st
+    integer,                  intent(in)    :: theory_level
+    integer,                  intent(in)    :: xc_family
 
     integer :: iline, icol
     type(states_dim_t), pointer :: states_dim
@@ -296,13 +293,6 @@ contains
     !cmplxscl: copy cmplxscl initialized in states.F90
     call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
 
-    nullify(hm%subsys_hm)
-    if(present(subsys_hm))then
-      ! Set Subsystems Hamiltonian pointer.
-      ASSERT(.not.hm%cmplxscl%space)
-      hm%subsys_hm=>subsys_hm
-    end if
-
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -350,7 +340,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space, subsys_hm)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
@@ -574,8 +564,6 @@ contains
     PUSH_SUB(hamiltonian_end)
 
     call hamiltonian_base_end(hm%hm_base)
-
-    nullify(hm%subsys_hm)
 
 #ifdef HAVE_OPENCL
     if(associated(hm%phase) .and. opencl_is_enabled()) then
