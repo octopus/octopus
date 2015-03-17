@@ -68,16 +68,16 @@ Util : util-name
 Input : file-name
   Perform a run, after copying the input file to working directory.
 match ; name ; COMMAND(..); reference-value
-  Extracts a calculated number from a run and tests it against the reference value. The name is an identifier printed to output. The number is extracted as the standard output from the listed COMMAND, after filtering to remove non-numeric results. The COMMAND is one of this set:
-  . GREP(filename, 'search-regex', column, offset)
-      Finds the first line in file containing 'search-regex' (a regular expression passed to the 'grep' command, and which MAY NOT contain a comma), and returns the specified column of that line. The optional 'offset' directs the use of that many lines after the line containing 'search-regex'. No offset specified is equivalent to offset = 0. If there are multiple occurrences of 'search-regex', the first one will be used. This is the most robust of the commands to changes in output formatting, and should be used when possible in preference to the others.
-  . GREPFIELD(filename, 'search-text', field, offset)
-      Like GREP except returns the specified field of that line. "Field" is meant in the sense used by 'awk', i.e. the line is parsed into white-space separated groups, indexed starting with 1.
+  Extracts a calculated number from a run and tests it against the reference value. The name is an identifier printed to output. The number is extracted as the standard output from the listed COMMAND, after filtering to remove non-numeric results. Note that an internal comma in the filename can be escaped as '\,'. Also, '_COMMA_' will be converted to ',' and '_COLUMN_' to ';' in any parameters. The COMMAND is one of this set:
+  . GREPFIELD(filename, 'search-regex', field, offset)
+      Finds the first line in file containing 'search-regex' (a regular expression passed to the 'grep' command, and which MAY NOT contain a comma), and returns the specified field of that line. "Field" is meant in the sense used by 'awk', i.e. the line is parsed into white-space separated groups, indexed starting with 1. The optional 'offset' directs the use of that many lines after the line containing 'search-regex'. No offset specified is equivalent to offset = 0. If there are multiple occurrences of 'search-regex', the first one will be used. This is the most robust of the commands to changes in output formatting, and should be used when possible in preference to the others.
+  . GREP(filename, 'search-text', column, offset)
+      Like GREPFIELD except returns the specified column of that line, i.e. a string from the nth character to the next whitespace. Deprecated.
   . SIZE(filename)
       Returns the size of the specified file via 'ls -lt'. Useful for binary files whose contents cannot easily be checked.
-  . LINE(filename, line, column)
-      Returns the specified column of the specified line number from the file. Negative number means from the end of the file. Use GREP instead if possible.
   . LINEFIELD(filename, line, field)
       Returns the specified field of the specified line number from the file. Negative number means from the end of the file. Use GREPFIELD instead if possible.      
+  . LINE(filename, line, column)
+      Returns the specified column of the specified line number from the file. Negative number means from the end of the file. Use GREP instead if possible. Deprecated.
   . SHELL(shell-command)
       The result is the standard output of the listed command. Deprecated; use GREP(FIELD) or LINE(FIELD) unless absolutely necessary.
