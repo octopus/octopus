@@ -247,6 +247,11 @@ if [ -z $OCT_TEST_NJOBS] ; then
     if [ -x `which nproc` ] ; then
 	OCT_TEST_NJOBS=`nproc`
     fi
+
+    # execute the commands using nice, to lower the priority and avoid core anxiety
+    if [ -z $EXEC ] && [ -x `which nice` ] ; then
+	export EXEC=`which nice`
+    fi
 fi
 
 # Find testfiles.
