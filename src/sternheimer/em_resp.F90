@@ -150,6 +150,10 @@ contains
       call messages_fatal(1)
     endif
 
+    ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
+    ! Otherwise, this line is a tautology.
+    complex_response = states_are_complex(sys%st)
+
     if (states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
     else

@@ -148,6 +148,10 @@ contains
       call messages_fatal(1)
     endif
 
+    ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
+    ! Otherwise, this line is a tautology.
+    complex_response = states_are_complex(sys%st)
+
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
