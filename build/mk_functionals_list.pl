@@ -40,7 +40,7 @@ EndOfUsage
 $top_srcdir = ($opt_s ? $opt_s : ".");
 $top_builddir = ($opt_b ? $opt_b : ".");
 
-$src   = "$top_srcdir/src/xc";
+$src   = "$top_srcdir/src/hamiltonian";
 $funct = "$top_builddir/libxc/src/xc_funcs.h";
 
 if(!-d $src && !-f $funct) {

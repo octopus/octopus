@@ -19,7 +19,22 @@
 ##
 ## $Id$
 
-SUBDIRS = include basic math species ions grid poisson frozen states \
-	xc hamiltonian system scf td opt_control sternheimer main utils
-
+SUBDIRS =                \
+	include          \
+	basic            \
+	math             \
+	species          \
+	ions             \
+	grid             \
+	poisson          \
+	frozen           \
+	states           \
+	hamiltonian      \
+	system           \
+	scf              \
+	td               \
+	opt_control      \
+	sternheimer      \
+	main             \
+	utils
 
