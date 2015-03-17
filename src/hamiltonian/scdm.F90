@@ -85,21 +85,21 @@ module scdm_m
     FLOAT, pointer   :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
     FLOAT            :: rcut        !< orbital cutoff radius (box size) NOTE: this could be dynamic and state dependent
     integer          :: box_size    !< number of mesh points in the dimension of local box around scdm states 
-    !! NOTE: this could be dynamic and state dependent
-    integer          :: full_box    !< = (2*(2*box_size+1))**3, i.e. number of points in box
+                                    !! NOTE: this could be dynamic and state dependent
+    integer          :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
     type(mesh_t)     :: boxmesh     !< mesh describing the small box
     type(cube_t)     :: boxcube     !< cube of the small box (used for fft in poisson solver
-    !! has doubled size for truncation)
+                                    !! has doubled size for truncation)
     integer, pointer :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
     FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
     CMPLX, pointer   :: zpsi(:,:)   ! ^
     type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
     type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
     type(cmplxscl_t)    :: cmplxscl
-    logical, pointer :: periodic(:) !< tracks whcih scdm states are split by the periodic boundary conditions
+    logical, pointer :: periodic(:) !< tracks which scdm states are split by the periodic boundary conditions
 
     logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
-    logical          :: verbose     !< write infor about SCDM procedure
+    logical          :: verbose     !< write info about SCDM procedure
 
     ! parallelization of scdm states
     logical          :: root        !< this is a redundat flag equal to mesh%vp%rank==0
@@ -119,6 +119,10 @@ module scdm_m
 
 contains
 
+  !> this initializes the states and solver to compute exact exchange using the method described in
+  !> A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
+  !>                            selected columns of the density matrix
+  !> http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
   subroutine scdm_init(st,der,scdm)
     
     type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
@@ -145,7 +149,6 @@ contains
     if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
          call messages_not_implemented("SCDM with mixed-periodicity")  
 
-!    scdm%root = (der%mesh%vp%rank == 0)
 #if HAVE_MPI
     call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
 #endif
@@ -180,7 +183,6 @@ contains
       call messages_print_var_value(stdout,'SCDM box_size', scdm%box_size)
       call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*0.529177249)
     end if
-    !    scdm%full_box = (2*(2*scdm%box_size+1))**3
     scdm%full_box = (2*scdm%box_size+1)**3
     !check if scdm is not bigger than fft-grid of full simualtion cell  
     if (scdm%full_box > der%mesh%np_global) then
@@ -195,7 +197,7 @@ contains
     SAFE_ALLOCATE(istart(1:der%mesh%mpi_grp%size))
     SAFE_ALLOCATE(iend(1:der%mesh%mpi_grp%size))
     SAFE_ALLOCATE(ilsize(1:der%mesh%mpi_grp%size))
-    !
+
     call multicomm_divide_range(st%nst, der%mesh%mpi_grp%size, istart, iend, lsize=ilsize)
     scdm%st_start = istart(der%mesh%vp%rank+1)
     scdm%st_end = iend(der%mesh%vp%rank+1)
@@ -210,7 +212,7 @@ contains
       else
         SAFE_ALLOCATE(scdm%st%zpsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%lnst,1:scdm%st%d%nik))
       end if
-      ! localized SCDM states defined on box twice their size for coulomb truncation
+      ! localized SCDM states 
       SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%lnst))
     else ! real
       if (scdm%root) then
@@ -218,7 +220,7 @@ contains
       else
         SAFE_ALLOCATE(scdm%st%dpsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%lnst, 1:scdm%st%d%nik))
       end if
-      ! localized SCDM states defined on box twice their size for coulomb truncation
+      ! localized SCDM states
       SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%lnst))
     end if
     
@@ -233,7 +235,7 @@ contains
     scdm%boxmesh%sb%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
     scdm%boxmesh%sb%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
 
-    !set mesh points with double size for coulomb truncation
+    !set mesh points 
     scdm%boxmesh%np = scdm%full_box
     scdm%boxmesh%np_global = scdm%boxmesh%np
     scdm%boxmesh%np_part = scdm%boxmesh%np_global
@@ -269,43 +271,40 @@ contains
     call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
 
     ! create a cube object for the small box, with double size for coulomb truncation
-    ! instead,this should be used to enlarge the box, but then need to keep track of dimension:
-    !call mesh_double_box(scdm%boxmesh%sb, scdm%boxmesh, 2._8, temp)
-
 !    call cube_init(scdm%boxcube, scdm%boxmesh%idx%ll, scdm%boxmesh%sb, &
 !               fft_type=FFT_REAL, fft_library=FFTLIB_FFTW, dont_optimize = .true.)
  
     ! without nfft we have to double the box 
 #ifndef HAVE_NFFT
-   if (der%mesh%sb%periodic_dim > 0) call messages_not_implemented("periodic SSCDM  without NFFT library")  
-   box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
-   call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+    if (der%mesh%sb%periodic_dim > 0) call messages_not_implemented("periodic SSCDM  without NFFT library")  
+    box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
+    call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
 # else ! nfft case
-   box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
-   if (der%mesh%sb%periodic_dim.eq.3) then
-     !enlargement factor to fit he simulationbox boundary
-     ! ??? not sure
-     enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
-     
-   else ! non-periodic case
-     enlarge = M_TWO
-   end if
-   call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, &
-        fft_type=FFT_COMPLEX, fft_library=FFTLIB_NFFT, &
-        tp_enlarge=enlarge,spacing=der%mesh%spacing)
-   !call cube_init(scdm%boxcube, box*2, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+    box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
+    if (der%mesh%sb%periodic_dim.eq.3) then
+      !enlargement factor to fit he simulationbox boundary
+      ! ??? not sure
+      enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
+      
+    else ! non-periodic case
+      enlarge = M_TWO
+    end if
+    call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, &
+         fft_type=FFT_COMPLEX, fft_library=FFTLIB_NFFT, &
+         tp_enlarge=enlarge,spacing=der%mesh%spacing)
+    !call cube_init(scdm%boxcube, box*2, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
 #endif 
-
+    
     ! Joseba recommends including this
     !if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
     !    call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
     !end if
-
+    
     ! set up poisson solver used for the exchange operator with scdm states
     ! this replictaes poisson_kernel_init()
     scdm%poisson%poisson_soft_coulomb_param = M_ZERO
     call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
-!call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_NOCUT)
+    !call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_NOCUT)
 
     ! create poisson object
     SAFE_ALLOCATE(scdm%poisson%der)
@@ -320,7 +319,7 @@ contains
     scdm_is_init = .true.
 
     call messages_write('done SCDM init')
-
+    
     POP_SUB(scdm_init)
   end subroutine scdm_init
 
@@ -338,36 +337,31 @@ contains
 
     PUSH_SUB(dRRQR)
     ! dummy call to obtain dimension of work
-    ! FIXME change with SAFE_
-    allocate(work(1))
+    SAFE_ALLOCATE(work(1))
     call DGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, info )
     if (info /= 0) then
-      ! FIXME change with messages_fatal
-      print *, 'Illegal argument in DGEQP3: ', info
-      stop
+      write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
+      call messages_fatal(1)
     end if
     ! Note: scalapack routine is called P?GEQPF()
 
     lwork = work(1)
-    ! FIXME change with SAFE_
-    deallocate(work)
-    ! FIXME change with SAFE_
-    allocate(work(lwork))
+    SAFE_DEALLOCATE_A(work)
+    SAFE_ALLOCATE(work(lwork))
 
     jpvt(:) = 0
     tau(:) = 0.
     ! actual call
     call DGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, info)
     if (info /= 0) then
-      ! FIXME change with messages_fatal
-      print *, 'Illegal argument in DGEQP3: ', info
-      stop
+      write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
+      call messages_fatal(1)
     end if
 
     POP_SUB(dRRQR)
   end subroutine dRRQR
 
-  !> wrapper routine for complex rank-revealing QR decompisition
+  !> wrapper routine for complex rank-revealing QR decomposition
   !! of the n*np matrix kst, returning the pivot vector jpvt
   subroutine zRRQR(nn, np, kst, jpvt)
     integer, intent(in)  :: nn
@@ -382,37 +376,32 @@ contains
 
     PUSH_SUB(zRRQR)
     ! dummy call to obtain dimension of work
-    ! FIXME change with SAFE_
-    allocate(work(1))
+    SAFE_ALLOCATE(work(1))
     call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, rwork, info)
     if (info /= 0) then
-      ! FIXME change with messages_fatal
-      print *, 'Illegal argument in ZGEQP3: ', info
-      stop
+      write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+      call messages_fatal(1)
     end if
     ! Note: scalapack routine is called P?GEQPF()
 
     lwork = work(1)
-    ! FIXME change with SAFE_
-    deallocate(work)
-    ! FIXME change with SAFE_
-    allocate(work(lwork))
+    SAFE_DEALLOCATE_A(work)
+    SAFE_ALLOCATE(work(lwork))
 
     jpvt(:) = 0
     tau(:) = 0.
     ! actual call
     call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, rwork, info)
     if (info /= 0)then
-      ! FIXME change with messages_fatal
-      print *, 'Illegal argument in ZGEQP3: ', info
-      stop
+      write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+      call messages_fatal(1)
     end if
 
     POP_SUB(zRRQR)
   end subroutine zRRQR
 
   !> check if there are points outside simulation cell (index range of idx) by
-  !! checking the corners only. This is inteded for rectangular cells
+  !! checking the corners only. This is intended for rectangular cells
   !! should be generalized to arbitrary shapes (but then need to check the faces)
   subroutine check_periodic_box(idx,center,size,periodic)
     type(index_t),    intent(in)  :: idx

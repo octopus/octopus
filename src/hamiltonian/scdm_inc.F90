@@ -25,7 +25,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   type(mesh_t), intent(in)   :: mesh
   type(scdm_t) :: scdm
 
-  integer :: ii, jj, kk, ll, vv, count, ip, nval, INFO,i1, i2, i3, idim, j1, j2, j3
+  integer :: ii, jj, kk, ll, vv, count, ip, nval, info,i1, i2, i3, idim, j1, j2, j3
   integer :: JPVT(mesh%np_global)
   integer :: icenter(3), ind_center
 
@@ -51,7 +51,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   if (st%lnst /= st%nst) call messages_not_implemented("SCDM with state parallelization")
   nval = st%nst ! TODO: check that this is really the number of valence states
 
-  ! built transpose of KS set on which RRQR is performed
+  ! build transpose of KS set on which RRQR is performed
   if (scdm%root) then
     SAFE_ALLOCATE(KSt(nval,mesh%np_global))
     ! keep a copy of this NOTE: maybe too expensive in memory?
@@ -90,7 +90,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   ! perform the RRQR
   scdm%st%X(psi)(:,:,:,:) = M_ZERO ! this is important for distribution later
   ! Note: this should be parallelized, once it is clear that we would save time 
-  !---! ----------------------------- SERIAL START --------------------------------
+!---! ----------------------------- SERIAL START --------------------------------
   if(scdm%root) then
 
     call X(RRQR)(nval,mesh%np_global,KSt,JPVT)
@@ -99,8 +99,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
     SAFE_DEALLOCATE_A(KSt)
 
-    ! form SCDM Note: This could be done in one step together with the orhtogonalization
-    !                 to save this allocation
+    ! form SCDM, Note: This could be done in one step together with the orhtogonalization
+    !                  to save this allocation
     SAFE_ALLOCATE(SCDM_temp(mesh%np_global,nval))
     SCDM_temp(:,:) = M_ZERO
     do ii = 1, nval
@@ -127,13 +127,14 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul2:',t2-t1)
     ! Cholesky fact.
-    call X(POTRF)("L", nval, Pcc, nval, INFO )
-    if (INFO /= 0) then
-      if (INFO < 0) then
-        ! FIXME use messages_warning
-        print *, 'Illegal argument in DPOTRF: ', INFO
+    call X(POTRF)("L", nval, Pcc, nval, info )
+    if (info /= 0) then
+      if (info < 0) then
+        write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
+        call messages_fatal(1)
       else
-        print *, 'Fail of Cholesky, not pos-semi-def '
+        message(1) = 'Fail of Cholesky, not pos-semi-def '
+        call messages_fatal(1)
       endif
       stop
     endif
@@ -165,7 +166,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       scdm%st%X(psi)(:,1,vv,1) = scdm%st%X(psi)(:,1,vv,1)/&
            (sqrt(dot_product(scdm%st%X(psi)(:,1,vv,1),scdm%st%X(psi)(:,1,vv,1))*mesh%volume_element))
       !this should be used ../X(mf_nrm2)(mesh,scdm%st%X(psi)(:,1,v,1))
-      ! but doensnt work with parallelization
+      ! but doesnt work with parallelization
     end do
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout,  'time: norms',t2-t1)
@@ -194,14 +195,14 @@ subroutine X(scdm_localize)(st,mesh,scdm)
         scdm%center(ii,vv) = sum(scdm%st%X(psi)(:,st%d%dim,vv,scdm%st%d%nik)*R_CONJ(scdm%st%X(psi)(:,st%d%dim,vv,scdm%st%d%nik))* &
              mesh%idx%lxyz(1:mesh%np_global,ii)*mesh%spacing(ii))*mesh%volume_element
       end do
-      write(127,*) scdm%center(:,vv)
+      !write(127,*) scdm%center(:,vv)
     end do
-    close(127)
+    !close(127)
     call cpu_time(t2)
     if (scdm%verbose) call messages_print_var_value(stdout, 'time: find centers',t2-t1)
   end if
 
-  !---! --------------------- SERIAL END ------------------------------------
+!---! --------------------- SERIAL END ------------------------------------
 
 #if HAVE_MPI
   call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
@@ -256,8 +257,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
            icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
            icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
     else
-      ! FIXME change with messages_info
-      print *, 'copy periodic state', count
       ! in case there are periodic replica go through every point
       do i1 = -scdm%box_size, scdm%box_size
         do i2 = -scdm%box_size, scdm%box_size
@@ -301,15 +300,14 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     do jj = 1, scdm%box_size*2+1
       do kk = 1, scdm%box_size*2+1
         do ll = 1, scdm%box_size*2+1
-          ! map into the twice larger box
-          !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
+          ! map into the box
           ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
           scdm%X(psi)(ip,count) = scdm%st%X(psi)(scdm%box(jj,kk,ll,count),st%d%dim,count,scdm%st%d%nik)
         end do
       end do
     end do
 
-    ! compue localization error
+    ! compute localization error
     error_tmp = error_tmp + M_ONE - dot_product(scdm%X(psi)(:,count),scdm%X(psi)(:,count))*mesh%volume_element
 
     ! re-normalize inside box
@@ -481,12 +479,12 @@ subroutine X(invert)(nn, A)
     allocate(work(lwork*2))
     call X(getri)(nn, A, nn, ipiv, work, lwork, ierror )
   else
-    ! FIXME change with messages_fatal
-    stop 'Terminating due to failed LU decomp'
+    message(1) = 'Terminating due to failed LU decomp'
+    call messages_fatal(1)
   end if
   if (ierror /= 0) then
-    ! FIXME change with messages_fatal
-    stop 'Terminating due to failed inversion'
+    message(1) = 'Terminating due to failed inversion'
+    call messages_fatal(1)
   end if
   deallocate(work)
 
