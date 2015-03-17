@@ -110,7 +110,7 @@ contains
   !! calls the proper function.
   subroutine local_domains()
     type(local_domain_t)           :: local
-    integer                        :: err, iter, l_start, l_end, l_step, last_slash
+    integer                        :: err, iter, l_start, l_end, l_step
     integer                        :: ia, n_spec_def, read_data, iunit, ispec
     integer                        :: length, folder_index
     FLOAT                          :: default_dt, dt
@@ -336,13 +336,10 @@ contains
       end if
 
       ! Look for the mesh points inside local domains
-      ! Read in restart file
       if(iter == l_start .and. .not.ldrestart) then
-        if (.not.ldrestart) then
-        call local_inside_domain(local, sys%st%rho(:,1), .true.)
-        end if
+        call local_inside_domain(local, sys%st%rho(:,1))
       else
-        call local_inside_domain(local, sys%st%rho(:,1), ldupdate)
+        if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
       end if
 
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
@@ -631,7 +628,7 @@ contains
     type(local_domain_t), intent(inout) :: lcl
     type(restart_t),      intent(in)    :: restart
 
-    integer                     :: id, ip, iunit, ierr, how
+    integer                     :: id, ip, iunit, ierr
     character(len=MAX_PATH_LEN) :: filename, folder, tmp
     FLOAT, allocatable          :: inside(:)
 
@@ -661,10 +658,9 @@ contains
     POP_SUB(local_restart)
   end subroutine local_restart
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(lcl, ff, update)
+  subroutine local_inside_domain(lcl, ff)
     type(local_domain_t),   intent(inout) :: lcl
     FLOAT,                  intent(in)    :: ff(:)
-    logical,                intent(in)    :: update
     
     integer             :: how, id, ip, iunit, ierr
     type(basins_t)      :: basins
@@ -676,66 +672,65 @@ contains
     
     PUSH_SUB(local_inside_domain)
 
-    if (update) then
-      message(1) = 'Info: Assigning mesh points inside each local domain'
-      call messages_info(1)
-      SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1)); ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
-      if (any(lcl%dshape(:) == BADER)) then
-        call add_dens_to_ion_x(ff2,sys%geo)
-        call basins_init(basins, sys%gr%mesh)
-        call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
-        call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-        call parse_logical('LDExtraWrite', .false., extra_write)
-        call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
-        if (extra_write) then
-          call parse_integer('LDOutputHow', 0, how)
-          if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-            call messages_input_error('LDOutputHow')
-          end if
-          filename = 'basinsmap'
-          call dio_function_output(how, &
-            trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
-          call dio_function_output(how, &
-            trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
-          call io_close(iunit)
+    message(1) = 'Info: Assigning mesh points inside each local domain'
+    call messages_info(1)
+    SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1))
+    ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
+    if (any(lcl%dshape(:) == BADER)) then
+      call add_dens_to_ion_x(ff2,sys%geo)
+      call basins_init(basins, sys%gr%mesh)
+      call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
+      call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
+      call parse_logical('LDExtraWrite', .false., extra_write)
+      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
+      if (extra_write) then
+        call parse_integer('LDOutputHow', 0, how)
+        if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
+          call messages_input_error('LDOutputHow')
         end if
-        call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
-      else
-        do id = 1, lcl%nd
-          call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
-        end do
-        call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+        filename = 'basinsmap'
+        call dio_function_output(how, &
+          trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, &
+          trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
+        call io_close(iunit)
       end if
-
-    ! Write restart file for local domains
-      base_folder = "./restart/"
-      folder = "ld/"
-      filename = "ldomains"
-      write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
-      call messages_info(1)
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
-                    ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
-      ff2 = M_ZERO
-      SAFE_ALLOCATE(lines(lcl%nd+2))
-      write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd
-      write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)')'#id','label','shape','Atom list','center of mass'
+      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+    else
       do id = 1, lcl%nd
-        write(frmt,'(a,i0,a)')'(i3,1x,a15,1x,i5,1x,a80,1x',sys%space%dim,'(f10.6,1x))'
-        write(lines(id+2),fmt=trim(frmt))id, trim(lcl%lab(id)), lcl%dshape(id), trim(lcl%clist(id)),lcl%dcm(1:sys%space%dim, id)
-        do ip = 1, sys%gr%mesh%np 
-          if (lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
-        end do
+        call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
       end do
-      call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
+      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+    end if
 
-      filename = "ldomains.info"
-      iunit = restart_open(restart, filename)
-      call restart_write(restart, iunit, lines, lcl%nd+2, ierr)
-      call restart_end(restart)
-      SAFE_DEALLOCATE_A(lines)
+    !Write restart file for local domains
+    base_folder = "./restart/"
+    folder = "ld/"
+    filename = "ldomains"
+    write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
+    call messages_info(1)
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
+                  ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+    ff2 = M_ZERO
+    SAFE_ALLOCATE(lines(lcl%nd+2))
+    write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd
+    write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)')'#id','label','shape','Atom list','center of mass'
+    do id = 1, lcl%nd
+      write(frmt,'(a,i0,a)')'(i3,1x,a15,1x,i5,1x,a80,1x',sys%space%dim,'(f10.6,1x))'
+      write(lines(id+2),fmt=trim(frmt))id, trim(lcl%lab(id)), lcl%dshape(id), trim(lcl%clist(id)),lcl%dcm(1:sys%space%dim, id)
+      do ip = 1, sys%gr%mesh%np 
+        if (lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id) 
+      end do
+    end do
+    call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
+
+    filename = "ldomains.info"
+    iunit = restart_open(restart, filename)
+    call restart_write(restart, iunit, lines, lcl%nd+2, ierr)
+    call restart_end(restart)
+    SAFE_DEALLOCATE_A(lines)
     
-      SAFE_DEALLOCATE_A(ff2)
-    end if 
+    SAFE_DEALLOCATE_A(ff2)
     
     POP_SUB(local_inside_domain)
 
