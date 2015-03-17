@@ -120,9 +120,9 @@ module scdm_m
 contains
 
   !> this initializes the states and solver to compute exact exchange using the method described in
-  !> A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
-  !>                            selected columns of the density matrix
-  !> http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
+  !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
+  !!                            selected columns of the density matrix
+  !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
   subroutine scdm_init(st,der,scdm)
     
     type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
