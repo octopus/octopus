@@ -4,8 +4,7 @@ CalculationMode = td
  'Al' | 0.0 | 0.0 | 0.0
 %
 
-PseudopotentialSet = hgh
-ExperimentalFeatures = yes
+PseudopotentialSet = hgh_lda
 
 Radius = 6.0
 Spacing = 0.5

@@ -5,8 +5,7 @@ CalculationMode = gs
 
 FromScratch = yes
 
-PseudopotentialSet = hgh
-ExperimentalFeatures = yes
+PseudopotentialSet = hgh_lda
 
 %Coordinates
   "Ar" | 0 | 0 | 0

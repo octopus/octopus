@@ -26,7 +26,7 @@ ppdir = $(pkgdatadir)/pseudopotentials
 dist_pp_DATA =           \
 	standard.set     \
 	sg15.set         \
-	hgh.set          \
+	hgh_lda.set      \
 	elements
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use

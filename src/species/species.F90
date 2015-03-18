@@ -101,11 +101,6 @@ module species_m
     SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
     SPECIES_SOFT_COULOMB   = 128              !< soft-Coulomb potential
 
-  integer, public, parameter ::             &
-    PSEUDO_SET_STANDARD = 1,                &
-    PSEUDO_SET_SG15     = 2,                &
-    PSEUDO_SET_HGH      = 3
-
   type species_t
     private
     integer :: index                  !< just a counter
@@ -218,14 +213,19 @@ contains
     !% PBE pseudopotentials developed by Schlipf and Gygi (M. Schlipf
     !% and F. Gygi, (2015) arXiv:1502.00995). This set provides
     !% pseudopotentials for most elements.
-    !%Option hgh 3
-    !% (experimental) The set of Hartwigsen-Goedecker-Hutter pseudopotentials.
+    !%Option hgh_lda 3
+    !% The set of Hartwigsen-Goedecker-Hutter [1] LDA pseudopotentials
+    !% for elements from H to Rn. For many species a semi-core variant
+    !% is available, it can be obtained by appending _sc to the
+    !% element name.
+    !%
+    !% [1] C. Hartwigsen, S. Goedecker, and J. Hutter Phys. Rev. B 58, 3641, (1998).
+    !%
     !%End
 
-    call parse_integer('PseudopotentialSet', PSEUDO_SET_STANDARD, pseudo_set)
+    call parse_integer('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
-    if(pseudo_set == PSEUDO_SET_SG15) call messages_experimental('PseudopotentialSet = sg15')
-    if(pseudo_set == PSEUDO_SET_HGH) call messages_experimental('PseudopotentialSet = hgh')
+    if(pseudo_set == OPTION_SG15) call messages_experimental('PseudopotentialSet = sg15')
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -453,12 +453,12 @@ contains
 
     ! Find out if the species is in the pseudo potential set
     select case(pseudo_set)
-    case(PSEUDO_SET_STANDARD)
+    case(OPTION_STANDARD)
       fname = trim(conf%share)//'/pseudopotentials/standard.set'
-    case(PSEUDO_SET_SG15)
+    case(OPTION_SG15)
       fname = trim(conf%share)//'/pseudopotentials/sg15.set'
-    case(PSEUDO_SET_HGH)
-      fname = trim(conf%share)//'/pseudopotentials/hgh.set'
+    case(OPTION_HGH_LDA)
+      fname = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
     case default
       ASSERT(.false.)
     end select

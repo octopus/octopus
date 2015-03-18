@@ -10,9 +10,7 @@ BoxShape = minimum
 Radius  = 5.0
 Spacing = 0.35
 
-PseudopotentialSet = hgh
-
-ExperimentalFeatures = yes
+PseudopotentialSet = hgh_lda
 
 %Coordinates
   "Xe" | -1.5 | 0 | 0 
