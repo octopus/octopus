@@ -66,11 +66,12 @@ contains
 
     !%Variable FeastMaxIter
     !%Type integer 
+    !%Default 20
     !%Section SCF::Eigensolver::FEAST
     !%Description 
     !% Maximum number of extra iterations that the FEAST eigensolver
     !% will perform per SCF step.  Must be >= 0.  0 means that only
-    !% one iteration will be done.  Default is 20.
+    !% one iteration will be done.
     !%End     
     call parse_integer('FeastMaxIter', 20, this%maxiter)
 

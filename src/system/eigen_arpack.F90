@@ -92,10 +92,10 @@ contains
     !%Description 
     !% Use this tolerance in Arpack when the relative density error is
     !% approximately 1. As the relative density error becomes lower,
-    !% use a tolerance in between this value and EigenSolverTolerance
+    !% use a tolerance in between this value and <tt>EigenSolverTolerance</tt>.
     !% approaching the latter as the SCF cycle converges. This
     !% parameter is ignored if given a non-positive value (default).
-    !% In that case EigenSolverTolerance is used always.
+    !% In that case <tt>EigenSolverTolerance</tt> is used always.
     !%End 
     call parse_float('ArpackInitialTolerance', M_ZERO, this%initial_tolerance)
     
@@ -127,9 +127,9 @@ contains
     !%Section SCF::Eigensolver::ARPACK
     !%Description 
     !% This indicates how many Arnoldi vectors are generated 
-    !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2. 
+    !% It must satisfy <tt>EigenSolverArnoldiVectors</tt> - <tt>Number Of Eigenvectors</tt> >= 2. 
     !% See the ARPACK documentation for more details. It will default to  
-    !% twice the number of eigenvectors (which is the number of states) 
+    !% twice the number of eigenvectors (which is the number of states).
     !%End 
     call parse_integer('EigensolverArnoldiVectors', 2*nst, this%arnoldi_vectors) 
     if(this%arnoldi_vectors - nst < M_TWO) call messages_input_error('EigensolverArnoldiVectors') 
@@ -171,7 +171,7 @@ contains
     !%Option rand 0
     !% Random residual vector.
     !%Option calc 1
-    !% resid = H*psi - epsilon*psi.
+    !% <math>resid = H*\psi - \epsilon*\psi</math>.
     !%End
     call parse_integer('EigensolverArpackInitialResid', 2, this%init_resid)
     if(.not.varinfo_valid_option('EigensolverArpackInitialResid', this%init_resid))&
