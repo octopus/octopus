@@ -590,6 +590,7 @@ contains
         write(message(1),'(a)') 'Info: Starting SCF iteration.'
       else
         write(message(1),'(a)') 'Info: No SCF iterations will be done.'
+        ! we cannot tell whether it is converged.
         finish = .false.
       endif
       call messages_info(1)
@@ -865,8 +866,6 @@ contains
     case(MIXDENS)
       SAFE_DEALLOCATE_A(rhonew)
       SAFE_DEALLOCATE_A(zrhonew)
-    case(MIXNONE)
-      !       call v_ks_calc(ks, hm, st, geo)
     end select
 
     SAFE_DEALLOCATE_A(rhoout)
@@ -874,7 +873,7 @@ contains
     SAFE_DEALLOCATE_A(zrhoout)
     SAFE_DEALLOCATE_A(zrhoin)
 
-    if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
+    if(scf%max_iter > 0 .and. any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
       write(message(1),'(a)') 'Some of the states are not fully converged!'
       call messages_warning(1)
     endif
