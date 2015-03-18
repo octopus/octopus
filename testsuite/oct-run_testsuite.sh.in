@@ -243,16 +243,35 @@ while getopts "hnlp:d:cg:q:" opt ; do
 done
 shift $[ OPTIND - 1 ]
 
-if [ -z $OCT_TEST_NJOBS] ; then
-    if [ -x `which nproc` ] ; then
-	OCT_TEST_NJOBS=`nproc`
+if [ -z $OCT_TEST_NJOBS ] ; then
+
+    # some Linux
+    nproc=`which nproc 2> /dev/null`;
+    if [ -n $nproc ] && [ -x $nproc ]; then
+	OCT_TEST_NJOBS=`$nproc`
     fi
 
-    # execute the commands using nice, to lower the priority and avoid core anxiety
-    if [ -z $EXEC ] && [ -x `which nice` ] ; then
-	export EXEC=`which nice`
+    # Mac OSX
+    if [ -z $OCT_TEST_NJOBS ]; then
+	nproc=`which sysctl 2> /dev/null`
+	if [ -n $nproc ] && [ -x $nproc ]; then
+	    OCT_TEST_NJOBS=`$nproc -n hw.ncpu`
+	fi
+    fi
+
+    if [ -z $OCT_TEST_NJOBS ] ; then
+	OCT_TEST_NJOBS=1
+    fi
+
+    if [ $OCT_TEST_NJOBS -gt 1 ] && [ -z $EXEC ]; then
+	# execute the commands using nice, to lower the priority and avoid core anxiety
+	nice=`which nice 2> /dev/null`
+	if [ -n $nice ] && [ -x $nice ] ; then
+	    export EXEC=$nice
+	fi
     fi
 fi
+echo "Running $OCT_TEST_NJOBS jobs in parallel. Set environment variable OCT_TEST_NJOBS to adjust this."
 
 # Find testfiles.
 if [ -n "$directory" ]; then
@@ -285,10 +304,6 @@ if [ -z "$testfiles" ]; then
 else
     # Get epoch seconds at testsuite start.
     testsuite_start=$(date +%s) 
-
-    if [ -z $OCT_TEST_NJOBS ]; then
-	OCT_TEST_NJOBS=1
-    fi
 
     # trap signals, so we kill all children before dying
     trap "trap_kill" TERM INT
