@@ -57,13 +57,7 @@ module run_m
 
   private
   public ::                      &
-    run_init,                    &
-    run,                         &
-    run_end
-
-  type(system_t),      save :: sys
-  type(hamiltonian_t), save :: hm
-  type(profile_t),     save :: calc_mode_prof
+    run
 
   integer :: calc_mode_id
 
@@ -72,10 +66,83 @@ module run_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine run()
+  integer function get_resp_method()
+
+    PUSH_SUB(get_resp_method)
+    
+    !%Variable ResponseMethod
+    !%Type integer
+    !%Default sternheimer
+    !%Section Linear Response
+    !%Description
+    !% Some response properties can be calculated either via
+    !% Sternheimer linear response or by using finite
+    !% differences. You can use this variable to select how you want
+    !% them to be calculated, it applies to <tt>em_resp</tt> and <tt>vib_modes</tt>
+    !% calculation modes. By default, the Sternheimer linear-response
+    !% technique is used.
+    !%Option sternheimer 1
+    !% The linear response is obtained by solving a self-consistent
+    !% Sternheimer equation for the variation of the orbitals. This
+    !% is the recommended method.
+    !%Option finite_differences 2
+    !% Properties are calculated as a finite-differences derivative of
+    !% the energy obtained by several ground-state calculations. This
+    !% method, slow and limited only to static response, is kept
+    !% mainly because it is simple and useful for testing purposes.
+    !%End
+    
+    call parse_integer('ResponseMethod', LR, get_resp_method)
+
+    if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
+      call messages_input_error('ResponseMethod')
+    end if
+
+    POP_SUB(get_resp_method)
+  end function get_resp_method
+  
+  ! ---------------------------------------------------------
+  subroutine run(cm)
+    integer, intent(in) :: cm
+
+    type(system_t)      :: sys
+    type(hamiltonian_t) :: hm
+    type(profile_t)     :: calc_mode_prof
     logical :: fromScratch
 
     PUSH_SUB(run)
+
+    calc_mode_id = cm
+
+    call messages_print_stress(stdout, "Calculation Mode")
+    call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
+    call messages_print_stress(stdout)
+
+    call calc_mode_init()
+
+    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
+      call restart_module_init()
+
+      ! initialize FFTs
+      call fft_all_init()
+
+      call unit_system_init()
+      call system_init(sys, cm)
+      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+      
+      call messages_print_stress(stdout, 'Approximate memory requirements')
+      call memory_run(sys)
+      call messages_print_stress(stdout)
+
+      if(calc_mode_id /= CM_DUMMY) then
+        message(1) = "Info: Generating external potential"
+        call messages_info(1)
+        call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+        message(1) = "      done."
+        call messages_info(1)
+      end if
+    end if
+
 
 #ifdef HAVE_MPI2
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
@@ -162,85 +229,17 @@ contains
     endif
 #endif
 
-    POP_SUB(run)
-
-  end subroutine run
-  
-
-  ! ---------------------------------------------------------
-  integer function get_resp_method()
-
-    PUSH_SUB(get_resp_method)
-    
-    !%Variable ResponseMethod
-    !%Type integer
-    !%Default sternheimer
-    !%Section Linear Response
-    !%Description
-    !% Some response properties can be calculated either via
-    !% Sternheimer linear response or by using finite
-    !% differences. You can use this variable to select how you want
-    !% them to be calculated, it applies to <tt>em_resp</tt> and <tt>vib_modes</tt>
-    !% calculation modes. By default, the Sternheimer linear-response
-    !% technique is used.
-    !%Option sternheimer 1
-    !% The linear response is obtained by solving a self-consistent
-    !% Sternheimer equation for the variation of the orbitals. This
-    !% is the recommended method.
-    !%Option finite_differences 2
-    !% Properties are calculated as a finite-differences derivative of
-    !% the energy obtained by several ground-state calculations. This
-    !% method, slow and limited only to static response, is kept
-    !% mainly because it is simple and useful for testing purposes.
-    !%End
-    
-    call parse_integer('ResponseMethod', LR, get_resp_method)
-
-    if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
-      call messages_input_error('ResponseMethod')
-    end if
-
-    POP_SUB(get_resp_method)
-  end function get_resp_method
-  
-  ! ---------------------------------------------------------
-  subroutine run_init(cm)
-    integer, intent(in) :: cm
-
-    PUSH_SUB(run_init)
-
-    calc_mode_id = cm
-
-    call messages_print_stress(stdout, "Calculation Mode")
-    call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
-    call messages_print_stress(stdout)
-
-    call calc_mode_init()
-
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      call restart_module_init()
-
-      ! initialize FFTs
-      call fft_all_init()
-
-      call unit_system_init()
-      call system_init(sys, cm)
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      
-      call messages_print_stress(stdout, 'Approximate memory requirements')
-      call memory_run(sys)
-      call messages_print_stress(stdout)
-
-      if(calc_mode_id /= CM_DUMMY) then
-        message(1) = "Info: Generating external potential"
-        call messages_info(1)
-        call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
-        message(1) = "      done."
-        call messages_info(1)
-      end if
+      call hamiltonian_end(hm)
+      call system_end(sys)
+      call fft_all_end()
     end if
 
-    POP_SUB(run_init)
+#ifdef HAVE_MPI
+    call mpi_debug_statistics()
+#endif
+
+    POP_SUB(run)
 
   contains
 
@@ -260,26 +259,7 @@ contains
       POP_SUB(calc_mode_init)
     end subroutine calc_mode_init
 
-  end subroutine run_init
-
-
-  ! ---------------------------------------------------------
-  subroutine run_end()
-    
-    PUSH_SUB(run_end)
-
-    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      call hamiltonian_end(hm)
-      call system_end(sys)
-      call fft_all_end()
-    end if
-
-#ifdef HAVE_MPI
-    call mpi_debug_statistics()
-#endif
-
-    POP_SUB(run_end)
-  end subroutine run_end
+  end subroutine run
 
 end module run_m
 

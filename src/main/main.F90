@@ -130,9 +130,7 @@ program octopus
   call print_header()
   
   ! now we really start
-  call run_init(inp_calc_mode)
-  call run()
-  call run_end()
+  call run(inp_calc_mode)
   
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
