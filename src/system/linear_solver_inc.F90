@@ -458,7 +458,8 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   R_TYPE,                intent(in)    :: shift
 
   integer :: idim, jst
-  FLOAT   :: alpha_j, proj
+  FLOAT   :: alpha_j
+  R_TYPE  :: proj
 
   PUSH_SUB(X(linear_solver_operator))
 
@@ -482,7 +483,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
     
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
+      call lalg_axpy(gr%mesh%np, alpha_j * proj, st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
 
   end do
