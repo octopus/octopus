@@ -199,28 +199,24 @@ contains
     initialized = .true.
     
     !%Variable PseudopotentialSet
-    !%Type flag
+    !%Type integer
     !%Default standard
     !%Section System::Species
     !%Description
     !% Selects the set of pseudopotentials used by default.
-    !%
     !%Option standard 1
     !% The standard set of Octopus that provides LDA pseudopotentials
-    !% for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
+    !% in the PSF format for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
     !%Option sg15 2
     !% (experimental) The set of Optimized Norm-Conserving Vanderbilt
-    !% PBE pseudopotentials developed by Schlipf and Gygi (M. Schlipf
-    !% and F. Gygi, (2015) arXiv:1502.00995). This set provides
-    !% pseudopotentials for most elements.
+    !% PBE pseudopotentials (M. Schlipf and F. Gygi, arXiv:1502.00995, 2015).
+    !% This set provides pseudopotentials for most elements.
     !%Option hgh_lda 3
-    !% The set of Hartwigsen-Goedecker-Hutter [1] LDA pseudopotentials
+    !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials
     !% for elements from H to Rn. For many species a semi-core variant
-    !% is available, it can be obtained by appending _sc to the
+    !% is available, it can be obtained by appending <tt>_sc</tt> to the
     !% element name.
-    !%
-    !% [1] C. Hartwigsen, S. Goedecker, and J. Hutter Phys. Rev. B 58, 3641, (1998).
-    !%
+    !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
     !%End
 
     call parse_integer('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
@@ -287,15 +283,16 @@ contains
     !% the code. To use these pseudopotentials, you do not need to define them
     !% explicitly in the <tt>Species</tt> block, as default parameters
     !% are provided.
-    !%
     !% You can select the set for default pseudopotentials using the
     !% <tt>PseudopotentialSet</tt> variable.
     !%
     !% Additional pseudopotentials can be downloaded from the <a
     !% href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
-    !% octopus homepage</a> or from other sources. As explained below,
-    !% several pseudopotential formats are supported.
-    !%
+    !% octopus homepage</a> or from other sources. Supported norm-conserving pseudopotential formats are
+    !% detected by the file extension: UPF (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), FHI (ABINIT 6, <tt>.fhi</tt>),
+    !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>),
+    !% HGH (Hartwigsen-Goedecker-Hutter, <tt>.hgh</tt>).
+    !% PSPIO format can also be used via <tt>species_pspio</tt> if that library is linked.
     !% Note: pseudopotentials may only be used in 3D.
     !%
     !% The format of this block is the following: The first field is a
@@ -307,9 +304,9 @@ contains
     !% by a first field with the parameter name and the field that
     !% follows with the value of the parameter. Some parameters are
     !% specific to a certain species while others are accepted by all
-    !% species. These are 'mass', 'max_spacing', and 'max_radius'.
+    !% species. These are <tt>mass</tt>, <tt>max_spacing</tt>, and <tt>min_radius</tt>.
     !%
-    !% This is an example of possible species:
+    !% These are examples of possible species:
     !%
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
@@ -326,34 +323,32 @@ contains
     !%
     !%Option species_pseudo  -7
     !% The species is a pseudopotential. The pseudopotential file must
-    !% be defined by the 'file' or 'db_file' paramaters. Optional
-    !% arguments are 'lmax' and 'lloc'.
+    !% be defined by the <tt>file</tt> or <tt>db_file</tt> parameters. Optional
+    !% parameters are <tt>lmax</tt> and <tt>lloc</tt>.
     !%Option species_user_defined -123
     !% Species with user-defined potential. The potential for the
-    !% species is defined by the formula given by the 'potential_formula'
-    !% parameter. The charge associated to this species is given by the 'valence' parameter.
+    !% species is defined by the formula given by the <tt>potential_formula</tt>
+    !% parameter. The charge associated with this species is given by the <tt>valence</tt> parameter.
     !%Option species_charge_density -125
     !% The potential for this species is created from the distribution
-    !% of charge given by the 'density_formula' parameter. The
-    !% required 'valence' parameter determines the number of electrons
-    !% associated to the species.
+    !% of charge given by the <tt>density_formula</tt> parameter. The
+    !% required <tt>valence</tt> parameter determines the number of electrons
+    !% associated with the species.
     !%Option species_point  -3
     !%Option species_jellium  -3
-    !% Jellium sphere: the optional fifth field is the radius of the sphere (default = 0.5 a.u.).
+    !% Jellium sphere.
     !%Option species_jellium_slab  -4
-    !% Jellium slab: the fifth field is the thickness of the slab.
+    !% Jellium slab: an extra field is the thickness of the slab.
     !% The slab extends across the simulation box in the <i>xy</i>-plane.
     !%Option species_pspio  -110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> 
     !% directory, using the PSPIO library.
-    !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
-    !% consider in the calculation and the <i>l</i>-component to consider as
-    !% local are indicated in the pseudopotential file are cannot be changed.
+    !% No <tt>lmax</tt> or <tt>lloc</tt>, as these are indicated in the pseudopotential file and cannot be changed.
     !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
-    !% point. No extra columns.
+    !% point.
     !%Option species_full_gaussian   -124
     !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
@@ -370,14 +365,10 @@ contains
     !% <math>\vec{r0}</math> is calculated in such a way that the the
     !% first moment of <math>q(r)/z</math> is equal to the atomic
     !% position. For a precise description, see N. A. Modine,
-    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
-    !%
-    !% Column 5 is <math>sigma</math>, the width of the Gaussian that should be
-    !% small, but you may run into numerical difficulties if it is too
-    !% small (0.25 by default).
+    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997). The width of the Gaussian
+    !% is set by parameter <tt>gaussian_width</tt>.
     !%Option species_from_file  -126
-    !% The potential is read from a file, whose name is given in column 5.
-    !% Accepted file formats, detected by extension: obf, ncdf and csv.
+    !% The potential is read from a file. Accepted file formats, detected by extension: obf, ncdf and csv.
     !%Option species_soft_coulomb -128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
@@ -385,39 +376,42 @@ contains
     !% v(r) = - z_val / sqrt(a^2 + r^2)
     !% </math>
     !%
-    !% The value of a should be given by the mandatory 'softening' parameter.
+    !% The value of <i>a</i> should be given by the mandatory <tt>softening</tt> parameter.
     !%Option min_radius -10001
-    !% The minimum radius of the box required for this species to be properly converged.
+    !% The minimum radius of the box that will be used for this species.
     !%Option max_spacing -10002
-    !% The maximum spacing required for this species for converged results.
+    !% The maximum spacing allowed for converged results with this species.
     !%Option lmax -10003
-    !% The maximum angular momentum of the pseudopotential.
+    !% The maximum angular-momentum channel that will be used for the pseudopotential.
     !%Option lloc -10004
-    !% The component of the pseudopotenital to be considered local.
+    !% The angular-momentum channel of the pseudopotential to be considered local.
     !%Option mass -10005
     !% The mass of the species in atomic mass units, <i>i.e.</i> the mass of a proton is
-    !% roughly one.
+    !% roughly one. It is set automatically for pseudopotentials from the
+    !% <a href=http://www.nist.gov/pml/data/comp.cfm>NIST values</a>.
+    !% For other species, the default is 1.0.
     !%Option valence -10006
-    !% The number of electrons of the species.
+    !% The number of electrons of the species. It is set automatically for pseudopotentials,
+    !% but is mandatory for other species.
     !%Option jellium_radius -10007
-    !% The radius of jellium sphere. If this value is not specified,
+    !% The radius of the sphere for <tt>species_jellium</tt>. If this value is not specified,
     !% the default of 0.5 bohr is used.
     !%Option gaussian_width -10008
-    !% The width of the gaussian in units of spacing used to represent
-    !% the nuclear charge for species_full_gaussian. If not present,
+    !% The width of the Gaussian (in units of spacing) used to represent
+    !% the nuclear charge for <tt>species_full_gaussian</tt>. If not present,
     !% the default is 0.25.
     !%Option softening -10009
-    !% The softening parameter a for species_soft_coulomb in units of length.
+    !% The softening parameter <i>a</a> for <tt>species_soft_coulomb</tt> in units of length.
     !%Option file -10010
     !% The path for the file that describes the species.
     !%Option db_file -10011
     !% The path for the file, in the Octopus directory of
     !% pseudopotentials, that describes the species.
     !%Option potential_formula -10012
-    !% Mathematical expression that defines the potential for species_user_defined. You can use
+    !% Mathematical expression that defines the potential for <tt>species_user_defined</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
     !%Option density_formula -10013
-    !% Mathematical expression that defines the charge density for species_charge_density. You can use
+    !% Mathematical expression that defines the charge density for <tt>species_charge_density</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
     !%End
 
@@ -451,7 +445,7 @@ contains
       return
     end if
 
-    ! Find out if the species is in the pseudo potential set
+    ! Find out if the species is in the pseudopotential set
     select case(pseudo_set)
     case(OPTION_STANDARD)
       fname = trim(conf%share)//'/pseudopotentials/standard.set'
