@@ -1830,7 +1830,7 @@ contains
     !dimension test
 
     !here we must set the dimensions for the fft part, starting from the nfft
-    !remember that actually nfft2 is associated to n03 and viceversa
+    !remember that actually nfft2 is associated with n03 and viceversa
 
     !dimensions that define the center of symmetry
     n1h=nfft1/2

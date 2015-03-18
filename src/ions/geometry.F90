@@ -357,7 +357,7 @@ contains
     !%Description
     !% This block defines the type of classical interaction between
     !% ions. Each line represents the interaction between two types of
-    !% species. The first two columns contain the element symbols, the
+    !% species. The first two columns contain the species names, the
     !% next column is the type of interaction as defined below. The
     !% next columns are the parameters for the interaction (if
     !% any). Pairs not specified interact through Coulomb`s law.
@@ -378,7 +378,7 @@ contains
     !%End
 
     if(parse_block('IonicInteraction', blk) == 0) then
-      call messages_experimental('non-Coulombian ionic interaction')
+      call messages_experimental('non-Coulombic ionic interaction')
       nrow = parse_block_n(blk)
 
       !for the moment we consider two parameters for lj 12 6
