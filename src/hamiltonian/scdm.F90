@@ -113,7 +113,6 @@ module scdm_m
   logical,public    :: scdm_is_init=.false.  ! is initialized
   logical,public    :: scdm_is_local=.false.  ! is localized
   
-  type(scdm_t), public, save :: scdm
   !> debug stuff
   type(geometry_t), public   :: scdm_geo
 

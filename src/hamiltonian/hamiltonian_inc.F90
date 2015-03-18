@@ -171,8 +171,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
       ASSERT(.not. batch_is_packed(hpsib))
 
       if(hm%EXX)  then
-        call scdm_init(hm%hf_st, der,scdm)
-        call X(scdm_localize)(hm%hf_st, der%mesh,scdm)
+        call scdm_init(hm%hf_st, der, hm%scdm)
+        call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
         ! to apply the scdm exact exchange we need the state on the global mesh
         SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
         ! global hpsi, should not be neccesary once mesh and scdm state parallelization coincide
@@ -494,13 +494,13 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
   if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
   
-  SAFE_ALLOCATE(rho_l(1:scdm%full_box))
-  SAFE_ALLOCATE(pot_l(1:scdm%full_box))
+  SAFE_ALLOCATE(rho_l(1:hm%scdm%full_box))
+  SAFE_ALLOCATE(pot_l(1:hm%scdm%full_box))
   
   do ik2 = 1, hm%d%nik
     if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
     count = 0
-    do jst = scdm%st_start, scdm%st_end
+    do jst = hm%scdm%st_start, hm%scdm%st_end
       count = count +1
       if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
 
@@ -511,28 +511,28 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
       rho_l(:) = M_ZERO
 
       ! copy density to local box
-      do jj=1,scdm%box_size*2+1
-        do kk=1,scdm%box_size*2+1
-          do ll=1,scdm%box_size*2+1
-            ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-            rho_l(ip) = R_CONJ(scdm%X(psi)(ip,count))*psi(scdm%box(jj,kk,ll,count), 1)
+      do jj=1,hm%scdm%box_size*2+1
+        do kk=1,hm%scdm%box_size*2+1
+          do ll=1,hm%scdm%box_size*2+1
+            ip = (jj-1)*((hm%scdm%box_size*2+1))**2+(kk-1)*((hm%scdm%box_size*2+1)) + ll
+            rho_l(ip) = R_CONJ(hm%scdm%X(psi)(ip,count))*psi(hm%scdm%box(jj,kk,ll,count), 1)
           end do
         end do
       end do
 
-      call X(poisson_solve)(scdm%poisson, pot_l, rho_l, all_nodes=.false.)
+      call X(poisson_solve)(hm%scdm%poisson, pot_l, rho_l, all_nodes=.false.)
 
       ff = hm%hf_st%occ(jst, ik2)
       if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
       
       do idim = 1, hm%hf_st%d%dim
         ! potential in local box to full H*psi 
-        do jj=1,scdm%box_size*2+1
-          do kk=1,scdm%box_size*2+1
-            do ll=1,scdm%box_size*2+1
-              ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-              hpsi(scdm%box(jj,kk,ll,count),idim) = &
-                   hpsi(scdm%box(jj,kk,ll,count),idim) - exx_coef*ff*scdm%X(psi)(ip,count)*pot_l(ip)
+        do jj=1,hm%scdm%box_size*2+1
+          do kk=1,hm%scdm%box_size*2+1
+            do ll=1,hm%scdm%box_size*2+1
+              ip = (jj-1)*((hm%scdm%box_size*2+1))**2+(kk-1)*((hm%scdm%box_size*2+1)) + ll
+              hpsi(hm%scdm%box(jj,kk,ll,count),idim) = &
+                   hpsi(hm%scdm%box(jj,kk,ll,count),idim) - exx_coef*ff*hm%scdm%X(psi)(ip,count)*pot_l(ip)
             end do
           end do
         end do

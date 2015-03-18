@@ -194,7 +194,7 @@ module hamiltonian_m
 
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
-    
+    type(scdm_t)  :: scdm
   end type hamiltonian_t
 
   integer, public, parameter :: &
