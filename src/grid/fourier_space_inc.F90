@@ -22,7 +22,7 @@
 !! Note that the dimensions of the function in fs are different depending on whether
 !! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cube_function_rs2fs)(cube, cf)
-  type(cube_t),          intent(inout) :: cube
+  type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_rs2fs))
@@ -44,7 +44,7 @@ end subroutine X(cube_function_rs2fs)
 
 ! ---------------------------------------------------------
 subroutine X(cube_function_fs2rs)(cube, cf)
-  type(cube_t),          intent(inout) :: cube
+  type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_fs2rs))
@@ -122,7 +122,7 @@ end subroutine X(fourier_space_op_init)
 !! This is a local function.
 subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(fourier_space_op_t), intent(in)     :: this
-  type(cube_t),             intent(inout)  :: cube
+  type(cube_t),             intent(in)     :: cube
   type(cube_function_t),    intent(inout)  :: cf
   
   integer :: ii, jj, kk

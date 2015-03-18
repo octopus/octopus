@@ -210,14 +210,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes)
-    type(poisson_isf_t), intent(inout) :: this
+    type(poisson_isf_t), intent(in)    :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     logical,             intent(in)    :: all_nodes
 
-    integer :: i_cnf
+    integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
     
     PUSH_SUB(poisson_isf_solve)
@@ -248,15 +248,21 @@ contains
 
     if(i_cnf == SERIAL) then
 
+      nn(1) = this%cnf(SERIAL)%nfft1
+      nn(2) = this%cnf(SERIAL)%nfft2
+      nn(3) = this%cnf(SERIAL)%nfft3
       call psolver_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3),    &
-        this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
+        nn(1), nn(2), nn(3), &
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rho_cf%dRS)
 
 #if defined(HAVE_MPI)
     else
+      nn(1) = this%cnf(i_cnf)%nfft1
+      nn(2) = this%cnf(i_cnf)%nfft2
+      nn(3) = this%cnf(i_cnf)%nfft3
       if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
         call par_psolver_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
-          this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
+          nn(1), nn(2), nn(3), &
           real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, rho_cf%dRS,                      &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
       end if

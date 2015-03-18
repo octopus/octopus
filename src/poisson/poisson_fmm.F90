@@ -300,7 +300,7 @@ contains
   !! However, fmm requires initialization because, in contrast to Octopus`
   !! direct solvers, FMM reads some parameters from the inp file.
   subroutine poisson_fmm_solve(this, der, pot, rho)  
-    type(poisson_fmm_t),         intent(inout) :: this
+    type(poisson_fmm_t),         intent(in)    :: this
     type(derivatives_t), target, intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)

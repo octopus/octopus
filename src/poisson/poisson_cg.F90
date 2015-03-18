@@ -66,7 +66,7 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_cg1(der, corrector, pot, rho)
     type(derivatives_t),  target, intent(in)    :: der
-    type(poisson_corr_t),         intent(inout) :: corrector
+    type(poisson_corr_t),         intent(in)    :: corrector
     FLOAT,                        intent(inout) :: pot(:)
     FLOAT,                        intent(in)    :: rho(:)
 

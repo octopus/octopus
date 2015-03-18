@@ -149,7 +149,7 @@ contains
   end subroutine poisson_libisf_end
 
   subroutine poisson_libisf_parallel_solve(this, mesh, cube, pot, rho,  mesh_cube_map)
-    type(poisson_libisf_t), intent(inout) :: this
+    type(poisson_libisf_t), intent(in) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
@@ -196,7 +196,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_libisf_global_solve(this, mesh, cube, pot, rho)
-    type(poisson_libisf_t), intent(inout) :: this
+    type(poisson_libisf_t), intent(in) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)

@@ -729,9 +729,9 @@ contains
   !-----------------------------------------------------------------
 
   subroutine poisson_fft_solve(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
-    type(poisson_fft_t),            intent(inout) :: this
+    type(poisson_fft_t),            intent(in)    :: this
     type(mesh_t),                   intent(in)    :: mesh
-    type(cube_t),                   intent(inout) :: cube
+    type(cube_t),                   intent(in)    :: cube
     FLOAT,                          intent(out)   :: pot(:)
     FLOAT,                          intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
