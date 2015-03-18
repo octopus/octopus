@@ -19,7 +19,6 @@
 ##
 ## $Id$
 
-#export LEX="flex -d"
 #save the current directory
 dox_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $dox_dir
@@ -36,7 +35,7 @@ cp $dox_dir/octopus.png .
 #copy to the new location
 sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
 #call doxygen
-/home/jalberdi004/installed_soft/doxygen-1.8.8/bin/doxygen 
+doxygen >/dev/null 2>/dev/null 
 
 cd ..
 echo "Doxygen documentation created in $dox_dir/html/index.html"

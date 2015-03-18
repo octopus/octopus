@@ -62,10 +62,7 @@ else
       METIS_CFLAGS="-I$with_metis_prefix/$include_path"
     fi
     if test "x${LIBS_METIS+set}" != xset ; then
-      LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis -lm"
-    fi
-    if test "x${LIBS_METIS+set}" != xset ; then
-      LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis -lm"
+      LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis"
     fi
 
     CFLAGS="$CFLAGS $METIS_CFLAGS"
