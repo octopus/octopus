@@ -496,11 +496,11 @@ contains
 #include "complex.F90"
 #include "nfft_inc.F90"
 
-
-
 #endif
 
-
-
-
 end module nfft_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

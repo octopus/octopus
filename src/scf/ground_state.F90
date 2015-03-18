@@ -115,14 +115,6 @@ contains
         call messages_write("Run a DFT calculation with XCFunctional = oep_x first")
         call messages_fatal()
       else
-
-      if(hm%EXX) then
-         ! SCDM needs a copy of the initial states
-         if(.not.associated(hm%hf_st)) then
-            hm%hf_st => sys%st
-         endif
-      endif
-
         call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
       endif
     else

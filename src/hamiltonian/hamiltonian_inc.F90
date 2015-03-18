@@ -40,7 +40,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
-  FLOAT :: exx_coef
   R_TYPE, allocatable :: psi_global(:,:), hpsi_global(:,:)
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
@@ -168,7 +167,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if (iand(TERM_OTHERS, terms_) /= 0) then
 
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK.or.hm%EXX) then
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       ASSERT(.not. batch_is_packed(hpsib))
 
       if(hm%EXX)  then

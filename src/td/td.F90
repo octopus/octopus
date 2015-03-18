@@ -497,8 +497,6 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
 
-      if(hm%EXX.and..not.hm%theory_level == HARTREE_FOCK) hm%hf_st => st
-
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)

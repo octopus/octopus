@@ -403,7 +403,7 @@ contains
     !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
     !%Option mask 2
     !% A mask is applied to the wavefunctions at the boundaries.
-   !%End
+    !%End
     call parse_integer('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call messages_input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
@@ -1037,11 +1037,6 @@ contains
      !! during the SCF calculation.
      call v_nuclei_cav(this%pcm%v_n, geo, this%pcm%tess, this%pcm%n_tesserae)
      call pcm_charges(this%pcm%q_n, this%pcm%qtot_n, this%pcm%v_n, this%pcm%matrix, this%pcm%n_tesserae)
-
-     write(this%pcm%info_unit,'(1X,A33,F12.8)') &
-                           "Nuclear molecular charge Q_M^n = ", &
-                           -( this%pcm%epsilon_0/(this%pcm%epsilon_0 - M_ONE) )*this%pcm%qtot_n
-
      call pcm_pot_rs( this%pcm%v_n_rs, this%pcm%q_n, this%pcm%tess, this%pcm%n_tesserae, gr%mesh, this%pcm%gaussian_width )
     endif
 
