@@ -164,8 +164,9 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
     call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
-    forall(ip = 1:mesh%np) &
+    forall(ip = 1:mesh%np) 
       ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
+    end forall
 
     xx(ia) = X(mf_integrate)(mesh, ff)
   end do
@@ -178,7 +179,7 @@ end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
 !> Casida: \vec{d}_k = \sum_{cv} \vec{d}_{cv} x_{cv} \sqrt{\frac{\epsilon_c - \epsilon_v}{\omega_k}}
-!> others: \vec{d}_k = \sum_{cv} \vec{d}_{cv} x_{cv}
+!! others: \vec{d}_k = \sum_{cv} \vec{d}_{cv} x_{cv}
 R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: ia

@@ -1054,10 +1054,10 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
-            
-           forall (ip = 1:mesh%np) & 
-                   this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                                                       this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+          forall (ip = 1:mesh%np)  
+            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                 this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+          end forall
         endif
 
         if(this%cmplxscl%space) then

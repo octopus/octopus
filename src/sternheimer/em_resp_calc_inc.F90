@@ -794,8 +794,9 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
         
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
-          forall(ip = 1:sys%gr%mesh%np) &
+          forall(ip = 1:sys%gr%mesh%np) 
             integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+          end forall
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
             (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         enddo
