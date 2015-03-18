@@ -505,11 +505,12 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 
 
 void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
-     (fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+     (fint * np, fint * type, fint * file_size, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
   int correct_endianness;
   unsigned long fname_len;
+  struct stat st;
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
@@ -520,6 +521,9 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
 
   *np  = h->np;
   *type = (int) h->type;
+
+  stat(fname, &st);
+  *file_size = (int) st.st_size;
 
   free(h);
 }
