@@ -187,14 +187,11 @@ for y in $tests; do
 	echo Starting test $test_index: $test_name
 
 	if [ "$dry_run" == "yes" ]; then
-	    echo "$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	    $preserve_opt -D $bin_directory -f $y \
-	    > ${ybase}.log 2>&1; let $(($varname=$?)); echo > /dev/null &"
+	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
+	         $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
 	fi
-	# without the final echo it doesn't work, I don't know why...
 	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	    $preserve_opt -D $bin_directory -f $y \
-	    > ${ybase}.log 2>&1 &
+	    $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
 	ppid=$!
 	queue $ppid $test_name
 	

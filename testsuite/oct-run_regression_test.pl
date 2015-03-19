@@ -110,7 +110,7 @@ if($opt_D) {
 }
 
 if(length($opt_f) == 0) {
-    die255("ERROR: You must supply the name of a test file with the -f option.\n");
+    die255("You must supply the name of a test file with the -f option.");
 }
 
 $aexec = get_env("EXEC");
@@ -177,7 +177,7 @@ if (!$opt_m) {
     mkdir $workdir;
       
     $scriptname = "$workdir/matches.sh";
-    open(SCRIPT, ">$scriptname") or die255("ERROR: could not create '$scriptname'.\n");
+    open(SCRIPT, ">$scriptname") or die255("Could not create '$scriptname'.");
     print SCRIPT "#\!/usr/bin/env bash\n\n";
     print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
     close(SCRIPT);
@@ -189,7 +189,7 @@ if (!$opt_m) {
 }
 
 # testsuite
-open(TESTSUITE, "<".$opt_f ) or die255("ERROR: cannot open testsuite file '$opt_f'.\n");
+open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
 
 while ($_ = <TESTSUITE>) {
 
@@ -208,6 +208,9 @@ while ($_ = <TESTSUITE>) {
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
       $test{"name"} = $1;
+      if($test{"name"} eq "") {
+	  die255("No name was provided with Test tag.");
+      }
       print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
       print "Using workdir    : $workdir\n";
       if($opt_p) {
@@ -227,8 +230,8 @@ while ($_ = <TESTSUITE>) {
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  skip_exit();
       } elsif ( $enabled ne "Yes") {
-	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+	  die255("Unknown option 'Enabled = $enabled' in testsuite file.");
       }
 
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
@@ -295,7 +298,7 @@ while ($_ = <TESTSUITE>) {
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
-	die255("ERROR: Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).\n\n");
+	die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
       }
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
@@ -336,7 +339,7 @@ while ($_ = <TESTSUITE>) {
             $mode = (stat "$workdir/inp")[2];
             chmod $mode|S_IWUSR, "$workdir/inp";
           } else {
-            die255("ERROR: could not find input file: $input_file\n");
+            die255("Could not find input file '$input_file'.");
           }
       
 	  print "\nStarting test run ...\n";
@@ -437,7 +440,7 @@ while ($_ = <TESTSUITE>) {
 	      }
 	  }
       } else {
-	  die255("ERROR: Unknown command '$_'\n");
+	  die255("Unknown command '$_'.");
       }
     }
 
@@ -455,7 +458,7 @@ exit $failures;
 
 
 sub run_match_new {
-  die255("ERROR: Have to run before matching\n") if !$test{"run"} && !opt_m;
+  die255("Have to run before matching.") if !$test{"run"} && !opt_m;
 
   # parse match line
   my ($line, $match, $match_command, $shell_command, $ref_value, $off);
@@ -600,15 +603,15 @@ sub check_num_args {
     my $func_name      = $_[3];
 
     if($given_num_args < $min_num_args) {
-	die255("$func_name given $given_num_args argument(s) but needs at least $min_num_args.\n");
+	die255("$func_name given $given_num_args argument(s) but needs at least $min_num_args.");
     }
     if($given_num_args > $max_num_args) {
-	die255("$func_name given $given_num_args argument(s) but can take no more than $max_num_args.\n");
+	die255("$func_name given $given_num_args argument(s) but can take no more than $max_num_args.");
     }
 }
 
 sub die255 {
-    print STDERR $_[0];
+    print STDERR "ERROR: " . $_[0] . "\n";
     print "Status: error\n\n";
     exit 255;
 }
