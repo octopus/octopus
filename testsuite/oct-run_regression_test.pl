@@ -272,7 +272,7 @@ while ($_ = <TESTSUITE>) {
 	if(length($options_required) > 0) {
 	    # check if the executable was compiled with the required options
 	    foreach my $option (split(/;/, $options_required)){
-		if($options_available !~ $option) {
+		if(" $options_available " !~ " $option ") {
 		    print "\nSkipping test: executable does not have the required option '$option'";
 		    if($options_are_mpi) {
 			print " for MPI";
