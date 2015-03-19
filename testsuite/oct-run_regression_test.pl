@@ -230,7 +230,7 @@ foreach my $octopus_exe (@executables){
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit 254;
+	  skip_exit();
       } elsif ( $enabled ne "Yes") {
 	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
@@ -320,7 +320,7 @@ foreach my $octopus_exe (@executables){
 	    } else {
 	      print "No mpiexec found: Skipping parallel test \n";
 	      if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	      exit 254;
+	      skip_exit();
 	    }
 	  } else {
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
@@ -400,6 +400,8 @@ foreach my $octopus_exe (@executables){
   close(TESTSUITE)
 }
 
+print "Status: ".$failures." failures\n\n";
+
 exit $failures;
 
 
@@ -446,8 +448,7 @@ sub find_executables {
   close(TESTSUITE);
 
   if($name eq "") {
-      print STDERR "ERROR: No name was provided with Test tag.\n";
-      exit 254;
+      die255("ERROR: No name was provided with Test tag.\n");
   }
 
   # Exit if no suitable executable was found.
@@ -455,7 +456,7 @@ sub find_executables {
     print STDERR "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
     print STDERR "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
     print STDERR "Skipping ... \n\n";
-    exit 254;
+    skip_exit();
   }
 }
 
@@ -614,5 +615,11 @@ sub check_num_args {
 
 sub die255 {
     print STDERR $_[0];
+    print "Status: error\n\n";
     exit 255;
+}
+
+sub skip_exit {
+    print "Status: skipped\n\n";
+    exit 254;  
 }

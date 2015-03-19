@@ -127,15 +127,18 @@ function checkqueue {
       sleep 0.1s;
     done
 
-    varname=`get_varname $test_name`
-    failures=$(eval echo \$${varname})
-    #echo "failures ($varname) = $failures"
-    unset $varname
+    logfile=`basename $test_name .test`.log
 
+    failures=`grep "Status:" $logfile| cut -f 2 -d \ `
+
+    if [ x${failures} == x ]; then
+	failures="error";
+    fi
+    
     # Look for failed/passed/skipped testcases and add to failure summary.
-    if [ "${failures}" -eq 0 ]; then
+    if [ ${failures} == "0" ]; then
 	passed_tests=$((passed_tests + 1))
-    elif [ ${failures} -eq 254 ]; then
+    elif [ ${failures} == "skipped" ]; then
 	skipped_tests=$((skipped_tests + 1))
     else
 	failed_tests=$((failed_tests + 1))
@@ -144,14 +147,8 @@ function checkqueue {
 	spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
 	failure_report="$failure_report    $test_name$spaces$failures\n"
     fi
-    cat `basename $test_name .test`.log
+    cat $logfile
     printf " ************************\n\n"
-}
-
-function get_varname() {
-    # purge funny characters which could cause trouble for bash parsing
-    # lead with 'v' because variables cannot start with numbers
-    echo v$1 | tr -d "+/._-"
 }
 
 # Run all tests. Takes as first argument a list of testfile names.
@@ -191,12 +188,9 @@ for y in $tests; do
         test_index=$(($test_index + 1))
 	echo Starting test $test_index: $test_name
 
-	# store return code in varname for reading in checkqueue when it finishes
-	varname=`get_varname $test_name`
-	# without the final echo it doesn't work, I don't know why...
 	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
-	    > ${ybase}.log 2>&1; let $(($varname=$?)); echo > /dev/null &
+	    > ${ybase}.log 2>&1 &
 	ppid=$!
 	queue $ppid $test_name
 	
