@@ -13,8 +13,8 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-TheoryLevel = hartree_fock
 XCFunctional = hyb_gga_xc_b3lyp
+
 %Occupations
 0.8
 0.2

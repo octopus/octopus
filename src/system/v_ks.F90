@@ -132,14 +132,23 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
 
+    integer :: x_id, c_id, xk_id, ck_id, default, val
+    logical :: parsed_theory_level
+    
     PUSH_SUB(v_ks_init)
 
+    ! We need to parse TheoryLevel and XCFunctional, this is
+    ! complicated because they are interdependent.
+    
     !%Variable TheoryLevel
     !%Type integer
-    !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% The calculations can be run with different "theory levels":
+    !% The calculations can be run with different "theory levels" that
+    !% control how electrons are simulated. The default is
+    !% <tt>dft</tt>. When hybrid functionals are requested, through
+    !% the <tt>XCFunctional</tt> variable, the default is
+    !% <tt>hartree_fock</tt>.
     !%Option independent_particles 2
     !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
@@ -165,16 +174,94 @@ contains
     !%Option rdmft 7 
     !% (Not fully implemented) Reduced Density Matrix functional theory
     !%End
-    call parse_integer('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
-    if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
-
-    call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
-    call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
-    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
-    if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
+   
+    ks%theory_level = KOHN_SHAM_DFT
+    parsed_theory_level = .false.
+    
+    ! the user knows what he wants, give her that
+    if(parse_is_defined('TheoryLevel')) then
+      call parse_integer('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+
+      parsed_theory_level = .true.
+    end if
+
+
+    ! parse the XC functional
+    default = 0
+    if(ks%theory_level == KOHN_SHAM_DFT) then
+      select case(gr%mesh%sb%dim)
+      case(3); default = XC_LDA_X    + 1000*XC_LDA_C_PZ_MOD
+      case(2); default = XC_LDA_X_2D + 1000*XC_LDA_C_2D_AMGB
+      case(1); default = XC_LDA_X_1D + 1000*XC_LDA_C_1D_CSC
+      end select
+    end if
+    
+    ! The description of this variable can be found in file src/xc/functionals_list.F90
+    call parse_integer('XCFunctional', default, val)
+
+    ! the first 3 digits of the number indicate the X functional and
+    ! the next 3 the C functional.
+    c_id = val / 1000
+    x_id = val - c_id*1000
+
+    
+    !%Variable XCKernel
+    !%Type integer
+    !%Default lda_x+lda_c_pz_mod
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
+    !%Option xc_functional -1
+    !% The same functional defined by <tt>XCFunctional</tt>.
+    !%End
+    
+    call parse_integer('XCKernel', default, val)
+    
+    if( -1 == val ) then
+      ck_id = c_id
+      xk_id = x_id
+    else
+      ck_id = val / 1000
+      xk_id = val - ck_id*1000  
+    end if
+    
+    call messages_obsolete_variable('XFunctional', 'XCFunctional')
+    call messages_obsolete_variable('CFunctional', 'XCFunctional')
+
+    ! initialize XC modules
+    
+    ! This is a bit ugly, theory_level might not be Hartee-Fock now
+    ! but it might become Hartee-Fock later. This is safe because it
+    ! becomes Hartree-Fock in the cases where the functional is hybrid
+    ! and the ifs inside check for both conditions.
+    call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+      x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
+    
+    ks%xc_family = ks%xc%family
+    
+    if(.not. parsed_theory_level) then 
+      default = KOHN_SHAM_DFT
+
+      ! the functional is a hybrid, use Hartree-Fock as theory level by default
+      if( iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0 ) then
+        default = HARTREE_FOCK
+      end if
+
+      ! In principle we do not need to parse. However we do it for consistency
+      call parse_integer('TheoryLevel', default, ks%theory_level)
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+     
+    end if
+
+    call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
+    call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
+
+    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
+    if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -189,16 +276,10 @@ contains
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree-Fock with k-points")
-
-      ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, hartree_fock=.true.)
-      ks%xc_family = ks%xc%family
+      
       ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
-      ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, hartree_fock=.false.)
-      ks%xc_family = ks%xc%family
 
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then

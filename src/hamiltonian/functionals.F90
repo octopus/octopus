@@ -108,7 +108,7 @@ contains
     call xc_functl_init(functl, spin_channels)
 
     functl%id = id
-
+    
     if(functl%id == 0) then
       functl%family = XC_FAMILY_NONE
     else
@@ -129,7 +129,7 @@ contains
         else if (functl%id == XC_RDMFT_XC_M) then
           functl%family = XC_FAMILY_RDMFT  
         else
-          call messages_input_error('XCFunctional')
+          call messages_input_error('XCFunctional', 'Unknown functional')
         end if
       end if
     end if

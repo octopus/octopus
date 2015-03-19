@@ -13,8 +13,10 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-TheoryLevel = hartree_fock
+TheoryLevel = hartree_fock # this is the default, but we keep it to check the parsing routines, b3lyp does not define it
+
 XCFunctional = hyb_gga_xc_pbeh
+
 %Occupations
 0.8
 0.2

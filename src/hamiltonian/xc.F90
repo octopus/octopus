@@ -88,7 +88,7 @@ module xc_m
     LR_NONE = 0,        &
     LR_X    = 1
 
-  integer, parameter :: &
+  integer, public, parameter :: &
     FUNC_X = 1,         &
     FUNC_C = 2
 
@@ -121,14 +121,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, periodic_dim, nel, hartree_fock)
+  subroutine xc_init(xcs, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
     type(xc_t), intent(out) :: xcs
     integer,    intent(in)  :: ndim
     integer,    intent(in)  :: periodic_dim
     FLOAT,      intent(in)  :: nel
+    integer,    intent(in)  :: x_id
+    integer,    intent(in)  :: c_id
+    integer,    intent(in)  :: xk_id
+    integer,    intent(in)  :: ck_id
     logical,    intent(in)  :: hartree_fock
 
-    integer :: isp, x_id, c_id, xk_id, ck_id
+    integer :: isp
     logical :: ll
 
     PUSH_SUB(xc_init)
@@ -142,8 +146,8 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functional(FUNC_X, isp),  x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functional(FUNC_C, isp),  c_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), c_id, ndim, nel, isp)
 
       call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), xk_id, ndim, nel, isp)
       call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), ck_id, ndim, nel, isp)
@@ -236,51 +240,11 @@ contains
   contains 
 
     subroutine parse()
-      integer :: val, default
 
       PUSH_SUB(xc_init.parse)
 
-      ! the first 3 digits of the number indicate the X functional and
-      ! the next 3 the C functional.
-
-      default = 0
-      if(.not.hartree_fock) then
-        select case(ndim)
-        case(3); default = XC_LDA_X    + XC_LDA_C_PZ_MOD *1000
-        case(2); default = XC_LDA_X_2D + XC_LDA_C_2D_AMGB*1000
-        case(1); default = XC_LDA_X_1D + XC_LDA_C_1D_CSC *1000
-        end select
-      end if
-
-      ! The description of this variable can be found in file src/xc/functionals_list.F90
-      call parse_integer('XCFunctional', default, val)
-
-      c_id = val / 1000
-      x_id = val - c_id*1000
-
-      call messages_obsolete_variable('XFunctional', 'XCFunctional')
-      call messages_obsolete_variable('CFunctional', 'XCFunctional')
-
-      !%Variable XCKernel
-      !%Type integer
-      !%Default lda_x+lda_c_pz_mod
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
-      !%Option xc_functional -1
-      !% The same functional defined by <tt>XCFunctional</tt>.
-      !%End
-
-      call parse_integer('XCKernel', default, val)
-
-      if( -1 == val ) then
-        ck_id = c_id
-        xk_id = x_id
-      else
-        ck_id = val / 1000
-        xk_id = val - ck_id*1000  
-      end if
-
+      ! the values of x_id,  c_id, xk_id, and c_id are read outside the routine
+      
       !%Variable XCKernelLRCAlpha
       !%Type float
       !%Default 0.0
