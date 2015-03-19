@@ -134,6 +134,13 @@ function checkqueue {
 	failures="error";
     fi
     
+    if [ x${failures} == xskipped ] || [ x${failures} == x0 ]; then
+	# Remove Status: line and following blank one.
+	sed 'N;$!P;$!D;$d' $logfile
+    else
+	cat $logfile
+    fi
+
     # Look for failed/passed/skipped testcases and add to failure summary.
     if [ ${failures} == "0" ]; then
 	passed_tests=$((passed_tests + 1))
@@ -146,8 +153,8 @@ function checkqueue {
 	spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
 	failure_report="$failure_report    $test_name$spaces$failures\n"
     fi
-    cat $logfile
-    printf " ************************\n\n"
+
+    printf "\n ************************\n\n"
 }
 
 # Run all tests. Takes as first argument a list of testfile names.
