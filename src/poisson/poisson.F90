@@ -508,14 +508,10 @@ contains
       end if
 
       if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
-        message(1) = 'PFFT library has only been implemented for 3D systems.'
-        message(2) = 'Feel free to contribute and implement it!'
-        call messages_fatal(2)
+        call messages_not_implemented('PFFT support for dimensionality other than 3')
       end if
       if (der%mesh%sb%periodic_dim /= 0 .and. fft_library == FFTLIB_PFFT) then
-        message(1) = 'PFFT library has only been implemented for non periodic systems.'
-        message(2) = 'Feel free to contribute and implement it!'
-        call messages_fatal(2)
+        call messages_not_implemented('PFFT support for periodic systems')
       end if
 
       select case (der%mesh%sb%dim)
