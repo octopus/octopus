@@ -428,10 +428,9 @@ sub find_executables {
 	  if(!$valid) {
 	    # check if the executable was compiled with the required options
 	    $has_options = 1;
+	    $options_available = `$exec_directory/$x -c`;
 	    foreach my $y (split(/;/, $options)){
-	      $command_line = "$exec_directory/$x -c | grep -q $y";
-	      $rv = system($command_line);
-	      $has_options = $has_options && ($rv == 0)
+	      $has_options = $has_options && (" $options_available " =~ " $y ");
 	    }
 
 	    if($has_options) {
