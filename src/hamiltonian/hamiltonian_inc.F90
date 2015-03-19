@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
@@ -333,7 +333,7 @@ end subroutine X(hamiltonian_external)
 ! ---------------------------------------------------------
 
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime, set_bc)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
@@ -405,7 +405,7 @@ end subroutine X(hamiltonian_apply_all)
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
@@ -414,9 +414,8 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   FLOAT,               intent(in)    :: exx_coef
 
   integer :: jst, ip, idim, ik2
-  FLOAT :: weight, weight2
-  R_TYPE :: exch
-  R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), xpsi(:,:)
+  FLOAT                              :: ff
+  R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :)
 
   PUSH_SUB(X(exchange_operator))
 
@@ -426,19 +425,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(xpsi(1:der%mesh%np, 1:hm%d%dim))
-  xpsi(:,:) = M_ZERO
 
-  if(ist < hm%hf_st%nst) then
-    weight = hm%hf_st%occ(ist, ik)
-  else
-    ! Could happen during LCAO, means we are not doing a self-consistent calculation,
-    ! and the exchange energy will be meaningless anyway.
-    weight = M_ONE
-  endif
-  ! Only the same spin couples via exchange, so we do not want occupation including both.
-  if(hm%d%ispin == UNPOLARIZED) weight = M_HALF*weight
-  
   do ik2 = 1, hm%d%nik
     if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
 
@@ -465,39 +452,26 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
       call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
 
-      weight2 = hm%hf_st%occ(jst, ik2)
-      if(hm%d%ispin == UNPOLARIZED) weight2 = M_HALF*weight2
+      ff = hm%hf_st%occ(jst, ik2)
+      if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)
-          xpsi(ip, idim) = xpsi(ip, idim) - exx_coef*weight2*psi2(ip, idim)*pot(ip)
+          hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
         end forall
       end do
 
-    end do ! jst
-  end do ! ik2
-
-  ! one-half is to avoid double-counting interactions
-  exch = M_HALF * weight * X(mf_dotp)(der%mesh, hm%hf_st%d%dim, xpsi, psi, dotu = hm%cmplxscl%space)
-  hm%energy%exchange = hm%energy%exchange + R_REAL(exch)
-  if(hm%cmplxscl%space) &
-    hm%energy%Imexchange = hm%energy%Imexchange + R_AIMAG(exch)
-  
-  do idim = 1, hm%hf_st%d%dim
-    forall(ip = 1:der%mesh%np)
-      hpsi(ip, idim) = hpsi(ip, idim) + xpsi(ip, idim)
-    end forall
+    end do
   end do
-  
+
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
   SAFE_DEALLOCATE_A(psi2)
-  SAFE_DEALLOCATE_A(xpsi)
 
   POP_SUB(X(exchange_operator))
 end subroutine X(exchange_operator)
 
-
+! EXX
 ! ---------------------------------------------------------
 subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   type(hamiltonian_t), intent(in)    :: hm
@@ -630,7 +604,7 @@ end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)

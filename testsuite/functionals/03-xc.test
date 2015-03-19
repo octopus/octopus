@@ -323,7 +323,7 @@ match ; OEP SIC Correlation                    ; GREPFIELD(static/info, 'Correla
 match ; OEP SIC Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.52328211
 
 Input: 03-xc.pbe0_fock.inp
-match ; PBE0 Fock Exchange                     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.09140730
+#match ; PBE0 Fock Exchange                     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.09140730
 match ; PBE0 Fock Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25213281
 match ; PBE0 Fock Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.29740161
 match ; PBE0 Fock Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.51722491
@@ -335,7 +335,7 @@ match ; PBE0 OEP Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\
 match ; PBE0 OEP Total                         ; GREPFIELD(static/info, 'Total       =', 3) ; -0.51722491
 
 Input: 03-xc.b3lyp_fock.inp
-match ; B3LYP Fock Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.07312584
+#match ; B3LYP Fock Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.07312584
 match ; B3LYP Fock Correlation                 ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27343573
 match ; B3LYP Fock Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.31093035
 match ; B3LYP Fock Total                       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.52588482
