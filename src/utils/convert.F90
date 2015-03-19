@@ -97,7 +97,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call system_init(sys, CM_NONE)
+    call system_init(sys)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
