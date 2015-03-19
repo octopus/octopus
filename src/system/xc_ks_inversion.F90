@@ -216,6 +216,11 @@ contains
     
     sqrtrho = M_ZERO
     
+    if(any(target_rho(:,:) < -M_EPSILON)) then
+      write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
+      call messages_warning(1)
+    endif
+
     do jj = 1, nspin
       do ii = 1, gr%der%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
