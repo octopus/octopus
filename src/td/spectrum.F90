@@ -147,8 +147,7 @@ contains
     !%Default fourier
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% Decides which method is used to obtain the spectrum. The
-    !% default is the fourier transform.
+    !% Decides which method is used to obtain the spectrum.
     !%Option fourier 1
     !% The standard fourier transform.
     !%Option compressed_sensing 2
@@ -166,8 +165,7 @@ contains
     !%Description
     !% For compressed sensing, the signal to process, the
     !% time-dependent dipole in this case, is assumed to have some
-    !% noise that is given by this quantity. The default value is
-    !% 0.0, this value is unitless.
+    !% noise that is given by this dimensionless quantity.
     !%End
     call parse_float('SpectrumSignalNoise', CNST(0.0), spectrum%noise)
 
@@ -252,7 +250,7 @@ contains
     !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Sampling rate for the spectrum. If you supply a number equal or smaller than zero, then
-    !% the sampling rate will be (2 * pi / T), where T is the total propagation time.
+    !% the sampling rate will be <math>2 \pi / T</math>, where <math>T</math> is the total propagation time.
     !%End
     fdefault = CNST(0.01)/(M_TWO*P_Ry)
     if(present(default_energy_step)) fdefault = default_energy_step

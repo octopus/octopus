@@ -537,12 +537,12 @@ contains
     SAFE_ALLOCATE(mesh%idx%lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
     !%Variable MeshOrder
+    !%Default blocks
     !%Type integer
     !%Section Execution::Optimization
     !%Description
     !% This variable controls how the grid points are mapped to a
-    !% linear array. This influences the performance of the code. The
-    !% default is blocks.
+    !% linear array. This influences the performance of the code.
     !%Option blocks 1
     !% The grid is mapped using small parallelepipedic grids. The size
     !% of the blocks is controlled by <tt>MeshBlockSize</tt>.

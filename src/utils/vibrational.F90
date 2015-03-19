@@ -73,8 +73,7 @@
     !% In the calculation of the vibrational spectrum it not necessary
     !% to read the velocity at every time step. This variable controls
     !% the integer factor between the simulation time step and the
-    !% time step used to calculate the vibrational spectrum. The
-    !% default is 10.
+    !% time step used to calculate the vibrational spectrum.
     !%End
 
     call parse_integer('PropagationSpectrumTimeStepFactor', 10, skip)
