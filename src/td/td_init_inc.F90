@@ -196,7 +196,6 @@ subroutine td_init(td, sys, hm)
 
   call propagator_init(sys%gr, sys%st, td%tr, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
-  if(td%dynamics == BO)  call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
   if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
     call messages_print_stress(stdout, "Time-dependent external fields")
     call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
