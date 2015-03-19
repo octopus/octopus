@@ -96,12 +96,12 @@ contains
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
     !% atomic units. However, for input or output, some people like
-    !% to use a system based on eV for energies and <math>\AA</math>
-    !% for length.
+    !% to use a system based on electron-Volts (eV) for energies
+    !% and Angstroms (&Aring;) for length.
     !%
     !% Normally time units are derived from energy and length units,
-    !% so it is measured in <math>\hbar/Hartree</math> or
-    !% <math>\hbar/electronvolt</math>. Alternatively you can tell
+    !% so it is measured in <math>\hbar</math>/Hartree or
+    !% <math>\hbar</math>/eV. Alternatively you can tell
     !% Octopus to use femtoseconds as the time unit by adding the
     !% value <tt>femtoseconds</tt> (Note that no other unit will be 
     !% based on femtoseconds). So for example you can use:
@@ -128,7 +128,7 @@ contains
     !% Atomic units.
     !%Option ev_angstrom   1
     !% Electronvolts for energy, Angstroms for length, the rest of the
-    !% units are derived from these and <math>hbar=1</math>.
+    !% units are derived from these and <math>\hbar=1</math>.
     !%Option femtoseconds  2
     !% (Experimental) If you add this value to the other options,
     !% Octopus will treat time in femtoseconds units.

@@ -117,9 +117,9 @@ subroutine td_init(td, sys, hm)
   !% at the same time as <tt>TDMaxSteps</tt>. By default this variable will
   !% not be used.
   !%
-  !% The units for this variable are hbar/Hartree (or hbar/eV if you
+  !% The units for this variable are <math>\hbar</math>/Hartree (or <math>\hbar</math>/eV if you
   !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
-  !% femtoseconds are 1 fs = 41.34 hbar/Hartree = 1.52 hbar/eV.
+  !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
   !%End
   call parse_float('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
