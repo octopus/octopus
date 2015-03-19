@@ -802,10 +802,10 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-              ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           else
-             call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-               ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
+                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
           end if
         endif
 
@@ -964,7 +964,6 @@ contains
         if (hm%cmplxscl%space) forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, ispin) = hm%Imvxc(ip, ispin)
       end if
 
-      ! Note: this includes hybrids calculated with the Fock operator instead of OEP
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object

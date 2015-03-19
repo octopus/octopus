@@ -284,7 +284,6 @@ contains
       !enlargement factor to fit he simulationbox boundary
       ! ??? not sure
       enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
-      
     else ! non-periodic case
       enlarge = M_TWO
     end if

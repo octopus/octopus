@@ -233,7 +233,7 @@ contains
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
       ! in case use scdm localized states for exact exchange and request a new localization             
-      if(hm%EXX) scdm_is_local = .false.
+      if(hm%scdm_EXX) scdm_is_local = .false.
 
       ! time iterate the system, one time step.
       select case(td%dynamics)

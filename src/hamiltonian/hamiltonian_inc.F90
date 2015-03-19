@@ -170,7 +170,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       ASSERT(.not. batch_is_packed(hpsib))
 
-      if(hm%EXX)  then
+      if(hm%scdm_EXX)  then
         call scdm_init(hm%hf_st, der, hm%scdm)
         call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
         ! to apply the scdm exact exchange we need the state on the global mesh
@@ -471,7 +471,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   POP_SUB(X(exchange_operator))
 end subroutine X(exchange_operator)
 
-! EXX
+! scdm_EXX
 ! ---------------------------------------------------------
 subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   type(hamiltonian_t), intent(in)    :: hm

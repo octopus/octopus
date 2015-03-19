@@ -166,8 +166,8 @@ module hamiltonian_m
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
-!
-    logical :: EXX
+    !> use the SCDM method to compute the action of the Fock operator
+    logical :: scdm_EXX
 
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
@@ -475,9 +475,12 @@ contains
     call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
 
     ! use exact exchange
-    call parse_logical('EXX', .false., hm%EXX)
-    if(hm%EXX) then
-       message(1) = "Info: Using SCDM exact exchange"
+    call parse_logical('scdm_EXX', .false., hm%scdm_EXX)
+    if(hm%scdm_EXX) then
+      if(hm%theory_level /= HARTREE_FOCK) then
+        call messages_not_implemented("SCDM for exact exchange with dft run mode")
+      endif
+       message(1) = "Info: Using SCDM for exact exchange"
        call messages_info(1)
     endif
 
