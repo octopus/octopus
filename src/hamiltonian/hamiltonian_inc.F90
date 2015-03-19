@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
@@ -333,7 +333,7 @@ end subroutine X(hamiltonian_external)
 ! ---------------------------------------------------------
 
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime, set_bc)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
@@ -405,7 +405,7 @@ end subroutine X(hamiltonian_apply_all)
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
@@ -630,7 +630,7 @@ end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)
