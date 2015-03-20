@@ -230,6 +230,7 @@ module states_m
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
 #endif
+    logical                     :: scalapack_compatible !< Whether the states parallelization uses ScaLAPACK layout
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
@@ -2076,9 +2077,31 @@ contains
     call mpi_grp_init(st%st_kpt_mpi_grp, mc%st_kpt_comm)
 
 #ifdef HAVE_SCALAPACK
-    if(calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel) then
+    !%Variable ScaLAPACKCompatible
+    !%Type logical
+    !%Section Execution::Parallelization
+    !%Description
+    !% Whether to use a layout for states parallelization which is compatible with ScaLAPACK.
+    !% The default is yes for <tt>CalculationMode = gs, unocc, go</tt> without k-point parallelization,
+    !% and no otherwise. (Setting to other than default is experimental.)
+    !% The value must be yes if any ScaLAPACK routines are called in the course of the run;
+    !% it must be set by hand for <tt>td</tt> with <tt>TDDynamics = bo</tt>.
+    !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
+    !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
+    !%End
+    call parse_logical('ScaLAPACKCompatible', calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
+    if((calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
+      call messages_experimental('Setting ScaLAPACKCompatible to other than default')
+    
+    if(st%scalapack_compatible) then
+      if(mc%have_slaves) &
+        call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)")
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
+    else
+      call blacs_proc_grid_nullify(st%dom_st_proc_grid)
     end if
+#else
+    st%scalapack_compatible = .false.
 #endif
 
 #if defined(HAVE_MPI)
@@ -2097,7 +2120,7 @@ contains
      SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
 
      call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), &
-       lsize = st%st_num, scalapack_compat = calc_mode_scalapack_compat())
+       lsize = st%st_num, scalapack_compat = st%scalapack_compatible)
 
      message(1) = "Info: Parallelization in states"
      call messages_info(1)
@@ -2470,7 +2493,11 @@ contains
     ! What we do for now is to use the maximum of the number of
     ! points and we set to zero the remaining points.
 
-    ASSERT(calc_mode_scalapack_compat())
+    if(.not. st%scalapack_compatible) then
+      message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
+      message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
+      call messages_fatal(2, only_root_writes = .true.)
+    endif
     
     if (mesh%parallel_in_domains) then
       blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &

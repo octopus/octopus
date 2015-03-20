@@ -26,6 +26,7 @@ TDTimeStep = 10.0
 
 TDMaximumIter = 4
 
-ParallelizationStrategy = par_domains
+ScaLAPACKCompatible = yes
+ParallelizationStrategy = par_states
 
 FilterPotentials = filter_ts
