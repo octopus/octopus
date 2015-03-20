@@ -2,9 +2,11 @@
 # $Id$
 
 Test       : Born-Oppenheimer Molecular Dynamics
-Programs   : octopus_mpi; octopus
+Options    : scalapack
+Programs   : octopus_mpi
+Options    :
+Programs   : octopus
 TestGroups : short-run, real_time
-Options_MPI: scalapack
 Enabled    : Yes
 
 # ground state
