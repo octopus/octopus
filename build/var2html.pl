@@ -76,6 +76,10 @@ sub read_varinfo(){
   $thisvar = "";
   $thisfield = "";
   while($l = <IN>){
+    # for MathJax inline math: http://docs.mathjax.org/en/latest/start.html
+    $l =~ s/<math>/\\(/g;
+    $l =~ s/<\/math>/\\)/g;
+
     if($thisvar && $thisfield && $l !~ /^\w/){
       if($l =~ /^\s*$/){
 	$vars{$thisvar}{$thisfield} .= "<br><br>\n";
@@ -267,7 +271,8 @@ sub print_vars(){
       print OUT "
 <html>
 <head>
-
+<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />
+<script type=\"text/javascript\" src=\"https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full\"></script>
 <style>
    BODY {background-color: white; 
          font-size: 10pt; font-family: verdana,helvetica;}
