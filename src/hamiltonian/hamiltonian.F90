@@ -477,8 +477,9 @@ contains
     ! use exact exchange
     call parse_logical('scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
+      call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange with dft run mode")
+        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
       endif
        message(1) = "Info: Using SCDM for exact exchange"
        call messages_info(1)

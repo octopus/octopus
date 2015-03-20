@@ -30,7 +30,6 @@ module scdm_m
   use cube_m
   use cube_function_m
   use derivatives_m
-  !  use energy_m
   use fft_m
   use nfft_m
   use geometry_m

@@ -3,7 +3,6 @@
 module pes_flux_m
   use global_m
   use messages_m
-!  use datasets_m
   use mesh_m
   use profiling_m
   use varinfo_m
@@ -33,20 +32,20 @@ module pes_flux_m
     pes_flux_apply_boundaries
 
   type pes_flux_t
-    integer           :: nkpnts         ! total number of k-points
+    integer           :: nkpnts         !< total number of k-points
     integer           :: nk, nphi
     FLOAT             :: delk, phimin, delphi
-    integer           :: srfcshape      ! shape of the surface (= cubic/spherical)
-    integer           :: nsrfcpnts      ! total number of points contructing surface
-    integer           :: abmethod       ! method for absorbing boundaries
+    integer           :: srfcshape      !< shape of the surface (= cubic/spherical)
+    integer           :: nsrfcpnts      !< total number of points contructing surface
+    integer           :: abmethod       !< method for absorbing boundaries
     integer           :: output
     integer           :: interval
 
-    FLOAT, pointer    :: kpnt(:,:)      ! coordinates of all k-points
-    integer, pointer  :: srfcpnt(:)     ! returns the index of the points on the surface
-    FLOAT, pointer    :: srfcnrml(:,:)  ! (unit) vectors normal to the surface
-    FLOAT, pointer    :: vlkvphase(:)   ! current Volkov phase for all k-points
-    CMPLX, pointer    :: spctramp(:,:,:,:) ! spectral amplitude
+    FLOAT, pointer    :: kpnt(:,:)      !< coordinates of all k-points
+    integer, pointer  :: srfcpnt(:)     !< returns the index of the points on the surface
+    FLOAT, pointer    :: srfcnrml(:,:)  !< (unit) vectors normal to the surface
+    FLOAT, pointer    :: vlkvphase(:)   !< current Volkov phase for all k-points
+    CMPLX, pointer    :: spctramp(:,:,:,:) !< spectral amplitude
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -72,6 +71,8 @@ contains
 
     PUSH_SUB(pes_flux_init)
 
+    call messages_experimental("PhotoElectronSpectrum with t-surff")
+
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 'Surff only works in velocity gauge.'
@@ -91,7 +92,7 @@ contains
   ! - k points (automatically at first, later manually from block)
   ! - 
 
-!    if(parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
+!    if(parse_block('PhotoElectronSpectrumPoints', blk) < 0) then
 !      message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_flux'
 !      call messages_fatal(1)
 !    end if
@@ -103,16 +104,16 @@ contains
 !    end if
 
 
-    !%Variable SurffShape
-    !%Type integer
-    !%Default m_cubic
-    !%Section Time-Dependent::Surff
-    !%Description
-    !% The surface shape.
-    !%Option m_cubic 1
-    !% cubic surface.
-    !%End
-!    call parse_integer(datasets_check('SurffShape'), M_CUBIC, flux%srfcshape)
+!    !%Variable SurffShape
+!    !%Type integer
+!    !%Default m_cubic
+!    !%Section Time-Dependent::PhotoElectronSpectrum
+!    !%Description
+!    !% The surface shape.
+!    !%Option m_cubic 1
+!    !% cubic surface.
+!    !%End
+!    call parse_integer('SurffShape', M_CUBIC, flux%srfcshape)
 !    if(.not.varinfo_valid_option('SurffShape', flux%srfcshape)) &
 !      call input_error('SurffShape')
 !    call messages_print_var_option(stdout, "SurffShape", flux%srfcshape)
@@ -495,3 +496,8 @@ contains
   end subroutine pes_flux_output
 
 end module pes_flux_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
