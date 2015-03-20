@@ -59,6 +59,9 @@ contains
     
     PUSH_SUB(basins_init)
 
+    if(mesh%parallel_in_domains) &
+      call messages_experimental("Bader basins parallel in domains")
+    
     SAFE_ALLOCATE(this%map(1:mesh%np))
     this%map(1:mesh%np) = -1
 

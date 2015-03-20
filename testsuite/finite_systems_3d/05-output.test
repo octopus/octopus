@@ -46,7 +46,6 @@ match ; Plane value 10   ; LINEFIELD(static/density.x\=0, 10, 3) ; 2.23494456545
 match ; Plane value 30   ; LINEFIELD(static/density.x\=0, 30, 3) ; 1.89763461646455E-004
 match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 295, 3) ; 6.06673423715878E-003
 
-
 #xcrysden
 match ; XCrySDen geometry; LINEFIELD(static/geometry.xsf, 2, 3) ; 2.645886
 match ; XCrySDen wf 1    ; LINEFIELD(static/wf-st0001.xsf, 2, 3) ; 2.645886
@@ -54,6 +53,11 @@ match ; XCrySDen wf 2    ; LINEFIELD(static/wf-st0001.xsf, 8, 1) ; 5.291772
 Precision : 0.000001
 match ; XCrySDen wf 3    ; LINEFIELD(static/wf-st0001.xsf, 8087, 1) ; 0.010543843731284
 match ; XCrySDen wf 4    ; LINEFIELD(static/wf-st0001.xsf, 8546, 1) ; 0.007238401100039
+
+#bader: only works in serial currently
+#match ; Num. Bader basins  ; GREPFIELD(static/bader_basins-sp1.info, "Number of basins =", 5) ;  6
+#match ; Basin 1 volume     ; GREPFIELD(static/bader_basins-sp1.info, "volume =",           3) ; 13.577424
+#match ; Basin 1 population ; GREPFIELD(static/bader_basins-sp1.info, "population =",       3) ;  0.227759
 
 # Convert the density from obf to dx format and check it.
 Util  : oct-convert
