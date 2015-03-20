@@ -122,7 +122,7 @@ subroutine td_init(td, sys, hm)
   call messages_print_var_value(stdout, datasets_check('TDMaximumIter'), td%max_iter)
 
   if(td%max_iter < 1) then
-    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
+    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaximumIter."
     message(2) = '(TDMaximumIter <= 1)'
     call messages_fatal(2)
   end if
@@ -138,15 +138,12 @@ subroutine td_init(td, sys, hm)
   !%Default ehrenfest
   !%Section Time-Dependent::Propagation
   !%Description
-  !% Type of dynamics to follow during a time propagation. By default
-  !% it is Ehrenfest TDDFT. In any of the other two cases, you must set
-  !% 'MoveIons = yes'.
+  !% Type of dynamics to follow during a time propagation.
+  !% For BO, you must set <tt>MoveIons = yes</tt>.
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
   !%Option bo 2
   !% Born-Oppenheimer (Experimental).
-  !%Option cp 3
-  !% Car-Parrinello molecular dynamics.
   !%End
 
   call parse_integer(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
