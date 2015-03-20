@@ -49,12 +49,12 @@ The test files consist of lines beginning with one of a set of tags, parsed by t
 # A comment line. Will be ignored.
 Test : title
   Write a title to output to identify the test. Should be the first tag in the file.
-Program :
-  Which executable will be used. Should be either "octopus" for normal runs or "oct-test" for special test runs. Anything that does not run properly for both serial and parallel executables is not acceptable.
 Options:
   Specify that this test can only be run if the code was compiled with certain options, e.g. scalapack, netcdf, etc. The code is run with "-c" argument to query for options.
 Options_MPI:
   Like Options, except only applies if the code is being run with MPI, and overrules the Options tag. This is used when a parallel run would require e.g. scalapack or mpi2, but a serial run does not have any option requirement.
+Program :
+  Which executable will be used. Should be either "octopus" for normal runs or "oct-test" for special test runs. Anything that does not run properly for both serial and parallel executables is not acceptable.
 TestGroups : group-name, [group-name2, [...]]
   The oct-run_testsuite.sh script can be run with argument "-g" and a list of groups. Then tests will only be run if there is a match between the argument list and the list in TestGroups. Current groups: each directory ("components", "finite_systems_1d", etc.), "long-run" (included only "make check-full"), and "short-run" (everything that is not "long-run". [This tag is actually read by oct-run_testsuite.sh rather than oct-run_regression_test.pl.]
 Enabled : Yes/No
