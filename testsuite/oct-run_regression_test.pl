@@ -199,6 +199,7 @@ foreach my $octopus_exe (@executables){
 
   $command = $octopus_exe;
 
+  $enabled = "";
   while ($_ = <TESTSUITE>) {
 
     # remove trailing newline 
@@ -235,9 +236,9 @@ foreach my $octopus_exe (@executables){
 	  die255("ERROR: Unknown option 'Enabled = $enabled' in testsuite file.\n\n");
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
       }
-    } elsif ( $_ =~ /^Programs/) {
+    } elsif ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
         # handled earlier
-    } elsif ( $_ =~ /^Options/) {
+    } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         # handled earlier
     } elsif ( $_ =~ /^TestGroups/) {
         # handled by oct-run_testsuite.sh
