@@ -294,7 +294,7 @@ while ($_ = <TESTSUITE>) {
 	    }
 	}
 	# FIXME: make common skip proc; import Options to BGW version
-    } elsif ( $_ =~ /^TestGroups/) {
+    } elsif ( $_ =~ /^TestGroups\s*:/) {
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
