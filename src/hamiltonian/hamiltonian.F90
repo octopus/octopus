@@ -1092,7 +1092,7 @@ contains
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
-          ! get the uniform vector potential associated to a magnetic field
+          ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
           call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time)
           this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential - aa/P_C

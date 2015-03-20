@@ -1764,7 +1764,7 @@ contains
     !cmplxscl
     !NOTE: sometimes these objects are allocated outside this module
     ! and therefore the correspondence with val => val%Re is broken.
-    ! In this case we check if the pointer val is associated to zval%Re.
+    ! In this case we check if the pointer val is associated with zval%Re.
     if(associated(st%rho, target=st%zrho%Re)) then 
       nullify(st%rho)
       SAFE_DEALLOCATE_P(st%zrho%Re)       
