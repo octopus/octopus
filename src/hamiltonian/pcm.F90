@@ -36,29 +36,30 @@ module pcm_m
 
   private
 
-  public :: pcm_t,                &
-            pcm_init,             &
-            pcm_end,              &
-            pcm_charges,          &
-            pcm_pot_rs,           &
-            pcm_elect_energy,     &
-            v_nuclei_cav,         &
-            v_electrons_cav_li
-
+  public :: &
+       pcm_t,                &
+       pcm_init,             &
+       pcm_end,              &
+       pcm_charges,          &
+       pcm_pot_rs,           &
+       pcm_elect_energy,     &
+       v_nuclei_cav,         &
+       v_electrons_cav_li
+  
 
  !> The cavity hosting the solute molecule is built from a set of 
  !! interlocking spheres with optimized radii centered at the nuclear positions.  
   type, public :: sphere_t  
-    FLOAT :: x(MAX_DIM) !< center of the sphere
-    FLOAT :: r          !< radius of the sphere (different for each species)
+    FLOAT :: center(MAX_DIM) !< center of the sphere
+    FLOAT :: radius          !< radius of the sphere (different for each species)
   end type
 
  !> The resulting cavity is discretized by a set of tesserae.  
   type, public :: tessera_t
-    FLOAT :: x(MAX_DIM) !< representative point of the tessera 
-    FLOAT :: area       !< area of the tessera
-    FLOAT :: n(MAX_DIM) !< unitary outgoing vector normal to the tessera surface 
-    FLOAT :: r_sphere   !< radius of the sphere to which the tessera belongs
+    FLOAT :: point(MAX_DIM)  !< representative point of the tessera 
+    FLOAT :: area            !< area of the tessera
+    FLOAT :: normal(MAX_DIM) !< unitary outgoing vector normal to the tessera surface 
+    FLOAT :: r_sphere        !< radius of the sphere to which the tessera belongs
   end type tessera_t
 
   type pcm_t
@@ -149,10 +150,10 @@ contains
     call parse_logical('Solvation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       if (grid%sb%box_shape /= MINIMUM) then
-          message(1) = "PCM is only available for BoxShape = minimum"
-          call messages_fatal(1)
+        message(1) = "PCM is only available for BoxShape = minimum"
+        call messages_fatal(1)
       else 
-          call messages_experimental("polarizable continuum model")
+        call messages_experimental("polarizable continuum model")
       endif
     else
       POP_SUB(pcm_init)
@@ -188,41 +189,41 @@ contains
     call parse_float('SmearingFactor', M_ONE, pcm%gaussian_width)
 
     if (pcm%gaussian_width == M_ZERO) then
-        message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
-        call messages_info(1)
+      message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
+      call messages_info(1)
     else
-        message(1) = "Info: PCM potential is regularized to avoid Coulomb singularity"
-        call messages_info(1)        
+      message(1) = "Info: PCM potential is regularized to avoid Coulomb singularity"
+      call messages_info(1)        
     endif
-
+    
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
-       if (geo%atom(ia)%label == 'H') cycle
-       pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
-    enddo
-
+      if (geo%atom(ia)%label == 'H') cycle
+      pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
+    end do
+    
     SAFE_ALLOCATE( pcm%spheres(1:pcm%n_spheres) )
     
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
-       
-       if (geo%atom(ia)%label == 'H') cycle
-       pcm%n_spheres = pcm%n_spheres + 1
       
-       ! These coordinates are already in atomic units (Bohr)
-       pcm%spheres(pcm%n_spheres)%x = geo%atom(ia)%x
-
-       if (geo%atom(ia)%label == 'C')  pcm%spheres(pcm%n_spheres)%r = rcav_C
-       if (geo%atom(ia)%label == 'O')  pcm%spheres(pcm%n_spheres)%r = rcav_O
-       if (geo%atom(ia)%label == 'N')  pcm%spheres(pcm%n_spheres)%r = rcav_N
-       if (geo%atom(ia)%label == 'S')  pcm%spheres(pcm%n_spheres)%r = rcav_S
-       if (geo%atom(ia)%label == 'F')  pcm%spheres(pcm%n_spheres)%r = rcav_F
-       if (geo%atom(ia)%label == 'Na') pcm%spheres(pcm%n_spheres)%r = rcav_Na
-       if (geo%atom(ia)%label == 'Cl') pcm%spheres(pcm%n_spheres)%r = rcav_Cl
-    enddo
-
+      if (geo%atom(ia)%label == 'H') cycle
+      pcm%n_spheres = pcm%n_spheres + 1
+      
+      ! These coordinates are already in atomic units (Bohr)
+      pcm%spheres(pcm%n_spheres)%center = geo%atom(ia)%x
+      
+      if (geo%atom(ia)%label == 'C')  pcm%spheres(pcm%n_spheres)%radius = rcav_C
+      if (geo%atom(ia)%label == 'O')  pcm%spheres(pcm%n_spheres)%radius = rcav_O
+      if (geo%atom(ia)%label == 'N')  pcm%spheres(pcm%n_spheres)%radius = rcav_N
+      if (geo%atom(ia)%label == 'S')  pcm%spheres(pcm%n_spheres)%radius = rcav_S
+      if (geo%atom(ia)%label == 'F')  pcm%spheres(pcm%n_spheres)%radius = rcav_F
+      if (geo%atom(ia)%label == 'Na') pcm%spheres(pcm%n_spheres)%radius = rcav_Na
+      if (geo%atom(ia)%label == 'Cl') pcm%spheres(pcm%n_spheres)%radius = rcav_Cl
+    end do
+    
     call io_mkdir('pcm')
-
+    
     pcm%info_unit = io_open('pcm/pcm_info.out', action='write')
 
     write(pcm%info_unit,'(A34)') '#Configuration: Molecule + Solvent'
@@ -238,19 +239,19 @@ contains
 
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
-       if (geo%atom(ia)%label == 'H') cycle
-       pcm%n_spheres = pcm%n_spheres + 1       
-
-       write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres,            &
-                              						               geo%atom(ia)%label,       &
-                                                                                       geo%atom(ia)%x*P_a_B,     &
-                                                                                       pcm%spheres(pcm%n_spheres)%r*P_a_B
-    enddo
+      if (geo%atom(ia)%label == 'H') cycle
+      pcm%n_spheres = pcm%n_spheres + 1       
+      
+      write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres,            &
+           geo%atom(ia)%label,       &
+           geo%atom(ia)%x*P_a_B,     &
+           pcm%spheres(pcm%n_spheres)%radius*P_a_B
+    end do
     write(pcm%info_unit,'(A1)')'#'  
     write(pcm%info_unit,'(A1,4X,A4,9X,A4,15X,A4,15X,A4,15X,A4,15X,A8,12X,A5,15X,A5)') &
-                                                  '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+         '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
     pcm%counter = 0
-
+    
     !%Variable CavityGeometry
     !%Type string
     !%Section Hamiltonian::PCM
@@ -263,64 +264,64 @@ contains
     iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
     
     read(iunit,*) pcm%n_tesserae
-
+    
     if (pcm%n_tesserae.gt.mxts) then
-        write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
-        call messages_warning(1)     
+      write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
+      call messages_warning(1)     
     endif
-
-    SAFE_ALLOCATE( pcm%tess(1:pcm%n_tesserae)  )
-
+    
+    SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%x(1)
-    enddo
-	
+      read(iunit,*) pcm%tess(ia)%point(1)
+    end do
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%x(2)
-    enddo
-	
+      read(iunit,*) pcm%tess(ia)%point(2)
+    end do
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%x(3)
-    enddo
-
+      read(iunit,*) pcm%tess(ia)%point(3)
+    end do
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%area
-    enddo
-
+      read(iunit,*) pcm%tess(ia)%area
+    end do
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%r_sphere
-    enddo
-
+      read(iunit,*) pcm%tess(ia)%r_sphere
+    end do
+    
     do ia=1, pcm%n_tesserae
-       read(iunit,*) pcm%tess(ia)%n
-    enddo
+      read(iunit,*) pcm%tess(ia)%normal
+    end do
     
     call io_close(iunit)
-
+    
     message(1) = "Info: van der Waals surface has been read from " // trim(pcm%input_cavity)
     call messages_info(1)
-
+    
     cav_unit_test = io_open('pcm/cavity_mol.xyz', action='write')
-
+    
     write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
     write (cav_unit_test,'(2X)')
-
-    do ia=1, pcm%n_tesserae
-       write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', pcm%tess(ia)%x*P_a_B
-    enddo
-
-    do ia=1, geo%natoms
-       write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') geo%atom(ia)%label,      &
-                                                                    geo%atom(ia)%x*P_a_B
-    enddo
+    
+    do ia = 1, pcm%n_tesserae
+      write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', pcm%tess(ia)%point*P_a_B
+    end do
+    
+    do ia = 1, geo%natoms
+      write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') geo%atom(ia)%label,      &
+           geo%atom(ia)%x*P_a_B
+    end do
 
     call io_close(cav_unit_test)
-
+    
     pcm%n_vertices = 8
-    SAFE_ALLOCATE( pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices) )
+    SAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
     pcm%ind_vh = INT(M_ZERO)
-
-    SAFE_ALLOCATE( pcm%arg_li(1:pcm%n_tesserae, 1:MAX_DIM) )
+    
+    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:MAX_DIM))
     pcm%arg_li = M_ZERO
 
 !    vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')
@@ -328,11 +329,11 @@ contains
 
 !     do ia=1,pcm%n_tesserae
 !        write(vdw_unit,*) pcm%tess(ia)%x/P_Ang
-!     enddo
+!     end do
 
 !     do ia=1, grid%mesh%np
 !        write(grid_unit,*) grid%mesh%x(ia,:)/P_Ang
-!     enddo
+!     end do
 
 !    call io_close(vdw_unit)
 !    call io_close(grid_unit)
@@ -342,15 +343,15 @@ contains
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
-     SAFE_ALLOCATE( sr_dist(pcm%n_tesserae,grid%mesh%np) ) 
-     sr_dist = M_ZERO
-     do ia = 1, pcm%n_tesserae
-      call nearest_cube_vertices( pcm%tess(ia)%x, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices )
+    SAFE_ALLOCATE(sr_dist(pcm%n_tesserae,grid%mesh%np)) 
+    sr_dist = M_ZERO
+    do ia = 1, pcm%n_tesserae
+      call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices)
       do ip = 1, grid%mesh%np !running serially np=np_global
-       call mesh_r(grid%mesh, ip, sr_dist(ia,ip), origin=pcm%tess(ia)%x)
-      enddo
-     enddo
-
+        call mesh_r(grid%mesh, ip, sr_dist(ia,ip), origin=pcm%tess(ia)%point)
+      end do
+    end do
+    
 !    call io_close(nearest_idx_unit)
 !    call io_close(idx_from_coord_unit)
 
@@ -358,42 +359,42 @@ contains
     pcm%epsilon_infty = CNST(1.7760) 
     SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     mat_gamess = M_ZERO
-
+    
     SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
-
+    
     call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix) 
-
+    
     pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess_dyn.out', action='write')
-
-     do jtess=1, pcm%n_tesserae
-      do itess=1, pcm%n_tesserae
-         write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
-      enddo
-     enddo
+    
+    do jtess = 1, pcm%n_tesserae
+      do itess = 1, pcm%n_tesserae
+        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
+      end do
+    end do
 
     call io_close(pcmmat_gamess_unit)
-
+    
     pcm%matrix = M_ZERO
     mat_gamess = M_ZERO
-
+    
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
-
+    
     pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
     pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess.out', action='write')
-
-     do jtess=1, pcm%n_tesserae
-      do itess=1, pcm%n_tesserae
-         write(pcmmat_unit,*) pcm%matrix(itess,jtess)
-         write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
-      enddo
-     enddo
+    
+    do jtess = 1, pcm%n_tesserae
+      do itess = 1, pcm%n_tesserae
+        write(pcmmat_unit,*) pcm%matrix(itess,jtess)
+        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
+      end do
+    end do
 
     call io_close(pcmmat_unit)
     call io_close(pcmmat_gamess_unit)
-
+    
     SAFE_ALLOCATE( pcm%v_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%v_n_rs(1:grid%mesh%np) )
@@ -407,12 +408,10 @@ contains
     pcm%v_e    = M_ZERO
     pcm%q_e    = M_ZERO
     pcm%v_e_rs = M_ZERO
-
+    
     POP_SUB(pcm_init)
-    return
   end subroutine pcm_init
       
-!==================================================================
   !> Calculates the Hartree potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
   subroutine v_electrons_cav_li(v_e_cav, v_hartree, pcm)
@@ -421,43 +420,43 @@ contains
     FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
 
     integer :: ia
-
+    
     FLOAT :: C_00
     FLOAT :: C_10
     FLOAT :: C_01
     FLOAT :: C_11
     FLOAT :: C_0
     FLOAT :: C_1
-
+    
     PUSH_SUB(v_electrons_cav_li)    
+    
+    v_e_cav = M_ZERO
+    
+    do ia = 1, pcm%n_tesserae
 
-     v_e_cav = M_ZERO
-
-     do ia=1, pcm%n_tesserae
-
-        C_00 = v_hartree( pcm%ind_vh(ia,1) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-               v_hartree( pcm%ind_vh(ia,5) )*( pcm%arg_li(ia,1) )
-
-        C_10 = v_hartree( pcm%ind_vh(ia,2) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-               v_hartree( pcm%ind_vh(ia,6) )*( pcm%arg_li(ia,1) )
-
-        C_01 = v_hartree( pcm%ind_vh(ia,4) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-               v_hartree( pcm%ind_vh(ia,8) )*( pcm%arg_li(ia,1) )
-
-        C_11 = v_hartree( pcm%ind_vh(ia,3) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-               v_hartree( pcm%ind_vh(ia,7) )*( pcm%arg_li(ia,1) )
-
-        C_0 = C_00*( M_ONE - pcm%arg_li(ia,2) ) + C_10*pcm%arg_li(ia,2)
-
-        C_1 = C_01*( M_ONE - pcm%arg_li(ia,2) ) + C_11*pcm%arg_li(ia,2)
-
-        v_e_cav(ia) = C_0*( M_ONE - pcm%arg_li(ia,3) ) + C_1*pcm%arg_li(ia,3)
-
-      enddo
-   
+      C_00 = v_hartree( pcm%ind_vh(ia,1) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+           v_hartree( pcm%ind_vh(ia,5) )*( pcm%arg_li(ia,1) )
+      
+      C_10 = v_hartree( pcm%ind_vh(ia,2) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+           v_hartree( pcm%ind_vh(ia,6) )*( pcm%arg_li(ia,1) )
+      
+      C_01 = v_hartree( pcm%ind_vh(ia,4) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+           v_hartree( pcm%ind_vh(ia,8) )*( pcm%arg_li(ia,1) )
+      
+      C_11 = v_hartree( pcm%ind_vh(ia,3) )*( M_ONE - pcm%arg_li(ia,1) ) + &
+           v_hartree( pcm%ind_vh(ia,7) )*( pcm%arg_li(ia,1) )
+      
+      C_0 = C_00*( M_ONE - pcm%arg_li(ia,2) ) + C_10*pcm%arg_li(ia,2)
+      
+      C_1 = C_01*( M_ONE - pcm%arg_li(ia,2) ) + C_11*pcm%arg_li(ia,2)
+      
+      v_e_cav(ia) = C_0*( M_ONE - pcm%arg_li(ia,3) ) + C_1*pcm%arg_li(ia,3)
+      
+    end do
+    
     POP_SUB(v_electrons_cav_li)
-  end subroutine v_electrons_cav_li      
-!==================================================================
+  end subroutine v_electrons_cav_li
+
   !> Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
   !! v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
   subroutine v_nuclei_cav(v_n_cav, geo, tess, n_tess)
@@ -475,13 +474,13 @@ contains
     type(species_t), pointer :: spci 
 
     PUSH_SUB(v_nuclei_cav)
-     
+
     v_n_cav = M_ZERO
 
     do ik = 1, n_tess
-     do ia = 1, geo%natoms
-        diff = geo%atom(ia)%x - tess(ik)%x 
-        
+      do ia = 1, geo%natoms
+        diff = geo%atom(ia)%x - tess(ik)%point
+
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
@@ -489,14 +488,14 @@ contains
         z_ia = species_zval(spci)
 
         v_n_cav(ik) = v_n_cav(ik) + z_ia/dist       
-     enddo
-    enddo
+      end do
+    end do
 
     v_n_cav = -v_n_cav
 
     POP_SUB(v_nuclei_cav)
   end subroutine v_nuclei_cav
-!==================================================================
+
   !> Calculates the solute-solvent electrostatic interaction energy
   !! E_M-solv = \sum{ik=1}^n_tess { [VHartree(ik) + Vnuclei(ik)]*[q_e(ik) + q_n(ik)] }   
   subroutine pcm_elect_energy(geo, pcm, E_int_ee, E_int_en, E_int_ne, E_int_nn)
@@ -512,141 +511,140 @@ contains
     FLOAT   :: z_ia
     integer :: ik
     integer :: ia
-
+    
     type(species_t), pointer :: spci 
-
+    
     PUSH_SUB(pcm_elect_energy)
      
     E_int_ee = M_ZERO
     E_int_en = M_ZERO
     E_int_ne = M_ZERO
     E_int_nn = M_ZERO
-
+    
     do ik = 1, pcm%n_tesserae
-
-       E_int_ee = E_int_ee + pcm%v_e(ik)*pcm%q_e(ik)
-       E_int_en = E_int_en + pcm%v_e(ik)*pcm%q_n(ik)
-
-     do ia = 1, geo%natoms
-        diff = geo%atom(ia)%x - pcm%tess(ik)%x 
+      
+      E_int_ee = E_int_ee + pcm%v_e(ik)*pcm%q_e(ik)
+      E_int_en = E_int_en + pcm%v_e(ik)*pcm%q_n(ik)
+      
+      do ia = 1, geo%natoms
+        diff = geo%atom(ia)%x - pcm%tess(ik)%point 
         
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
         spci => geo%atom(ia)%species
         z_ia = -species_zval(spci)
-
+        
         E_int_ne = E_int_ne + z_ia*pcm%q_e(ik) / dist
         E_int_nn = E_int_nn + z_ia*pcm%q_n(ik) / dist
-
-     enddo
-    enddo
-
+        
+      end do
+    end do
+    
     E_int_ee = M_HALF*E_int_ee
     E_int_en = M_HALF*E_int_en
     E_int_ne = M_HALF*E_int_ne
     E_int_nn = M_HALF*E_int_nn
-
+    
     POP_SUB(pcm_elect_energy)
   end subroutine pcm_elect_energy
 
-!==================================================================
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
   subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li, ia, n_vertices)
-   FLOAT, intent(in)        :: point(1:MAX_DIM)
-   type(mesh_t), intent(in) :: mesh
-   integer, intent(out)     :: vert_idx(:)
-   FLOAT, intent(out)       :: weight_li(:)
-   integer, intent(in)      :: ia
-   integer, intent(in)      :: n_vertices
+    FLOAT, intent(in)        :: point(1:MAX_DIM)
+    type(mesh_t), intent(in) :: mesh
+    integer, intent(out)     :: vert_idx(:)
+    FLOAT, intent(out)       :: weight_li(:)
+    integer, intent(in)      :: ia
+    integer, intent(in)      :: n_vertices
 
-   FLOAT   :: dmin
-   integer :: rankmin
+    FLOAT   :: dmin
+    integer :: rankmin
 
-   FLOAT   :: coord_0(1:MAX_DIM)
-   integer :: sign_x
-   integer :: sign_y
-   integer :: sign_z
-   integer :: point_0(1:MAX_DIM)
-   integer :: point_f(1:MAX_DIM)
-   integer :: ii
-!   integer :: tess_unit
-!   integer :: vertices_unit
+    FLOAT   :: coord_0(1:MAX_DIM)
+    integer :: sign_x
+    integer :: sign_y
+    integer :: sign_z
+    integer :: point_0(1:MAX_DIM)
+    integer :: point_f(1:MAX_DIM)
+    integer :: ii
+    !   integer :: tess_unit
+    !   integer :: vertices_unit
 
-!   character(LEN=20) :: cc
+    !   character(LEN=20) :: cc
 
-   PUSH_SUB(nearest_cube_vertices)    
+    PUSH_SUB(nearest_cube_vertices)    
 
-   vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
-       
-   coord_0 = mesh%x(vert_idx(1), :)
-   point_0 = NINT(coord_0/mesh%spacing)
-   
-!   write(nearest_idx_unit,*) vert_idx(1)
-!   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
+    vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
 
-   sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
-   sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
-   sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) )
+    coord_0 = mesh%x(vert_idx(1), :)
+    point_0 = NINT(coord_0/mesh%spacing)
 
-   weight_li = ABS(point - coord_0)/mesh%spacing 
+    !   write(nearest_idx_unit,*) vert_idx(1)
+    !   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
 
-  !FRONT CUBE PLANE
-   point_f = point_0
+    sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
+    sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
+    sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) )
 
-  !POINT P2
-   point_f(2) = point_f(2) + sign_y
-   vert_idx(2) = index_from_coords(mesh%idx, point_f)
+    weight_li = ABS(point - coord_0)/mesh%spacing 
 
-  !POINT P3
-   point_f(3) = point_f(3) + sign_z
-   vert_idx(3) = index_from_coords(mesh%idx, point_f)
+    !FRONT CUBE PLANE
+    point_f = point_0
 
-  !POINT P4
-   point_f(2) = point_f(2) - sign_y
-   vert_idx(4) = index_from_coords(mesh%idx, point_f)
+    !POINT P2
+    point_f(2) = point_f(2) + sign_y
+    vert_idx(2) = index_from_coords(mesh%idx, point_f)
 
-  !REAR CUBE PLANE
-   point_f = point_0 
+    !POINT P3
+    point_f(3) = point_f(3) + sign_z
+    vert_idx(3) = index_from_coords(mesh%idx, point_f)
 
-  !POINT P5
-   point_f(1) = point_f(1) + sign_x
-   vert_idx(5) = index_from_coords(mesh%idx, point_f)
+    !POINT P4
+    point_f(2) = point_f(2) - sign_y
+    vert_idx(4) = index_from_coords(mesh%idx, point_f)
 
-  !POINT P6
-   point_f(2) = point_f(2) + sign_y
-   vert_idx(6) = index_from_coords(mesh%idx, point_f)
+    !REAR CUBE PLANE
+    point_f = point_0 
 
-  !POINT P7
-   point_f(3) = point_f(3) + sign_z
-   vert_idx(7) = index_from_coords(mesh%idx, point_f)
+    !POINT P5
+    point_f(1) = point_f(1) + sign_x
+    vert_idx(5) = index_from_coords(mesh%idx, point_f)
 
-  !POINT P8
-   point_f(2) = point_f(2) - sign_y
-   vert_idx(8) = index_from_coords(mesh%idx, point_f)
+    !POINT P6
+    point_f(2) = point_f(2) + sign_y
+    vert_idx(6) = index_from_coords(mesh%idx, point_f)
 
-!   write(cc,'(I3)') ia
+    !POINT P7
+    point_f(3) = point_f(3) + sign_z
+    vert_idx(7) = index_from_coords(mesh%idx, point_f)
 
-!   tess_unit     = io_open('pcm/'//trim(cc)//'_tess.dat', action='write')
-!   vertices_unit = io_open('pcm/'//trim(cc)//'_vertices.dat', action='write')
+    !POINT P8
+    point_f(2) = point_f(2) - sign_y
+    vert_idx(8) = index_from_coords(mesh%idx, point_f)
 
-!    write(tess_unit,*) point/P_Ang
-   
-!    do ii=1, n_vertices
-!       write(vertices_unit,*) mesh%x(vert_idx(ii), :)/P_Ang 
-!    enddo
+    !   write(cc,'(I3)') ia
 
-!   call io_close(tess_unit)
-!   call io_close(vertices_unit)
+    !   tess_unit     = io_open('pcm/'//trim(cc)//'_tess.dat', action='write')
+    !   vertices_unit = io_open('pcm/'//trim(cc)//'_vertices.dat', action='write')
 
-   POP_SUB(nearest_cube_vertices)    
-  
+    !    write(tess_unit,*) point/P_Ang
+
+    !    do ii=1, n_vertices
+    !       write(vertices_unit,*) mesh%x(vert_idx(ii), :)/P_Ang 
+    !    end do
+
+    !   call io_close(tess_unit)
+    !   call io_close(vertices_unit)
+
+    POP_SUB(nearest_cube_vertices)    
+
   end subroutine nearest_cube_vertices
-!==============================================================================================
- !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
- !! provided the value of the molecular electrostatic potential at 
- !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
+
+  !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
+  !! provided the value of the molecular electrostatic potential at 
+  !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
   subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess)
     FLOAT, intent(out)   :: q_pcm(:)     !< (1:n_tess)
     FLOAT, intent(out)   :: q_pcm_tot
@@ -663,15 +661,15 @@ contains
     q_pcm_tot = M_ZERO
 
     do ia = 1, n_tess
-       do ib = 1, n_tess
-          q_pcm(ia) = q_pcm(ia) + pcm_mat(ia,ib)*v_cav(ib) !< transpose matrix might speed up
-       enddo 
-       q_pcm_tot = q_pcm_tot + q_pcm(ia)
-    enddo
-    
+      do ib = 1, n_tess
+        q_pcm(ia) = q_pcm(ia) + pcm_mat(ia,ib)*v_cav(ib) !< transpose matrix might speed up
+      end do
+      q_pcm_tot = q_pcm_tot + q_pcm(ia)
+    end do
+
     POP_SUB(pcm_charges)
   end subroutine pcm_charges
-!==================================================
+  
   !> Generates the potential 'v_pcm' in real-space.
   subroutine pcm_pot_rs(v_pcm, q_pcm, tess, n_tess, mesh, width_factor)
     FLOAT,           intent(out) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
@@ -695,28 +693,28 @@ contains
     v_pcm = M_ZERO
 
     if (width_factor /= M_ZERO) then
-    
-     do ia = 1, n_tess
+
+      do ia = 1, n_tess
         do ip = 1, mesh%np !running serially np=np_global
-           arg = sr_dist(ia,ip)/sqrt( tess(ia)%area*width_factor )        
-           term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
-           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
-        enddo 
-     enddo
-     v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
+          arg = sr_dist(ia,ip)/sqrt( tess(ia)%area*width_factor )        
+          term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
+          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
+        end do
+      end do
+      v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
 
     else
-     
-     do ia = 1, n_tess
+
+      do ia = 1, n_tess
         do ip = 1, mesh%np !running serially np=np_global
-           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/sr_dist(ia,ip) !< standard PCM field
-        enddo 
-     enddo
+          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/sr_dist(ia,ip) !< standard PCM field
+        end do
+      end do
 
     endif
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
-!=====================================================================================
+
   !> Generates the PCM response matrix. J. Tomassi et al. Chem. Rev. 105, 2999 (2005). 
   subroutine pcm_matrix(eps, tess, n_tess, pcm_mat )
     FLOAT, intent(in)           :: eps
@@ -753,7 +751,7 @@ contains
 
     do i=1, n_tess
        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
-    enddo
+    end do
 
     SAFE_DEALLOCATE_A(d_mat_act) 
      
@@ -769,13 +767,13 @@ contains
 
     !> Computing -S_E*S_I^-1*(2*Pi - D_I)
     pcm_mat = -matmul( Sigma, pcm_mat ) 
-     
+
     do i=1, n_tess
-       pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
-    enddo
+      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
+    end do
 
     pcm_mat = pcm_mat - Delta
-    
+
     SAFE_ALLOCATE( mat_tmp(1:n_tess,1:n_tess) )
     mat_tmp = M_ZERO
 
@@ -808,66 +806,62 @@ contains
     SAFE_DEALLOCATE_A(mat_tmp)
 
     pcm_mat = -pcm_mat
-
-!   Testing
-    DO i=1, n_tess
-       mat_gamess(i,:) = pcm_mat(i,:)/tess(i)%area
-    ENDDO    
-       
+    
+    !   Testing
+    do i=1, n_tess
+      mat_gamess(i,:) = pcm_mat(i,:)/tess(i)%area
+    end do
+    
     POP_SUB(pcm_matrix)
-
+    
   end subroutine pcm_matrix
-!==============================================================
-  subroutine s_i_matrix(n_tess, tess)
 
+  subroutine s_i_matrix(n_tess, tess)
     integer, intent(in)         :: n_tess
     type(tessera_t), intent(in) :: tess(:)
     
-    integer :: i
-    integer :: j
+    integer :: ii, jj
 
     s_mat_act = M_ZERO 
 
-    do i = 1, n_tess
-     do j = i, n_tess
+    do ii = 1, n_tess
+     do jj = ii, n_tess
 
-        s_mat_act(i,j) = s_mat_elem_I( tess(i), tess(j) )
-        if (i /= j) s_mat_act(j,i) = s_mat_act(i,j) !symmetric matrix
+        s_mat_act(ii,jj) = s_mat_elem_I(tess(ii), tess(jj))
+        if (ii /= jj) s_mat_act(jj,ii) = s_mat_act(ii,jj) !symmetric matrix
 
-     enddo
-    enddo
+     end do
+    end do
 
   end subroutine s_i_matrix
-!==============================================================
-  subroutine d_i_matrix(n_tess, tess)
 
+  subroutine d_i_matrix(n_tess, tess)
     integer, intent(in)         :: n_tess
     type(tessera_t), intent(in) :: tess(:)
 
-    integer :: i
-    integer :: j
+    integer :: ii, jj
 
     d_mat_act = M_ZERO 
 
-    do i = 1, n_tess
-     do j = 1, n_tess !< non-symmetric matrix
-
-        d_mat_act(i,j) = d_mat_elem_I( tess(i), tess(j) )
-
-     enddo
-    enddo
-
+    do ii = 1, n_tess
+      do jj = 1, n_tess !< non-symmetric matrix
+        
+        d_mat_act(ii,jj) = d_mat_elem_I(tess(ii), tess(jj))
+        
+      end do
+    end do
+    
   end subroutine d_i_matrix
-!===========================================
+
   !> electrostatic Green function in vacuo:
   !! G_I(r,r^\prime) = 1 / | r - r^\prime |
-  FLOAT function s_mat_elem_I( tessi, tessj )
+  FLOAT function s_mat_elem_I(tessi, tessj)
     type(tessera_t), intent(in) :: tessi
     type(tessera_t), intent(in) :: tessj
-
+    
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.1)
-
+    
     FLOAT :: diff(1:MAX_DIM)
     FLOAT :: dist
     FLOAT :: s_diag
@@ -876,31 +870,30 @@ contains
     s_diag = M_ZERO
     s_off_diag = M_ZERO
 
-    diff = tessi%x - tessj%x
+    diff = tessi%point - tessj%point
 
     dist = dot_product( diff, diff )
     dist = sqrt(dist)
 
-    if  ( dist == M_ZERO ) then
+    if  (dist == M_ZERO) then
 
-        s_diag = M_SD_DIAG*sqrt( M_FOUR*M_Pi/tessi%area )
-        s_mat_elem_I = s_diag
-
+      s_diag = M_SD_DIAG*sqrt( M_FOUR*M_Pi/tessi%area )
+      s_mat_elem_I = s_diag
+      
     else
+      
+      if ( dist > M_DIST_MIN ) s_off_diag = M_ONE/dist 
+      s_mat_elem_I = s_off_diag
+      
+    end if
 
-        if ( dist > M_DIST_MIN ) s_off_diag = M_ONE/dist 
-        s_mat_elem_I = s_off_diag
+  end function s_mat_elem_I
 
-    endif
-
-    return
-    end function s_mat_elem_I
-!=================================================================
   !> Gradient of the Green function in vacuo GRAD[G_I(r,r^\prime)]
-  FLOAT function d_mat_elem_I( tessi, tessj )
+  FLOAT function d_mat_elem_I(tessi, tessj)
     type(tessera_t), intent(in) :: tessi
     type(tessera_t), intent(in) :: tessj
-
+    
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
 
@@ -912,54 +905,53 @@ contains
     d_diag = M_ZERO
     d_off_diag = M_ZERO
 
-    diff = tessi%x - tessj%x
+    diff = tessi%point - tessj%point
 
     dist = dot_product( diff, diff )
     dist = sqrt(dist)
 
-    IF (dist == M_ZERO) THEN
-        !> Diagonal matrix elements  
-        d_diag = M_SD_DIAG*sqrt(M_FOUR*M_Pi*tessi%area)
-        d_diag = -d_diag/(M_TWO*tessi%r_sphere)
-        d_mat_elem_I = d_diag
-   
+    if (dist == M_ZERO) then
+      !> Diagonal matrix elements  
+      d_diag = M_SD_DIAG*sqrt(M_FOUR*M_Pi*tessi%area)
+      d_diag = -d_diag/(M_TWO*tessi%r_sphere)
+      d_mat_elem_I = d_diag
+      
     else
-        !> off-diagonal matrix elements  
-        if (dist > M_DIST_MIN) then
-            d_off_diag = dot_product( diff, tessj%n(:) )	
-            d_off_diag = d_off_diag*tessj%area/dist**3
-        endif
+      !> off-diagonal matrix elements  
+      if (dist > M_DIST_MIN) then
+        d_off_diag = dot_product( diff, tessj%normal(:) )	
+        d_off_diag = d_off_diag*tessj%area/dist**3
+      end if
 
-        d_mat_elem_I = d_off_diag
+      d_mat_elem_I = d_off_diag
+      
+    end if
+    
+  end function d_mat_elem_I
 
-    endif
-   
-    return
-    end function d_mat_elem_I
-!==============================================================
   subroutine pcm_end(pcm)
     type(pcm_t), intent(inout) :: pcm
-
+    
     PUSH_SUB(pcm_end)
-
-     SAFE_DEALLOCATE_A(pcm%spheres)
-     SAFE_DEALLOCATE_A(pcm%tess)
-     SAFE_DEALLOCATE_A(pcm%matrix)
-     SAFE_DEALLOCATE_A(pcm%q_e)
-     SAFE_DEALLOCATE_A(pcm%q_n) 
-     SAFE_DEALLOCATE_A(pcm%v_e)
-     SAFE_DEALLOCATE_A(pcm%v_n)
-     SAFE_DEALLOCATE_A(pcm%v_e_rs)
-     SAFE_DEALLOCATE_A(pcm%v_n_rs)
-     SAFE_DEALLOCATE_A(pcm%ind_vh)
-     SAFE_DEALLOCATE_A(pcm%arg_li)
-     SAFE_DEALLOCATE_A(sr_dist) 
-
-     call io_close(pcm%info_unit)
-
+    
+    SAFE_DEALLOCATE_A(pcm%spheres)
+    SAFE_DEALLOCATE_A(pcm%tess)
+    SAFE_DEALLOCATE_A(pcm%matrix)
+    SAFE_DEALLOCATE_A(pcm%q_e)
+    SAFE_DEALLOCATE_A(pcm%q_n) 
+    SAFE_DEALLOCATE_A(pcm%v_e)
+    SAFE_DEALLOCATE_A(pcm%v_n)
+    SAFE_DEALLOCATE_A(pcm%v_e_rs)
+    SAFE_DEALLOCATE_A(pcm%v_n_rs)
+    SAFE_DEALLOCATE_A(pcm%ind_vh)
+    SAFE_DEALLOCATE_A(pcm%arg_li)
+    SAFE_DEALLOCATE_A(sr_dist) 
+    
+    call io_close(pcm%info_unit)
+    
     POP_SUB(pcm_end)
   end subroutine pcm_end
-
+  
 end module pcm_m
 
 !! Local Variables:
