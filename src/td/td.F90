@@ -153,6 +153,7 @@ contains
       end if
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
     end if
 
     ! Calculate initial value of the gauge vector field
