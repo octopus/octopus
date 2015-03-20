@@ -245,7 +245,8 @@ contains
     !%Section SCF::LCAO
     !%Description
     !% If set to true, and using complex states, complex spherical harmonics will be used, <i>i.e.</i>
-    !% with exp(i m \phi). If false, real spherical harmonics with sin(m \phi) or cos(m \phi) are used.
+    !% with <math>e^{\pm i m \phi}</math>.
+    !% If false, real spherical harmonics with <math>\sin(m \phi)</math> or <math>\cos(m \phi)</math> are used.
     !% This variable will make it more likely to get states that are eigenvectors of the <math>L_z</math>
     !% operator, with a definite angular momentum.
     !%End
