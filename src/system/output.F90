@@ -125,6 +125,7 @@ module output_m
     !> These variables fine-tune the output for some of the possible output options:
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
+    logical :: duringscf
 
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
     character(len=32) :: iter_dir  !< The folder name, if information will be output while iterating.
@@ -507,7 +508,8 @@ contains
     !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
     !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
     !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
-    !% Must be >= 0. If it is 0, then no output is written.
+    !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
+    !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
     !%End
     call parse_integer('OutputInterval', 50, outp%output_interval)
     call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
@@ -515,6 +517,16 @@ contains
       message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1)
     endif
+
+    !%Variable OutputDuringSCF
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
+    !% output will be written after every <tt>OutputInterval</tt> iterations.
+    !%End
+    call parse_logical('OutputDuringSCF', .false., outp%duringscf) 
 
     !%Variable OutputIterDir
     !%Default "output_iter"
@@ -546,8 +558,6 @@ contains
       message(1) = "RestartWriteInterval must be > 0."
       call messages_fatal(1)
     endif
-
-    call messages_obsolete_variable("OutputDuringSCF", "OutputInterval")
 
     ! these kinds of Output do not have a how
     what_no_how = C_OUTPUT_MATRIX_ELEMENTS + C_OUTPUT_BERKELEYGW + C_OUTPUT_DOS + &
