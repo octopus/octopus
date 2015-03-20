@@ -1,5 +1,5 @@
 CalculationMode = td
-
+ExperimentalFeatures = yes
 FromScratch = yes
 
 bond_length = 2.4
