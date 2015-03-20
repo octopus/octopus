@@ -528,7 +528,9 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_string('OutputIterDir', "output_iter", outp%iter_dir)
-    call io_mkdir(outp%iter_dir)
+    if(outp%what /= 0 .and. outp%output_interval > 0) then
+      call io_mkdir(outp%iter_dir)
+    endif
     call add_last_slash(outp%iter_dir)
 
     !%Variable RestartWriteInterval
