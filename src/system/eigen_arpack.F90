@@ -141,14 +141,16 @@ contains
     !%Default SR 
     !%Section SCF::Eigensolver::ARPACK
     !%Description 
-    !% Eigenvalues sorting strategy (case sensitive).
+    !% Eigenvalue sorting strategy (case sensitive).
     !% From ARPACK documentation: 
-    !% 'LM' -> want eigenvalues of largest magnitude.
-    !% 'SM' -> want eigenvalues of smallest magnitude.
-    !% 'LR' -> want eigenvalues of largest real part.
-    !% 'SR' -> want eigenvalues of smallest real part.
-    !% 'LI' -> want eigenvalues of largest imaginary part.
-    !% 'SI' -> want eigenvalues of smallest imaginary part.
+    !% <ul>
+    !% <li>'LM' -> want eigenvalues of largest magnitude.
+    !% <li>'SM' -> want eigenvalues of smallest magnitude.
+    !% <li>'LR' -> want eigenvalues of largest real part.
+    !% <li>'SR' -> want eigenvalues of smallest real part.
+    !% <li>'LI' -> want eigenvalues of largest imaginary part.
+    !% <li>'SI' -> want eigenvalues of smallest imaginary part.
+    !% </ul>
     !%End 
     call parse_string(datasets_check('EigensolverArpackSort'), "SR", this%sort)
     if(this%sort /= "LM"  .and. &

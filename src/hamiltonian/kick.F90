@@ -143,9 +143,9 @@ contains
     !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
     !% calculate, <i>e.g.</i>, the linear optical spectra. If the ions are
     !% allowed to move, the kick will affect them also.
-    !% The electric field is -(\hbar <i>k</i> / <i>e</i>) delta(<i>t</i>) for a dipole with
+    !% The electric field is <math>-(\hbar k / e) \delta(t)</math> for a dipole with
     !% zero wavevector, where <i>k</i> = <tt>TDDeltaStrength</tt>, which causes
-    !% the wavefunctions instantaneously to acquire a phase exp(<i>ikx</i>).
+    !% the wavefunctions instantaneously to acquire a phase <math>e^{ikx}</math>.
     !% The unit is inverse length.
     !%End
     call parse_float(datasets_check('TDDeltaStrength'), M_ZERO, kick%delta_strength, units_inp%length**(-1))
@@ -226,7 +226,7 @@ contains
       !% If the block <tt>TDKickFunction</tt> is present in the input file, and the variable
       !% <tt>TDDeltaUserDefined</tt> is not present in the input file, the kick function to
       !% be applied at time zero of the time-propagation will not be a "dipole" function
-      !% (<i>i.e.</i> phi => exp(i*k*z) phi), but a general multipole in the form r^l * Y_{lm}(r).
+      !% (<i>i.e.</i> <math>\phi \rightarrow e^{ikx} \phi</math>, but a general multipole in the form <math>r^l Y_{lm}(r)</math>.
       !%
       !% Each line has three columns: integers <i>l</i> and <i>m</i> that defines the
       !% multipole, and a weight. Any number of lines may be given, and the kick will be the sum of those
