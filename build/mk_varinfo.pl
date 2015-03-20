@@ -88,6 +88,11 @@ foreach $F90file (@F90){
 	s/^\s*!%//; s/\s*$//;
 
 	if(/^Option\s+(\S+)\s+bit\((\S+)\)/){
+	  if($2 > 30) {
+	    printf STDERR "ERROR: bit($2) is too large and will overflow the maximum integer.\n";
+	    printf STDERR "File $F90file, Variable $var, Option $1.\n";
+	    exit(1);
+	  }
 	  put_opt($1, (1<<($2)));
 	} elsif(/^Option\s+(\S+)\s+(\S+)/){
 	  put_opt($1, $2);
