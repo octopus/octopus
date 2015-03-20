@@ -214,7 +214,6 @@ contains
 
     !%Variable ConvForce
     !%Type float
-    !%Default 0.0
     !%Section SCF::Convergence
     !%Description
     !% Absolute convergence of the forces: maximum variation of any
@@ -252,7 +251,6 @@ contains
 
     !%Variable MixField
     !%Type integer
-    !%Default density
     !%Section SCF::Mixing
     !%Description
     !% Selects what should be mixed during the SCF cycle.  Note that
