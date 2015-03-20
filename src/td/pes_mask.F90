@@ -340,21 +340,21 @@ contains
     
 #if !defined(HAVE_NFFT) 
     if (mask%pw_map_how ==  PW_MAP_NFFT) then
-      message(1) = "PESMaskPlaneWaveProjection = nfft_map requires libnfft3. Recompile and try again." 
+      message(1) = "PESMaskPlaneWaveProjection = nfft_map requires NFFT but that library was not linked."
       call messages_fatal(1) 
     endif
 #endif
     
 #if !defined(HAVE_PFFT) 
     if (mask%pw_map_how ==  PW_MAP_PFFT) then
-      message(1) = "PESMaskPlaneWaveProjection = pfft_map requires linpfft. Recompile and try again." 
+      message(1) = "PESMaskPlaneWaveProjection = pfft_map requires PFFT but that library was not linked."
       call messages_fatal(1) 
     endif
 #endif
 
 #if !defined(HAVE_PNFFT) 
     if (mask%pw_map_how ==  PW_MAP_PNFFT) then
-      message(1) = "PESMaskPlaneWaveProjection = pnfft_map requires libpnfft. Recompile and try again." 
+      message(1) = "PESMaskPlaneWaveProjection = pnfft_map requires PNFFT but that library was not linked."
       call messages_fatal(1) 
     endif
 #endif
