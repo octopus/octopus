@@ -78,16 +78,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
-  !!
-  !! This is only accurate in the limit of a large supercell.
-  !! It is implemented only for an orthogonal unit cell.
   !! \f[
-  !! \mu = - eL/2*\pi Im ln <\Psi|exp(-i(2*\pi/L)x)|\Psi>
+  !! det <\psi_i|exp(-i(2*\pi/L)x)|\psi_j>
   !! \f]
   !! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
-  !! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
-  !! in this case, finite differences should be used to construct derivatives with respect to k
   CMPLX function berry_phase_det(st, mesh, dir, ik) result(det)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
@@ -198,8 +192,8 @@ contains
   subroutine berry_potential(st, mesh, E_field, pot)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: mesh
-    FLOAT,          intent(in)  :: E_field(:) ! mesh%sb%dim
-    FLOAT,          intent(out) :: pot(:,:)   ! mesh%np, st%d%nspin
+    FLOAT,          intent(in)  :: E_field(:) !< (mesh%sb%dim)
+    FLOAT,          intent(out) :: pot(:,:)   !< (mesh%np, st%d%nspin)
 
     integer :: ispin, idir
     CMPLX :: factor, det
@@ -235,8 +229,8 @@ contains
   FLOAT function berry_energy_correction(st, mesh, E_field, vberry) result(delta)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
-    FLOAT,          intent(in) :: E_field(:)  !< mesh\%sb\%periodic_dim
-    FLOAT,          intent(in) :: vberry(:,:) !< mesh\%np, st\%d\%nspin
+    FLOAT,          intent(in) :: E_field(:)  !< (mesh%sb%periodic_dim)
+    FLOAT,          intent(in) :: vberry(:,:) !< (mesh%np, st%d%nspin)
 
     integer :: ispin, idir
 
