@@ -23,7 +23,7 @@
 module casida_m
   use batch_m
   use batch_ops_m
-  use calc_mode_m
+  use calc_mode_par_m
   use comm_m
   use density_m
   use excited_states_m
@@ -159,9 +159,9 @@ contains
     ! impossible to choose joint parallelization wisely, and generally resulting in a choice of only one domain
     ! group. FIXME! --DAS
 
-    ! call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true).
-    call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
-    call calc_mode_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
+    ! call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true).
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+    call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
   end subroutine casida_run_init

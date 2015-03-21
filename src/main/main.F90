@@ -20,7 +20,7 @@
 #include "global.h"
 
 program octopus
-  use calc_mode_m
+  use calc_mode_par_m
   use command_line_m
   use global_m
   use io_m
@@ -120,7 +120,7 @@ program octopus
   ! Now we can initialize the I/O
   call io_init()
 
-  call calc_mode_init()
+  call calc_mode_par_init()
   
   ! now we declare octopus as running
   call io_switch_status('running')
@@ -143,7 +143,7 @@ program octopus
   
   call profiling_end()
   
-  call calc_mode_end()
+  call calc_mode_par_end()
   
   call print_date("Calculation ended on ")
   call print_walltime()

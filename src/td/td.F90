@@ -21,7 +21,7 @@
 
 module td_m
   use batch_m
-  use calc_mode_m
+  use calc_mode_par_m
   use cmplxscl_m
   use density_m
   use energy_calc_m
@@ -108,7 +108,7 @@ contains
 
     PUSH_SUB(td_run_init)
 
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .true.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .true.)
 
     POP_SUB(td_run_init)
   end subroutine td_run_init

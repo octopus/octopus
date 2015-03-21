@@ -20,7 +20,7 @@
 #include "global.h"
 
 program oct_test
-  use calc_mode_m
+  use calc_mode_par_m
   use command_line_m
   use derivatives_m
   use fft_m
@@ -64,7 +64,7 @@ program oct_test
   call getopt_end()
 
   call global_init()
-  call calc_mode_init()
+  call calc_mode_par_init()
   call messages_init()
 
   call messages_obsolete_variable('WhichTest', 'TestMode')
@@ -137,7 +137,7 @@ program oct_test
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
-  call calc_mode_end()
+  call calc_mode_par_end()
   call global_end()
 
   contains
@@ -148,7 +148,7 @@ program oct_test
 
     PUSH_SUB(test_hartree)
 
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
     call poisson_test(sys%gr%mesh)
@@ -198,8 +198,8 @@ program oct_test
 
     PUSH_SUB(test_orthogonalization)
 
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call calc_mode_set_scalapack_compat()
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_set_scalapack_compat()
 
     call system_init(sys)
 

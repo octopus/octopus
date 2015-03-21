@@ -286,7 +286,8 @@ contains
       !% For <tt>CalculationMode = casida</tt>, it means parallelization in electron-hole pairs.
       !%End
 
-      ! defaults are set ultimately by calc_mode_init, modified with calc_mode_set_parallelization by some calculation modes
+      ! defaults are set ultimately by calc_mode_par_init,
+      ! modified with calc_mode_par_set_parallelization by some calculation modes
 
      if(base_grp%size > 1) then
 

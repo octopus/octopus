@@ -20,7 +20,7 @@
 #include "global.h"
 
 module ground_state_m
-  use calc_mode_m
+  use calc_mode_par_m
   use energy_calc_m
   use global_m
   use grid_m
@@ -58,9 +58,9 @@ contains
     PUSH_SUB(ground_state_run_init)
 
 #ifdef HAVE_SCALAPACK
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 #endif
-    call calc_mode_set_scalapack_compat()
+    call calc_mode_par_set_scalapack_compat()
 
     POP_SUB(ground_state_run_init)
   end subroutine ground_state_run_init

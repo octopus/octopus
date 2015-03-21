@@ -21,7 +21,7 @@
 
 module states_m
   use blacs_proc_grid_m
-  use calc_mode_m
+  use calc_mode_par_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -1846,8 +1846,9 @@ contains
     !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
     !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
     !%End
-    call parse_logical('ScaLAPACKCompatible', calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
-    if((calc_mode_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
+    call parse_logical('ScaLAPACKCompatible', &
+      calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
+    if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
     
     if(st%scalapack_compatible) then

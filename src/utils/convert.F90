@@ -20,7 +20,7 @@
 #include "global.h"
 
 program oct_convert
-  use calc_mode_m
+  use calc_mode_par_m
   use command_line_m
   use fft_m
   use fftw_m
@@ -55,7 +55,7 @@ program oct_convert
   call getopt_end()
 
   call global_init()
-  call calc_mode_init()
+  call calc_mode_par_init()
   call messages_init()
 
   call io_init()
@@ -96,7 +96,7 @@ contains
 
     PUSH_SUB(convert)
 
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call system_init(sys)
 
     message(1) = 'Info: Converting files'
