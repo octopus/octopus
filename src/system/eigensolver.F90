@@ -274,7 +274,7 @@ contains
     !%Description
     !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
-    !% conjugate gradients (<tt>cg</tt>); except when parallelization in states is
+    !% conjugate gradients (<tt>cg</tt>), except that when parallelization in states is
     !% enabled, the default is <tt>lobpcg</tt>.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
@@ -286,8 +286,7 @@ contains
     !% larger systems but less mature.
     !% Ref: Jiang et al., <i>Phys. Rev. B</i> <b>68</b>, 165337 (2003)
     !%Option evolution 9
-    !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
-    !% caution.
+    !% (Experimental) Propagation in imaginary time.
     !%Option lobpcg 8
     !% (Experimental) Locally optimal block-preconditioned
     !% conjugate-gradient algorithm. Ref: A. Knyazev, Toward the
@@ -297,16 +296,19 @@ contains
     !%Option rmmdiis 10 
     !% Residual minimization scheme, direct inversion in the
     !% iterative subspace eigensolver, based on the implementation of
-    !% Kresse and Furthmüller [<i>Phys. Rev. B</i> <b>54</b>, 11169
+    !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
     !% (1996)]. This eigensolver requires almost no orthogonalization
     !% so it can be considerably faster than the other options for
     !% large systems; however it might suffer stability problems. To
     !% improve its performance a large number of <tt>ExtraStates</tt>
     !% are required (around 10-20% of the number of occupied states).
+    !% Note: with <tt>unocc</tt>, you will need to stop the calculation
+    !% by hand, since the highest states will probably never converge.
+    !% Usage with more than one block of states per node is experimental, unfortunately.
     !%Option multigrid 7
     !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
-    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
+    !% (Experimental) Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
     !%Option feast 13
     !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST package.
     !%End
@@ -341,6 +343,8 @@ contains
     case(RS_CG)
     case(RS_PLAN)
     case(RS_EVO)
+      call messages_experimental("imaginary-time evolution eigensolver")
+
       !%Variable EigensolverImaginaryTime
       !%Type float
       !%Default 10.0
@@ -409,6 +413,7 @@ contains
       end if
 
       call arpack_init(eigens%arpack, gr, st%nst)
+      call messages_experimental("ARPACK eigensolver")
 
       !Some default values 
       default_iter = 500  ! empirical value based upon experience

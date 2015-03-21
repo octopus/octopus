@@ -310,6 +310,12 @@ contains
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)
 
+      if(eigens%es_type == RS_RMMDIIS) then
+        message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
+        message(2) = "by hand, since the highest states will probably never converge."
+        call messages_warning(2)
+      endif
+      
       POP_SUB(unocc_run.init_)
     end subroutine init_
 
