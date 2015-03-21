@@ -109,11 +109,12 @@ contains
     !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
-    call parse_integer('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
+    call parse_integer('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
-    if(this%method /= CURRENT_GRADIENT_CORR) &
-      call messages_experimental("CurrentDensity /= gradient_corrected")
-
+    if(this%method /= CURRENT_HAMILTONIAN) then
+      call messages_experimental("CurrentDensity /= hamiltonian")
+    end if
+    
     POP_SUB(current_init)
   end subroutine current_init
 
