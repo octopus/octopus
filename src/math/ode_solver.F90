@@ -21,7 +21,6 @@
 
 module ode_solver_m
   use global_m
-  use parser_m
   use messages_m
   use profiling_m
 

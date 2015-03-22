@@ -25,7 +25,6 @@
 module solvers_m
   use blas_m
   use global_m
-  use lalg_adv_m
   use lalg_basic_m
   use loct_m
   use loct_math_m

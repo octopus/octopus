@@ -22,10 +22,8 @@
 !> This module is intended to contain "only mathematical" functions
 !! and procedures.
 module math_m
-  use blas_m
   use global_m
   use lalg_basic_m
-  use loct_m
   use loct_math_m
   use messages_m
   use profiling_m

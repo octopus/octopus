@@ -175,7 +175,6 @@ module fftw_m
 
   interface fftw_set_timelimit
     subroutine DFFTW(set_timelimit)(time)
-      use c_pointer_m
       implicit none
       FLOAT, intent(in) :: time
     end subroutine DFFTW(set_timelimit)

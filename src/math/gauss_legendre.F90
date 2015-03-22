@@ -20,7 +20,6 @@
 #include "global.h"
 
 module gauss_legendre_m
-  use global_m
 
   implicit none
 

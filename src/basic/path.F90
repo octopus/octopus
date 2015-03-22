@@ -22,15 +22,10 @@
 module path_m
 
   use global_m
+  use loct_m
   use messages_m
   use profiling_m
 
-  use loct_m, only: &
-    loct_getcwd,    &
-    loct_dirname,   &
-    loct_basename,  &
-    loct_realpath,  &
-    loct_getenv
 
   implicit none
 

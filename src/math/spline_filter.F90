@@ -25,7 +25,6 @@ module spline_filter_m
   use splines_m
   use loct_math_m
   use messages_m
-  use c_pointer_m
 
   implicit none
 

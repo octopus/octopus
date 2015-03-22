@@ -3,10 +3,9 @@
 module json_m
 
   use global_m
+  use kinds_m
   use messages_m
   use profiling_m
-
-  use kinds_m, only: wp
 
   implicit none
 
