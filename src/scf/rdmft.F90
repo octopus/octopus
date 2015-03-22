@@ -244,6 +244,7 @@ contains
       !%Type float
       !%Default 1e-6 Ha
       !%Section SCF::RDMFT
+      !%Description
       !% Convergence criterion for stopping the overall minimization of the energy with
       !% respect to occupation numbers and the orbitals. The minimization of the 
       !% energy stops when the total energy difference between two subsequent 

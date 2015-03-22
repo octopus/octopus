@@ -106,6 +106,11 @@ sub read_varinfo(){
       $vars{$thisvar}{"section"} = $arg;
     }elsif($key eq "type"){
       $vars{$thisvar}{"type"} = $arg;
+      if($arg ne "float" && $arg ne "integer" && $arg ne "flag" &&
+	 $arg ne "string" && $arg ne "logical" && $arg ne "block") {
+	  print STDERR "ERROR: Variable '$thisvar' has unknown type '$arg'.\n";
+	  exit(1);
+      }
     }elsif($key eq "default"){
       $vars{$thisvar}{"default"} = $arg;
     }elsif($key eq "description"){
@@ -115,6 +120,18 @@ sub read_varinfo(){
       $arg =~ /^(\S*)\s*(.*?)\s*$/;
       $thisfield = "option_$2_$1";
     }elsif($key eq "end"){
+      if($vars{$thisvar}{"section"} eq "") {
+	print STDERR "ERROR: Variable '$thisvar' lacks Section field.\n";
+	exit(1);
+      }
+      if($vars{$thisvar}{"type"} eq "") {
+	print "ERROR: Variable '$thisvar' lacks Type field.\n";
+	exit(1);
+      }
+      if($vars{$thisvar}{"description"} eq "") {
+	print "ERROR: Variable '$thisvar' lacks Description field.\n";
+	exit(1);
+      }
       $thisvar   = "";
       $thisfield = "";
     }
