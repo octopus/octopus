@@ -279,7 +279,7 @@ foreach my $octopus_exe (@executables){
 	    $matchdir = "$workdir/$input_base";
 	} else {
           if( -f $input_file ) {
-            print "\n\nUsing input file : $input_file \n";
+            print "\nUsing input file : $input_file\n";
             system("cp $input_file $workdir/inp");
             # Ensure that the input file is writable so that it can
             # be overwritten by the next test.
@@ -289,8 +289,6 @@ foreach my $octopus_exe (@executables){
             die255("ERROR: could not find input file: $input_file\n");
           }
       
-	  print "\nStarting test run ...\n";
-
 	  $command_suffix = $command;
 
 	  # serial or MPI run?
@@ -343,11 +341,10 @@ foreach my $octopus_exe (@executables){
 	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
 
 	    if($return_value == 0) {
-	      print "Finished test run.\n\n";
 	      printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
 	      
 	    } else {
-	      print "\n\nTest run failed with exit code $return_value.\n";
+	      print "Test run failed with exit code $return_value.\n";
 	      print "These are the last lines of output:\n\n";
 	      print "----------------------------------------\n";
 	      system("tail -20 $workdir/out");
@@ -401,7 +398,7 @@ foreach my $octopus_exe (@executables){
   close(TESTSUITE)
 }
 
-print "Status: ".$failures." failures\n\n";
+print "Status: ".$failures." failures\n";
 
 exit $failures;
 
@@ -616,11 +613,11 @@ sub check_num_args {
 
 sub die255 {
     print STDERR $_[0];
-    print "Status: error\n\n";
+    print "Status: error\n";
     exit 255;
 }
 
 sub skip_exit {
-    print "Status: skipped\n\n";
+    print "Status: skipped\n";
     exit 254;  
 }
