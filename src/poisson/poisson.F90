@@ -182,8 +182,8 @@ contains
     !%Description
     !% Defines which method to use to solve the Poisson equation. Some incompatibilities apply depending on
     !% dimensionality, periodicity, etc.
-    !% For comparison of accuracy and performance of the methods in Octopus, see P Garcia-Risueño, 
-    !% J Alberdi-Rodriguez et al., Journal of Computational Chemistry 35 (2014) http://arxiv.org/abs/1211.2092. 
+    !% For a comparison of the accuracy and performance of the methods in Octopus, see P Garcia-Risue&ntilde;o, 
+    !% J Alberdi-Rodriguez <i>et al.</i>, <i>J. Comp. Chem.</i> <b>35</b>, 427-444 (2014) [http://arxiv.org/abs/1211.2092].
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
@@ -212,11 +212,11 @@ contains
     !%Option libisf 10
     !% (Experimental) Meant to be exactly the same as Interpolating
     !% Scaling Functions Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.0. Work with K points only using
+    !% library, taken from BigDFT 1.7.0. Works with k-points only using
     !% <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
     !% found in http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures
-    !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only
-    !% Tested with the version bigdft-1.7-dev.28
+    !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only.
+    !% Tested with the version bigdft-1.7-dev.28.
     !%End
 
     default_solver = POISSON_FFT
@@ -259,21 +259,20 @@ contains
     case (POISSON_CG)
       str = "conjugate gradients"
     case (POISSON_CG_CORRECTED)
-      str = "corrected conjugate gradients"
+      str = "conjugate gradients, corrected"
     case (POISSON_MULTIGRID)
       str = "multigrid"
     case (POISSON_ISF)
-      str = "interpolating scaling function"
+      str = "interpolating scaling functions"
     case (POISSON_SETE)
       str = "SETE"
     case (POISSON_LIBISF)
-      str = "interpolating scaling function (from BIGDFT)"
+      str = "interpolating scaling functions (from BigDFT)"
     case (POISSON_NULL)
       str = "none"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
-    write(message(2),'(a)') "see P Garcia-Risueño, J Alberdi-Rodriguez et al., J. Comp. Chem 35, 427-444 (2014)"
-    call messages_info(2)
+    call messages_info(1)
 
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
@@ -329,7 +328,7 @@ contains
       end select
 
       call parse_integer(datasets_check('PoissonFFTKernel'), default_kernel, this%kernel)
-      if(.not.varinfo_valid_option('PoissonFFTKernel', this%method)) call input_error('PoissonFFTKernel')
+      if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call input_error('PoissonFFTKernel')
 
       call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 
