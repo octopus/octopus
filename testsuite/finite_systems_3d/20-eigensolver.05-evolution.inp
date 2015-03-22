@@ -2,6 +2,7 @@
 # $Id$
 
 Units = ev_angstrom
+ExperimentalFeatures = yes
 
 CalculationMode = gs
 FromScratch = yes

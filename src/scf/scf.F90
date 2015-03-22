@@ -363,7 +363,8 @@ contains
     !% default is yes. For periodic systems the default is no, unless
     !% an electric field is being applied in a periodic direction.
     !% The single-point Berry`s phase approximation is used for
-    !% periodic directions.
+    !% periodic directions. Ref:
+    !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
     call parse_logical(datasets_check('SCFCalculateDipole'), .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
