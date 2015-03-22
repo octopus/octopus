@@ -94,13 +94,13 @@ program oct_test
   !%Default all
   !%Section Utilities::oct-test
   !%Description
-  !% Decides what on what type of values the test should be performed.
+  !% Decides on what type of values the test should be performed.
   !%Option real 1
-  !% Tests derivatives for real functions.
+  !% Test for real functions.
   !%Option complex 2
-  !% Tests derivatives for complex functions.
+  !% Test for complex functions.
   !%Option all 3
-  !% Tests derivatives for both real and complex functions.
+  !% Tests for real and complex functions.
   !%End
   call parse_integer('TestType', TEST_ALL, test_type)
 
@@ -222,20 +222,24 @@ program oct_test
 
     call system_init(sys)
 
-    call messages_write('Info: Testing real interpolation routines')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
+    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
+      call messages_write('Info: Testing real interpolation routines')
+      call messages_new_line()
+      call messages_new_line()
+      call messages_info()
 
-    call dmesh_interpolation_test(sys%gr%mesh)
+      call dmesh_interpolation_test(sys%gr%mesh)
+    endif
 
-    call messages_new_line()
-    call messages_write('Info: Testing complex interpolation routines')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
+    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
+      call messages_new_line()
+      call messages_write('Info: Testing complex interpolation routines')
+      call messages_new_line()
+      call messages_new_line()
+      call messages_info()
 
-    call zmesh_interpolation_test(sys%gr%mesh)
+      call zmesh_interpolation_test(sys%gr%mesh)
+    endif
 
     call system_end(sys)
 
