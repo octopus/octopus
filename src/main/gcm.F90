@@ -28,7 +28,6 @@ module gcm_m
   use hamiltonian_m
   use hamiltonian_base_m
   use lalg_adv_m
-  use lalg_basic_m
   use mesh_function_m
   use messages_m
   use parser_m

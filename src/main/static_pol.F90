@@ -26,14 +26,10 @@ module static_pol_m
   use em_resp_m
   use geometry_m
   use global_m
-  use grid_m
-  use output_m
   use hamiltonian_m
   use io_m
   use io_function_m
   use lcao_m
-  use loct_m
-  use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m

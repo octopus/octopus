@@ -22,14 +22,12 @@
 
 module casida_m
   use batch_m
-  use batch_ops_m
   use calc_mode_par_m
   use comm_m
   use density_m
   use excited_states_m
   use forces_m
   use gauss_legendre_m
-  use global_m
   use hamiltonian_m
   use io_m
   use io_function_m
@@ -40,10 +38,7 @@ module casida_m
   use math_m
   use mesh_m
   use mesh_function_m
-  use messages_m
   use mpi_m
-  use multicomm_m
-  use output_m
   use parser_m
   use pert_m
   use poisson_m

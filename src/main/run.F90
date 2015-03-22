@@ -22,7 +22,6 @@
 module run_m
   use casida_m
   use em_resp_m
-  use epot_m
   use fft_m
   use geom_opt_m
   use global_m
@@ -46,7 +45,6 @@ module run_m
   use static_pol_m
   use system_m
   use td_m
-  use unit_m
   use unit_system_m
   use unocc_m
   use varinfo_m

@@ -1,39 +1,28 @@
 #include "global.h"
 
 module output_fio_m
-
+  use base_config_m
+  use base_hamiltonian_m  
+  use curvilinear_m
+  use epot_m
+  use fio_config_m
+  use geometry_m
   use global_m
+  use grid_m
+  use hamiltonian_m
+  use io_m
+  use json_m
+  use json_m
+  use kinds_m
+  use mesh_m
   use messages_m
+  use path_m
   use profiling_m
-
-  use curvilinear_m, only: curvilinear_t
-  use epot_m,        only: epot_t
-  use geometry_m,    only: geometry_t, geometry_create_data_object
-  use grid_m,        only: grid_t
-  use hamiltonian_m, only: hamiltonian_t
-  use io_m,          only: io_open, io_close
-  use json_m,        only: JSON_OK, json_object_t, json_array_t, json_array_iterator_t
-  use json_m,        only: json_init, json_next, json_append, json_set, json_get, json_write, json_end
-  use kinds_m,       only: wp
-  use mesh_m,        only: mesh_t
-  use path_m,        only: path_join
-  use simul_box_m,   only: simul_box_t
-  use space_m,       only: space_t, space_create_data_object
-  use species_m,     only: SPECIES_FROZEN
-  use states_m,      only: states_t
-
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_POTN,             &
-    HMLT_TYPE_HMLT
-
-  use base_config_m, only: &
-    base_config_parse
-
-  use fio_config_m, only: &
-    input_mesh_dir,       &
-    input_mesh_file,      &
-    input_external_file
-
+  use simul_box_m
+  use space_m
+  use species_m
+  use states_m
+  
   implicit none
 
   private

@@ -22,10 +22,8 @@
 program octopus
   use calc_mode_par_m
   use command_line_m
-  use global_m
   use io_m
   use loct_m
-  use messages_m
   use mpi_m
   use parser_m
   use profiling_m

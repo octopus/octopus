@@ -25,7 +25,6 @@ module invert_ks_m
   use global_m
   use hamiltonian_m 
   use output_m 
-  use io_function_m 
   use io_m 
   use mesh_function_m 
   use messages_m 
@@ -33,11 +32,8 @@ module invert_ks_m
   use poisson_m
   use profiling_m 
   use restart_m
-  use states_m 
   use states_restart_m
   use system_m 
-  use unit_m 
-  use unit_system_m 
   use xc_ks_inversion_m 
   
   implicit none

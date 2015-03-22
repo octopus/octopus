@@ -24,17 +24,13 @@ program oct_test
   use command_line_m
   use derivatives_m
   use fft_m
-  use global_m
   use io_m
-  use messages_m
   use mesh_interpolation_m
-  use mpi_m
   use parser_m
   use poisson_m
   use profiling_m
   use states_calc_m
   use system_m
-  use unit_m
   use unit_system_m
   use utils_m
 

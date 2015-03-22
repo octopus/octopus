@@ -21,7 +21,6 @@
 
 module memory_m
   use global_m
-  use hamiltonian_m
   use mesh_m
   use messages_m
   use states_m

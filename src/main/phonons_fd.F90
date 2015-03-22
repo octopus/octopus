@@ -22,14 +22,11 @@
 module phonons_fd_m
   use density_m
   use energy_calc_m
-  use epot_m
   use geometry_m
   use global_m
   use grid_m
   use output_m
   use hamiltonian_m
-  use io_m
-  use lalg_adv_m
   use mesh_m
   use messages_m
   use multicomm_m
@@ -40,7 +37,6 @@ module phonons_fd_m
   use states_m
   use states_restart_m
   use system_m
-  use unit_m
   use unit_system_m
   use utils_m 
   use v_ks_m

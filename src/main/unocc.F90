@@ -36,7 +36,6 @@ module unocc_m
   use simul_box_m
   use states_m
   use states_io_m
-  use states_dim_m
   use states_restart_m
   use system_m
   use v_ks_m

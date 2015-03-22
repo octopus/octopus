@@ -22,14 +22,12 @@
 module geom_opt_m
   use density_m
   use energy_calc_m
-  use epot_m
   use geometry_m
   use global_m
   use hamiltonian_m
   use io_m
   use lcao_m
   use loct_m
-  use loct_math_m
   use parser_m
   use mesh_m
   use messages_m
@@ -41,7 +39,6 @@ module geom_opt_m
   use simul_box_m
   use species_m
   use states_m
-  use states_calc_m
   use states_restart_m
   use system_m
   use unit_m
