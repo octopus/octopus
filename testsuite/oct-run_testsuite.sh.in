@@ -161,11 +161,8 @@ function checkqueue {
 function run_testsuite() {
 
 tests="$1"
-echo "*****************************"
-echo "  Running octopus testsuite  "
-echo "*****************************"
 if [ -n "$test_groups" ]; then
-echo "For test groups: $test_groups"
+echo "Test groups: $test_groups"
 fi
 echo ""
 
@@ -247,12 +244,26 @@ while getopts "hnlp:d:cg:q:" opt ; do
 done
 shift $[ OPTIND - 1 ]
 
+echo "*****************************"
+echo "  Running octopus testsuite  "
+echo "*****************************"
+echo
+echo " Warning: Running the testsuite can take from several minutes"
+echo " to more than two hours."
+echo
+
 if [ -z $OCT_TEST_NJOBS ] ; then
 
+    echo
+    echo " The environment variable OCT_TEST_NJOBS is not set, Octopus"
+    echo " will determine automatically the ideal number of jobs:"
+    echo
+    
     # some Linux
     nproc=`which nproc 2> /dev/null`;
     if [ -n $nproc ] && [ -x $nproc ]; then
-	OCT_TEST_NJOBS=`$nproc`
+	#We need to unset OMP_NUM_THREADS when counting the processors
+	OCT_TEST_NJOBS=`OMP_NUM_THREADS= $nproc`
     fi
 
     # Mac OSX
@@ -265,6 +276,8 @@ if [ -z $OCT_TEST_NJOBS ] ; then
 
     if [ -z $OCT_TEST_NJOBS ] ; then
 	OCT_TEST_NJOBS=1
+    else
+	echo "  - Found $OCT_TEST_NJOBS processors that can be used."
     fi
 
     if [ $OCT_TEST_NJOBS -gt 1 ] && [ -z $EXEC ]; then
@@ -274,8 +287,44 @@ if [ -z $OCT_TEST_NJOBS ] ; then
 	    export EXEC=$nice
 	fi
     fi
+    
+    if [ "${local_run}" == "yes" ]; then
+	bin_directory=`pwd`/../src/main
+    else
+	bin_directory=$prefix/bin
+    fi
+
+    if `$bin_directory/octopus -c | grep -q mpi` ; then
+	OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/4))
+	echo "  - This is an MPI run, each job can use up to 4 processors."
+    fi
+
+    if `$bin_directory/octopus -c | grep -q openmp` ; then
+	if [ ! -z $OMP_NUM_THREADS ] ; then
+	    OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/$OMP_NUM_THREADS))
+	    echo "  - This is an OpenMP run. OMP_NUM_THREADS is set to $OMP_NUM_THREADS processors per job."
+        else
+	    echo "  - This is an OpenMP run. Each jobs uses all processors."
+	    OCT_TEST_NJOBS=1
+	fi
+    fi
+
+
+    if [ $OCT_TEST_NJOBS -eq 0 ] ; then
+	OCT_TEST_NJOBS=1
+    fi
+
+    echo
+    echo " Running $OCT_TEST_NJOBS jobs in parallel. Set environment variable OCT_TEST_NJOBS to adjust this."
+    echo
+    
+    #wait for a bit for the user to read
+    sleep 0.75
+else
+    echo
+    echo " Running $OCT_TEST_NJOBS jobs in parallel."
+    echo    
 fi
-echo "Running $OCT_TEST_NJOBS jobs in parallel. Set environment variable OCT_TEST_NJOBS to adjust this."
 
 # Find testfiles.
 if [ -n "$directory" ]; then
