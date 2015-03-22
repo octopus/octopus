@@ -240,7 +240,7 @@ foreach my $octopus_exe (@executables){
         # handled earlier
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         # handled earlier
-    } elsif ( $_ =~ /^TestGroups/) {
+    } elsif ( $_ =~ /^TestGroups\s*:/) {
         # handled by oct-run_testsuite.sh
     } else {
       if ( $enabled eq "") {
