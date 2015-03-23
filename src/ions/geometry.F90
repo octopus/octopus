@@ -371,8 +371,8 @@ contains
     !% parameters.
     !%Option lennard_jones 2
     !% (Experimental) The Lennard-Jones 12-6 model potential. It has
-    !% the form <math>V(r) = 4\epsilon((\sigma/r)^12 -
-    !% (\sigma/r)^6)</math>.  The next 2 columns contain the
+    !% the form <math>V(r) = 4\epsilon((\frac{\sigma}{r})^{12} -
+    !% (\frac{\sigma}{r})^6)</math>.  The next 2 columns contain the
     !% <math>\epsilon</math> and <math>\sigma</math> (given in the
     !% corresponding input file units).
     !%End

@@ -362,7 +362,7 @@ contains
       !% the <tt>TDPolarization</tt> block should be related by symmetry
       !% operations. If <i>A</i> is the symmetry operation that takes you
       !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
-      !% should be set to the direction defined by <i>A</i>^{-1} <i>pol3</i>.  
+      !% should be set to the direction defined by <i>A</i><math>^{-1}</math><i>pol3</i>.  
       !% For more information see MJT Oliveira
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
@@ -393,16 +393,17 @@ contains
     !% <tt>ftchd</tt> is created (it contains the Fourier transform of the charge density
     !% at each time). The type of the applied external field can be set by
     !% an optional last number. Possible options are <tt>qexp</tt> (default), <tt>qcos</tt>,
-    !% <tt>qsin</tt>, or <tt>qcos+qsin</tt>.
+    !% <tt>qsin</tt>, or <tt>qcos+qsin</tt>. In the formulae below,
+    !% <math>\vec{q}</math> is the momentum-transfer vector.
     !%Option qexp 1
-    !% External field is exp(<i>iq.r</i>).
+    !% External field is <math>e^{i \vec{q} \cdot \vec{r}}</math>.
     !%Option qcos 2
-    !% External field is cos(<i>q.r</i>).
+    !% External field is <math>\cos \left( i \vec{q} \cdot \vec{r} \right)</math>.
     !%Option qsin 3
-    !% External field is sin(<i>q.r</i>).
+    !% External field is <math>\sin \left( i \vec{q} \cdot \vec{r} \right)</math>.
     !%Option qbessel 4
-    !% External field is j_l(qr)*Y_lm(r), where q is the length of the momentum-transfer vector.
-    !% In this case the block has to include two extra values (l and m).
+    !% External field is <math>j_l \left( \vec{q} \cdot \vec{r} \right) Y_{lm} \left(\vec{r} \right)</math>.
+    !% In this case, the block has to include two extra values (<i>l</i> and <i>m</i>).
     !%End
 
     if(parse_block('TDMomentumTransfer', blk)==0) then
