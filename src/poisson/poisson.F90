@@ -189,7 +189,7 @@ contains
     !%Option NoPoisson -999
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
-    !% Fast multipole method.                                  
+    !% Fast multipole method. Requires FMM library.
     !%Option direct_sum -1                                      
     !% Direct evaluation of the Hartree potential (only for finite systems).
     !%Option fft 0
@@ -211,8 +211,8 @@ contains
     !%Option libisf 10
     !% (Experimental) Meant to be exactly the same as Interpolating
     !% Scaling Functions Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.6. Works with k-points only using
-    !% <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
+    !% library, taken from BigDFT 1.7.6. Only for finite systems.
+    !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
     !% found in http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures
     !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only.
     !% Tested with the version bigdft-1.7.6.
@@ -393,13 +393,12 @@ contains
     case(3)
       
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
-        write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present.'
-        call messages_warning(1)
+        call messages_not_implemented('FMM for periodic systems')
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
-        call messages_write('The ISF solver should only be used for finite systems.')
-        call messages_warning()
+        call messages_write('The ISF solver can only be used for finite systems.')
+        call messages_fatal()
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
@@ -461,25 +460,17 @@ contains
     end if
 
     if (this%method == POISSON_LIBISF .and. multicomm_have_slaves(mc)) then
-      message(1) = 'Task parallelization is not implemented with '
-      message(2) = 'the new ISF method'
-      call messages_fatal(2)
+      call messages_not_implemented('Task parallelization with LibISF Poisson solver')
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
       ! Documentation in poisson_libisf.F90
       call parse_logical('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
       if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
-        message(1) = 'K points parallelization is not implemented with '
-        message(2) = 'the new ISF method with partitioned data.'
-        message(3) = 'Try setting PoissonSolverISFParallelData = no'
-        call messages_fatal(3)
+        call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
       end if
       if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
-        message(1) = 'K points parallelization is not implemented with PFFT library,'
-        message(2) = 'choose FFTW. Otherwise, set PoissonSolver to isf or libisf '
-        message(3) = '(only together with PoissonSolverISFParallelData = no)'
-        call messages_fatal(3)
+        call messages_not_implemented("k-point parallelization with PFFT library for Poisson solver")
       end if
     end if
     
