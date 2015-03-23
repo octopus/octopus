@@ -263,14 +263,14 @@ contains
 
     !%Variable OpenCLDevice
     !%Type integer
-    !%Default 0
+    !%Default gpu
     !%Section Execution::OpenCL
     !%Description
     !% This variable selects the OpenCL device that Octopus will
     !% use. You can specify one of the options below or a numerical
     !% id to select a specific device.
     !%Option gpu -1
-    !% If available, Octopus will use a GPU for OpenCL. This is the default.
+    !% If available, Octopus will use a GPU for OpenCL.
     !%Option cpu -2
     !% If available, Octopus will use a GPU for OpenCL.
     !%Option accelerator -3
