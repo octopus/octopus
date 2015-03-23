@@ -222,7 +222,7 @@ contains
     !%Description
     !% This variable determines which algorithm will be used to approximate
     !% the evolution operator <math>U(t+\delta t, t)</math>. That is, given
-    !% <math>\psi(\tau)</math> and <math>H(\tau)</math> for <math>tau \le t</math>,
+    !% <math>\psi(\tau)</math> and <math>H(\tau)</math> for <math>\tau \le t</math>,
     !% calculate <math>t+\delta t</math>. Note that in general the Hamiltonian
     !% is not known at times in the interior of the interval <math>[t,t+\delta t]</math>.
     !% This is due to the self-consistent nature of the time-dependent Kohn-Sham problem:
@@ -250,15 +250,15 @@ contains
     !%Option etrs 2
     !% The idea is to make use of time-reversal symmetry from the beginning:
     !%
-    !% <MATH>
+    !% <math>
     !%   \exp \left(-i\delta t/2 H_{n}\right)\psi_n = exp \left(i\delta t/2 H_{n+1}\right)\psi_{n+1},
-    !% </MATH>
+    !% </math>
     !%
     !% and then invert to obtain:
     !%
-    !% <MATH>
+    !% <math>
     !%   \psi_{n+1} = \exp \left(-i\delta t/2 H_{n+1}\right) exp \left(-i\delta t/2 H_{n}\right)\psi_{n}.
-    !% </MATH>
+    !% </math>
     !%
     !% But we need to know <math>H_{n+1}</math>, which can only be known exactly through the solution
     !% <math>\psi_{n+1}</math>. What we do is to estimate it by performing a single exponential:
@@ -270,9 +270,9 @@ contains
     !% It is based on extrapolation of the time-dependent potentials. It is faster
     !% by about 40%.
     !%
-    !% The only difference is the procedure to estimate @math{H_{n+1}}: in this case
+    !% The only difference is the procedure to estimate <math>H_{n+1}</math>: in this case
     !% it is extrapolated via a second-order polynomial by making use of the
-    !% Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
+    !% Hamiltonian at time <math>t-2\delta t</math>, <math>t-\delta t</math> and <math>t</math>.
     !%Option caetrs 12
     !% (experimental) Corrected Approximated Enforced Time-Reversal
     !% Symmetry (AETRS), this is the previous propagator but including
@@ -284,23 +284,23 @@ contains
     !% time-reversal symmetry (if the self-consistency problem is dealt with correctly).
     !% It is defined as:
     !%
-    !% <MATH>
+    !% <math>
     !%   U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
-    !% </MATH>
+    !% </math>
     !%Option crank_nicholson 5
     !%Option crank_nicolson 5
     !% Classical Crank-Nicolson propagator.
     !%
-    !% <MATH>
+    !% <math>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
-    !% </MATH>
+    !% </math>
     !%Option crank_nicholson_sparskit 6
     !%Option crank_nicolson_sparskit 6
     !% Classical Crank-Nicolson propagator. Requires the SPARSKIT library.
     !%
-    !% <MATH>
+    !% <math>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
-    !% </MATH>
+    !% </math>
     !%Option magnus 7
     !% Magnus Expansion (M4).
     !% This is the most sophisticated approach. It is a fourth-order scheme (a feature

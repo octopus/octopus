@@ -274,7 +274,7 @@ contains
     !%Description
     !% Photoelectron waves time-propagation operator in momentum space.
     !%Option volkov 2
-    !% Plane wave evolves with exp(i(p-A(t)/c)^2*dt/2).
+    !% Plane wave evolves with <math>\exp(i(p-A(t)/c)^2 dt / 2)</math>.
     !%Option free 1
     !% Free plane-wave propagation.   
     !%End
@@ -287,9 +287,9 @@ contains
     !%Default -1.0
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The time photoelectrons start to be recorded. In pump-probe simulations this allow to 
-    !% get rid of unwanted ionization signal coming from the pump.
-    !% NOTE: this will enforce the mask boundary conditions for all the times. 
+    !% The time photoelectrons start to be recorded. In pump-probe simulations, this allows
+    !% getting rid of an unwanted ionization signal coming from the pump.
+    !% NOTE: This will enforce the mask boundary conditions for all times. 
     !%End
     call parse_float('PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
 
@@ -311,7 +311,7 @@ contains
     !%Option integral 1
     !% Direct integration_map.
     !%Option fft_out 2 
-    !% FFT filtered in order to keep only outgoing waves. 1D only.  
+    !% FFT filtered in order to keep only outgoing waves. 1D only. 
     !%Option fft_map 3 
     !% FFT transform.
     !%Option tdpsf_map 4
@@ -319,9 +319,9 @@ contains
     !%Option nfft_map 5
     !% Non-equispaced FFT map. 
     !%Option pfft_map 6
-    !% Use PFFT libraries. 
+    !% Use PFFT library. 
     !%Option pnfft_map 7
-    !% Use PNFFT libraries. 
+    !% Use PNFFT library. 
     !%End
     call parse_integer('PESMaskPlaneWaveProjection', PW_MAP_BARE_FFT, mask%pw_map_how)
     
@@ -598,7 +598,7 @@ contains
     !% <br>%</tt>
     !%
     !% The optional 3rd column is a user-defined expression for the mask 
-    !% function. For example, "r" creates a spherical mask (which is the 
+    !% function. For example, <i>r</i> creates a spherical mask (which is the 
     !% default for <tt>BoxShape = sphere</tt>). Note, values R2 larger than 
     !% the box size may lead in this case to unexpected reflection 
     !% behaviours.
@@ -714,14 +714,14 @@ contains
     !%Default false
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Add the contribution of \Psi_A in the mask region to the photo-electron spectrum.
-    !% Literally adds the Fourier components of: 
-    !% \Theta(r-R1)*\Psi_A(r)
-    !% with \Theta being the Heaviside step function. 
+    !% Add the contribution of <math>\Psi_A</math> in the mask region to the photo-electron spectrum.
+    !% Literally adds the Fourier components of:
+    !% <math>\Theta(r-R1) \Psi_A(r)</math>
+    !% with <math>\Theta</math> being the Heaviside step function. 
     !% With this option PES will contain all the contributions starting from the inner 
-    !% radius R1. Use this option to improve convergence with respect to the box size 
+    !% radius <math>R1</math>. Use this option to improve convergence with respect to the box size 
     !% and total simulation time. 
-    !% Note: carefully choose R1 in order to avoid contributions from returning electrons. 
+    !% Note: Carefully choose <math>R1</math> in order to avoid contributions from returning electrons. 
     !%End
     call parse_logical('PESMaskIncludePsiA', .false., mask%add_psia)
     if(mask%add_psia) then
@@ -732,7 +732,7 @@ contains
     
     !%Variable PESMaskSpectEnergyMax 
     !%Type float
-    !%Default maxval(mask%Lk)**2/2
+    !%Default maxval(mask%Lk)<math>^2/2</math>
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% The maximum energy for the PES spectrum.

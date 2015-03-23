@@ -366,23 +366,24 @@ contains
       !% populations for a number of excited states, which will be described in the files specified
       !% in this block: each line should be the name of a file that contains one excited state.
       !%
-      !% This file structure is the one written by the casida run mode, in the files in the directory "excitations".
+      !% This file structure is the one written by the casida run mode, in the files in the directory <tt>*_excitations</tt>.
       !% The file describes the "promotions" from occupied
       !% to unoccupied levels that change the initial Slater determinant
       !% structure specified in ground_state. These promotions are a set
       !% of electron-hole pairs. Each line in the file, after an optional header, has four
       !% columns:
       !%
-      !% i  a  sigma  weight
+      !% <i>i  a  sigma  weight</i>
       !% 
-      !% where i should be an occupied state, a an unoccupied one, and sigma
-      !% the spin state of the corresponding orbital. This pair is then associated with a
-      !% creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
+      !% where <i>i</i> should be an occupied state, <i>a</i> an unoccupied one, and <i>sigma</i>
+      !% the spin of the corresponding orbital. This pair is then associated with a
+      !% creation-annihilation pair <math>a^{\dagger}_{a,sigma} a_{i,sigma}</math>, so that the
       !% excited state will be a linear combination in the form:
       !% 
-      !% |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
+      !% <math>\left|{\rm ExcitedState}\right> =
+      !% \sum [ weight(i,a,sigma) a^{\dagger}_{a,sigma} a_{i,sigma} \left|{\rm GroundState}\right> ]</math>
       !%
-      !% where weight is the number in the fourth column.
+      !% where <i>weight</i> is the number in the fourth column.
       !% These weights should be normalized to one; otherwise the routine
       !% will normalize them, and write a warning.
       !%End
