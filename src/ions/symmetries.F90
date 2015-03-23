@@ -297,7 +297,7 @@ contains
       call messages_info(1)
       do iop = 1, fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations
-        translation(:, iop) = translation(:, iop) - int(translation(:, iop) + M_EPSILON)
+        translation(:, iop) = translation(:, iop) - int(translation(:, iop) + CNST(0.5)*symprec)
         call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
