@@ -125,6 +125,7 @@ if test x"${enable_opencl}" == x"yes" ; then
   fi
   AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
   AC_CHECK_FUNC(clAmdBlasGetVersion, [AC_DEFINE(HAVE_CLAMDBLAS, 1, [defined if clAmdBlas is available])])
+  AC_CHECK_FUNC(clblasGetVersion, [AC_DEFINE(HAVE_CLAMDBLAS, 1, [defined if clAmdBlas is available])])  
   AC_CHECK_FUNC(clAmdFftGetVersion, [AC_DEFINE(HAVE_CLAMDFFT, 1, [defined if clAmdFft is available])])
 fi
 
