@@ -320,7 +320,6 @@ contains
     !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |  gaussian_width |  0.2
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
-    !%
     !%Option species_pseudo  -7
     !% The species is a pseudopotential. The pseudopotential file must
     !% be defined by the <tt>file</tt> or <tt>db_file</tt> parameters. Optional
@@ -354,15 +353,13 @@ contains
     !% positive charge (distorted if curvilinear coordinates are
     !% used), in the form:
     !%
-    !% <math>
-    !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
-    !% </math>
+    !% <math>q(r) = z \beta \exp[ - (\vec{r}-\vec{r_0})^2 / (\sqrt{2} \delta \sigma) ] </math>
     !%
     !% <math>\beta</math> is chosen in order to maintain proper
     !% normalization (the integral of <math>q</math> should sum up to
     !% <math>z</math>). <math>\delta</math> is the grid spacing (the
     !% grid spacing in the first dimension, to be precise).
-    !% <math>\vec{r0}</math> is calculated in such a way that the the
+    !% <math>\vec{r_0}</math> is calculated in such a way that the the
     !% first moment of <math>q(r)/z</math> is equal to the atomic
     !% position. For a precise description, see N. A. Modine,
     !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997). The width of the Gaussian
@@ -372,9 +369,7 @@ contains
     !%Option species_soft_coulomb -128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
-    !% <math>
-    !% v(r) = - z_val / sqrt(a^2 + r^2)
-    !% </math>
+    !% <math>v(r) = - z_{val} / \sqrt{a^2 + r^2}</math>
     !%
     !% The value of <i>a</i> should be given by the mandatory <tt>softening</tt> parameter.
     !%Option min_radius -10001
@@ -401,7 +396,7 @@ contains
     !% the nuclear charge for <tt>species_full_gaussian</tt>. If not present,
     !% the default is 0.25.
     !%Option softening -10009
-    !% The softening parameter <i>a</a> for <tt>species_soft_coulomb</tt> in units of length.
+    !% The softening parameter <i>a</i> for <tt>species_soft_coulomb</tt> in units of length.
     !%Option file -10010
     !% The path for the file that describes the species.
     !%Option db_file -10011
