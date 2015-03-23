@@ -295,7 +295,9 @@ sub print_vars(){
 <p><b><a name='$vars{$key}{variable}'></a>$vars{$key}{variable}</b>
 <br/><i>Section</i>: $vars{$key}{section}
 <br/><i>Type</i>: $vars{$key}{type}\n";
-    print OUT "<br/><i>Default</i>: $vars{$key}{default}\n" if($vars{$key}{default});
+    if($vars{$key}{default} ne "") {
+	print OUT "<br/><i>Default</i>: $vars{$key}{default}\n";
+    }
     print OUT "<br/>$vars{$key}{description}\n";
 
     my $first = 1;
