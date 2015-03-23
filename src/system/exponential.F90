@@ -91,7 +91,7 @@ contains
     !% whenever it considers that the evolution may not be properly proceeding --
     !% the Lanczos process did not converge. The method consists in a Krylov
     !% subspace approximation of the action of the exponential
-    !% (see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. <b>34</b>, 1911 (1997) for details). 
+    !% (see M. Hochbruck and C. Lubich, <i>SIAM J. Numer. Anal.</i> <b>34</b>, 1911 (1997) for details). 
     !% Two more variables control the performance of the method: the maximum dimension
     !% of this subspace (controlled by variable <tt>TDExpOrder</tt>), and
     !% the stopping criterion (controlled by variable <tt>TDLanczosTol</tt>).
@@ -103,7 +103,7 @@ contains
     !% This method amounts to a straightforward application of the definition of
     !% the exponential of an operator, in terms of its Taylor expansion.
     !%
-    !% <MATH>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.</MATH>
+    !% <math>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.</math>
     !%
     !% The order <i>k</i> is determined by variable <i>TDExpOder</i>.
     !% Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
@@ -117,13 +117,13 @@ contains
     !% There exists a closed analytic form for the coefficients of the exponential in terms
     !% of Chebyshev polynomials:
     !%
-    !% <MATH>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H),</MATH>
+    !% <math>\exp_{\rm CHEB} \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}J_k(\delta t) T_k(H),</math>
     !%
     !% where <math>J_k</math> are the Bessel functions of the first kind, and H has to be previously
     !% scaled to <math>[-1,1]</math>.
-    !% See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. <b>81</b>,
-    !% 3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. <b>45</b>, 145 (1994);
-    !% C. W. Clenshaw, MTAC <b>9</b>, 118 (1955).
+    !% See H. Tal-Ezer and R. Kosloff, <i>J. Chem. Phys.</i> <b>81</b>,
+    !% 3967 (1984); R. Kosloff, <i>Annu. Rev. Phys. Chem.</i> <b>45</b>, 145 (1994);
+    !% C. W. Clenshaw, <i>MTAC</i> <b>9</b>, 118 (1955).
     !%End
     call parse_integer('TDExponentialMethod', EXP_TAYLOR, te%exp_method)
 
