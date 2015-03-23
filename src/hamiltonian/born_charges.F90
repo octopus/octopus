@@ -76,7 +76,7 @@ contains
     !%Section Linear Response::Polarizabilities
     !%Description
     !% Enforce the acoustic sum rule by distributing the excess sum of Born charges equally among the atoms.
-    !% Sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2).
+    !% Sum rule: <math>\sum_{\alpha} Z^{*}_{\alpha, i, j} = Z_{\rm tot} \delta_{ij}</math>.
     !% Violation of the sum rule may be caused by inadequate spacing, box size (in finite directions),
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End

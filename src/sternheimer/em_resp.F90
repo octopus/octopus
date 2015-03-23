@@ -492,7 +492,7 @@ contains
       !%Section Linear Response::Polarizabilities
       !%Description
       !% This block defines for which frequencies the polarizabilities
-      !% will be calculated. If it is not present, the static (omega = 0) response
+      !% will be calculated. If it is not present, the static (<math>\omega = 0</math>) response
       !% is calculated.
       !%
       !% Each row of the block indicates a sequence of frequency values, the
@@ -613,8 +613,8 @@ contains
         !% This block describes the multiples of the frequency used for
         !% the dynamic hyperpolarizability. The results are written to the
         !% file <tt>beta</tt> in the directory for the first multiple.
-        !% There must be three factors, summing to zero. For example,
-        !% for second-harmonic generation, you could use
+        !% There must be three factors, summing to zero: <math>\omega_1 + \omega_2 + \omega_3 = 0</math>.
+        !% For example, for second-harmonic generation, you could use
         !% <tt>1 | 1 | -2</tt>.
         !%End
 
