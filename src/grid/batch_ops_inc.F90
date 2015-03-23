@@ -899,7 +899,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   select case(batch_status(yy))
   case(BATCH_CL_PACKED)
 
-#ifdef R_TREAL
+#if defined(HAVE_OPENCL) && defined(R_TREAL)
 
     ! We reuse here the routine to apply the local potential
     call batch_set_zero(yy)
