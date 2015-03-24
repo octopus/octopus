@@ -30,7 +30,7 @@ case $with_pfft_prefix in
   *.a | *.so | *.so.* | *.o) LIBS_PFFT=$with_pfft_prefix ;
      xpath=${with_pfft_prefix%/lib/*} 
      FCFLAGS_PFFT="$ax_cv_f90_modflag$xpath/include";;  
-  *) LIBS_PFFT="-L$with_pfft_prefix/lib"; 
+  *) LIBS_PFFT="-L$with_pfft_prefix/lib -lpfft"; 
      FCFLAGS_PFFT="$ax_cv_f90_modflag$with_pfft_prefix/include" ;;
 esac
 
@@ -100,38 +100,17 @@ testprogram="AC_LANG_PROGRAM([],[
 
   ])"
 
-
-dnl First, check LIBS_PFFT environment variable
-if test x"$acx_pfft_ok" = xno; then
-  LIBS="$LIBS_PFFT $LIBS_MPIFFT $LIBS_FFT $acx_pfft_save_LIB"
-  AC_MSG_CHECKING([for pfft library])
-  AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="$LIBS_PFFT $LIBS_MPIFFT $LIBS_FFT"], [])
-  if test $acx_pfft_ok = no; then
-    AC_MSG_RESULT([$acx_pfft_ok])
-  else
-    AC_MSG_RESULT([$acx_pfft_ok ($LIBS_PFFT)])
-  fi
-fi
-
-
-dnl Generic PFFT library 
 if test $acx_pfft_ok = no; then
-  AC_MSG_CHECKING([for pfft library with -lpfft])
-  if test "$LIBS_PFFT" = ""; then
-    LIBS="-lpfft $LIBS_MPIFFT $LIBS_FFT $LIBS $acx_pfft_save_LIB"
-    AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="-lpfft $LIBS_MPIFFT $LIBS_FFT"], [])
-  else
-    LIBS="$LIBS_PFFT -lpfft $LIBS_MPIFFT $LIBS_FFT $acx_pfft_save_LIB"
-    AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; 
-                                  LIBS_PFFT="$LIBS_PFFT -lpfft $LIBS_MPIFFT $LIBS_FFT"], [])  
-  fi
+  AC_MSG_CHECKING([for pfft library])
+  LIBS="$LIBS_PFFT $LIBS_MPIFFT $LIBS_FFT $acx_pfft_save_LIB"
+  AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="$LIBS"], [])  
+
   if test $acx_pfft_ok = no; then
     AC_MSG_RESULT([$acx_pfft_ok])
   else
     AC_MSG_RESULT([$acx_pfft_ok ($LIBS_PFFT)])
   fi
 fi
-
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pfft_ok" = xyes; then
