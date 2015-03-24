@@ -265,7 +265,7 @@ contains
 
       !%Variable KPointsGrid
       !%Type block
-      !%Default Gamma-point only
+      !%Default <math>\Gamma</math>-point only
       !%Section Mesh::KPoints
       !%Description
       !% When this block is given (and the <tt>KPoints</tt> block is not present),
@@ -279,7 +279,7 @@ contains
       !% in reciprocal space. The numbers refer to the whole Brillouin
       !% zone, and the actual number of <i>k</i>-points is usually
       !% reduced exploiting the symmetries of the system.  By default
-      !% the grid will always include the Gamma point. An optional
+      !% the grid will always include the <math>\Gamma</math>-point. An optional
       !% second row can specify a shift in the <i>k</i>-points (between 0 and 1).
       !% The number of columns should be equal to <tt>Dimensions</tt>,
       !% but the grid and shift numbers should be 1 and zero in finite directions.
@@ -431,6 +431,7 @@ contains
       !% Same as the block <tt>KPoints</tt> but this time the input is given in reduced 
       !% coordinates, <i>i.e.</i>
       !% what <tt>Octopus</tt> writes in a line in the ground-state standard output as
+      !% 
       !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
       !%End
 

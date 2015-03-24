@@ -81,12 +81,12 @@ contains
     !%Description
     !% The relevant functions in octopus are represented on a mesh in real space.
     !% This mesh may be an evenly spaced regular rectangular grid (standard mode),
-    !% or else an *adaptive* or *curvilinear grid*. We have implemented
+    !% or else an adaptive or curvilinear grid. We have implemented
     !% three kinds of adaptive meshes, although only one is currently working,
     !% the one invented by F. Gygi (<tt>curv_gygi</tt>). The code will stop if any of
     !% the other two is invoked. All are experimental with domain parallelization.
     !%Option curv_uniform 1
-    !% Regular, uniform rectangular grid. The default.
+    !% Regular, uniform rectangular grid.
     !%Option curv_gygi 2
     !% The deformation of the grid is done according to the scheme described by
     !% F. Gygi [F. Gygi and G. Galli, <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)].

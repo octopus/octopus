@@ -182,7 +182,8 @@ contains
     !% Defines which method to use to solve the Poisson equation. Some incompatibilities apply depending on
     !% dimensionality, periodicity, etc.
     !% For a comparison of the accuracy and performance of the methods in Octopus, see P Garcia-Risue&ntilde;o, 
-    !% J Alberdi-Rodriguez <i>et al.</i>, <i>J. Comp. Chem.</i> <b>35</b>, 427-444 (2014) [http://arxiv.org/abs/1211.2092].
+    !% J Alberdi-Rodriguez <i>et al.</i>, <i>J. Comp. Chem.</i> <b>35</b>, 427-444 (2014)
+    !% or <a href=http://arxiv.org/abs/1211.2092>arXiV</a>.
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
@@ -213,9 +214,9 @@ contains
     !% Scaling Functions Poisson solver, but using an external
     !% library, taken from BigDFT 1.7.6. Only for finite systems.
     !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures
-    !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only.
-    !% Tested with the version bigdft-1.7.6.
+    !% found in <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures>Octopus</a>
+    !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
+    !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
     !%End
 
     default_solver = POISSON_FFT

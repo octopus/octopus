@@ -301,16 +301,14 @@ contains
       !%Description
       !% This variable decides the shape of the simulation box.
       !% Note that some incompatibilities apply:
-      !% <ul>
-      !% <li>Spherical or minimum mesh is not allowed for periodic systems.</li>
-      !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.</li>
-      !% <li><tt>Box_image</tt> is only allowed in 2D.</li>
-      !% </ul>
+      !% <ul><li>Spherical or minimum mesh is not allowed for periodic systems.
+      !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.
+      !% <li><tt>box_image</tt> is only allowed in 2D.</ul>
       !%Option sphere 1
       !% The simulation box will be a sphere of radius <tt>Radius</tt>. (In 2D, this is a circle.)
       !%Option cylinder 2
       !% The simulation box will be a cylinder with radius <tt>Radius</tt> and height (in the <i>x</i>-direction)
-      !% of two times <tt>Xlength</tt>.
+      !% of 2 <tt>Xlength</tt>.
       !%Option minimum 3
       !% The simulation box will be constructed by adding spheres created around each
       !% atom (or user-defined potential), of radius <tt>Radius</tt>.
@@ -393,11 +391,11 @@ contains
 
       if(sb%box_shape == CYLINDER) then
         !%Variable Xlength
+        !%Default <tt>Radius</tt>
         !%Type float
         !%Section Mesh::Simulation Box
         !%Description
         !% If <tt>BoxShape</tt> is <tt>cylinder</tt>, the total length of the cylinder is twice <tt>Xlength</tt>.
-        !% The default is <tt>Radius</tt>.
         !%End
         if(sb%rsize > M_ZERO) then
           default = sb%rsize
@@ -661,14 +659,12 @@ contains
       !%Section Mesh::Simulation Box
       !%Description
       !% (Experimental) Primitive lattice vectors. Vectors are stored in rows.
-      !% Note that these vectors will be normalized.
-      !% Default:
-      !% <tt>%LatticeVectors
+      !% Note that these vectors will be normalized. Default:
+      !% <br><br><tt>%LatticeVectors
       !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-      !% <br>%</tt>
-      !%
+      !% <br>%<br></tt>
       !% Note: This version of Octopus should support non-orthogonal cells.
       !%End
       sb%rlattice_primitive = M_ZERO
@@ -683,9 +679,9 @@ contains
         call parse_block_end(blk)
 
         if (abs(sb%rlattice_primitive(1,2)) + abs(sb%rlattice_primitive(2,3)) +abs(sb%rlattice_primitive(1,3)) > 1.d-12) then
-          message(1) = 'Note that non orthogonal unit cells are not correct yet. They do run, but the results are not ok.'
+          message(1) = 'Note that non-orthogonal unit cells are not correct yet. They do run, but the results are not ok.'
           call messages_warning (1)
-          call messages_experimental('Non orthogonal unit cells')
+          call messages_experimental('Non-orthogonal unit cells')
         end if
 
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
