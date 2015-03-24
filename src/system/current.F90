@@ -291,11 +291,12 @@ contains
       call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
     end if
     
-    if(st%symmetrize_density) then
+    if(der%mesh%sb%kpoints%use_symmetries) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent)
+        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent, &
+          suppress_warning = .true.)
         current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
       call symmetrizer_end(symmetrizer)
