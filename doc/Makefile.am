@@ -36,7 +36,7 @@ EXTRA_DIST = \
 	ChangeLog.2007.gz   \
 	ChangeLog.2008.gz
 
-CLEANFILES = *~ *.bak $(man_MANS)
+CLEANFILES = *~ *.bak variables.texi $(man_MANS)
 
 .pod.1:
 	pod2man -c "octopus documentation" -s 1 $< > $@
