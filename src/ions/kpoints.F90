@@ -172,7 +172,6 @@ contains
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
-    !%Default yes
     !%Section Mesh::KPoints
     !%Description
     !% If symmetries are used to reduce the number of <i>k</i>-points,
