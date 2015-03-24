@@ -41,30 +41,42 @@ if test ! -z "$LIBS_LIBXC"; then
   AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
 fi
 
-# static linkage, separate Fortran interface (libxc 2.2.0 and later)
-if test x"$acx_libxc_ok" = xno; then
-  LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
-  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+if test ! -z "$with_libxc_prefix"; then
+  # static linkage, separate Fortran interface (libxc 2.2.0 and later)
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+  fi
+  
+  # static linkage, combined Fortran interface (libxc 2.0.x, 2.1.x)
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+  fi
 fi
 
 # dynamic linkage, separate Fortran interface (libxc 2.2.0 and later)
 if test x"$acx_libxc_ok" = xno; then
-  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxcf90 -lxc"
-  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
-fi
-
-# static linkage, combined Fortran interface (libxc 2.0.x, 2.1.x)
-if test x"$acx_libxc_ok" = xno; then
-  LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a"
+  if test ! -z "$with_libxc_prefix"; then
+    LIBS_LIBXC="-L$with_libxc_prefix/lib"
+  else
+    LIBS_LIBXC=""
+  fi
+  LIBS_LIBXC="$LIBS_LIBXC -lxcf90 -lxc"
   LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
 fi
 
 # dynamic linkage, combined Fortran interface (libxc 2.0.x, 2.1.x)
 if test x"$acx_libxc_ok" = xno; then
-  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
+  if test ! -z "$with_libxc_prefix"; then
+    LIBS_LIBXC="-L$with_libxc_prefix/lib"
+  else
+    LIBS_LIBXC=""
+  fi
+  LIBS_LIBXC="$LIBS_LIBXC -lxc"
   LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
 fi
