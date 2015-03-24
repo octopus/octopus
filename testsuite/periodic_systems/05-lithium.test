@@ -98,63 +98,63 @@ match ; XSF value    ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 
 
 Input      : 05-lithium.02-td.inp
 
-match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.491972763843e-01
-match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.491962738618e-01
-match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.491979907577e-01
-match ; Energy           [step 15] ; LINE(td.general/energy,  -6, 30) ; -5.491996720732e-01
-match ; Energy           [step 20] ; LINE(td.general/energy,  -1, 30) ; -5.492013062508e-01
+match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.492013062508e-01
+match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.491987668351e-01
+match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.491999294268e-01
+match ; Energy           [step 15] ; LINE(td.general/energy,  -6, 30) ; -5.492004570095e-01
+match ; Energy           [step 20] ; LINE(td.general/energy,  -1, 30) ; -5.492001991629e-01
 
 match ; Vector potential [step  1] ; LINE(td.general/gauge_field, -21, 30) ; 1.000000000000e+01
-match ; Vector potential [step  5] ; LINE(td.general/gauge_field, -16, 30) ; 9.995809815058e+00
-match ; Vector potential [step 10] ; LINE(td.general/gauge_field, -11, 30) ; 9.983252136994e+00
-match ; Vector potential [step 15] ; LINE(td.general/gauge_field,  -6, 30) ; 9.962363792646e+00
-match ; Vector potential [step 20] ; LINE(td.general/gauge_field,  -1, 30) ; 9.933201081578e+00
+match ; Vector potential [step  5] ; LINE(td.general/gauge_field, -16, 30) ; 9.995592662638e+00
+match ; Vector potential [step 10] ; LINE(td.general/gauge_field, -11, 30) ; 9.982370952052e+00
+match ; Vector potential [step 15] ; LINE(td.general/gauge_field,  -6, 30) ; 9.960335143073e+00
+match ; Vector potential [step 20] ; LINE(td.general/gauge_field,  -1, 30) ; 9.929489261526e+00
 
 Input      : 05-lithium.03-td-restart.inp
 
-match ; Energy           [step 20] ; LINE(td.general/energy, -11, 30) ; -5.492013062508e-01
-match ; Energy           [step 35] ; LINE(td.general/energy,  -6, 30) ; -5.492028861244e-01
-match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.492044065224e-01
+match ; Energy           [step 20] ; LINE(td.general/energy, -11, 30) ; -5.492044065224e-01
+match ; Energy           [step 35] ; LINE(td.general/energy,  -6, 30) ; -5.491990086101e-01
+match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.491967563899e-01
 
-match ; Vector potential [step 20] ; LINE(td.general/gauge_field, -11, 30) ; 9.933201081578e+00
-match ; Vector potential [step 25] ; LINE(td.general/gauge_field,  -6, 30) ; 9.895834707018e+00
-match ; Vector potential [step 30] ; LINE(td.general/gauge_field,  -1, 30) ; 9.850345872326e+00
+match ; Vector potential [step 20] ; LINE(td.general/gauge_field, -11, 30) ; 9.929489261526e+00
+match ; Vector potential [step 25] ; LINE(td.general/gauge_field,  -6, 30) ; 9.889845758731e+00
+match ; Vector potential [step 30] ; LINE(td.general/gauge_field,  -1, 30) ; 9.841428068109e+00
 
 Util : oct-dielectric-function
 Input      : 05-lithium.04-dielectric_function.inp
 
 match ; chi file  energy 0 ; LINE(td.general/chi,  2,  1) ;  0.000000E+00
-match ; Re chi xx energy 0 ; LINE(td.general/chi,  2, 17) ;  0.105094E+00
+match ; Re chi xx energy 0 ; LINE(td.general/chi,  2, 17) ;  0.110980E+00
 match ; Im chi xx energy 0 ; LINE(td.general/chi,  2, 32) ;  0.000000E+00
-match ; Re chi yy energy 0 ; LINE(td.general/chi,  2, 47) ;  0.859482E-13
+match ; Re chi yy energy 0 ; LINE(td.general/chi,  2, 47) ; -0.213860E-04
 match ; Im chi yy energy 0 ; LINE(td.general/chi,  2, 62) ;  0.000000E+00
-match ; Re chi zz energy 0 ; LINE(td.general/chi,  2, 77) ; -0.723323E-13
+match ; Re chi zz energy 0 ; LINE(td.general/chi,  2, 77) ; -0.213860E-04
 match ; Im chi zz energy 0 ; LINE(td.general/chi,  2, 92) ;  0.000000E+00
 
 match ; chi file  energy 1 ; LINE(td.general/chi, -1,  1) ;  0.734987E+00
-match ; Re chi xx energy 1 ; LINE(td.general/chi, -1, 17) ;  0.102652E+00
-match ; Im chi xx energy 1 ; LINE(td.general/chi, -1, 32) ;  0.204572E-01
+match ; Re chi xx energy 1 ; LINE(td.general/chi, -1, 17) ;  0.108394E+00
+match ; Im chi xx energy 1 ; LINE(td.general/chi, -1, 32) ;  0.216357E-01
 
-match ; epsilon file  energy 0 ; LINE(td.general/dielectric_function,  2,  1) ;  0.000000E+00
-match ; Re epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 17) ;  0.100453E+01
-match ; Im epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 32) ;  0.000000E+00
-match ; Re epsilon yy energy 0 ; LINE(td.general/dielectric_function,  2, 47) ;  0.370108E-14
+match ; epsilon file  energy 0 ; LINE(td.general/dielectric_function,  2,  1) ;  0.000000E+00  
+match ; Re epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 17) ;  0.100478E+01
+match ; Im epsilon xx energy 0 ; LINE(td.general/dielectric_function,  2, 32) ;  0.000000E+00 
+match ; Re epsilon yy energy 0 ; LINE(td.general/dielectric_function,  2, 47) ; -0.920917E-06
 match ; Im epsilon yy energy 0 ; LINE(td.general/dielectric_function,  2, 62) ;  0.000000E+00
-match ; Re epsilon zz energy 0 ; LINE(td.general/dielectric_function,  2, 77) ; -0.311476E-14
+match ; Re epsilon zz energy 0 ; LINE(td.general/dielectric_function,  2, 77) ; -0.920917E-06
 match ; Im epsilon zz energy 0 ; LINE(td.general/dielectric_function,  2, 92) ;  0.000000E+00
 
 match ; epsilon file  energy 1 ; LINE(td.general/dielectric_function, -1,  1) ;  0.734987E+00
-match ; Re epsilon xx energy 1 ; LINE(td.general/dielectric_function, -1, 17) ;  0.100442E+01
-match ; Im epsilon xx energy 1 ; LINE(td.general/dielectric_function, -1, 32) ;  0.971537E-03
+match ; Re epsilon xx energy 1 ; LINE(td.general/dielectric_function, -1, 17) ;  0.100467E+01
+match ; Im epsilon xx energy 1 ; LINE(td.general/dielectric_function, -1, 32) ;  0.931672E-03
 
 match ; inveps file  energy 0 ; LINE(td.general/inverse_dielectric_function,  2,  1) ;  0.000000E+00
-match ; Re inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 17) ;  0.995495E+00
+match ; Re inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 17) ;  0.995244E+00 
 match ; Im inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 32) ;  0.000000E+00
-match ; Re inveps yy energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 47) ; -0.311476E-14
+match ; Re inveps yy energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 47) ; -0.920917E-06
 match ; Im inveps yy energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 62) ;  0.000000E+00
-match ; Re inveps zz energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 77) ;  0.370108E-14
+match ; Re inveps zz energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 77) ; -0.920917E-06 
 match ; Im inveps zz energy 0 ; LINE(td.general/inverse_dielectric_function,  2, 92) ;  0.000000E+00
 
 match ; inveps file  energy 1 ; LINE(td.general/inverse_dielectric_function, -1,  1) ;  0.734987E+00
-match ; Re inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function, -1, 17) ;  0.995598E+00
-match ; Im inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function, -1, 32) ; -0.962443E-03
+match ; Re inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function, -1, 17) ;  0.995353E+00
+match ; Im inveps xx energy 0 ; LINE(td.general/inverse_dielectric_function, -1, 32) ; -0.923034E-03

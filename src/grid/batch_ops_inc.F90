@@ -880,7 +880,11 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
   integer :: ist, ip
   R_TYPE :: mul
-
+#ifdef HAVE_OPENCL
+  integer :: iprange
+  type(opencl_mem_t)      :: ff_buffer
+#endif
+  
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")
 
@@ -894,7 +898,31 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
   select case(batch_status(yy))
   case(BATCH_CL_PACKED)
+
+#if defined(HAVE_OPENCL) && defined(R_TREAL)
+
+    ! We reuse here the routine to apply the local potential
+    call batch_set_zero(yy)
+    
+    call opencl_create_buffer(ff_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, np)
+    call opencl_write_buffer(ff_buffer, np, ff)
+
+    call opencl_set_kernel_arg(kernel_vpsi, 0, 0)
+    call opencl_set_kernel_arg(kernel_vpsi, 1, np)
+    call opencl_set_kernel_arg(kernel_vpsi, 2, ff_buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 3, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 4, log2(xx%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_vpsi, 5, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 6, log2(yy%pack%size_real(1)))
+    
+    iprange = opencl_kernel_workgroup_size(kernel_vpsi)/xx%pack%size_real(1)
+    
+    call opencl_kernel_run(kernel_vpsi, (/xx%pack%size_real(1), pad(np, iprange)/), (/xx%pack%size_real(1), iprange/))
+
+    call opencl_release_buffer(ff_buffer)
+#else
     call messages_not_implemented("OpenCL batch_mul")
+#endif
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
