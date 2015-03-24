@@ -327,7 +327,7 @@ contains
     !%Option species_user_defined -123
     !% Species with user-defined potential. The potential for the
     !% species is defined by the formula given by the <tt>potential_formula</tt>
-    !% parameter. The charge associated with this species is given by the <tt>valence</tt> parameter.
+    !% parameter. The charge associated with this species must be given by the <tt>valence</tt> parameter.
     !%Option species_charge_density -125
     !% The potential for this species is created from the distribution
     !% of charge given by the <tt>density_formula</tt> parameter. The
@@ -337,13 +337,13 @@ contains
     !%Option species_jellium  -3
     !% Jellium sphere.
     !%Option species_jellium_slab  -4
-    !% Jellium slab: an extra field is the thickness of the slab.
-    !% The slab extends across the simulation box in the <i>xy</i>-plane.
+    !% A slab of jellium that extends across the simulation box in the
+    !% <i>xy</i>-plane. The dimension along the <i>z</i> direction is
+    !% determined by the required parameter <tt>thickness</tt>.
     !%Option species_pspio  -110
-    !% (experimental) PSPIO library: the pseudopotential will be read from a file,
-    !% either in the working directory or in the <tt>OCTOPUS-HOME/share/pseudopotentials/UPF</tt> 
-    !% directory, using the PSPIO library.
-    !% No <tt>lmax</tt> or <tt>lloc</tt>, as these are indicated in the pseudopotential file and cannot be changed.
+    !% (experimental) Alternative method to read pseudopotentials
+    !% using the PSPIO library. The file must be given by the
+    !% <tt>file</tt> or <tt>db_file</tt> parameters.
     !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
@@ -408,6 +408,8 @@ contains
     !%Option density_formula -10013
     !% Mathematical expression that defines the charge density for <tt>species_charge_density</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
+    !%Option thickness -10014
+    !% The thickness of the slab for species_jellium_slab. Must be positive.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1384,10 +1386,6 @@ contains
       spec%jradius = CNST(0.5)
         
     case(SPECIES_JELLIUM_SLAB)
-      call parse_block_float(blk, row, read_data, spec%jthick) ! thickness of the jellium slab
-      read_data = read_data + 1
-      if(spec%jthick <= M_ZERO) call messages_input_error('Species')
-      spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
 
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
       spec%sigma = CNST(0.25)
@@ -1405,7 +1403,8 @@ contains
     spec%mass = -CNST(1.0)
     spec%z_val = -CNST(1.0)
     spec%sc_alpha = -CNST(1.0)
-
+    spec%jthick = -CNST(1.0)
+    
     call iihash_init(read_parameters, 10)
     
     icol = read_data
@@ -1492,6 +1491,19 @@ contains
         if(spec%type /= SPECIES_CHARGE_DENSITY) then
           call messages_input_error('Species', 'density_formula can only be used with species_charge_density')
         end if
+
+      case(OPTION_THICKNESS)
+        call check_duplication(OPTION_THICKNESS)
+        call parse_block_float(blk, row, icol + 1, spec%jthick) ! thickness of the jellium slab
+
+        if(spec%jthick <= M_ZERO) call messages_input_error('Species', &
+          'the value of the thickness parameter in species '//trim(spec%label)//' must be positive.')
+
+        spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
+
+        if(spec%type /= SPECIES_JELLIUM_SLAB) then
+          call messages_input_error('Species', 'thickness can only be used with species_jellium_slab')
+        end if
         
       case default
         call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
@@ -1521,6 +1533,9 @@ contains
       call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")
     end if
       
+    if(spec%type == SPECIES_JELLIUM_SLAB .and. spec%jthick < M_ZERO) then
+      call messages_input_error('Species', "The thickness parameter is missing for species '"//trim(spec%label)//"'")
+    end if
     
     select case(spec%type)
     case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
