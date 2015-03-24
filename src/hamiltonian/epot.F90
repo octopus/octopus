@@ -315,8 +315,8 @@ contains
     !%
     !% The magnetic field should always be entered in atomic units, regardless
     !% of the <tt>Units</tt> variable. Note that we use the "Gaussian" system
-    !% meaning 1 au[B] = 1.7152553 * 10^7 gauss, which corresponds to
-    !% 1.7152553 * 10^3 Tesla.
+    !% meaning 1 au[B] = <math>1.7152553 \times 10^7</math> Gauss, which corresponds to
+    !% <math>1.7152553 \times 10^3</math> Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
     if(parse_block('StaticMagneticField', blk) == 0) then
@@ -326,11 +326,12 @@ contains
       !%Default linear_xy
       !%Section Hamiltonian
       !%Description
-      !% The gauge of the static vector potential A when a magnetic field B = (0,0,B_z) is applied onto a 2D-system.
+      !% The gauge of the static vector potential <math>A</math> when a magnetic field
+      !% <math>B = \left( 0, 0, B_z \right)</math> is applied to a 2D-system.
       !%Option linear_xy 0
-      !% Linear gauge with A = ((1/2)/P_c)*(-y,x)*B_z. This is the default. (Cannot be used for periodic systems.)
+      !% Linear gauge with <math>A = \frac{1}{2c} \left( -y, x \right) B_z</math>. (Cannot be used for periodic systems.)
       !%Option linear_y 1
-      !% Linear gauge with A = (1/P_c)*(-y,0)*B_z. Can be used for <tt>PeriodicDimensions = 1</tt>
+      !% Linear gauge with <math>A = \frac{1}{c} \left( -y, 0 \right) B_z</math>. Can be used for <tt>PeriodicDimensions = 1</tt>
       !% but not <tt>PeriodicDimensions = 2</tt>.
       !%End
       call parse_integer('StaticMagneticField2DGauge', 0, gauge_2d)

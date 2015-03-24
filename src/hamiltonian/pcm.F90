@@ -142,8 +142,8 @@ contains
     !%Description
     !% If true, the calculation is performed accounting for solvation effects
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
-    !% (Chem. Rev. 105, 2999 (2005), J. Chem. Phys. 107, 3032 (1997),
-    !% J. Chem. Phys. 139, 024105 (2013)). At the moment, this option is available 
+    !% (<i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>107</b>, 3032 (1997),
+    !% <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)). At the moment, this option is available 
     !% only for ground-state calculations. Experimental.
     !%End
 
@@ -173,7 +173,7 @@ contains
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Static dielectric constant of the solvent (\epsilon_0). 1.0 indicates gas phase.
+    !% Static dielectric constant of the solvent (<math>\epsilon_0</math>). 1.0 indicates gas phase.
     !%End
     call parse_float('SolventDielectricConstant', M_ONE, pcm%epsilon_0)
 
