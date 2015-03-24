@@ -347,7 +347,7 @@ contains
     !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
-    !% point.
+    !% point. The atomic number is determined from the name of the species.
     !%Option species_full_gaussian   -124
     !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
@@ -362,8 +362,9 @@ contains
     !% <math>\vec{r_0}</math> is calculated in such a way that the the
     !% first moment of <math>q(r)/z</math> is equal to the atomic
     !% position. For a precise description, see N. A. Modine,
-    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997). The width of the Gaussian
-    !% is set by parameter <tt>gaussian_width</tt>.
+    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997). The width of the
+    !% Gaussian is set by parameter <tt>gaussian_width</tt>. The
+    !% atomic number is determined from the name of the species.
     !%Option species_from_file  -126
     !% The potential is read from a file. Accepted file formats, detected by extension: obf, ncdf and csv.
     !%Option species_soft_coulomb -128
