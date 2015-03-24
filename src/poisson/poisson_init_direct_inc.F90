@@ -47,10 +47,10 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   !% The Poisson solvers <tt>multigrid</tt>, <tt>cg</tt>, and <tt>cg_corrected</tt>
   !% (and <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>)
   !% do a multipolar expansion of the given
-  !% charge density, such that $\rho = \rho_{multip.expansion}+\Delta
-  !% \rho$. The Hartree potential due to the \rho_{multip.expansion} is
-  !% calculated analytically, while the Hartree potential due to $\Delta
-  !% \rho$ is calculated with either a multigrid or cg solver.
+  !% charge density, such that <math>\rho = \rho_{multip.expansion}+\Delta
+  !% \rho</math>. The Hartree potential due to the <math>\rho_{multip.expansion}</math> is
+  !% calculated analytically, while the Hartree potential due to <math>\Delta \rho</math>
+  !% is calculated with either a multigrid or cg solver.
   !% The order of the multipolar expansion is set by this variable.
   !%
   !% Default is 4 for <tt>PoissonSolver = cg_corrected</tt> and <tt>multigrid</tt>, and 2
@@ -109,7 +109,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     !%Section Hamiltonian::Poisson
     !%Description
     !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
-    !% solver is not 1/r but 1/sqrt(a^2 + r^2), where this variable sets the value of "a".
+    !% solver is not <math>1/r</math> but <math>1/\sqrt{a^2 + r^2}</math>, where this variable sets the value of <i>a</math>.
     !%End
     call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
       M_ONE, this%poisson_soft_coulomb_param, units_inp%length)

@@ -112,10 +112,10 @@ contains
     !% Indicates whether data is partitioned within the ISF library.
     !% If data is distributed among processes, Octopus uses parallel data-structures 
     !% and, thus, less memory.
-    !% If "yes", data is parallelized. The Z axis of the input (rho) vector
+    !% If "yes", data is parallelized. The <i>z</i>-axis of the input vector
     !% is split among the MPI processes.
     !% If "no", entire input and output vector is saved in all the MPI processes.
-    !% If K-points parallelization is used, "no" must be selected
+    !% If k-points parallelization is used, "no" must be selected.
     !%End
     call parse_logical('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then

@@ -123,17 +123,17 @@ contains
     !%Default 0.0001 
     !%Section Hamiltonian::Poisson 
     !%Description
-    !% Dimensionless parameter for relative convergence of FMM.
+    !% Dimensionless parameter for relative convergence of <tt>PoissonSolver = FMM</tt>.
     !% Sets energy error bound.
     !% Strong inhomogeneous systems may violate the error bound.
     !% For inhomogeneous systems we have an error-controlled sequential version available
     !% (from Ivo Kabadshow).
     !%
-    !% Our implementation of FMM (based on H. Dachsel, J. Chem. Phys. 131,
+    !% Our implementation of FMM (based on H. Dachsel, <i>J. Chem. Phys.</i> <b>131</b>,
     !% 244102 (2009)) can keep the error of the Hartree energy below an
     !% arbitrary bound. The quotient of the value chosen for the maximum
     !% error in the Hartree energy and the value of the Hartree energy is
-    !% DeltaEFMM.
+    !% <tt>DeltaEFMM</tt>.
     !%
     !%End
     call parse_float(datasets_check('DeltaEFMM'), CNST(1e-4), this%delta_E_fmm)
@@ -144,31 +144,33 @@ contains
     !%Section Hamiltonian::Poisson 
     !%Description
     !% Dimensionless parameter for the correction of the self-interaction of the
-    !% electrostatic Hartree potential. 
+    !% electrostatic Hartree potential, when using <tt>PoissonSolver = FMM</tt>.
     !% 
-    !% Octopus represents charge density in real space grids, each
-    !% point containing a value $\rho$ corresponding to the charge
+    !% Octopus represents charge density on a real-space grid, each
+    !% point containing a value <math>\rho</math> corresponding to the charge
     !% density in the cell centered in such point. Therefore, the
-    !% integral for the Hartree potential at point $i$, this is
-    !% $V_H(i)$, can be reduced to a summation:
+    !% integral for the Hartree potential at point <math>i</math>, <math>V_H(i)</math>, can be reduced to a summation:
     !%
-    !% $V_H(i) = (1/4\pi\epsilon_0) \Omega \sum_{i \neq j} \frac{\rho(\vec{r}(j))}{|\vec{r}(j) - \vec{r}(i)|} + V_{self.int.}(i)$
-    !% where $\Omega$ is the volume of the cell, and $\vec{r}(j)$ is the
-    !% position of the point $j$. The $V_{self.int.}(i)$ corresponds to
-    !% the integral over the cell centered on the point $i$ that is necessary to
-    !% calculate the Hartree potential at point $i$:
+    !% <math>V_H(i) = \frac{\Omega}{4\pi\epsilon_0} \sum_{i \neq j}
+    !% \frac{\rho(\vec{r}(j))}{|\vec{r}(j) - \vec{r}(i)|} + V_{self.int.}(i)</math>
+    !% where <math>\Omega</math> is the volume element of the mesh, and <math>\vec{r}(j)</math> is the
+    !% position of the point <math>j</math>. The <math>V_{self.int.}(i)</math> corresponds to
+    !% the integral over the cell centered on the point <math>i</math> that is necessary to
+    !% calculate the Hartree potential at point <math>i</math>:
     !%
-    !% $V_{self.int.}(i):=\int_{\Omega(i)}d\vec{r} \frac{\rho(\vec{r}(i))}{|\vec{r}-\vec{r}(i)|}$
+    !% <math>V_{self.int.}(i)=\frac{1}{4\pi\epsilon_0}
+    !% \int_{\Omega(i)}d\vec{r} \frac{\rho(\vec{r}(i))}{|\vec{r}-\vec{r}(i)|}</math>
     !%
     !% In the FMM version implemented into Octopus, a correction method
-    !% for $V_H(i)$ is used (see García-Risueño et al., J. Comp. Chem. 35 427 (2014)).
-    !% This method defines cells neighbouring cell $i$, which
-    !% have volume $\Omega(i)/8$ (in 3D) and charge density obtained by
-    !% interpolation. In the calculation of $V_H(i)$, in order to avoid
+    !% for <math>V_H(i)</math> is used
+    !% (see Garc&iacute;a-Risue&ntilde;o <i>et al.</i>, <i>J. Comp. Chem.</i> <b>35</b>, 427 (2014)).
+    !% This method defines cells neighbouring cell <math>i</math>, which
+    !% have volume <math>\Omega(i)/8</math> (in 3D) and charge density obtained by
+    !% interpolation. In the calculation of <math>V_H(i)</math>, in order to avoid
     !% double counting of charge, and to cancel part of the errors arising
     !% from considering the distances constant in the summation above, a
-    !% term $-\alpha_{FMM}V_{self.int.}(i)$ is added to the summation (see
-    !% the referred paper for the explicit formulae).
+    !% term <math>-\alpha_{FMM}V_{self.int.}(i)</math> is added to the summation (see
+    !% the paper for the explicit formulae).
     !%End
     call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), this%alpha_fmm)
 
@@ -231,9 +233,7 @@ contains
       if (.not.((mesh%sb%box_shape == PARALLELEPIPED) .and. ((mesh%sb%lsize(1) == mesh%sb%lsize(2)) .and. &
         (mesh%sb%lsize(1) == mesh%sb%lsize(3)) .and. &
         (mesh%sb%lsize(2) == mesh%sb%lsize(3))))) then
-        message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
-        message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
-        call messages_fatal(2)
+        call messages_not_implemented("FMM Poisson solver with non-cubic boxes.")
       end if
     end if
 
@@ -439,4 +439,3 @@ end module poisson_fmm_m
 !! mode: f90
 !! coding: utf-8
 !! End:
-
