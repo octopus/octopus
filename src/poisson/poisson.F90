@@ -212,11 +212,11 @@ contains
     !%Option libisf 10
     !% (Experimental) Meant to be exactly the same as Interpolating
     !% Scaling Functions Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.0. Works with k-points only using
+    !% library, taken from BigDFT 1.7.6. Works with k-points only using
     !% <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
     !% found in http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures
     !% and http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only.
-    !% Tested with the version bigdft-1.7-dev.28.
+    !% Tested with the version bigdft-1.7.6.
     !%End
 
     default_solver = POISSON_FFT
