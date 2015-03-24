@@ -169,7 +169,7 @@ sub print_header{
   open(OUT, ">$include/options.h");
   my $key;
   foreach $key (sort(keys %opt)) {
-    print OUT "#define OPTION_", uc $key , " ", $opt{"$key"}, "\n";
+    print OUT "#define OPTION_", uc $key , " (", $opt{"$key"}, ")\n";
   }
 
   close(OUT);
