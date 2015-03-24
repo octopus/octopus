@@ -137,7 +137,7 @@ contains
     !%Section Linear Response::Vibrational Modes
     !%Description
     !% If set to true, all entries of the dynamical matrix will be calculated and then
-    !% the matrix will be symmetrized to enforce mat(i,j) = mat(j,i). If set to false,
+    !% the matrix will be symmetrized to enforce <math>D_{ij} = D_{ji}</math>. If set to false,
     !% only the upper half of the matrix will be calculated.
     !%End
     call parse_logical('SymmetrizeDynamicalMatrix', .true., symmetrize)

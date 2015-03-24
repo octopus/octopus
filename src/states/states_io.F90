@@ -353,12 +353,13 @@ contains
     !%Type block
     !%Section Output
     !%Description
-    !% Momentum-transfer vector <i>q</i> to be used when calculating matrix elements
-    !% &lt;f|exp(iq.r)|i&gt;. This enables the calculation of the dynamical structure factor,
+    !% Momentum-transfer vector <math>\vec{q}</math> to be used when calculating matrix elements
+    !% <math>\left< f \left| e^{i \vec{q} \cdot \vec{r}} \right| i \right></math>.
+    !% This enables the calculation of the dynamical structure factor,
     !% which is closely related to generalized oscillator strengths.
     !% If the vector is not given, but TPA output is requested (<tt>Output = TPA</tt>),
     !% only the oscillator strengths are written in the output file.
-    !% For example, to use <i>q</i> = (0.1, 0.2, 0.3), set
+    !% For example, to use <math>\vec{q}</math> = (0.1, 0.2, 0.3), set
     !%
     !% <tt>%MomentumTransfer
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
