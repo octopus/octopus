@@ -52,7 +52,8 @@
     !%Description
     !% If <tt>OCTTargetOperator = oct_tg_density</tt>, then one must supply the target density
     !% that should be searched for. This one can do by supplying a string through
-    !% the variable <tt>OCTTargetDensity</tt>.
+    !% the variable <tt>OCTTargetDensity</tt>. Alternately, give the special string <tt>"OCTTargetDensityFromState"</tt>
+    !% to specify the expression via the block <tt>OCTTargetDensityFromState</tt>.
     !%End
 
     !%Variable OCTTargetDensityFromState
@@ -60,7 +61,7 @@
     !%Default no
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and <tt>OCTLocalTarget = "OCTTargetDensityFromState"</tt>,
+    !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and <tt>OCTTargetDensity = "OCTTargetDensityFromState"</tt>,
     !% you must specify a <tt>OCTTargetDensityState</tt> block, in order to specify which linear
     !% combination of the states present in <tt>restart/gs</tt> is used to
     !% create the target density.
@@ -128,37 +129,39 @@
       !%Section Calculation Modes::Optimal Control
       !%Default oct_no_curr
       !%Description
-      !% The variable <tt>OCTCurrentFunctional</tt> describes which kind of current target functional J1_c[j] is
-      !% to be used. EXPERIMENTAL!
+      !% (Experimental) The variable <tt>OCTCurrentFunctional</tt> describes which kind of
+      !% current target functional <math>J1_c[j]</math> is to be used.
       !%Option oct_no_curr 0
       !% No current functional is used, no current calculated.
       !%Option oct_curr_square 1
-      !% Calculates the square of current j: J1_c[j] = <tt>OCTCurrentWeight</tt>*\int|j(r)|^2 dr. 
-      !% For <tt>OCTCurrentWeight</tt> .LT. 0 the current will be minimized (useful in combination with 
+      !% Calculates the square of current <math>j</math>:
+      !% <math>J1_c[j] = {\tt OCTCurrentWeight} \int{\left| j(r) \right|^2 dr}</math>.
+      !% For <tt>OCTCurrentWeight</tt> < 0, the current will be minimized (useful in combination with
       !% target density in order to obtain stable final target density), while for 
-      !% OCTCurrentWeight</tt> .GT. 0 it will be maximized (useful in combination with a target density 
+      !% <tt>OCTCurrentWeight</tt> > 0, it will be maximized (useful in combination with a target density 
       !% in order to obtain a high-velocity impact, for instance). It is a static target, to be reached at
       !% total time. 
       !%Option oct_max_curr_ring 2
-      !% Maximizes the current of a quantum ring in one direction. The functional maximizes the z projection of the 
-      !% outer product between the position \vec{r} and the current \vec{j}: 
-      !% J1[j] = <tt>OCTCurrentWeight</tt>*\int (\vec{r} \times \vec{j}) \hat{z} dr. For <tt>OCTCurrentWeight</tt> .GT. 0. the
-      !% current flows in counter-clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.
+      !% Maximizes the current of a quantum ring in one direction. The functional maximizes the <math>z</math> projection of the 
+      !% outer product between the position <math>\vec{r}</math> and the current <math>\vec{j}</math>: 
+      !% <math>J1[j] = {\tt OCTCurrentWeight} \int{(\vec{r} \times \vec{j}) \cdot \hat{z} dr}</math>.
+      !% For <tt>OCTCurrentWeight</tt> > 0, the
+      !% current flows in counter-clockwise direction, while for <tt>OCTCurrentWeight</tt> < 0, the current is clockwise.
       !%Option oct_curr_square_td 3
-      !% The time dependent version of <tt>oct_curr_square</tt>. In fact, calculates the 
+      !% The time-dependent version of <tt>oct_curr_square</tt>. In fact, calculates the 
       !% square of current in time interval [<tt>OCTStartTimeCurrTg</tt>, 
       !% total time = <tt>TDMaximumIter</tt> * <tt>TDTimeStep</tt>]. 
       !% Set <tt>TDPropagator</tt> = <tt>crank_nicolson</tt>.
-      !%End 
+      !%End
 
       !%Variable OCTCurrentWeight
       !%Type float
       !%Section Calculation Modes::Optimal Control
       !%Default 0.0
       !%Description
-      !% In the case of simultaneous optimization of density n and current j, one can tune the importance
-      !% of the current functional J1_c[j], as the respective functionals might not provide results on the
-      !% same scale of magnitude. J1[n,j]= J1_d[n]+ <tt>OCTCurrentWeight</tt> * J1_c[j]. Be aware that its
+      !% In the case of simultaneous optimization of density <math>n</math> and current <math>j</math>, one can tune the importance
+      !% of the current functional <math>J1_c[j]</math>, as the respective functionals might not provide results on the
+      !% same scale of magnitude. <math>J1[n,j]= J1_d[n]+ {\tt OCTCurrentWeight}\ J1_c[j]</math>. Be aware that its
       !% sign is crucial for the chosen <tt>OCTCurrentFunctional</tt> as explained there.
       !%End
 
@@ -167,30 +170,30 @@
       !%Section Calculation Modes::Optimal Control
       !%Default 0
       !%Description
-      !% Allows for a time dependent target for the current without defining it for the total 
+      !% Allows for a time-dependent target for the current without defining it for the total 
       !% time-interval of the simulation.
       !% Thus it can be switched on at the iteration desired, <tt>OCTStartIterCurrTg</tt> >= 0
       !% and  <tt>OCTStartIterCurrTg</tt>  <  <tt>TDMaximumIter</tt>. 
       !% Tip: If you would like to specify a real time for switching
       !% the functional on rather than the number of steps, just use something
       !% like:
-      !% <tt>OCTStartIterCurrTg</tt> = 100.0 / <tt>TDTimeStep</tt>
+      !% <tt>OCTStartIterCurrTg</tt> = 100.0 / <tt>TDTimeStep</tt>.
       !%End
  
       !%Variable OCTSpatialCurrWeight
       !%Type block
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% Can be seen as a position dependent <tt>OCTCurrentWeight</tt>. Consequently, it
-      !% weights contribution of current j to its functional J1_c[j] according to the position in space. 
-      !% For example, <tt>oct_curr_square</tt> thus becomes 
-      !% J1_c[j] = <tt>OCTCurrentWeight</tt> \int |j(r)|^2 <tt>OCTSpatialCurrWeight</tt>(r) dr.
+      !% Can be seen as a position-dependent <tt>OCTCurrentWeight</tt>. Consequently, it
+      !% weights contribution of current <math>j</math> to its functional <math>J1_c[j]</math> according to the position in space. 
+      !% For example, <tt>oct_curr_square</tt> thus becomes
+      !% <math>J1_c[j] = {\tt OCTCurrentWeight} \int{\left| j(r) \right|^2 {\tt OCTSpatialCurrWeight}(r) dr}</math>.
       !%
-      !% It is defined <tt>OCTSpatialCurrWeight</tt>(r) = g(x)*g(y)*g(z), where   
-      !% g(x) = \sum_{i} 1/(1+exp( -fact*(x-startpoint_i) )) - 1/(1+exp( -fact*(x-endpoint_i) )).
-      !% If not specified, g(x) = 1. 
+      !% It is defined as <tt>OCTSpatialCurrWeight</tt><math>(r) = g(x) g(y) g(z)</math>, where   
+      !% <math>g(x) = \sum_{i} 1/(1+e^{-{\tt fact} (x-{\tt startpoint}_i)}) - 1/(1+e^{-{\tt fact} (x-{\tt endpoint}_i)})</math>.
+      !% If not specified, <math>g(x) = 1</math>.
       !% 
-      !% Each g(x) is represented by one line of the block that has the following form
+      !% Each <math>g(x)</math> is represented by one line of the block that has the following form
       !%
       !% <tt>%OCTSpatialCurrWeight
       !% <br>&nbsp;&nbsp;  dimension  |  fact |  startpoint_1  | endpoint_1  | startpoint_2 | endpoint_2 |...

@@ -80,7 +80,7 @@ contains
     !%Variable OCTInitialState
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default 1
+    !%Default oct_is_groundstate
     !%Description
     !% Describes the initial state of the quantum system.
     !% Possible arguments are:
@@ -92,7 +92,7 @@ contains
     !% Start in a transformation of the ground-state orbitals, as defined in the
     !% block <tt>OCTInitialTransformStates</tt>.
     !%Option oct_is_userdefined 4
-    !% Start in a userdefined state.
+    !% Start in a user-defined state.
     !%End
     call parse_integer('OCTInitialState', oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    

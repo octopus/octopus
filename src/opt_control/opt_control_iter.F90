@@ -84,7 +84,7 @@ contains
     !% less than <tt>OCTEps</tt> the iteration is stopped. This difference is defined as:
     !% 
     !% <math>
-    !% D[\epsilon^{i},\epsilon^{o}] = \int_0^T dt \vert \epsilon^{i}(t)-\epsilon^{o}(t)\vert^2\,.
+    !% D[\varepsilon^{in},\varepsilon^{out}] = \int_0^T dt \left| \varepsilon^{in}(t)-\varepsilon^{out}(t)\right|^2
     !% </math>
     !%
     !% (If there are several control fields, this difference is defined as the sum over
