@@ -81,7 +81,7 @@ contains
 
     !%Variable OutputMatrixElements
     !%Type flag
-    !%Default no
+    !%Default none
     !%Section Output
     !%Description
     !% Specifies what matrix elements to print.
@@ -92,11 +92,12 @@ contains
     !%Option momentum 1
     !% Momentum. Filename: <tt>ks_me_momentum</tt>.
     !%Option ang_momentum 2
-    !% Dimensionless angular momentum (r x k). Filename: <tt>ks_me_angular_momentum</tt>.
+    !% Dimensionless angular momentum <math>\vec{r} \times \vec{k}</math>. Filename: <tt>ks_me_angular_momentum</tt>.
     !%Option one_body 4
-    !% <math>&lt;i|T + V_{ext}|j&gt;</math>. Not available with states parallelization.
+    !% <math>\left< i \left| \hat{T} + V_{ext} \right| j \right></math>. Not available with states parallelization.
     !%Option two_body 8
-    !% <math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math>. Not available with states parallelization.
+    !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| kl \right></math>.
+    !% Not available with states parallelization.
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%End
@@ -123,11 +124,11 @@ contains
       !% between Kohn-Sham states.
       !%
       !% In 2D, this variable is ignored: it will always print two files, 
-      !% <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2), containing the X and
-      !% Y dipole matrix elements.
+      !% <tt>ks_me_multipoles.i</tt> (<tt>i</tt>=1,2), containing the <math>x</math> and
+      !% <math>y</math> dipole matrix elements.
       !%
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
-      !% X and X**2 matrix elements between Kohn-Sham states.
+      !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
       call parse_integer('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
