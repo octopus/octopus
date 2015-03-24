@@ -25,8 +25,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psi(:, :)   !< psi(1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: ppsi(:, :)  !< ppsi(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: psi(:, :)   !< (1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: ppsi(:, :)  !< (1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
   type(batch_t) :: psib, ppsib
@@ -66,7 +66,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer,           intent(in)    :: ik
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
-  R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
+  R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
@@ -99,7 +99,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     return
   end if
 
-  SAFE_ALLOCATE(reduce_buffer(1:nreduce))
+  SAFE_ALLOCATE(reduce_buffer(1:nreduce, 1:dim))
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
@@ -134,18 +134,18 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           ii = ireduce(ipj, ll, mm, ist)
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:))
+            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(ii:))
+              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
             else
-              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:))
+              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
-              lpsi(1:ns, 1:dim), reduce_buffer(ii:))
+              lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
           end select
         end do ! mm
       end do ! ll
@@ -158,7 +158,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
-    call comm_allreduce(mesh%mpi_grp%comm, reduce_buffer, dim = nreduce)
+    call comm_allreduce(mesh%mpi_grp%comm, reduce_buffer)
     call profiling_out(reduce_prof)
   end if
 
@@ -182,18 +182,18 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
             else
-              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+              pj(ipj)%reltype, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
           end select
           
         end do ! mm
