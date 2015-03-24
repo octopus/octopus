@@ -163,8 +163,8 @@ contains
       !%Default true
       !%Section Linear Response::KdotP
       !%Description
-      !% For testing purposes, set to false to ignore the term -i[r,V] in
-      !% the k.p perturbation, which is due to non-local pseudopotentials.
+      !% For testing purposes, set to false to ignore the term <math>-i \left[\vec{r}, V\right]</math> in
+      !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_logical(datasets_check('KdotPUseNonLocalPseudopotential'), &

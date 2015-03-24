@@ -329,7 +329,7 @@ contains
       !%Description
       !% Only applies if <tt>CasidaMomentumTransfer</tt> is nonzero.
       !% Directionally averaged dynamic structure factor is calculated by
-      !% averaging over the results from a set of <i>q</i>-vectors. The vectors
+      !% averaging over the results from a set of <math>\vec{q}</math>-vectors. The vectors
       !% are generated using Gauss-Legendre quadrature scheme [see <i>e.g.</i>
       !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
       !% variable determines the order of the scheme.

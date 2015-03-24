@@ -126,8 +126,8 @@ contains
     !% is equivalent to Hermitian.] Slightly slower than <tt>bicgstab</tt> but more reliable.
     !% For Sternheimer, must be real wavefunctions, but can have eta.
     !%Option qmr_symmetrized 82
-    !% Quasi-minimal residual solver, using the symmetrized form A^T A x = A^T y instead of
-    !% A x = y. Reliable but very slow. General matrices.
+    !% Quasi-minimal residual solver, using the symmetrized form <math>A^\dagger A x = A^\dagger y</math> instead of
+    !% <math>A x = y</math>. Reliable but very slow. General matrices.
     !%Option qmr_dotp 83
     !% Quasi-minimal residual solver, for Hermitian matrices, using the
     !% symmetric algorithm with conjugated dot product (experimental). Slightly slower than <tt>bicgstab</tt>
