@@ -87,11 +87,10 @@ module poisson_libisf_m
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube, soft_coulb_param)
+  subroutine poisson_libisf_init(this, mesh, cube)
     type(poisson_libisf_t), intent(out)   :: this
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
-    FLOAT, optional,        intent(in)    :: soft_coulb_param
 
 #ifdef HAVE_LIBISF
     logical data_is_parallel
@@ -256,7 +255,6 @@ contains
     !!                for calculating XC energies and potential. 
     !!                ixc=0 indicates that no XC terms are computed. The XC functional codes follow
     !!                the ABINIT convention.   
-    integer :: ixc = 1
     !>    n3d         third dimension of the density. For distributed data, it takes into account 
     !!                the enlarging needed for calculating the XC functionals.
     !!                For global data it is simply equal to n03. 
