@@ -355,12 +355,6 @@ contains
 
       end do
 
-      write(message(1), '(3a,f5.2,3a)') &
-        "Info: species_full_delta species ", trim(species_label(species)), &
-        " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
-        " [ ", trim(units_abbrev(units_out%length)), " ]"
-      call messages_info(1)
-
       have_point = .true.
 #ifdef HAVE_MPI
       ! in parallel we have to find the minimum of the whole grid
@@ -371,8 +365,10 @@ contains
 
         if(mesh%mpi_grp%rank /= nint(global_min(2))) have_point = .false.
 
+        dist2_min = global_min(1)
       end if
 #endif
+
       if(have_point) then
         if(mesh%use_curvilinear) then
           rho(ipos) = -species_z(species)/mesh%vol_pp(ipos)
@@ -380,6 +376,12 @@ contains
           rho(ipos) = -species_z(species)/mesh%vol_pp(1)
         end if
       end if
+
+      write(message(1), '(3a,f5.2,3a)') &
+        "Info: species_full_delta species ", trim(species_label(species)), &
+        " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
+        " [ ", trim(units_abbrev(units_out%length)), " ]"
+      call messages_info(1)
 
     case(SPECIES_FULL_GAUSSIAN)
 
