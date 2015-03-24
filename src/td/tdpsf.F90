@@ -118,15 +118,14 @@ contains
     write(message(1),*) 'TDPSF:  time step = ', units_from_atomic(units_inp%time, psf%Tstep)
     write(message(2),*) 'TDPSF:  Buffer region = ', units_from_atomic(units_inp%length, psf%width)
     call messages_info(2)
-    write (*,*) "dlmax",dlmax,"lmax",lmax,"kmax",kmax
 
 
     !%Variable TDPSFSigma 
-    !%Default sqrt(2)
+    !%Default <math>\sqrt{2}</math>
     !%Type float
     !%Section Time-Dependent::TDPSF
     !%Description
-    !% Standard deviation of the phase space filter.
+    !% Standard deviation of the phase-space filter.
     !%End
     call parse_float(datasets_check('TDPSFSigma'),sqrt(M_TWO),psf%sigma)
     call messages_print_var_value(stdout, "TDPSFSigma",psf%sigma)
@@ -143,11 +142,11 @@ contains
     call messages_print_var_value(stdout, "TDPSFDelta",psf%delta)
 
     !%Variable TDPSFKmin
-    !%Default pi/width
+    !%Default <math>\pi</math>/width
     !%Type float
     !%Section Time-Dependent::TDPSF
     !%Description
-    !% k-space filter width.
+    !% <i>k</i>-space filter width.
     !%End
     call parse_float(datasets_check('TDPSFKmin'),M_PI/width,psf%kmin)
     call messages_print_var_value(stdout, "TDPSFKmin",psf%kmin)
@@ -158,10 +157,9 @@ contains
     
     sigma_max = width /sqrt(log(1/psf%delta+dim*log(2*psf%sigma/sqrt(M_PI))))
     
-    write (*,*) "sigma_min= ",sigma_min,"sigma_max= ",sigma_max
+    write(message(1),*) "sigma_min= ",sigma_min,"sigma_max= ",sigma_max
+    call messages_info(1)
  
-
-
     sigma = psf%sigma
     kmax = kmax/4
     call tdpsf_generate_filters(psf,width,kmin,sigma)
@@ -201,9 +199,7 @@ contains
     dim = psf%mesh%sb%dim
     normX=M_TWO**dim *  M_PI**(-dim/M_TWO) * (M_ONE/sigma)**dim
 
-    write (*,*) sigma 
-
-    ! The filter in real space
+     ! The filter in real space
     do idir=1, dim
       LL =  (psf%ll(idir)/M_TWO)*psf%mesh%spacing(idir)-ww
       do ii=1,psf%ll(idir)
@@ -211,8 +207,6 @@ contains
          
         psf%XFltr(PLUS,idir,ii)  = loct_erf((LL+M_TWO*ww/3.0-xx)/sigma) - loct_erf((LL+ww/3.0-xx)/sigma) 
         psf%XFltr(MINUS,idir,ii) = loct_erf((LL+M_TWO*ww/3.0+xx)/sigma) - loct_erf((LL+ww/3.0+xx)/sigma) 
-
-        write(*,*) ii,xx,psf%XFltr(PLUS,idir,ii)/M_TWO,psf%XFltr(MINUS,idir,ii)/M_TWO
       end do
     end do  
 
@@ -227,8 +221,6 @@ contains
 
         psf%KFltr(PLUS,idir,ii)  = M_ONE + loct_erf((kk-kmin)/sigma)
         psf%KFltr(MINUS,idir,ii) = M_ONE + loct_erf((-kk-kmin)/sigma)
-
-        write(*,*) ii,kk,psf%KFltr(PLUS,idir,ii)/M_TWO,psf%KFltr(MINUS,idir,ii)/M_TWO
       end do
     end do
 

@@ -476,12 +476,10 @@ contains
       !%Default 0
       !%Section Time-Dependent
       !%Description
-      !% You have the possibility of "freezing" a number of orbitals during a time-propagation.
+      !% (Experimental) You have the possibility of "freezing" a number of orbitals during a time-propagation.
       !% The Hartree and exchange-correlation potential due to these orbitals (which
       !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
       !% will not be propagated.
-      !%
-      !% <b>WARNING: NOT TESTED YET.</b>
       !%Option sae -1
       !% Single-active-electron approximation. This option is only valid for time-dependent
       !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move.
