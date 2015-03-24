@@ -572,11 +572,19 @@ contains
       end do
     end do
 
+    SAFE_DEALLOCATE_P(st%zeigenval%Re)
+    nullify(st%eigenval)
+    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
+    st%zeigenval%Re = huge(st%zeigenval%Re)
+    st%eigenval => st%zeigenval%Re
+    if (associated(st%zeigenval%Im)) then
+      SAFE_DEALLOCATE_P(st%zeigenval%Im)
+      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
+      st%zeigenval%Im = M_ZERO
+    end if
+
     SAFE_DEALLOCATE_P(st%occ)
-    SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    st%eigenval = huge(st%eigenval)
     st%occ      = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end

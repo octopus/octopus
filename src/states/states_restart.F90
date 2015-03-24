@@ -108,7 +108,15 @@ contains
 
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
     nullify(st%eigenval)
-    
+    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
+    st%zeigenval%Re = huge(st%zeigenval%Re)
+    st%eigenval => st%zeigenval%Re
+    if (associated(st%zeigenval%Im)) then
+      SAFE_DEALLOCATE_P(st%zeigenval%Im)
+      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
+      st%zeigenval%Im = M_ZERO
+    end if
+
     if (present(is_complex)) then
       if ( is_complex ) then
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
@@ -120,14 +128,10 @@ contains
       call states_allocate_wfns(st, gr%mesh)
     endif
 
-    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
-    st%eigenval => st%zeigenval%Re
-
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
       st%spin = M_ZERO
     end if
-    st%eigenval = M_HUGE
 
     ! load wavefunctions
     call states_load(restart, st, gr, ierr)
