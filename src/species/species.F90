@@ -287,7 +287,6 @@ contains
     !% <br>&nbsp;&nbsp;'H_all'   |   1.0079 | spec_full_gaussian  | 1
     !% <br>&nbsp;&nbsp;'Xe'      | 131.29   | spec_ps_upf         | 54
     !% <br>%</tt>
-    !%
     !% Additionally, all the pseudopotential types (PSF, HGH, CPI, FHI, UPF) can take two extra
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified).
@@ -351,15 +350,13 @@ contains
     !% positive charge (distorted if curvilinear coordinates are
     !% used), in the form:
     !%
-    !% <math>
-    !% q(r) = z * \beta * exp[ - (\vec{r}-\vec{r0})**2 / (sqrt(2) * \delta * \sigma) ]
-    !% </math>
+    !% <math>q(r) = z \beta \exp[ - (\vec{r}-\vec{r_0})^2 / (\sqrt{2} \delta \sigma) ] </math>
     !%
     !% <math>\beta</math> is chosen in order to maintain proper
     !% normalization (the integral of <math>q</math> should sum up to
     !% <math>z</math>). <math>\delta</math> is the grid spacing (the
     !% grid spacing in the first dimension, to be precise).
-    !% <math>\vec{r0}</math> is calculated in such a way that the the
+    !% <math>\vec{r_0}</math> is calculated in such a way that the the
     !% first moment of <math>q(r)/z</math> is equal to the atomic
     !% position. For a precise description, see N. A. Modine,
     !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
@@ -376,10 +373,7 @@ contains
     !%Option spec_soft_coulomb 128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
-    !% <math>
-    !% v(r) = - z_val / sqrt( a + r^2)
-    !% </math>
-    !%
+    !% <math>v(r) = - z_{val} / \sqrt{a^2 + r^2}</math>
     !% The parameter <i>a</i> should be given in the fifth column.
     !%End
 
