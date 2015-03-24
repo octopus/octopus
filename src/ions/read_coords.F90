@@ -425,7 +425,6 @@ contains
     !% range [-0.5, 0.5).
     !%
     !% This block cannot be used with the <tt>minimum</tt> box shape.
-    !% 
     !%End
 
     ! This is valid only for Coordinates.

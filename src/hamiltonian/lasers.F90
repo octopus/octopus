@@ -322,22 +322,22 @@ contains
     !% and intensity is:
     !% <math> I(t) = \frac{c}{8\pi} E^2(t) </math>.
     !%
-    !% It is common to read intensities in W/cm^2. The dimensions of intensities are
-    !% [W]/(L^2T), where [W] are the dimensions of energy. The relevant conversion factors
+    !% It is common to read intensities in W/cm<math>^2</math>. The dimensions of intensities are
+    !% [W]/(L<math>^2</math>T), where [W] are the dimensions of energy. The relevant conversion factors
     !% are:
     !%
-    !% <math> Hartree / (a_0^2 atomic_time) = 6.4364086e+15 W / cm^2 </math>
+    !% Hartree / (<math>a_0^2</math> atomic_time) = <math>6.4364086 \times 10^{15} \mathrm{W/cm}^2</math>
     !% 
-    !% <math> eV / ( angstrom^2 (hbar/eV) ) = 2.4341348e+12 W / cm^2 </math>
+    !% eV / ( &Aring;<math>^2 (\hbar</math>/eV) ) = <math>2.4341348 \times 10^{12} \mathrm{W/cm}^2</math>
     !%
-    !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>, 
+    !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>,
     !% then the intensity is:
     !%
-    !% <math> I_0 = 3.51 10^16 W/cm^2 (E_0^2) </math>
+    !% <math> I_0 = 3.51 \times 10^{16} \mathrm{W/cm}^2 (E_0^2) </math>
     !%
-    !% If, working with "Units = ev_angstrom", we set <math>E_0</math>, then the intensity is:
+    !% If, working with <tt>Units = ev_angstrom</tt>, we set <math>E_0</math>, then the intensity is:
     !%
-    !% <math> I_0 = 1.327 10^13 (E_0^2) W/cm^2 </math>
+    !% <math> I_0 = 1.327 \times 10^{13} (E_0^2) \mathrm{W/cm}^2 </math>
     !%
     !%Option electric_field 1
     !% The external field is an electric field, the usual case when we want to describe a 
