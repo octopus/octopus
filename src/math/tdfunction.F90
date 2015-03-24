@@ -144,49 +144,44 @@ contains
     !% of function we are using; in the following we provide an example for each of the
     !% possible types:
     !%
-    !%    (1) <tt>tdf_cw</tt>
+    !%Option tdf_cw 10002
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_cw | amplitude 
     !% <br>%</tt>
     !%
-    !% The function is just a constant of value <tt>amplitude</tt>.
+    !% The function is just a constant of value <tt>amplitude</tt>: <math> f(t) </math> = amplitude
     !%
-    !% <math> f(t) = amplitude
-    !%
-    !%    (2) <tt>tdf_gaussian</tt>
+    !%Option tdf_gaussian 10003
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_gaussian | amplitude | tau0 | t0
     !% <br>%</tt>
     !% 
-    !% The function is a Gaussian:
+    !% The function is a Gaussian, <math> f(t) = F_0 \exp( - (t-t_0)^2/(2\tau_0^2) ) </math>,
+    !% where <math>F_0</math> = amplitude.
     !%
-    !% <math> f(t) = F_0 exp( - (t-t_0)^2/(2\tau_0^2) ) </math>
-    !%
-    !% <math>F_0</math> = amplitude.
-    !%
-    !%    (3) <tt>tdf_cosinoidal</tt>
-    !%
+    !%Option tdf_cosinoidal 10004
+    !% 
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_cosinoidal | amplitude | tau0 | t0
     !% <br>%</tt>
     !%
-    !% <math> f(t) =  F_0 cos( \pi/2 \frac{t-2\tau_0-t_0}{\tau0} )  </math>
+    !% <math> f(t) =  F_0 \cos( \frac{\pi}{2} \frac{t-2\tau_0-t_0}{\tau0} )  </math>
     !%
     !% If <math> | t - t_0 | > \tau_0 </math>, then <math> f(t) = 0 </math>.
     !%
-    !%    (4) <tt>tdf_trapezoidal</tt>
+    !%Option tdf_trapezoidal 10005
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_trapezoidal | amplitude | tau0 | t0 | tau1
     !% <br>%</tt>
     !%
-    !% The function ramps linearly during <math>tau_1</math> time units, stays constant for
-    !% <math>tau_0</math> time units, and the decays to zero linearly again for <math>tau_1</math>
+    !% The function ramps linearly for <tt>tau1</tt> time units, stays constant for
+    !% <tt>tau0</tt> time units, and then decays to zero linearly again for <tt>tau1</tt>
     !% time units.
     !%
-    !%    (5) <tt>tdf_from_file</tt>
+    !%Option tdf_from_file 10006
     !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_file | "filename"
@@ -196,28 +191,14 @@ contains
     !% should contain three columns: first column is time, second and third column are the
     !% real part and the imaginary part of the temporal function <i>f</i>(<i>t</i>).
     !%
-    !%    (A.6) <tt>tdf_from_expr</tt>
-    !%
+    !%Option tdf_from_expr 10008
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_expr | "expression"
     !% <br>%</tt>
     !%
     !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
     !% letter <i>t</i> means time, obviously. The expression is used to construct the function <i>f</i>
-    !% that defines the field:
-    !%
-    !%Option tdf_cw 10002
-    !% Explained above.
-    !%Option tdf_gaussian 10003
-    !% Explained above.
-    !%Option tdf_cosinoidal 10004
-    !% Explained above.
-    !%Option tdf_trapezoidal 10005
-    !% Explained above.
-    !%Option tdf_from_file 10006
-    !% Explained above.
-    !%Option tdf_from_expr 10008
-    !% Explained above.
+    !% that defines the field.
     !%End
     ierr = -3
     if(parse_block(datasets_check('TDFunctions'), blk) /= 0) then

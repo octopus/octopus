@@ -484,7 +484,7 @@ contains
     !% It is possible to choose different envelopes for different control functions.
     !% There should be one line for each control function. Each line should
     !% have only one element: a string with the name of a time-dependent function,
-    !% that should be correspondingly defined in a "TDFunctions" block.
+    !% that should be correspondingly defined in a <tt>TDFunctions</tt> block.
     !%End
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
