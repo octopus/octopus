@@ -266,7 +266,7 @@ contains
       !% for completeness, since it is free.
       !%Option fire 8
       !% (Experimental) The FIRE algorithm.
-      !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P.Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
+      !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
@@ -364,7 +364,7 @@ contains
       !%Option minimize_energy 1
       !% Use the total energy as objective function.
       !%Option minimize_forces 2
-      !% Use <math>\sqrt{\sum |f_i|^2}</math> as objective function.
+      !% Use <math>\sqrt{\sum_i \left| f_i \right|^2}</math> as objective function.
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End

@@ -111,7 +111,7 @@ contains
     !% Selects whether the exact two-particle method or the iterative scheme
     !% is used to invert the density to get the KS potential.
     !%Option iterative 1
-    !% Iterative scheme for v_s.
+    !% Iterative scheme for <math>v_s</math>.
     !%Option two_particle 2
     !% Exact two-particle scheme.
     !%Option iterativevxc 3
@@ -135,7 +135,7 @@ contains
     !%Option ks_inversion_none 1
     !% Do not compute KS inversion.
     !%Option ks_inversion_adiabatic 2
-    !% Compute exact adiabatic vxc.
+    !% Compute exact adiabatic <math>v_{xc}</math>.
     !%End
     call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
     call parse_integer(datasets_check('KSInversionLevel'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
@@ -297,7 +297,7 @@ contains
     !%Section Calculation Modes::Invert KS
     !%Description
     !% Additive constant <i>c</i> in the iterative calculation of the KS potential
-    !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
+    !% <math>v(\alpha+1)=\frac{\rho(\alpha)+c}{\rho_{target}+c} v(\alpha)</math>
     !% ensures that very small densities do not cause numerical problems.
     !%End
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
