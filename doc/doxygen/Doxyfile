@@ -876,7 +876,7 @@ IMAGE_PATH             =
 # or removed, the anchors will not be placed correctly.
 
 # I think this is executed from the src/XXX directory containing each file
-INPUT_FILTER           = "cpp -C -ansi  -I. -I../external_libs/metis-5.1/  -Iinclude -I../external_libs/spglib-1.5.2/src -I../liboct_parser -I../external_libs/fortrancl -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_SCALAPACK -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
+INPUT_FILTER           = "cpp -C -ansi  -I. -I.. -I../external_libs/metis-5.1/  -Iinclude -I../external_libs/spglib-1.5.2/src -I../liboct_parser -I../external_libs/fortrancl -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_SCALAPACK -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
 
 # The FILTER_PATTERNS tag can be used to specify filters on a per file pattern
 # basis. Doxygen will compare the file name with each pattern and apply the
