@@ -509,7 +509,7 @@ contains
         (M_ONE - frac)*CNST(100.0), "% of computer time."
       if(frac < CNST(0.8)) then
         message(2) = "Usually a number of processors which is a multiple of small primes is best."
-        call messages_warning(3)
+        call messages_warning(2)
       else
         call messages_info(1)
       end if
