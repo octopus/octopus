@@ -109,7 +109,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     !%Section Hamiltonian::Poisson
     !%Description
     !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
-    !% solver is not <math>1/r</math> but <math>1/\sqrt{a^2 + r^2}</math>, where this variable sets the value of <i>a</math>.
+    !% solver is not <math>1/r</math> but <math>1/\sqrt{a^2 + r^2}</math>, where this variable sets the value of <math>a</math>.
     !%End
     call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
       M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
