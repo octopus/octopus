@@ -261,11 +261,9 @@ contains
     !%Default 0.0
     !%Section Hamiltonian
     !%Description
-    !% This feature is still in experimental phase, use at your own risk.
-    !%
-    !% For systems described in 2D (electrons confined to 2D in semiconductor structures), one
-    !% may add the Bychkov-Rashba spin-orbit coupling term [Bychkov and Rashba, J. Phys. C: Solid
-    !% State Phys. 17, 6031 (1984)]. The variable "RashbaSpinOrbitCoupling" determines the strength
+    !% (Experimental.) For systems described in 2D (electrons confined to 2D in semiconductor structures), one
+    !% may add the Bychkov-Rashba spin-orbit coupling term [Bychkov and Rashba, <i>J. Phys. C: Solid
+    !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
     call parse_float('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)

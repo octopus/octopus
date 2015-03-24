@@ -251,9 +251,9 @@ contains
       !%Section Hamiltonian::XC
       !%Description
       !% Set to a non-zero value to add a long-range correction for solids to the kernel.
-      !% This is the alpha parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
+      !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
       !% 69, 155112 (2004), which results in multiplying the Hartree term by
-      !% <math>1 - \alpha / 4 \pi</math>. 
+      !% <math>1 - \alpha / 4 \pi</math>. (Experimental)
       !%End
 
       call parse_float('XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
@@ -263,12 +263,10 @@ contains
       !%Variable XCDensityCorrection
       !%Type integer
       !%Default none
-      !%Section Hamiltonian::XC
+      !%Section Hamiltonian::XC::DensityCorrection
       !%Description
-      !% This variable controls the long range correction of the XC
-      !% potential using the XC density representation
-      !% (http://arxiv.org/abs/1107.4339). By default, no correction
-      !% is applied.
+      !% This variable controls the long-range correction of the XC
+      !% potential using the <a href=http://arxiv.org/abs/1107.4339>XC density representation</a>.
       !%Option none 0
       !% No correction is applied.
       !%Option long_range_x 1
@@ -282,12 +280,12 @@ contains
         !%Variable XCDensityCorrectionOptimize
         !%Type logical
         !%Default true
-        !%Section Hamiltonian::XC
+        !%Section Hamiltonian::XC::DensityCorrection
         !%Description
-        !% When enabled, the default, the density cutoff will be
+        !% When enabled, the density cutoff will be
         !% optimized to replicate the boundary conditions of the exact
         !% XC potential. If the variable is set to no, the value of
-        !% the cutoff must be given by the XCDensityCorrectionCutoff
+        !% the cutoff must be given by the <tt>XCDensityCorrectionCutoff</tt>
         !% variable.
         !%End
         call parse_logical('XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
@@ -295,21 +293,21 @@ contains
         !%Variable XCDensityCorrectionCutoff
         !%Type float
         !%Default 0.0
-        !%Section Hamiltonian::XC
+        !%Section Hamiltonian::XC::DensityCorrection
         !%Description
-        !% The value of the cutoff applied to the XC density. The default value is 0.
+        !% The value of the cutoff applied to the XC density.
         !%End
         call parse_float('XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
 
         !%Variable XCDensityCorrectionMinimum
         !%Type logical
         !%Default true
-        !%Section Hamiltonian::XC
+        !%Section Hamiltonian::XC::DensityCorrection
         !%Description
-        !% When enabled, the default, the cutoff optimization will
-        !% return the first minimum of the q_xc function if it does
-        !% not find a value of -1 (See http://arxiv.org/abs/1107.4339
-        !% for details). This is required for atoms or small
+        !% When enabled, the cutoff optimization will
+        !% return the first minimum of the <math>q_xc</math> function if it does
+        !% not find a value of -1 (<a href=http://arxiv.org/abs/1107.4339>details</a>).
+        !% This is required for atoms or small
         !% molecules, but may cause numerical problems.
         !%End
         call parse_logical('XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
@@ -317,9 +315,9 @@ contains
         !%Variable XCDensityCorrectionNormalize
         !%Type logical
         !%Default true
-        !%Section Hamiltonian::XC
+        !%Section Hamiltonian::XC::DensityCorrection
         !%Description
-        !% When enabled, the default, the correction will be
+        !% When enabled, the correction will be
         !% normalized to reproduce the exact boundary conditions of
         !% the XC potential.
         !%End
