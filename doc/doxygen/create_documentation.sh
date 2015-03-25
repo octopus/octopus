@@ -26,7 +26,7 @@ cd ../..
 oct_base_dir=$PWD
 
 # go to the source directory
-cd $oct_base_dir/src
+cd $oct_base_dir
 
 echo "Configuring"
 autoreconf -i
@@ -34,7 +34,7 @@ autoreconf -i
 cd src/include
 make
 # to produce config_F90.h and options.h
-cd $oct_base_dir
+cd $oct_base_dir/src
 
 # FIXME: set all -DHAVE_ via
 # sed s'|/\* \#undef HAVE_|#define HAVE_|' ../config.h | grep '^#define' > include/config_F90.h
@@ -46,7 +46,7 @@ echo "Creating documentation"
 cp $dox_dir/Doxyfile .
 cp $dox_dir/octopus.png .
 #copy to the new location
-sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
+sed -i "s|doxygen_doc|$dox_dir|" Doxyfile
 #call doxygen
 doxygen
 
