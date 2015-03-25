@@ -368,7 +368,7 @@ contains
 #endif
 
     do ii = 1, prof_vars%last_profile
-      call profile_end(prof_vars%profile_list(ii)%p)
+      prof_vars%profile_list(ii)%p%initialized = .false.
     end do
 
     if(iand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
@@ -437,16 +437,6 @@ contains
 
     POP_SUB(profile_init)
   end subroutine profile_init
-
-  ! ---------------------------------------------------------
-  subroutine profile_end(this)
-    type(profile_t), intent(inout) :: this
-
-    PUSH_SUB(profile_end)
-    this%initialized = .false.
-
-    POP_SUB(profile_end)
-  end subroutine profile_end
 
 
   ! ---------------------------------------------------------
