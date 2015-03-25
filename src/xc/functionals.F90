@@ -208,7 +208,7 @@ contains
       !% Exponentially screened Coulomb interaction.
       !% See, <i>e.g.</i>, M Casula, S Sorella, and G Senatore, <i>Phys. Rev. B</i> <b>74</b>, 245427 (2006).
       !%Option interaction_soft_coulomb 1
-      !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2). This is the default.
+      !% Soft Coulomb interaction of the form <math>1/sqrt(x^2 + alpha^2)</math>. This is the default.
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
       call parse_integer(datasets_check('Interaction1D'), INT_SOFT_COULOMB, interact_1d)
@@ -218,8 +218,8 @@ contains
       !%Default 1.0
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the screening parameter, alpha, of the softened Coulomb interaction
-      !% when running in 1D. The default value is 1.0.
+      !% Defines the screening parameter, <math>\alpha</math>, of the softened Coulomb interaction
+      !% when running in 1D.
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_float(datasets_check('Interaction1DScreening'), M_ONE, alpha)

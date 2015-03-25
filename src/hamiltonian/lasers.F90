@@ -282,7 +282,7 @@ contains
     !% in the current version, is a field constant in space, which permits us to describe 
     !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
     !% (<tt>scalar_potential</tt>). 
-    !% The last element is optional and indicates the carrier phase function <tt>phi(t)</tt>. 
+    !% The last element is optional and indicates the carrier phase function <math>\phi(t)</math>. 
     !% It is a time dependent function and as such should be expressed as a formula within 
     !% quotation marks.
     !%
