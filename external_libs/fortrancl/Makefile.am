@@ -23,7 +23,7 @@ if COMPILE_OPENCL
   noinst_LIBRARIES = libfortrancl.a
 endif
 
-AM_CFLAGS = @CL_CFLAGS@
+AM_CFLAGS = @CFLAGS_CLBLAS@ @CFLAGS_CLFFT@ @CL_CFLAGS@
 
 libfortrancl_a_SOURCES =       \
 	cl_types.f90           \

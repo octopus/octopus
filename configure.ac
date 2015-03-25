@@ -124,10 +124,8 @@ if test x"${enable_opencl}" == x"yes" ; then
     AC_MSG_FAILURE([Cannot find the OpenCL library.])
   fi
   AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
-  AC_CHECK_FUNC(clAmdBlasGetVersion, [AC_DEFINE(HAVE_CLAMDBLAS, 1, [defined if clBLAS is available])])
-  AC_CHECK_FUNC(clblasGetVersion, [AC_DEFINE(HAVE_CLAMDBLAS, 1, [defined if clBLAS is available])])  
-  AC_CHECK_FUNC(clAmdFftGetVersion, [AC_DEFINE(HAVE_CLAMDFFT, 1, [defined if clFFT is available])])
-  AC_CHECK_FUNC(clfftGetVersion, [AC_DEFINE(HAVE_CLAMDFFT, 1, [defined if clFFT is available])])
+  ACX_CLBLAS
+  ACX_CLFFT
 fi
 
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")

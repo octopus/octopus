@@ -88,7 +88,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 
 if COMPILE_OPENCL
-  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@
+  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
   FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl
 endif
 
