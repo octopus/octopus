@@ -134,15 +134,15 @@ contains
     !%Section System::Coordinates
     !%Description
     !% If this variable is present, the program tries to read the atomic coordinates
-    !% from the file specified by its value. The PDB (Protein Data Bank,
-    !% <tt>http://www.rcsb.org/pdb/</tt>) format is quite complicated, and it goes 
+    !% from the file specified by its value. The PDB (<a href=http://www.rcsb.org/pdb>Protein Data Bank</a>)
+    !% format is quite complicated, and it goes 
     !% well beyond the scope of this manual. You can find a comprehensive
-    !% description <a href='http://www.wwpdb.org/docs.html'>here</a>.
+    !% description <a href=http://www.wwpdb.org/docs.html>here</a>.
     !% From the plethora of instructions defined in the PDB standard, <tt>Octopus</tt>
     !% only reads two, <tt>ATOM</tt> and <tt>HETATOM</tt>. From these fields, it reads:
     !% <ul>
     !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
-    !% first letter - "CA" and "CB" will both refer to carbon - so elements whose
+    !% first letter - <tt>CA</tt> and <tt>CB</tt> will both refer to carbon - so elements whose
     !% chemical symbol has more than one letter cannot be represented in this way.
     !% So, if you want to run mercury (Hg), please use one of the other two methods
     !% to input the coordinates: <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
@@ -218,11 +218,12 @@ contains
     !%Type string
     !%Section System::Coordinates
     !%Description
-    !% Another option besides PDB and XYZ coordinates formats is XSF, as defined by the XCrySDen visualization
-    !% program (http://www.xcrysden.org/doc/XSF.html). Specify the filename with this variable.
-    !% <tt>PeriodicDimensions</tt> will be set based on the first line (CRYSTAL, SLAB, POLYMER, or MOLECULE),
+    !% Another option besides PDB and XYZ coordinates formats is XSF, as <a href=http://www.xcrysden.org/doc/XSF.html>defined</a>
+    !% by the XCrySDen visualization program. Specify the filename with this variable.
+    !% <tt>PeriodicDimensions</tt> will be set based on the first line
+    !% (<tt>CRYSTAL</tt>, <tt>SLAB</tt>, <tt>POLYMER</tt>, or <tt>MOLECULE</tt>),
     !% and <tt>Lsize</tt> will be set based on the lattice vectors, for compatible values of <tt>BoxShape</tt>.
-    !% The file should not contain 'ATOMS', 'CONVVEC', or 'PRIMCOORD'.
+    !% The file should not contain <tt>ATOMS</tt>, <tt>CONVVEC</tt>, or <tt>PRIMCOORD</tt>.
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
@@ -249,7 +250,7 @@ contains
         !%Section System::Coordinates
         !%Description
         !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
-        !% will be used. The PRIMVEC block must be written for each step.
+        !% will be used. The <tt>PRIMVEC</tt> block must be written for each step.
         !%End
         call parse_integer(datasets_check('XSFCoordinatesAnimStep'), 1, step_to_use)
         if(step_to_use < 1) then

@@ -166,9 +166,9 @@ contains
     !% This means that the mesh to which FFTs are applied is not taken to be as small
     !% as possible: some points may be added to each direction in order to get a "good number"
     !% for the performance of the FFT algorithm.
-    !% The best FFT grid dimensions are given by <math>2^a*3^b*5^c*7^d*11^e*13^f</math>
+    !% The best FFT grid dimensions are given by <math>2^a 3^b 5^c 7^d 11^e 13^f</math>
     !% where <math>a,b,c,d</math> are arbitrary and <math>e,f</math> are 0 or 1.
-    !% (http://www.fftw.org/doc/Complex-DFTs.html)
+    !% (<a href=http://www.fftw.org/doc/Complex-DFTs.html>ref</a>).
     !% In some cases, namely when using
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
     !% For spatial FFTs in periodic directions, the grid is never optimized, but a warning will
@@ -185,7 +185,7 @@ contains
     !%Default fftw_measure
     !%Section Mesh::FFTs
     !%Description
-    !% The FFTs are performed in octopus with the help of the FFTW package (http://www.fftw.org).
+    !% The FFTs are performed in octopus with the help of <a href=http://www.fftw.org>FFTW</a> and similar packages.
     !% Before doing the actual computations, this package prepares a "plan", which means that 
     !% the precise numerical strategy to be followed to compute the FFT is machine/compiler-dependent,
     !% and therefore the software attempts to figure out which is this precise strategy (see the

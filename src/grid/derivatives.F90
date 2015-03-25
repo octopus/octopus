@@ -180,7 +180,7 @@ contains
     !%
     !% If curvilinear coordinates are to be used, then only the <tt>stencil_starplus</tt>
     !% or the <tt>stencil_cube</tt> may be used. We only recommend the <tt>stencil_starplus</tt>,
-    !% since the cube typically needs way too much memory resources.
+    !% since the cube typically needs far too much memory.
     !%Option stencil_star 1
     !% A star around each point (<i>i.e.</i>, only points on the axis).
     !%Option stencil_variational 2
@@ -214,14 +214,13 @@ contains
     !% spatial direction, <i>e.g.</i> <tt>DerivativesOrder = 1</tt> would give
     !% the well-known three-point formula in 1D.
     !% The number of points actually used for the Laplacian
-    !% depends on the stencil used:
-    !%
-    !% <tt>stencil_star</tt>: 2*<tt>DerivativesOrder</tt>*<i>dim</i>+1
-    !%
-    !% <tt>stencil_cube</tt>: (2*<tt>DerivativesOrder</tt>+1)^<i>dim</i>
-    !%
-    !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+<i>n</i> with <i>n</i> being 12
+    !% depends on the stencil used. Let <math>O</math> = <tt>DerivativesOrder</tt>, and <math>d</math> = <tt>Dimensions</tt>.
+    !% <ul>
+    !% <li> <tt>stencil_star</tt>: <math>2 O d + 1</math>
+    !% <li> <tt>stencil_cube</tt>: <math>(2 O + 1)^d</math>
+    !% <li> <tt>stencil_starplus</tt>: <math>2 O d + 1 + n</math> with <i>n</i> being 12
     !% in 2D and 44 in 3D.
+    !% </ul>
     !%End
     call parse_integer(datasets_check('DerivativesOrder'), 4, der%order)
 
@@ -235,7 +234,7 @@ contains
     !%Option blocking 1
     !% Blocking communication.
     !%Option non_blocking 2
-    !% Communication is based on non-blocking point-to-point communication. This is the default.
+    !% Communication is based on non-blocking point-to-point communication.
     !%End
     
     call parse_integer(datasets_check('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
