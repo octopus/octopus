@@ -211,10 +211,13 @@ contains
     
     !%Variable XCKernel
     !%Type integer
-    !%Default lda_x+lda_c_pz_mod
     !%Section Hamiltonian::XC
     !%Description
     !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
+    !% Defaults:
+    !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
+    !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
+    !% <br>3D: <tt>lda_x + lda_c_pz_mod</tt>
     !%Option xc_functional -1
     !% The same functional defined by <tt>XCFunctional</tt>.
     !%End
