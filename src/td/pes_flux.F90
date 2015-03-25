@@ -41,11 +41,13 @@ module pes_flux_m
     integer           :: output
     integer           :: interval
 
-    FLOAT, pointer    :: kpnt(:,:)      !< coordinates of all k-points
-    integer, pointer  :: srfcpnt(:)     !< returns the index of the points on the surface
-    FLOAT, pointer    :: srfcnrml(:,:)  !< (unit) vectors normal to the surface
-    FLOAT, pointer    :: vlkvphase(:)   !< current Volkov phase for all k-points
+    FLOAT, pointer    :: kpnt(:,:)         !< coordinates of all k-points
+    integer, pointer  :: srfcpnt(:)        !< returns the index of the points on the surface
+    FLOAT, pointer    :: srfcnrml(:,:)     !< (unit) vectors normal to the surface
+    FLOAT, pointer    :: vlkvphase(:)      !< current Volkov phase for all k-points
     CMPLX, pointer    :: spctramp(:,:,:,:) !< spectral amplitude
+    CMPLX, pointer    :: Jk(:,:,:,:,:,:)   !< current density operator   
+    CMPLX, pointer    :: phik(:,:)         !< Volkov waves
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -65,7 +67,7 @@ contains
     type(block_t)        :: blk
     FLOAT, allocatable   :: border(:)       ! distance of surface from border
     integer              :: id, ikp, isp, il, iph, ikk
-    FLOAT                :: phi, kk
+    FLOAT                :: phi, kk, krr
 !    type(mesh_t)         :: kmesh
     FLOAT                :: phimax, kmax
 
@@ -178,6 +180,19 @@ contains
     SAFE_ALLOCATE(flux%spctramp(1:flux%nkpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     flux%spctramp = M_z0
 
+    SAFE_ALLOCATE(flux%Jk(1:flux%nkpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:flux%nsrfcpnts, 1:mesh%sb%dim ))
+    flux%Jk = M_z0
+
+    SAFE_ALLOCATE(flux%phik(1:flux%nkpnts, 1:flux%nsrfcpnts))
+    flux%phik = M_z0 
+    
+    do ikp = 1, flux%nkpnts
+      do isp = 1, flux%nsrfcpnts
+        krr = dot_product(flux%kpnt(ikp,1:mesh%sb%dim), mesh%x(flux%srfcpnt(isp),1:mesh%sb%dim))
+        flux%phik(ikp,isp) = exp(M_zI * krr) / (M_TWO * M_PI)**(mesh%sb%dim/M_TWO) 
+      end do
+    end do
+
     write(*,*) 'end init.'
 
     POP_SUB(pes_flux_init)
@@ -191,7 +206,9 @@ contains
 
     SAFE_DEALLOCATE_P(flux%kpnt)
     SAFE_DEALLOCATE_P(flux%spctramp)
-
+    SAFE_DEALLOCATE_P(flux%Jk)
+    SAFE_DEALLOCATE_P(flux%phik)
+    
     SAFE_DEALLOCATE_P(flux%srfcpnt)
     SAFE_DEALLOCATE_P(flux%srfcnrml)
 
@@ -246,6 +263,7 @@ contains
 
 
   end subroutine pes_flux_derpsi
+
   ! ---------------------------------------------------------
   subroutine pes_flux_calc(flux, mesh, st, gr, hm, iter, dt)
     type(pes_flux_t),    intent(inout) :: flux
@@ -256,7 +274,7 @@ contains
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
-    integer            :: ik, ist, idim, ikp, isp, rankmin, il, iph, ikk
+    integer            :: ik, ist, idim, ikp, isp, rankmin, il, iph, ikk, dim,nsrf,nkp, dir
     FLOAT              :: dmin
     CMPLX, allocatable :: gzpsi(:,:)
     CMPLX, allocatable :: fluxx(:)
@@ -267,6 +285,10 @@ contains
     CMPLX              :: planewf   ! plane waves for each k-point on the surface
 
     PUSH_SUB(pes_flux_calc)
+
+    dim=mesh%sb%dim
+    nsrf = flux%nsrfcpnts
+    nkp = flux%nkpnts
 
     SAFE_ALLOCATE(wf(1:flux%nsrfcpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     wf = M_z0
@@ -289,11 +311,18 @@ contains
       call laser_field(hm%ep%lasers(il), vp, iter*dt)
     end do
 
+!     ! update the Volkov phase adding the previous time steps
+!     do ikp = 1, flux%nkpnts
+!       vec = sum((flux%kpnt(ikp, :) - vp(:) / P_c)**2)
+!       flux%vlkvphase(ikp) = flux%vlkvphase(ikp) + vec * dt / M_TWO
+!     end do
+
     ! update the Volkov phase adding the previous time steps
     do ikp = 1, flux%nkpnts
-      vec = sum((flux%kpnt(ikp, :) - vp(:) / P_c)**2)
-      flux%vlkvphase(ikp) = flux%vlkvphase(ikp) + vec * dt / M_TWO
+      vec = sum((flux%kpnt(ikp, 1:dim) - vp(1:dim) / P_c)**2)
+      flux%phik(ikp,:) = flux%phik(ikp,:)* exp(-M_zI* vec * dt / M_TWO) 
     end do
+
 
     ! accumulate flux through surface every flux%interval (save time)
     if(flux%interval > 0 .and. mod(iter, flux%interval) == 0) then
@@ -319,31 +348,51 @@ contains
    
 !      write(*,*) 'test02'
    
+!       ! accumulate flux through surface
+!       do ik = st%d%kpt%start, st%d%kpt%end
+!         do ist = st%st_start, st%st_end
+!           do idim = 1, st%d%dim
+!             do ikp = 1, flux%nkpnts
+!               do isp = 1, flux%nsrfcpnts
+!                 krr = dot_product(flux%kpnt(ikp,1:mesh%sb%dim), mesh%x(flux%srfcpnt(isp),1:mesh%sb%dim))
+!                 planewf = exp(M_zI * krr) / (M_TWO * M_PI)**M_TWOTHIRD
+!
+!                 ! conjg() or not?
+!                 fluxx(:) = conjg(planewf * exp(-M_zI * flux%vlkvphase(ikp))) *          &
+!                      (flux%kpnt(ikp, :) *  wf(isp, idim, ist, ik)                       &
+!                                  - M_zI * gwf(isp, idim, ist, ik, :)                    &
+!                   - M_TWO * vp(:) / P_c *  wf(isp, idim, ist, ik))
+!                 flux%spctramp(ikp, idim, ist, ik) = flux%spctramp(ikp, idim, ist, ik) + &
+!                   dot_product(fluxx(:), flux%srfcnrml(isp, :)) * dt * flux%interval / M_TWO
+!                 ! times the surface element (integrate that into srfcnrml)
+!                 ! Sign of planephase? Minus, obtained in tests in weak field regime.
+!                 ! Sign of vlkvphase ???
+!               end do
+!             end do
+!           end do
+!         end do
+!       end do
+
+
+
       ! accumulate flux through surface
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             do ikp = 1, flux%nkpnts
-              do isp = 1, flux%nsrfcpnts
-                krr = dot_product(flux%kpnt(ikp, :), mesh%x(flux%srfcpnt(isp), :))
-                planewf = exp(M_zI * krr) / (M_TWO * M_PI)**M_TWOTHIRD
-   
-                ! conjg() or not?
-                fluxx(:) = conjg(planewf * exp(-M_zI * flux%vlkvphase(ikp))) *          &
-                     (flux%kpnt(ikp, :) *  wf(isp, idim, ist, ik)                       &
-                                 - M_zI * gwf(isp, idim, ist, ik, :)                    &
-                  - M_TWO * vp(:) / P_c *  wf(isp, idim, ist, ik))
-                flux%spctramp(ikp, idim, ist, ik) = flux%spctramp(ikp, idim, ist, ik) + &
-                  dot_product(fluxx(:), flux%srfcnrml(isp, :)) * dt * flux%interval / M_TWO
-                ! times the surface element (integrate that into srfcnrml)
-                ! Sign of planephase? Minus, obtained in tests in weak field regime. 
-                ! Sign of vlkvphase ???
+              do dir = 1, dim
+                flux%Jk(ikp, idim, ist, ik, 1:nsrf, dir) =                                   & 
+                                          flux%Jk(ikp, idim, ist, ik, 1:nsrf, dir) +     &
+                conjg(flux%phik(ikp, 1:nsrf)) *                                       & 
+                (    flux%kpnt(ikp, dir) * wf(1:nsrf, idim, ist, ik)                    &
+                    - M_zI * gwf(1:nsrf, idim, ist, ik, dir)                            &
+                    - M_TWO * vp(dir) / P_c *  wf(1:nsrf, idim, ist, ik))
               end do
             end do
           end do
         end do
       end do
-   
+
 !      write(*,*) 'test03'
    
 
@@ -454,7 +503,7 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(in)    :: st
 
-    integer            :: ikp, ikk, iph, iunit, idim, ik, ist
+    integer            :: ikp, ikk, iph, iunit, idim, ik, ist, isp
     FLOAT              :: phi, kk
     FLOAT, allocatable :: summ(:)
 
@@ -462,6 +511,23 @@ contains
 
     SAFE_ALLOCATE(summ(1:flux%nkpnts))
     summ = M_ZERO
+
+    flux%spctramp(:, :, :, :) = M_z0
+    do ikp = 1, flux%nkpnts
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do idim = 1, st%d%dim
+          do ist = st%st_start, st%st_end
+            do isp = 1, flux%nsrfcpnts
+              flux%spctramp(ikp, idim, ist, ik) = flux%spctramp(ikp, idim, ist, ik) + &
+                               dot_product(flux%Jk(ikp, idim, ist, ik, isp,:), flux%srfcnrml(isp,:)) 
+  !                              &
+  !                              * dt * flux%interval / M_TWO
+            end do
+          end do
+        end do
+      end do
+    end do
+    
 
     ! sum over all states, spins, etc.  & write out (put this in pes_flux_output & add mpi_communication)
     do ikp = 1, flux%nkpnts
