@@ -4,12 +4,16 @@
 !%Type integer
 !%Section Hamiltonian::XC
 !%Description
-!% Defines the exchange and correlation functional to be used;
-!% they should be specified as a sum of a correlation term and an
-!% exchange term. Defaults:
-!% <br> 1D: lda_x_1d + lda_c_1d_csc
-!% <br> 2D: lda_x_2d + lda_c_2d_amgb
-!% <br> 3D: lda_x + lda_c_pz_mod
+!% Defines the exchange and correlation functionals to be used,
+!% specified as a sum of an exchange functional and a
+!% correlation functional, or a single exchange-correlation functional
+!% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
+!% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
+!% Libxc documentation</a>.
+!% <br>Defaults:
+!% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
+!% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
+!% <br>3D: <tt>lda_x + lda_c_pz_mod</tt>
 !%Option lda_x               1
 !% Exchange
 !%Option lda_c_wigner               2000

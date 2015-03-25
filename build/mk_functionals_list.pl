@@ -22,15 +22,15 @@
 
 use Getopt::Std;
 use File::Find;
-getopts "hs:b:";
+getopts "hs:I:";
 
 if($opt_h) {
     print <<"EndOfUsage";
 
-Usage: mk_functionals_list.pl [-b DIR] [-s DIR] [-h]
+Usage: mk_functionals_list.pl [-s DIR] [-I DIR] [-h]
 
-    -b    The top level build tree directory, . if omitted
-    -s    The top level source tree directory, . if omitted
+    -s    The top-level source tree directory, . if omitted
+    -I    The libxc include directory, in which to find xc_funcs.h
     -h    This help message
 EndOfUsage
 
@@ -38,17 +38,18 @@ EndOfUsage
 }
 
 $top_srcdir = ($opt_s ? $opt_s : ".");
-$top_builddir = ($opt_b ? $opt_b : ".");
 
 $src   = "$top_srcdir/src/hamiltonian";
-$funct = "$top_builddir/libxc/src/xc_funcs.h";
+$funct = "$opt_I/xc_funcs.h";
 
-if(!-d $src && !-f $funct) {
-    print stderr <<"EndOfErrorMsg";
+if(!-d $src) {
+    print STDERR "Cannot find directory '$src'. Run from top-level directory or set -s option appropriately.\n";
+    exit(1);
+}
 
-The $src directory or the file $funct could not be found. Please run
-this script from the octopus toplevel directory or set -s option appropriately.
-EndOfErrorMsg
+if(!-f $funct) {
+    print STDERR "Cannot find file '$funct'. Set -I option appropriately.\n";
+    exit(1);
 }
 
 open(OUT, ">$src/functionals_list.F90");
@@ -59,12 +60,16 @@ print OUT <<"EndOfHeader";
 !%Type integer
 !%Section Hamiltonian::XC
 !%Description
-!% Defines the exchange and correlation functional to be used;
-!% they should be specified as a sum of a correlation term and an
-!% exchange term. Defaults:
-!% <br> 1D: lda_x_1d + lda_c_1d_csc
-!% <br> 2D: lda_x_2d + lda_c_2d_amgb
-!% <br> 3D: lda_x + lda_c_pz_mod
+!% Defines the exchange and correlation functionals to be used,
+!% specified as a sum of an exchange functional and a
+!% correlation functional, or a single exchange-correlation functional
+!% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
+!% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
+!% Libxc documentation</a>.
+!% <br>Defaults:
+!% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
+!% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
+!% <br>3D: <tt>lda_x + lda_c_pz_mod</tt>
 EndOfHeader
 
 open(IN, "<$funct");
@@ -74,6 +79,7 @@ while($_ = <IN>){
     $number  = $2;
     $comment = $3;
 
+    # do not include kinetic-energy functionals
     next if($option =~ /^XC_\S+_K_/);
 
     if($option =~ /^XC_\S+_C_/ || $option =~ /^XC_\S+_XC_/){
@@ -90,11 +96,15 @@ print OUT <<EOF;
 !%Option ks_inversion             801 
 !% Inversion of KS potential
 !%Option lda_xc_cmplx             701
-!% LDA complex scaled exchange-correlation.
-!%Option xc_half_hartree          917
-!% Half-Hartree exchange for two electrons (supports complex scaling)
+!% Complex-scaled LDA exchange and correlation.
+!%Option pbe_xc_cmplx             702
+!% Complex-scaled PBE exchange and correlation.
+!%Option lb94_xc_cmplx            703
+!% Complex-scaled LB94 exchange and correlation.
 !%Option rdmft_xc_m               601
 !% RDMFT Mueller functional
+!%Option xc_half_hartree          917
+!% Half-Hartree exchange for two electrons (supports complex scaling)
 !%Option none                       0
 !% Exchange and correlation set to zero.
 !%End
@@ -102,4 +112,3 @@ EOF
 
 close(IN);
 close(OUT);
-
