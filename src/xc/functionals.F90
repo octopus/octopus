@@ -122,10 +122,16 @@ contains
         else if (functl%id == XC_KS_INVERSION) then
           functl%family = XC_FAMILY_KS_INVERSION
         else if (functl%id == XC_LDA_XC_CMPLX) then
+          call messages_experimental("complex-scaled LDA exchange and correlation")
           functl%family = XC_FAMILY_LDA
         else if(functl%id == XC_HALF_HARTREE) then
+          call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_PBE_XC_CMPLX .or. functl%id == XC_LB94_XC_CMPLX) then
+        else if(functl%id == XC_PBE_XC_CMPLX) then
+          call messages_experimental("complex-scaled PBE exchange and correlation")
+          functl%family = XC_FAMILY_GGA
+        else if(functl%id == XC_LB94_XC_CMPLX) then
+          call messages_experimental("complex-scaled LB94 exchange and correlation")
           functl%family = XC_FAMILY_GGA
         else if (functl%id == XC_RDMFT_XC_M) then
           functl%family = XC_FAMILY_RDMFT  
@@ -295,26 +301,22 @@ contains
       ! we will include it in libxc when done with the tests
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Complex-scaled LDA'
-      write(message(3), '(4x,a)') 'WARNING: under development'
-      call messages_info(3, iunit)
+      call messages_info(2, iunit)
         
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
-      write(message(3), '(4x,a)') 'WARNING: under development'
-      call messages_info(3, iunit)
+      call messages_info(2, iunit)
 
     else if(functl%id == XC_PBE_XC_CMPLX) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Complex-scaled PBE'
-      write(message(3), '(4x,a)') 'WARNING: under development'
-      call messages_info(3, iunit)
+      call messages_info(2, iunit)
 
     else if(functl%id == XC_LB94_XC_CMPLX) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Complex-scaled LB94'
-      write(message(3), '(4x,a)') 'WARNING: under development'
-      call messages_info(3, iunit)
+      call messages_info(2, iunit)
       
     else if(functl%family /= XC_FAMILY_NONE) then ! all the other families
       select case(functl%type)
