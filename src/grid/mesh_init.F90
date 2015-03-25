@@ -965,8 +965,8 @@ contains
       call profiling_end()
       call print_date("Calculation ended on ")
       call datasets_end()
-      write(message(1),'(a)') "Execution has ended"
-      write(message(2),'(a)') "If you want to run your system, you don`t have to use MeshPartitionVirtualSize"
+      write(message(1),'(a)') "Execution has ended."
+      write(message(2),'(a)') "If you want to run your system, do not use MeshPartitionVirtualSize."
       call messages_warning(2)
       call messages_end()
       call global_end()
