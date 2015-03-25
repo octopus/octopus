@@ -140,11 +140,11 @@ contains
     !%Default no
     !%Section Hamiltonian::PCM
     !%Description
-    !% If true, the calculation is performed accounting for solvation effects
+    !% (Experimental) If true, the calculation is performed accounting for solvation effects
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
     !% (<i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>107</b>, 3032 (1997),
     !% <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)). At the moment, this option is available 
-    !% only for ground-state calculations. Experimental.
+    !% only for ground-state calculations.
     !%End
 
     call parse_logical(datasets_check('Solvation'), .false., pcm%run_pcm)
@@ -173,7 +173,7 @@ contains
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Static dielectric constant of the solvent (<math>\epsilon_0</math>). 1.0 indicates gas phase.
+    !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
     call parse_float(datasets_check('SolventDielectricConstant'), M_ONE, pcm%epsilon_0)
 
@@ -183,7 +183,7 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% Parameter used to control the width (area of each tessera) of the Gaussians used to distribute
-    !% the polarization charges on each tessera of the cavity surface. If sets to zero, the solvent 
+    !% the polarization charges on each tessera of the cavity surface. If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
     call parse_float(datasets_check('SmearingFactor'), M_ONE, pcm%gaussian_width)

@@ -219,7 +219,7 @@ contains
         !% Amaldi correction term.
         !%Option sic_adsic 4
         !% Average-density SIC.
-        !% C. Legrand et al. J. Phys. B 35, 1115 (2002). 
+        !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
         call parse_integer(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
