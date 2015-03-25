@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id: mk_varinfo.pl 5657 2009-06-29 15:02:07Z marques $
+# $Id$
 
 
 use Getopt::Std;
