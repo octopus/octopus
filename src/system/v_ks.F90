@@ -172,7 +172,7 @@ contains
     !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
     !%Option rdmft 7 
-    !% (Not fully implemented) Reduced Density Matrix functional theory
+    !% (Experimental) Reduced Density Matrix functional theory.
     !%End
     
     ks%xc_family = XC_FAMILY_NONE
@@ -208,7 +208,6 @@ contains
     c_id = val / 1000
     x_id = val - c_id*1000
 
-    
     !%Variable XCKernel
     !%Type integer
     !%Section Hamiltonian::XC
