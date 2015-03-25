@@ -129,11 +129,9 @@ contains
     !%Description
     !% If true, allows the use of certain parts of the code that are
     !% still under development and are not suitable for production
-    !% runs. This should not be used unless you know what you are doing, check
-    !% 
-    !%  http://www.tddft.org/programs/octopus/experimental_features
-    !%
-    !% for details.
+    !% runs. This should not be used unless you know what you are doing.
+    !% See details on
+    !% <a href=http://www.tddft.org/programs/octopus/experimental_features>wiki page</a>.
     !% This variable cannot use a dataset prefix.
     !%End
     call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
