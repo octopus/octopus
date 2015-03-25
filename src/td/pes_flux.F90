@@ -368,7 +368,7 @@ contains
 !                   dot_product(fluxx(:), flux%srfcnrml(isp, :)) * dt * flux%interval / M_TWO
 !                 ! times the surface element (integrate that into srfcnrml)
 !                 ! Sign of planephase? Minus, obtained in tests in weak field regime.
-!                 ! Sign of vlkvphase ???
+!                 ! Sign of vlkvphase?
 !               end do
 !             end do
 !           end do

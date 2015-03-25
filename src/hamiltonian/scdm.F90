@@ -246,10 +246,10 @@ contains
 
     scdm%boxmesh%idx%dim = 3
     scdm%boxmesh%idx%ll(:) = scdm%boxmesh%idx%nr(2,:) - scdm%boxmesh%idx%nr(1,:) + 1
-!???
+!?
     scdm%boxmesh%idx%enlarge(:) = 0
     SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz(1:scdm%boxmesh%np,1:scdm%boxmesh%idx%dim))
-    ! need to copy indices because otherwise line gets too long (precompiler???)
+    ! need to copy indices because otherwise line gets too long (precompiler?)
     ii = -(scdm%box_size)
     jj = (scdm%box_size)
     SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz_inv(ii:jj,ii:jj,ii:jj))
@@ -281,7 +281,7 @@ contains
     box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
     if (der%mesh%sb%periodic_dim.eq.3) then
       !enlargement factor to fit he simulationbox boundary
-      ! ??? not sure
+      ! ? not sure
       enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
     else ! non-periodic case
       enlarge = M_TWO

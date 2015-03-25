@@ -4,7 +4,7 @@
 #
 # Script to use gnuplot to plot the partitioning of
 # the mesh.
-# The files mesh_partition.??? as produced in debug/mesh_partition by
+# The files mesh_partition.XXX as produced in debug/mesh_partition by
 # the octopus debug mode have to be present in the current working
 # directory when this script is invoked.
 # The plot can be found in the file mesh_partitions.png.

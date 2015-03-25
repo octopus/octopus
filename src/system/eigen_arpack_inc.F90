@@ -254,7 +254,7 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
       diff(j) = workl(ipntr(11)+j-1)
     end if
   end do
-  ! XXX What about those eigenvalues not converged ??????  Which value?
+  ! XXX What about those eigenvalues not converged ?  Which value?
 
   write(message(1), '(a,i6)') 'Arpack: Number of major iterations         ', iparam(3)
   write(message(2), '(a,i6)') 'Arpack: Number of matrix-vector operations ', iparam(9)
