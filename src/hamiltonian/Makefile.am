@@ -41,10 +41,7 @@ libhamiltonian_a_SOURCES =         \
 	pcm.F90			   \
 	scdm.F90                   \
 	functionals.F90            \
-	xc.F90                     \
-        boundaries.F90             \
-        boundaries_ecs.F90         \
-        boundaries_abs.F90
+	xc.F90
 
 noinst_HEADERS =                      \
 	lasers_inc.F90                \
@@ -85,6 +82,6 @@ pcm.o : pcm.F90
 scdm.o : scdm.F90 scdm_inc.F90 xc.o
 functionals.o : functionals.F90 
 xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o 
-boundaries_abs.o : boundaries_abs.F90 
-boundaries_ecs.o : boundaries_ecs.F90 
-boundaries.o : boundaries.F90 boundaries_ecs.o boundaries_abs.o
+#boundaries_abs.o : boundaries_abs.F90 
+#boundaries_ecs.o : boundaries_ecs.F90 
+#boundaries.o : boundaries.F90 boundaries_ecs.o boundaries_abs.o
