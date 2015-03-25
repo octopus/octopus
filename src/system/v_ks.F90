@@ -164,7 +164,7 @@ contains
     !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
     !%Option rdmft 7 
-    !% (Not fully implemented) Reduced Density Matrix functional theory
+    !% (Experimental) Reduced Density Matrix functional theory.
     !%End
     call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
