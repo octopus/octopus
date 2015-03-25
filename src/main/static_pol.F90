@@ -459,7 +459,7 @@ contains
       !%Default true
       !%Section Linear Response::Static Polarization
       !%Description
-      !% Calculate <i>yz</i>-field for beta_<i>xyz</i> hyperpolarizability, which is sometimes harder to converge.
+      !% Calculate <i>yz</i>-field for <math>\beta_{xyz}</math> hyperpolarizability, which is sometimes harder to converge.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call parse_logical(datasets_check('EMCalcDiagonalField'), .true., calc_diagonal)

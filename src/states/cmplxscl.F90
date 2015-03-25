@@ -72,7 +72,7 @@ contains
     !%Default none
     !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% (experimental) Global complex scaling. The options 
+    !% (Experimental) Global complex scaling. The options 
     !% allow to scale space and time coordinates in the Hamiltonian.
     !% Cannot be used with OpenCL currently.
     !% You can specify more than one value by giving them as a sum, 
@@ -81,14 +81,14 @@ contains
     !%Option none 0
     !% No scaling is applied. This is the default.
     !%Option space 2
-    !% This is implements the global coordinate transformation r-> r e^{i \theta}.
-    !% When <tt>TheoryLevel=DFT</tt> Density functional resonance theory DFRT is employed.  
-    !% In order to reveal resonances <tt>ComplexScalingTheta</tt> bigger than zero should be set.
-    !% D. L. Whitenack and A. Wasserman, Phys. Rev. Lett. 107, 163002 (2011).
+    !% This is implements the global coordinate transformation <math>r \rightarrow r e^{i \theta}</math>.
+    !% When <tt>TheoryLevel=DFT</tt>, density-functional resonance theory (DFRT) is employed.  
+    !% In order to reveal resonances, <tt>ComplexScalingTheta</tt> bigger than zero should be set.
+    !% D. L. Whitenack and A. Wasserman, <i>Phys. Rev. Lett.</i> <b>107</b>, 163002 (2011).
     !%Option time 4
-    !% This is implements the coordinate transformation t-> t e^{i \alpha_r} for 
-    !% right states and t-> t e^{i \alpha_l} for left states.
-    !% J. Bengtsson, E. Lindroth, and S. Selstø, Phys. Rev. A 85, 013419 (2012).
+    !% This is implements the coordinate transformation <math>t \rightarrow t e^{i \alpha_r}</math> for 
+    !% right states and <math>t \rightarrow t e^{i \alpha_l}</math> for left states.
+    !% J. Bengtsson, E. Lindroth, and S. Selst&oslash;, <i>Phys. Rev. A</i> <b>85</b>, 013419 (2012).
     !%End
     call parse_integer(datasets_check('ComplexScaling'), CMPLXSCL_NONE, cmplxscl_flags)
     if(.not.varinfo_valid_option('ComplexScaling', cmplxscl_flags, is_flag = .true.)) then
@@ -108,8 +108,8 @@ contains
       !%Default 0.3
       !%Section Hamiltonian::ComplexScaling
       !%Description
-      !% The spatial coordinate complex scaling angle \theta, in radians.
-      !% Allowed values must be in the range 0 <= \theta < \pi/4. 
+      !% The spatial coordinate complex scaling angle <math>\theta</math>, in radians.
+      !% Allowed values must be in the range <math>0 <= \theta < \pi/4</math>.
       !%End
       call parse_float(datasets_check('ComplexScalingTheta'), CNST(0.3), this%theta)
       if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call input_error('ComplexScalingTheta')
@@ -136,7 +136,7 @@ contains
     !%Section Hamiltonian::ComplexScaling
     !%Description
     !% Eigenstates eps will be ordered by
-    !%  \Re(\epsilon) + penalizationfactor (\Im(\epsilon))^2
+    !% <math>\Re(\epsilon) + {\rm penalizationfactor} (\Im(\epsilon))^2</math>.
     !%End
     call parse_float(datasets_check('ComplexScalingPenalizationFactor'), M_TWO, this%penalizationfactor)
 
@@ -166,10 +166,10 @@ contains
 
     !%Variable ComplexScalingAlpha
     !%Type float 
-    !%Default 2*theta
+    !%Default 2*<tt>ComplexScalingTheta</tt>
     !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% The time coordinate complex scaling angle \alpha_r used to evolve 
+    !% The time coordinate complex scaling angle <math>\alpha_r</math> used to evolve 
     !% right states.  
     !%End
     if(this%time .and. this%space) then
@@ -180,10 +180,10 @@ contains
 
     !%Variable ComplexScalingAlphaLeft
     !%Type float 
-    !%Default ComplexScalingAlpha
+    !%Default <tt>ComplexScalingAlpha</tt>
     !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% The time coordinate complex scaling angle \alpha_l used to evolve 
+    !% The time coordinate complex scaling angle <math>\alpha_l</math> used to evolve 
     !% left states.  
     !%End
     call parse_float(datasets_check('ComplexScalingAlphaLeft'), this%alphaR, this%alphaL)
@@ -193,7 +193,7 @@ contains
     !%Default 0.0
     !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% Radius used to determine whether a state is a continuum state.
+    !% Radius used to determine whether a state is a continuum state (in bohr).
     !%End
     call parse_float(datasets_check('ComplexScalingLocalizationRadius'), &
       M_ZERO, this%localizationradius)

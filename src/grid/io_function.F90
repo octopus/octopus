@@ -145,10 +145,10 @@ contains
     !% previous file names.
     !%Option dx 64
     !% For printing three-dimensional information, the open-source program
-    !% visualization tool OpenDX (<tt>http://www.opendx.org/</tt>) can be used. The string
+    !% visualization tool <a href=http://www.opendx.org>OpenDX</a> can be used. The string
     !% <tt>.dx</tt> is appended to previous file names. Available only in 3D.
     !%Option netcdf 128
-    !% Outputs in NetCDF (<tt>http://www.unidata.ucar.edu/packages/netcdf/</tt>) format. This file
+    !% Outputs in <a href=http://www.unidata.ucar.edu/packages/netcdf>NetCDF</a> format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library. Only writes the real part of complex functions.
     !%Option mesh_index 512
@@ -159,7 +159,7 @@ contains
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
     !%Option xcrysden 1024
     !% A format for printing structures and three-dimensional information, which can be visualized by
-    !% the free open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
+    !% the free open-source program <a href=http://www.xcrysden.org>XCrySDen</a> and others. The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by <tt>UnitsOutput</tt>. Available in 2D and 3D.
     !%Option matlab 2048
@@ -184,22 +184,22 @@ contains
     !%Option binary 16384
     !% Plain binary, new format.
     !%Option etsf 32768
-    !% ETSF file format (<tt>http://www.etsf.eu/resources/software/standardization_project</tt>).
+    !% <a href=http://www.etsf.eu/resources/software/standardization_project>ETSF file format</a>.
     !% Requires the ETSF_IO library. Applies only to <tt>Output = density</tt>, <tt>geometry</tt>,
     !% <tt>wfs</tt>, and/or <tt>wfs_fourier</tt>.
     !%Option xyz 65536
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%Option cube 131072
-    !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>).
+    !% Generates output in the <a href=http://paulbourke.net/dataformats/cube>cube file format</a>.
     !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
-    !% Generates output in OpenSCAD format (<tt>http://www.openscad.org/</tt>). For the moment only the geometry is supported.
+    !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a>. For the moment only the geometry is supported.
     !%Option json 524288
     !% Generates output in JSON format.
     !%Option bild 1048576
-    !% Generates output BILD format (<tt>http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html</tt>).
+    !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
     !%Option vtk 2097152
-    !% Generates output VTK legacy format (<tt>http://www.vtk.org/VTK/img/file-formats.pdf</tt>).
+    !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
