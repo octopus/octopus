@@ -87,7 +87,7 @@ contains
     PUSH_SUB(current_init)
 
     !%Variable CurrentDensity
-    !%Default gradient
+    !%Default hamiltonian
     !%Type integer
     !%Section Hamiltonian
     !%Description
@@ -97,10 +97,10 @@ contains
     !% it.
     !%Option gradient 1
     !% The calculation of current is done using the gradient operator
-    !% with additional corrections for non-local operators.
+    !% with additional corrections from non-local operators. (Experimental)
     !%Option hamiltonian 2
     !% The current density is obtained from the commutator of the
-    !% Hamiltonian with the position operator. (Experimental)
+    !% Hamiltonian with the position operator.
     !%Option poisson 3
     !% Obtain the current from solving the Poisson equation from the continuity equation. (Experimental)
     !%Option poisson_correction 4
