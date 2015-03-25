@@ -57,10 +57,8 @@ subroutine td_init(td, sys, hm)
   !%
   !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
   !%
-  !% so you will always use the optimal electronic time step.
-  !%
-  !% For more details see: <tt>http://arxiv.org/abs/0710.3321</tt>
-  !%
+  !% so you will always use the optimal electronic time step
+  !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
   !%End
   call parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
 

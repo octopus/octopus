@@ -257,7 +257,7 @@ contains
     !% Outputs kinetic-energy density, defined as:
     !%
     !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
-    !%  \vert \nabla \phi_{i\sigma}(\vec{r}) \vert^2\,. </math>
+    !%  \left| \vec{\nabla} \phi_{i\sigma}(\vec{r}) \right|^2\,. </math>
     !%
     !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
     !% or if you are using spinors. For spin-unpolarized calculations, you
@@ -272,7 +272,7 @@ contains
     !% Outputs density of states. See <tt>DOSEnergyMax</tt>, <tt>DOSEnergyMin</tt>, <tt>DOSEnergyPoints</tt>,
     !% and <tt>DOSGamma</tt>.
     !%Option tpa 131072
-    !% Outputs transition-potential approximation (TPA) matrix elements, using q-vector specified
+    !% Outputs transition-potential approximation (TPA) matrix elements, using <math>\vec{q}</math>-vector specified
     !% by <tt>MomentumTransfer</tt>.
     !%Option forces 262144
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
@@ -294,7 +294,8 @@ contains
     !%Option PES 8388608   
     !% Outputs the time-dependent photoelectron spectrum.
     !%Option BerkeleyGW 16777216
-    !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
+    !% Output for a run with <a href=http://www.berkeleygw.org>BerkeleyGW</a>.
+    !% See <tt>Output::BerkeleyGW</tt> for further specification.
     !%Option delta_perturbation 33554432
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential 67108864
@@ -995,7 +996,7 @@ contains
     !%Default (1, 0, 0)
     !%Section Output::BerkeleyGW
     !%Description
-    !% Polarization, i.e. direction vector, for which to calculate <tt>vmtxel</tt>, if you have set
+    !% Polarization, <i>i.e.</i> direction vector, for which to calculate <tt>vmtxel</tt>, if you have set
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. May not have any component in a periodic direction.
     !% The vector will be normalized.
     !%End

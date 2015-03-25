@@ -106,9 +106,9 @@ contains
     !%
     !% <math>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.</math>
     !%
-    !% The order <i>k</i> is determined by variable <i>TDExpOder</i>.
-    !% Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
-    !% see http://www.phys.washington.edu/~bertsch/num3.ps)
+    !% The order <i>k</i> is determined by variable <tt>TDExpOrder</tt>.
+    !% Some numerical considerations from <a href=http://www.phys.washington.edu/~bertsch/num3.ps>
+    !% Jeff Giansiracusa and George F. Bertsch</a>
     !% suggest the 4th order as especially suitable and stable.
     !%Option chebyshev 4
     !% In principle, the Chebyshev expansion
