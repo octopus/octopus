@@ -65,8 +65,8 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
 
     type(block_t)        :: blk
-    FLOAT, allocatable   :: border(:)       ! distance of surface from border
-    integer              :: id, ikp, isp, il, iph, ikk
+    FLOAT                :: border(MAX_DIM)       ! distance of surface from border
+    integer              :: id, ikp, isp, il, iph, ikk, start, end, nn
     FLOAT                :: phi, kk, krr
 !    type(mesh_t)         :: kmesh
     FLOAT                :: phimax, kmax
@@ -122,18 +122,17 @@ contains
 
 
     ! surface
-    SAFE_ALLOCATE(border(1:MAX_DIM))
     if(parse_block('PESSurface', blk) < 0) then
       border(:) = hm%ab_width
       message(1) = "PESSurface not specified. Using default values."
       call messages_info(1)
     else
+      ASSERT(mesh%sb%dim == 3)
       call parse_block_float(blk, 0, 0, border(1))
       call parse_block_float(blk, 0, 1, border(2))
       call parse_block_float(blk, 0, 2, border(3))
     end if
     call pes_flux_getsrfc(flux, mesh, border)
-    SAFE_DEALLOCATE_A(border)
 
     ! k-mesh in 1D (2 points) & 2D (polar coordinates)
     call parse_float('PESSurfaceKmax', M_ONE, kmax)
@@ -177,10 +176,13 @@ contains
     SAFE_ALLOCATE(flux%vlkvphase(1:flux%nkpnts))
     flux%vlkvphase(:) = M_ZERO
 
-    SAFE_ALLOCATE(flux%spctramp(1:flux%nkpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    start = st%st_start
+    end = st%st_end
+    SAFE_ALLOCATE(flux%spctramp(1:flux%nkpnts, 1:st%d%dim, start:end, 1:st%d%nik))
     flux%spctramp = M_z0
 
-    SAFE_ALLOCATE(flux%Jk(1:flux%nkpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:flux%nsrfcpnts, 1:mesh%sb%dim ))
+    nn = flux%nsrfcpnts
+    SAFE_ALLOCATE(flux%Jk(1:flux%nkpnts, 1:st%d%dim, start:end, 1:st%d%nik, 1:nn, 1:mesh%sb%dim))
     flux%Jk = M_z0
 
     SAFE_ALLOCATE(flux%phik(1:flux%nkpnts, 1:flux%nsrfcpnts))
