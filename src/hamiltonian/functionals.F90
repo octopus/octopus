@@ -213,7 +213,7 @@ contains
       !% Exponentially screened Coulomb interaction.
       !% See, <i>e.g.</i>, M Casula, S Sorella, and G Senatore, <i>Phys. Rev. B</i> <b>74</b>, 245427 (2006).
       !%Option interaction_soft_coulomb 1
-      !% Soft Coulomb interaction of the form <math>1/sqrt{x^2 + alpha^2}</math>.
+      !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
       call parse_integer('Interaction1D', INT_SOFT_COULOMB, interact_1d)

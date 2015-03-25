@@ -173,7 +173,7 @@ contains
     !%Option rand 0
     !% Random residual vector.
     !%Option calc 1
-    !% <math>resid = H*\psi - \epsilon*\psi</math>.
+    !% <math>resid = H \psi - \varepsilon \psi</math>.
     !%End
     call parse_integer('EigensolverArpackInitialResid', 2, this%init_resid)
     if(.not.varinfo_valid_option('EigensolverArpackInitialResid', this%init_resid))&

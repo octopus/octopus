@@ -209,7 +209,7 @@ contains
     !% in the PSF format for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
     !%Option sg15 2
     !% (experimental) The set of Optimized Norm-Conserving Vanderbilt
-    !% PBE pseudopotentials (M. Schlipf and F. Gygi, arXiv:1502.00995, 2015).
+    !% PBE pseudopotentials (<a href=http://arxiv.org/abs/1502.00995>M. Schlipf and F. Gygi, 2015</a>).
     !% This set provides pseudopotentials for most elements.
     !%Option hgh_lda 3
     !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials

@@ -161,7 +161,7 @@ contains
     !%Description
     !% Absolute convergence of the density: 
     !%
-    !% <math>\epsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
+    !% <math>\varepsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
@@ -174,7 +174,7 @@ contains
     !%Description
     !% Relative convergence of the density: 
     !%
-    !% <math>\epsilon = \frac{1}{N} \mathrm{ConvAbsDens}</math>.
+    !% <math>\varepsilon = \frac{1}{N} \mathrm{ConvAbsDens}</math>.
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
@@ -188,7 +188,8 @@ contains
     !%Description
     !% Absolute convergence of the sum of the eigenvalues:
     !%
-    !% <math> \epsilon = \left| \sum_{j=1}^{N_{occ}} \epsilon_j^{out} - \sum_{j=1}^{N_{occ}} \epsilon_j^{inp} \right| </math>
+    !% <math> \varepsilon = \left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} -
+    !% \sum_{j=1}^{N_{occ}} \varepsilon_j^{inp} \right| </math>
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
@@ -202,8 +203,8 @@ contains
     !%Description
     !% Relative convergence of the sum of the eigenvalues:
     !%
-    !% <math>\epsilon = \frac{ \left| \sum_{j=1}^{N_{occ}} ( \epsilon_j^{out} -  \epsilon_j^{inp} ) \right|}
-    !% {\left| \sum_{j=1}^{N_{occ}} \epsilon_j^{out} \right|} </math>
+    !% <math>\varepsilon = \frac{ \left| \sum_{j=1}^{N_{occ}} ( \varepsilon_j^{out} -  \varepsilon_j^{inp} ) \right|}
+    !% {\left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} \right|} </math>
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End

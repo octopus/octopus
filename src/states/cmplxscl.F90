@@ -134,8 +134,8 @@ contains
     !%Default 2
     !%Section Hamiltonian::ComplexScaling
     !%Description
-    !% Eigenstates eps will be ordered by
-    !% <math>\Re(\epsilon) + {\rm penalizationfactor} (\Im(\epsilon))^2</math>.
+    !% Eigenvalues <math>\varepsilon</math> will be ordered by
+    !% <math>\Re(\varepsilon) + {\rm penalizationfactor} (\Im(\varepsilon))^2</math>.
     !%End
     call parse_float('ComplexScalingPenalizationFactor', M_TWO, this%penalizationfactor)
 

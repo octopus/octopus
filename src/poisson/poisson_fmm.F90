@@ -150,14 +150,14 @@ contains
     !% density in the cell centered in such point. Therefore, the
     !% integral for the Hartree potential at point <math>i</math>, <math>V_H(i)</math>, can be reduced to a summation:
     !%
-    !% <math>V_H(i) = \frac{\Omega}{4\pi\epsilon_0} \sum_{i \neq j}
+    !% <math>V_H(i) = \frac{\Omega}{4\pi\varepsilon_0} \sum_{i \neq j}
     !% \frac{\rho(\vec{r}(j))}{|\vec{r}(j) - \vec{r}(i)|} + V_{self.int.}(i)</math>
     !% where <math>\Omega</math> is the volume element of the mesh, and <math>\vec{r}(j)</math> is the
     !% position of the point <math>j</math>. The <math>V_{self.int.}(i)</math> corresponds to
     !% the integral over the cell centered on the point <math>i</math> that is necessary to
     !% calculate the Hartree potential at point <math>i</math>:
     !%
-    !% <math>V_{self.int.}(i)=\frac{1}{4\pi\epsilon_0}
+    !% <math>V_{self.int.}(i)=\frac{1}{4\pi\varepsilon_0}
     !% \int_{\Omega(i)}d\vec{r} \frac{\rho(\vec{r}(i))}{|\vec{r}-\vec{r}(i)|}</math>
     !%
     !% In the FMM version implemented into Octopus, a correction method

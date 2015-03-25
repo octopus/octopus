@@ -364,16 +364,15 @@ contains
     !%
     !% Note: In most cases there is no need to specify this block,
     !% since Coulomb interaction will be used by default.
-    !%
     !%Option coulomb 1
     !% Particles interact according to Coulomb`s law. The interaction
     !% strength is given by the charge of the species. There are no
     !% parameters.
     !%Option lennard_jones 2
     !% (Experimental) The Lennard-Jones 12-6 model potential. It has
-    !% the form <math>V(r) = 4\epsilon((\frac{\sigma}{r})^{12} -
-    !% (\frac{\sigma}{r})^6)</math>.  The next 2 columns contain the
-    !% <math>\epsilon</math> and <math>\sigma</math> (given in the
+    !% the form <math>V(r) = 4 \varepsilon \left[\left(\frac{\sigma}{r}\right)^{12} -
+    !% \left(\frac{\sigma}{r}\right)^6\right]</math>.  The next 2 columns contain the
+    !% <math>\varepsilon</math> and <math>\sigma</math> (given in the
     !% corresponding input file units).
     !%End
 
