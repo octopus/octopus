@@ -43,10 +43,10 @@
     !% target to optimize in terms of the ionic velocities. This is done by 
     !% supplying a string through the block <tt>OCTVelocityTarget</tt>.
     !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
-    !% while "n_atom" is the respective atom number, corresponding to the 
-    !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+    !% where <tt>n_atom</tt> is the atom number, corresponding to the 
+    !% <tt>Coordinates</tt> block, and <tt>vec_comp</tt> is the corresponding
     !% vector component of the velocity. The target string can be
-    !% supplied by using several lines in the OCTTargetOperator block.
+    !% supplied by using several lines in this block.
     !% As an example, the following target can be used to maximize the
     !% velocity difference between atom 1 and 2 (in a 3D system):
     !%
@@ -68,15 +68,15 @@
     !% The derivatives are supplied via strings through the block
     !% <tt>OCTVelocityDerivatives</tt>.
     !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
-    !% while "n_atom" is the atom number, corresponding to the 
-    !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+    !% while <tt>n_atom</tt> is the atom number, corresponding to the 
+    !% <tt>Coordinates</tt> block, and <tt>vec_comp</tt> is the corresponding
     !% vector component of the velocity. The first line of the 
     !% <tt>OCTVelocityDerivatives</tt> block contains the derivatives
-    !% with respect to "v[1,*]", the second with respect to "v[2,*]" and so
-    !% on. The first column contains all derivatives with respect "v[*,1]",
-    !% the second with respect to "v[*,2]" and the third w.r.t. "v[*,3]".
+    !% with respect to <tt>v[1,*]</tt>, the second with respect to <tt>v[2,*]</tt> and so
+    !% on. The first column contains all derivatives with respect <tt>v[*,1]</tt>,
+    !% the second with respect to <tt>v[*,2]</tt> and the third w.r.t. <tt>v[*,3]</tt>.
     !% As an example, we show the <tt>OCTVelocityDerivatives</tt> block
-    !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt> 
+    !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt>
     !% help section:
     !%
     !% <tt>%OCTVelocityDerivatives

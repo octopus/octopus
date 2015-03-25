@@ -207,13 +207,13 @@ contains
     !% The target operator is a projection operator on the ground state, <i>i.e.</i> the
     !% objective is to populate the ground state as much as possible.
     !%Option oct_tg_excited 2
-    !% The target operator is an "excited state". This means that the target operator
+    !% (Experimental) The target operator is an "excited state". This means that the target operator
     !% is a linear combination of Slater determinants, each one formed by replacing
     !% in the ground-state Slater determinant one occupied state with one excited
     !% state (<i>i.e.</i> "single excitations"). The description of which excitations are
     !% used, and with which weights, should be given in a file called
-    !% <tt>oct-excited-state-target</tt>. This is still in very preliminary, experimental
-    !% phase. See the documentation of subroutine <tt>excited_states_init</tt> in the source
+    !% <tt>oct-excited-state-target</tt>.
+    !% See the documentation of subroutine <tt>excited_states_init</tt> in the source
     !% code in order to use this feature.
     !%Option oct_tg_gstransformation 3
     !% The target operator is a projection operator on a transformation of the ground-state 
@@ -221,7 +221,7 @@ contains
     !%Option oct_tg_userdefined 4
     !% Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
     !%Option oct_tg_jdensity 5
-    !% EXPERIMENTAL: 
+    !% (Experimental)
     !%Option oct_tg_local 6
     !% The target operator is a local operator.
     !%Option oct_tg_td_local 7
@@ -231,20 +231,20 @@ contains
     !% block <tt>OCTTargetTransformStates</tt>. This means that the target operator is the unity
     !% operator minus the projector onto that state.
     !%Option oct_tg_hhg 9
-    !% The target is the optimization of the HHG yield. You must supply the OCTOptimizeHarmonicSpectrum
-    !% block, and it attempts to optimize te maximum of the spectrum around each harmonic peak. You may
+    !% The target is the optimization of the HHG yield. You must supply the <tt>OCTOptimizeHarmonicSpectrum</tt>
+    !% block, and it attempts to optimize the maximum of the spectrum around each harmonic peak. You may
     !% use only one of the gradient-less optimization schemes.
     !%Option oct_tg_velocity 10
     !% The target is a function of the velocities of the nuclei at the end of the influence of
     !% the external field, defined by <tt>OCTVelocityTarget</tt>
     !%Option oct_tg_hhgnew 12
-    !% EXPERIMENTAL: The  target is the optimization of the HHG yield. You must supply the
-    !% OCTHarmonicWeight string. It attempts to optimized the integral of the harmonic spectrum multiplied
+    !% (Experimental) The target is the optimization of the HHG yield. You must supply the
+    !% <tt>OCTHarmonicWeight</tt> string. It attempts to optimize the integral of the harmonic spectrum multiplied
     !% by some user-defined weight function.
     !%Option oct_tg_classical 13
-    !% EXPERIMENTAL
+    !% (Experimental)
     !%Option oct_tg_spin 14
-    !% EXPERIMENTAL
+    !% (Experimental)
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &

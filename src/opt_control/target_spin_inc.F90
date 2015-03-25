@@ -35,11 +35,9 @@
 
     !%Variable OCTTargetSpin
     !%Type block
-    !%Default no
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% (EXPERIMENTAL)
-    !%
+    !% (Experimental) Specify the targeted spin as a 3-component vector. It will be normalized.
     !%End
     if(parse_isdef(datasets_check('OCTTargetSpin')) /= 0) then
       if(parse_block(datasets_check('OCTTargetSpin'), blk) == 0) then
@@ -58,15 +56,13 @@
         
       else
         message(1) = '"OCTTargetSpin" has to be specified as block.'
-        call messages_info(1)
-        call input_error('OCTTargetSpin')
+        call messages_fatal(1)
       end if
 
     else
-      message(1) = 'Error: if "OCTTargetOperator = oct_tg_spin", then you must'
-      message(2) = 'supply one "OCTTargetSpin" block.'
-      call messages_info(2)
-      call input_error('OCTTargetSpin')
+      message(1) = 'If "OCTTargetOperator = oct_tg_spin", then you must'
+      message(2) = 'supply a "OCTTargetSpin" block.'
+      call messages_fatal(2)
     end if
 
 

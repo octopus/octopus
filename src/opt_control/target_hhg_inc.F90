@@ -36,8 +36,7 @@
     !%Default no
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% WARNING: Experimental
-    !%
+    !% (Experimental)
     !% If <tt>OCTTargetOperator = oct_tg_hhg</tt>, the target is the harmonic emission spectrum.
     !% In that case, you must supply an <tt>OCTOptimizeHarmonicSpectrum</tt> block in the <tt>inp</tt>
     !% file. The target is given, in general, by:
@@ -51,9 +50,9 @@
     !%
     !% <math>\alpha(\omega) = \sum_{L=1}^{M} \frac{\alpha_L}{a_L} \sqcap( (\omega - L\omega_0)/a_L )</math>,
     !%
-    !% where <math>omega_0</math> is the carrier frequency. <math>M</math> is
+    !% where <math>\omega_0</math> is the carrier frequency. <math>M</math> is
     !% the number of columns in the <tt>OCTOptimizeHarmonicSpectrum</tt> block. The values of <i>L</i> will be listed
-    !% in the first row of this block; <math> alpha_L </math> in the second row, and <math>a_L</math> in
+    !% in the first row of this block; <math>\alpha_L</math> in the second row, and <math>a_L</math> in
     !% the third.
     !% 
     !% Example:
@@ -153,13 +152,17 @@
           
     !%Variable OCTHarmonicWeight
     !%Type string
+    !%Default "1"
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% EXPERIMENTAL: If "OCTTargetOperator = oct_tg_plateau", then the function to optimize is the integral of the
-    !% harmonic spectrum H(w), weighted with a function f(w) that is defined as a string here. For example, if 
-    !% you set OCTHarmonicWeight  = "step(w-1)", the function to optimize is the integral of step(w-1)*H(w) or, i.e.
-    !% the integral of H(w) from one to infinity. In practice, it is better if you also set an upper limit, i.e.
-    !% for example f(w) = step(w-1)*step(2-w).
+    !% (Experimental) If <tt>OCTTargetOperator = oct_tg_plateau</tt>, then the function to optimize is the integral of the
+    !% harmonic spectrum <math>H(\omega)</math>, weighted with a function <math>f(\omega)</math>
+    !% that is defined as a string here. For example, if 
+    !% you set <tt>OCTHarmonicWeight  = "step(w-1)"</tt>, the function to optimize is
+    !% the integral of <math>step(\omega-1)*H(\omega)</math>, <i>i.e.</i>
+    !% <math>\int_1^{\infty} H \left( \omega \right) d\omega</math>.
+    !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
+    !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
     call parse_string(datasets_check('OCTHarmonicWeight'), "1", tg%plateau_string)
     tg%dt = td%dt
