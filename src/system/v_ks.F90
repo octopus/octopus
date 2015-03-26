@@ -213,6 +213,7 @@ contains
     !%Section Hamiltonian::XC
     !%Description
     !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
+    !% The options are the same as <tt>XCFunctional</tt>.
     !% Defaults:
     !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
     !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
@@ -236,7 +237,7 @@ contains
 
     ! initialize XC modules
     
-    ! This is a bit ugly, theory_level might not be Hartee-Fock now
+    ! This is a bit ugly, theory_level might not be Hartree-Fock now
     ! but it might become Hartee-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.

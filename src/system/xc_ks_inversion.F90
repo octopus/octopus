@@ -142,11 +142,11 @@ contains
     !%Default xc_asymptotics_none
     !%Section Calculation Modes::Invert KS
     !%Description
-    !% Asymptotic correction applied to <math>v_xc</math>.
+    !% Asymptotic correction applied to <math>v_{xc}</math>.
     !%Option xc_asymptotics_none 1
     !% Do not apply any correction in the asymptotic region.
     !%Option xc_asymptotics_sc 2
-    !% Applies the soft-Coulomb decay of <math>-1/\sqrt{r^2+1}</math> to <math>v_xc</math> in the asymptotic region.
+    !% Applies the soft-Coulomb decay of <math>-1/\sqrt{r^2+1}</math> to <math>v_{xc}</math> in the asymptotic region.
     !%End
     call parse_integer('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 

@@ -206,7 +206,7 @@ contains
       !%Description
       !% Decides how to implement the meta-GGAs (NOT WORKING).
       !%Option mgga_dphi 1
-      !% Use for <math>v_xc</math> the derivative of the energy functional with respect
+      !% Use for <math>v_{xc}</math> the derivative of the energy functional with respect
       !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
       !% (and other) programs.
       !%Option mgga_gea 2
@@ -305,7 +305,7 @@ contains
         !%Section Hamiltonian::XC::DensityCorrection
         !%Description
         !% When enabled, the cutoff optimization will
-        !% return the first minimum of the <math>q_xc</math> function if it does
+        !% return the first minimum of the <math>q_{xc}</math> function if it does
         !% not find a value of -1 (<a href=http://arxiv.org/abs/1107.4339>details</a>).
         !% This is required for atoms or small
         !% molecules, but may cause numerical problems.
