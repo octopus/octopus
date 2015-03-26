@@ -28,9 +28,19 @@ oct_base_dir=$PWD
 # go to the source directory
 cd $oct_base_dir/src
 
-echo "Creating documentation"
+echo "Configuring"
+autoreconf -i
+./configure
+cd src/include
+make
+# to produce config_F90.h and options.h
+cd $oct_base_dir
 
-# must run autoreconf -i; ./configure; cd src/include; make (to produce config_F90.h)
+# FIXME: set all -DHAVE_ via
+# sed s'|/\* \#undef HAVE_|#define HAVE_|' ../config.h | grep '^#define' > include/config_F90.h
+# FIXME: provide header files (e.g. fcs_config.h)
+
+echo "Creating documentation"
 
 # Doxyfile is for version 1.8.6
 cp $dox_dir/Doxyfile .
