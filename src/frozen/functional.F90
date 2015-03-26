@@ -26,7 +26,6 @@ module functional_m
     XC_FAMILY_LDA,           &
     XC_FAMILY_GGA,           &
     XC_FAMILY_MGGA,          &
-    XC_FAMILY_LCA,           &
     XC_FAMILY_OEP,           &
     XC_FAMILY_HYB_GGA
 
@@ -69,7 +68,6 @@ module functional_m
     XC_FAMILY_LDA,     &
     XC_FAMILY_GGA,     &
     XC_FAMILY_MGGA,    &
-    XC_FAMILY_LCA,     &
     XC_FAMILY_OEP,     &
     XC_FAMILY_HYB_GGA
 
@@ -126,7 +124,6 @@ contains
         SAFE_ALLOCATE(this%gga)
         call gga_init(this%gga, config)
       !case(XC_FAMILY_MGGA)
-      !case(XC_FAMILY_LCA)
       !case(XC_FAMILY_OEP)
       case default
         call functional_end(this)
@@ -176,7 +173,6 @@ contains
         ASSERT(associated(this%gga))
         call gga_start(this%gga, der)
       !case(XC_FAMILY_MGGA)
-      !case(XC_FAMILY_LCA)
       !case(XC_FAMILY_OEP)
       case default
         call functional_end(this)
@@ -199,7 +195,6 @@ contains
     case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
       kind=gga_get_kind(this%gga)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       kind=XC_UNKNOWN
@@ -253,7 +248,6 @@ contains
     case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
       call gga_get_exc(this%gga, density, exc)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       ASSERT(.false.)
@@ -276,7 +270,6 @@ contains
     case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
       call gga_get_exc_and_vxc(this%gga, density, exc, vxc)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       ASSERT(.false.)
@@ -301,7 +294,6 @@ contains
     case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
       call gga_get_exc_and_vxc(this%gga, density, exc, potential)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       ASSERT(.false.)
@@ -324,7 +316,6 @@ contains
     case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
       call gga_get_vxc(this%gga, density, potential)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       ASSERT(.false.)
@@ -351,7 +342,6 @@ contains
       SAFE_ALLOCATE(this%gga)
       call gga_copy(this%gga, that%gga)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     case default
       nullify(this%lda, this%lda)
@@ -374,7 +364,6 @@ contains
       call gga_end(this%gga)
       SAFE_DEALLOCATE_P(this%gga)
     !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_LCA)
     !case(XC_FAMILY_OEP)
     end select
     this%family=XC_NONE

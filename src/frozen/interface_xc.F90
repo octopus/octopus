@@ -9,65 +9,7 @@ module interface_xc_m
   use json_m,  only: JSON_OK, json_object_t, json_get
   use kinds_m, only: wp
 
-  use XC_F90(lib_m), only: &
-    XC_F90(pointer_t)
-
-  use XC_F90(lib_m), only: &
-    XC_F90(func_init),     &
-    XC_F90(func_end)
-
-  use XC_F90(lib_m), only: &
-    XC_F90(info_kind),     &
-    XC_F90(info_flags)
-
-  use XC_F90(lib_m), only:        &
-    XC_F90(lda_c_xalpha_set_par), &
-    XC_F90(lda_x_1d_set_par),     &
-    XC_F90(lda_c_1d_csc_set_par), &
-    XC_F90(lda_c_2d_prm_set_par)
-
-  use XC_F90(lib_m), only: &
-    XC_F90(lda_exc),       &
-    XC_F90(lda_exc_vxc),   &
-    XC_F90(lda_vxc)
-
-  use XC_F90(lib_m), only: &
-    XC_F90(gga_exc),       &
-    XC_F90(gga_exc_vxc),   &
-    XC_F90(gga_vxc)
-
-  use XC_F90(lib_m), only: &
-    XC_FLAGS_HAVE_EXC,     &
-    XC_FLAGS_HAVE_VXC
-
-  use XC_F90(lib_m), only: &
-    XC_FLAGS_1D,           &
-    XC_FLAGS_2D,           &
-    XC_FLAGS_3D
-
-  use XC_F90(lib_m), only: &
-    XC_POLARIZED,          &
-    XC_UNPOLARIZED
-
-  use XC_F90(lib_m), only:   &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  use XC_F90(lib_m), only: &
-    XC_FAMILY_LDA,         &
-    XC_FAMILY_GGA,         &
-    XC_FAMILY_MGGA,        &
-    XC_FAMILY_LCA,         &
-    XC_FAMILY_OEP,         &
-    XC_FAMILY_HYB_GGA
-
-  use XC_F90(lib_m), only: &
-    XC_LDA_C_XALPHA,       &
-    XC_LDA_X_1D,           &
-    XC_LDA_C_1D_CSC,       &
-    XC_LDA_C_2D_PRM
+  use XC_F90(lib_m)
 
   private
   public ::         &
@@ -84,7 +26,6 @@ module interface_xc_m
     XC_FAMILY_LDA,     &
     XC_FAMILY_GGA,     &
     XC_FAMILY_MGGA,    &
-    XC_FAMILY_LCA,     &
     XC_FAMILY_OEP,     &
     XC_FAMILY_HYB_GGA
 
