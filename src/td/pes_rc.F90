@@ -56,6 +56,7 @@ module pes_rc_m
   type PES_rc_t
     integer          :: npoints                 !< how many points we store the wf
     integer, pointer :: points(:)               !< which points to use
+    FLOAT, pointer   :: points_xyz(:,:)
     character(len=30), pointer :: filenames(:)  !< filenames
     CMPLX, pointer :: wf(:,:,:,:,:)
     integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
@@ -75,7 +76,12 @@ contains
     integer  :: ip
     FLOAT :: xx(MAX_DIM)
     FLOAT :: dmin
+    FLOAT :: buf(1:MAX_DIM)
     integer :: rankmin
+
+#if defined(HAVE_MPI)
+    integer :: status(MPI_STATUS_SIZE)
+#endif
 
     PUSH_SUB(PES_rc_init)
 
@@ -106,6 +112,7 @@ contains
     ! setup filenames and read points
     SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%points_xyz(1:pesrc%npoints, 1:MAX_DIM))
     SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
 
     do ip = 1, pesrc%npoints
@@ -119,11 +126,32 @@ contains
       pesrc%points(ip) = mesh_nearest_point(mesh, xx, dmin, rankmin)
       pesrc%rankmin(ip)= rankmin
 
+      if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+        if(mesh%mpi_grp%rank == rankmin) then
+           pesrc%points_xyz(ip,:) = mesh%x(pesrc%points(ip),:)
+
+          if(mesh%mpi_grp%rank /= 0) then
+            buf(:) = pesrc%points_xyz(ip,:)
+            call mpi_send(buf, MAX_DIM, MPI_DOUBLE,0, 0, mesh%mpi_grp%comm, mpi_err)
+          endif
+        endif
+        if(mesh%mpi_grp%rank == 0 .AND. rankmin /= 0) then
+          call mpi_recv(buf, MAX_DIM, MPI_DOUBLE,rankmin, 0, mesh%mpi_grp%comm, status, mpi_err)
+          pesrc%points_xyz(ip,:) = buf(:)
+        endif
+#endif
+      else
+        pesrc%points_xyz(ip,:) = mesh%x(pesrc%points(ip),:)
+      end if
+
+
     end do
 
     call parse_block_end(blk)
 
-    SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
+    SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, 1:st%nst, 1:st%d%nik, 0:save_iter-1))
+    pesrc%wf = M_z0
 
     POP_SUB(PES_rc_init)
   end subroutine PES_rc_init
@@ -138,6 +166,7 @@ contains
     if(associated(pesrc%filenames)) then
       SAFE_DEALLOCATE_P(pesrc%filenames)
       SAFE_DEALLOCATE_P(pesrc%points)
+      SAFE_DEALLOCATE_P(pesrc%points_xyz)
       SAFE_DEALLOCATE_P(pesrc%wf)
       SAFE_DEALLOCATE_P(pesrc%rankmin)
     end if
@@ -147,68 +176,57 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc(pesrc, st, mesh, ii)
+  subroutine PES_rc_calc(pesrc, st, mesh, ii, dt, iter)
     type(PES_rc_t), intent(inout) :: pesrc
     type(states_t), intent(in)    :: st
     integer,        intent(in)    :: ii
     type(mesh_t),   intent(in)    :: mesh
+    FLOAT,          intent(in)    :: dt
+    integer,        intent(in)    :: iter
 
-    integer :: ip, ik, ist, idim
+    CMPLX, allocatable            :: wfact(:,:,:,:)
+
+    integer :: ip, ik, ist, idim, isdim
     logical :: contains_ip
-    CMPLX, allocatable :: psi(:, :, :, :)
-#if defined(HAVE_MPI)
-    CMPLX :: wf
-    integer :: status(MPI_STATUS_SIZE)
-#endif
 
     PUSH_SUB(PES_rc_calc)
 
-    SAFE_ALLOCATE(psi(1:1, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-    
+    SAFE_ALLOCATE(wfact(1:pesrc%npoints, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+    wfact = M_z0
+
     contains_ip = .true.
 
     do ip = 1, pesrc%npoints
 
 #if defined(HAVE_MPI)
-      if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
-        contains_ip = .true.
-      else
-        contains_ip = .false.
+      if(mesh%parallel_in_domains) then
+        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
+          contains_ip = .true.
+        else
+          contains_ip = .false.
+        end if
       end if
 #endif
 
-      if(contains_ip) call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
-              
-      
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             if(contains_ip) then
-              pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik)*psi(1, idim, ist, ik)
-
-#if defined(HAVE_MPI)
-              if(mesh%mpi_grp%rank /= 0) then
-                wf=pesrc%wf(ip, idim, ist, ik, ii)
-                call MPI_Send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
-              end if
-#endif
-
+              wfact(ip, idim, ist, ik) = st%zpsi(pesrc%points(ip), idim, ist, ik)
             end if
-
-#if defined(HAVE_MPI)
-            if(mesh%mpi_grp%rank  ==  0 .and. pesrc%rankmin(ip) /= 0) then
-              call MPI_Recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
-              pesrc%wf(ip, idim, ist, ik, ii) = wf
-
-            end if
-#endif
-
           end do
         end do
       end do
     end do
 
-    SAFE_DEALLOCATE_A(psi)
+#if defined(HAVE_MPI)
+    isdim = pesrc%npoints * st%d%dim * st%nst * st%d%nik
+    call mpi_allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_DOUBLE_COMPLEX, mpi_sum, mpi_comm_world, mpi_err)
+#else
+    pesrc%wf(:,:,:,:,ii) = wfact(:,:,:,:)
+#endif
+
+    SAFE_DEALLOCATE_A(wfact)
 
     POP_SUB(PES_rc_calc)
   end subroutine PES_rc_calc
@@ -228,13 +246,13 @@ contains
 
     do ip = 1, pesrc%npoints
       iunit = io_open('td.general/'//pesrc%filenames(ip), action='write', position='append')
-      do ii = 1, save_iter
-        jj = iter - save_iter + ii
+      do ii = 1, save_iter - mod(iter, save_iter)
+        jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
         write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
         do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
+          do ist = 1, st%nst
             do idim = 1, st%d%dim
-              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ip, idim, ist, ik, ii))
+              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ip, idim, ist, ik, ii-1))
               write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
                 real(vfu),  aimag(vfu) 
             end do
@@ -262,18 +280,16 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
         iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
-        xx(:)=mesh%idx%lxyz(pesrc%points(ip),:)
+        xx(:) = pesrc%points_xyz(ip,:)
         write(iunit,'(a1)') '#'
         write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
-          '# R = (',units_from_atomic(units_inp%length, xx(1)*mesh%spacing(1)), &
-          ' ,',units_from_atomic(units_inp%length, xx(2)*mesh%spacing(1)), &
-          ' ,',units_from_atomic(units_inp%length, xx(3)*mesh%spacing(1)), &
+          '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
           ' )  [', trim(units_abbrev(units_inp%length)), ']'
 
         write(iunit,'(a1)') '#'  
         write(iunit, '(a3,14x)', advance='no') '# t' 
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
             do idim = 1, st%d%dim
               write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
                 "ik = ", ik, " ist = ", ist, " idim = ", idim
