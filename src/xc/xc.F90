@@ -203,7 +203,7 @@ contains
       !%Description
       !% Decides how to implement the meta-GGAs (NOT WORKING).
       !%Option mgga_dphi 1
-      !% Use for <math>v_xc</math> the derivative of the energy functional with respect
+      !% Use for <math>v_{xc}</math> the derivative of the energy functional with respect
       !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
       !% (and other) programs.
       !%Option mgga_gea 2
@@ -267,6 +267,7 @@ contains
       !%Section Hamiltonian::XC
       !%Description
       !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
+      !% The options are the same as <tt>XCFunctional</tt>.
       !% Defaults:
       !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
       !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
