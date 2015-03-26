@@ -24,9 +24,11 @@
 # Parses the HTML status pages.
 # Tested with BuildBot 0.7.12, 0.8.5, 0.8.8
 
+# TODO: be able to specify branch, or at least identify branch of the builds
+
 if(@ARGV < 2) {
-  print "Please use 'buildbot_query.pl <inputfile> <match> [localfiles] '\n";
-  exit;
+  print "Usage: buildbot_query.pl <inputfile> <match> [localfiles]\n";
+  exit(1);
 }
 
 $inputfile = shift @ARGV;
@@ -40,12 +42,17 @@ print "URL: $bbpath\n";
 print "Input file: $inputfile\n";
 print "Match: $match\n\n";
 
+if($inputfile =~ ".test") {
+    print STDERR "Pass the input file, not the .test file.\n";
+    exit(1);
+}
+
 # get list of latest builds
 if(-e "one_box_per_builder") { system ("rm one_box_per_builder"); }
 system ("wget -nv $bbpath/one_box_per_builder");
 
 if(@ARGV > 0) {
-    open(ONEBOX, ">>one_box_per_builder") or die "cannot open one_box_per_builder\n";
+    open(ONEBOX, ">>one_box_per_builder") or die "Cannot open one_box_per_builder.\n";
     print ONEBOX "\n";
     foreach(@ARGV) {
 	print ONEBOX "LOCAL FILENAME: $_\n";
@@ -53,7 +60,7 @@ if(@ARGV > 0) {
     close(ONEBOX);
 }
 
-open(ONEBOX, "<one_box_per_builder") or die "cannot open one_box_per_builder\n";
+open(ONEBOX, "<one_box_per_builder") or die "Cannot open one_box_per_builder.\n";
 
 $total = 0.0;
 $counts = 0;
@@ -61,6 +68,8 @@ $max = -inf;
 $maxname = "";
 $min = inf;
 $minname = "";
+
+$filename = "text";
 
 while ($_ = <ONEBOX>) {
 # BB 0.7.12
@@ -77,12 +86,19 @@ while ($_ = <ONEBOX>) {
 	$url = "builders/$builder/builds/$build_num";
 	print "\nBuilder: $builder, at svn revision $svn_rev\n";
 
-	# remove old file, or new ones will be named 'stdio.2' etc.
-	if(-e "stdio") { system ("rm stdio"); }
-	system ("wget -nv $bbpath/$url/steps/shell_$shell_num/logs/stdio");
+	# remove old file, or new ones will be named 'text.2' etc.
+	if(-e $filename) { system ("rm $filename"); }
+	# get the version without any complicating HTML markup
+	unless (system ("wget -nv $bbpath/$url/steps/shell_$shell_num/logs/stdio/$filename") == 0) {
+	    print STDERR "Cannot download test log.\n";
+	    next;
+	}
 
 	$name = $builder;
-	open(TESTLOG, "<stdio") or print "cannot open test log\n";
+	unless (open(TESTLOG, "<$filename")) {
+	    print STDERR "Cannot open test log.\n";
+	    next;
+	}
     } elsif ( $_ =~ /LOCAL FILENAME: (.*)/) {
 	print "\n$_\n";
 	$name = $1;
@@ -90,10 +106,13 @@ while ($_ = <ONEBOX>) {
     } else {
 	next;
     }
+    $file_found = 0;
     $match_found = 0;
     while ($_ = <TESTLOG>) {
-	# do not use ~= / .. / here or $filename needs to have special characters escaped
-	if(index($_, $inputfile) != -1) {
+	
+	# do not use ~= / .. / here or $inputfile needs to have special characters escaped
+	if($_ =~ /Using input file : / && index($_, $inputfile) != -1) {
+	    $file_found = 1;
 	    while ($_ = <TESTLOG>) {
 		if(index($_, $match) != -1) {
 		    if($_ =~ /\(Calculated value = (.*)\)/) {  # match OK
@@ -115,6 +134,7 @@ while ($_ = <ONEBOX>) {
 			    }
 			}
 		    }
+		    
 		    # If match failed and did not give a number, do not treat it as zero.
 		    if($match_found) {
 			$total += $value;
@@ -134,14 +154,17 @@ while ($_ = <ONEBOX>) {
 	}
     }
     close(TESTLOG);
-    if($match_found == 0) {
-	print "Match not found.\n";
+    if($file_found == 0) {
+	print STDERR "File not found.\n";
+    } elsif($match_found == 0) {
+	print STDERR "Match not found.\n";
     }
     # why not? builder down, svn or compilation failed, not in the right category of builders, etc.
 }
 
 if($counts == 0) {
-    print "No matches found.\n";
+    print STDERR "No matches found.\n";
+    exit(1);
 } else {
     print "\n\n=== SUMMARY ===\n";
     print "Based on $counts matches found.\n";
