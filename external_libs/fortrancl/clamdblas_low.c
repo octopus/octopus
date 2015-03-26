@@ -2,23 +2,23 @@
 
 #ifdef HAVE_CLAMDBLAS
 
-#include <clAmdBlas.h>
+#include <clBLAS.h>
 
 void FC_FUNC_(clamdblasgetversion_low, CLAMDBLASGETVERSION_LOW)(int * major, int * minor, int * patch, int * status){
   cl_uint cl_major, cl_minor, cl_patch;
 
-  *status = clAmdBlasGetVersion(&cl_major, &cl_minor, &cl_patch);
+  *status = clblasGetVersion(&cl_major, &cl_minor, &cl_patch);
   *major = cl_major;
   *minor = cl_minor;
   *patch = cl_patch;
 }
 
 void FC_FUNC_(clamdblassetup_low, CLAMDBLASSETUP_LOW)(int * status){
-  *status = clAmdBlasSetup();
+  *status = clblasSetup();
 }
 
 void FC_FUNC_(clamdblasteardown_low, CLAMDBLASTEARDOWN_LOW)(){
-  clAmdBlasTeardown();
+  clblasTeardown();
 }
 
 void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
@@ -39,12 +39,12 @@ void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 							  int * status){
 
 
-  *status = clAmdBlasDtrsmEx((clAmdBlasOrder) *order, (clAmdBlasSide) *side, (clAmdBlasUplo) *uplo, 
-			     (clAmdBlasTranspose) *transA, (clAmdBlasDiag) *diag,
-			     (size_t) *M, (size_t) *N, *alpha, 
-			     *A, (size_t) *offA, (size_t) *lda, 
-			     *B, (size_t) *offB, (size_t) *ldb, 
-			     1, CommandQueue, 0, NULL, NULL);
+  *status = clblasDtrsm((clblasOrder) *order, (clblasSide) *side, (clblasUplo) *uplo, 
+			(clblasTranspose) *transA, (clblasDiag) *diag,
+			(size_t) *M, (size_t) *N, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, 
+			*B, (size_t) *offB, (size_t) *ldb, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 
@@ -66,12 +66,12 @@ void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
 							  int * status){
 
 
-  *status = clAmdBlasZtrsmEx((clAmdBlasOrder) *order, (clAmdBlasSide) *side, (clAmdBlasUplo) *uplo, 
-			     (clAmdBlasTranspose) *transA, (clAmdBlasDiag) *diag,
-			     (size_t) *M, (size_t) *N, *alpha, 
-			     *A, (size_t) *offA, (size_t) *lda, 
-			     *B, (size_t) *offB, (size_t) *ldb, 
-			     1, CommandQueue, 0, NULL, NULL);
+  *status = clblasZtrsm((clblasOrder) *order, (clblasSide) *side, (clblasUplo) *uplo, 
+			(clblasTranspose) *transA, (clblasDiag) *diag,
+			(size_t) *M, (size_t) *N, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, 
+			*B, (size_t) *offB, (size_t) *ldb, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 void FC_FUNC_(clamdblasdgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
@@ -94,12 +94,12 @@ void FC_FUNC_(clamdblasdgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
 							  cl_command_queue * CommandQueue,
 							  int * status){
 
-  *status = clAmdBlasDgemmEx((clAmdBlasOrder) *order, (clAmdBlasTranspose) *transA, (clAmdBlasTranspose) *transB, 
-			     (size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
-			     *A, (size_t) *offA, (size_t) *lda, 
-			     *B, (size_t) *offB, (size_t) *ldb, *beta, 
-			     *C, (size_t) *offC, (size_t) *ldc, 
-			     1, CommandQueue, 0, NULL, NULL);
+  *status = clblasDgemm((clblasOrder) *order, (clblasTranspose) *transA, (clblasTranspose) *transB, 
+			(size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, 
+			*B, (size_t) *offB, (size_t) *ldb, *beta, 
+			*C, (size_t) *offC, (size_t) *ldc, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 void FC_FUNC_(clamdblaszgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
@@ -122,12 +122,12 @@ void FC_FUNC_(clamdblaszgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
 							  cl_command_queue * CommandQueue,
 							  int * status){
 
-  *status = clAmdBlasZgemmEx((clAmdBlasOrder) *order, (clAmdBlasTranspose) *transA, (clAmdBlasTranspose) *transB, 
-			     (size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
-			     *A, (size_t) *offA, (size_t) *lda, 
-			     *B, (size_t) *offB, (size_t) *ldb, *beta, 
-			     *C, (size_t) *offC, (size_t) *ldc, 
-			     1, CommandQueue, 0, NULL, NULL);
+  *status = clblasZgemm((clblasOrder) *order, (clblasTranspose) *transA, (clblasTranspose) *transB, 
+			(size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, 
+			*B, (size_t) *offB, (size_t) *ldb, *beta, 
+			*C, (size_t) *offC, (size_t) *ldc, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 void FC_FUNC_(clamdblasdsyrkex_low, CLAMDBLASDSYRKEX_LOW)(int * order,
@@ -146,11 +146,11 @@ void FC_FUNC_(clamdblasdsyrkex_low, CLAMDBLASDSYRKEX_LOW)(int * order,
 							  cl_command_queue * CommandQueue,
 							  int * status){
 
-  *status = clAmdBlasDsyrkEx((clAmdBlasOrder) *order, (clAmdBlasUplo) *uplo, (clAmdBlasTranspose) *transA, 
-			     (size_t) *N, (size_t) *K, *alpha, 
-			     *A, (size_t) *offA, (size_t) *lda, *beta, 
-			     *C, (size_t) *offC, (size_t) *ldc, 
-			     1, CommandQueue, 0, NULL, NULL);
+  *status = clblasDsyrk((clblasOrder) *order, (clblasUplo) *uplo, (clblasTranspose) *transA, 
+			(size_t) *N, (size_t) *K, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, *beta, 
+			*C, (size_t) *offC, (size_t) *ldc, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 void FC_FUNC_(clamdblaszherkex_low, CLAMDBLASZHERKEX_LOW)(int * order,
@@ -169,11 +169,11 @@ void FC_FUNC_(clamdblaszherkex_low, CLAMDBLASZHERKEX_LOW)(int * order,
 							  cl_command_queue * CommandQueue,
 							  int * status){
 
-  *status = clAmdBlasZherk((clAmdBlasOrder) *order, (clAmdBlasUplo) *uplo, (clAmdBlasTranspose) *transA, 
-			   (size_t) *N, (size_t) *K, *alpha, 
-			   *A, (size_t) *offA, (size_t) *lda, *beta, 
-			   *C, (size_t) *offC, (size_t) *ldc, 
-			   1, CommandQueue, 0, NULL, NULL);
+  *status = clblasZherk((clblasOrder) *order, (clblasUplo) *uplo, (clblasTranspose) *transA, 
+			(size_t) *N, (size_t) *K, *alpha, 
+			*A, (size_t) *offA, (size_t) *lda, *beta, 
+			*C, (size_t) *offC, (size_t) *ldc, 
+			1, CommandQueue, 0, NULL, NULL);
 }
 
 #endif
