@@ -248,8 +248,7 @@ contains
 
   ! ---------------------------------------------------------
   !> These routines output the unit-conversion factors, defined by
-  !! [a.u.] = <input>*u.unit
-  !! <output> = [a.u.]/u.unit
+  !! [a.u.] = input*u.unit, output = [a.u.]/u.unit
   ! ---------------------------------------------------------
   subroutine unit_system_init_atomic(uu)
     type(unit_system_t), intent(out) :: uu
