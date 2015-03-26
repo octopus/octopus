@@ -151,15 +151,6 @@ if test x"$enable_mpi" == x"yes"; then
   ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C]))
 fi
 
-dnl build and install frozen framework, if enabled, or just compile a dummy library.
-AC_ARG_ENABLE([frozen], AS_HELP_STRING([--enable-frozen], [Frozen framework support (experimental)]))
-if test -n x"$enable_frozen" -a x"$enable_frozen" != x"yes"; then
-  enable_frozen=no
-else
-  enable_frozen=yes
-fi
-AM_CONDITIONAL([COMPILE_FROZEN], [test x"$enable_frozen" = x"yes"])
-
 dnl build/install Perl bits unless --disable-perl is used
 AC_ARG_ENABLE([perl],
 	      AS_HELP_STRING([--disable-perl], [don't build/install Perl components]),

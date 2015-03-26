@@ -20,8 +20,6 @@
 
 noinst_LIBRARIES = libfrozen.a
 
-if COMPILE_FROZEN
-
 libfrozen_a_SOURCES =		\
 	imesh.F90		\
 	igrid.F90		\
@@ -88,25 +86,6 @@ libfrozen_a_SOURCES =		\
 	ssys_handle.F90		\
 	ssys_config.F90
 
-else
-
-libfrozen_a_SOURCES =			\
-	fio_config.dummy.F90		\
-	base_density.dummy.F90		\
-	base_external.dummy.F90		\
-	base_hamiltonian.dummy.F90	\
-	base_config.dummy.F90		\
-	frozen_density.dummy.F90	\
-	frozen_external.dummy.F90	\
-	live_density.dummy.F90		\
-	live_external.dummy.F90		\
-	ssys_density.dummy.F90		\
-	ssys_states.dummy.F90		\
-	ssys_external.dummy.F90		\
-	ssys_hamiltonian.dummy.F90
-
-endif
-
 noinst_HEADERS =		\
 	util.h			\
 	template.h		\
@@ -121,8 +100,6 @@ include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
-
-if COMPILE_FROZEN
 
 imesh.o 	: imesh.F90
 igrid.o 	: igrid.F90
@@ -195,24 +172,3 @@ ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_external.o ssys_ionic.o base_hami
 # ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
 # ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o frozen_config.o fio_config.F90 base_config.o functional.o
 
-else
-
-base_density.dummy.o		: base_density.dummy.F90
-base_external.dummy.o	 	: base_external.dummy.F90
-base_hamiltonian.dummy.o	: base_hamiltonian.dummy.F90
-base_config.dummy.o 		: base_config.dummy.F90
-
-fio_config.dummy.o	: fio_config.dummy.F90
-
-frozen_density.dummy.o 	: frozen_density.dummy.F90
-frozen_external.dummy.o	: frozen_external.dummy.F90
-
-live_density.dummy.o	: live_density.dummy.F90
-live_external.dummy.o	: live_external.dummy.F90
-
-ssys_density.dummy.o		: ssys_density.dummy.F90 live_density.dummy.o frozen_density.dummy.o base_density.dummy.o
-ssys_states.dummy.o		: ssys_states.dummy.F90 ssys_density.dummy.o
-ssys_external.dummy.o		: ssys_external.dummy.F90 live_external.dummy.o base_external.dummy.o
-ssys_hamiltonian.dummy.o	: ssys_hamiltonian.dummy.F90 ssys_external.dummy.o
-
-endif
