@@ -20,8 +20,8 @@
 ## $Id$
 
 #save the current directory
-dox_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd $dox_dir
+cd `dirname $0`
+dox_dir=$PWD
 cd ../..
 oct_base_dir=$PWD
 
@@ -30,12 +30,15 @@ cd $oct_base_dir/src
 
 echo "Creating documentation"
 
+# must run autoreconf -i; ./configure; cd src/include; make (to produce config_F90.h)
+
+# Doxyfile is for version 1.8.6
 cp $dox_dir/Doxyfile .
 cp $dox_dir/octopus.png .
 #copy to the new location
 sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
 #call doxygen
-doxygen >/dev/null 2>/dev/null 
+doxygen
 
 cd ..
 echo "Doxygen documentation created in $dox_dir/html/index.html"
