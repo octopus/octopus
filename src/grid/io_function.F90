@@ -192,7 +192,8 @@ contains
     !% Generates output in the <a href=http://paulbourke.net/dataformats/cube>cube file format</a>.
     !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
-    !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a>. For the moment only the geometry is supported.
+    !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
+    !% Produces geometry and isosurface (at 0.21) of the magnitude of fields.
     !%Option json 524288
     !% Generates output in JSON format.
     !%Option bild 1048576

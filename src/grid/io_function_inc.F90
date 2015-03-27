@@ -1149,11 +1149,6 @@ contains
 
     call io_close(iunit)
 
-
-#ifdef R_TREAL
-    print*, trim(fname), minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
-#endif
-
     call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//".scad")
 
     call geometry_write_openscad(geo, cad_file = cad_file)
@@ -1225,23 +1220,6 @@ contains
         vertlist(1:3, 11) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(3), cube_point(7))
       end if
       
-#if 0
-      print*, "CUBEINDEX ", cubeindex
-      print*, "TRIANGLES ", triangles(:, cubeindex)
-
-      print*, "--------------------"
-      do jp = 0, 7
-        print*, mesh%x(cube_point(0), 1:3)
-      end do
-      print*, "--------------------"
-
-      print*, "--------------------"
-      do jp = 0, 11
-        print*, jp, vertlist(1:3, jp)
-      end do
-      print*, "--------------------"
-#endif
-
       call polyhedron_init(poly)
 
       ll = 1
