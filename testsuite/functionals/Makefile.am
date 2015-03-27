@@ -120,8 +120,8 @@ dist_share_DATA =                                  \
         03-xc.pbe0_oep.inp                         \
         03-xc.b3lyp_fock.inp                       \
         03-xc.b3lyp_oep.inp                        \
-	03-xc.am05_fock.inp                        \
-	03-xc.am05_oep.inp                         \
+	03-xc.m05_fock.inp                         \
+	03-xc.m05_oep.inp                          \
 	04-oep.01-jellium-lsda.inp                 \
 	04-oep.02-jellium-exx_kli.inp              \
 	04-oep.03-jellium-full_exx.inp             \
