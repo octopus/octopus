@@ -194,13 +194,30 @@ contains
         call messages_fatal(1)
       end if
     end if
+    
+    ! FIXME: check on presence of XC_FLAGS_HAVE_EXC, XC_FLAGS_HAVE_VXC
 
+!    XC_NON_RELATIVISTIC     =   0
+!    XC_RELATIVISTIC         =   1
+
+    ! FIXME: aren`t there other parameters that can or should be set?
     ! special parameters that have to be configured
     select case(functl%id)
+      ! FIXME: aren`t there other Xalpha functionals?
     case(XC_LDA_C_XALPHA)
+
+      !%Variable Xalpha
+      !%Type float
+      !%Default 1.0
+      !%Section Hamiltonian::XC
+      !%Description
+      !% The parameter of the Slater X<math>\alpha</math> functional. Applies only for
+      !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
+      !%End
       call parse_float('Xalpha', M_ONE, alpha)
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
 
+      ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
       !%Variable Interaction1D
       !%Type integer
@@ -223,7 +240,7 @@ contains
       !%Default 1.0
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the screening parameter, <math>\alpha</math>, of the softened Coulomb interaction
+      !% Defines the screening parameter <math>\alpha</math> of the softened Coulomb interaction
       !% when running in 1D.
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
@@ -238,8 +255,25 @@ contains
     case(XC_LDA_C_2D_PRM)
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 
+    ! FIXME: libxc has XC_GGA_X_LBM, isn't that the modified one?
     case(XC_GGA_X_LB)
+      !%Variable LB94_modified
+      !%Type integer
+      !%Default 0
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
+      !%End
       call parse_integer('LB94_modified', 0, functl%LB94_modified)
+
+      ! FIXME: libxc seems to have 1e-32 as a threshold, should we not use that?
+      !%Variable LB94_threshold
+      !%Type float
+      !%Default 1.0e-6
+      !%Section Hamiltonian::XC
+      !%Description
+      !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
+      !%End
       call parse_float('LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
       
     end select
