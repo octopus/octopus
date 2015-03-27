@@ -187,8 +187,12 @@
 #ifdef R_TCOMPLEX
     call try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
 #endif
+
     if(ierr == -1) then
       call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .false., ierr)
+    endif
+
+    if(ierr == 0) then
       ASSERT(product(ubound(ff)) >= np)
 
 #ifdef HAVE_MPI2
