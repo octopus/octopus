@@ -226,7 +226,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+  if (iand(TERM_MGGA, terms_) /= 0 .and. &
+    (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)) then
     ASSERT(.not. batch_is_packed(hpsib))
     do ii = 1, nst
       call set_pointers()
