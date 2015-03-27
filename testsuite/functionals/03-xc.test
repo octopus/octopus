@@ -6,6 +6,9 @@ Program    : octopus
 TestGroups : long-run, functionals
 Enabled    : Yes
 
+# FIXME: Restart after the first run fails if 4 procs are used; no restart wfns are written at all!
+#Processors : 4
+
 Input: 03-xc.01-gs.inp
 match ; Hartree-Fock energy Total              ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45473695
 match ; Hartree-Fock eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3) ; -1.128711
@@ -345,3 +348,14 @@ match ; B3LYP OEP Exchange                     ; GREPFIELD(static/info, 'Exchang
 match ; B3LYP OEP Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27343573
 match ; B3LYP OEP Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.44904268
 match ; B3LYP OEP Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.52588482
+
+Input: 03-xc.am05_fock.inp
+match ; AM05 Fock Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.26581406
+match ; AM05 Fock Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34212749
+match ; AM05 Fock Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.53849195
+
+Input: 03-xc.am05_oep.inp
+match ; AM05 OEP Exchange                      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.07080079
+match ; AM05 OEP Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.26581406
+match ; AM05 OEP Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.48372906
+match ; AM05 OEP Total                         ; GREPFIELD(static/info, 'Total       =', 3) ; -0.53849195
