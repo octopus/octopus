@@ -81,7 +81,6 @@ module xc_m
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
-  FLOAT, parameter :: denom_eps = CNST(1.0e-20) !< added to denominators to avoid overflows...
 
   integer, parameter :: &
     LR_NONE = 0,        &
