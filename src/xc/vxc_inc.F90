@@ -275,7 +275,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         SAFE_DEALLOCATE_A(unp_dedd)
       end if
 
-      if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
+      if(gga .or. mgga) then
         do ib = 1, n_block
           dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
           if(ispin /= UNPOLARIZED) then
@@ -286,7 +286,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         end do
       end if
 
-      if(functl(ixc)%family == XC_FAMILY_MGGA) then
+      if(mgga) then
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
         call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
       end if
@@ -558,6 +558,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(gf)
 
+    ! FIXME: should we do this for any functional lacking XC_FLAGS_HAVE_EXC?
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(calc_energy .and. functl(1)%id == XC_GGA_X_LB) then
