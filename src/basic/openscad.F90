@@ -198,7 +198,7 @@ contains
       '[', pos1(1), ',', pos1(2), ',', pos1(3), '],',       &
       '[', pos2(1), ',', pos2(2), ',', pos2(3), '],',       &
       '[', pos3(1), ',', pos3(2), ',', pos3(3), '],',       &
-      '], triangles=[ [2,1,0] ]);'
+      '], faces=[ [2,1,0] ]);'
     
   end subroutine openscad_file_triangle
 
@@ -232,7 +232,7 @@ contains
       end if
     end do
 
-    write(this%iunit, '(a)') '], triangles = [ '
+    write(this%iunit, '(a)') '], faces = [ '
 
     do ii = 1, poly%ntriangles
       write(this%iunit, '(a,i10,a,i10,a,i10,a)') &
