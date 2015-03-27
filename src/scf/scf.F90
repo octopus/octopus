@@ -266,7 +266,7 @@ contains
     !% particles.
     !%Option potential 1
     !% The Kohn-Sham potential is mixed. This is the default for OEP
-    !% or MGGA calculations, or if <tt>StaticElectricField</tt> is applied in
+    !% or (hybrid) MGGA calculations, or if <tt>StaticElectricField</tt> is applied in
     !% a periodic direction.
     !%Option density 2
     !% Mix the density. This is the default for other cases, including
@@ -275,7 +275,7 @@ contains
 
     mixdefault = MIXDENS
     if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
-    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
+    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
     if(associated(hm%vberry)) mixdefault = MIXPOT
 
     call parse_integer(datasets_check('MixField'), mixdefault, scf%mix_field)
@@ -287,7 +287,7 @@ contains
       call messages_fatal(1)
     end if
 
-    if(scf%mix_field == MIXDENS .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) then
+    if(scf%mix_field == MIXDENS .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
       message(1) = "Input: You have selected to mix the density with OEP or MGGA XC functionals."
       message(2) = "       This might produce convergence problems. Mix the potential instead."
       call messages_warning(2)

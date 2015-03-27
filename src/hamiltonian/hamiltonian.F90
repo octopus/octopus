@@ -306,7 +306,7 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+      if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
@@ -333,7 +333,7 @@ contains
         SAFE_ALLOCATE(hm%Imvxc(1:gr%mesh%np, 1:hm%d%nspin))
         hm%Imvxc=M_ZERO
 
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+        if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
           SAFE_ALLOCATE(hm%Imvtau(1:gr%mesh%np, 1:hm%d%nspin))
           hm%Imvtau=M_ZERO
         end if
@@ -748,6 +748,7 @@ contains
 
   end subroutine hamiltonian_init
 
+  
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(hm, gr)
     type(hamiltonian_t), intent(inout) :: hm
@@ -779,7 +780,7 @@ contains
     SAFE_DEALLOCATE_P(hm%Imvxc)
     SAFE_DEALLOCATE_P(hm%Imvtau)
     
-    if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+    if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
@@ -1272,7 +1273,7 @@ contains
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK .or. this%theory_level == RDMFT) apply = .false.
-    if(iand(this%xc_family, XC_FAMILY_MGGA) /= 0)  apply = .false.
+    if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_packed
@@ -1430,8 +1431,8 @@ contains
     call restart_write(restart, iunit, lines, 1, err)
     if (err /= 0) ierr = ierr + 4
 
-    ! MGGAs have an extra term that also needs to be dumped
-    if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+    ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
+    if (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
       lines(1) = '#     #spin    #nspin    filename'
       lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
@@ -1525,9 +1526,9 @@ contains
     end do
     if (err2 /= 0) ierr = ierr + 1
 
-    ! MGGAs have an extra term that also needs to be read
+    ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
     err2 = 0
-    if (iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+    if (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'
