@@ -335,7 +335,6 @@ contains
         case (XC_FAMILY_HYB_GGA);   write(s2,'(a)') "Hybrid GGA"
         case (XC_FAMILY_HYB_MGGA);  write(s2,'(a)') "Hybrid MGGA"
         case (XC_FAMILY_MGGA);      write(s2,'(a)') "MGGA"
-        case (XC_FAMILY_LCA);       write(s2,'(a)') "LCA"
       end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call messages_info(2, iunit)

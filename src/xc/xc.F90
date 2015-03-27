@@ -72,7 +72,6 @@ module xc_m
     FLOAT   :: kernel_lrc_alpha         !< long-range correction alpha parameter for kernel in solids
 
     FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
-    integer :: mGGA_implementation      !< how to implement the MGGAs
     logical :: use_gi_ked               !< should we use the gauge-independent kinetic energy density?
 
     integer :: xc_density_correction
@@ -188,37 +187,10 @@ contains
       xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
-    ! Now it is time for these current functionals
-    if (iand(xcs%family, XC_FAMILY_LCA) /= 0 .and. &
-      iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP) /= 0) then
-      message(1) = "LCA functional can only be used along with LDA or GGA functionals."
-      call messages_fatal(1)
-    end if
+    if (iand(xcs%family, XC_FAMILY_LCA) /= 0) &
+      call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
-    if(iand(xcs%family, XC_FAMILY_MGGA) /= 0) then
-      !%Variable MGGAimplementation
-      !%Type integer
-      !%Default mgga_gea
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Decides how to implement the meta-GGAs (NOT WORKING).
-      !%Option mgga_dphi 1
-      !% Use for <math>v_{xc}</math> the derivative of the energy functional with respect
-      !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
-      !% (and other) programs.
-      !%Option mgga_gea 2
-      !% Use gradient expansion (GEA) of the kinetic-energy density.
-      !%Option mgga_oep 3
-      !% Use the OEP equation to obtain the XC potential. This is the "correct" way
-      !% to do it within DFT.
-      !%End
-      call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
-      if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
-        call input_error('xcs%mGGA_implementation')
-
-
-      call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
-
+    if(iand(xcs%family, XC_FAMILY_MGGA) /= 0 .or. iand(xcs%family, XC_FAMILY_HYB_MGGA) /= 0) then
       !%Variable XCUseGaugeIndependentKED
       !%Type logical
       !%Default yes
@@ -226,11 +198,10 @@ contains
       !%Description
       !% If true, when evaluating the XC functional, a term including the (paramagnetic or total) current
       !% is added to the kinetic-energy density such as to make it gauge-independent.
+      !% Applies only to meta-GGA (and hybrid meta-GGA) functionals.
       !%End
       call parse_logical(datasets_check('XCUseGaugeIndependentKED'), .true., xcs%use_gi_ked)
-
     end if
-
 
     POP_SUB(xc_init)
 
