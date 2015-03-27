@@ -238,7 +238,7 @@ contains
     ! initialize XC modules
     
     ! This is a bit ugly, theory_level might not be Hartree-Fock now
-    ! but it might become Hartee-Fock later. This is safe because it
+    ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
     call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
