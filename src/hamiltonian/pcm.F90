@@ -144,8 +144,10 @@ contains
     !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
     !% (<i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>107</b>, 3032 (1997),
     !% <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)). At the moment, this option is available 
-    !% only for ground-state calculations.
+    !% only for ground-state calculations, and only for <tt>TheoryLevel = DFT</tt>.
     !%End
+
+    ! FIXME: pcm terms are only added to total energy in DFT case
 
     call parse_logical('Solvation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
