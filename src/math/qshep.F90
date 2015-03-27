@@ -45,7 +45,7 @@ module qshep_m
 
   type qshep_t
    private
-   integer :: kind ! 0 for real functions (im is not used);  for complex ones.
+   integer :: kind !< 0 for real functions (im is not used);  for complex ones.
    type(qshepr_t) :: re, im
   end type qshep_t
 
@@ -57,8 +57,104 @@ module qshep_m
     module procedure dqshep_interpolate, zqshep_interpolate
   end interface qshep_interpolate
 
+  interface
+    real(8) function qs2val(px, py, n, x, y, f, nr, lcell, lnext, xmin, &
+      ymin, dx, dy, rmax, rsq, a)
+      implicit none
+      real(8) :: px
+      real(8) :: py
+      integer :: n
+      real(8) :: x(n)
+      real(8) :: y(n)
+      real(8) :: f(n)
+      integer :: nr
+      integer :: lcell(nr, nr)
+      integer :: lnext(n)
+      real(8) :: xmin
+      real(8) :: ymin
+      real(8) :: dx
+      real(8) :: dy
+      real(8) :: rmax
+      real(8) :: rsq(n)
+      real(8) :: a(5, n)
+    end function qs2val
+
+    subroutine qs2grd(px, py, n, x, y, f, nr, lcell, lnext, xmin, &
+      ymin, dx, dy, rmax, rsq, a, q, qx, qy, ier)
+      implicit none
+      real(8) :: px
+      real(8) :: py
+      integer :: n
+      real(8) :: x(n)
+      real(8) :: y(n)
+      real(8) :: f(n)
+      integer :: nr
+      integer :: lcell(nr, nr)
+      integer :: lnext(n)
+      real(8) :: xmin
+      real(8) :: ymin
+      real(8) :: dx
+      real(8) :: dy
+      real(8) :: rmax
+      real(8) :: rsq(n)
+      real(8) :: a(5, n)
+      real(8) :: q
+      real(8) :: qx
+      real(8) :: qy
+      integer :: ier
+    end subroutine qs2grd
+
+    real(8) function qs3val(px, py, pz, n, x, y, z, f, nr, lcell, lnext, xyzmin, &
+      xyzdel, rmax, rsq, a)
+      implicit none
+      real(8) :: px
+      real(8) :: py
+      real(8) :: pz
+      integer :: n
+      real(8) :: x(n)
+      real(8) :: y(n)
+      real(8) :: z(n)
+      real(8) :: f(n)
+      integer :: nr
+      integer :: lcell(nr, nr, nr)
+      integer :: lnext(n)
+      real(8) :: xyzmin(3)
+      real(8) :: xyzdel(3)
+      real(8) :: rmax
+      real(8) :: rsq(n)
+      real(8) :: a(9, n)
+    end function qs3val
+
+    subroutine qs3grd(px, py, pz, n, x, y, z, f, nr, lcell, lnext, xyzmin, &
+      xyzdel, rmax, rsq, a, q, qx, qy, qz, ier)
+      implicit none
+      real(8) :: px
+      real(8) :: py
+      real(8) :: pz
+      integer :: n
+      real(8) :: x(n)
+      real(8) :: y(n)
+      real(8) :: z(n)
+      real(8) :: f(n)
+      integer :: nr
+      integer :: lcell(nr, nr, nr)
+      integer :: lnext(n)
+      real(8) :: xyzmin(3)
+      real(8) :: xyzdel(3)
+      real(8) :: rmax
+      real(8) :: rsq(n)
+      real(8) :: a(9, n)
+      real(8) :: q
+      real(8) :: qx
+      real(8) :: qy
+      real(8) :: qz
+      integer :: ier
+    end subroutine qs3grd
+  end interface
+  
 contains
 
+  ! ------------------------------------------------------------------------------
   subroutine dqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
     integer,       intent(in)  :: npoints
@@ -69,15 +165,13 @@ contains
     PUSH_SUB(dqshep_init)
 
     interp%kind = 0
-    if(present(z)) then
-      call qshepr_init(interp%re, npoints, f, x, y, z)
-    else
-      call qshepr_init(interp%re, npoints, f, x, y)
-    end if
+    call qshepr_init(interp%re, npoints, f, x, y, z = z)
 
     POP_SUB(dqshep_init)
   end subroutine dqshep_init
 
+  
+  ! ------------------------------------------------------------------------------
   subroutine zqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
     integer,       intent(in)  :: npoints
@@ -88,17 +182,14 @@ contains
     PUSH_SUB(zqshep_init)
 
     interp%kind = 1
-    if(present(z)) then
-      call qshepr_init(interp%re, npoints, real(f), x, y, z)
-      call qshepr_init(interp%im, npoints, aimag(f), x, y, z)
-    else
-      call qshepr_init(interp%re, npoints, real(f), x, y)
-      call qshepr_init(interp%im, npoints, aimag(f), x, y)
-    end if
+    call qshepr_init(interp%re, npoints, real(f),  x, y, z = z)
+    call qshepr_init(interp%im, npoints, aimag(f), x, y, z = z)
 
     POP_SUB(zqshep_init)
   end subroutine zqshep_init
 
+
+  ! ------------------------------------------------------------------------------
   subroutine qshepr_init(interp, npoints, f, x, y, z)
     type(qshepr_t), intent(out) :: interp
     integer,        intent(in) :: npoints
@@ -161,6 +252,7 @@ contains
   end subroutine qshepr_init
 
 
+  ! ------------------------------------------------------------------------------
   real(8) function qshep_interpolater(interp, f, p, gf) result(v)
     type(qshepr_t),    intent(in)    :: interp
     real(8),           intent(in)    :: f(:)
@@ -168,7 +260,6 @@ contains
     real(8), optional, intent(inout) :: gf(:)
 
     integer :: ier
-    real(8), external :: qs2val, qs3val
 
     PUSH_SUB(qshep_interpolater)
     
@@ -201,6 +292,7 @@ contains
   end function qshep_interpolater
 
 
+  ! ------------------------------------------------------------------------------
   real(8) function dqshep_interpolate(interp, f, p, gf) result(v)
     type(qshep_t),     intent(in)    :: interp
     real(8),           intent(in)    :: f(:)
@@ -209,16 +301,13 @@ contains
 
     PUSH_SUB(dqshep_interpolate)
 
-    if(present(gf)) then
-      v = qshep_interpolater(interp%re, f, p, gf)
-    else
-      v = qshep_interpolater(interp%re, f, p)
-    end if
+    v = qshep_interpolater(interp%re, f, p, gf = gf)
 
     POP_SUB(dqshep_interpolate)
   end function dqshep_interpolate
 
 
+  ! ------------------------------------------------------------------------------
   complex(8) function zqshep_interpolate(interp, f, p, gf) result(v)
     type(qshep_t),        intent(in)    :: interp
     complex(8),           intent(in)    :: f(:)
@@ -249,6 +338,7 @@ contains
   end function zqshep_interpolate
 
 
+  ! ------------------------------------------------------------------------------
   subroutine qshep_end(interp)
     type(qshep_t), intent(inout) :: interp
 
@@ -261,6 +351,7 @@ contains
   end subroutine qshep_end
 
 
+  ! ------------------------------------------------------------------------------
   subroutine qshepr_end(interp)
     type(qshepr_t), intent(inout) :: interp
 
