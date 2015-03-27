@@ -133,11 +133,11 @@ contains
 
           if(mesh%mpi_grp%rank /= 0) then
             buf(:) = pesrc%points_xyz(ip,:)
-            call mpi_send(buf, MAX_DIM, MPI_DOUBLE,0, 0, mesh%mpi_grp%comm, mpi_err)
+            call mpi_send(buf, MAX_DIM, MPI_DOUBLE_PRECISION, 0, 0, mesh%mpi_grp%comm, mpi_err)
           endif
         endif
         if(mesh%mpi_grp%rank == 0 .AND. rankmin /= 0) then
-          call mpi_recv(buf, MAX_DIM, MPI_DOUBLE,rankmin, 0, mesh%mpi_grp%comm, status, mpi_err)
+          call mpi_recv(buf, MAX_DIM, MPI_DOUBLE_PRECISION, rankmin, 0, mesh%mpi_grp%comm, status, mpi_err)
           pesrc%points_xyz(ip,:) = buf(:)
         endif
 #endif
