@@ -150,14 +150,14 @@ contains
     call parse_string('ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
-    !%Variable ConvertStart
-    !%Type integer
-    !%Default 0
-    !%Section Utilities::oct-convert
-    !%Description
-    !% The starting number of the filename or folder.
-    !%End
-    call parse_integer('ConvertStart', c_start_default, c_start)
+!    !%Variable ConvertStart
+!    !%Type integer
+!    !%Section Utilities::oct-convert
+!    !%Description
+!    !% The starting number of the filename or folder.
+!    !% Default is zero if 
+!    !%End
+!    call parse_integer('ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -183,7 +183,6 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The file which is going to subtracted to rest of the files.
-    !% specified in <tt>OutputHow</tt>.
     !%End
     call parse_string('ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
@@ -206,7 +205,7 @@ contains
 
     !%Variable ConvertSubtractFolder
     !%Type string
-    !%Default [blank]
+    !%Default .
     !%Section Utilities::oct-convert
     !%Description
     !% The folder name which is going to be subtracted.
@@ -219,7 +218,7 @@ contains
     !%Default false
     !%Section Utilities::oct-convert
     !%Description
-    !% Decides if the input files are going to be transformed via Fourier Transform.
+    !% Decides if the input files are going to be Fourier-transformed.
     !%End
     call parse_logical('ConvertTransform', .false., fourier_trans)
 
@@ -421,10 +420,10 @@ contains
 
     !%Variable ConvertEnergyMin
     !%Type float
-    !%Default 0.
+    !%Default 0.0
     !%Section Utilities::oct-convert
     !%Description
-    !% The starting number of the filename.
+    !% Minimum energy to output from Fourier transform.
     !%End
     call parse_float('ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
 
@@ -433,7 +432,7 @@ contains
     !%Default 1
     !%Section Utilities::oct-convert
     !%Description
-    !% How many points are read at once. For the parallel run has not been
+    !% How many points are read at once. For the parallel run this has not been
     !% yet tested, so it should be one. For the serial run, a number
     !% of 100-1000 will speed-up the execution time by this factor.
     !%End
@@ -450,7 +449,7 @@ contains
     !%Default w_max
     !%Section Utilities::oct-convert
     !%Description
-    !% The last number of the filename.
+    !% Maximum energy to output from Fourier transform.
     !%End
     fdefault = units_from_atomic(units_inp%energy, w_max)
     call parse_float('ConvertEnergyMax',fdefault, max_energy, units_inp%energy)

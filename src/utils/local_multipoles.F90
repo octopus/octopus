@@ -173,7 +173,7 @@ contains
     !%Section Utilities::oct-local_multipoles
     !%Description
     !% This variable sets the threshold for the basins calculations. Recommended values: 
-    !% Recommended values: 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
+    !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
     call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
 
@@ -191,7 +191,7 @@ contains
     !%Default true                                                                                                     
     !%Section Utilities::oct-local_multipoles                                                                          
     !%Description                                                                                                      
-    !% Controls to over-write existing files.                                                                          
+    !% Controls whether to over-write existing files.                                                                          
     !%End                                                                                                              
     call parse_logical('LDOverWrite', .true., ldoverwrite)                       
 
@@ -237,9 +237,10 @@ contains
     !TODO: use standart FromSratch and %RestartOptions 
     !%Variable LDRestart
     !%Type logical
+    !%Default false
     !%Section Utilities::oct-local_multipoles
     !%Description
-    !% Restart information will be read from LDRestartFolder
+    !% Restart information will be read from <tt>LDRestartFolder</tt>.
     !%End
     call parse_logical('LDRestart', .false., ldrestart)
 
@@ -248,6 +249,7 @@ contains
 
       !%Variable LDRestartFolder
       !%Type string
+      !%Default "ld.general"
       !%Section Utilities::oct-local_multipoles
       !%Description
       !% The folder name where the density used as input file is.
@@ -391,11 +393,11 @@ contains
     !% <br>case(MINIMUM):        | rsize | 'center_list' 
     !% <br>case(BADER):          | 'center_list' 
     !% <br>%</tt>
-    !% <br>rsize < Radius in input length units
-    !% <br>xsize < the length of the cylinder in the x-direction 
-    !% <br>origin coordinates < in input length units separated by | . where is the box centered.
-    !% <br>lsize <  half of the length of the parallelepiped in each direction.
-    !% <br>center_list < string containing the list of atoms in xyz file for each domain in the form "2,16-23"
+    !% <br>rsize: Radius in input length units
+    !% <br>xsize: the length of the cylinder in the x-direction 
+    !% <br>origin coordinates"  in input length units separated by | . where is the box centered.
+    !% <br>lsize:  half of the length of the parallelepiped in each direction.
+    !% <br>center_list: string containing the list of atoms in xyz file for each domain in the form "2,16-23"
     !%End
 
     ! First, find out if there is a LocalDomains block.
