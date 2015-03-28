@@ -127,36 +127,32 @@ module parser_m
       real(8),          intent(out) :: res
     end subroutine oct_parse_double
 
-    subroutine oct_parse_string(name, def, res)
-      implicit none
-      character(len=*), intent(in) :: name, def
-      character(len=*), intent(out):: res
-    end subroutine oct_parse_string
-  end interface
-
-  interface parse_float
-    module procedure oct_parse_double4_unit
-    module procedure oct_parse_double8_unit
-  end interface parse_float
-
-  interface parse_cmplx
     subroutine oct_parse_complex(name, def, res)
       implicit none
       character(len=*), intent(in) :: name
       complex(8), intent(in)       :: def
       complex(8), intent(out)      :: res
     end subroutine oct_parse_complex
-    module procedure oct_parse_complex4
-  end interface parse_cmplx
+    
+    subroutine oct_parse_string(name, def, res)
+      implicit none
+      character(len=*), intent(in) :: name, def
+      character(len=*), intent(out):: res
+    end subroutine oct_parse_string
 
-  interface parse_block
     integer function oct_parse_block(name, blk)
       use block_t_m
       implicit none
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
     end function oct_parse_block
-  end interface parse_block
+
+  end interface
+
+  interface parse_float
+    module procedure oct_parse_double4_unit
+    module procedure oct_parse_double8_unit
+  end interface parse_float
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
@@ -395,8 +391,31 @@ contains
 
   end subroutine parse_logical
 
+  ! ---------------------------------------------------------
+  
+  subroutine parse_cmplx(name, def, res)
+    character(len=*), intent(in)    :: name
+    complex(8),       intent(in)    :: def
+    complex(8),       intent(out)   :: res
+
+    call parse_check_varinfo(name)
+    call oct_parse_complex(name, def, res)
+    
+  end subroutine parse_cmplx
 
   ! ---------------------------------------------------------
+  
+  integer function parse_block(name, blk)
+    character(len=*), intent(in)    :: name
+    type(block_t),    intent(out)   :: blk
+
+    call parse_check_varinfo(name)
+    parse_block = oct_parse_block(name, blk)
+
+  end function parse_block
+
+  ! ---------------------------------------------------------
+
   subroutine parse_block_logical(blk, l, c, res)
     type(block_t), intent(in) :: blk
     integer, intent(in)          :: l, c
@@ -473,18 +492,6 @@ contains
     end if
     
   end subroutine oct_parse_double8_unit
-
-  ! ---------------------------------------------------------
-  subroutine oct_parse_complex4(name, def4, res4)
-    character(len=*), intent(in) :: name
-    complex(4), intent(in)       :: def4
-    complex(4), intent(out)      :: res4
-
-    complex(8) :: res8
-    call oct_parse_complex(name, cmplx(def4, kind=8), res8)
-    res4 = real(res8, kind=4)
-  end subroutine oct_parse_complex4
-
 
   ! ---------------------------------------------------------
   subroutine oct_parse_block_double4(blk, l, c, res4)
