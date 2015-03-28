@@ -188,7 +188,7 @@ contains
     !% L. Tao and A. Scrinzi, <i>New Journal of Physics</i> <b>14</b>, 013021 (2012).
     !%End
 
-    call parse_integer('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
+    call parse_variable('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call messages_input_error('PhotoElectronSpectrum')
     end if

@@ -135,7 +135,7 @@ contains
     !% If disabled, <tt>Octopus</tt> will not compute
     !% nor print the symmetries.
     !%End
-    call parse_logical('SymmetriesCompute', (geo%natoms < 100), symmetries_compute)
+    call parse_variable('SymmetriesCompute', (geo%natoms < 100), symmetries_compute)
     if(.not. symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1)

@@ -201,7 +201,7 @@ contains
     !%Option vtk 2097152
     !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
     !%End
-    call parse_integer('OutputHow', 0, how)
+    call parse_variable('OutputHow', 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
       call messages_input_error('OutputHow')
     end if

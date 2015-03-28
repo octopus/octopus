@@ -238,7 +238,7 @@ contains
       !% This number gets stricter with more iterations.
       !%End
 
-      call parse_float('RDMTolerance', CNST(1.0e-1), rdm%toler)
+      call parse_variable('RDMTolerance', CNST(1.0e-1), rdm%toler)
 
       !%Variable RDMConvEner
       !%Type float
@@ -252,7 +252,7 @@ contains
       !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
       !%End
 
-      call parse_float('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
+      call parse_variable('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
     
       POP_SUB(scf_rdmft.rdmft_init)
 

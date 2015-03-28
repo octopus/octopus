@@ -101,7 +101,7 @@ contains
     !% Calculate the optimal number of levels for the grid.
     !%End
 
-    call parse_integer('MultigridLevels', 0, n_levels)
+    call parse_variable('MultigridLevels', 0, n_levels)
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3

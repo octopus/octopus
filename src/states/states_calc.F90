@@ -314,7 +314,7 @@ contains
     !% A state j with energy E_j will be considered degenerate with a state
     !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
     !%End
-    call parse_float('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
+    call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
     degen_thres = units_to_atomic(units_inp%energy, degen_thres)
 
     ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 

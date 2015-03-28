@@ -195,10 +195,10 @@ contains
 
     default = OP_VEC
 
-    call parse_integer('OperateDouble', default, dfunction_global)
+    call parse_variable('OperateDouble', default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
 
-    call parse_integer('OperateComplex', default, zfunction_global)
+    call parse_variable('OperateComplex', default, zfunction_global)
     if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
 
 
@@ -228,10 +228,10 @@ contains
     !% This version is optimized using vector primitives (if available).
     !%End
     
-    call parse_integer('OperateSingle', OP_FORTRAN, sfunction_global)
+    call parse_variable('OperateSingle', OP_FORTRAN, sfunction_global)
     if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
     
-    call parse_integer('OperateComplexSingle', OP_FORTRAN, cfunction_global)
+    call parse_variable('OperateComplexSingle', OP_FORTRAN, cfunction_global)
     if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
 #ifdef HAVE_OPENCL
@@ -251,7 +251,7 @@ contains
       !%Option nomap 3
       !% (Experimental) This version does not use a map.
       !%End
-      call parse_integer('OperateOpenCL',  OP_MAP, function_opencl)
+      call parse_variable('OperateOpenCL',  OP_MAP, function_opencl)
 
     end if
 #endif
@@ -267,7 +267,7 @@ contains
     !% experimental and has not been thoroughly tested.
     !%End
 
-    call parse_logical('NLOperatorCompactBoundaries', .false., compact_boundaries)
+    call parse_variable('NLOperatorCompactBoundaries', .false., compact_boundaries)
 
     if(compact_boundaries) then
       call messages_experimental('NLOperatorCompactBoundaries')

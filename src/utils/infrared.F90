@@ -63,10 +63,10 @@
     call unit_system_init()
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_integer('TDMaximumIter', 1500, max_iter)
-    call parse_float('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_float('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_float('PropagationSpectrumMaxEnergy', &
+    call parse_variable('TDMaximumIter', 1500, max_iter)
+    call parse_variable('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable('PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw

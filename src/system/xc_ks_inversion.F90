@@ -114,7 +114,7 @@ contains
     !%Option two_particle 2
     !% Exact two-particle scheme.
     !%End
-    call parse_integer('InvertKSmethod', XC_INV_METHOD_VS_ITER, ks_inv%method)
+    call parse_variable('InvertKSmethod', XC_INV_METHOD_VS_ITER, ks_inv%method)
 
     if(ks_inv%method < XC_INV_METHOD_VS_ITER &
       .or. ks_inv%method > XC_INV_METHOD_TWO_PARTICLE) then
@@ -134,7 +134,7 @@ contains
     !% Compute exact adiabatic <math>v_{xc}</math>.
     !%End
     call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
-    call parse_integer('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
+    call parse_variable('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error('KSInversionLevel')
 
     !%Variable KSInversionAsymptotics
@@ -148,7 +148,7 @@ contains
     !%Option xc_asymptotics_sc 2
     !% Applies the soft-Coulomb decay of <math>-1/\sqrt{r^2+1}</math> to <math>v_{xc}</math> in the asymptotic region.
     !%End
-    call parse_integer('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
+    call parse_variable('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       call states_copy(ks_inv%aux_st, st, exclude_wfns = .true.)
@@ -215,7 +215,7 @@ contains
 
     PUSH_SUB(invertks_2part)
     
-    !call parse_float('InvertKSStabilizer', M_HALF, stabilizer)
+    !call parse_variable('InvertKSStabilizer', M_HALF, stabilizer)
     
     np = gr%mesh%np
     
@@ -353,7 +353,7 @@ contains
     !% Absolute difference between the calculated and the target density in the KS
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End    
-    call parse_float('InvertKSConvAbsDens', CNST(1e-5), convdensity)
+    call parse_variable('InvertKSConvAbsDens', CNST(1e-5), convdensity)
 
     !%Variable InvertKSStabilizer
     !%Type float
@@ -364,7 +364,7 @@ contains
     !% <math>v(\alpha+1)=\frac{\rho(\alpha)+c}{\rho_{target}+c} v(\alpha)</math>
     !% ensures that very small densities do not cause numerical problems.
     !%End
-    call parse_float('InvertKSStabilizer', M_HALF, stabilizer)
+    call parse_variable('InvertKSStabilizer', M_HALF, stabilizer)
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -381,7 +381,7 @@ contains
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
     !% addition.
     !%End
-    call parse_integer('InvertKSVerbosity', 0, verbosity)  
+    call parse_variable('InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
       call messages_fatal(1)

@@ -192,16 +192,16 @@ contains
     !% The star, plus a number of off-axis points.
     !%End
     if(use_curvilinear) then
-      call parse_integer('DerivativesStencil', DER_STARPLUS, der%stencil_type)
+      call parse_variable('DerivativesStencil', DER_STARPLUS, der%stencil_type)
     else
-      call parse_integer('DerivativesStencil', DER_STAR, der%stencil_type)
+      call parse_variable('DerivativesStencil', DER_STAR, der%stencil_type)
     endif
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_float('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+      call parse_variable('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -223,7 +223,7 @@ contains
     !% in 2D and 44 in 3D.
     !% </ul>
     !%End
-    call parse_integer('DerivativesOrder', 4, der%order)
+    call parse_variable('DerivativesOrder', 4, der%order)
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationOfDerivatives
@@ -238,7 +238,7 @@ contains
     !% Communication is based on non-blocking point-to-point communication.
     !%End
     
-    call parse_integer('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
+    call parse_variable('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call messages_input_error('ParallelizationOfDerivatives')

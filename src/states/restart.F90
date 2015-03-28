@@ -433,7 +433,7 @@ contains
       !% option and write some restart information anyway.
       !%End
 
-      call parse_logical('RestartWrite', .true., restart_write)
+      call parse_variable('RestartWrite', .true., restart_write)
       restart%skip = .not. restart_write
 
       if(restart%skip) then

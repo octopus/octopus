@@ -151,16 +151,16 @@ contains
     !%End
 
     if(parse_is_defined('Units')) then
-      call parse_integer('Units', UNITS_ATOMIC, cc)
+      call parse_variable('Units', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('Units')
       cinp = cc
       cout = cc
     else
       ! note that we check the value is valid for the 'Units' variable
-      call parse_integer('UnitsInput', UNITS_ATOMIC, cc)
+      call parse_variable('UnitsInput', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsInput')
       cinp = cc
-      call parse_integer('UnitsOutput', UNITS_ATOMIC, cc)
+      call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
       cout = cc
     end if

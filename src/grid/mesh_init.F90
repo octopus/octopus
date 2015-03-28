@@ -554,7 +554,7 @@ contains
     !% grid in two of the dimensions.
     !%End
 
-    call parse_integer('MeshOrder', ORDER_BLOCKS, order)
+    call parse_variable('MeshOrder', ORDER_BLOCKS, order)
 
     select case(order)
     case(ORDER_BLOCKS)
@@ -819,7 +819,7 @@ contains
     !%Description
     !% Directory where <tt>Octopus</tt> can read or write the mesh partition.
     !%End
-    call parse_string('MeshPartitionDir', "restart/partition", partition_dir)
+    call parse_variable('MeshPartitionDir', "restart/partition", partition_dir)
 
     call messages_obsolete_variable('MeshPartitionFromScratch', 'MeshPartitionRead')
 
@@ -831,7 +831,7 @@ contains
     !% If set to yes (the default), <tt>Octopus</tt> will try to use the mesh
     !% partition from a previous run, if available, in directory <tt>MeshPartitionDir</tt>.
     !%End
-    call parse_logical('MeshPartitionRead', .true., read_partition)
+    call parse_variable('MeshPartitionRead', .true., read_partition)
 
     ierr = -1
     if (read_partition) then
@@ -864,7 +864,7 @@ contains
       !% Gives the possibility to change the partition nodes.
       !% Afterward, it crashes.
       !%End
-      call parse_integer('MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
+      call parse_variable('MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
       
       if (vsize /= mesh%mpi_grp%size) then
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
@@ -895,7 +895,7 @@ contains
       !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
       !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
       !%End
-      call parse_logical('MeshPartitionWrite', .true., write_partition)
+      call parse_variable('MeshPartitionWrite', .true., write_partition)
 
       if (mpi_grp_is_root(mesh%mpi_grp)) then
         call io_mkdir(trim(partition_dir), parents=.true.)
@@ -938,7 +938,7 @@ contains
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End
-    call parse_logical('MeshUseTopology', .false., use_topo)
+    call parse_variable('MeshUseTopology', .false., use_topo)
 
     if(use_topo) then
       ! this should be integrated in vec_init
@@ -1042,7 +1042,7 @@ contains
     !% nor print the partition information, such as local points,
     !% no. of neighbours, ghost points and boundary points.
     !%End
-    call parse_logical('PartitionPrint', .true., partition_print)
+    call parse_variable('PartitionPrint', .true., partition_print)
     
     if (partition_print) then
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)

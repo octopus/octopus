@@ -159,17 +159,17 @@ contains
     scdm%st%d%nik = st%d%nik
     scdm%st%d     = st%d
     scdm%cmplxscl = st%cmplxscl
-    call parse_logical('SCDM_reorthonormalize', .false., scdm%re_ortho_normalize)
+    call parse_variable('SCDM_reorthonormalize', .false., scdm%re_ortho_normalize)
     if (scdm%re_ortho_normalize) scdm%st%d%orth_method = ORTH_CHOLESKY_SERIAL
 
-    call parse_logical('SCDM_verbose', .false., scdm%verbose)
+    call parse_variable('SCDM_verbose', .false., scdm%verbose)
 
     ! allocate centers
     SAFE_ALLOCATE(scdm%center(1:3,1:scdm%st%nst))
 
     ! make a cube around the center points
     ! with side length NOTE: this should be dynamic
-    call parse_float('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
+    call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
     if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
     ! box_size is half the size of the  box
     scdm%box_size = 0

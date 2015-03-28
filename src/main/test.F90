@@ -80,7 +80,7 @@ program oct_test
   !%Option interpolation 4
   !% Test the interpolation routines.
   !%End
-  call parse_integer('TestMode', HARTREE_TEST, test_mode)
+  call parse_variable('TestMode', HARTREE_TEST, test_mode)
 
   call messages_obsolete_variable('TestDerivatives', 'TestType')
   call messages_obsolete_variable('TestOrthogonalization', 'TestType')
@@ -102,7 +102,7 @@ program oct_test
   !%Option all 3
   !% Tests for double-precision real and complex functions.
   !%End
-  call parse_integer('TestType', TEST_ALL, test_type)
+  call parse_variable('TestType', TEST_ALL, test_type)
 
   call io_init()
   call profiling_init()

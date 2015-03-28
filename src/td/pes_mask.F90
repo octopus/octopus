@@ -248,7 +248,7 @@ contains
     !%Option psf_mode 4
     !% Phase-space filter. Implementation not complete.
     !%End
-    call parse_integer('PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
+    call parse_variable('PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
     if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
@@ -278,7 +278,7 @@ contains
     !%Option free 1
     !% Free plane-wave propagation.   
     !%End
-    call parse_integer('PESMaskPropagator', VOLKOV, mask%sw_evolve)
+    call parse_variable('PESMaskPropagator', VOLKOV, mask%sw_evolve)
     if(.not.varinfo_valid_option('PESMaskPropagator', mask%sw_evolve)) call messages_input_error('PESMaskPropagator')
     call messages_print_var_option(stdout, "PESMaskPropagator", mask%sw_evolve)
     
@@ -291,7 +291,7 @@ contains
     !% getting rid of an unwanted ionization signal coming from the pump.
     !% NOTE: This will enforce the mask boundary conditions for all times. 
     !%End
-    call parse_float('PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
+    call parse_variable('PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
 
     !%Variable PESMaskPlaneWaveProjection
     !%Type integer
@@ -323,7 +323,7 @@ contains
     !%Option pnfft_map 7
     !% Use PNFFT library. 
     !%End
-    call parse_integer('PESMaskPlaneWaveProjection', PW_MAP_BARE_FFT, mask%pw_map_how)
+    call parse_variable('PESMaskPlaneWaveProjection', PW_MAP_BARE_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
       call messages_input_error('PESMaskPlaneWaveProjection')
@@ -376,7 +376,7 @@ contains
     !% This helps to avoid wavefunction wrapping at the boundaries.
     !%End
 
-    call parse_float('PESMaskEnlargeFactor', M_ONE, mask%enlarge)
+    call parse_variable('PESMaskEnlargeFactor', M_ONE, mask%enlarge)
     
     if ( mask%enlarge /= M_ONE ) then
       call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge)
@@ -404,7 +404,7 @@ contains
     !% Note: needs <tt> PESMaskPlaneWaveProjection = nfft_map or pnfft_map </tt>.
     !%End
     
-    call parse_float('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p)
+    call parse_variable('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p)
     
     if ( mask%enlarge_2p /= M_ONE ) then
       call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p)
@@ -581,7 +581,7 @@ contains
     !%Option m_erf 3 
     !%Error function. Not Implemented.
     !%End
-    call parse_integer('PESMaskShape', defaultMask, mask%shape)
+    call parse_variable('PESMaskShape', defaultMask, mask%shape)
     if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
@@ -691,7 +691,7 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_float('PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
+    call parse_variable('PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
@@ -723,7 +723,7 @@ contains
     !% and total simulation time. 
     !% Note: Carefully choose <math>R1</math> in order to avoid contributions from returning electrons. 
     !%End
-    call parse_logical('PESMaskIncludePsiA', .false., mask%add_psia)
+    call parse_variable('PESMaskIncludePsiA', .false., mask%add_psia)
     if(mask%add_psia) then
       message(1)= "Input: Include contribution from Psi_A."
       call messages_info(1)
@@ -738,7 +738,7 @@ contains
     !% The maximum energy for the PES spectrum.
     !%End
     MaxE = maxval(mask%Lk)**2/2
-    call parse_float('PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
+    call parse_variable('PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax, unit = units_out%energy)
 
     !%Variable PESMaskSpectEnergyStep 
@@ -748,7 +748,7 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-    call parse_float('PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
+    call parse_variable('PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     
     !%Variable PESMaskOutputInterpolate 
@@ -760,7 +760,7 @@ contains
     !% NOTE: In 3D this is practically prohibitive in the present implementation.
     !% We suggest to use the postprocessing tool <tt>oct-photoelectron_spectrum</tt> in this case. 
     !%End
-    call parse_logical('PESMaskOutputInterpolate', .false., mask%interpolate_out)
+    call parse_variable('PESMaskOutputInterpolate', .false., mask%interpolate_out)
     if(mask%interpolate_out) then
       message(1)= "Input: output interpolation ENABLED."
       call messages_info(1)

@@ -254,7 +254,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call parse_float('ParticleMass', M_ONE, hm%mass)
+    call parse_variable('ParticleMass', M_ONE, hm%mass)
 
     !%Variable RashbaSpinOrbitCoupling
     !%Type float
@@ -266,7 +266,7 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_float('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
+    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
     if(parse_is_defined('RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
@@ -354,7 +354,7 @@ contains
       gauge_field_is_applied(hm%ep%gfield) .or. &
       parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
 
-    call parse_logical('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
+    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -402,7 +402,7 @@ contains
     !%Option mask 2
     !% A mask is applied to the wavefunctions at the boundaries.
     !%End
-    call parse_integer('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
+    call parse_variable('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call messages_input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
 
@@ -468,14 +468,14 @@ contains
     !% wave-functions when operating with them. This involves some
     !% additional copying but makes operations more efficient.
     !%End
-    call parse_logical('StatesPack', .true., hm%apply_packed)
+    call parse_variable('StatesPack', .true., hm%apply_packed)
 
     call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
     ! use exact exchange
-    call parse_logical('scdm_EXX', .false., hm%scdm_EXX)
+    call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
@@ -532,7 +532,7 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call parse_float('ABWidth', CNST(0.4), hm%ab_width, units_inp%length)
+      call parse_variable('ABWidth', CNST(0.4), hm%ab_width, units_inp%length)
 
       if(hm%ab == 1) then
         !%Variable ABHeight
@@ -542,7 +542,7 @@ contains
         !%Description
         !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
-        call parse_float('ABHeight', -CNST(0.2), hm%ab_height, units_inp%energy)
+        call parse_variable('ABHeight', -CNST(0.2), hm%ab_height, units_inp%energy)
       else
         hm%ab_height = M_ONE
       end if

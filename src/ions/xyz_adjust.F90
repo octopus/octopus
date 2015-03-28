@@ -111,7 +111,7 @@ contains
       else
         default = NONE
       endif
-      call parse_integer('AxisType', default, axis_type)
+      call parse_variable('AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then

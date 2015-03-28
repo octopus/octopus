@@ -168,7 +168,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_logical('KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable('KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -187,7 +187,7 @@ contains
     !% time-reversal symmetry should not be used.
     !%
     !%End
-    call parse_logical('KPointsUseTimeReversal', .not. symmetries_have_break_dir(symm), this%use_time_reversal)
+    call parse_variable('KPointsUseTimeReversal', .not. symmetries_have_break_dir(symm), this%use_time_reversal)
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA

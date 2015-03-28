@@ -73,7 +73,7 @@ contains
     !% will perform per SCF step.  Must be >= 0.  0 means that only
     !% one iteration will be done.
     !%End     
-    call parse_integer('FeastMaxIter', 20, this%maxiter)
+    call parse_variable('FeastMaxIter', 20, this%maxiter)
 
     call linear_solver_init(this%linear_solver, gr, "FEAST", .false., LS_QMR_SYMMETRIC)
 

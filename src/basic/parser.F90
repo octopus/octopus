@@ -53,11 +53,7 @@ module parser_m
     parse_putsym,        &
     parse_end,           &
     parse_is_defined,    &
-    parse_integer,       &
-    parse_float,         &
-    parse_cmplx,         &
-    parse_string,        &
-    parse_logical,       &
+    parse_variable,      &
     parse_block,         &
     parse_block_end,     &
     parse_block_n,       &
@@ -149,10 +145,14 @@ module parser_m
 
   end interface
 
-  interface parse_float
+  interface parse_variable
+    module procedure parse_integer
+    module procedure parse_logical
+    module procedure parse_string
+    module procedure parse_cmplx
     module procedure oct_parse_double4_unit
     module procedure oct_parse_double8_unit
-  end interface parse_float
+  end interface parse_variable
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)

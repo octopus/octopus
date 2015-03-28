@@ -113,7 +113,7 @@ contains
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files it should be one space ' '.
     !%End
-    call parse_string('ConvertFilename', 'density', basename)
+    call parse_variable('ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -131,7 +131,7 @@ contains
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_logical('ConvertIterateFolder', .true., iterate_folder)
+    call parse_variable('ConvertIterateFolder', .true., iterate_folder)
 
     if (iterate_folder) then
       folder_default  = 'td.'
@@ -148,7 +148,7 @@ contains
     !% The folder name where the input files are. The default is
     !% <tt>td.</tt> if <tt>ConvertIterateFolder = true</tt>, otherwise <tt>restart</tt>.
     !%End
-    call parse_string('ConvertFolder', folder_default, folder)
+    call parse_variable('ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
     !%Variable ConvertStart
@@ -158,7 +158,7 @@ contains
     !% The starting number of the filename or folder.
     !% Default is 0 if <tt>ConvertIterateFolder = true</tt>, otherwise 1.
     !%End
-    call parse_integer('ConvertStart', c_start_default, c_start)
+    call parse_variable('ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -167,7 +167,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_integer('ConvertEnd', 1, c_end)
+    call parse_variable('ConvertEnd', 1, c_end)
 
     !%Variable ConvertStep
     !%Type integer
@@ -176,7 +176,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_integer('ConvertStep', 1, c_step)
+    call parse_variable('ConvertStep', 1, c_step)
 
     !%Variable ConvertSubtractFilename
     !%Type string
@@ -185,7 +185,7 @@ contains
     !%Description
     !% Input filename. The file which is going to subtracted to rest of the files.
     !%End
-    call parse_string('ConvertSubtractFilename', 'density', ref_name)
+    call parse_variable('ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
     ! Delete the extension if present
     length = len_trim(ref_name)
@@ -202,7 +202,7 @@ contains
     !%Description
     !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_logical('ConvertSubtract', .false., subtract_file)
+    call parse_variable('ConvertSubtract', .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -211,7 +211,7 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_string('ConvertSubtractFolder', '.', ref_folder)
+    call parse_variable('ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
     !%Variable ConvertTransform
@@ -221,7 +221,7 @@ contains
     !%Description
     !% Decides if the input files are going to be Fourier-transformed.
     !%End
-    call parse_logical('ConvertTransform', .false., fourier_trans)
+    call parse_variable('ConvertTransform', .false., fourier_trans)
 
     ! Compute Fourier transform 
     if (fourier_trans) then
@@ -403,7 +403,7 @@ contains
 
     ! set default time_step as dt from TD section
     fdefault = M_ZERO
-    call parse_float('TDTimeStep', fdefault, dt, unit = units_inp%time)
+    call parse_variable('TDTimeStep', fdefault, dt, unit = units_inp%time)
     if (dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -426,7 +426,7 @@ contains
     !%Description
     !% Minimum energy to output from Fourier transform.
     !%End
-    call parse_float('ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
+    call parse_variable('ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
 
     !%Variable ConvertReadSize
     !%Type integer
@@ -437,7 +437,7 @@ contains
     !% yet tested, so it should be one. For the serial run, a number
     !% of 100-1000 will speed-up the execution time by this factor.
     !%End
-    call parse_integer('ConvertReadSize', 1, chunk_size)
+    call parse_variable('ConvertReadSize', 1, chunk_size)
     
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
@@ -453,7 +453,7 @@ contains
     !% Maximum energy to output from Fourier transform.
     !%End
     fdefault = units_from_atomic(units_inp%energy, w_max)
-    call parse_float('ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
+    call parse_variable('ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
     if (max_energy > w_max) then
       write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
            units_from_atomic(units_inp%energy, max_energy)

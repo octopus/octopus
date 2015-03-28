@@ -245,7 +245,7 @@ contains
     !%Option oct_tg_spin 14
     !% (Experimental)
     !%End
-    call parse_integer('OCTTargetOperator', oct_tg_gstransformation, tg%type)
+    call parse_variable('OCTTargetOperator', oct_tg_gstransformation, tg%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
       call messages_input_error('OCTTargetOperator')
 

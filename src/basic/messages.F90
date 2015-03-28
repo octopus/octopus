@@ -131,7 +131,7 @@ contains
     !% See details on
     !% <a href=http://www.tddft.org/programs/octopus/experimental_features>wiki page</a>.
     !%End
-    call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
 
     !%Variable DebugLevel
     !%Type integer
@@ -156,7 +156,7 @@ contains
     !% it is usually only necessary for parallel runs. In the serial case all
     !% the information can be obtained from standard out.
     !%End
-    call parse_integer('DebugLevel', 0, conf%debug_level)
+    call parse_variable('DebugLevel', 0, conf%debug_level)
     if(conf%debug_level>0) then
       in_debug_mode = .true.
     else

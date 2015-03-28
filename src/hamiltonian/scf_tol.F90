@@ -84,7 +84,7 @@ contains
 
     str = 'LRMaximumIter'
     if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-    call parse_integer(str, def_maximumiter_, this%max_iter)
+    call parse_variable(str, def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
     !%Type float
@@ -98,7 +98,7 @@ contains
     !%End
     str = 'LRConvAbsDens'
     if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-    call parse_float(str, CNST(1e-5), this%conv_abs_dens)
+    call parse_variable(str, CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRConvRelDens
     !%Type float
@@ -112,7 +112,7 @@ contains
     !%End
     str = 'LRConvRelDens'
     if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-    call parse_float(str, M_ZERO, this%conv_rel_dens)
+    call parse_variable(str, M_ZERO, this%conv_rel_dens)
 
     ! value to use for adaptive tol scheme
     if(this%conv_abs_dens <= M_ZERO) then
@@ -155,7 +155,7 @@ contains
     else
       str = 'LRTolScheme'
       if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-      call parse_integer(str, SCF_TOL_ADAPTIVE, this%scheme)
+      call parse_variable(str, SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
       call messages_input_error('LRTolScheme')
@@ -170,7 +170,7 @@ contains
     !%End
     str = 'LRTolInitTol'
     if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-    call parse_float(str, CNST(1e-2), this%initial_tol)
+    call parse_variable(str, CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
     !%Variable LRTolFinalTol
@@ -182,7 +182,7 @@ contains
     !%End
     str = 'LRTolFinalTol'
     if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-    call parse_float(str, CNST(1e-6), this%final_tol)
+    call parse_variable(str, CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRTolAdaptiveFactor
@@ -196,7 +196,7 @@ contains
       !%End
       str = 'LRTolAdaptiveFactor'
       if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-      call parse_float(str, CNST(0.1), this%dynamic_tol_factor)
+      call parse_variable(str, CNST(0.1), this%dynamic_tol_factor)
     end if
 
     if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
@@ -209,7 +209,7 @@ contains
       !%End
       str = 'LRTolIterWindow'
       if(parse_is_defined(trim(prefix)//trim(str))) str = trim(prefix)//trim(str)
-      call parse_integer(str, 10, this%iter_window)
+      call parse_variable(str, 10, this%iter_window)
     end if
 
     POP_SUB(scf_tol_init)

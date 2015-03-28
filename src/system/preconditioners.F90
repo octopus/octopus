@@ -114,12 +114,12 @@ contains
     end if
 
     if (parse_is_defined(trim(prefix_)//'Preconditioner')) then 
-      call parse_integer(trim(prefix_)//'Preconditioner', default, this%which)
+      call parse_variable(trim(prefix_)//'Preconditioner', default, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call messages_input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
-      call parse_integer('Preconditioner', default, this%which)
+      call parse_variable('Preconditioner', default, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call messages_input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which)

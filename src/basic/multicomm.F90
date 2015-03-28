@@ -228,7 +228,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization.
       !%End
-      call parse_integer('ParallelizationNumberSlaves', 0, num_slaves)
+      call parse_variable('ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
@@ -291,7 +291,7 @@ contains
 
      if(base_grp%size > 1) then
 
-        call parse_integer('ParallelizationStrategy', default_mask, mc%par_strategy)
+        call parse_variable('ParallelizationStrategy', default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call messages_input_error('ParallelizationStrategy')

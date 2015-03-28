@@ -226,7 +226,7 @@ contains
 #else
     default = .false.
 #endif
-    call parse_logical('DisableOpenCL', default, disable)
+    call parse_variable('DisableOpenCL', default, disable)
     opencl%enabled = .not. disable
 
 #ifndef HAVE_OPENCL
@@ -259,7 +259,7 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_integer('OpenCLPlatform', 0, iplatform)
+    call parse_variable('OpenCLPlatform', 0, iplatform)
 
     !%Variable OpenCLDevice
     !%Type integer
@@ -279,7 +279,7 @@ contains
     !% Octopus will use the default device specified by the OpenCL
     !% implementation.
     !%End
-    call parse_integer('OpenCLDevice', OPENCL_GPU, idevice)
+    call parse_variable('OpenCLDevice', OPENCL_GPU, idevice)
 
     if(idevice < OPENCL_DEFAULT) then
       message(1) = 'Invalid OpenCLDevice.'
@@ -520,7 +520,7 @@ contains
     !% routines to benchmark the performance of the OpenCL device.
     !%End
 
-    call parse_logical('OpenCLBenchmark', .false., run_benchmark)
+    call parse_variable('OpenCLBenchmark', .false., run_benchmark)
 
     if(run_benchmark) then
 #ifdef HAVE_OPENCL

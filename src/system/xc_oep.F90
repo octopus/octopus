@@ -112,7 +112,7 @@ contains
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !%End
     call messages_obsolete_variable('OEP_Level', 'OEPLevel')
-    call parse_integer('OEPLevel', XC_OEP_KLI, oep%level)
+    call parse_variable('OEPLevel', XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEP_level')
 
     if(oep%level /= XC_OEP_NONE) then
@@ -131,7 +131,7 @@ contains
         !% equation in the full OEP procedure.
         !%End
         call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
-        call parse_float('OEPMixing', M_ONE, oep%mixing)
+        call parse_variable('OEPMixing', M_ONE, oep%mixing)
       end if
 
      ! this routine is only prepared for finite systems

@@ -120,7 +120,7 @@ contains
 #endif
       end if
 
-      call parse_integer('SubspaceDiagonalization', default, this%method)
+      call parse_variable('SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
     endif

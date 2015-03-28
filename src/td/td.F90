@@ -486,7 +486,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call parse_integer('TDFreezeOrbitals', 0, freeze_orbitals)
+      call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
 
       if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
 
@@ -525,7 +525,7 @@ contains
       !% The electrons are evolved as independent particles feeling the Hartree and 
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
-      call parse_logical('TDFreezeHXC', .false., freeze_hxc)
+      call parse_variable('TDFreezeHXC', .false., freeze_hxc)
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)

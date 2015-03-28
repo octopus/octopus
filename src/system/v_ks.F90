@@ -183,7 +183,7 @@ contains
     
     ! the user knows what he wants, give her that
     if(parse_is_defined('TheoryLevel')) then
-      call parse_integer('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
+      call parse_variable('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
 
       parsed_theory_level = .true.
@@ -201,7 +201,7 @@ contains
     end if
     
     ! The description of this variable can be found in file src/xc/functionals_list.F90
-    call parse_integer('XCFunctional', default, val)
+    call parse_variable('XCFunctional', default, val)
 
     ! the first 3 digits of the number indicate the X functional and
     ! the next 3 the C functional.
@@ -222,7 +222,7 @@ contains
     !% The same functional defined by <tt>XCFunctional</tt>.
     !%End
     
-    call parse_integer('XCKernel', default, val)
+    call parse_variable('XCKernel', default, val)
     
     if( -1 == val ) then
       ck_id = c_id
@@ -255,7 +255,7 @@ contains
       end if
 
       ! In principle we do not need to parse. However we do it for consistency
-      call parse_integer('TheoryLevel', default, ks%theory_level)
+      call parse_variable('TheoryLevel', default, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
      
     end if
@@ -304,7 +304,7 @@ contains
         !% Average-density SIC.
         !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
-        call parse_integer('SICCorrection', sic_none, ks%sic_type)
+        call parse_variable('SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
 
         ! Perdew-Zunger corrections

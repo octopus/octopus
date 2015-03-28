@@ -102,7 +102,7 @@ contains
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%End
 
-    call parse_integer('OutputMatrixElements', 0, this%what)
+    call parse_variable('OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
     end if
@@ -130,7 +130,7 @@ contains
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
-      call parse_integer('OutputMEMultipoles', 1, this%ks_multipoles)
+      call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     POP_SUB(output_me_init)

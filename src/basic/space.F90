@@ -79,7 +79,7 @@ contains
       !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
       !% variable. Note that not all input variables may be available in all cases.
       !%End
-      call parse_integer('Dimensions', default_ndim, this%dim)
+      call parse_variable('Dimensions', default_ndim, this%dim)
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
 

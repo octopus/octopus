@@ -343,14 +343,14 @@ contains
     return
   end subroutine json_parser_handle_special
 
-   subroutine json_parser_parse_string(parser, string, iostat)
+   subroutine json_parser_parse_variable(parser, string, iostat)
     type(json_parser_t), intent(inout) :: parser
     type(json_string_t), intent(out)   :: string
     integer,             intent(out)   :: iostat
     !
     character :: char
     !
-    PUSH_SUB(json_parser_parse_string)
+    PUSH_SUB(json_parser_parse_variable)
     call json_end(string)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(char=='"'))then
@@ -370,9 +370,9 @@ contains
       end do
       if((iostat/=0).or.(char/='"'))call json_end(string)
     end if
-    POP_SUB(json_parser_parse_string)
+    POP_SUB(json_parser_parse_variable)
     return
-  end subroutine json_parser_parse_string
+  end subroutine json_parser_parse_variable
 
   recursive subroutine json_parser_parse_value(parser, val, iostat)
     type(json_parser_t), intent(inout) :: parser
@@ -452,7 +452,7 @@ contains
         nullify(string)
       case('"')
         SAFE_ALLOCATE(string)
-        call json_parser_parse_string(parser, string, iostat)
+        call json_parser_parse_variable(parser, string, iostat)
         if((iostat==0).and.(json_isdef(string)))then
           call json_init(val, string)
         else
@@ -540,7 +540,7 @@ contains
     PUSH_SUB(json_parser_parse_member)
     call json_end(member)
     SAFE_ALLOCATE(string)
-    call json_parser_parse_string(parser, string, iostat)
+    call json_parser_parse_variable(parser, string, iostat)
     if((iostat==0).and.(json_isdef(string)))then
       call json_parser_get_nonblank_char(parser, char, iostat)
       if((iostat==0).and.(char==':'))then

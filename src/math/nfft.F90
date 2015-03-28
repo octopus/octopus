@@ -111,7 +111,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_logical('NFFTGuruInterface',  nfft%guru, nfft%guru)
+    call parse_variable('NFFTGuruInterface',  nfft%guru, nfft%guru)
 
 
     !%Variable NFFTCutoff
@@ -122,7 +122,7 @@ contains
     !% Cut-off parameter of the window function.
     !% See NFFT manual for details.
     !%End
-    call parse_integer('NFFTCutoff', nfft%mm, nfft%mm)
+    call parse_variable('NFFTCutoff', nfft%mm, nfft%mm)
 
 
     !%Variable NFFTOversampling
@@ -132,7 +132,7 @@ contains
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_float('NFFTOversampling', nfft%sigma, nfft%sigma)
+    call parse_variable('NFFTOversampling', nfft%sigma, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -150,7 +150,7 @@ contains
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
-    call parse_integer('NFFTPrecompute', nfft%precompute, nfft%precompute)
+    call parse_variable('NFFTPrecompute', nfft%precompute, nfft%precompute)
      if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 

@@ -131,7 +131,7 @@ contains
     !%Description
     !% Standard deviation of the phase-space filter.
     !%End
-    call parse_float('TDPSFSigma', sqrt(M_TWO), psf%sigma)
+    call parse_variable('TDPSFSigma', sqrt(M_TWO), psf%sigma)
     call messages_print_var_value(stdout, "TDPSFSigma",psf%sigma)
 
 
@@ -142,7 +142,7 @@ contains
     !%Description
     !% Filter error threshold.
     !%End
-    call parse_float('TDPSFDelta', 1.0d-4, psf%delta)
+    call parse_variable('TDPSFDelta', 1.0d-4, psf%delta)
     call messages_print_var_value(stdout, "TDPSFDelta",psf%delta)
 
     !%Variable TDPSFKmin
@@ -152,7 +152,7 @@ contains
     !%Description
     !% <i>k</i>-space filter width.
     !%End
-    call parse_float('TDPSFKmin', M_PI/width, psf%kmin)
+    call parse_variable('TDPSFKmin', M_PI/width, psf%kmin)
     call messages_print_var_value(stdout, "TDPSFKmin",psf%kmin)
 
     kmin = psf%kmin

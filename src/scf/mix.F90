@@ -125,7 +125,7 @@ contains
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !%End
-    call parse_integer(trim(prefix)//'TypeOfMixing', def, smix%scheme)
+    call parse_variable(trim(prefix)//'TypeOfMixing', def, smix%scheme)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%scheme)) call messages_input_error('TypeOfMixing')
     call messages_print_var_option(stdout, "TypeOfMixing", smix%scheme)
 
@@ -138,7 +138,7 @@ contains
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
     if (smix%scheme == MIX_LINEAR .or. smix%scheme == MIX_BROYDEN) then
-      call parse_float(trim(prefix)//'Mixing', CNST(0.3), smix%alpha)
+      call parse_variable(trim(prefix)//'Mixing', CNST(0.3), smix%alpha)
       if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
     end if
 
@@ -152,7 +152,7 @@ contains
     !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%scheme == MIX_GRPULAY .or. smix%scheme == MIX_BROYDEN) then
-      call parse_integer(trim(prefix)//'MixNumberSteps', 3, smix%ns)
+      call parse_variable(trim(prefix)//'MixNumberSteps', 3, smix%ns)
       if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
     else
       smix%ns = 0

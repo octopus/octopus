@@ -134,7 +134,7 @@ contains
     !%Description
     !% The folder name where the density used as input file is.
     !%End
-    call parse_string('LDFolder', folder_default, folder)
+    call parse_variable('LDFolder', folder_default, folder)
 
     ! Check if the folder is finished by an /
     if (index(folder, '/', .true.) /= len_trim(folder)) then
@@ -142,7 +142,7 @@ contains
     end if
 
       default_dt = M_ZERO
-      call parse_float('TDTimeStep', default_dt, dt, unit = units_inp%time)
+      call parse_variable('TDTimeStep', default_dt, dt, unit = units_inp%time)
       if (dt <= M_ZERO) then
         write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
         write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -157,7 +157,7 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_string('LDFilename', 'density', basename)
+    call parse_variable('LDFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -175,7 +175,7 @@ contains
     !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
-    call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
+    call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -184,7 +184,7 @@ contains
     !%Description
     !% Controls if the calculation of the local domains is desired at each iteration.
     !%End
-    call parse_logical('LDUpdate', .false., ldupdate)
+    call parse_variable('LDUpdate', .false., ldupdate)
 
     !%Variable LDOverWrite                                                                                             
     !%Type logical                                                                                                     
@@ -193,7 +193,7 @@ contains
     !%Description                                                                                                      
     !% Controls whether to over-write existing files.                                                                          
     !%End                                                                                                              
-    call parse_logical('LDOverWrite', .true., ldoverwrite)                       
+    call parse_variable('LDOverWrite', .true., ldoverwrite)                       
 
     !%Variable LDRadiiFile
     !%Type string
@@ -203,7 +203,7 @@ contains
     !% Full path for the radii file. If set, def_rsize will be reset to the new values. 
     !% This file should have the same format as share/PP/default.
     !%End
-    call parse_string('LDRadiiFile', 'default', radiifile)
+    call parse_variable('LDRadiiFile', 'default', radiifile)
 
     if(trim(radiifile) /= "default") then
       n_spec_def = max(0, loct_number_of_lines(radiifile))
@@ -242,7 +242,7 @@ contains
     !%Description
     !% Restart information will be read from <tt>LDRestartFolder</tt>.
     !%End
-    call parse_logical('LDRestart', .false., ldrestart)
+    call parse_variable('LDRestart', .false., ldrestart)
 
     if (ldrestart) then
       write(folder_default,'(a)')'ld.general'
@@ -254,7 +254,7 @@ contains
       !%Description
       !% The folder name where the density used as input file is.
       !%End
-      call parse_string('LDRestartFolder', folder_default, ldrestart_folder)
+      call parse_variable('LDRestartFolder', folder_default, ldrestart_folder)
 
       ! Check if the folder is finished by an /
       if (index(ldrestart_folder, '/', .true.) /= len_trim(ldrestart_folder)) then
@@ -264,10 +264,10 @@ contains
 
 
     ! Documentation in convert.F90. Variable names changed to avoid conflict with convert utility.
-    call parse_logical('LDIterateFolder', .false., iterate)
-    call parse_integer('LDStart', 0, l_start)
-    call parse_integer('LDEnd', 0, l_end)
-    call parse_integer('LDStep', 1, l_step)
+    call parse_variable('LDIterateFolder', .false., iterate)
+    call parse_variable('LDStart', 0, l_start)
+    call parse_variable('LDEnd', 0, l_end)
+    call parse_variable('LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
@@ -680,12 +680,12 @@ contains
     if (any(lcl%dshape(:) == BADER)) then
       call add_dens_to_ion_x(ff2,sys%geo)
       call basins_init(basins, sys%gr%mesh)
-      call parse_float('LDBaderThreshold', CNST(0.01), BaderThreshold)
+      call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call parse_logical('LDExtraWrite', .false., extra_write)
+      call parse_variable('LDExtraWrite', .false., extra_write)
       call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
       if (extra_write) then
-        call parse_integer('LDOutputHow', 0, how)
+        call parse_variable('LDOutputHow', 0, how)
         if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
           call messages_input_error('LDOutputHow')
         end if
@@ -786,10 +786,10 @@ contains
     !% Writes additional information to files, when computing local multipoles. For 
     !% example, it writes coordinates of each local domain.
     !%End
-    call parse_logical('LDExtraWrite', .false., extra_write)
+    call parse_variable('LDExtraWrite', .false., extra_write)
 
     if (extra_write) then
-      call parse_integer('LDOutputHow', 0, how)
+      call parse_variable('LDOutputHow', 0, how)
       if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
         call messages_input_error('LDOutputHow')
       end if

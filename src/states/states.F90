@@ -328,7 +328,7 @@ contains
     !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
-    call parse_integer('SpinComponents', UNPOLARIZED, st%d%ispin)
+    call parse_variable('SpinComponents', UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
@@ -344,7 +344,7 @@ contains
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
-    call parse_float('ExcessCharge', M_ZERO, excess_charge)
+    call parse_variable('ExcessCharge', M_ZERO, excess_charge)
 
 
     !%Variable TotalStates
@@ -361,7 +361,7 @@ contains
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
     !%End
-    call parse_integer('TotalStates', 0, ntot)
+    call parse_variable('TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
       call messages_fatal(1)
@@ -383,7 +383,7 @@ contains
     !% an electronic temperature with <tt>Smearing</tt>, or in order to calculate
     !% excited states (including with <tt>CalculationMode = unocc</tt>).
     !%End
-    call parse_integer('ExtraStates', 0, nempty)
+    call parse_variable('ExtraStates', 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
@@ -468,7 +468,7 @@ contains
 
     ASSERT(default > 0)
 
-    call parse_integer('StatesBlockSize', default, st%d%block_size)
+    call parse_variable('StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
       call messages_fatal()
@@ -512,7 +512,7 @@ contains
     !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
-    call parse_logical('OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
+    call parse_variable('OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -554,7 +554,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_logical('SymmetrizeDensity', .false., st%symmetrize_density)
+    call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
@@ -651,7 +651,7 @@ contains
     !% if the occupations from the previous calculation had been set via the <tt>Occupations</tt> block,
     !% <i>i.e.</i> fixed. Otherwise, occupations will be determined by smearing.
     !%End
-    call parse_logical('RestartFixedOccupations', .false., st%restart_fixed_occ)
+    call parse_variable('RestartFixedOccupations', .false., st%restart_fixed_occ)
     ! we will turn on st%fixed_occ if restart_read is ever called
 
     !%Variable Occupations
@@ -821,7 +821,7 @@ contains
     !% according to the order of the expectation values of the restart wavefunctions.
     !%End
     if(st%fixed_occ) then
-      call parse_logical('RestartReorderOccs', .false., st%restart_reorder_occs)
+      call parse_variable('RestartReorderOccs', .false., st%restart_reorder_occs)
     else
       st%restart_reorder_occs = .false.
     endif
@@ -973,7 +973,7 @@ contains
     !% benchmarking and normal users need not use it.
     !%
     !%End
-    call parse_logical('ForceComplex', .false., force)
+    call parse_variable('ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
 
@@ -1315,7 +1315,7 @@ contains
     !% execution will stop with an error.
     !%End
 
-    call parse_logical('StatesPack', .false., st%d%pack_states)
+    call parse_variable('StatesPack', .false., st%d%pack_states)
     if(st%d%pack_states) call messages_experimental('StatesPack')
 
     !%Variable StatesOrthogonalization
@@ -1349,7 +1349,7 @@ contains
       default = ORTH_CHOLESKY_SERIAL
     end if
 
-    call parse_integer('StatesOrthogonalization', default, st%d%orth_method)
+    call parse_variable('StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
@@ -1371,7 +1371,7 @@ contains
     !% amount of memory in megabytes that would be subtracted from
     !% the total device memory.
     !%End
-    call parse_float('StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
+    call parse_variable('StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
@@ -1846,7 +1846,7 @@ contains
     !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
     !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
     !%End
-    call parse_logical('ScaLAPACKCompatible', &
+    call parse_variable('ScaLAPACKCompatible', &
       calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
     if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
@@ -2499,7 +2499,7 @@ contains
     !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
     !%End
 
-    call parse_float('CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
+    call parse_variable('CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -2528,7 +2528,7 @@ contains
     if(energy_window < M_ZERO) then
       write(nst_string,'(i6)') st%nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_string('CasidaKohnShamStates', default, wfn_list)
+      call parse_variable('CasidaKohnShamStates', default, wfn_list)
 
       write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
       call messages_info(1)

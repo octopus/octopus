@@ -109,7 +109,7 @@ contains
     !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
-    call parse_integer('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
+    call parse_variable('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_HAMILTONIAN) then
       call messages_experimental("CurrentDensity /= hamiltonian")

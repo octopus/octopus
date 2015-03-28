@@ -267,7 +267,7 @@ contains
     !% Singapore, 1995).
     !%End
 
-    call parse_integer('CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
+    call parse_variable('CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st)) then
       if((iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
@@ -290,7 +290,7 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call parse_string('CasidaTransitionDensities', "0", cas%trandens)
+    call parse_variable('CasidaTransitionDensities', "0", cas%trandens)
 
     if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%outp%how)
 
@@ -327,7 +327,7 @@ contains
       !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
       !% variable determines the order of the scheme.
       !%End
-      call parse_integer('CasidaQuadratureOrder', 5, cas%avg_order)
+      call parse_variable('CasidaQuadratureOrder', 5, cas%avg_order)
     else
       cas%qvector(:) = M_ZERO
       cas%qcalc = .false.
@@ -343,7 +343,7 @@ contains
     !% effect for a spin-polarized calculation.
     !%End
     if(sys%st%d%ispin == UNPOLARIZED) then
-      call parse_logical('CasidaCalcTriplet', .false., cas%triplet)
+      call parse_variable('CasidaCalcTriplet', .false., cas%triplet)
     else
       cas%triplet = .false.
     endif
@@ -363,7 +363,7 @@ contains
     !% lower diagonal. Numerical issues may cause small differences however. Use this variable to
     !% calculate the Hermitian conjugate of the usual matrix, for testing.
     !%End
-    call parse_logical('CasidaHermitianConjugate', .false., cas%herm_conj)
+    call parse_variable('CasidaHermitianConjugate', .false., cas%herm_conj)
 
     !%Variable CasidaCalcForces
     !%Type logical
@@ -372,7 +372,7 @@ contains
     !%Description
     !% (Experimental) Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
     !%End
-    call parse_logical('CasidaCalcForces', .false., cas%calc_forces)
+    call parse_variable('CasidaCalcForces', .false., cas%calc_forces)
     if(cas%calc_forces) then
       call messages_experimental("Excited-state forces calculation")
 
@@ -383,7 +383,7 @@ contains
       !%Description
       !% If false, the derivative of the kernel will not be included in the excited-state force calculation.
       !%End
-      call parse_logical('CasidaCalcForcesKernel', .true., cas%calc_forces_kernel)
+      call parse_variable('CasidaCalcForcesKernel', .true., cas%calc_forces_kernel)
 
       !%Variable CasidaCalcForcesSCF
       !%Type logical
@@ -393,7 +393,7 @@ contains
       !% If true, the ground-state forces will be included in the excited-state forces, so they are total forces.
       !% If false, the excited-state forces that are produced are only the gradients of the excitation energy.
       !%End
-      call parse_logical('CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
+      call parse_variable('CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
     endif
 
     ! Initialize structure

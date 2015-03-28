@@ -78,7 +78,7 @@ contains
     !% has not been achieved. -1 means unlimited. 0 means just do LCAO or read from
     !% restart, and stop.
     !%End
-    call parse_integer('MaximumIter', 50, max_iter)
+    call parse_variable('MaximumIter', 50, max_iter)
     call messages_obsolete_variable('UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
@@ -91,7 +91,7 @@ contains
     !% This is useful for testing, or if the occupied states fail to converge.
     !% It will be enabled automatically if only occupied states are being calculated.
     !%End
-    call parse_logical('UnoccShowOccStates', .false., showoccstates)
+    call parse_variable('UnoccShowOccStates', .false., showoccstates)
 
     SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
     do ik = 1, sys%st%d%nik

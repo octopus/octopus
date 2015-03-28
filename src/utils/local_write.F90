@@ -122,7 +122,7 @@ contains
 
     default = 2**(LOCAL_OUT_MULTIPOLES - 1) 
 
-    call parse_integer('LDOutput', default, flags)
+    call parse_variable('LDOutput', default, flags)
 
     if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error('LDOutput')
 
@@ -139,7 +139,7 @@ contains
     !% Describes the format of the output files (see <tt>LDOutput</tt>).
     !% It can take the same values as <tt>OutputHow</tt> flag.
     !%End
-    call parse_integer('LDOutputHow', 0, writ%how)
+    call parse_variable('LDOutputHow', 0, writ%how)
     if(.not.varinfo_valid_option('OutputHow', writ%how, is_flag=.true.)) then
       call messages_input_error('LDOutputHow')
     end if
@@ -153,7 +153,7 @@ contains
     !% during a time-dependent simulation. Must be non-negative.
     !%End
 
-    call parse_integer('LDMultipoleLmax', 1, writ%lmax)
+    call parse_variable('LDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LDMultipoleLmax."
       message(2) = '(Must be LDMultipoleLmax >= 0 )'

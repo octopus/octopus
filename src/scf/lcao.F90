@@ -220,7 +220,7 @@ contains
     !% Using the LCAO density as a new guess density may improve the convergence, but can
     !% also slow it down or yield wrong results (especially for spin-polarized calculations).
     !%End
-    call parse_integer('LCAOStart', mode_default, this%mode)
+    call parse_variable('LCAOStart', mode_default, this%mode)
     if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error('LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
@@ -239,7 +239,7 @@ contains
     !% alternative (and experimental) implementation. It is faster for
     !% large systems and parallel in states. It is not working for spinors, however.
     !%End
-    call parse_logical('LCAOAlternative', .false., this%alternative)
+    call parse_variable('LCAOAlternative', .false., this%alternative)
     ! DAS: For spinors, you will always get magnetization in (1, 0, 0) direction, and the
     ! eigenvalues will be incorrect. This is due to confusion between spins and spinors in the code.
     if(st%d%ispin == SPINORS .and. this%alternative) then
@@ -264,7 +264,7 @@ contains
     !%End
 
     if(states_are_complex(st)) then
-      call parse_logical('LCAOComplexYlms', .false., this%complex_ylms)
+      call parse_variable('LCAOComplexYlms', .false., this%complex_ylms)
     else
       this%complex_ylms = .false.
     endif
@@ -279,7 +279,7 @@ contains
     !!% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
     !!%End
 #ifdef LCAO_DEBUG
-    call parse_logical('LCAODebug', .false., this%debug)
+    call parse_variable('LCAODebug', .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
 
@@ -299,7 +299,7 @@ contains
       !% The coordinates of the atomic orbitals used by the LCAO
       !% procedure will be rescaled by the value of this variable. 1.0 means no rescaling.
       !%End
-      call parse_float('LCAOScaleFactor', CNST(1.0), this%orbital_scale_factor)
+      call parse_variable('LCAOScaleFactor', CNST(1.0), this%orbital_scale_factor)
       call messages_print_var_value(stdout, 'LCAOScaleFactor', this%orbital_scale_factor)
 
       !%Variable LCAOMaximumOrbitalRadius
@@ -310,7 +310,7 @@ contains
       !% The LCAO procedure will ignore orbitals that have an
       !% extent greater that this value.
       !%End
-      call parse_float('LCAOMaximumOrbitalRadius', CNST(20.0), max_orb_radius, unit = units_inp%length)
+      call parse_variable('LCAOMaximumOrbitalRadius', CNST(20.0), max_orb_radius, unit = units_inp%length)
       call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', max_orb_radius, units_out%length)
 
       ! count the number of orbitals available
@@ -446,7 +446,7 @@ contains
       !% reduced. If you want to use the largest possible number, set
       !% <tt>LCAODimension</tt> to a negative number.
       !%End
-      call parse_integer('LCAODimension', 0, n)
+      call parse_variable('LCAODimension', 0, n)
 
       if(n > 0 .and. n <= st%nst .and. st%nst <= this%maxorbs) then
         ! n was made too small
@@ -503,7 +503,7 @@ contains
       !% that is required to store the orbitals.
       !%
       !%End
-      call parse_logical('LCAOKeepOrbitals', .true., this%keep_orb)
+      call parse_variable('LCAOKeepOrbitals', .true., this%keep_orb)
 
       !%Variable LCAOExtraOrbitals
       !%Type logical
@@ -520,7 +520,7 @@ contains
       !% some lower-lying states which correspond to higher angular momenta instead
       !% of higher principal quantum number.
       !%End
-      call parse_logical('LCAOExtraOrbitals', .false., this%derivative)
+      call parse_variable('LCAOExtraOrbitals', .false., this%derivative)
 
       ! DAS: if you calculate the Na atom this way, spin-polarized, with just one unoccupied state,
       ! you will obtain states (up and down) which are actually the 10th states if you start with
@@ -544,7 +544,7 @@ contains
       !% Only applies if <tt>LCAOAlternative = true</tt>.
       !% The tolerance for the diagonalization of the LCAO Hamiltonian.
       !%End
-      call parse_float('LCAODiagTol', CNST(1e-10), this%diag_tol)
+      call parse_variable('LCAODiagTol', CNST(1e-10), this%diag_tol)
 
       if(this%derivative) then
         this%mult = 2
@@ -1095,7 +1095,7 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call parse_integer('GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
+      call parse_variable('GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if

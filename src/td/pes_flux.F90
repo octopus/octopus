@@ -115,7 +115,7 @@ contains
 !    !%Option m_cubic 1
 !    !% cubic surface.
 !    !%End
-!    call parse_integer('SurffShape', M_CUBIC, flux%srfcshape)
+!    call parse_variable('SurffShape', M_CUBIC, flux%srfcshape)
 !    if(.not.varinfo_valid_option('SurffShape', flux%srfcshape)) &
 !      call input_error('SurffShape')
 !    call messages_print_var_option(stdout, "SurffShape", flux%srfcshape)
@@ -135,11 +135,11 @@ contains
     call pes_flux_getsrfc(flux, mesh, border)
 
     ! k-mesh in 1D (2 points) & 2D (polar coordinates)
-    call parse_float('PESSurfaceKmax', M_ONE, kmax)
-    call parse_float('PESSurfaceDeltaK', CNST(0.002), flux%delk)
-    call parse_float('PESSurfacePhiMin', M_ZERO, flux%phimin)
-    call parse_float('PESSurfacePhiMax', M_TWO * M_PI, phimax)
-    call parse_float('PESSurfaceDelPhi', CNST((M_TWO * M_PI)/360), flux%delphi)
+    call parse_variable('PESSurfaceKmax', M_ONE, kmax)
+    call parse_variable('PESSurfaceDeltaK', CNST(0.002), flux%delk)
+    call parse_variable('PESSurfacePhiMin', M_ZERO, flux%phimin)
+    call parse_variable('PESSurfacePhiMax', M_TWO * M_PI, phimax)
+    call parse_variable('PESSurfaceDelPhi', CNST((M_TWO * M_PI)/360), flux%delphi)
 
     if(mesh%sb%dim == 1) then
       phimax = M_PI
@@ -171,7 +171,7 @@ contains
 !    write(*,*) 'testb02'
 
     ! other stuff
-    call parse_integer('PESSurfaceInterval', 1, flux%interval)
+    call parse_variable('PESSurfaceInterval', 1, flux%interval)
 
     SAFE_ALLOCATE(flux%vlkvphase(1:flux%nkpnts))
     flux%vlkvphase(:) = M_ZERO

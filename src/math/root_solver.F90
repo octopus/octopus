@@ -109,7 +109,7 @@ contains
     !%Option root_watterstrom 5
     !% Watterstrom method.
     !%End
-    call parse_integer('RootSolver', ROOT_NEWTON, rs%solver_type)
+    call parse_variable('RootSolver', ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
       call messages_input_error('RootSolver')
     end if
@@ -122,7 +122,7 @@ contains
     !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
     !%End
-    call parse_integer('RootSolverMaxIter', 100, rs%maxiter)
+    call parse_variable('RootSolverMaxIter', 100, rs%maxiter)
 
     !%Variable RootSolverRelTolerance
     !%Type float
@@ -131,7 +131,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_float('RootSolverRelTolerance', CNST(1e-8), rs%rel_tolerance)
+    call parse_variable('RootSolverRelTolerance', CNST(1e-8), rs%rel_tolerance)
 
     !%Variable RootSolverAbsTolerance
     !%Type float
@@ -140,7 +140,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_float('RootSolverAbsTolerance', CNST(1e-8), rs%abs_tolerance)
+    call parse_variable('RootSolverAbsTolerance', CNST(1e-8), rs%abs_tolerance)
 
     !%Variable RootSolverHavePolynomial
     !%Type logical
@@ -150,7 +150,7 @@ contains
     !%  If set to yes, the coefficients of the polynomial have to be passed to
     !%  the root solver.
     !%End
-    call parse_logical('RootSolverHavePolynomial', .false., rs%have_polynomial)
+    call parse_variable('RootSolverHavePolynomial', .false., rs%have_polynomial)
 
     !%Variable RootSolverWSRadius
     !%Type float
@@ -160,7 +160,7 @@ contains
     !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
     !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
     !%End
-    call parse_float('RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
+    call parse_variable('RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
 
     POP_SUB(root_solver_read)
   end subroutine root_solver_read
@@ -218,7 +218,7 @@ contains
     !%Option ode_pd89 4
     !% Prince-Dormand solver.
     !%End
-    call parse_integer('WatterstromODESolver', ODE_PD89, os%solver_type)
+    call parse_variable('WatterstromODESolver', ODE_PD89, os%solver_type)
 
     !%Variable WatterstromODESolverNSteps
     !%Type integer
@@ -228,7 +228,7 @@ contains
     !% Number of steps which the chosen ODE solver should perform
     !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
     !%End
-    call parse_integer('WatterstromODESolverNSteps', 400, os%nsteps)
+    call parse_variable('WatterstromODESolverNSteps', 400, os%nsteps)
 
     ! set up ODE solver
     os%nsize       = order

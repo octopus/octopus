@@ -76,7 +76,7 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call parse_integer('PropagationSpectrumTimeStepFactor', 10, skip)
+    call parse_variable('PropagationSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('PropagationSpectrumTimeStepFactor')
 
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
@@ -184,7 +184,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_float('VibrationalSpectrumTime', ntime*deltat, vaftime)
+    call parse_variable('VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 

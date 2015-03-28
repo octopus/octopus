@@ -135,7 +135,7 @@ contains
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%
     !%End
-    call parse_integer('NDimModelmb', gr%sb%dim, this%ndim)
+    call parse_variable('NDimModelmb', gr%sb%dim, this%ndim)
     call messages_print_var_option(stdout, "NDimModelmb", this%ndim)
     
     !%Variable NParticleModelmb
@@ -146,7 +146,7 @@ contains
     !% Number of particles in modelmb space. 
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%End
-    call parse_integer('NParticleModelmb', 1, this%nparticle)
+    call parse_variable('NParticleModelmb', 1, this%nparticle)
     call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
     
     !%Variable NTypeParticleModelmb
@@ -156,7 +156,7 @@ contains
     !%Description
     !% Number of different types of particles in modelmb space.
     !%End
-    call parse_integer('NTypeParticleModelmb', 1, this%ntype_of_particle)
+    call parse_variable('NTypeParticleModelmb', 1, this%ntype_of_particle)
     call messages_print_var_option(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
     if (this%ntype_of_particle > this%nparticle) then
       write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be <= Number of modelmb particles ', &

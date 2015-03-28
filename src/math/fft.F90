@@ -173,7 +173,7 @@ contains
     !% be written if the number is not good, with a suggestion of a better one to use, so you
     !% can try a different spacing if you want to get a good number.
     !%End
-    call parse_logical('FFTOptimize', .true., fft_optimize)
+    call parse_variable('FFTOptimize', .true., fft_optimize)
     do ii = 1, FFT_MAX
       fft_refs(ii) = FFT_NULL
     end do
@@ -200,7 +200,7 @@ contains
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
-    call parse_integer('FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
+    call parse_variable('FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
      
 !    !%Variable FFTPlanTimeLimit
@@ -214,7 +214,7 @@ contains
 !    !% creation of the plan. If a negative value (default one) is
 !    !% assigned, there is no restriction.
 !    !%End   
-!    call parse_float('FFTPlanTimeLimit', -M_ONE, time_limit)    
+!    call parse_variable('FFTPlanTimeLimit', -M_ONE, time_limit)    
 !    call fftw_set_timelimit(time_limit)
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)

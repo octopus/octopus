@@ -116,7 +116,7 @@ contains
     !% If "no", entire input and output vector is saved in all the MPI processes.
     !% If k-points parallelization is used, "no" must be selected.
     !%End
-    call parse_logical('PoissonSolverISFParallelData', .true., data_is_parallel)
+    call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
       this%datacode = "D"
     else 

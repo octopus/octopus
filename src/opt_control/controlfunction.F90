@@ -250,7 +250,7 @@ contains
     !%Option control_rt 7
     !% EXPERIMENTAL
     !%End
-    call parse_integer('OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
+    call parse_variable('OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
         call messages_input_error('OCTControlFunctionRepresentation')
       select case(cf_common%representation)
@@ -292,7 +292,7 @@ contains
     !% The Fourier series that can be used to represent the control functions must be truncated;
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call parse_float('OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
+    call parse_variable('OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
     if(cf_common%representation /= ctr_rt) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -317,7 +317,7 @@ contains
     !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call parse_float('OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
+    call parse_variable('OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -329,7 +329,7 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
-    call parse_logical('OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
+    call parse_variable('OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
 
 
     !%Variable OCTControlFunctionType
@@ -353,7 +353,7 @@ contains
     !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
     !%End
-    call parse_integer('OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
+    call parse_variable('OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
       call messages_input_error('OCTControlFunctionType')
     if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
@@ -465,7 +465,7 @@ contains
       end if
     else
       ! We have the same penalty for all the control functions.
-      call parse_float('OCTPenalty', M_ONE, octpenalty)
+      call parse_variable('OCTPenalty', M_ONE, octpenalty)
       cf_common%alpha(1:cf_common%no_controlfunctions) = octpenalty
     end if
 

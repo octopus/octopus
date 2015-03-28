@@ -157,9 +157,9 @@ contains
     endif
 
     if (parse_is_defined(trim(prefix)//"LinearSolver")) then 
-      call parse_integer(trim(prefix)//"LinearSolver", defsolver_, fsolver)
+      call parse_variable(trim(prefix)//"LinearSolver", defsolver_, fsolver)
     else
-      call parse_integer("LinearSolver", defsolver_, fsolver)
+      call parse_variable("LinearSolver", defsolver_, fsolver)
     end if
 
     ! set up pointer for dot product and norm in QMR solvers
@@ -179,9 +179,9 @@ contains
     !% convergence is not achieved.
     !%End
     if (parse_is_defined(trim(prefix)//"LinearSolverMaxIter")) then 
-      call parse_integer(trim(prefix)//"LinearSolverMaxIter", 1000, this%max_iter)
+      call parse_variable(trim(prefix)//"LinearSolverMaxIter", 1000, this%max_iter)
     else
-      call parse_integer("LinearSolverMaxIter", 1000, this%max_iter)
+      call parse_variable("LinearSolverMaxIter", 1000, this%max_iter)
     end if
 
     write(message(1),'(a)') 'Linear Solver'

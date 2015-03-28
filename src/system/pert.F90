@@ -145,7 +145,7 @@ contains
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call parse_integer('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
+      call parse_variable('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call messages_input_error('MagneticGaugeCorrection')
 
@@ -166,7 +166,7 @@ contains
       !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
-      call parse_logical('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
+      call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
     endif
 
     POP_SUB(pert_init)

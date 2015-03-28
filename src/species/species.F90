@@ -219,7 +219,7 @@ contains
     !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
     !%End
 
-    call parse_integer('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
+    call parse_variable('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
     if(pseudo_set == OPTION_SG15) call messages_experimental('PseudopotentialSet = sg15')
 

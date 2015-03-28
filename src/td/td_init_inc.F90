@@ -61,7 +61,7 @@ subroutine td_init(td, sys, hm)
   !% so you will always use the optimal electronic time step
   !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
   !%End
-  call parse_float('TDIonicTimeScale', CNST(1.0), td%mu)
+  call parse_variable('TDIonicTimeScale', CNST(1.0), td%mu)
 
   if (td%mu <= M_ZERO) then
     write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
@@ -93,7 +93,7 @@ subroutine td_init(td, sys, hm)
   default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
   default_dt = default_dt*td%mu
 
-  call parse_float('TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+  call parse_variable('TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
   if (td%dt <= M_ZERO) then
     write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
@@ -119,7 +119,7 @@ subroutine td_init(td, sys, hm)
   !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
   !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
   !%End
-  call parse_float('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+  call parse_variable('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
   call messages_obsolete_variable('TDMaximumIter', 'TDMaxSteps')
   
@@ -133,7 +133,7 @@ subroutine td_init(td, sys, hm)
   !%End
   default_time_steps = 1500
   if(propagation_time > CNST(0.0)) default_time_steps = nint(propagation_time/td%dt)
-  call parse_integer('TDMaxSteps', default_time_steps, td%max_iter)
+  call parse_variable('TDMaxSteps', default_time_steps, td%max_iter)
 
   if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
   
@@ -165,7 +165,7 @@ subroutine td_init(td, sys, hm)
   !% Born-Oppenheimer (Experimental).
   !%End
 
-  call parse_integer('TDDynamics', EHRENFEST, td%dynamics)
+  call parse_variable('TDDynamics', EHRENFEST, td%dynamics)
   if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
   if(td%dynamics .ne. EHRENFEST) then
@@ -188,7 +188,7 @@ subroutine td_init(td, sys, hm)
   !% The recalculation is not done every time step, but only every
   !% <tt>RestartWriteInterval</tt> time steps.
   !%End
-  call parse_logical('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+  call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
   call messages_obsolete_variable('TDScissor')
 
@@ -211,7 +211,7 @@ subroutine td_init(td, sys, hm)
   !% the energy will be calculated in each step.
   !%End 
 
-  call parse_integer('TDEnergyUpdateIter', 10, td%energy_update_iter)
+  call parse_variable('TDEnergyUpdateIter', 10, td%energy_update_iter)
 
   POP_SUB(td_init)
 end subroutine td_init
