@@ -494,7 +494,9 @@ contains
     call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
     call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
-
+    if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
+      call messages_not_implemented("PCM for TheoryLevel /= DFT")
+    
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 

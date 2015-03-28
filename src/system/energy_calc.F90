@@ -144,6 +144,8 @@ contains
       if (cmplxscl) hm%energy%Imtotal =  M_HALF*(hm%energy%Imeigenvalues + hm%energy%Imkinetic + & 
         hm%energy%Imextern - hm%energy%Imintnvxc - Imevxctau) + hm%energy%Imcorrelation
 
+      ! FIXME: pcm terms are only added to total energy in DFT case
+      
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau &
