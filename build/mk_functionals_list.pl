@@ -92,21 +92,21 @@ while($_ = <IN>){
 }
 print OUT <<EOF;
 !%Option oep_x                    901
-!% OEP: Exact exchange
+!% OEP: Exact exchange (not from libxc).
 !%Option ks_inversion             801 
-!% Inversion of KS potential
+!% Inversion of KS potential (not from libxc).
 !%Option lda_xc_cmplx             701
-!% Complex-scaled LDA exchange and correlation.
+!% Complex-scaled LDA exchange and correlation (not from libxc).
 !%Option pbe_xc_cmplx             702
-!% Complex-scaled PBE exchange and correlation.
+!% Complex-scaled PBE exchange and correlation (not from libxc).
 !%Option lb94_xc_cmplx            703
-!% Complex-scaled LB94 exchange and correlation.
+!% Complex-scaled LB94 exchange and correlation (not from libxc).
 !%Option rdmft_xc_m               601
-!% RDMFT Mueller functional
+!% RDMFT Mueller functional (not from libxc).
 !%Option xc_half_hartree          917
-!% Half-Hartree exchange for two electrons (supports complex scaling)
+!% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
 !%Option none                       0
-!% Exchange and correlation set to zero.
+!% Exchange and correlation set to zero (not from libxc).
 !%End
 EOF
 
