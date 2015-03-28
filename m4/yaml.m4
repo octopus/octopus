@@ -46,20 +46,4 @@ AC_DEFUN([ACX_YAML], [
   AM_CONDITIONAL(HAVE_LIB_YAML, test x"$ac_use_libyaml" = x"yes")
   AC_SUBST(LIB_YAML_CFLAGS)
   AC_SUBST(LIB_YAML_LIBS)
-  # Define the package version numbers and the bug reporting link of yaml.
-  m4_define([YAML_MAJOR], 0)
-  m4_define([YAML_MINOR], 1)
-  m4_define([YAML_PATCH], 4)
-  m4_define([YAML_BUGS], [http://pyyaml.org/newticket?component=libyaml])
-  
-  m4_define([YAML_RELEASE], 0)
-  m4_define([YAML_CURRENT], 2)
-  m4_define([YAML_REVISION], 2)
-  m4_define([YAML_AGE], 0)
-  
-  # Define macro variables for the package version numbers of yaml.
-  AC_DEFINE(YAML_VERSION_MAJOR, YAML_MAJOR, [Define the major version number.])
-  AC_DEFINE(YAML_VERSION_MINOR, YAML_MINOR, [Define the minor version number.])
-  AC_DEFINE(YAML_VERSION_PATCH, YAML_PATCH, [Define the patch version number.])
-  AC_DEFINE(YAML_VERSION_STRING, "YAML_MAJOR.YAML_MINOR.YAML_PATCH", [Define the version string.])
 ])dnl ACX_YAML
