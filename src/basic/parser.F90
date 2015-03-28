@@ -39,7 +39,8 @@ module parser_m
   use loct_m
   use mpi_m
   use unit_m
-
+  use varinfo_m
+  
   implicit none
 
   ! Define which routines can be seen from the outside.
@@ -361,6 +362,8 @@ contains
 
     integer :: idef, ires
 
+    call parse_check_varinfo(name)
+    
     idef = 0
     if(def) idef = 1
 
@@ -579,8 +582,25 @@ contains
     end do
 
   end subroutine parse_array
+
   ! ----------------------------------------------------------------------
 
+  subroutine parse_check_varinfo(varname)
+    character(len=*), intent(in) :: varname
+    
+    if(.not. varinfo_exists(varname)) then
+      write(stderr,*) ''
+      write(stderr,*) '  ////////////////////////////////////////////////////////////////////'
+      write(stderr,*) '  /'
+      write(stderr,*) '  /  Warning: Undocumented variable '//trim(varname)//'.'
+      write(stderr,*) '  /'
+      write(stderr,*) '  ////////////////////////////////////////////////////////////////////'
+      write(stderr,*) ''
+    end if
+
+  end subroutine parse_check_varinfo
+
+  
 end module parser_m
 
 !! Local Variables:

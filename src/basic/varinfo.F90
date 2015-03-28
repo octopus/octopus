@@ -33,7 +33,8 @@ module varinfo_m
     varinfo_search,       &
     varinfo_print_option, &
     varinfo_valid_option, &
-    varinfo_option
+    varinfo_option,       &
+    varinfo_exists
 
   interface
     subroutine varinfo_init(filename)
@@ -273,6 +274,21 @@ contains
 
   end function varinfo_option
 
+  ! ----------------------------------------------------------
+
+  logical function varinfo_exists(var) result(exists)
+    character(len=*),  intent(in) :: var
+
+    type(c_ptr) :: handle
+
+    call set_null(handle)
+
+    call varinfo_search_var(var, handle)
+
+    exists = c_associated(handle)
+
+  end function varinfo_exists
+  
 
 end module varinfo_m
 
