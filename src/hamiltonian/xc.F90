@@ -192,6 +192,9 @@ contains
     if (iand(xcs%family, XC_FAMILY_LCA) /= 0) &
       call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
+    call messages_obsolete_variable('MGGAimplementation')
+    call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
+
     if(iand(xcs%family, XC_FAMILY_MGGA) /= 0 .or. iand(xcs%family, XC_FAMILY_HYB_MGGA) /= 0) then
       !%Variable XCUseGaugeIndependentKED
       !%Type logical
