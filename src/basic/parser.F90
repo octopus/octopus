@@ -112,22 +112,26 @@ module parser_m
     end function oct_parse_isdef
   end interface parse_isdef
 
-  interface parse_integer
+  interface
     subroutine oct_parse_int(name, def, res)
       implicit none
       character(len=*), intent(in) :: name
       integer, intent(in)          :: def
       integer, intent(out)         :: res
     end subroutine oct_parse_int
-  end interface parse_integer
 
-  interface
     subroutine oct_parse_double(name, def, res)
       implicit none
       character(len=*), intent(in)  :: name
       real(8),          intent(in)  :: def
       real(8),          intent(out) :: res
     end subroutine oct_parse_double
+
+    subroutine oct_parse_string(name, def, res)
+      implicit none
+      character(len=*), intent(in) :: name, def
+      character(len=*), intent(out):: res
+    end subroutine oct_parse_string
   end interface
 
   interface parse_float
@@ -144,14 +148,6 @@ module parser_m
     end subroutine oct_parse_complex
     module procedure oct_parse_complex4
   end interface parse_cmplx
-
-  interface parse_string
-    subroutine oct_parse_string(name, def, res)
-      implicit none
-      character(len=*), intent(in) :: name, def
-      character(len=*), intent(out):: res
-    end subroutine oct_parse_string
-  end interface
 
   interface parse_block
     integer function oct_parse_block(name, blk)
@@ -355,13 +351,37 @@ contains
     isdef = parse_isdef(name) /= 0
     
   end function parse_is_defined
+
+  ! ---------------------------------------------------------  
+  
+  subroutine parse_integer(name, def, res)
+    character(len=*), intent(in)    :: name
+    integer,          intent(in)    :: def
+    integer,          intent(out)   :: res
+
+    call parse_check_varinfo(name)
+    call oct_parse_int(name, def, res)
+
+  end subroutine parse_integer
+
+  ! ---------------------------------------------------------
+  
+  subroutine parse_string(name, def, res)
+    character(len=*), intent(in)    :: name
+    character(len=*), intent(in)    :: def
+    character(len=*), intent(out)   :: res
     
+    call parse_check_varinfo(name)
+    call oct_parse_string(name, def, res)
+    
+  end subroutine parse_string
+  
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
   subroutine parse_logical(name, def, res)
-    character(len=*), intent(in) :: name
-    logical, intent(in) :: def
-    logical, intent(out) :: res
+    character(len=*), intent(in)    :: name
+    logical,          intent(in)    :: def
+    logical,          intent(out)   :: res
 
     integer :: idef, ires
 
