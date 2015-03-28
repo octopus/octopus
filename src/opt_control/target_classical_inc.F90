@@ -39,16 +39,17 @@
     !%Type block
     !%Section Calculation Modes::Optimal Control
     !%Description
+    !% If <tt>OCTTargetOperator = oct_tg_classical</tt>, the you must supply this block.
+    !% It should contain a string (e.g. "(q[1,1]-q[1,2])*p[2,1]") with a mathematical
+    !% expression in terms of two arrays, q and p, that represent the position and momenta
+    !% of the classical variables. The first index runs through the various classical particles,
+    !% and the second index runs through the spatial dimensions.
     !%
-    !%End
-
-    !%Variable OCTClassicalDerivatives
-    !%Type block
-    !%Section Calculation Modes::Optimal Control
-    !%Description
+    !% In principle, the block only contains one entry (string). However, if the expression is very
+    !% long, you can split it into various lines (one column each) that will be concatenated.
     !%
+    !% The QOCT algorithm will attempt to maximize this expression, at the end of the propagation.
     !%End
-
     if(parse_block('OCTClassicalTarget', blk)==0) then
       tg%classical_input_string = " "
       do jj=0, parse_block_n(blk)-1
@@ -62,6 +63,16 @@
       call messages_fatal(2)
     end if
 
+    !%Variable OCTMomentumDerivatives
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% This block should contain the derivatives of the expression given in  
+    !% <tt>OCTClassicalTarget</tt> with respect to the p array components.
+    !% Each line corresponds to a different classical particle, whereas the 
+    !% columns correspond to each spatial dimension: the (i,j) block component
+    !% corresponds with the derivative wrt p[i,j].
+    !%End
     if( parse_block('OCTMomentumDerivatives', blk)==0   ) then
       SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
@@ -73,10 +84,20 @@
     elseif(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
       message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg" or'
       message(2) = '"OCTScheme = oct_algorithm_bfgs", then you must define the blocks "OCTClassicalTarget",' 
-      message(3) = '"OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
+      message(3) = '"OCTPositionDerivatives" AND "OCTMomentumDerivatives"'
       call messages_fatal(3)
     end if
 
+    !%Variable OCTPositionDerivatives
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% This block should contain the derivatives of the expression given in  
+    !% <tt>OCTClassicalTarget</tt> with respect to the q array components.
+    !% Each line corresponds to a different classical particle, whereas the 
+    !% columns correspond to each spatial dimension: the (i,j) block component
+    !% corresponds with the derivative wrt q[i,j].
+    !%End
     if( parse_block('OCTPositionDerivatives', blk)==0 ) then
       SAFE_ALLOCATE(tg%pos_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
@@ -88,7 +109,7 @@
     elseif(oct%algorithm  ==  oct_algorithm_cg .or. oct%algorithm == oct_algorithm_bfgs) then
       message(1) = 'If "OCTTargetOperator = oct_tg_classical" and "OCTScheme = oct_algorithm_cg" or'
       message(2) = '"OCTScheme = oct_algorithm_bfgs", then you must define the blocks "OCTClassicalTarget",'
-      message(3) = '"OCTPositionDerivatives" AND "OCTVelocityDerivatives"'
+      message(3) = '"OCTPositionDerivatives" AND "OCTMomentumDerivatives"'
       call messages_fatal(3)
     end if
 
