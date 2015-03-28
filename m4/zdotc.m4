@@ -27,14 +27,14 @@ nn=100
 
 allocate(f1(nn), f2(nn))
 
-result1 = cmplx(0.0d0,0.0d0)
+result1 = cmplx(0.0d0,0.0d0,8)
 do ii=1, nn
-  f1(ii) = cmplx(exp(dble(ii)/dble(nn)), 0.0d0)
-  f2(ii) = cmplx(cos(dble(ii)/dble(nn)), 0.0d0)
+  f1(ii) = cmplx(exp(dble(ii)/dble(nn)), 0.0d0, 8)
+  f2(ii) = cmplx(cos(dble(ii)/dble(nn)), 0.0d0, 8)
   result1 = result1 + exp(dble(ii)/dble(nn))*cos(dble(ii)/dble(nn))
 end do
 
-result2 = cmplx(0.0d0,0.0d0)
+result2 = cmplx(0.0d0,0.0d0,8)
 result2 = zdotc(nn,f1,1,f2,1)
 
 open(1, file='conftest.out')
