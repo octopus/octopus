@@ -112,7 +112,7 @@ contains
     ! setup filenames and read points
     SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%points_xyz(1:pesrc%npoints, 1:MAX_DIM))
+    SAFE_ALLOCATE(pesrc%points_xyz(1:pesrc%npoints, 1:mesh%sb%dim))
     SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
 
     do ip = 1, pesrc%npoints
@@ -129,20 +129,20 @@ contains
       if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
         if(mesh%mpi_grp%rank == rankmin) then
-           pesrc%points_xyz(ip,:) = mesh%x(pesrc%points(ip),:)
+           pesrc%points_xyz(ip,1:mesh%sb%dim) = mesh%x(pesrc%points(ip),1:mesh%sb%dim)
 
           if(mesh%mpi_grp%rank /= 0) then
-            buf(:) = pesrc%points_xyz(ip,:)
+            buf(1:mesh%sb%dim) = pesrc%points_xyz(ip,1:mesh%sb%dim)
             call mpi_send(buf, MAX_DIM, MPI_DOUBLE_PRECISION, 0, 0, mesh%mpi_grp%comm, mpi_err)
           endif
         endif
         if(mesh%mpi_grp%rank == 0 .AND. rankmin /= 0) then
           call mpi_recv(buf, MAX_DIM, MPI_DOUBLE_PRECISION, rankmin, 0, mesh%mpi_grp%comm, status, mpi_err)
-          pesrc%points_xyz(ip,:) = buf(:)
+          pesrc%points_xyz(ip,1:mesh%sb%dim) = buf(1:mesh%sb%dim)
         endif
 #endif
       else
-        pesrc%points_xyz(ip,:) = mesh%x(pesrc%points(ip),:)
+        pesrc%points_xyz(ip,1:mesh%sb%dim) = mesh%x(pesrc%points(ip),1:mesh%sb%dim)
       end if
 
 
@@ -277,10 +277,11 @@ contains
 
     PUSH_SUB(PES_rc_init_write)
 
+    xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
         iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
-        xx(:) = pesrc%points_xyz(ip,:)
+        xx(1:mesh%sb%dim) = pesrc%points_xyz(ip,1:mesh%sb%dim)
         write(iunit,'(a1)') '#'
         write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
           '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
