@@ -110,12 +110,12 @@ contains
     !% maximum value of <math>l</math> can be set with the variable <tt>LDMultipoleLmax</tt>.
     !%Option density 2
     !% If set, <tt>octopus</tt> outputs the densities corresponding to the local domains to 
-    !%the folder <tt>ld.general/densities</tt>. 
-    !% The output format is set by the LDOuputHow input variable.
+    !% the folder <tt>ld.general/densities</tt>. 
+    !% The output format is set by the <tt>LDOutputHow</tt> input variable.
     !%Option local_v 4
-    !% If set, <tt>octopus</tt> outputs the different components potential
+    !% If set, <tt>octopus</tt> outputs the different components of the potential
     !% to the folder <tt>ld.general/potential</tt>. 
-    !% The output format is set by the LDOuputHow input variable.
+    !% The output format is set by the <tt>LDOutputHow</tt> input variable.
     !%Option energy 128
     !% If set, <tt>octopus</tt> outputs the different components of the energy of the local domains
     !% to the folder <tt>ld.general/energy</tt>.
@@ -134,11 +134,11 @@ contains
 
     !%Variable LDOutputHow
     !%Type flag
-    !%Default 0
+    !%Default none
     !%Section Utilities::oct-local_multipoles
     !%Description
-    !% Describes the format of the output files (see <tt>Output</tt>).
-    !% It can take the same values as OutputHow flag.
+    !% Describes the format of the output files (see <tt>LDOutput</tt>).
+    !% It can take the same values as <tt>OutputHow</tt> flag.
     !%End
     call parse_integer(datasets_check('LDOutputHow'), 0, writ%how)
     if(.not.varinfo_valid_option('OutputHow', writ%how, is_flag=.true.)) then

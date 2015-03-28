@@ -96,8 +96,8 @@ contains
       !%Section Utilities::oct-center-geom
       !%Description
       !% After the structure is centered, it is also aligned to a set of orthogonal axes.
-      !% This variable decides which set of axes to use. Only implemented for 3D; otherwise
-      !% 'none' is default and the only legal value.
+      !% This variable decides which set of axes to use. Only implemented for 3D, in which case
+      !% the default is <tt>inertia</tt>; otherwise <tt>none</tt> is default and the only legal value.
       !%Option none 0
       !% Do not rotate. Will still give output regarding center of mass and moment of inertia.
       !%Option inertia 1
