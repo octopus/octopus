@@ -121,13 +121,16 @@ module parser_m
     end subroutine oct_parse_int
   end interface parse_integer
 
-  interface parse_float
+  interface
     subroutine oct_parse_double(name, def, res)
       implicit none
       character(len=*), intent(in)  :: name
       real(8),          intent(in)  :: def
       real(8),          intent(out) :: res
     end subroutine oct_parse_double
+  end interface
+
+  interface parse_float
     module procedure oct_parse_double4_unit
     module procedure oct_parse_double8_unit
   end interface parse_float
@@ -420,6 +423,8 @@ contains
 
     real(8) :: res8
 
+    call parse_check_varinfo(name)
+
     if(present(unit)) then
       call oct_parse_double(name, units_from_atomic(unit, real(def4, 8)), res8)
       res4 = real(units_to_atomic(unit, res8), kind=4)
@@ -436,11 +441,16 @@ contains
     character(len=*), intent(in)  :: name
     real(8),          intent(in)  :: def
     real(8),          intent(out) :: res
-    type(unit_t),     intent(in)  :: unit
+    type(unit_t), optional, intent(in)  :: unit
 
-    call oct_parse_double(name, units_from_atomic(unit, def), res)
-
-    res = units_to_atomic(unit, res)
+    call parse_check_varinfo(name)
+    
+    if(present(unit)) then
+      call oct_parse_double(name, units_from_atomic(unit, def), res)
+      res = units_to_atomic(unit, res)
+    else
+      call oct_parse_double(name, def, res)
+    end if
     
   end subroutine oct_parse_double8_unit
 
