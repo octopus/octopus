@@ -24,7 +24,7 @@ module atomic_m
   use logrid_m
   use messages_m
   use profiling_m
-  use xc_f90_lib_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -292,8 +292,8 @@ contains
       F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),         &
       EPSX, EPSC,                                                    &
       DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
-    type(xc_f90_pointer_t) :: x_conf, c_conf
-    type(xc_f90_pointer_t) :: x_info, c_info
+    type(XC_F90(pointer_t)) :: x_conf, c_conf
+    type(XC_F90(pointer_t)) :: x_info, c_info
 
     PUSH_SUB(atomxc)
 
@@ -314,15 +314,15 @@ contains
     
     ! initialize xc functional
     if(GGA) then
-      call xc_f90_func_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
-      call xc_f90_func_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
+      call XC_F90(func_init)(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
+      call XC_F90(func_init)(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
     else
-      call xc_f90_func_init(x_conf, x_info, XC_LDA_X, NSPIN)
+      call XC_F90(func_init)(x_conf, x_info, XC_LDA_X, NSPIN)
       if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
         AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-        call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
+        call XC_F90(func_init)(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
       else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-        call xc_f90_func_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
+        call XC_F90(func_init)(c_conf, c_info, XC_LDA_C_PW, NSPIN)
       else
         write(message(1),'(a,a)') 'LDAXC: Unknown author ', AUTHOR
         call messages_fatal(1)
@@ -409,7 +409,7 @@ contains
         GD = M_ZERO
       end if
       
-      ! The xc_f90_gga routines need as input these combinations of 
+      ! The XC_F90(gga) routines need as input these combinations of 
       ! the gradient of the densities.
       sigma(1) = gd(3, 1)*gd(3, 1)
       if(NSPIN > 1) then
@@ -420,11 +420,11 @@ contains
       ! Find exchange and correlation energy densities and their
       ! derivatives with respect to density and density gradient
       if (GGA) then
-        call xc_f90_gga_exc_vxc(x_conf, 1, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-        call xc_f90_gga_exc_vxc(c_conf, 1, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+        call XC_F90(gga_exc_vxc)(x_conf, 1, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+        call XC_F90(gga_exc_vxc)(c_conf, 1, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
       else
-        call xc_f90_lda_exc_vxc(x_conf, 1, D(1), EPSX, DEXDD(1))
-        call xc_f90_lda_exc_vxc(c_conf, 1, D(1), EPSC, DECDD(1))
+        call XC_F90(lda_exc_vxc)(x_conf, 1, D(1), EPSX, DEXDD(1))
+        call XC_F90(lda_exc_vxc)(c_conf, 1, D(1), EPSC, DECDD(1))
       end if
       
       ! The derivatives of the exchange and correlation energies per particle with
@@ -490,8 +490,8 @@ contains
       end do
     end do
 
-    call xc_f90_func_end(x_conf)
-    call xc_f90_func_end(c_conf)
+    call XC_F90(func_end)(x_conf)
+    call XC_F90(func_end)(c_conf)
     
     POP_SUB(atomxc)
   end subroutine atomxc
