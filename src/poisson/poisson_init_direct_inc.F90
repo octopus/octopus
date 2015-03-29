@@ -208,10 +208,10 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
 
-  FLOAT                :: prefactor
+  FLOAT                :: prefactor, aa1, aa2, aa3, aa4
   integer              :: ip, jp, dim
   integer, allocatable :: ip_v(:), part_v(:)
-  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim)
+  FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
   FLOAT                :: tmp, xg(MAX_DIM)
   FLOAT, allocatable   :: pvec(:) 
@@ -281,32 +281,80 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   else ! serial mode
 #endif
-    pot = M_ZERO
-    do ip = 1, this%der%mesh%np
-      xx(1:dim) = this%der%mesh%x(ip,1:dim)
+    
+    do ip = 1, this%der%mesh%np - 4 + 1, 4
+
+      xx1(1:dim) = this%der%mesh%x(ip    , 1:dim)
+      xx2(1:dim) = this%der%mesh%x(ip + 1, 1:dim)
+      xx3(1:dim) = this%der%mesh%x(ip + 2, 1:dim)
+      xx4(1:dim) = this%der%mesh%x(ip + 3, 1:dim)
+      
+      if(this%der%mesh%use_curvilinear) then
+
+        aa1 = prefactor*rho(ip    )*this%der%mesh%vol_pp(ip    )**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+        aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+        aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+        aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+        do jp = 1, this%der%mesh%np
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+        end do
+
+      else
+
+        aa1 = prefactor*rho(ip    )
+        aa2 = prefactor*rho(ip + 1)
+        aa3 = prefactor*rho(ip + 2)
+        aa4 = prefactor*rho(ip + 3)
+
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+        do jp = 1, this%der%mesh%np
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+        end do
+        
+      end if
+
+      pot(ip    ) = this%der%mesh%volume_element*aa1
+      pot(ip + 1) = this%der%mesh%volume_element*aa2
+      pot(ip + 2) = this%der%mesh%volume_element*aa3
+      pot(ip + 3) = this%der%mesh%volume_element*aa4
+      
+    end do
+    
+    do ip = ip, this%der%mesh%np
+
+      aa1 = CNST(0.0)
+
+      xx1(1:dim) = this%der%mesh%x(ip,1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+            aa1 = aa1 + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))*this%der%mesh%vol_pp(jp)
-          endif
+            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+          end if
         end do
       else
         do jp = 1, this%der%mesh%np
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)
+            aa1 = aa1 + prefactor*rho(ip)
           else
-            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
-          endif
+            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+          end if
         end do
       end if
+
+      pot(ip) = this%der%mesh%volume_element*aa1
+      
     end do
-    if(.not. this%der%mesh%use_curvilinear) then
-      pot(1:this%der%mesh%np) = pot(1:this%der%mesh%np)*this%der%mesh%volume_element
-    endif
+    
 #ifdef HAVE_MPI
   end if
 #endif
