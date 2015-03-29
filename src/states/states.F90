@@ -474,8 +474,7 @@ contains
       call messages_fatal()
     end if
 
-    ASSERT(st%d%block_size > 0)
-
+    st%d%block_size = min(st%d%block_size, st%nst)
     conf%target_states_block_size = st%d%block_size
 
     !cmplxscl
