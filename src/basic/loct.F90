@@ -41,12 +41,13 @@ module loct_m
     loct_rm_status_files,    &
     loct_dir_exists,         &
     loct_number_of_lines,    &
+    loct_break_C_string,     &
     loct_getenv,             &
     loct_isinstringlist,     &
     loct_progress_bar,       &
     loct_printRecipe,        &
     loct_strerror,           &
-    get_memory_usage,        &
+    loct_get_memory_usage,   &
     loct_exit_failure
 
 #if defined(HAVE_GDLIB)
@@ -152,11 +153,21 @@ module loct_m
   end interface loct_rm
 
   interface loct_number_of_lines
-    integer function number_of_lines(filename)
+    integer function oct_number_of_lines(filename)
       implicit none
       character(len=*), intent(in) :: filename
-    end function number_of_lines
+    end function oct_number_of_lines
   end interface loct_number_of_lines
+
+  interface loct_break_C_string
+    subroutine oct_break_C_string(str, s, line)
+      use iso_c_binding
+      implicit none
+      type(c_ptr),       intent(in)    :: str
+      type(c_ptr),       intent(inout) :: s
+      character(len=*),  intent(out)   :: line
+    end subroutine oct_break_C_string
+  end interface loct_break_C_string
 
   interface loct_search_file_lr
     subroutine oct_search_file_lr(freq, tag, ierr, dirname)
@@ -193,11 +204,11 @@ module loct_m
     end subroutine oct_printRecipe
   end interface loct_printRecipe
 
-  interface
-    subroutine loct_exit_failure()
+  interface loct_exit_failure
+    subroutine oct_exit_failure()
       implicit none
-    end subroutine loct_exit_failure
-  end interface
+    end subroutine oct_exit_failure
+  end interface loct_exit_failure
 
   interface loct_wfs_list
     subroutine oct_wfs_list(str, l)
@@ -248,11 +259,11 @@ module loct_m
   end interface loct_gdimage_get_pixel_rgb
 #endif
 
- interface
-   integer(SIZEOF_VOIDP) function get_memory_usage()
+ interface loct_get_memory_usage
+   integer(SIZEOF_VOIDP) function oct_get_memory_usage()
      implicit none
-   end function get_memory_usage
- end interface
+   end function oct_get_memory_usage
+ end interface loct_get_memory_usage
 
 contains
 

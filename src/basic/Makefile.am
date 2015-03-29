@@ -111,7 +111,7 @@ blacs.o : blacs.F90
 mpi.o : mpi.F90 blacs.o
 hardware.o : hardware.F90
 varinfo.o : varinfo.F90 string.o
-string.o : string.F90
+string.o : string.F90 loct.o
 loct.o : loct.F90
 loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profiling.o
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile

@@ -918,7 +918,7 @@ contains
       write(tmpstr,'(a,i6,a,i6.6,f20.6,i8,a)') "* I ", &
         sec, '.', usec, &
         loct_clock(), &
-        get_memory_usage() / 1024, " | "
+        loct_get_memory_usage() / 1024, " | "
       do ii = no_sub_stack - 1, 1, -1
         write(tmpstr, '(2a)') trim(tmpstr), "..|"
       end do
@@ -984,7 +984,7 @@ contains
       write(tmpstr,'(a,i6,a,i6.6,f20.6,i8, a)') "* O ", &
         sec, '.', usec, &
         loct_clock() - time_stack(no_sub_stack), &
-        get_memory_usage() / 1024, " | "
+        loct_get_memory_usage() / 1024, " | "
       do ii = no_sub_stack - 1, 1, -1
         write(tmpstr,'(2a)') trim(tmpstr), "..|"
       end do

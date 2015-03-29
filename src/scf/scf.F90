@@ -965,7 +965,7 @@ contains
         call messages_info(2)
 
         if(conf%report_memory) then
-          mem = get_memory_usage()/(CNST(1024.0)**2)
+          mem = loct_get_memory_usage()/(CNST(1024.0)**2)
 #ifdef HAVE_MPI
           call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
           mem = mem_tmp

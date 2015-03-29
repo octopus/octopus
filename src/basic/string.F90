@@ -22,7 +22,8 @@
 module string_m
   
   use iso_c_binding
-
+  use loct_m
+  
   implicit none
 
   private
@@ -171,22 +172,12 @@ contains
     character(len=256) :: line
     character(len=5)   :: advance_
 
-    interface
-      subroutine break_C_string(str, s, line)
-        use iso_c_binding
-        implicit none
-        type(c_ptr),       intent(in)    :: str
-        type(c_ptr),       intent(inout) :: s
-        character(len=*),  intent(out)   :: line
-      end subroutine break_C_string
-    end interface
-
     advance_ = "yes"
     if(present(advance)) advance_ = advance
 
     s = c_null_ptr
     do
-      call break_C_string(str, s, line)
+      call loct_break_C_string(str, s, line)
       if (.not. c_associated(s)) exit
       if(present(pre)) then
         write(iunit, '(a,a)', advance=advance_) pre, trim(line)

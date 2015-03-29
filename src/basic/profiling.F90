@@ -909,7 +909,7 @@ contains
     call profiling_make_position_str(var, file, line, str)
 
     ! get number of pages
-    mem = get_memory_usage()
+    mem = loct_get_memory_usage()
 
     write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)

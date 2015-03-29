@@ -317,7 +317,7 @@ void FC_FUNC_(oct_sysname, OCT_SYSNAME)
 }
 
 
-int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
+int FC_FUNC_(oct_number_of_lines, OCT_NUMBER_OF_LINES)
   (STR_F_TYPE name STR_ARG1)
 {
 
@@ -345,7 +345,7 @@ int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
 /* Given a string in C, it breaks it line by line and returns each 
    as a Fortran string. Returns 0 if string does not have more lines. 
 */
-void FC_FUNC_(break_c_string, BREAK_C_STRING)
+void FC_FUNC_(oct_break_c_string, OCT_BREAK_C_STRING)
   (char **str, char **s, STR_F_TYPE line_f STR_ARG1)
 {
   char *c, line[256]; /* hopefully no line is longer than 256 characters ;) */
@@ -473,7 +473,7 @@ float FC_FUNC_(oct_hypotf, OCT_HYPOTF)
   return hypotf(*x, *y);
 }
 
-void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
+void * FC_FUNC_(oct_get_memory_usage, OCT_GET_MEMORY_USAGE)()
 {
 #if defined(HAVE_SYSCONF) && defined(HAVE_GETPID)
   static size_t pagesize = 0;
@@ -499,6 +499,6 @@ void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
 #endif
 }
 
-void FC_FUNC_(loct_exit_failure, LOCT_EXIT_FAILURE)(){
+void FC_FUNC_(oct_exit_failure, OCT_EXIT_FAILURE)(){
   exit(EXIT_FAILURE);
 }
