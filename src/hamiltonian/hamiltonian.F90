@@ -475,7 +475,14 @@ contains
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
-    ! use exact exchange
+    !%Variable SCDM_EXX
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
+    !% the Fock operator for exact exchange will be applied with the SCDM method.
+    !%End
     call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
