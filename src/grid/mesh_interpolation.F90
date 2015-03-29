@@ -20,7 +20,7 @@
 #include "global.h"
 
 module mesh_interpolation_m
-  use c_pointer_m
+  use iso_c_binding
   use global_m
   use io_m
   use loct_math_m

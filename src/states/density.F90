@@ -23,7 +23,7 @@ module density_m
   use blas_m
   use base_density_m
   use batch_m
-  use c_pointer_m
+  use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
 #endif

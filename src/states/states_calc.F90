@@ -25,7 +25,7 @@ module states_calc_m
   use blas_m
   use blacs_m
   use blacs_proc_grid_m
-  use c_pointer_m
+  use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLAMDBLAS

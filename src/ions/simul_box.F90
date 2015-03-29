@@ -23,7 +23,7 @@
 module simul_box_m
   use atom_m
   use blas_m
-  use c_pointer_m
+  use iso_c_binding
   use geometry_m
   use global_m
   use io_m

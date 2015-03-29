@@ -20,7 +20,7 @@
 #include "global.h"
 
 module td_calc_m
-  use c_pointer_m 
+  use iso_c_binding 
   use forces_m
   use geometry_m
   use global_m

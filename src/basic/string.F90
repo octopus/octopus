@@ -21,7 +21,7 @@
 
 module string_m
   
-  use c_pointer_m
+  use iso_c_binding
 
   implicit none
 
@@ -173,7 +173,7 @@ contains
 
     interface
       subroutine break_C_string(str, s, line)
-        use c_pointer_m
+        use iso_c_binding
         implicit none
         type(c_ptr),       intent(in)    :: str
         type(c_ptr),       intent(inout) :: s
@@ -184,7 +184,7 @@ contains
     advance_ = "yes"
     if(present(advance)) advance_ = advance
 
-    call set_null(s)
+    s = c_null_ptr
     do
       call break_C_string(str, s, line)
       if (.not. c_associated(s)) exit

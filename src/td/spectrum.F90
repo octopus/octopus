@@ -21,7 +21,7 @@
 
 module spectrum_m
   use batch_m
-  use c_pointer_m
+  use iso_c_binding
   use cmplxscl_m
   use compressed_sensing_m
   use fft_m

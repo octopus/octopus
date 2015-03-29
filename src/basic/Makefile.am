@@ -38,7 +38,6 @@ libbasic_a_SOURCES =     \
 	json.F90         \
 	json_parser.F90  \
 	mpi_lib.F90      \
-	c_pointer.F90    \
 	unit.F90         \
 	unit_system.F90  \
 	mpi_debug.F90    \
@@ -111,14 +110,13 @@ types.o : types.F90
 blacs.o : blacs.F90
 mpi.o : mpi.F90 blacs.o
 hardware.o : hardware.F90
-c_pointer.o : c_pointer.F90
-varinfo.o : varinfo.F90 string.o c_pointer.o
-string.o : string.F90 c_pointer.o
-loct.o : loct.F90 c_pointer.o
+varinfo.o : varinfo.F90 string.o
+string.o : string.F90
+loct.o : loct.F90
 loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profiling.o
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
 unit.o : unit.F90 global.o
-parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o varinfo.F90
+parser.o : parser.F90 mpi.o loct.o global.o unit.o varinfo.F90
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o  unit.o
 papi_f.o : papi_f.F90
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types.o
@@ -126,7 +124,7 @@ profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types
 command_line.o : command_line.F90 messages.o profiling.o
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  
 unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o   varinfo.o
-write_iter.o : write_iter.F90 c_pointer.o
+write_iter.o : write_iter.F90
 io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
 io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
 kinds.o : kinds.F90
@@ -135,7 +133,7 @@ json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
 json_parser.o : json_parser.F90 json.o kinds.o io.o messages.o profiling.o global.o
 
 opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o
-octcl_kernel.o : octcl_kernel.F90 opencl.o c_pointer.o global.o
+octcl_kernel.o : octcl_kernel.F90 opencl.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o  profiling.o

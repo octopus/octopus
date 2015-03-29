@@ -27,7 +27,7 @@
 !! This module provides a single interface that works with different
 !! FFT implementations.
 module fft_m
-  use c_pointer_m
+  use iso_c_binding
 #ifdef HAVE_OPENCL  
   use cl
 #ifdef HAVE_CLAMDFFT

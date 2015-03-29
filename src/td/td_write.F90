@@ -20,7 +20,7 @@
 #include "global.h"
 
 module td_write_m
-  use c_pointer_m
+  use iso_c_binding
   use excited_states_m
   use forces_m
   use gauge_field_m

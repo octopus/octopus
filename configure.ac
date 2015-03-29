@@ -212,8 +212,8 @@ ACX_F90_ACCEPTS_LINE_NUMBERS
 dnl check whether the Fortran compiler supports command-line arguments
 ACX_FC_COMMAND_LINE_ARGUMENTS
 
-dnl check whether the Fortran compiler supports Fortran 2003's c_ptr type
-ACX_FC_F2003_C_PTR
+dnl check whether the Fortran compiler supports Fortran 2003's iso_c_binding
+ACX_FC_ISO_C_BINDING([], AC_MSG_ERROR([could not find required Fortran 2003 iso_c_binding]))
 
 dnl check flag to include module path
 AX_F90_MODULE_FLAG

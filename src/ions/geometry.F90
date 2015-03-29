@@ -21,7 +21,7 @@
 
 module geometry_m
   use atom_m
-  use c_pointer_m
+  use iso_c_binding
   use distributed_m
   use global_m
   use io_m

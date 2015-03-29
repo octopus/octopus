@@ -27,7 +27,7 @@ module nfft_m
 #else
 
 
-  use c_pointer_m
+  use iso_c_binding
   use fftw_m
   use global_m
   use loct_math_m

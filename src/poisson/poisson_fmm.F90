@@ -25,7 +25,7 @@
 
 module poisson_fmm_m
   use boundaries_m 
-  use c_pointer_m
+  use iso_c_binding
   use cube_m
   use derivatives_m
   use fft_m

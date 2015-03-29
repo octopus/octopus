@@ -21,7 +21,7 @@
 
 module local_write_m
   use box_union_m
-  use c_pointer_m
+  use iso_c_binding
   use geometry_m
   use global_m
   use grid_m

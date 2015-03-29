@@ -45,7 +45,7 @@ module write_iter_m
   interface
     !> Initializes the C object with the parameters
     subroutine write_iter_init(out,  iter, factor, file)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr),      intent(inout) :: out    !< Write C object
       integer,          intent(in)    :: iter   !< Iteration number
@@ -54,19 +54,19 @@ module write_iter_m
     end subroutine write_iter_init
 
     subroutine write_iter_clear(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_clear
 
     subroutine write_iter_flush(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_flush
 
     subroutine write_iter_end(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_end
@@ -75,41 +75,41 @@ module write_iter_m
     !! adds one to the iteration.
     !! Must be called after write_iter_init()
     subroutine write_iter_start(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_start
 
     !> Sets the iteration number to the C object
     subroutine write_iter_set(out,  iter)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr),      intent(inout) :: out  !< Write C object
       integer,          intent(in)    :: iter !< Iteration number
     end subroutine write_iter_set
 
     subroutine write_iter_string(out, string)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr),      intent(inout) :: out    !< Write C object
       character(len=*), intent(in)    :: string
     end subroutine write_iter_string
 
     subroutine write_iter_header_start(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_header_start
 
     subroutine write_iter_header(out, string)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr),      intent(inout) :: out    !< Write C object
       character(len=*), intent(in)    :: string
     end subroutine write_iter_header
 
     subroutine write_iter_nl(out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
     end subroutine write_iter_nl
@@ -117,7 +117,7 @@ module write_iter_m
 
   interface write_iter_double
     subroutine write_iter_double_1(out, d, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n
@@ -125,7 +125,7 @@ module write_iter_m
     end subroutine write_iter_double_1
 
     subroutine write_iter_double_n(out, d, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n
@@ -133,7 +133,7 @@ module write_iter_m
     end subroutine write_iter_double_n
 
     subroutine write_iter_float_1(out, d, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n
@@ -141,7 +141,7 @@ module write_iter_m
     end subroutine write_iter_float_1
 
     subroutine write_iter_float_n(out, d, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n
@@ -151,7 +151,7 @@ module write_iter_m
 
   interface write_iter_int
     subroutine write_iter_int_1(out, i, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n
@@ -159,7 +159,7 @@ module write_iter_m
     end subroutine write_iter_int_1
 
     subroutine write_iter_int_n(out, i, n)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: out !< Write C object
       integer,     intent(in)    :: n

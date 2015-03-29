@@ -198,9 +198,9 @@
 !----------------------------------------------------------------------------*/!
 module splines_m
   use global_m
+  use iso_c_binding
   use loct_math_m
   use messages_m
-  use c_pointer_m
   use profiling_m
 
   implicit none
@@ -285,13 +285,13 @@ module splines_m
   ! take care of calling the GSL library.
   interface
     subroutine oct_spline_end(spl, acc)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       integer,     intent(in) :: nrc
       real(8),     intent(in) :: x
@@ -301,7 +301,7 @@ module splines_m
     end subroutine oct_spline_fit
 
     real(8) pure function oct_spline_eval(x, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       real(8),     intent(in) :: x
       type(c_ptr), intent(in) :: spl
@@ -309,7 +309,7 @@ module splines_m
     end function oct_spline_eval
 
     pure subroutine oct_spline_eval_array(nn, xf, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       integer,     intent(in)    :: nn
       real(8),     intent(inout) :: xf
@@ -318,7 +318,7 @@ module splines_m
     end subroutine oct_spline_eval_array
 
     pure subroutine oct_spline_eval_array4(nn, xf, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       integer,     intent(in)    :: nn
       real(4),     intent(inout) :: xf
@@ -327,7 +327,7 @@ module splines_m
     end subroutine oct_spline_eval_array4
 
     pure subroutine oct_spline_eval_arrayz(nn, xf, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       integer,     intent(in)    :: nn
       complex(8),  intent(inout) :: xf
@@ -336,7 +336,7 @@ module splines_m
     end subroutine oct_spline_eval_arrayz
 
     pure subroutine oct_spline_eval_arrayc(nn, xf, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       integer,     intent(in)    :: nn
       complex(4),  intent(inout) :: xf
@@ -345,7 +345,7 @@ module splines_m
     end subroutine oct_spline_eval_arrayc
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       real(8),     intent(in) :: x
       type(c_ptr), intent(in) :: spl
@@ -353,7 +353,7 @@ module splines_m
     end function oct_spline_eval_der
 
     real(8) pure function oct_spline_eval_der2(x, spl, acc)
-      use c_pointer_m
+      use iso_c_binding
 
       real(8),     intent(in) :: x
       type(c_ptr), intent(in) :: spl
@@ -361,27 +361,27 @@ module splines_m
     end function oct_spline_eval_der2
 
     integer pure function oct_spline_npoints(spl)
-      use c_pointer_m
+      use iso_c_binding
 
       type(c_ptr), intent(in) :: spl
     end function oct_spline_npoints
 
     pure subroutine oct_spline_x(spl, x)
-      use c_pointer_m
+      use iso_c_binding
 
       type(c_ptr), intent(in)  :: spl
       real(8),     intent(out) :: x
     end subroutine oct_spline_x
 
     subroutine oct_spline_y(spl, y)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in) :: spl
       real(8),     intent(out) :: y
     end subroutine oct_spline_y
 
     real(8) pure function oct_spline_eval_integ(spl, a, b, acc)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in) :: spl
       real(8),     intent(in) :: a
@@ -398,8 +398,8 @@ contains
 
     ! No PUSH SUB, called too often
 
-    call set_null(spl%spl)
-    call set_null(spl%acc)
+    spl%spl = c_null_ptr
+    spl%acc = c_null_ptr
 
     ! deliberately illegal values, for checking
     spl%x_limit(1) = -1d0
@@ -451,8 +451,8 @@ contains
     if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
       call oct_spline_end(spl%spl, spl%acc)
     end if
-    call set_null(spl%spl)
-    call set_null(spl%acc)
+    spl%spl = c_null_ptr
+    spl%acc = c_null_ptr
 
   end subroutine spline_end_0
 

@@ -238,7 +238,7 @@ module loct_math_m
   !> Functions to generate combinations
   interface loct_combination_init
     subroutine oct_combination_init(c, n, k)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(out) :: c
       integer,     intent(in)  :: n, k
@@ -247,7 +247,7 @@ module loct_math_m
 
   interface loct_combination_end
     subroutine oct_combination_end(c)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in) :: c
     end subroutine oct_combination_end
@@ -255,7 +255,7 @@ module loct_math_m
 
   interface loct_combination_next
     subroutine oct_combination_next(c, next)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: c
       integer,     intent(out)  :: next
@@ -264,7 +264,7 @@ module loct_math_m
 
   interface
     subroutine oct_get_combination(c, comb)
-      use c_pointer_m
+      use iso_c_binding
       type(c_ptr), intent(in)  :: c
       integer,     intent(out) :: comb
     end subroutine oct_get_combination
@@ -274,7 +274,7 @@ module loct_math_m
   !> Functions to generate random numbers
   interface loct_ran_init
     subroutine oct_ran_init(r)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(out) :: r
     end subroutine oct_ran_init
@@ -282,7 +282,7 @@ module loct_math_m
 
   interface loct_ran_end
     subroutine oct_ran_end(r)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: r
     end subroutine oct_ran_end
@@ -290,7 +290,7 @@ module loct_math_m
 
   interface loct_ran_gaussian
     function oct_ran_gaussian(r, sigma)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       real(8) :: oct_ran_gaussian
       type(c_ptr), intent(in) :: r
@@ -301,7 +301,7 @@ module loct_math_m
 
   interface loct_ran_flat
     function oct_ran_flat(r, a, b)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       real(8) :: oct_ran_flat
       type(c_ptr), intent(in) :: r
@@ -322,7 +322,7 @@ module loct_math_m
 contains
   
   subroutine loct_get_combination(c, comb)
-    use c_pointer_m
+    use iso_c_binding
     type(c_ptr),      intent(in)  :: c
     integer,          intent(out) :: comb(0:) !< Assume C-style array indices (i.e. start from 0) 
 
@@ -445,7 +445,7 @@ contains
   end subroutine oct_ylm4
 
   real(4) function oct_ran_gaussian4(r, sigma)
-    use c_pointer_m
+    use iso_c_binding
     type(c_ptr), intent(in) :: r
     real(4),     intent(in) :: sigma
 
@@ -453,7 +453,7 @@ contains
   end function oct_ran_gaussian4
 
   real(4) function oct_ran_flat4(r, a, b)
-    use c_pointer_m
+    use iso_c_binding
     type(c_ptr), intent(in) :: r
     real(4),     intent(in) :: a
     real(4),     intent(in) :: b

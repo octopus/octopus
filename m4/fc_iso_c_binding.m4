@@ -1,4 +1,5 @@
 ## Copyright (C) 2008 T. Burnus
+## Copyright (C) 2015 M. Oliveira
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,25 +20,28 @@
 ##
 
 #
-# Check for Fortran 2003 c_ptr support
+# Check for Fortran 2003 iso_c_bindings support
 # ------------------------------------
 
-AC_DEFUN([ACX_FC_F2003_C_PTR],
-[
-AC_MSG_CHECKING([for Fortran 2003 c_ptr type])
+AC_DEFUN([ACX_FC_ISO_C_BINDING], [
 
-AC_LINK_IFELSE(
-    AC_LANG_PROGRAM( [], [
-    use iso_c_binding
-    implicit none
-    type(c_ptr) :: ptr
-    ptr = c_null_ptr
-    if (c_associated(ptr)) stop 3
-    ]),
-    [AC_MSG_RESULT(yes)
-     AC_DEFINE(F2003_C_PTR, 1,
-               [compiler supports c_ptr type of Fortran 2003])],
-    [AC_MSG_RESULT(no)])
+AC_MSG_CHECKING([for Fortran 2003 iso_c_binding])
 
-]
-)
+testprog="AC_LANG_PROGRAM([],[
+  use iso_c_binding
+  implicit none
+  type(c_ptr) :: ptr
+  ptr = c_null_ptr
+  if (c_associated(ptr)) stop 3])"
+
+acx_iso_c_binding_ok=no
+AC_LINK_IFELSE($testprog, [acx_iso_c_binding_ok=yes], [])
+
+AC_MSG_RESULT([$acx_iso_c_binding_ok])
+if test x"$acx_iso_c_binding_ok" = xyes; then
+  AC_DEFINE(ISO_C_BINDING, 1, [compiler supports Fortran 2003 iso_c_binding])
+  $1
+else
+  $2
+fi
+])

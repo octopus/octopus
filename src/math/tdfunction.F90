@@ -25,7 +25,7 @@
 !! magnetic fields.
 !!--------------------------------------------------------------
 module tdfunction_m
-  use c_pointer_m
+  use iso_c_binding
   use fft_m
   use global_m
   use io_m

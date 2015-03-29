@@ -20,7 +20,7 @@
 #include "global.h"
 
 module kick_m
-  use c_pointer_m
+  use iso_c_binding
   use geometry_m
   use global_m
   use grid_m

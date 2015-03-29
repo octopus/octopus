@@ -20,8 +20,8 @@
 #include "global.h"
 
 module varinfo_m
+  use iso_c_binding
   use string_m
-  use c_pointer_m
 
   implicit none
 
@@ -43,14 +43,14 @@ module varinfo_m
     end subroutine varinfo_init
 
     subroutine varinfo_getvar(name, var)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       character(len=*), intent(in)    :: name
       type(c_ptr),      intent(inout) :: var
     end subroutine varinfo_getvar
 
     subroutine varinfo_getinfo(var, name, type, default, section, desc)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: var
       type(c_ptr), intent(out) :: name
@@ -61,14 +61,14 @@ module varinfo_m
     end subroutine varinfo_getinfo
 
     subroutine varinfo_getopt(var, opt)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: var
       type(c_ptr), intent(out) :: opt
     end subroutine varinfo_getopt
 
     subroutine varinfo_opt_getinfo(opt, name, val, desc)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: opt
       type(c_ptr), intent(out) :: name
@@ -77,14 +77,14 @@ module varinfo_m
     end subroutine varinfo_opt_getinfo
 
     subroutine varinfo_search_var(name, var)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       character(len=*), intent(in)    :: name
       type(c_ptr),      intent(inout) :: var
     end subroutine varinfo_search_var
 
     subroutine varinfo_search_option(var, name, val, ierr)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr),      intent(in)  :: var
       character(len=*), intent(in)  :: name
@@ -131,7 +131,7 @@ contains
     write(iunit, '(a)') "Description:"
     call print_C_string(iunit, desc, "    ")
 
-    call set_null(opt)
+    opt = c_null_ptr
     first = .true.
     do
       call varinfo_getopt(handle, opt)
@@ -170,7 +170,7 @@ contains
     call varinfo_getvar(var, handle)
     if(.not. c_associated(handle)) return
 
-    call set_null(opt)
+    opt = c_null_ptr
     do
       call varinfo_getopt(handle, opt)
       if(.not. c_associated(opt)) exit
@@ -205,7 +205,7 @@ contains
     call varinfo_getvar(var, handle)
     if(.not. c_associated(handle)) return
 
-    call set_null(opt)
+    opt = c_null_ptr
     do
       call varinfo_getopt(handle, opt)
       if(.not. c_associated(opt)) exit
@@ -238,7 +238,7 @@ contains
     
     type(c_ptr) :: handle, name, type, default, section, desc
     
-    call set_null(handle)
+    handle = c_null_ptr
     if(present(ierr)) ierr = -1
     do 
       call varinfo_search_var(var, handle)
@@ -281,7 +281,7 @@ contains
 
     type(c_ptr) :: handle
 
-    call set_null(handle)
+    handle = c_null_ptr
 
     call varinfo_search_var(var, handle)
 

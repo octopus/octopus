@@ -212,7 +212,7 @@ module loct_m
 #if defined(HAVE_GDLIB)
   interface loct_gdimage_create_from
     function oct_gdimage_create_from(filename)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr) :: oct_gdimage_create_from
       character(len=*), intent(in) :: filename
@@ -221,7 +221,7 @@ module loct_m
 
   interface loct_gdimage_sx
     function oct_gdimage_sx(im)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       integer :: oct_gdimage_sx
       type(c_ptr), intent(in) :: im
@@ -230,7 +230,7 @@ module loct_m
 
   interface loct_gdimage_sy
     function oct_gdimage_sy(im)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       integer :: oct_gdimage_sy
       type(c_ptr), intent(in) :: im
@@ -239,7 +239,7 @@ module loct_m
 
   interface loct_gdimage_get_pixel_rgb
     subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: im
       integer,     intent(in)  :: x, y

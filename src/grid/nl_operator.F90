@@ -25,7 +25,7 @@ module nl_operator_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use c_pointer_m
+  use iso_c_binding
   use global_m
   use io_m
   use loct_pointer_m

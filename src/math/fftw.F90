@@ -23,7 +23,7 @@
 #  define DFFTW(x) dfftw_ ## x
 
 module fftw_m
-  use c_pointer_m
+  use iso_c_binding
   use global_m
   use messages_m
   use profiling_m
@@ -83,7 +83,7 @@ module fftw_m
   !> ----------------- plan_dft ------------------
   interface 
     subroutine DFFTW(plan_dft_r2c_1d)(plan, n, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
@@ -93,7 +93,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_r2c_1d)
 
     subroutine DFFTW(plan_dft_r2c_2d)(plan, n1, n2, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
@@ -103,7 +103,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_r2c_2d)
     
     subroutine DFFTW(plan_dft_r2c_3d)(plan, n1, n2, n3, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
@@ -113,7 +113,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_r2c_3d)
 
     subroutine DFFTW(plan_dft_c2r_1d)(plan, n, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
@@ -123,7 +123,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_c2r_1d)
 
     subroutine DFFTW(plan_dft_c2r_2d)(plan, n1, n2, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
@@ -133,7 +133,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_c2r_2d)
 
     subroutine DFFTW(plan_dft_c2r_3d)(plan, n1, n2, n3, in, out, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
@@ -143,7 +143,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_c2r_3d)
 
     subroutine DFFTW(plan_dft_1d)(plan, n, in, out, sign, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n
@@ -153,7 +153,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_1d)
 
     subroutine DFFTW(plan_dft_2d)(plan, n1, n2, in, out, sign, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2
@@ -163,7 +163,7 @@ module fftw_m
     end subroutine DFFTW(plan_dft_2d)
 
     subroutine DFFTW(plan_dft_3d)(plan, n1, n2, n3, in, out, sign, flags)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
       integer,     intent(in)    :: n1, n2, n3
@@ -183,7 +183,7 @@ module fftw_m
   ! ----------------- execute_dft ------------------
   interface fftw_execute_dft
     subroutine DFFTW(execute_dft_r2c)(plan, in, out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: plan
       FLOAT,       intent(in)  :: in
@@ -191,7 +191,7 @@ module fftw_m
     end subroutine DFFTW(execute_dft_r2c)
 
     subroutine DFFTW(execute_dft_c2r)(plan, in, out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: plan
       CMPLX,       intent(in)  :: in
@@ -199,7 +199,7 @@ module fftw_m
     end subroutine DFFTW(execute_dft_c2r)
 
     subroutine DFFTW(execute_dft)(plan, in, out)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(in)  :: plan
       CMPLX,       intent(in)  :: in
@@ -211,7 +211,7 @@ module fftw_m
   !> ----------------- destroy_plan ------------------
   interface fftw_destroy_plan
     subroutine DFFTW(destroy_plan)(plan)
-      use c_pointer_m
+      use iso_c_binding
       implicit none
       type(c_ptr), intent(inout) :: plan
     end subroutine DFFTW(destroy_plan)
