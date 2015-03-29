@@ -103,9 +103,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
-  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
+
   SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
-  !$omp do
+
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
@@ -152,9 +152,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
     end do ! ipj
   end do ! ist
-  !$omp end do nowait
+
   SAFE_DEALLOCATE_A(lpsi)
-  !$omp end parallel
 
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
