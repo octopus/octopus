@@ -561,26 +561,9 @@ contains
       type(block_t) :: blk
 
       PUSH_SUB(simul_box_init.read_box_offset)
-      !%Variable BoxOffset
-      !%Type float
-      !%Default 0.0
-      !%Section Mesh::Simulation Box
-      !%Description
-      !% Shifts the zero of the simulation box, relative to the atomic coordinates, by a specified vector.
-      !% It can be either a float, interpreted as (x,x,x), or a block containing the (x,y,z) value of the zero.
-      !% WARNING: This variable does not seem to work correctly!
-      !%End
       sb%box_offset = M_ZERO
-      if(parse_block('BoxOffset', blk) == 0) then
-        do idir = 1, sb%dim
-          call parse_block_float(blk, 0, idir - 1, sb%box_offset(idir), units_inp%length)
-        end do
-        call parse_block_end(blk)
-      else
-        call parse_variable('BoxOffset', M_ZERO, sb%box_offset(1), units_inp%length)
-        sb%box_offset(1:sb%dim) = sb%box_offset(1)
-      end if
-
+      call messages_obsolete_variable('BoxOffset')
+      
       POP_SUB(simul_box_init.read_box_offset)
     end subroutine read_box_offset
 
