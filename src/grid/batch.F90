@@ -50,11 +50,11 @@ module batch_m
     batch_copy,                     &
     batch_end,                      &
     batch_add_state,                &
-    dbatch_new,                     &
-    zbatch_new,                     &
-    sbatch_new,                     &
-    cbatch_new,                     &
-    batch_delete,                   &
+    dbatch_allocate,                &
+    zbatch_allocate,                &
+    sbatch_allocate,                &
+    cbatch_allocate,                &
+    batch_deallocate,               &
     batch_is_packed,                &
     batch_pack_was_modified,        &
     batch_is_ok,                    &
@@ -165,7 +165,7 @@ contains
     end if
 
     if(this%is_allocated) then
-      call batch_delete(this)
+      call batch_deallocate(this)
     end if
 
     nullify(this%dpsicont)
@@ -182,12 +182,12 @@ contains
   end subroutine batch_end
 
   !--------------------------------------------------------------
-  subroutine batch_delete(this)
+  subroutine batch_deallocate(this)
     type(batch_t),  intent(inout) :: this
     
     integer :: ii
     
-    PUSH_SUB(batch_delete)
+    PUSH_SUB(batch_deallocate)
 
     this%is_allocated = .false.
 
@@ -212,8 +212,8 @@ contains
     SAFE_DEALLOCATE_P(this%spsicont)
     SAFE_DEALLOCATE_P(this%cpsicont)
     
-    POP_SUB(batch_delete)
-  end subroutine batch_delete
+    POP_SUB(batch_deallocate)
+  end subroutine batch_deallocate
   
   !--------------------------------------------------------------
 
@@ -387,7 +387,7 @@ contains
           np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
         end do
 
-        call dbatch_new(bout, 1, bin%nst, np)
+        call dbatch_allocate(bout, 1, bin%nst, np)
         
       else if(batch_type(bin) == TYPE_CMPLX) then
         np = 0
@@ -395,7 +395,7 @@ contains
           np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
         end do
 
-        call zbatch_new(bout, 1, bin%nst, np)
+        call zbatch_allocate(bout, 1, bin%nst, np)
 
       else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
@@ -404,7 +404,7 @@ contains
           np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
         end do
 
-        call sbatch_new(bout, 1, bin%nst, np)
+        call sbatch_allocate(bout, 1, bin%nst, np)
         
       else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
@@ -413,7 +413,7 @@ contains
           np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
         end do
 
-        call cbatch_new(bout, 1, bin%nst, np)
+        call cbatch_allocate(bout, 1, bin%nst, np)
         
       end if
 

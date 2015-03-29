@@ -742,10 +742,10 @@ subroutine X(derivatives_test)(this, test_param)
   do 
 
     call batch_init(ffb, 1, blocksize)
-    call X(batch_new)(ffb, 1, blocksize, this%mesh%np_part)
+    call X(batch_allocate)(ffb, 1, blocksize, this%mesh%np_part)
 
     call batch_init(opffb, 1, blocksize)
-    call X(batch_new)(opffb, 1, blocksize, this%mesh%np)
+    call X(batch_allocate)(opffb, 1, blocksize, this%mesh%np)
 
     forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
       ffb%states_linear(ist)%X(psi)(ip) = ff(ip)

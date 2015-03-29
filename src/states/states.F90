@@ -1088,7 +1088,7 @@ contains
             else
               ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call dbatch_new(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+              call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
           else
             if(associated(st%zpsi)) then
@@ -1096,7 +1096,7 @@ contains
             else
               ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call zbatch_new(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+              call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
             if(st%have_left_states) then !cmplxscl
               if(associated(st%psi%zL)) then
@@ -1104,7 +1104,7 @@ contains
               else
                 ASSERT(present(mesh))
                 call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-                call zbatch_new(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+                call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
               end if 
             else
               st%psibL => st%group%psib                           

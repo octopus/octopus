@@ -91,7 +91,7 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_new)(this, st_start, st_end, np)
+subroutine X(batch_allocate)(this, st_start, st_end, np)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
@@ -99,7 +99,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
 
   integer :: ist
 
-  PUSH_SUB(X(batch_new))
+  PUSH_SUB(X(batch_allocate))
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
   this%X(psicont) = R_TOTYPE(M_ZERO)
@@ -110,8 +110,8 @@ subroutine X(batch_new)(this, st_start, st_end, np)
     call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
-  POP_SUB(X(batch_new))
-end subroutine X(batch_new)
+  POP_SUB(X(batch_allocate))
+end subroutine X(batch_allocate)
 
 !! Local Variables:
 !! mode: f90
