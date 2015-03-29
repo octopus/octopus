@@ -43,19 +43,6 @@ program oct_test
   type(test_parameters_t) :: test_param
   integer :: ierr
 
-  integer, parameter ::              &
-    HARTREE_TEST       =   1,        &
-    DER_TEST           =   2,        &
-    ORT_TEST           =   3,        &
-    INTERPOLATION_TEST =   4
-
-  integer, parameter ::        &
-    TEST_REAL           = 1,   &
-    TEST_COMPLEX        = 2,   &
-    TEST_ALL            = 3,   &
-    TEST_REAL_SINGLE    = 4,   &
-    TEST_COMPLEX_SINGLE = 5    
-
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
   if(ierr  ==  0) call getopt_octopus(config_str)
@@ -69,20 +56,20 @@ program oct_test
 
   !%Variable TestMode
   !%Type integer
-  !%Default hartree_test
+  !%Default hartree
   !%Section Utilities::oct-test
   !%Description
   !% Decides what kind of test should be performed.
-  !%Option hartree_test 1
-  !% Tests the various Hartree solvers.
+  !%Option hartree 1
+  !% Tests the Poisson solvers used to calculate the Hartree potential.
   !%Option derivatives 2
-  !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
+  !% Tests and benchmarks the implementation of the finite-difference operators, used to calculate derivatives.
   !%Option orthogonalization 3
   !% Tests the implementation of the orthogonalization routines.
   !%Option interpolation 4
   !% Test the interpolation routines.
   !%End
-  call parse_variable('TestMode', HARTREE_TEST, test_mode)
+  call parse_variable('TestMode', OPTION_HARTREE, test_mode)
 
   call messages_obsolete_variable('TestDerivatives', 'TestType')
   call messages_obsolete_variable('TestOrthogonalization', 'TestType')
@@ -104,7 +91,7 @@ program oct_test
   !%Option all 3
   !% Tests for double-precision real and complex functions.
   !%End
-  call parse_variable('TestType', TEST_ALL, test_type)
+  call parse_variable('TestType', OPTION_ALL, test_type)
 
   !%Variable TestRepetitions
   !%Type integer
@@ -164,13 +151,13 @@ program oct_test
   call unit_system_init()
 
   select case(test_mode)
-  case(HARTREE_TEST)
+  case(OPTION_HARTREE)
     call test_hartree()
-  case(DER_TEST)
+  case(OPTION_DERIVATIVES)
     call test_derivatives()
-  case(ORT_TEST)
+  case(OPTION_ORTHOGONALIZATION)
     call test_orthogonalization()
-  case(INTERPOLATION_TEST)
+  case(OPTION_INTERPOLATION)
     call test_interpolation()  
   end select
 
@@ -213,19 +200,19 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
       call dderivatives_test(sys%gr%der, test_param)
     end if
 
-    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
       call zderivatives_test(sys%gr%der, test_param)
     end if
 
-    if(test_type == TEST_REAL_SINGLE) then
+    if(test_type == OPTION_REAL_SINGLE) then
       call sderivatives_test(sys%gr%der, test_param)
     end if
    
-    if(test_type == TEST_COMPLEX_SINGLE) then
+    if(test_type == OPTION_COMPLEX_SINGLE) then
       call cderivatives_test(sys%gr%der, test_param)
     end if
 
@@ -250,13 +237,13 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       call dstates_calc_orth_test(sys%st, sys%gr%mesh)
     end if
 
-    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       call zstates_calc_orth_test(sys%st, sys%gr%mesh)
@@ -276,7 +263,7 @@ program oct_test
 
     call system_init(sys)
 
-    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
       call messages_write('Info: Testing real interpolation routines')
       call messages_new_line()
       call messages_new_line()
@@ -285,7 +272,7 @@ program oct_test
       call dmesh_interpolation_test(sys%gr%mesh)
     endif
 
-    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
+    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
       call messages_new_line()
       call messages_write('Info: Testing complex interpolation routines')
       call messages_new_line()
