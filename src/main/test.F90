@@ -95,7 +95,7 @@ program oct_test
 
   !%Variable TestRepetitions
   !%Type integer
-  !%Default 10
+  !%Default 1
   !%Section Utilities::oct-test
   !%Description
   !% This variable controls the behavior of oct-test for performance
@@ -106,7 +106,7 @@ program oct_test
   !% Currently this variable is used by the <tt>hartree_test</tt> and
   !% <tt>derivatives</tt> tests.
   !%End  
-  call parse_variable('TestRepetitions', 10, test_param%repetitions)
+  call parse_variable('TestRepetitions', 1, test_param%repetitions)
 
   !%Variable TestMinBlockSize
   !%Type integer
