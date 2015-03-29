@@ -236,7 +236,7 @@ contains
 
     !%Variable ProfilingAllNodes
     !%Default no
-    !%Type integer
+    !%Type logical
     !%Section Execution::Optimization
     !%Description
     !% This variable controls whether all nodes print the time

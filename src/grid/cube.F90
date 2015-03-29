@@ -149,7 +149,7 @@ contains
         fft_library_ = fft_library
       else
         !%Variable FFTLibrary
-        !%Type logical
+        !%Type integer
         !%Section Mesh::FFTs
         !%Default fftw 
         !%Description
