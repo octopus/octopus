@@ -68,6 +68,7 @@ module hamiltonian_m
   use unit_system_m
   use varinfo_m
   use xc_m
+  use xc_functl_m
   use XC_F90(lib_m)
 
   implicit none
