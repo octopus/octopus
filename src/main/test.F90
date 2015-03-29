@@ -31,6 +31,7 @@ program oct_test
   use profiling_m
   use states_calc_m
   use system_m
+  use test_parameters_m
   use unit_system_m
   use utils_m
 
@@ -39,6 +40,7 @@ program oct_test
   character(len=256) :: config_str
   integer :: test_type
   integer :: test_mode
+  type(test_parameters_t) :: test_param
   integer :: ierr
 
   integer, parameter ::              &
@@ -104,6 +106,47 @@ program oct_test
   !%End
   call parse_variable('TestType', TEST_ALL, test_type)
 
+  !%Variable TestRepetitions
+  !%Type integer
+  !%Default 10
+  !%Section Utilities::oct-test
+  !%Description
+  !% This variable controls the behavior of oct-test for performance
+  !% benchmarking purposes. It sets the number of times the
+  !% computational kernel of a test will be executed, in order to
+  !% provide more accurate timings.
+  !%
+  !% Currently this variable is used by the <tt>hartree_test</tt> and
+  !% <tt>derivatives</tt> tests.
+  !%End  
+  call parse_variable('TestRepetitions', 10, test_param%repetitions)
+
+  !%Variable TestMinBlockSize
+  !%Type integer
+  !%Default 1
+  !%Section Utilities::oct-test
+  !%Description
+  !% Some tests can work with multiple blocksizes, in this case of
+  !% range of blocksizes will be tested. This variable sets the lower
+  !% bound of that range.
+  !%
+  !% Currently this variable is only used by the derivatives test.
+  !%End
+  call parse_variable('TestMinBlockSize', 1, test_param%min_blocksize)
+
+  !%Variable TestMaxBlockSize
+  !%Type integer
+  !%Default 128
+  !%Section Utilities::oct-test
+  !%Description
+  !% Some tests can work with multiple blocksizes, in this case of
+  !% range of blocksizes will be tested. This variable sets the lower
+  !% bound of that range.
+  !%
+  !% Currently this variable is only used by the derivatives test.
+  !%End
+  call parse_variable('TestMaxBlockSize', 128, test_param%max_blocksize)
+  
   call io_init()
   call profiling_init()
 
@@ -111,6 +154,10 @@ program oct_test
 
   call messages_print_stress(stdout, "Test mode")
   call messages_print_var_option(stdout, "TestMode", test_mode)
+  call messages_print_var_option(stdout, "TestType", test_type)
+  call messages_print_var_value(stdout, "TestRepetitions", test_param%repetitions)
+  call messages_print_var_value(stdout, "TestMinBlockSize", test_param%min_blocksize)
+  call messages_print_var_value(stdout, "TestMaxBlockSize", test_param%max_blocksize)
   call messages_print_stress(stdout)
 
   call fft_all_init()
@@ -147,7 +194,7 @@ program oct_test
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
-    call poisson_test(sys%gr%mesh)
+    call poisson_test(sys%gr%mesh, test_param)
     call system_end(sys)
 
     POP_SUB(test_hartree)
@@ -167,19 +214,19 @@ program oct_test
     call messages_info(2)
 
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
-      call dderivatives_test(sys%gr%der)
+      call dderivatives_test(sys%gr%der, test_param)
     end if
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
-      call zderivatives_test(sys%gr%der)
+      call zderivatives_test(sys%gr%der, test_param)
     end if
 
     if(test_type == TEST_REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der)
+      call sderivatives_test(sys%gr%der, test_param)
     end if
    
     if(test_type == TEST_COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der)
+      call cderivatives_test(sys%gr%der, test_param)
     end if
 
     call system_end(sys)

@@ -51,6 +51,7 @@ module poisson_m
   use poisson_multigrid_m
   use profiling_m
   use simul_box_m
+  use test_parameters_m
   use types_m
   use unit_m
   use unit_system_m
@@ -822,18 +823,17 @@ contains
   !! file by calculating numerically and analytically the Hartree
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
-  subroutine poisson_test(mesh)
-    type(mesh_t), intent(in) :: mesh
+  subroutine poisson_test(mesh, test_param)
+    type(mesh_t),            intent(in)    :: mesh
+    type(test_parameters_t), intent(in)    :: test_param
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 
     FLOAT :: total_charge
-    integer :: ip, idir, ierr, iunit, nn, n_gaussians, times, itime
+    integer :: ip, idir, ierr, iunit, nn, n_gaussians, itime
 
     PUSH_SUB(poisson_test)
-
-    call parse_variable('TestRepetitions', 1, times)
 
     if(mesh%sb%dim == 1) then
       call messages_not_implemented('Poisson test for 1D case')
@@ -907,7 +907,7 @@ contains
     end do
 
     ! This calculates the numerical potential
-    do itime = 1, times
+    do itime = 1, test_param%repetitions
       call dpoisson_solve(psolver, vh, rho)
     end do
 

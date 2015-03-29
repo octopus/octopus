@@ -74,7 +74,8 @@ libbasic_a_SOURCES =     \
 	openscad.F90         \
 	polyhedron.F90       \
 	xml.F90              \
-	xml_low.c
+	xml_low.c            \
+	test_parameters.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -104,6 +105,7 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
+test_parameters.o : global.o
 xml.o: xml.F90
 types.o : types.F90
 blacs.o : blacs.F90

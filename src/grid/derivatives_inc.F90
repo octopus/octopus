@@ -688,14 +688,15 @@ end subroutine X(derivatives_curl)
 
 ! ----------------------------------------------------------
 
-subroutine X(derivatives_test)(this)
-  type(derivatives_t), intent(in)  :: this
-
+subroutine X(derivatives_test)(this, test_param)
+  type(derivatives_t),     intent(in)    :: this
+  type(test_parameters_t), intent(in)    :: test_param
+  
   R_TYPE, allocatable :: ff(:), opff(:, :)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist
   type(batch_t) :: ffb, opffb
-  integer :: blocksize, max_blocksize, itime, times
+  integer :: blocksize, itime
   logical :: packstates
   real(8) :: stime, etime
   character(len=20) :: type
@@ -734,11 +735,9 @@ subroutine X(derivatives_test)(this)
   cc = cc - M_ZI*R_TOTYPE(50.0)
 #endif
 
+  blocksize = test_param%min_blocksize
+    
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
-
-  call parse_variable('TestMinBlockSize', 1, blocksize)
-  call parse_variable('TestMaxBlockSize', 128, max_blocksize)
-  call parse_variable('TestRepetitions', 10, times)
 
   do 
 
@@ -757,15 +756,15 @@ subroutine X(derivatives_test)(this)
       call batch_pack(opffb, copy = .false.)
     end if
 
-    if(times > 1) then
+    if(test_param%repetitions > 1) then
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end if
 
     stime = loct_clock()
-    do itime = 1, times
+    do itime = 1, test_param%repetitions
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end do
-    etime = (loct_clock() - stime)/dble(times)
+    etime = (loct_clock() - stime)/dble(test_param%repetitions)
 
     if(packstates) then
       call batch_unpack(ffb, copy = .false.)
@@ -795,7 +794,7 @@ subroutine X(derivatives_test)(this)
     call batch_end(opffb)
 
     blocksize = 2*blocksize
-    if(blocksize > max_blocksize) exit
+    if(blocksize > test_param%max_blocksize) exit
 
   end do
 
