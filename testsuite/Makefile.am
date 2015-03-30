@@ -71,8 +71,8 @@ check-base:
 MINTIME=600
 # note: beginning line with '-' means ignore the exit status of the command
 clean-local:
-	-if test "x$(TEMPDIRPATH)" == "x"; then TEMPDIRPATH=/tmp; fi; \
-	find $(TEMPDIRPATH) -name 'octopus\.*' -type d -mmin +$(MINTIME) -exec rm -rf {} \; 2> /dev/null
+	-if test "x$$TEMPDIRPATH" == "x"; then TEMPDIRPATH=/tmp; fi; \
+	find $$TEMPDIRPATH -name 'octopus\.*' -type d -mmin +$(MINTIME) -exec rm -rf {} \; 2> /dev/null
 
 CLEANFILES = *.log
 
