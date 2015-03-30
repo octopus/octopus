@@ -103,7 +103,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   !!End
 
   if(this%der%mesh%sb%dim == 1) then
-    !%Variable Poisson1DSoftCoulomParam
+    !%Variable Poisson1DSoftCoulombParam
     !%Type float
     !%Default 1.0 bohr
     !%Section Hamiltonian::Poisson
