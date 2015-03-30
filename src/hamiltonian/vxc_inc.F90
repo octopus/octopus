@@ -732,7 +732,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   integer, save :: iter = 0
   FLOAT,   save :: ncsave
   character(len=30) :: number
-  FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, deriv_old, qxcfin
+  FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, qxcfin
   FLOAT   :: x1, x2, x3, f1, f2, f3, dd, vol, mindd, maxdd
   FLOAT, allocatable :: nxc(:), lrvxc(:)
   type(profile_t), save :: prof
@@ -772,7 +772,6 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
       if(.not. done) then
         ncutoff_old = x1
         qxc_old = qxc
-        deriv_old = deriv
       end if
 
       x1 = x1*CNST(1.01)
@@ -1216,7 +1215,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   FLOAT, parameter :: C0I = CNST(0.238732414637843), C1 = CNST(-0.45816529328314287), &
     CC1 = CNST(1.9236610509315362), CC2 = CNST(2.5648814012420482), IF2 = CNST(0.58482236226346462)
   integer          :: gg
-  FLOAT            :: ff, f1, xx, zeta3, zeta4, decdrs, decdzeta
+  FLOAT            :: ff, f1, xx, zeta3, zeta4, decdzeta
   
   PUSH_SUB(zxc_lda_correlation)
 
@@ -1262,7 +1261,6 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
       ff = CC1 * ((M_ONE + zeta(gg)) * xplus(gg) + (M_ONE - zeta(gg)) * xminus(gg) - M_TWO)
       f1 = CC2 * (xplus(gg) - xminus(gg))
       xx = M_ONE - zeta4
-      decdrs = depsdrs(gg) * (M_ONE - ff * zeta4) + depsdrs(gg) * ff * zeta4 + dalphadrs(gg) * ff * xx * IF2
       
       decdzeta = M_FOUR * zeta3 * ff * (epsc1(gg) - epsc(gg) - alpha(gg) * IF2) + &
         f1 * (zeta4 * epsc1(gg) - zeta4 * epsc(gg) + xx * alpha(gg) * IF2)
@@ -1302,11 +1300,7 @@ subroutine zxc_complex_lda(mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   CMPLX,           intent(inout) :: zex
   CMPLX,           intent(inout) :: zec
 
-  ! LDA correlation parameters
-  integer               :: N
-  logical               :: calc_energy
-  CMPLX                 :: zenergies1(2), zenergies2(2)
-  CMPLX                 :: zextmp
+  CMPLX :: zextmp
 
   PUSH_SUB(zxc_complex_lda)
   
@@ -1449,9 +1443,6 @@ subroutine cmplxscl_get_gradient(der, zrho, theta, gradient)
   CMPLX,               intent(out) :: gradient(:, :)
   
   CMPLX, allocatable :: zrhotemp(:)
-  CMPLX              :: dimphase
-
-  dimphase = exp(M_zI * theta * der%mesh%sb%dim)
 
   PUSH_SUB(cmplxscl_get_gradient)
 
@@ -1479,9 +1470,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   CMPLX,                intent(inout) :: zec
 
   integer               :: nn
-  logical               :: calc_energy
-  CMPLX                 :: zenergies1(2), zenergies2(2) ! XXX sum/broadcast
-  CMPLX                 :: zextmp, cc, dFxds2, dexda2
+  CMPLX                 :: cc, dFxds2, dexda2
 
   ! XXX Some of the float parameters are repeated in LDA.  Define globally or something?
   FLOAT, parameter      :: &
@@ -1490,7 +1479,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
     gamma = CNST(0.0310906908697), CC1 = CNST(1.9236610509315362), CC2 = CNST(2.5648814012420482), &
     IF2 = CNST(0.58482236226346462), beta = CNST(0.06672455060314922)
 
-  CMPLX, allocatable    :: rootrs(:), gradient(:, :), a2(:), epsc(:), decdrs(:), zrhotemp(:), HH(:), depscdsigma(:), &
+  CMPLX, allocatable    :: rootrs(:), gradient(:, :), a2(:), epsc(:), decdrs(:), HH(:), depscdsigma(:), &
     depsxdsigma(:)
   CMPLX                 :: rs, ex, dexdrs, s2, xx, yy, Fx, t2, At2, num, denom, AA, dimphase
   CMPLX                 :: tmp, tmp2, dAdrs, dHdA, dHdt2
