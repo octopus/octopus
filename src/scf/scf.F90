@@ -276,7 +276,7 @@ contains
 
     mixdefault = MIXDENS
     if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
-    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
+    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) mixdefault = MIXPOT
     if(associated(hm%vberry)) mixdefault = MIXPOT
 
     call parse_integer(datasets_check('MixField'), mixdefault, scf%mix_field)
