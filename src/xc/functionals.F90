@@ -100,7 +100,7 @@ contains
 
     integer :: interact_1d
     FLOAT   :: alpha
-    logical :: ok
+    logical :: ok, lb94_modified
     integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
     PUSH_SUB(xc_functl_init_functl)
@@ -258,14 +258,19 @@ contains
       ! FIXME: libxc has XC_GGA_X_LBM, isn't that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
-      !%Type integer
-      !%Default 0
+      !%Type logical
+      !%Default no
       !%Section Hamiltonian::XC
       !%Description
       !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_integer(datasets_check('LB94_modified'), 0, functl%LB94_modified)
-
+      call parse_logical(datasets_check('LB94_modified'), .false., lb94_modified)
+      if(lb94_modified) then
+        functl%LB94_modified = 1
+      else
+        functl%LB94_modified = 0
+      endif
+      
       ! FIXME: libxc seems to have 1e-32 as a threshold, should we not use that?
       !%Variable LB94_threshold
       !%Type float
