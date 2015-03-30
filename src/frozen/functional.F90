@@ -12,65 +12,14 @@ module functional_m
   use mesh_m,          only: mesh_t
   use mesh_function_m, only: dmf_integrate
 
-  use interface_xc_m, only: &
-    XC_UNKNOWN,             &   
-    XC_NONE
+  use interface_xc_m
 
-  use interface_xc_m, only:  &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  use interface_xc_m, only:  &
-    XC_FAMILY_LDA,           &
-    XC_FAMILY_GGA,           &
-    XC_FAMILY_MGGA,          &
-    XC_FAMILY_OEP,           &
-    XC_FAMILY_HYB_GGA
-
-  use gga_m, only:       &
-    gga_t,               &
-    gga_init,            &
-    gga_start,           &
-    gga_get_kind,        &
-    gga_get_exc,         &
-    gga_get_exc_and_vxc, &
-    gga_get_vxc,         &
-    gga_copy,            &
-    gga_end
-
-  use lda_m, only:       &
-    lda_t,               &
-    lda_init,            &
-    lda_start,           &
-    lda_get_kind,        &
-    lda_get_exc,         &
-    lda_get_exc_and_vxc, &
-    lda_get_vxc,         &
-    lda_copy,            &
-    lda_end
+  use gga_m
+  use lda_m
 
   implicit none
 
   private
-  public ::     &
-    XC_UNKNOWN, &
-    XC_NONE
-
-  public ::                  &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  public ::            &
-    XC_FAMILY_LDA,     &
-    XC_FAMILY_GGA,     &
-    XC_FAMILY_MGGA,    &
-    XC_FAMILY_OEP,     &
-    XC_FAMILY_HYB_GGA
-
   public ::                              &
     functional_init,                     &
     functional_start,                    &
