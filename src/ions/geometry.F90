@@ -63,7 +63,6 @@ module geometry_m
     cm_vel,                          &
     geometry_write_xyz,              &
     geometry_write_openscad,         &
-    loadPDB,                         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
     geometry_species_time_dependent, &
@@ -584,67 +583,6 @@ contains
     POP_SUB(geometry_partition)
   end subroutine geometry_partition
 
-
-  ! ---------------------------------------------------------
-  subroutine loadPDB(iunit, geo)
-    integer,          intent(in)    :: iunit
-    type(geometry_t), intent(inout) :: geo
-
-    FLOAT, dimension(3) :: x
-    FLOAT               :: charge
-    character(len=80)   :: record
-    character(len=6)    :: record_name
-    character(len=4)    :: atm
-    character(len=3)    :: res
-    integer             :: na, nca, ierr
-
-    PUSH_SUB(loadPDB)
-
-    ! First count number of atoms
-    rewind(iunit)
-    geo%natoms = 0
-    geo%ncatoms = 0
-    do
-      read(iunit, '(a80)', iostat=ierr) record
-      if(ierr/=0)exit
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        read(record, '(17x,a3)') res
-        if(trim(res) == 'QM') then
-          geo%natoms = geo%natoms + 1
-        else
-          geo%ncatoms = geo%ncatoms + 1
-        end if
-      end if
-    end do
-
-    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-    SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-
-    ! read in the data
-    rewind(iunit)
-    na = 1; nca = 1
-    do
-      read(iunit, '(a80)', iostat=ierr) record
-      if(ierr/=0)exit
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        read(record, '(12x,a4,1x,a3)') atm, res
-        call str_trim(atm)
-        if(trim(res) == 'QM') then
-          read(record, '(30x,3f8.3)') x
-          call atom_init(geo%atom(na), atm(1:1), x)
-          na = na + 1
-        else
-          read(record, '(30x,3f8.3,6x,f6.2)') x, charge
-          call atom_classical_init(geo%catom(nca), atm, x, charge)
-          nca = nca + 1
-        end if
-      end if
-    end do
-
-    POP_SUB(loadPDB)
-  end subroutine loadPDB
 
   ! ---------------------------------------------------------
   subroutine geometry_end(geo)
