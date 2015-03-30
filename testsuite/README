@@ -26,6 +26,7 @@ make check-full &> $PBS_O_WORKDIR/makecheck-full
 
 * Environment variables:
   - TEMPDIRPATH: sets the scratch directory where temporary working directories will be created. Default is /tmp, but on some machines you may not have permission to write there.
+    This variable also determines the directory that will be automatically cleaned of files older than 10 hours by 'make clean' in the testsuite directory.
   - MPIEXEC: sets the command for parallel runs. Default is `which mpiexec`. Note that mpiexec and mpirun are generally equivalent (except for Intel MPI, in which case mpirun is recommended). Set this if you are using a different command such as 'ibrun' (SGE parallel environment), 'runjob' (BlueGene), 'aprun' (Cray), or 'poe' (IBM); if you need to use a different mpiexec than the one in your path; or if some options need to be appended to the command. Depending on the value of this variable, four styles of command line are used: ibrun, runjob, mpirun/aprun, and poe.
   - OCT_TEST_NJOBS: number of tests to run concurrently for job parallelism. Used by oct-run_testsuite.sh.
   - OCT_TEST_MPI_NPROCS: set to overrule the number of processors listed in the test files. Useful for testing correctness of parallelization or if you don't have 4 cores. Some tests, however, may fail with an error because they set an explicit number of MPI tasks for each parallelization strategy.
