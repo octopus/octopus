@@ -283,6 +283,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
+      integer :: default_boxshape
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -293,10 +294,10 @@ contains
 
       !%Variable BoxShape
       !%Type integer
-      !%Default minimum
       !%Section Mesh::Simulation Box
       !%Description
       !% This variable decides the shape of the simulation box.
+      !% The default is <tt>minimum</tt> for finite systems and <tt>parallelepiped</tt> for periodic systems.
       !% Note that some incompatibilities apply:
       !% <ul><li>Spherical or minimum mesh is not allowed for periodic systems.
       !% <li>Cylindrical mesh is not allowed for systems that are periodic in more than one dimension.
@@ -328,7 +329,12 @@ contains
       !% number of dimensions.
       !%End
 
-      call parse_variable('BoxShape', MINIMUM, sb%box_shape)
+      if(simul_box_is_periodic(sb)) then
+        default_boxshape = PARALLELEPIPED
+      else
+        default_boxshape = MINIMUM
+      endif
+      call parse_variable('BoxShape', default_boxshape, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
