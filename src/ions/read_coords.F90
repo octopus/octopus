@@ -143,14 +143,25 @@ contains
     !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
     !% first letter - <tt>CA</tt> and <tt>CB</tt> will both refer to carbon - so elements whose
     !% chemical symbol has more than one letter cannot be represented in this way.
-    !% So, if you want to run mercury (Hg), please use one of the other two methods
-    !% to input the coordinates: <tt>XYZCoordinates</tt> or <tt>Coordinates</tt>.</li>
-    !% <li> columns 18-21: The residue. If residue is <tt>QM</tt>, the atom is treated by quantum
-    !% mechanics; otherwise it is simply treated as an external classical point charge.
-    !% Its charge will be given by columns 61-65.</li>
+    !% So, if you want to run mercury (Hg), please use one of the other methods
+    !% to input the coordinates.
+    !% <li> columns 18-21: The residue. Ignored.
     !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is <tt>(3f8.3)</tt>.</li>
-    !% <li> columns 61-65: Classical charge of the atom. The Fortran format is <tt>(f6.2)</tt>.</li>
+    !% <li> columns 61-65: Classical charge of the atom. Required if reading classical atoms, ignored otherwise.
+    !% The Fortran format is <tt>(f6.2)</tt>.</li>
     !% </ul>
+    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
+    !%End
+
+    !%Variable PDBClassical
+    !%Type string
+    !%Section System::Coordinates
+    !%Description
+    !% If this variable is present, the program tries to read the atomic coordinates for classical atoms.
+    !% from the file specified by its value. The same as <tt>PDBCoordinates</tt>, except that the
+    !% classical charge colum must be present. The interaction from the
+    !% classical atoms is specified by <tt>ClassicalPotential</tt>, for QM/MM calculations.
+    !% Not available in periodic systems.
     !%End
 
     if(parse_is_defined('PDB'//trim(what))) then
@@ -170,6 +181,12 @@ contains
       call read_coords_read_PDB(what, iunit, gf)
       call io_close(iunit)
     end if
+
+    ! PDB is the only acceptable format for classical atoms.
+    if(trim(what) == "Classical") then
+      POP_SUB(read_coords_read)
+      return
+    endif
 
     !%Variable XYZCoordinates
     !%Type string
@@ -359,8 +376,8 @@ contains
     !%Type block
     !%Section System::Coordinates
     !%Description
-    !% If neither <tt>XYZCoordinates</tt> nor <tt>PDBCoordinates</tt> was found, <tt>Octopus</tt>
-    !% tries to read the coordinates for the atoms from the block <tt>Coordinates</tt>. The
+    !% If <tt>XYZCoordinates</tt>, <tt>PDBCoordinates</tt>, and <tt>XSFCoordinates</tt> were not found,
+    !% <tt>Octopus</tt> tries to read the coordinates for the atoms from the block <tt>Coordinates</tt>. The
     !% format is quite straightforward:
     !%
     !% <tt>%Coordinates
@@ -505,6 +522,8 @@ contains
 
     PUSH_SUB(read_coords_read_PDB)
 
+    ! TODO: read the specification of the crystal structure.
+    
     ! First count number of atoms
     rewind(iunit)
     do
