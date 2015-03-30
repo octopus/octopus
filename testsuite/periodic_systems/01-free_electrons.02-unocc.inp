@@ -30,10 +30,6 @@ BoxShape = parallelepiped
  0.5
 %
 
-%BoxOffset
- 0.0
-%
-
 %KPoints
 0.1 | 0.000000
 0.2 | 0.031416
