@@ -114,7 +114,8 @@ contains
     else
       ! get the family of the functional
       functl%family = XC_F90(family_from_id)(functl%id)
-
+      ! this also ensures it is actually a functional defined by the linked version of libxc
+      
       if(functl%family == XC_FAMILY_UNKNOWN) then
         if(functl%id == XC_OEP_X) then
           functl%family = XC_FAMILY_OEP
@@ -364,6 +365,11 @@ contains
         write(message(1), '(2x,a)') 'Correlation'
       case(XC_EXCHANGE_CORRELATION)
         write(message(1), '(2x,a)') 'Exchange-correlation'
+      case(XC_KINETIC)
+        call messages_not_implemented("kinetic-energy functionals")
+      case default
+        write(message(1), '(a,i6,a,i6)') "Unknown functional type ", functl%type, ' for functional ', functl%id
+        call messages_fatal(1)
       end select
 
       call XC_F90(info_name)  (functl%info, s1)
