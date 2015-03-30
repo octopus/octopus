@@ -54,12 +54,11 @@ end type modelmb_1part_t
 
 contains
 
-subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
+subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part)
   type(modelmb_1part_t), intent(out) :: this
   type(mesh_t),          intent(in)  :: mesh
   integer,               intent(in)  :: ikeeppart
   integer,               intent(in)  :: ndim1part
-  FLOAT,                 intent(in)  :: box_offset(:) !< (MAX_DIM)
 
   integer :: idir, irealdir
 
@@ -108,7 +107,7 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
   do idir = 1,ndim1part
     irealdir = (ikeeppart-1)*ndim1part + idir
     !origin(idir) = (npoints(irealdir)/2)*gr%mesh%spacing(irealdir)
-    this%origin(idir) = box_offset(irealdir)
+    this%origin(idir) = M_ZERO
   end do
 
   POP_SUB(modelmb_1part_init)

@@ -34,7 +34,7 @@ R_TYPE function X(mesh_interpolation_evaluate)(this, values, position) result(in
   ASSERT(mesh%sb%dim <= 3)
   ASSERT(.not. mesh%parallel_in_domains)
 
-  posrel(1:mesh%sb%dim) = (position(1:mesh%sb%dim) - mesh%sb%box_offset(1:mesh%sb%dim))/mesh%spacing(1:mesh%sb%dim)
+  posrel(1:mesh%sb%dim) = position(1:mesh%sb%dim)/mesh%spacing(1:mesh%sb%dim)
 
   nm(1:mesh%sb%dim) = floor(posrel(1:mesh%sb%dim))
 

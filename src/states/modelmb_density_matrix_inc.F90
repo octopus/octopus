@@ -198,7 +198,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     ikeeppart = denmat%particle_kept(idensmat)
     nparticles = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype(ikeeppart))
 
-    call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
+    call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part)
 
     SAFE_ALLOCATE(densmatr(1:mb_1part%npt, 1:mb_1part%npt))
     SAFE_ALLOCATE(evectors(1:mb_1part%npt, 1:mb_1part%npt))

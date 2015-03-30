@@ -243,11 +243,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   ! We label the points inside the mesh
   do iz = start_z, end_z
-    chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
+    chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
+      chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
+        chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
       end do
 
@@ -314,11 +314,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   if(sb%mr_flag) then
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-      chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
+      chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
+        chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
         do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-          chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
+          chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
            ! skip if not inner point
           if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
           res = -1
@@ -611,11 +611,11 @@ contains
           do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
 
             do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
-              chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + mesh%sb%box_offset(1)
+              chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
               do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
-                chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + mesh%sb%box_offset(2)
+                chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
                 do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
-                  chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
+                  chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
 
                   if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
                     iin = iin + 1
@@ -696,9 +696,9 @@ contains
 #ifdef HAVE_MPI
         if(.not. mesh%parallel_in_domains) then
 #endif
-          chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1) + mesh%sb%box_offset(1)
-          chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2) + mesh%sb%box_offset(2)
-          chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3) + mesh%sb%box_offset(3)
+          chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1)
+          chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
+          chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
 
           call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
           mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
@@ -761,9 +761,9 @@ contains
 #ifdef HAVE_MPI
             if(.not. mesh%parallel_in_domains) then
 #endif
-              chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1) + mesh%sb%box_offset(1)
-              chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2) + mesh%sb%box_offset(2)
-              chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3) + mesh%sb%box_offset(3)
+              chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1)
+              chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
+              chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
 
               call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
               mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)

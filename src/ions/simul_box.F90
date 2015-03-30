@@ -95,8 +95,6 @@ module simul_box_m
     !! 4->parallelepiped (orthonormal, up to now).
     integer  :: box_shape   
 
-    FLOAT :: box_offset(MAX_DIM)  !< shifts of the origin in the respective direction
-
     FLOAT :: rsize          !< the radius of the sphere or of the cylinder
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
@@ -150,7 +148,6 @@ contains
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
-    call read_box_offset()                 ! Parameters defining the offset of the origin.
     call simul_box_build_lattice(sb)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
@@ -551,21 +548,10 @@ contains
         end do
       end select
 
-      POP_SUB(simul_box_init.read_box)
-    end subroutine read_box
-
-
-    !--------------------------------------------------------------
-    subroutine read_box_offset()
-      integer :: idir
-      type(block_t) :: blk
-
-      PUSH_SUB(simul_box_init.read_box_offset)
-      sb%box_offset = M_ZERO
       call messages_obsolete_variable('BoxOffset')
       
-      POP_SUB(simul_box_init.read_box_offset)
-    end subroutine read_box_offset
+      POP_SUB(simul_box_init.read_box)
+    end subroutine read_box
 
   end subroutine simul_box_init
 
@@ -748,7 +734,7 @@ contains
       if (simul_box_is_periodic(sb)) then
         if(.not. geo%reduced_coordinates) then
           !convert the position to the orthogonal space
-          xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+          xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 ! TODO : change to klattice not primitive, and remove line below
           xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
         else
@@ -767,7 +753,7 @@ contains
         ASSERT(all(xx(1:pd) >= M_ZERO))
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 ! TODO : change to rlattice not primitive, and remove line above
-        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
+        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd))
 
       end if
 
@@ -809,7 +795,7 @@ contains
     if (simul_box_is_periodic(sb)) then
       if(.not. geo%reduced_coordinates) then
         !convert the position to the orthogonal space - does this mean reduced coordinates?
-        xx(1:pd) = matmul(ratom(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+        xx(1:pd) = matmul(ratom(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 !TODO: change previous line to klattice (not prim) and remove next line
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
       else
@@ -829,7 +815,7 @@ contains
       xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
 !TODO: change next line to rlattice (not prim) and remove previous line
-      ratom(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
+      ratom(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd))
 
     end if
 
@@ -1028,7 +1014,7 @@ contains
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM), offset_latt(MAX_DIM)
+    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
@@ -1040,12 +1026,11 @@ contains
 
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
-
+    xx = M_ZERO
+    
     !convert from lattice to Cartesian
-    offset_latt(1:sb%dim) = matmul(sb%box_offset(1:sb%dim), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
-    forall(ip = 1:npoints) xx(1:sb%dim, ip) = offset_latt(1:sb%dim)
     if(npoints == 1) then
-      xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim)) - sb%box_offset(1:sb%dim)
+      xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     else
       call lalg_gemm(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, -M_ONE, xx)
     endif
@@ -1214,7 +1199,7 @@ contains
           write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
           write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
         end select
-        write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
+        write(iunit, '(a20,99e22.14)')   'box_offset=         ', (M_ZERO, idir = 1, sb%dim)
         write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
         if(sb%mr_flag) then
           write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
@@ -1318,7 +1303,7 @@ contains
         if (err /= 0) then
           ierr = ierr + 2**7
         else
-          read(lines(1),'(a20,99e22.14)') str, sb%box_offset(1:sb%dim)
+          ! lines(1) was sb%box_offset, now removed
           read(lines(2),'(a20,l7)') str, sb%mr_flag
         end if
 
@@ -1393,7 +1378,6 @@ contains
     PUSH_SUB(simul_box_copy)
 
     sbout%box_shape               = sbin%box_shape
-    sbout%box_offset              = sbin%box_offset
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize
     sbout%lsize                   = sbin%lsize
