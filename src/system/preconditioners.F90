@@ -76,7 +76,6 @@ contains
 
     FLOAT, parameter :: alpha = M_HALF
     FLOAT :: vol
-    character(len=256) :: prefix_
     integer :: default
     integer :: maxp, is, ns, ip, ip2
     

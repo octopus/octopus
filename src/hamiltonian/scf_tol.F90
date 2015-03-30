@@ -67,7 +67,6 @@ contains
     integer, optional,  intent(in)  :: tol_scheme
 
     integer :: def_maximumiter_
-    character(len=256) :: str
 
     PUSH_SUB(scf_tol_init)
     
