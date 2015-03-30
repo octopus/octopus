@@ -240,8 +240,8 @@ contains
           enddo
         enddo
       enddo
-      call sternheimer_init(sh2, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = .false.)
-      call sternheimer_init(sh_kdotp, sys, hm, "EM", complex_response, set_ham_var = 0, &
+      call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = .false.)
+      call sternheimer_init(sh_kdotp, sys, hm, complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
       SAFE_ALLOCATE(dl_eig(sys%st%nst, sys%st%d%nik, sys%gr%sb%periodic_dim))
@@ -259,10 +259,10 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
       ! first-order response is zero if there is time-reversal symmetry. F Mauri and SG Louie, PRL 76, 4246 (1996)
-      call sternheimer_init(sh, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonianVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, "EM", complex_response, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, hm, complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
     endif
 

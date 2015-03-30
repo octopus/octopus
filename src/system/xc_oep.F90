@@ -151,8 +151,8 @@ contains
       end if
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
-        call scf_tol_init(oep%scftol, "OEP", st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, gr, "OEP", states_are_real(st))
+        call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
+        call linear_solver_init(oep%solver, gr, states_are_real(st))
         call lr_init(oep%lr)
       end if
 

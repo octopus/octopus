@@ -192,7 +192,7 @@ contains
     call messages_info(1)
 
     call system_h_setup(sys, hm)
-    call sternheimer_init(sh, sys, hm, "VM", wfs_are_cplx = states_are_complex(st))
+    call sternheimer_init(sh, sys, hm, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr")
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)

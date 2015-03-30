@@ -91,10 +91,9 @@ module linear_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, prefix, states_are_real, def_solver)
+  subroutine linear_solver_init(this, gr, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(in)    :: gr
-    character(len=*),       intent(in)    :: prefix
     logical,                intent(in)    :: states_are_real !< for choosing solver
     integer, optional,      intent(in)    :: def_solver
 
@@ -156,11 +155,7 @@ contains
       endif
     endif
 
-    if (parse_is_defined(trim(prefix)//"LinearSolver")) then 
-      call parse_variable(trim(prefix)//"LinearSolver", defsolver_, fsolver)
-    else
-      call parse_variable("LinearSolver", defsolver_, fsolver)
-    end if
+    call parse_variable("LinearSolver", defsolver_, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
@@ -168,7 +163,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, gr, prefix)
+    call preconditioner_init(this%pre, gr)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -178,11 +173,7 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    if (parse_is_defined(trim(prefix)//"LinearSolverMaxIter")) then 
-      call parse_variable(trim(prefix)//"LinearSolverMaxIter", 1000, this%max_iter)
-    else
-      call parse_variable("LinearSolverMaxIter", 1000, this%max_iter)
-    end if
+    call parse_variable("LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)))

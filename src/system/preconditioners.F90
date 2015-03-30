@@ -70,10 +70,9 @@ module preconditioners_m
 contains
 
   ! --------------------------------------------------------- 
-  subroutine preconditioner_init(this, gr, prefix)
+  subroutine preconditioner_init(this, gr)
     type(preconditioner_t), intent(out)    :: this 
     type(grid_t),           intent(in)     :: gr
-    character(len=*), optional, intent(in) :: prefix
 
     FLOAT, parameter :: alpha = M_HALF
     FLOAT :: vol
@@ -89,8 +88,7 @@ contains
     !%Section SCF::Eigensolver
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
-    !% the linear-response equations. May apply prefix of linear-response (<i>e.g.</i>
-    !% <tt>EM</tt>, <tt>KdotP</tt>, <tt>VM</tt>) to differentiate from choice for ground state.
+    !% the linear-response equations.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -104,8 +102,6 @@ contains
     !%Option pre_multigrid 7
     !% Multigrid preconditioner.
     !%End
-    prefix_ = ""
-    if(present(prefix)) prefix_ = prefix
 
     if(gr%mesh%use_curvilinear) then
       default = PRE_NONE
@@ -113,17 +109,10 @@ contains
       default = PRE_FILTER
     end if
 
-    if (parse_is_defined(trim(prefix_)//'Preconditioner')) then 
-      call parse_variable(trim(prefix_)//'Preconditioner', default, this%which)
-      if(.not.varinfo_valid_option('Preconditioner', this%which)) &
-        call messages_input_error('Preconditioner')
-      call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
-    else
-      call parse_variable('Preconditioner', default, this%which)
-      if(.not.varinfo_valid_option('Preconditioner', this%which)) &
-        call messages_input_error('Preconditioner')
-      call messages_print_var_option(stdout, 'Preconditioner', this%which)
-    endif  
+    call parse_variable('Preconditioner', default, this%which)
+    if(.not.varinfo_valid_option('Preconditioner', this%which)) &
+      call messages_input_error('Preconditioner')
+    call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
     select case(this%which)
     case(PRE_FILTER)

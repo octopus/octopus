@@ -186,12 +186,12 @@ contains
     endif
 
     call sternheimer_obsolete_variables('KdotP_', 'KdotP')
-    call sternheimer_init(sh, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
+    call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
       occ_response_by_sternheimer = .true.)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
     if(calc_2nd_order) then
-      call sternheimer_init(sh2, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
+      call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, &
         set_occ_response = .false., set_last_occ_response = .false.)
     endif
 
