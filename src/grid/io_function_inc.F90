@@ -528,7 +528,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
-  R_TYPE,                     intent(in)  :: ff(:)  ! ff(mesh%np_global)
+  R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
   logical,                    intent(in)  :: is_tmp
@@ -561,11 +561,11 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
     call messages_fatal(1)
   endif
 
+  ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS)   /= 0) np_max = mesh%np_part_global
-
-  ASSERT(ubound(ff, dim = 1) >= np_max)
+  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS) /= 0 .and. ubound(ff, dim = 1) >= mesh%np_part_global) &
+    np_max = mesh%np_part_global
 
   if(iand(how, C_OUTPUT_HOW_BINARY)     /= 0) call out_binary()
   if(iand(how, C_OUTPUT_HOW_AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
@@ -621,9 +621,9 @@ contains
     PUSH_SUB(X(io_function_output_global).out_binary)
 
     workdir = io_workpath(dir, is_tmp=is_tmp)
-    call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', mesh%np_global, ff, ierr)
+    call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', np_max, ff, ierr)
 
-    call profiling_count_transfers(mesh%np_global, ff(1))
+    call profiling_count_transfers(np_max, ff(1))
     POP_SUB(X(io_function_output_global).out_binary)
   end subroutine out_binary
 
@@ -1158,7 +1158,7 @@ contains
 
     call geometry_write_openscad(geo, cad_file = cad_file)
 
-    do ip = 1, mesh%np_global
+    do ip = 1, np_max
       ii = mesh%idx%lxyz(ip, 1)
       jj = mesh%idx%lxyz(ip, 2)
       kk = mesh%idx%lxyz(ip, 3)
@@ -1172,7 +1172,7 @@ contains
       cube_point(6) = mesh%idx%lxyz_inv(ii + 1, jj + 1, kk + 1)
       cube_point(7) = mesh%idx%lxyz_inv(ii + 1, jj    , kk + 1)
 
-      if(any(cube_point < 1 .or. cube_point > mesh%np_global)) cycle
+      if(any(cube_point < 1 .or. cube_point > np_max)) cycle
       
       cubeindex = 0
       if(X(inside_isolevel)(ff, cube_point(0), isosurface_value)) cubeindex = cubeindex + 1

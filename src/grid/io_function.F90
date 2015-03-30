@@ -181,6 +181,8 @@ contains
     !% <tt>*.meshgrid.y</tt>.
     !%Option boundary_points 8192
     !% This option includes the output of the mesh enlargement. Default is without.
+    !% Supported only by <tt>binary</tt>, <tt>axis</tt>, <tt>mesh_index</tt>, and <tt>openscad</tt> formats.
+    !% Not all types of <tt>Output</tt> will have this information available.
     !%Option binary 16384
     !% Plain binary, new format.
     !%Option etsf 32768
