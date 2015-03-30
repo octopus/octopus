@@ -455,7 +455,6 @@ contains
     integer, intent(in)         :: i, l
     FLOAT                       :: projectorg
 
-    !FLOAT, external :: gamma
     FLOAT :: pif, ex
 
     PUSH_SUB(projectorg)
