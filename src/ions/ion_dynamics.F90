@@ -290,15 +290,32 @@ contains
       !% Note that you do not need to specify initial velocities if you are not going
       !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
       !% are not specified, they are considered to be null.
+      !% Note: It is important for the velocities to maintain the ordering 
+      !% in which the atoms were defined in the coordinates specifications.
+      !%End
+
+      !%Variable XSFVelocities
+      !%Type string
+      !%Section System::Velocities
+      !%Description
+      !% Like <tt>XYZVelocities</tt> but in XCrySDen format, as in <tt>XSFCoordinates</tt>.
+      !%End
+
+      !%Variable PDBVelocities
+      !%Type string
+      !%Section System::Velocities
+      !%Description
+      !% Like <tt>XYZVelocities</tt> but in PDB format, as in <tt>PDBCoordinates</tt>.
       !%End
 
       !%Variable Velocities
       !%Type block
       !%Section System::Velocities
       !%Description
-      !% If <tt>XYZVelocities</tt> is not present, octopus will try to fetch the initial 
-      !% atomic velocities from this block. If this block is not present, octopus
-      !% will reset the initial velocities to zero. The format of this block can be
+      !% If <tt>XYZVelocities</tt>, <tt>PDBVelocities</tt>, and <tt>XSFVelocities</tt>
+      !% are not present, <tt>Octopus</tt> will try to fetch the initial 
+      !% atomic velocities from this block. If this block is not present, <tt>Octopus</tt>
+      !% will set the initial velocities to zero. The format of this block can be
       !% illustrated by this example:
       !%
       !% <tt>%Velocities
@@ -310,7 +327,7 @@ contains
       !% velocity of 3.4 velocity units.
       !%
       !% Note: It is important for the velocities to maintain the ordering 
-      !% in which the species were defined in the coordinates specifications.
+      !% in which the atoms were defined in the coordinates specifications.
       !%End
 
       call read_coords_init(xyz)
