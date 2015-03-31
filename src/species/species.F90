@@ -1438,9 +1438,27 @@ contains
         call check_duplication(OPTION_LMAX)
         call parse_block_integer(blk, row, icol + 1, spec%lmax)
 
+        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+          call messages_input_error('Species', &
+            "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
+        end if
+        
+        if(spec%lmax < 0) then
+          call messages_input_error('Species', "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
+        end if
+
       case(OPTION_LLOC)
         call check_duplication(OPTION_LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%lloc)
+
+        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+          call messages_input_error('Species', &
+            "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
+        end if
+
+        if(spec%lloc < 0) then
+          call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
+        end if
 
       case(OPTION_MASS)
         call check_duplication(OPTION_MASS)
@@ -1524,6 +1542,8 @@ contains
       icol = icol + 2        
     end do
 
+    ! CHECK THAT WHAT WE PARSED MAKES SENSE
+    
     if(spec%type == SPECIES_SOFT_COULOMB .and. .not. parameter_defined(OPTION_SOFTENING)) then
       call messages_input_error('Species', &
         "The 'softening' parameter is missing for species "//trim(spec%label))
@@ -1548,6 +1568,13 @@ contains
     if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION_THICKNESS)) then
       call messages_input_error('Species', &
         "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
+    end if
+
+    if(parameter_defined(OPTION_LMAX) .and. parameter_defined(OPTION_LLOC)) then
+      if(spec%lloc > spec%lmax) then
+        call messages_input_error('Species', &
+          "the 'lloc' parameter cannot be larger than the 'lmax' parameter in species "//trim(spec%label))
+      end if
     end if
     
     select case(spec%type)
