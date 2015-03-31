@@ -33,7 +33,7 @@ EXTRA_DIST =     \
 	ChangeLog PACKAGING \
 	TODO \
 	debian/changelog debian/control debian/copyright debian/dirs     \
-	debian/info debian/README.Debian debian/rules
+	debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
 	ChangeLog config.log config.status
