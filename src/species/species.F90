@@ -327,19 +327,25 @@ contains
     !%Option species_user_defined -123
     !% Species with user-defined potential. The potential for the
     !% species is defined by the formula given by the <tt>potential_formula</tt>
-    !% parameter. The charge associated with this species must be given by the <tt>valence</tt> parameter.
+    !% parameter.
+    !% The
+    !% <tt>valence</tt> parameter determines the number of electrons
+    !% associated with the species. By default, a valence of 0 is assumed.
     !%Option species_charge_density -125
     !% The potential for this species is created from the distribution
-    !% of charge given by the <tt>density_formula</tt> parameter. The
-    !% required <tt>valence</tt> parameter determines the number of electrons
-    !% associated with the species.
+    !% of charge given by the <tt>density_formula</tt> parameter.
+    !% The
+    !% <tt>valence</tt> parameter determines the number of electrons
+    !% associated with the species. By default, a valence of 0 is assumed.
     !%Option species_point  -3
     !%Option species_jellium  -3
     !% Jellium sphere.
+    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.
     !%Option species_jellium_slab  -4
     !% A slab of jellium that extends across the simulation box in the
     !% <i>xy</i>-plane. The dimension along the <i>z</i> direction is
     !% determined by the required parameter <tt>thickness</tt>.
+    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.    
     !%Option species_pspio  -110
     !% (experimental) Alternative method to read pseudopotentials
     !% using the PSPIO library. The file must be given by the
@@ -367,12 +373,16 @@ contains
     !% atomic number is determined from the name of the species.
     !%Option species_from_file  -126
     !% The potential is read from a file. Accepted file formats, detected by extension: obf, ncdf and csv.
+    !% The
+    !% <tt>valence</tt> parameter determines the number of electrons
+    !% associated with the species. By default, a valence of 0 is assumed.
     !%Option species_soft_coulomb -128
     !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
     !%
     !% <math>v(r) = - z_{val} / \sqrt{a^2 + r^2}</math>
     !%
     !% The value of <i>a</i> should be given by the mandatory <tt>softening</tt> parameter.
+    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.
     !%Option min_radius -10001
     !% The minimum radius of the box that will be used for this species.
     !%Option max_spacing -10002
@@ -1514,28 +1524,30 @@ contains
       icol = icol + 2        
     end do
 
-    call iihash_end(read_parameters)
-
-    if(spec%type == SPECIES_SOFT_COULOMB .and. spec%sc_alpha <= CNST(0.0)) then
-      call messages_write("The mandatory 'softening' parameter is missing for species "//trim(spec%label)//'.')
-      call messages_fatal()
+    if(spec%type == SPECIES_SOFT_COULOMB .and. .not. parameter_defined(OPTION_SOFTENING)) then
+      call messages_input_error('Species', &
+        "The 'softening' parameter is missing for species "//trim(spec%label))
     end if
 
-    if(spec%potential_formula == '' .and. spec%type == SPECIES_USDEF) then
-      call messages_input_error('Species', "The potential_formula parameter is missing for species '"//trim(spec%label)//"'")
+    if(spec%type == SPECIES_USDEF .and. .not. parameter_defined(OPTION_POTENTIAL_FORMULA)) then
+      call messages_input_error('Species', &
+        "The 'potential_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
-    if(spec%density_formula == '' .and. spec%type == SPECIES_CHARGE_DENSITY) then
-      call messages_input_error('Species', "The density_formula parameter is missing for species '"//trim(spec%label)//"'")
+    if(spec%type == SPECIES_CHARGE_DENSITY .and. .not. parameter_defined(OPTION_DENSITY_FORMULA)) then
+      call messages_input_error('Species', &
+        "The 'density_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
     
-    if(spec%filename == '' .and. &
-      (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE)) then
-      call messages_input_error('Species', "The file or db_file parameter is missing for species '"//trim(spec%label)//"'")
+    if((spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE) &
+      .and. .not. (parameter_defined(OPTION_FILE) .or. parameter_defined(OPTION_DB_FILE))) then
+      call messages_input_error('Species', &
+        "The 'file' or 'db_file' parameter is missing for species '"//trim(spec%label)//"'")
     end if
       
-    if(spec%type == SPECIES_JELLIUM_SLAB .and. spec%jthick < M_ZERO) then
-      call messages_input_error('Species', "The thickness parameter is missing for species '"//trim(spec%label)//"'")
+    if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION_THICKNESS)) then
+      call messages_input_error('Species', &
+        "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
     end if
     
     select case(spec%type)
@@ -1565,7 +1577,7 @@ contains
       call element_end(element)
         
     case default
-      if(spec%mass < CNST(0.0)) then
+      if(.not. parameter_defined(OPTION_MASS)) then
         spec%mass = 1.0
         call messages_write('Info: default mass for species '//trim(spec%label)//':')
         call messages_write(spec%mass)
@@ -1573,29 +1585,46 @@ contains
         call messages_info()
       end if
 
-      if(spec%z_val < CNST(0.0)) then
-        call messages_write('Cannot determine valence for species '//trim(spec%label)//'.')
-        call messages_fatal()
+      if(.not. parameter_defined(OPTION_VALENCE)) then
+        if(spec%type == SPECIES_USDEF .or. spec%type == SPECIES_CHARGE_DENSITY .or. spec%type == SPECIES_FROM_FILE) then
+          spec%z_val = CNST(0.0)
+        else
+          call messages_input_error('Species', &
+            "The 'valence' parameter is missing for species '"//trim(spec%label)//"'")
+        end if
       end if
       
     end select
-    
+
+    call iihash_end(read_parameters)
+
     POP_SUB(read_from_block)
 
   contains
+
+    logical function parameter_defined(param) result(defined)
+      integer, intent(in) :: param
+
+      integer :: tmp
+      
+      PUSH_SUB(read_from_block.parameter_defined)
+
+      tmp = iihash_lookup(read_parameters, -param, defined)
+      
+      POP_SUB(read_from_block.parameter_defined)
+    end function parameter_defined
+
+    !------------------------------------------------------
     
     subroutine check_duplication(param)
       integer, intent(in) :: param
 
-      integer :: tmp
-      logical :: parameter_found
-
       PUSH_SUB(read_from_block.check_duplication)
 
-      tmp = iihash_lookup(read_parameters, -param, parameter_found)
-      if(parameter_found) then
+      if(parameter_defined(param)) then
         call messages_input_error('Species', "Duplicated parameter in species '"//trim(spec%label)//"'")
       end if
+
       call iihash_insert(read_parameters, -param, 1)
 
       POP_SUB(read_from_block.check_duplication)
