@@ -311,7 +311,7 @@ contains
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
     !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.hgh'
-    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | file | db_file | "UPF/Xe.UPF"
+    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | db_file | "UPF/Xe.UPF"
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
     !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
@@ -322,8 +322,21 @@ contains
     !% <br>%</tt>
     !%Option species_pseudo  -7
     !% The species is a pseudopotential. The pseudopotential file must
-    !% be defined by the <tt>file</tt> or <tt>db_file</tt> parameters. Optional
-    !% parameters are <tt>lmax</tt> and <tt>lloc</tt>.
+    !% be defined by the <tt>file</tt> or <tt>db_file</tt>
+    !% parameters.
+    !%
+    !% The optional parameters are <tt>lmax</tt>, that defines the
+    !% maximum angular momentum component to be used, and
+    !% <tt>lloc</tt>, that defines the angular momentum to be
+    !% considered as local. When these parameters are not set, the
+    !% values are taken from the pseudopotential file. Note that,
+    !% depending on the type of pseudopotential, it might not be
+    !% possible to select <tt>lmax</tt> and <tt>lloc</tt>, if that is
+    !% the case the parameters will be ignored.
+    !%Option species_pspio  -110
+    !% (experimental) Alternative method to read pseudopotentials
+    !% using the PSPIO library. This species uses the same parameters
+    !% as <tt>species_pseudo</tt>.
     !%Option species_user_defined -123
     !% Species with user-defined potential. The potential for the
     !% species is defined by the formula given by the <tt>potential_formula</tt>
@@ -346,10 +359,6 @@ contains
     !% <i>xy</i>-plane. The dimension along the <i>z</i> direction is
     !% determined by the required parameter <tt>thickness</tt>.
     !% The charge associated with this species must be given by the <tt>valence</tt> parameter.    
-    !%Option species_pspio  -110
-    !% (experimental) Alternative method to read pseudopotentials
-    !% using the PSPIO library. The file must be given by the
-    !% <tt>file</tt> or <tt>db_file</tt> parameters.
     !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
