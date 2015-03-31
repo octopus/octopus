@@ -43,9 +43,6 @@ of a variety of systems, from small clusters to medium sized quantum dots.
 rm -rf $RPM_BUILD_ROOT
 %setup -q
 
-# The installation is also performed in the %%build stage because the
-# code has to be configured twice, with and without MPI support, and
-# cleaned in between.
 %build
 %configure \
   FC="@FC@" \
@@ -68,40 +65,8 @@ make
 
 make install DESTDIR=${RPM_BUILD_ROOT}
 
-make clean
-
-%configure \
-  FC="@FC@" \
-  FCFLAGS="@FCFLAGS@" \
-  CFLAGS="@CFLAGS@" \
-  CPPFLAGS="@CPPFLAGS@" \
-  LDFLAGS="@LDFLAGS@" \
-  LIBS_BLAS="@LIBS_BLAS@" \
-  LIBS_LAPACK="@LIBS_LAPACK@" \
-  LIBS_FFT="@LIBS_FFT@" \
-  GSL_CFLAGS="@GSL_CFLAGS@" \
-  GSL_CONFIG="@GSL_CONFIG@" \
-  GSL_LIBS="@GSL_LIBS@" \
-  --with-sparskit="@LIBS_SPARSKIT@" \
-  --with-arpack="@LIBS_ARPACK@" \
-  --with-netcdf="@LIBS_NETCDF@"
-
-make
-
-make install DESTDIR=${RPM_BUILD_ROOT}
-
-
 %clean
 rm -rf ${RPM_BUILD_ROOT}
-
-
-%post
-install-info %{_infodir}/octopus.info &> /dev/null
-
-
-%preun
-install-info --remove octopus &> /dev/null
-
 
 %files
 %defattr(-,root,root,0755)
