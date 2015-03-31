@@ -9,7 +9,9 @@
 !% correlation functional, or a single exchange-correlation functional
 !% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
 !% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
-!% Libxc documentation</a>.
+!% Libxc documentation</a>. The list provided here is from libxc 2.0; if you have
+!% linked against a different libxc version, you may have a somewhat different set
+!% of available functionals. Note that kinetic-energy functionals are not supported.
 !% <br>Defaults:
 !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
 !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
@@ -43,7 +45,7 @@
 !%Option lda_c_ob_pw               14000
 !% Ortiz & Ballone (PW)
 !%Option lda_c_2d_amgb               15000
-!% Attacalite et al
+!% Attaccalite et al
 !%Option lda_c_2d_prm               16000
 !% Pittalis, Rasanen & Marques correlation in 2D
 !%Option lda_c_vbh               17000
@@ -468,6 +470,7 @@
 !% RDMFT Mueller functional (not from libxc).
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
+!% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
 !%Option none                       0
 !% Exchange and correlation set to zero (not from libxc).
 !%End
