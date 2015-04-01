@@ -104,9 +104,6 @@ module messages_m
     module procedure messages_write_logical
   end interface messages_write
 
-  integer,    public :: global_alloc_err
-  integer(8), public :: global_sizeof
-
   integer :: warnings
   integer :: experimentals
   integer :: current_line

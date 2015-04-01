@@ -4,6 +4,7 @@
 ! purposes.
 
 module sgfft_m
+  use global_m
   use messages_m
   use mpi_m
 #ifdef HAVE_OMP

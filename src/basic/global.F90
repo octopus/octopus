@@ -110,6 +110,9 @@ module global_m
   !> Same for profiling mode.
   logical, public :: in_profiling_mode = .false.
 
+  integer,    public :: global_alloc_err
+  integer(8), public :: global_sizeof
+  
   ! End of declaration of public objects.
   ! ---------------------------------------------------------
 
