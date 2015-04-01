@@ -1008,7 +1008,7 @@ contains
       type(partial_charges_t) :: partial_charges
       integer :: iunit, idir, iatom, ii
       FLOAT:: rr(1:3), ff(1:3), torque(1:3)
-      FLOAT, allocatable :: bader_charges(:), voronoi_charges(:)
+      FLOAT, allocatable :: bader_charges(:), hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1116,27 +1116,28 @@ contains
 
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(bader_charges(1:geo%natoms))
-        SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
+        SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
         call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, bader_charges, voronoi_charges)
+        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, bader_charges, &
+          hirshfeld_charges = hirshfeld_charges)
         call partial_charges_end(partial_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 
           write(iunit,'(a)') 'Partial ionic charges'
-          write(iunit,'(a)') ' Ion                     Bader         Voronoi'
+          write(iunit,'(a)') ' Ion                     Bader         Hirshfeld'
 
           do iatom = 1, geo%natoms
             write(iunit,'(i4,a10,2f16.3)') iatom, trim(species_label(geo%atom(iatom)%species)), &
-              bader_charges(iatom), voronoi_charges(iatom)
+              bader_charges(iatom), hirshfeld_charges(iatom)
 
           end do
 
         end if
 
         SAFE_DEALLOCATE_A(bader_charges)
-        SAFE_DEALLOCATE_A(voronoi_charges)
+        SAFE_DEALLOCATE_A(hirshfeld_charges)
 
       end if
 

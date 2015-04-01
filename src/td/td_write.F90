@@ -235,7 +235,7 @@ contains
     !%Option total_current 65536
     !% Output the total current.
     !%Option partial_charges 131072
-    !% Bader and Voronoi partial charges. The output file is called 'td.general/partial_charges'.
+    !% Bader and Hirshfeld partial charges. The output file is called 'td.general/partial_charges'.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -2160,14 +2160,14 @@ contains
 
     integer :: idir
     character(len=50) :: aux
-    FLOAT, allocatable :: bader_charges(:), voronoi_charges(:)
+    FLOAT, allocatable :: bader_charges(:), hirshfeld_charges(:)
 
     PUSH_SUB(td_write_partial_charges)
 
     SAFE_ALLOCATE(bader_charges(1:geo%natoms))
-    SAFE_ALLOCATE(voronoi_charges(1:geo%natoms))
+    SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, mesh, st, geo, bader_charges, voronoi_charges)
+    call partial_charges_calculate(partial_charges, mesh, st, geo, bader_charges, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 
@@ -2184,7 +2184,7 @@ contains
         end do
         
         do idir = 1, geo%natoms
-          write(aux, '(a13,i3,a1)') 'voronoi(atom=', idir, ')'
+          write(aux, '(a13,i3,a1)') 'hirshfeld(atom=', idir, ')'
           call write_iter_header(out_partial_charges, aux)
         end do
         
@@ -2196,13 +2196,13 @@ contains
       call write_iter_start(out_partial_charges)
       
       call write_iter_double(out_partial_charges, bader_charges, geo%natoms)
-      call write_iter_double(out_partial_charges, voronoi_charges, geo%natoms)
+      call write_iter_double(out_partial_charges, hirshfeld_charges, geo%natoms)
       
       call write_iter_nl(out_partial_charges)
     end if
 
     SAFE_DEALLOCATE_A(bader_charges)
-    SAFE_DEALLOCATE_A(voronoi_charges)
+    SAFE_DEALLOCATE_A(hirshfeld_charges)
 
     POP_SUB(td_write_partial_charges)
   end subroutine td_write_partial_charges

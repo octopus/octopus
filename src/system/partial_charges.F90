@@ -67,6 +67,7 @@ module partial_charges_m
   use grid_m
   use hamiltonian_m
   use hamiltonian_base_m
+  use hirshfeld_m
   use io_m
   use io_function_m
   use lalg_basic_m
@@ -159,13 +160,14 @@ contains
 
   !----------------------------------------------
 
-  subroutine partial_charges_calculate(this, mesh, st, geo, bader_charges, voronoi_charges)
+  subroutine partial_charges_calculate(this, mesh, st, geo, bader_charges, voronoi_charges, hirshfeld_charges)
     type(partial_charges_t), intent(in)    :: this
     type(mesh_t),            intent(in)    :: mesh
     type(states_t),          intent(in)    :: st
     type(geometry_t),        intent(in)    :: geo
     FLOAT, optional,         intent(out)   :: bader_charges(:)
     FLOAT, optional,         intent(out)   :: voronoi_charges(:)
+    FLOAT, optional,         intent(out)   :: hirshfeld_charges(:)
 
     integer :: idir, iatom, ix, iy, iz, ip
     FLOAT :: vol
@@ -179,7 +181,8 @@ contains
     FLOAT    :: offset(MAX_DIM)
     FLOAT, allocatable :: total_density(:)
     type(profile_t), save :: prof
-
+    type(hirshfeld_t) :: hirshfeld
+    
     PUSH_SUB(partial_charges_calculate)
     call profiling_in(prof, 'PARTIAL_CHARGES')
 
@@ -303,7 +306,6 @@ contains
       end do
     end if
 
-
     SAFE_DEALLOCATE_A(ions%r_car)
     SAFE_DEALLOCATE_A(ions%r_dir)
     SAFE_DEALLOCATE_A(ions%ion_chg)
@@ -314,6 +316,17 @@ contains
     call dcube_function_free_RS(cube, density_cube)
     call cube_end(cube)
 
+    if(present(hirshfeld_charges)) then
+
+      call hirshfeld_init(hirshfeld, mesh, geo, st)
+      
+      do iatom = 1, geo%natoms
+        call hirshfeld_partition(hirshfeld, iatom, st%rho, hirshfeld_charges(iatom))
+      end do
+      
+      call hirshfeld_end(hirshfeld)
+    end if
+    
     call profiling_out(prof)
     POP_SUB(partial_charges_calculate)
 
