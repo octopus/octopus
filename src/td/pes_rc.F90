@@ -55,10 +55,10 @@ module pes_rc_m
 
   type PES_rc_t
     integer          :: npoints                 !< how many points we store the wf
-    integer, pointer :: points(:)               !< which points to use
-    FLOAT, pointer   :: points_xyz(:,:)
+    integer, pointer :: points(:)               !< which points to use (local index)
+    integer, pointer :: points_global(:)        !< global index of the points
     character(len=30), pointer :: filenames(:)  !< filenames
-    CMPLX, pointer :: wf(:,:,:,:,:)
+    CMPLX, pointer   :: wf(:,:,:,:,:)
     integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
   end type PES_rc_t
 
@@ -76,7 +76,7 @@ contains
     integer  :: ip
     FLOAT :: xx(MAX_DIM)
     FLOAT :: dmin
-    FLOAT :: buf(1:MAX_DIM)
+    integer :: buf
     integer :: rankmin
 
 #if defined(HAVE_MPI)
@@ -112,7 +112,7 @@ contains
     ! setup filenames and read points
     SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%points_xyz(1:pesrc%npoints, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
 
     do ip = 1, pesrc%npoints
@@ -122,30 +122,21 @@ contains
       call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
       call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
 
-
       pesrc%points(ip) = mesh_nearest_point(mesh, xx, dmin, rankmin)
       pesrc%rankmin(ip)= rankmin
 
       if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
         if(mesh%mpi_grp%rank == rankmin) then
-           pesrc%points_xyz(ip,1:mesh%sb%dim) = mesh%x(pesrc%points(ip),1:mesh%sb%dim)
-
-          if(mesh%mpi_grp%rank /= 0) then
-            buf(1:mesh%sb%dim) = pesrc%points_xyz(ip,1:mesh%sb%dim)
-            call mpi_send(buf, mesh%sb%dim, MPI_DOUBLE_PRECISION, 0, 0, mesh%mpi_grp%comm, mpi_err)
-          endif
+          buf = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
+        else
+          buf = 0
         endif
-        if(mesh%mpi_grp%rank == 0 .AND. rankmin /= 0) then
-          call mpi_recv(buf, mesh%sb%dim, MPI_DOUBLE_PRECISION, rankmin, 0, mesh%mpi_grp%comm, status, mpi_err)
-          pesrc%points_xyz(ip,1:mesh%sb%dim) = buf(1:mesh%sb%dim)
-        endif
+        call mpi_allreduce(buf, pesrc%points_global(ip), 1, MPI_INTEGER, mpi_sum, mpi_comm_world, mpi_err)
 #endif
       else
-        pesrc%points_xyz(ip,1:mesh%sb%dim) = mesh%x(pesrc%points(ip),1:mesh%sb%dim)
+        pesrc%points_global(ip) = pesrc%points(ip)
       end if
-
-
     end do
 
     call parse_block_end(blk)
@@ -166,7 +157,7 @@ contains
     if(associated(pesrc%filenames)) then
       SAFE_DEALLOCATE_P(pesrc%filenames)
       SAFE_DEALLOCATE_P(pesrc%points)
-      SAFE_DEALLOCATE_P(pesrc%points_xyz)
+      SAFE_DEALLOCATE_P(pesrc%points_global)
       SAFE_DEALLOCATE_P(pesrc%wf)
       SAFE_DEALLOCATE_P(pesrc%rankmin)
     end if
@@ -281,7 +272,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
         iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
-        xx(1:mesh%sb%dim) = pesrc%points_xyz(ip,1:mesh%sb%dim)
+        xx = mesh_x_global(mesh, pesrc%points_global(ip))
         write(iunit,'(a1)') '#'
         write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
           '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &

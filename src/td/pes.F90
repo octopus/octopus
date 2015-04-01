@@ -78,12 +78,12 @@ contains
     type(pes_rc_t), intent(out) :: this
     !
     PUSH_SUB(pes_rc_nullify)
-    !this%npoints  = 0
-    this%points    =>null()
-    this%points_xyz=>null()
-    this%filenames =>null()
-    this%wf        =>null()
-    this%rankmin   =>null()
+    !this%npoints      = 0
+    this%points        =>null()
+    this%points_global =>null()
+    this%filenames     =>null()
+    this%wf            =>null()
+    this%rankmin       =>null()
     POP_SUB(pes_rc_nullify)
     return
   end subroutine pes_rc_nullify
