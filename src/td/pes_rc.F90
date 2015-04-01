@@ -141,7 +141,7 @@ contains
 
     call parse_block_end(blk)
 
-    SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, 1:st%nst, 1:st%d%nik, 0:save_iter-1))
+    SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
     pesrc%wf = M_z0
 
     POP_SUB(PES_rc_init)
@@ -175,14 +175,24 @@ contains
     FLOAT,          intent(in)    :: dt
     integer,        intent(in)    :: iter
 
-    CMPLX, allocatable            :: wfact(:,:,:,:)
+    CMPLX, allocatable            :: psi(:,:,:,:), wfact(:,:,:,:)
 
     integer :: ip, ik, ist, idim, isdim
+    integer :: nst, dim, nik, stst, stend, kptst, kptend
     logical :: contains_ip
 
     PUSH_SUB(PES_rc_calc)
 
-    SAFE_ALLOCATE(wfact(1:pesrc%npoints, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+    nst    = st%nst
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
+    dim    = st%d%dim
+
+    SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
+
+    SAFE_ALLOCATE(wfact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints))
     wfact = M_z0
 
     contains_ip = .true.
@@ -199,24 +209,20 @@ contains
       end if
 #endif
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-            if(contains_ip) then
-              wfact(ip, idim, ist, ik) = st%zpsi(pesrc%points(ip), idim, ist, ik)
-            end if
-          end do
-        end do
-      end do
+      if(contains_ip) then
+        call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
+        wfact(stst:stend, dim, kptst:kptend, ip) = psi(stst:stend, dim, 1, kptst:kptend)
+      end if
     end do
 
 #if defined(HAVE_MPI)
-    isdim = pesrc%npoints * st%d%dim * st%nst * st%d%nik
+    isdim = st%nst * dim * st%d%nik * pesrc%npoints
     call mpi_allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_DOUBLE_COMPLEX, mpi_sum, mpi_comm_world, mpi_err)
 #else
     pesrc%wf(:,:,:,:,ii) = wfact(:,:,:,:)
 #endif
 
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(wfact)
 
     POP_SUB(PES_rc_calc)
@@ -243,7 +249,7 @@ contains
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do idim = 1, st%d%dim
-              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ip, idim, ist, ik, ii-1))
+              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ist, idim, ik, ip, ii-1))
               write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
                 real(vfu),  aimag(vfu) 
             end do
