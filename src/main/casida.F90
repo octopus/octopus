@@ -35,7 +35,6 @@ module casida_m
   use lalg_adv_m
   use loct_m
   use linear_response_m
-  use math_m
   use mesh_m
   use mesh_function_m
   use mpi_m

@@ -34,7 +34,6 @@ module em_resp_m
   use lalg_basic_m
   use linear_response_m
   use loct_m
-  use math_m
   use mesh_m
   use mesh_function_m
   use messages_m

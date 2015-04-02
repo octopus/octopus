@@ -24,7 +24,6 @@ module fourier_shell_m
   use cube_m
   use fft_m
   use global_m
-  use math_m
   use mesh_m
   use messages_m
   use profiling_m

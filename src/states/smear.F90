@@ -26,7 +26,6 @@ module smear_m
   use global_m
   use kpoints_m
   use loct_math_m
-  use math_m
   use messages_m
   use parser_m
   use profiling_m

@@ -45,7 +45,6 @@ module states_calc_m
   use lalg_basic_m
   use lapack_m
   use loct_m
-  use math_m
   use messages_m
   use mesh_m
   use mesh_batch_m

@@ -22,7 +22,6 @@
 module lalg_adv_m
   use global_m
   use lapack_m
-!  use math_m
   use sort_m
   use messages_m
   use mpi_m
