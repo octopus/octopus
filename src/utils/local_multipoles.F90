@@ -395,8 +395,8 @@ contains
     !% <br>%</tt>
     !% <br>rsize: Radius in input length units
     !% <br>xsize: the length of the cylinder in the x-direction 
-    !% <br>origin coordinates"  in input length units separated by | . where is the box centered.
-    !% <br>lsize:  half of the length of the parallelepiped in each direction.
+    !% <br>origin coordinates: in input length units separated by |, where the box is centered.
+    !% <br>lsize: half of the length of the parallelepiped in each direction.
     !% <br>center_list: string containing the list of atoms in xyz file for each domain in the form "2,16-23"
     !%End
 

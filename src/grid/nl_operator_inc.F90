@@ -105,7 +105,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
     else
       
-#ifndef SINGLE_PRECISION ! for the moment this not implemented      
+! for the moment this is not implemented
+#ifndef SINGLE_PRECISION
 
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef HAVE_OPENMP
