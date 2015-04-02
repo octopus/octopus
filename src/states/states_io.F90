@@ -37,6 +37,7 @@ module states_io_m
   use profiling_m
   use simul_box_m
   use smear_m
+  use sort_m
   use states_m
   use states_dim_m
   use unit_m
@@ -58,16 +59,22 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start)
+  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
     FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional, intent(in) :: st_start
-
-    integer :: ik, ikk, ist, ns, is, idir, st_start_
-    FLOAT :: kpoint(1:MAX_DIM)
+    logical, optional, intent(in) :: compact
+    
+    integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
+    logical :: print_eigenval
+    FLOAT :: kpoint(1:MAX_DIM), max_error
     character(len=80) :: tmp_str(max(MAX_DIM, 3)), cspin
+
+    FLOAT, allocatable :: flat_eigenval(:)
+    integer, allocatable :: flat_indices(:, :)
+    integer, parameter :: print_range = 8
 
     PUSH_SUB(states_write_eigenvalues)
 
@@ -75,78 +82,231 @@ contains
     if(present(st_start)) st_start_ = st_start
     ASSERT(nst <= st%nst)
 
-    ns = 1
-    if(st%d%nspin == 2) ns = 2
-
-    message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
-    call messages_info(1, iunit)
 
     if(.not. mpi_grp_is_root(mpi_world)) then
       POP_SUB(states_write_eigenvalues)
       return
     end if
 
-    if(st%d%ispin  ==  SPINORS) then
-      write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
-        '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
-    else
-      if(st%cmplxscl%space) then
-        write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
-          '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
+    if(.not. optional_default(compact, .false.)) then
+
+      ns = 1
+      if(st%d%nspin == 2) ns = 2
+      
+      message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
+      call messages_info(1, iunit)
+
+      if(st%d%ispin  ==  SPINORS) then
+        write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
+          '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
-          '#st',' Spin',' Eigenvalue', 'Occupation'
+        if(st%cmplxscl%space) then
+          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
+            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
+        else
+          write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
+            '#st',' Spin',' Eigenvalue', 'Occupation'
+        end if
       end if
-    end if
-    if(present(error)) &
-      write(message(1),'(a,a10)') trim(message(1)), ' Error'
-    call messages_info(1, iunit)
+      if(present(error)) &
+        write(message(1),'(a,a10)') trim(message(1)), ' Error'
+      call messages_info(1, iunit)
 
-    do ik = 1, st%d%nik, ns
-      if(simul_box_is_periodic(sb)) then
-        ikk = states_dim_get_kpoint_index(st%d, ik)
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
-        write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
-        do idir = 1, sb%dim
-          write(tmp_str(1), '(f10.6)') kpoint(idir)
-          message(1) = trim(message(1))//trim(tmp_str(1))
-          if(idir < sb%dim) message(1) = trim(message(1))//','
-        enddo
-        message(1) = trim(message(1))//')'
-        call messages_info(1, iunit)
-      end if
-
-      do ist = st_start_, nst
-        do is = 0, ns-1
-          if(is  ==  0) cspin = 'up'
-          if(is  ==  1) cspin = 'dn'
-          if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
-
-          write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
-          if(st%d%ispin == SPINORS) then
-            write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
-              units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
-            if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
-          else
-            if(st%cmplxscl%space) then !cmplxscl
-              write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
-            else
-              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
-            end if
-            if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
-          end if
-          if(present(error)) then
-            message(1) = trim(tmp_str(1))//trim(tmp_str(2))//trim(tmp_str(3))
-          else
-            message(1) = trim(tmp_str(1))//trim(tmp_str(2))
-          end if
+      do ik = 1, st%d%nik, ns
+        if(simul_box_is_periodic(sb)) then
+          ikk = states_dim_get_kpoint_index(st%d, ik)
+          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
+          write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
+          do idir = 1, sb%dim
+            write(tmp_str(1), '(f10.6)') kpoint(idir)
+            message(1) = trim(message(1))//trim(tmp_str(1))
+            if(idir < sb%dim) message(1) = trim(message(1))//','
+          enddo
+          message(1) = trim(message(1))//')'
           call messages_info(1, iunit)
+        end if
+
+        do ist = st_start_, nst
+          do is = 0, ns-1
+            if(is  ==  0) cspin = 'up'
+            if(is  ==  1) cspin = 'dn'
+            if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
+
+            write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
+            if(st%d%ispin == SPINORS) then
+              write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
+              if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
+            else
+              if(st%cmplxscl%space) then !cmplxscl
+                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
+                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
+                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
+              else
+                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
+              end if
+              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
+            end if
+            if(present(error)) then
+              message(1) = trim(tmp_str(1))//trim(tmp_str(2))//trim(tmp_str(3))
+            else
+              message(1) = trim(tmp_str(1))//trim(tmp_str(2))
+            end if
+            call messages_info(1, iunit)
+          end do
         end do
       end do
-    end do
+
+    else
+
+      call messages_info(1, iunit)
+
+      SAFE_ALLOCATE(flat_eigenval(1:st%d%nik*nst))
+      SAFE_ALLOCATE(flat_indices(1:2, 1:st%d%nik*nst))
+      
+      iflat = 1
+      do iqn = 1, st%d%nik
+        do ist = 1, nst
+          
+          flat_eigenval(iflat) = st%eigenval(ist, iqn)
+          flat_indices(1:2, iflat) = (/iqn, ist/)          
+
+          iflat = iflat + 1
+        end do
+      end do
+    
+      call sort(flat_eigenval, flat_indices(:, :))
+
+      SAFE_DEALLOCATE_A(flat_eigenval)
+     
+      do iflat = 1, st%d%nik*nst
+        iqn = flat_indices(1, iflat)
+        ist = flat_indices(2, iflat)
+        if(abs(st%occ(ist, iqn)) < CNST(5e-7)) then ! the smallest number we print that is not zero
+          homo_index = iflat - 1
+          exit
+        end if
+      end do
+      
+      tmp_str(1) = '#  State'
+
+      if(sb%periodic_dim > 0) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
+
+      if(st%d%ispin  ==  SPIN_POLARIZED) tmp_str(1) = trim(tmp_str(1))//'  Spin'
+
+      tmp_str(1) = trim(tmp_str(1))//'  Eigenvalue ['// trim(units_abbrev(units_out%energy)) // ']'
+
+      if(st%cmplxscl%space) then
+        tmp_str(1) = trim(tmp_str(1))//'  Im(Eigenvalue)'
+      end if
+        
+      tmp_str(1) = trim(tmp_str(1))//'  Occupation'
+
+      if(st%d%ispin  ==  SPINORS) then
+        tmp_str(1) = trim(tmp_str(1))//'      <Sx>     <Sy>     <Sz>'
+      end if
+      
+      if(present(error)) tmp_str(1) = trim(tmp_str(1))//'    Error'
+
+      call messages_write(tmp_str(1))
+      call messages_info(iunit = iunit)
+
+      not_printed = 0
+      max_error = CNST(0.0)
+      do iflat = 1, st%d%nik*nst
+        iqn = flat_indices(1, iflat)
+        ist = flat_indices(2, iflat)
+        ik = states_dim_get_kpoint_index(st%d, iqn)
+        is = states_dim_get_spin_index(st%d, iqn)
+
+        print_eigenval = iflat <= print_range
+        print_eigenval = print_eigenval .or. st%d%nik*nst - iflat < print_range
+        print_eigenval = print_eigenval .or. abs(iflat - homo_index) <= print_range
+
+        if(print_eigenval) then
+          
+          if(not_printed > 0) then
+            call messages_write('')
+            call messages_new_line()
+            call messages_write('  [output of ')
+            call messages_write(not_printed)
+            call messages_write(' eigenvalues skipped')
+            if(present(error)) then
+              call messages_write(': maximum error =')
+              call messages_write(max_error, fmt = '(es7.1)', align_left = .true.)
+            end if
+            call messages_write(']')
+            call messages_new_line()
+            call messages_write('')
+            call messages_info(iunit = iunit)
+
+            not_printed = 0
+            max_error = CNST(0.0)
+
+          end if
+
+          write(tmp_str(1), '(i7)') ist
+
+          if(sb%periodic_dim > 0) then
+            write(tmp_str(1), '(2a,i7)') trim(tmp_str(1)), ' ', ik
+          end if
+
+          if(st%d%ispin  ==  SPIN_POLARIZED) then
+            if(is  ==  1) cspin = '   up'
+            if(is  ==  2) cspin = '   dn'
+            write(tmp_str(1), '(2a,a5)') trim(tmp_str(1)), ' ', cspin
+          end if
+
+
+          if(.not. st%cmplxscl%space) then
+
+            if(len(units_abbrev(units_out%energy)) == 1) then
+              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
+            else
+              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
+            end if
+
+          else
+
+            if(len(units_abbrev(units_out%energy)) == 1) then
+              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
+            else
+              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
+            end if
+
+            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Im(ist, iqn))
+
+          end if
+
+          write(tmp_str(1), '(2a,f11.6)') trim(tmp_str(1)), ' ', st%occ(ist, iqn)
+
+          if(st%d%ispin  ==  SPINORS) then
+            write(tmp_str(1), '(2a,3f9.4)') trim(tmp_str(1)), ' ', st%spin(1:3, ist, iqn)
+          end if
+          
+          if(present(error)) then 
+            write(tmp_str(1), '(2a,es7.1,a)') trim(tmp_str(1)), '   (', error(ist, iqn), ')'
+          end if
+
+          call messages_write(tmp_str(1))
+          call messages_info(iunit = iunit)
+
+        else
+          
+          not_printed = not_printed + 1
+
+          if(present(error)) then
+            max_error = max(max_error, error(ist, iqn))
+          end if
+          
+        end if
+        
+      end do
+      
+      SAFE_DEALLOCATE_A(flat_indices)
+
+    end if
 
     if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
       write(message(1), '(a,f12.6,1x,a)') "Fermi energy = ", &

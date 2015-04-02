@@ -946,9 +946,9 @@ contains
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call messages_info(2)
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
+          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
         else
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
         if(associated(hm%vberry)) then

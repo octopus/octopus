@@ -46,7 +46,6 @@ module math_m
     ylmr,                       &
     grylmr,                     &
     weights,                    &
-    sort,                       &
     factorial,                  &
     hermite,                    &
     set_app_threshold,          &
@@ -61,7 +60,6 @@ module math_m
     infinity_norm,              &
     matrix_symmetric_average,   &
     matrix_symmetrize,          &
-    matrix_sort,                &
     interpolation_coefficients, &
     interpolate,                &
     even,                       &
@@ -84,34 +82,6 @@ module math_m
     module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
   end interface interpolate
   ! ------------------------------------------------------------------------------
-
-  ! ------------------------------------------------------------------------------
-  !> This is the common interface to a sorting routine.
-  !! It performs the shell algorithm, not as fast as the quicksort for large numbers,
-  !! but it seems that better for moderate numbers (around 100).
-  !! Their possible interfaces are:
-  !!   subroutine sort(a [, ind] )
-  !!     FLOAT_OR_INTEGER, intent(inout) :: a(:)
-  !!     integer, intent(inout), optional :: ind(:)
-  !!     ! This routine sorts, from smallest to largest, the array a.
-  !!     ! If the integer array ind is present, it puts in it the indexing
-  !!     ! of the sorting, so that other arrays can be sorted according to
-  !!     ! the sorting of a.
-  !!   end subroutine sort
-  !!
-  !!   subroutine sort(a, x)
-  !!     FLOAT, intent(inout) :: a(:)
-  !!     FLOAT_OR_COMPLEX, intent(inout) :: x(:, : [, :])
-  !!     ! This routine sorts, from smallest to largest, the array a.
-  !!     ! The real or complex array x, which may be two or three dimensional,
-  !!     ! is sorted according to the ordering of a. The last dimension of x
-  !!     ! must have the same size as a.
-  !!   end subroutine sort
-  interface sort
-    module procedure shellsort, dshellsort1, zshellsort1, &
-      dshellsort2, zshellsort2, ishellsort, sort_complex
-  end interface sort
-  !------------------------------------------------------------------------------
 
   !> This operator is .true. if the two operands are approximately
   !! equal (i.e. equal to within APP_THRESHOLD). For arrays, all
@@ -149,10 +119,6 @@ module math_m
   interface matrix_symmetrize
     module procedure dmatrix_symmetrize, zmatrix_symmetrize
   end interface matrix_symmetrize
-
-  interface matrix_sort
-    module procedure dmatrix_sort, zmatrix_sort
-  end interface matrix_sort
 
   interface log2
     module procedure dlog2, ilog2
@@ -606,113 +572,6 @@ contains
 
     POP_SUB(zdot_product)
   end function zdot_product
-
-
-  ! ---------------------------------------------------------
-  subroutine shellsort(a, ind)
-    FLOAT,             intent(inout) :: a(:)
-    integer, optional, intent(out)   :: ind(:)
-
-    integer :: i,j,inc,n, indi, indj
-    FLOAT   :: v
-
-    PUSH_SUB(shellsort)
-
-    n = size(a)
-
-    if(present(ind)) then
-      do i = 1, n
-        ind(i) = i
-      end do
-    end if
-
-    inc = 1
-    do
-      inc=3*inc+1
-      if (inc > n) exit
-    end do
-
-    do
-      inc=inc/3
-      do i=inc+1,n
-        v=a(i)
-        if(present(ind)) indi = ind(i)
-        j=i
-        do
-          if (a(j-inc) <= v) exit
-          !if (a(j-inc) >= v) exit
-          a(j)=a(j-inc)
-
-          !workaround to a bug in itanium ifort
-          !if(present(ind)) ind(j) = ind(j-inc)
-          if(present(ind)) indj = ind(j-inc)
-          if(present(ind)) ind(j) = indj
-
-          j=j-inc
-          if (j <= inc) exit
-        end do
-        a(j)=v
-        if(present(ind)) ind(j) = indi
-      end do
-      if (inc <= 1) exit
-    end do
-
-    POP_SUB(shellsort)
-  end subroutine shellsort
-
-
-  ! ---------------------------------------------------------
-  !> Shell sort for integer arrays.
-  subroutine ishellsort(a, ind)
-    integer,           intent(inout) :: a(:)
-    integer, optional, intent(out)   :: ind(:)
-
-    integer :: i,j,inc,n, indi, indj
-    integer :: v
-
-    PUSH_SUB(ishellsort)
-
-    n = size(a)
-
-    if(present(ind)) then
-      do i = 1, n
-        ind(i) = i
-      end do
-    end if
-
-    inc = 1
-    do
-      inc=3*inc+1
-      if (inc > n) exit
-    end do
-
-    do
-      inc=inc/3
-      do i=inc+1,n
-        v=a(i)
-        if(present(ind)) indi = ind(i)
-        j=i
-        do
-          if (a(j-inc) <= v) exit
-          !if (a(j-inc) >= v) exit
-          a(j)=a(j-inc)
-          !workaround to a bug in itanium ifort
-          !if(present(ind)) ind(j) = ind(j-inc)
-          if(present(ind)) indj = ind(j-inc)
-          if(present(ind)) ind(j) = indj
-
-          j=j-inc
-          if (j <= inc) exit
-        end do
-        a(j)=v
-        if(present(ind)) ind(j) = indi
-      end do
-      if (inc <= 1) exit
-    end do
-
-    POP_SUB(ishellsort)
-  end subroutine ishellsort
-
 
   ! ---------------------------------------------------------
   subroutine set_app_threshold(thr)
@@ -1212,101 +1071,6 @@ contains
 
     POP_SUB(generate_rotation_matrix)  
   end subroutine generate_rotation_matrix
-
-  ! ---------------------------------------------------------
-  !> Sort a complex vector vec(:)+i*Imvec(:) and put the ordering in reorder(:)
-  !! according to the following order:
-  !!
-  !! 1. values with zero imaginary part sorted by increasing real part
-  !! 2. values with negative imaginary part sorted by decreasing imaginary part
-  !! 3. values with positive imaginary part unsorted
-  subroutine sort_complex(vec, Imvec, reorder, imthr)
-    FLOAT,           intent(inout)  :: vec(:)
-    FLOAT,           intent(inout)  :: Imvec(:)
-    integer,         intent(out)    :: reorder(:)
-    FLOAT, optional, intent(in)     :: imthr !< the threshold for zero imaginary part
-
-    integer              :: dim, n0, n1, n2, i
-    integer, allocatable :: table(:),idx0(:)
-    FLOAT,   allocatable :: temp(:),tempI(:)
-    FLOAT                :: imthr_
-
-    PUSH_SUB(sort_complex)
-
-    dim = size(vec, 1)
-    ASSERT(dim == size(Imvec,1) .and. dim == size(reorder,1))
-
-    imthr_ = CNST(1E-6)
-    if(present(imthr)) imthr_ = imthr
-
-    SAFE_ALLOCATE(table(1:dim))
-    SAFE_ALLOCATE(temp(1:dim))
-    SAFE_ALLOCATE(tempI(1:dim))
-
-    tempI = Imvec
-    call sort(tempI,table)
-
-    n0 = 0
-    n1 = 0
-    temp = vec
-    do i = 1, dim
-      if (abs(Imvec(i)) < imthr_) then
-        n0 = n0 + 1 
-      else if (Imvec(i) < -imthr_) then 
-        n1 = n1 + 1
-      end if
-      vec(i)     = temp(table(dim - i + 1))
-      Imvec(i)   = tempI(dim - i + 1)
-      reorder(i) = table(dim - i + 1)
-      print *, "---", i ,vec(i), Imvec(i), reorder(i)
-    end do
-    n2 = dim - n0 - n1 
-    print *,n1, n0, n2 
-
-    temp = vec
-    tempI = Imvec
-    table = reorder
-
-    !first zero img parts
-    if (n0 > 0) then
-      SAFE_ALLOCATE(idx0(1:n0))
-      call sort(temp(n2+1:n2+n0),idx0(:))
-    end if
-
-    do i = 1, n0
-      vec  (i) = temp (n2 + i)
-      Imvec  (i) = tempI(n2 + idx0(i))
-      reorder(i) = table(n2 + idx0(i))
-      print *, i , n0 , n2 ,idx0(i), Imvec(i),reorder(i)
-    end do
-    SAFE_DEALLOCATE_A(idx0)
-
-    !negative Img parts
-    do i =  1, n1
-      vec    (n0 + i) = temp (n2 + n0 + i)
-      Imvec  (n0 + i) = tempI(n2 + n0 + i)
-      reorder(n0 + i) = table(n2 + n0 + i)
-    end do
-
-    ! positive img parts
-    do i = 1, n2
-      vec    (n0 + n1 + i) = temp (n2 + 1 -i)
-      Imvec  (n0 + n1 + i) = tempI(n2 + 1 -i)
-      reorder(n0 + n1 + i) = table(n2 + 1 -i)
-    end do
-
-
-    do i = 1, dim
-      print *, "--->", i ,vec(i), Imvec(i), reorder(i)
-    end do
-
-
-    SAFE_DEALLOCATE_A(tempI)  
-    SAFE_DEALLOCATE_A(temp)
-    SAFE_DEALLOCATE_A(table)
-
-    POP_SUB(sort_complex)
-  end subroutine sort_complex
 
   ! ---------------------------------------------------------
   !> Numerical derivative (Ridder`s algorithm).

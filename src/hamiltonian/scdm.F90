@@ -277,7 +277,8 @@ contains
     if (der%mesh%sb%periodic_dim > 0) call messages_not_implemented("periodic SSCDM  without NFFT library")  
     box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
-# else ! nfft case
+# else
+    ! nfft case    
     box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
     if (der%mesh%sb%periodic_dim.eq.3) then
       !enlargement factor to fit he simulationbox boundary

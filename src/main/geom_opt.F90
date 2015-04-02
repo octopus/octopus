@@ -37,6 +37,7 @@ module geom_opt_m
   use restart_m
   use scf_m
   use simul_box_m
+  use sort_m
   use species_m
   use states_m
   use states_restart_m

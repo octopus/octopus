@@ -29,7 +29,6 @@ module system_m
   use grid_m
   use hamiltonian_m
   use io_function_m
-  use math_m
   use mesh_m
   use messages_m
   use modelmb_particles_m
@@ -45,6 +44,7 @@ module system_m
   use space_m
   use species_m
   use simul_box_m
+  use sort_m
   use states_m
   use states_dim_m
   use unit_m

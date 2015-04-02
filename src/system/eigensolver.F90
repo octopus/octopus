@@ -44,6 +44,7 @@ module eigensolver_m
   use parser_m
   use preconditioners_m
   use profiling_m
+  use sort_m
   use states_m
   use states_calc_m
   use states_dim_m
