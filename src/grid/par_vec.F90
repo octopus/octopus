@@ -242,7 +242,7 @@ contains
     integer                     :: p1(MAX_DIM)      !< Points.
     type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
     integer                     :: iunit            !< For debug output to files.
-    character(len=3)            :: filenum
+    character(len=6)            :: filenum
     integer                     :: tmp, init, size, ii
     integer, allocatable        :: init_v(:), size_v(:), init_recv(:), sbuffer(:)
     logical                     :: found
@@ -569,11 +569,11 @@ contains
       ! debug/mesh_partition/ghost_points.###.
       call io_mkdir('debug/mesh_partition')
       
-      write(filenum, '(i3.3)') vp%partno
+      write(filenum, '(i6.6)') vp%partno
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
-        write(iunit, '(4i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
+        write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
       end do
 
       call io_close(iunit)
