@@ -33,22 +33,28 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
 
   PUSH_SUB(xc_get_kxc)
 
+  if(xcs%kernel_family == XC_FAMILY_NONE) then
+    POP_SUB(xc_get_kxc)
+    return
+  endif
+
+  if(iand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
+    message(1) = "Only LDA functionals are authorized for now in XCKernel."
+    call messages_fatal(1)
+  end if
+
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
   else
     functl => xcs%kernel(:, 2)
   end if
 
-  ! is there anything to do? (only LDA by now)
-  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)) /= XC_FAMILY_NONE) then
-    message(1) = "Only LDA functionals are authorized for now in xc_get_kxc."
-    call messages_fatal(1)
-  end if
-
-  if(xcs%kernel_family == XC_FAMILY_NONE) then
-    POP_SUB(xc_get_kxc)
-    return
-  endif
+  do ixc = 1, 2
+    if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_KXC) == 0) then
+      message(1) = "Cannot calculate kernel derivative. This functional does not have Kxc available."
+      call messages_fatal(1)
+    endif
+  enddo
 
   ! really start
 
