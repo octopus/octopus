@@ -368,7 +368,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/newuoa/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
-  external_libs/bader/Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile

@@ -2160,14 +2160,13 @@ contains
 
     integer :: idir
     character(len=50) :: aux
-    FLOAT, allocatable :: bader_charges(:), hirshfeld_charges(:)
+    FLOAT, allocatable :: hirshfeld_charges(:)
 
     PUSH_SUB(td_write_partial_charges)
 
-    SAFE_ALLOCATE(bader_charges(1:geo%natoms))
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, mesh, st, geo, bader_charges, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(partial_charges, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 
@@ -2177,11 +2176,6 @@ contains
         
         ! first line: column names
         call write_iter_header_start(out_partial_charges)
-        
-        do idir = 1, geo%natoms
-          write(aux, '(a11,i3,a1)') 'bader(atom=', idir, ')'
-          call write_iter_header(out_partial_charges, aux)
-        end do
         
         do idir = 1, geo%natoms
           write(aux, '(a13,i3,a1)') 'hirshfeld(atom=', idir, ')'
@@ -2195,13 +2189,11 @@ contains
       
       call write_iter_start(out_partial_charges)
       
-      call write_iter_double(out_partial_charges, bader_charges, geo%natoms)
       call write_iter_double(out_partial_charges, hirshfeld_charges, geo%natoms)
       
       call write_iter_nl(out_partial_charges)
     end if
 
-    SAFE_DEALLOCATE_A(bader_charges)
     SAFE_DEALLOCATE_A(hirshfeld_charges)
 
     POP_SUB(td_write_partial_charges)
