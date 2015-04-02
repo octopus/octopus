@@ -165,6 +165,19 @@ contains
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%flags    = XC_F90(info_flags)(functl%info)
 
+      ! FIXME: no need to say this for kernel
+      if(iand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
+        message(1) = 'Specified functional does not have total energy available.'
+        message(2) = 'Corresponding component of energy will just be left as zero.'
+        call messages_warning(2)
+      endif
+
+      if(iand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
+        message(1) = 'Specified functional does not have XC potential available.'
+        message(2) = 'Cannot run calculations. Choose another XCFunctional.'
+        call messages_fatal(2)
+      endif
+
       ok = iand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'

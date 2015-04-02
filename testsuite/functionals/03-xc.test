@@ -331,7 +331,7 @@ match ; gga_x_optpbe_vdw Int[n*v_xc]           ; GREPFIELD(static/info, 'Int\[n\
 Input: 03-xc.gga_x_lb.inp
 match ; gga_x_lb Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ; -1.126084
 match ; gga_x_lb Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.945682
-match ; gga_x_lb Exchange                      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.20502974
+match ; gga_x_lb Exchange                      ; GREPFIELD(static/info, 'Exchange    =', 3) ;  0.0
 match ; gga_x_lb Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.55604296
 
 Input: 03-xc.gga_xc_hcth_93.inp
