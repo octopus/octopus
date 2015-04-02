@@ -757,6 +757,7 @@ contains
           end if
         end do
         ASSERT(all(xx(1:pd) >= M_ZERO))
+        ASSERT(all(xx(1:pd) < CNST(1.0)))
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 ! TODO : change to rlattice not primitive, and remove line above
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd))
@@ -767,12 +768,12 @@ contains
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
-      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then 
+      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
-        if (sb%periodic_dim == sb%dim) then 
-          message(2) = "This is a bug." 
-          call messages_fatal(2) 
-        else 
+        if (sb%periodic_dim /= sb%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because simul_box_in_box is too strict with atoms close to
+          ! the upper boundary to the cell.
           if(warn_if_not) call messages_warning(1)
           if(die_if_not_) call messages_fatal(1)
         end if
