@@ -427,6 +427,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/pseudopotentials/Makefile
   testsuite/complex_scaling/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
+AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 
 dnl if test x"$ac_build_libyaml" != x"skip" ; then
 dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])
