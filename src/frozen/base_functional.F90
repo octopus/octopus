@@ -1,0 +1,826 @@
+#include "global.h"
+
+#undef LIST_TEMPLATE_NAME
+#undef LIST_TYPE_NAME
+#undef LIST_TYPE_MODULE_NAME
+
+#undef HASH_TEMPLATE_NAME
+#undef HASH_KEY_TEMPLATE_NAME
+#undef HASH_KEY_TYPE_NAME
+#undef HASH_KEY_TYPE_MODULE_NAME
+#undef HASH_KEY_FUNCTION_NAME
+#undef HASH_KEY_FUNCTION_MODULE_NAME
+#undef HASH_VAL_TEMPLATE_NAME
+#undef HASH_VAL_TYPE_NAME
+#undef HASH_VAL_TYPE_MODULE_NAME
+#undef HASH_INCLUDE_PREFIX
+#undef HASH_INCLUDE_HEADER
+#undef HASH_INCLUDE_BODY
+
+#define LIST_TEMPLATE_NAME base_functional
+#define LIST_INCLUDE_PREFIX
+#include "tlist.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_TEMPLATE_NAME base_functional
+#define HASH_KEY_TEMPLATE_NAME json
+#define HASH_KEY_TYPE_NAME json_object_t
+#define HASH_VAL_TEMPLATE_NAME base_functional
+
+#define HASH_INCLUDE_PREFIX
+#include "thash.F90"
+#undef HASH_INCLUDE_PREFIX
+
+module base_functional_m
+
+  use global_m
+  use messages_m
+  use profiling_m
+
+  use json_m,   only: operator(==), json_hash
+  use kinds_m,  only: wp
+
+  use json_m,   only: JSON_OK, json_object_t, json_get
+
+  use config_dict_m, only: &
+    CONFIG_DICT_OK,        &
+    CONFIG_DICT_NAME_LEN
+
+  use config_dict_m, only: &
+    config_dict_t,         &
+    config_dict_init,      &
+    config_dict_set,       &
+    config_dict_get,       &
+    config_dict_copy,      &
+    config_dict_end
+
+  use functional_m, only: &
+    functional_t,         &
+    functional_init,      &
+    functional_start,     &
+    functional_get,       &
+    functional_calc,      &
+    functional_end
+
+  use functional_m, only: &
+    FUNCT_XC_NONE
+
+  use storage_m, only:  &
+    storage_t,          &
+    storage_init,       &
+    storage_start,      &
+    storage_update,     &
+    storage_stop,       &
+    storage_reset,      &
+    storage_accumulate, &
+    storage_get,        &
+    storage_transfer,   &
+    storage_copy,       &
+    storage_end
+
+  use simulation_m, only: &
+    simulation_t
+
+  use base_system_m, only: &
+    base_system_t,         &
+    base_system_get
+
+  use base_states_m, only: &
+    base_states_t,         &
+    base_states_get
+
+  use base_density_m, only: &
+    base_density_t,         &
+    base_density_get
+
+#define TEMPLATE_NAME base_functional
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#include "intrpl_inc.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
+
+  implicit none
+
+  private
+  public ::                    &
+    base_functional__init__,   &
+    base_functional__start__,  &
+    base_functional__update__, &
+    base_functional__stop__,   &
+    base_functional__reset__,  &
+    base_functional__acc__,    &
+    base_functional__add__,    &
+    base_functional__copy__,   &
+    base_functional__end__
+
+  public ::                 &
+    base_functional_new,    &
+    base_functional_del,    &
+    base_functional_init,   &
+    base_functional_start,  &
+    base_functional_update, &
+    base_functional_stop,   &
+    base_functional_next,   &
+    base_functional_set,    &
+    base_functional_get,    &
+    base_functional_copy,   &
+    base_functional_end
+
+#define LIST_TEMPLATE_NAME base_functional
+#define LIST_INCLUDE_HEADER
+#include "tlist.F90"
+#undef LIST_INCLUDE_HEADER
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_INCLUDE_HEADER
+#include "thash.F90"
+#undef HASH_INCLUDE_HEADER
+
+  type, public :: base_functional_raii_t
+    private
+    type(base_functional_t), pointer :: prnt =>null()
+    type(base_functional_list_t)     :: list
+  end type base_functional_raii_t
+
+  type, public :: base_functional_t
+    private
+    type(json_object_t),  pointer :: config  =>null()
+    type(base_system_t),  pointer :: sys     =>null()
+    type(base_density_t), pointer :: density =>null()
+    type(simulation_t),   pointer :: sim     =>null()
+    real(kind=wp)                 :: factor  = 1.0_wp
+    real(kind=wp)                 :: energy  = 0.0_wp
+    type(functional_t)            :: funct
+    type(storage_t)               :: data
+    type(config_dict_t)           :: dict
+    type(base_functional_hash_t)  :: hash
+    type(base_functional_raii_t)  :: raii
+  end type base_functional_t
+
+  interface base_functional__init__
+    module procedure base_functional__init__functional
+    module procedure base_functional__init__copy
+  end interface base_functional__init__
+
+  interface base_functional__end__
+    module procedure base_functional__end__functional
+  end interface base_functional__end__
+
+  interface base_functional_init
+    module procedure base_functional_init_functional
+    module procedure base_functional_init_copy
+  end interface base_functional_init
+
+  interface base_functional_update
+    module procedure base_functional_update_functional
+    module procedure base_functional_update_pass
+  end interface base_functional_update
+ 
+  interface base_functional_set
+    module procedure base_functional_set_info
+  end interface base_functional_set
+
+  interface base_functional_get
+    module procedure base_functional_get_functional
+    module procedure base_functional_get_info
+    module procedure base_functional_get_config
+    module procedure base_functional_get_system
+    module procedure base_functional_get_density
+    module procedure base_functional_get_simulation
+    module procedure base_functional_get_functional_1d
+    module procedure base_functional_get_functional_md
+  end interface base_functional_get
+
+  interface base_functional_copy
+    module procedure base_functional_copy_functional
+  end interface base_functional_copy
+
+  interface base_functional_end
+    module procedure base_functional_end_functional
+  end interface base_functional_end
+
+  integer, public, parameter :: BASE_FUNCTIONAL_OK          = BASE_FUNCTIONAL_HASH_OK
+  integer, public, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_HASH_KEY_ERROR
+  integer, public, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_HASH_EMPTY_ERROR
+
+#define TEMPLATE_NAME base_functional
+#define INCLUDE_HEADER
+#include "iterator_code.F90"
+#include "intrpl_inc.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
+
+contains
+
+#define LIST_TEMPLATE_NAME base_functional
+#define LIST_INCLUDE_BODY
+#include "tlist.F90"
+#undef LIST_INCLUDE_BODY
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_INCLUDE_BODY
+#include "thash.F90"
+#undef HASH_INCLUDE_BODY
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_new(this, that)
+    type(base_functional_t),  target, intent(inout) :: this
+    type(base_functional_t), pointer                :: that
+    !
+    PUSH_SUB(base_functional_new)
+    nullify(that)
+    SAFE_ALLOCATE(that)
+    that%raii%prnt=>this
+    call base_functional_list_push(this%raii%list, that)
+    POP_SUB(base_functional_new)
+    return
+  end subroutine base_functional_new
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__idel__(this)
+    type(base_functional_t), pointer :: this
+    !
+    PUSH_SUB(base_functional__idel__)
+    SAFE_DEALLOCATE_P(this)
+    nullify(this)
+    POP_SUB(base_functional__idel__)
+    return
+  end subroutine base_functional__idel__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_del(this)
+    type(base_functional_t), pointer :: this
+    !
+    PUSH_SUB(base_functional_del)
+    if(associated(this))then
+      if(associated(this%raii%prnt))then
+        call base_functional_list_del(this%raii%prnt%raii%list, this)
+        call base_functional_end(this)
+        call base_functional__idel__(this)
+      end if
+    end if
+    POP_SUB(base_functional_del)
+    return
+  end subroutine base_functional_del
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__inull__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional__inull__)
+    nullify(this%config, this%sys, this%density, this%sim, this%raii%prnt)
+    this%factor=1.0_wp
+    this%energy=0.0_wp
+    POP_SUB(base_functional__inull__)
+    return
+  end subroutine base_functional__inull__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__init__functional(this, sys, config)
+    type(base_functional_t),     intent(out) :: this
+    type(base_system_t), target, intent(in)  :: sys
+    type(json_object_t), target, intent(in)  :: config
+    !
+    type(base_states_t), pointer :: states
+    integer                      :: id, nspin, ierr
+    !
+    PUSH_SUB(base_functional__init__functional)
+    call base_functional__inull__(this)
+    nullify(states)
+    this%config=>config
+    this%sys=>sys
+    call base_system_get(this%sys, states)
+    ASSERT(associated(states))
+    call base_states_get(states, this%density)
+    ASSERT(associated(this%density))
+    nullify(states)
+    call json_get(config, "factor", this%factor, ierr)
+    if(ierr/=JSON_OK)this%factor=1.0_wp
+    call json_get(config, "functional", id, ierr)
+    if(ierr/=JSON_OK)id=FUNCT_XC_NONE
+    call base_system_get(this%sys, nspin=nspin)
+    call functional_init(this%funct, id, nspin)
+    call storage_init(this%data, nspin, full=.false.)
+    call config_dict_init(this%dict)
+    call base_functional_hash_init(this%hash)
+    call base_functional_list_init(this%raii%list)
+    POP_SUB(base_functional__init__functional)
+    return
+  end subroutine base_functional__init__functional
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__init__copy(this, that)
+    type(base_functional_t), intent(out) :: this
+    type(base_functional_t), intent(in)  :: that
+    !
+    PUSH_SUB(base_functional__init__copy)
+    ASSERT(associated(that%config))
+    ASSERT(associated(that%sys))
+    call base_functional__init__(this, that%sys, that%config)
+    POP_SUB(base_functional__init__copy)
+    return
+  end subroutine base_functional__init__copy
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_init_functional(this, sys, config)
+    type(base_functional_t), intent(out) :: this
+    type(base_system_t),     intent(in)  :: sys
+    type(json_object_t),     intent(in)  :: config
+    !
+    PUSH_SUB(base_functional_init_functional)
+    call base_functional__init__(this, sys, config)
+    POP_SUB(base_functional_init_functional)
+    return
+  end subroutine base_functional_init_functional
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_init_copy(this, that)
+    type(base_functional_t), intent(out) :: this
+    type(base_functional_t), intent(in)  :: that
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: osub, isub
+    type(json_object_t),     pointer :: cnfg
+    integer                          :: ierr
+    !
+    PUSH_SUB(base_functional_init_copy)
+    nullify(cnfg, osub, isub)
+    call base_functional__init__(this, that)
+    call base_functional_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_functional_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_new(this, osub)
+      call base_functional_init(osub, isub)
+      call base_functional__add__(this, osub, cnfg)
+    end do
+    call base_functional_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_functional_init_copy)
+    return
+  end subroutine base_functional_init_copy
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__istart__(this, sim)
+    type(base_functional_t),    intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
+    !
+    PUSH_SUB(base_functional__istart__)
+    ASSERT(associated(this%config))
+    ASSERT(.not.associated(this%sim))
+    this%sim=>sim
+    call functional_start(this%funct, sim, fine=.true.)
+    call storage_start(this%data, sim)
+    POP_SUB(base_functional__istart__)
+    return
+  end subroutine base_functional__istart__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__start__(this, sim)
+    type(base_functional_t),      intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
+    !
+    PUSH_SUB(base_functional__start__)
+    if(present(sim))then
+      call base_functional__istart__(this, sim)
+    else
+      if(.not.associated(this%sim))then
+        ASSERT(associated(this%raii%prnt))
+        ASSERT(associated(this%raii%prnt%sim))
+        call base_functional__istart__(this, this%raii%prnt%sim)
+      end if
+    end if
+    POP_SUB(base_functional__start__)
+    return
+  end subroutine base_functional__start__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_start(this, sim)
+    type(base_functional_t),      intent(inout) :: this
+    type(simulation_t), optional, intent(in)    :: sim
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: subs
+    integer                          :: ierr
+    !
+    PUSH_SUB(base_functional_start)
+    nullify(subs)
+    call base_functional_init(iter, this)
+    do
+      nullify(subs)
+      call base_functional_next(iter, subs, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_start(subs, sim)
+    end do
+    call base_functional_end(iter)
+    nullify(subs)
+    call base_functional__start__(this, sim)
+    POP_SUB(base_functional_start)
+    return
+  end subroutine base_functional_start
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__update__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
+    type(storage_t)                        :: data
+    real(kind=wp)                          :: enrg
+    integer                                :: kind
+    logical                                :: fine
+    !
+    PUSH_SUB(base_functional__update__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(fptn, potn, dnst)
+    call base_functional__reset__(this)
+    call base_functional_get(this, kind=kind)
+    if(kind>FUNCT_XC_NONE)then
+      call storage_get(this%data, potn)
+      ASSERT(associated(potn))
+      fptn=>potn
+      call base_density_get(this%density, fine=fine)
+      if(fine)then
+        call storage_init(data, this%data)
+        call storage_start(data, this%sim, fine)
+        call storage_get(data, fptn)
+        ASSERT(associated(fptn))
+      end if
+      call base_density_get(this%density, dnst)
+      ASSERT(associated(dnst))
+      call functional_calc(this%funct, dnst, enrg, fptn)
+      if(fine)then
+        call storage_transfer(this%data, data)
+        call storage_end(data)
+        nullify(fptn)
+        fptn=>potn
+      end if
+      if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
+        this%energy=this%factor*enrg
+        fptn=this%factor*fptn
+      end if
+      call storage_update(this%data)
+    end if
+    POP_SUB(base_functional__update__)
+    return
+  end subroutine base_functional__update__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_update_functional(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional_update_functional)
+    call base_functional_update_pass(this, base_functional__update__)
+    POP_SUB(base_functional_update_functional)
+    return
+  end subroutine base_functional_update_functional
+ 
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_update_pass(this, functional_update)
+    type(base_functional_t), intent(inout) :: this
+    interface
+      subroutine functional_update(this)
+        import :: base_functional_t
+        type(base_functional_t), intent(inout) :: this
+      end subroutine functional_update
+    end interface
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: subs
+    integer                          :: ierr
+    !
+    PUSH_SUB(base_functional_update_pass)
+    nullify(subs)
+    call base_functional__reset__(this)
+    call functional_update(this)
+    call base_functional_init(iter, this)
+    do
+      nullify(subs)
+      call base_functional_next(iter, subs, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_update(subs, functional_update)
+      call base_functional__acc__(this, subs)
+    end do
+    call base_functional_end(iter)
+    nullify(subs)
+    POP_SUB(base_functional_update_pass)
+    return
+  end subroutine base_functional_update_pass
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__stop__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional__stop__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(this%sim)
+    call storage_stop(this%data)
+    POP_SUB(base_functional__stop__)
+    return
+  end subroutine base_functional__stop__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_stop(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: subs
+    integer                         :: ierr
+    !
+    PUSH_SUB(base_functional_stop)
+    nullify(subs)
+    call base_functional_init(iter, this)
+    do
+      nullify(subs)
+      call base_functional_next(iter, subs, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_stop(subs)
+    end do
+    call base_functional_end(iter)
+    nullify(subs)
+    call base_functional__stop__(this)
+    POP_SUB(base_functional_stop)
+    return
+  end subroutine base_functional_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__reset__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional__reset__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    this%energy=0.0_wp
+    call storage_reset(this%data)
+    POP_SUB(base_functional__reset__)
+    return
+  end subroutine base_functional__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__acc__(this, that)
+    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_functional__acc__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    this%energy = this%energy + that%energy
+    call storage_accumulate(this%data, that%data)
+    POP_SUB(base_functional__acc__)
+    return
+  end subroutine base_functional__acc__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__add__(this, that, config)
+    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), intent(in)    :: that
+    type(json_object_t),    intent(in)    :: config
+    !
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+    !
+    PUSH_SUB(base_functional__add__)
+    ASSERT(associated(this%config))
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_functional_hash_set(this%hash, config, that)
+    POP_SUB(base_functional__add__)
+    return
+  end subroutine base_functional__add__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_functional(this, name, that)
+    type(base_functional_t),  intent(in) :: this
+    character(len=*),        intent(in) :: name
+    type(base_functional_t), pointer     :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(base_functional_get_functional)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)then
+      call base_functional_hash_get(this%hash, config, that, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)nullify(that)
+    end if
+    POP_SUB(base_functional_get_functional)
+    return
+  end subroutine base_functional_get_functional
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_set_info(this, energy)
+    type(base_functional_t), intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: energy
+    !
+    PUSH_SUB(base_functional_set_config)
+    if(present(energy))&
+      this%energy=energy
+    POP_SUB(base_functional_set_config)
+    return
+  end subroutine base_functional_set_info
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_info(this, id, family, kind, size, nspin, energy)
+    type(base_functional_t), intent(in)  :: this
+    integer,       optional, intent(out) :: id
+    integer,       optional, intent(out) :: family
+    integer,       optional, intent(out) :: kind
+    integer,       optional, intent(out) :: size
+    integer,       optional, intent(out) :: nspin
+    real(kind=wp), optional, intent(out) :: energy
+    !
+    PUSH_SUB(base_functional_get_info)
+    if(present(energy))&
+      energy=this%energy
+    call functional_get(this%funct, id=id, family=family, kind=kind)
+    call storage_get(this%data, size=size, dim=nspin)
+    POP_SUB(base_functional_get_info)
+    return
+  end subroutine base_functional_get_info
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_config(this, that)
+    type(base_functional_t), target, intent(in) :: this
+    type(json_object_t),    pointer             :: that
+    !
+    PUSH_SUB(base_functional_get_config)
+    nullify(that)
+    if(associated(this%config))&
+      that=>this%config
+    POP_SUB(base_functional_get_config)
+    return
+  end subroutine base_functional_get_config
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_simulation(this, that)
+    type(base_functional_t), target, intent(in) :: this
+    type(simulation_t),     pointer             :: that
+    !
+    PUSH_SUB(base_functional_get_simulation)
+    nullify(that)
+    if(associated(this%sim))&
+      that=>this%sim
+    POP_SUB(base_functional_get_simulation)
+    return
+  end subroutine base_functional_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_system(this, that)
+    type(base_functional_t), target, intent(in) :: this
+    type(base_system_t),    pointer             :: that
+    !
+    PUSH_SUB(base_functional_get_system)
+    nullify(that)
+    if(associated(this%sys))&
+      that=>this%sys
+    POP_SUB(base_functional_get_system)
+    return
+  end subroutine base_functional_get_system
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_density(this, that)
+    type(base_functional_t), intent(in) :: this
+    type(base_density_t),   pointer     :: that
+    !
+    PUSH_SUB(base_functional_get_density)
+    nullify(that)
+    if(associated(this%density))&
+      that=>this%density
+    POP_SUB(base_functional_get_density)
+    return
+  end subroutine base_functional_get_density
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_functional_1d(this, that)
+    type(base_functional_t),      intent(in) :: this
+    real(kind=wp), dimension(:), pointer     :: that
+    !
+    PUSH_SUB(base_functional_get_functional_1d)
+    call storage_get(this%data, that)
+    POP_SUB(base_functional_get_functional_1d)
+    return
+  end subroutine base_functional_get_functional_1d
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_functional_md(this, that)
+    type(base_functional_t),        intent(in) :: this
+    real(kind=wp), dimension(:,:), pointer     :: that
+    !
+    PUSH_SUB(base_functional_get_functional_md)
+    call storage_get(this%data, that)
+    POP_SUB(base_functional_get_functional_md)
+    return
+  end subroutine base_functional_get_functional_md
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__copy__(this, that)
+    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_functional__copy__)
+    call base_functional__end__(this)
+    if(associated(that%config).and.associated(that%sys))then
+      call base_functional__init__(this, that%sys, that%config)
+      this%energy=that%energy
+      if(associated(that%sim))then
+        call base_functional__start__(this, that%sim)
+        call storage_copy(this%data, that%data)
+      end if
+    end if
+    POP_SUB(base_functional__copy__)
+    return
+  end subroutine base_functional__copy__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_copy_functional(this, that)
+    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), intent(in)    :: that
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: osub, isub
+    type(json_object_t),    pointer :: cnfg
+    integer                         :: ierr
+    !
+    PUSH_SUB(base_functional_copy_functional)
+    nullify(cnfg, osub, isub)
+    call base_functional_end(this)
+    call base_functional__copy__(this, that)
+    call base_functional_init(iter, that)
+    do
+      nullify(cnfg, osub, isub)
+      call base_functional_next(iter, cnfg, isub, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_new(this, osub)
+      call base_functional_copy(osub, isub)
+      call base_functional__add__(this, osub, cnfg)
+    end do
+    call base_functional_end(iter)
+    nullify(cnfg, osub, isub)
+    POP_SUB(base_functional_copy_functional)
+    return
+  end subroutine base_functional_copy_functional
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__end__functional(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional__end__functional)
+    call base_functional__inull__(this)
+    call functional_end(this%funct)
+    call storage_end(this%data)
+    call config_dict_end(this%dict)
+    call base_functional_hash_end(this%hash)
+    call base_functional_list_end(this%raii%list)
+    POP_SUB(base_functional__end__functional)
+    return
+  end subroutine base_functional__end__functional
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_end_functional(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    type(base_functional_t), pointer :: subs
+    !
+    PUSH_SUB(base_functional_end_functional)
+    do
+      nullify(subs)
+      call base_functional_list_pop(this%raii%list, subs)
+      if(.not.associated(subs))exit
+      call base_functional_end(subs)
+      call base_functional__idel__(subs)
+    end do
+    nullify(subs)
+    call base_functional__end__(this)
+    POP_SUB(base_functional_end_functional)
+    return
+  end subroutine base_functional_end_functional
+
+#define TEMPLATE_NAME base_functional
+#define INCLUDE_BODY
+#include "iterator_code.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
+
+#define TEMPLATE_NAME base_functional
+#define INCLUDE_BODY
+#include "intrpl_inc.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
+
+end module base_functional_m
+
+#undef HASH_TEMPLATE_NAME
+#undef HASH_KEY_TEMPLATE_NAME
+#undef HASH_KEY_TYPE_NAME
+#undef HASH_VAL_TEMPLATE_NAME
+
+!! Local Variables:
+!! mode: f90
+!! End:

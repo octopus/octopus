@@ -31,6 +31,9 @@ module functional_m
     functional_copy,  &
     functional_end
 
+  public ::           &
+    FUNCT_XC_NONE
+
   type :: functional_t
     private
     type(simulation_t), pointer :: sim  =>null()
@@ -49,6 +52,8 @@ module functional_m
     module procedure functional_calc_potential
     module procedure functional_calc_energy_and_potential
   end interface functional_calc
+
+  integer, parameter :: FUNCT_XC_NONE = XC_NONE
 
 contains
 

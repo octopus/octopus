@@ -75,6 +75,7 @@ module base_hamiltonian_m
 
   use config_dict_m, only: &
     config_dict_t,         &
+    config_dict_init,      &
     config_dict_set,       &
     config_dict_get
 
@@ -86,7 +87,8 @@ module base_hamiltonian_m
     simulation_t
 
   use base_system_m, only: &
-    base_system_t
+    base_system_t,         &
+    base_system_get
 
   use base_term_m, only: &
     base_term__init__,   &
@@ -114,6 +116,20 @@ module base_hamiltonian_m
   use base_potential_m, only: &
     base_potential_t
 
+  use base_functional_m, only: &
+    base_functional__init__,   &
+    base_functional__start__,  &
+    base_functional__update__, &
+    base_functional__stop__,   &
+    base_functional__reset__,  &
+    base_functional__acc__,    &
+    base_functional__add__,    &
+    base_functional__copy__,   &
+    base_functional__end__
+ 
+  use base_functional_m, only: &
+    base_functional_t
+ 
 #define TEMPLATE_NAME base_hamiltonian
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
@@ -176,14 +192,16 @@ module base_hamiltonian_m
   integer, public, parameter :: HMLT_TYPE_NONE = 0 
   integer, public, parameter :: HMLT_TYPE_TERM = 1
   integer, public, parameter :: HMLT_TYPE_POTN = 2
-  integer, public, parameter :: HMLT_TYPE_HMLT = 3
+  integer, public, parameter :: HMLT_TYPE_FNCT = 3
+  integer, public, parameter :: HMLT_TYPE_HMLT = 4
   
   type, private :: hterm_t
     private
-    type(base_term_t),        pointer :: term   =>null()
-    type(base_potential_t),   pointer :: potn   =>null()
-    type(base_hamiltonian_t), pointer :: hmlt   =>null()
-    integer                           :: type   = HMLT_TYPE_NONE
+    type(base_term_t),        pointer :: term =>null()
+    type(base_potential_t),   pointer :: potn =>null()
+    type(base_functional_t),  pointer :: fnct =>null()
+    type(base_hamiltonian_t), pointer :: hmlt =>null()
+    integer                           :: type = HMLT_TYPE_NONE
   end type hterm_t
 
   type, public :: base_hamiltonian_t
@@ -206,6 +224,7 @@ module base_hamiltonian_m
   interface hterm__get__
     module procedure hterm__get__term
     module procedure hterm__get__potn
+    module procedure hterm__get__fnct
     module procedure hterm__get__hmlt
   end interface hterm__get__
 
@@ -217,12 +236,14 @@ module base_hamiltonian_m
   interface base_hamiltonian__new__
     module procedure base_hamiltonian__new__term
     module procedure base_hamiltonian__new__potn
+    module procedure base_hamiltonian__new__fnct
     module procedure base_hamiltonian__new__hmlt
   end interface base_hamiltonian__new__
 
   interface base_hamiltonian__get__
     module procedure base_hamiltonian__get__term
     module procedure base_hamiltonian__get__potn
+    module procedure base_hamiltonian__get__fnct
     module procedure base_hamiltonian__get__hmlt
   end interface base_hamiltonian__get__
 
@@ -319,7 +340,7 @@ contains
     type(hterm_t), intent(inout) :: this
     !
     PUSH_SUB(hterm__inull__)
-    nullify(this%term, this%potn, this%hmlt)
+    nullify(this%term, this%potn, this%fnct, this%hmlt)
     this%type = HMLT_TYPE_NONE
     POP_SUB(hterm__inull__)
     return
@@ -339,6 +360,8 @@ contains
       SAFE_ALLOCATE(this%term)
     case(HMLT_TYPE_POTN)
       SAFE_ALLOCATE(this%potn)
+    case(HMLT_TYPE_FNCT)
+      SAFE_ALLOCATE(this%fnct)
     case(HMLT_TYPE_HMLT)
       SAFE_ALLOCATE(this%hmlt)
     case default
@@ -351,24 +374,36 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine hterm__init__hterm(this, sys, config)
-    type(hterm_t),       intent(out) :: this
-    type(base_system_t), intent(in)  :: sys
-    type(json_object_t), intent(in)  :: config
+    type(hterm_t),               intent(out) :: this
+    type(base_system_t), target, intent(in)  :: sys
+    type(json_object_t),         intent(in)  :: config
     !
-    integer :: type, ierr
+    character(len=BASE_HAMILTONIAN_NAME_LEN) :: name
+    type(base_system_t),             pointer :: psys
+    integer                                  :: type, ierr
     !
     PUSH_SUB(hterm__init__hterm)
+    nullify(psys)
     call json_get(config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     call hterm__iinit__(this, type)
+    call json_get(config, "name", name, ierr)
+    if(ierr==JSON_OK)then
+      call base_system_get(sys, name, psys)
+      ASSERT(associated(psys))
+    else
+      psys=>sys
+    end if
     select case(this%type)
     case(HMLT_TYPE_NONE)
     case(HMLT_TYPE_TERM)
-      call base_term__init__(this%term, sys, config)
+      call base_term__init__(this%term, psys, config)
     case(HMLT_TYPE_POTN)
-      call base_potential__init__(this%potn, sys, config)
+      call base_potential__init__(this%potn, psys, config)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__init__(this%fnct, psys, config)
     case(HMLT_TYPE_HMLT)
-      call base_hamiltonian__init__(this%hmlt, sys, config)
+      call base_hamiltonian__init__(this%hmlt, psys, config)
     case default
       message(1)="Unknown Hamiltonian term type."
       call messages_fatal(1)
@@ -390,6 +425,8 @@ contains
       call base_term__init__(this%term, that%term)
     case(HMLT_TYPE_POTN)
       call base_potential__init__(this%potn, that%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__init__(this%fnct, that%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__init__(this%hmlt, that%hmlt)
     case default
@@ -411,6 +448,8 @@ contains
     case(HMLT_TYPE_TERM)
     case(HMLT_TYPE_POTN)
       call base_potential__start__(this%potn, sim)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__start__(this%fnct, sim)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__start__(this%hmlt, sim)
     case default
@@ -432,6 +471,8 @@ contains
       call base_term__update__(this%term)
     case(HMLT_TYPE_POTN)
       call base_potential__update__(this%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__update__(this%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__update__(this%hmlt)
     case default
@@ -452,6 +493,8 @@ contains
     case(HMLT_TYPE_TERM)
     case(HMLT_TYPE_POTN)
       call base_potential__stop__(this%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__stop__(this%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__stop__(this%hmlt)
     case default
@@ -473,6 +516,8 @@ contains
       call base_term__reset__(this%term)
     case(HMLT_TYPE_POTN)
       call base_potential__reset__(this%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__reset__(this%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__reset__(this%hmlt)
     case default
@@ -496,6 +541,8 @@ contains
       call base_term__acc__(this%term, that%term)
     case(HMLT_TYPE_POTN)
       call base_potential__acc__(this%potn, that%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__acc__(this%fnct, that%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__acc__(this%hmlt, that%hmlt)
     case default
@@ -520,6 +567,8 @@ contains
       call base_term__add__(this%term, that%term, config)
     case(HMLT_TYPE_POTN)
       call base_potential__add__(this%potn, that%potn, config)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__add__(this%fnct, that%fnct, config)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__add__(this%hmlt, that%hmlt, config)
     case default
@@ -563,6 +612,22 @@ contains
   end subroutine hterm__get__potn
 
   ! ---------------------------------------------------------
+  subroutine hterm__get__fnct(this, that)
+    type(hterm_t),            intent(in) :: this
+    type(base_functional_t), pointer     :: that
+    !
+    PUSH_SUB(hterm__get__fnct)
+    nullify(that)
+    if(this%type/=HMLT_TYPE_NONE)then
+      ASSERT(this%type==HMLT_TYPE_FNCT)
+      ASSERT(associated(this%fnct))
+      that=>this%fnct
+    end if
+    POP_SUB(hterm__get__fnct)
+    return
+  end subroutine hterm__get__fnct
+ 
+  ! ---------------------------------------------------------
   subroutine hterm__get__hmlt(this, that)
     type(hterm_t),             intent(in) :: this
     type(base_hamiltonian_t), pointer     :: that
@@ -598,10 +663,13 @@ contains
     PUSH_SUB(hterm__copy__)
     call hterm__icopy__(this, that)
     select case(this%type)
+    case(HMLT_TYPE_NONE)
     case(HMLT_TYPE_TERM)
       call base_term__copy__(this%term, that%term)
     case(HMLT_TYPE_POTN)
       call base_potential__copy__(this%potn, that%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__copy__(this%fnct, that%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__copy__(this%hmlt, that%hmlt)
     case default
@@ -623,6 +691,8 @@ contains
       SAFE_DEALLOCATE_P(this%term)
     case(HMLT_TYPE_POTN)
       SAFE_DEALLOCATE_P(this%potn)
+    case(HMLT_TYPE_FNCT)
+      SAFE_DEALLOCATE_P(this%fnct)
     case(HMLT_TYPE_HMLT)
       SAFE_DEALLOCATE_P(this%hmlt)
     case default
@@ -645,6 +715,8 @@ contains
       call base_term__end__(this%term)
     case(HMLT_TYPE_POTN)
       call base_potential__end__(this%potn)
+    case(HMLT_TYPE_FNCT)
+      call base_functional__end__(this%fnct)
     case(HMLT_TYPE_HMLT)
       call base_hamiltonian__end__(this%hmlt)
     case default
@@ -708,6 +780,25 @@ contains
     return
   end subroutine base_hamiltonian__new__potn
 
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian__new__fnct(this, name, that)
+    type(base_hamiltonian_t), intent(inout) :: this
+    character(len=*),         intent(in)    :: name
+    type(base_functional_t), pointer        :: that
+    !
+    type(hterm_t), pointer :: htrm
+    !
+    PUSH_SUB(base_hamiltonian__new__fnct)
+    nullify(that, htrm)
+    call base_hamiltonian__inew__(this, name, htrm)
+    ASSERT(associated(htrm))
+    call hterm__iinit__(htrm, HMLT_TYPE_FNCT)
+    call hterm__get__(htrm, that)
+    nullify(htrm)
+    POP_SUB(base_hamiltonian__new__fnct)
+    return
+  end subroutine base_hamiltonian__new__fnct
+ 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__new__hmlt(this, name, that)
     type(base_hamiltonian_t),  intent(inout) :: this
@@ -1255,6 +1346,24 @@ contains
     return
   end subroutine base_hamiltonian__get__potn
 
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian__get__fnct(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_functional_t), pointer     :: that
+    !
+    type(hterm_t), pointer :: htrm
+    !
+    PUSH_SUB(base_hamiltonian__get__fnct)
+    nullify(that, htrm)
+    call base_hamiltonian__iget__(this, name, htrm)
+    if(associated(htrm))&
+      call hterm__get__(htrm, that)
+    nullify(htrm)
+    POP_SUB(base_hamiltonian__get__fnct)
+    return
+  end subroutine base_hamiltonian__get__fnct
+ 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__get__hmlt(this, name, that)
     type(base_hamiltonian_t),  intent(in) :: this
