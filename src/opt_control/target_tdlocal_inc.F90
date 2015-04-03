@@ -31,13 +31,22 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
+    !%Variable OCTTdTarget
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% (Experimental) If <tt>OCTTargetOperator = oct_tg_td_local</tt>, then you must supply
+    !% a OCTTdTarget block. The block should only contain one element, a string cotaining the
+    !% definition of the time-dependent local target, i.e. a function of x,y,z and t. that 
+    !% is to be maximized along the evolution.
+    !%End
     if(parse_block('OCTTdTarget', blk)==0) then
       call parse_block_string(blk, 0, 0, tg%td_local_target)
       call conv_to_C_string(tg%td_local_target)
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       call parse_block_end(blk)
     else
-      message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
+      message(1) = 'If OCTTargetOperator = oct_tg_td_local, you must suppy a OCTTdTarget block.'
       call messages_fatal(1)
     end if
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))

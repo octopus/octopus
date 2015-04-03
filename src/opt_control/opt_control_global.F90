@@ -164,6 +164,27 @@ contains
     select case(oct%algorithm)
     case(oct_algorithm_mt03)
       oct%delta = M_TWO; oct%eta = M_ZERO
+      !%Variable OCTEta
+      !%Type float
+      !%Section Calculation Modes::Optimal Control
+      !%Default 1.0
+      !%Description 
+      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can suppy the "eta" and "delta" parameters
+      !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
+      !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
+      !%End
+      call parse_variable('OCTEta', M_ONE, oct%eta)
+      !%Variable OCTDelta
+      !%Type float
+      !%Section Calculation Modes::Optimal Control
+      !%Default 0.0
+      !%Description 
+      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can suppy the "eta" and "delta" parameters
+      !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
+      !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
+      !%End
+      call parse_variable('OCTDelta', M_ZERO, oct%delta)
+
     case(oct_algorithm_zr98)
       oct%delta = M_ONE; oct%eta = M_ONE
     case(oct_algorithm_krotov)
@@ -175,6 +196,7 @@ contains
     case(oct_algorithm_bfgs)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
+      ! The use of these variables for the direct and newuoa schemes remain undocumented for the moment.
       call parse_variable('OCTEta', M_ONE, oct%eta)
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
     case(oct_algorithm_newuoa)

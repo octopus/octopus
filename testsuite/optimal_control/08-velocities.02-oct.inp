@@ -8,6 +8,8 @@ CalculationMode = opt_control
 Dimensions = 1
 fromScratch = yes
 
+ExperimentalFeatures = yes
+
 # ------------------
 # Grid
 # ------------------
