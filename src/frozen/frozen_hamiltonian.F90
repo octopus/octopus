@@ -31,6 +31,9 @@ module frozen_hamiltonian_m
     frozen_ionic_t
 
   use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
+
+  use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                              &
@@ -130,7 +133,7 @@ contains
     type(frozen_external_t),   pointer     :: that
     !
     PUSH_SUB(frozen_hamiltonian_get_external)
-    call base_hamiltonian_get(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(frozen_hamiltonian_get_external)
     return
   end subroutine frozen_hamiltonian_get_external
@@ -141,7 +144,7 @@ contains
     type(frozen_ionic_t),      pointer     :: that
     !
     PUSH_SUB(frozen_hamiltonian_get_ionic)
-    call base_hamiltonian_get(this, "ionic", that)
+    call base_hamiltonian__get__(this, "ionic", that)
     POP_SUB(frozen_hamiltonian_get_ionic)
     return
   end subroutine frozen_hamiltonian_get_ionic

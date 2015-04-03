@@ -55,28 +55,17 @@ module base_potential_m
     config_dict_copy,      &
     config_dict_end
 
-  use storage_m, only:     &
-    storage_t,             &
-    storage_init,          &
-    storage_start,         &
-    storage_update,        &
-    storage_stop,          &
-    storage_reset,         &
-    storage_accumulate,    &
-    storage_eval,          &
-    storage_get,           &
-    storage_get_size,      &
-    storage_get_dimension, &
-    storage_copy,          &
+  use storage_m, only:  &
+    storage_t,          &
+    storage_init,       &
+    storage_start,      &
+    storage_update,     &
+    storage_stop,       &
+    storage_reset,      &
+    storage_accumulate, &
+    storage_get,        &
+    storage_copy,       &
     storage_end
-
-  use storage_m, only: &
-    storage_intrpl_t
-
-  use storage_m, only:                             &
-    BASE_POTENTIAL_INTRPL_OK => STORAGE_INTRPL_OK, &
-    BASE_POTENTIAL_INTRPL_OD => STORAGE_INTRPL_OD, &
-    BASE_POTENTIAL_INTRPL_NI => STORAGE_INTRPL_NI
 
   use simulation_m, only: &
     simulation_t
@@ -87,6 +76,7 @@ module base_potential_m
 #define TEMPLATE_NAME base_potential
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_NAME
 
@@ -112,16 +102,10 @@ module base_potential_m
     base_potential_update, &
     base_potential_stop,   &
     base_potential_next,   &
-    base_potential_eval,   &
     base_potential_set,    &
     base_potential_get,    &
     base_potential_copy,   &
     base_potential_end
-
-  public ::                   &
-    BASE_POTENTIAL_INTRPL_OK, &
-    BASE_POTENTIAL_INTRPL_OD, &
-    BASE_POTENTIAL_INTRPL_NI
 
 #define LIST_TEMPLATE_NAME base_potential
 #define LIST_INCLUDE_HEADER
@@ -146,31 +130,27 @@ module base_potential_m
     type(base_potential_list_t)     :: list
   end type base_potential_t
 
-  type, public :: base_potential_intrpl_t
-    private
-    type(base_potential_t), pointer :: self =>null()
-    type(storage_intrpl_t)          :: intrp
-  end type base_potential_intrpl_t
-
   interface base_potential__init__
     module procedure base_potential__init__potential
     module procedure base_potential__init__copy
-    module procedure base_potential_intrpl_init
   end interface base_potential__init__
 
   interface base_potential__end__
     module procedure base_potential__end__potential
-    module procedure base_potential_intrpl_end
   end interface base_potential__end__
 
   interface base_potential_init
     module procedure base_potential_init_potential
     module procedure base_potential_init_copy
-    module procedure base_potential_intrpl_init
   end interface base_potential_init
 
+  interface base_potential_update
+    module procedure base_potential_update_potential
+    module procedure base_potential_update_pass
+  end interface base_potential_update
+ 
   interface base_potential_set
-    module procedure base_potential_set_energy
+    module procedure base_potential_set_info
   end interface base_potential_set
 
   interface base_potential_get
@@ -181,22 +161,14 @@ module base_potential_m
     module procedure base_potential_get_simulation
     module procedure base_potential_get_potential_1d
     module procedure base_potential_get_potential_md
-    module procedure base_potential_intrpl_get
   end interface base_potential_get
-
-  interface base_potential_eval
-    module procedure base_potential_intrpl_eval_1d
-    module procedure base_potential_intrpl_eval_md
-  end interface base_potential_eval
 
   interface base_potential_copy
     module procedure base_potential_copy_potential
-    module procedure base_potential_intrpl_copy
   end interface base_potential_copy
 
   interface base_potential_end
     module procedure base_potential_end_potential
-    module procedure base_potential_intrpl_end
   end interface base_potential_end
 
   integer, public, parameter :: BASE_POTENTIAL_OK          = BASE_POTENTIAL_HASH_OK
@@ -206,6 +178,7 @@ module base_potential_m
 #define TEMPLATE_NAME base_potential
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_NAME
 
@@ -304,8 +277,9 @@ contains
     type(base_potential_t), intent(in)  :: that
     !
     PUSH_SUB(base_potential__init__copy)
-    if(associated(that%config).and.associated(that%sys))&
-      call base_potential__init__(this, that%sys, that%config)
+    ASSERT(associated(that%config))
+    ASSERT(associated(that%sys))
+    call base_potential__init__(this, that%sys, that%config)
     POP_SUB(base_potential__init__copy)
     return
   end subroutine base_potential__init__copy
@@ -413,6 +387,7 @@ contains
     type(base_potential_t), intent(inout) :: this
     !
     PUSH_SUB(base_potential__update__)
+    ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     call storage_update(this%data)
     POP_SUB(base_potential__update__)
@@ -420,32 +395,46 @@ contains
   end subroutine base_potential__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_potential_update(this)
+  subroutine base_potential_update_potential(this)
     type(base_potential_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_potential_update_potential)
+    call base_potential_update_pass(this, base_potential__update__)
+    POP_SUB(base_potential_update_potential)
+    return
+  end subroutine base_potential_update_potential
+ 
+  ! ---------------------------------------------------------
+  recursive subroutine base_potential_update_pass(this, potential_update)
+    type(base_potential_t), intent(inout) :: this
+    interface
+      subroutine potential_update(this)
+        import :: base_potential_t
+        type(base_potential_t), intent(inout) :: this
+      end subroutine potential_update
+    end interface
     !
     type(base_potential_iterator_t) :: iter
     type(base_potential_t), pointer :: subs
     integer                         :: ierr
     !
-    PUSH_SUB(base_potential_update)
+    PUSH_SUB(base_potential_update_pass)
     nullify(subs)
-    this%energy=0.0_wp
     call base_potential__reset__(this)
     call base_potential_init(iter, this)
     do
       nullify(subs)
       call base_potential_next(iter, subs, ierr)
       if(ierr/=BASE_POTENTIAL_OK)exit
-      call base_potential_update(subs)
+      call base_potential_update(subs, potential_update)
       call base_potential__acc__(this, subs)
-      this%energy=this%energy+subs%energy
     end do
     call base_potential_end(iter)
     nullify(subs)
-    call base_potential__update__(this)
-    POP_SUB(base_potential_update)
+    call potential_update(this)
+    POP_SUB(base_potential_update_pass)
     return
-  end subroutine base_potential_update
+  end subroutine base_potential_update_pass
 
   ! ---------------------------------------------------------
   subroutine base_potential__stop__(this)
@@ -491,6 +480,7 @@ contains
     PUSH_SUB(base_potential__reset__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    this%energy=0.0_wp
     call storage_reset(this%data)
     POP_SUB(base_potential__reset__)
     return
@@ -504,6 +494,7 @@ contains
     PUSH_SUB(base_potential__acc__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    this%energy=this%energy+that%energy
     call storage_accumulate(this%data, that%data)
     POP_SUB(base_potential__acc__)
     return
@@ -519,6 +510,7 @@ contains
     integer                             :: ierr
     !
     PUSH_SUB(base_potential__add__)
+    ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
@@ -538,6 +530,7 @@ contains
     !
     PUSH_SUB(base_potential_get_potential)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_potential_hash_get(this%hash, config, that, ierr)
@@ -548,58 +541,29 @@ contains
   end subroutine base_potential_get_potential
 
   ! ---------------------------------------------------------
-  elemental subroutine base_potential_set_energy(this, that)
-    type(base_potential_t), intent(inout) :: this
-    real(kind=wp),          intent(in)    :: that
+  subroutine base_potential_set_info(this, energy)
+    type(base_potential_t),  intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: energy
     !
-    this%energy=that
+    PUSH_SUB(base_potential_set_info)
+    if(present(energy))&
+      this%energy=energy
+    POP_SUB(base_potential_set_info)
     return
-  end subroutine base_potential_set_energy
-
+  end subroutine base_potential_set_info
+ 
   ! ---------------------------------------------------------
-  elemental function base_potential_get_size(this) result(np)
-    type(base_potential_t), intent(in) :: this
-    !
-    integer :: np
-    !
-    np=storage_get_size(this%data)
-    return
-  end function base_potential_get_size
-
-  ! ---------------------------------------------------------
-  elemental function base_potential_get_nspin(this) result(that)
-    type(base_potential_t), intent(in) :: this
-    !
-    integer :: that
-    !
-    that=storage_get_dimension(this%data)
-    return
-  end function base_potential_get_nspin
-
-  ! ---------------------------------------------------------
-  elemental function base_potential_get_energy(this) result(that)
-    type(base_potential_t), intent(in) :: this
-    !
-    real(kind=wp) :: that
-    !
-    that=this%energy
-    return
-  end function base_potential_get_energy
-
-  ! ---------------------------------------------------------
-  !elemental 
   subroutine base_potential_get_info(this, size, nspin, energy)
     type(base_potential_t),  intent(in)  :: this
     integer,       optional, intent(out) :: size
     integer,       optional, intent(out) :: nspin
     real(kind=wp), optional, intent(out) :: energy
     !
-    if(present(size))&
-      size=base_potential_get_size(this)
-    if(present(nspin))&
-      nspin=base_potential_get_nspin(this)
+    PUSH_SUB(base_potential_get_info)
     if(present(energy))&
-      energy=base_potential_get_energy(this)
+      energy=this%energy
+    call storage_get(this%data, size=size, dim=nspin)
+    POP_SUB(base_potential_get_info)
     return
   end subroutine base_potential_get_info
 
@@ -760,87 +724,9 @@ contains
 #define TEMPLATE_NAME base_potential
 #define INCLUDE_BODY
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_NAME
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_init(this, that, type)
-    type(base_potential_intrpl_t),  intent(out) :: this
-    type(base_potential_t), target, intent(in)  :: that
-    integer,              optional, intent(in)  :: type
-    !
-    PUSH_SUB(base_potential_intrpl_init)
-    this%self=>that
-    call storage_init(this%intrp, that%data, type)
-    POP_SUB(base_potential_intrpl_init)
-    return
-  end subroutine base_potential_intrpl_init
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_eval_1d(this, x, v, ierr)
-    type(base_potential_intrpl_t), intent(in)  :: this
-    real(kind=wp),   dimension(:), intent(in)  :: x
-    real(kind=wp),                 intent(out) :: v
-    integer,                       intent(out) :: ierr
-    !
-    PUSH_SUB(base_potential_intrpl_eval_1d)
-    call storage_eval(this%intrp, x, v, ierr)
-    POP_SUB(base_potential_intrpl_eval_1d)
-    return
-  end subroutine base_potential_intrpl_eval_1d
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_eval_md(this, x, v, ierr)
-    type(base_potential_intrpl_t), intent(in)  :: this
-    real(kind=wp),   dimension(:), intent(in)  :: x
-    real(kind=wp),   dimension(:), intent(out) :: v
-    integer,                       intent(out) :: ierr
-    !
-    PUSH_SUB(base_potential_intrpl_eval_md)
-    call storage_eval(this%intrp, x, v, ierr)
-    POP_SUB(base_potential_intrpl_eval_md)
-    return
-  end subroutine base_potential_intrpl_eval_md
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_get(this, that)
-    type(base_potential_intrpl_t), intent(in) :: this
-    type(base_potential_t),       pointer     :: that
-    !
-    PUSH_SUB(base_potential_intrpl_get)
-    nullify(that)
-    if(associated(this%self))&
-      that=>this%self
-    POP_SUB(base_potential_intrpl_get)
-    return
-  end subroutine base_potential_intrpl_get
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_copy(this, that)
-    type(base_potential_intrpl_t), intent(out) :: this
-    type(base_potential_intrpl_t), intent(in)  :: that
-    !
-    PUSH_SUB(base_potential_intrpl_copy)
-    call base_potential_intrpl_end(this)
-    if(associated(that%self))then
-      this%self=>that%self
-      call storage_copy(this%intrp, that%intrp)
-    end if
-    POP_SUB(base_potential_intrpl_copy)
-    return
-  end subroutine base_potential_intrpl_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_intrpl_end(this)
-    type(base_potential_intrpl_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_potential_intrpl_end)
-    if(associated(this%self))&
-      call storage_end(this%intrp)
-    nullify(this%self)
-    POP_SUB(base_potential_intrpl_end)
-    return
-  end subroutine base_potential_intrpl_end
 
 end module base_potential_m
 

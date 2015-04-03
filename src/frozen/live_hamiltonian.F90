@@ -18,6 +18,9 @@ module live_hamiltonian_m
     live_external_t
 
   use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
+
+  use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                            &
@@ -92,7 +95,7 @@ contains
     type(live_external_t),   pointer     :: that
     !
     PUSH_SUB(live_hamiltonian_get_external)
-    call base_hamiltonian_get(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(live_hamiltonian_get_external)
     return
   end subroutine live_hamiltonian_get_external

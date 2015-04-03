@@ -23,6 +23,9 @@ module ssys_hamiltonian_m
     ssys_ionic_update
 
   use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
+
+  use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
   use base_hamiltonian_m, only:                          &
@@ -136,7 +139,7 @@ contains
     type(ssys_external_t),   pointer     :: that
     !
     PUSH_SUB(ssys_hamiltonian_get_external)
-    call base_hamiltonian_get(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(ssys_hamiltonian_get_external)
     return
   end subroutine ssys_hamiltonian_get_external
@@ -147,7 +150,7 @@ contains
     type(ssys_ionic_t),      pointer     :: that
     !
     PUSH_SUB(ssys_hamiltonian_get_ionic)
-    call base_hamiltonian_get(this, "ionic", that)
+    call base_hamiltonian__get__(this, "ionic", that)
     POP_SUB(ssys_hamiltonian_get_ionic)
     return
   end subroutine ssys_hamiltonian_get_ionic

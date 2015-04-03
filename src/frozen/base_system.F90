@@ -167,6 +167,7 @@ module base_system_m
 
   interface base_system_get
     module procedure base_system_get_system
+    module procedure base_system_get_info
     module procedure base_system_get_config
     module procedure base_system_get_simulation
     module procedure base_system_get_space
@@ -546,6 +547,18 @@ contains
     return
   end subroutine base_system_set_simulation
 
+  ! ---------------------------------------------------------
+  subroutine base_system_get_info(this, charge, nspin)
+    type(base_system_t),     intent(in)  :: this
+    real(kind=wp), optional, intent(out) :: charge
+    integer,       optional, intent(out) :: nspin
+    !
+    PUSH_SUB(base_system_get_info)
+    call base_states_get(this%st, charge=charge, nspin=nspin)
+    POP_SUB(base_system_get_info)
+    return
+  end subroutine base_system_get_info
+ 
   ! ---------------------------------------------------------
   subroutine base_system_get_config(this, that)
     type(base_system_t),  target, intent(in) :: this

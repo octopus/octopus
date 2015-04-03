@@ -70,6 +70,8 @@ module base_term_m
   public ::              &
     base_term__init__,   &
     base_term__update__, &
+    base_term__reset__,  &
+    base_term__acc__,    &
     base_term__add__,    &
     base_term__copy__,   &
     base_term__end__
@@ -115,6 +117,11 @@ module base_term_m
     module procedure base_term_init_term
     module procedure base_term_init_copy
   end interface base_term_init
+
+  interface base_term_update
+    module procedure base_term_update_term
+    module procedure base_term_update_pass
+  end interface base_term_update
 
   interface base_term_set
     module procedure base_term_set_info
@@ -232,8 +239,9 @@ contains
     type(base_term_t), intent(in)  :: that
     !
     PUSH_SUB(base_term__init__copy)
-    if(associated(that%config).and.associated(that%sys))&
-      call base_term__init__(this, that%sys, that%config)
+    ASSERT(associated(that%config))
+    ASSERT(associated(that%sys))
+    call base_term__init__(this, that%sys, that%config)
     POP_SUB(base_term__init__copy)
     return
   end subroutine base_term__init__copy
@@ -284,36 +292,74 @@ contains
     !
     PUSH_SUB(base_term__update__)
     ASSERT(associated(this%config))
-    ASSERT(associated(this%sys))
     POP_SUB(base_term__update__)
     return
   end subroutine base_term__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_term_update(this)
+  subroutine base_term_update_term(this)
     type(base_term_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_term_update_term)
+    call base_term_update_pass(this, base_term__update__)
+    POP_SUB(base_term_update_term)
+    return
+  end subroutine base_term_update_term
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_term_update_pass(this, term_update)
+    type(base_term_t), intent(inout) :: this
+    interface
+      subroutine term_update(this)
+        import :: base_term_t
+        type(base_term_t), intent(inout) :: this
+      end subroutine term_update
+    end interface
     !
     type(base_term_iterator_t) :: iter
     type(base_term_t), pointer :: subs
     integer                    :: ierr
     !
-    PUSH_SUB(base_term_update)
+    PUSH_SUB(base_term_update_pass)
     nullify(subs)
-    this%energy=0.0_wp
+    call base_term__reset__(this)
     call base_term_init(iter, this)
     do
       nullify(subs)
       call base_term_next(iter, subs, ierr)
       if(ierr/=BASE_TERM_OK)exit
-      call base_term_update(subs)
-      this%energy=this%energy+subs%energy
+      call base_term_update(subs, term_update)
+      call base_term__acc__(this, subs)
     end do
     call base_term_end(iter)
     nullify(subs)
-    call base_term__update__(this)
-    POP_SUB(base_term_update)
+    call term_update(this)
+    POP_SUB(base_term_update_pass)
     return
-  end subroutine base_term_update
+  end subroutine base_term_update_pass
+
+  ! ---------------------------------------------------------
+  subroutine base_term__reset__(this)
+    type(base_term_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_term__reset__)
+    ASSERT(associated(this%config))
+    this%energy=0.0_wp
+    POP_SUB(base_term__reset__)
+    return
+  end subroutine base_term__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_term__acc__(this, that)
+    type(base_term_t), intent(inout) :: this
+    type(base_term_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_term__acc__)
+    ASSERT(associated(this%config))
+    this%energy=this%energy+that%energy
+    POP_SUB(base_term__acc__)
+    return
+  end subroutine base_term__acc__
 
   ! ---------------------------------------------------------
   subroutine base_term__add__(this, that, config)
@@ -325,6 +371,7 @@ contains
     integer                             :: ierr
     !
     PUSH_SUB(base_term_init__add__)
+    ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
@@ -344,6 +391,7 @@ contains
     !
     PUSH_SUB(base_term_get_term)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)then
       call base_term_hash_get(this%hash, config, that, ierr)
@@ -352,15 +400,6 @@ contains
     POP_SUB(base_term_get_term)
     return
   end subroutine base_term_get_term
-
-  ! ---------------------------------------------------------
-  elemental subroutine base_term_set_energy(this, that)
-    type(base_term_t), intent(inout) :: this
-    real(kind=wp),     intent(in)    :: that
-    !
-    this%energy=that
-    return
-  end subroutine base_term_set_energy
 
   ! ---------------------------------------------------------
   subroutine base_term_set_info(this, energy)
@@ -372,16 +411,6 @@ contains
     POP_SUB(base_term_set_info)
     return
   end subroutine base_term_set_info
-
-  ! ---------------------------------------------------------
-  elemental function base_term_get_energy(this) result(that)
-    type(base_term_t), intent(in) :: this
-    !
-    real(kind=wp) :: that
-    !
-    that=this%energy
-    return
-  end function base_term_get_energy
 
   ! ---------------------------------------------------------
   subroutine base_term_get_info(this, energy)
@@ -425,11 +454,15 @@ contains
     type(base_term_t), intent(inout) :: this
     type(base_term_t), intent(in)    :: that
     !
+    type(base_term_t), pointer :: prnt
+    !
     PUSH_SUB(base_term__copy__)
+    prnt=>this%prnt
     call  base_term__end__(this)
     if(associated(that%config).and.associated(that%sys))&
       call base_term__init__(this, that%sys, that%config)
     POP_SUB(base_term__copy__)
+    this%prnt=>prnt
     return
   end subroutine base_term__copy__
 

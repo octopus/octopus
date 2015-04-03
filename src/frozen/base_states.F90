@@ -135,7 +135,7 @@ module base_states_m
   end interface base_states_init
 
   interface base_states_set
-    module procedure base_states_set_charge
+    module procedure base_states_set_info
     module procedure base_states_set_simulation
   end interface base_states_set
 
@@ -489,13 +489,16 @@ contains
   end subroutine base_states_get_states
 
   ! ---------------------------------------------------------
-  elemental subroutine base_states_set_charge(this, that)
-    type(base_states_t), intent(inout) :: this
-    real(kind=wp),       intent(in)    :: that
+  subroutine base_states_set_info(this, charge)
+    type(base_states_t),     intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: charge
     !
-    this%charge=that
+    PUSH_SUB(base_states_set_info)
+    if(present(charge))&
+      this%charge=charge
+    POP_SUB(base_states_set_info)
     return
-  end subroutine base_states_set_charge
+  end subroutine base_states_set_info
     
   ! ---------------------------------------------------------
   subroutine base_states_set_simulation(this, that)
@@ -511,22 +514,16 @@ contains
   end subroutine base_states_set_simulation
     
   ! ---------------------------------------------------------
-  elemental function base_states_get_charge(this) result(that)
-    type(base_states_t), intent(in) :: this
-    !
-    real(kind=wp) :: that
-    !
-    that=this%charge
-    return
-  end function base_states_get_charge
-    
-  ! ---------------------------------------------------------
-  elemental subroutine base_states_get_info(this, charge)
+  subroutine base_states_get_info(this, charge, nspin)
     type(base_states_t),     intent(in)  :: this
     real(kind=wp), optional, intent(out) :: charge
+    integer,       optional, intent(out) :: nspin
     !
+    PUSH_SUB(base_states_get_info)
     if(present(charge))&
-      charge=base_states_get_charge(this)
+      charge=this%charge
+    call base_density_get(this%density, nspin=nspin)
+    POP_SUB(base_states_get_info)
     return
   end subroutine base_states_get_info
     
