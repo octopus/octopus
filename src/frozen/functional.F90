@@ -7,318 +7,300 @@ module functional_m
   use profiling_m
 
   use derivatives_m,   only: derivatives_t
+  use grid_m,          only: grid_t
   use json_m,          only: JSON_OK, json_object_t, json_get
   use kinds_m,         only: wp
   use mesh_m,          only: mesh_t
   use mesh_function_m, only: dmf_integrate
 
-  use interface_xc_m
+  use simulation_m, only: &
+    simulation_t,         &
+    simulation_get
 
-  use gga_m
-  use lda_m
+  use interface_xc_m
 
   implicit none
 
   private
-  public ::                              &
-    functional_init,                     &
-    functional_start,                    &
-    functional_get_kind,                 &
-    functional_get_energy,               &
-    functional_get_energy_and_potential, &
-    functional_get_potential,            &
-    functional_copy,                     &
+  public ::           &
+    functional_t,     &
+    functional_init,  &
+    functional_start, &
+    functional_calc,  &
+    functional_get,   &
+    functional_copy,  &
     functional_end
 
-  type, public :: functional_t
+  type :: functional_t
     private
-    type(json_object_t), pointer :: config =>null()
-    type(mesh_t),        pointer :: mesh   =>null()
-    type(lda_t),         pointer :: lda    =>null()
-    type(gga_t),         pointer :: gga    =>null()
-    integer                      :: family = XC_NONE ! LDA, GGA, etc.
+    type(simulation_t), pointer :: sim  =>null()
+    type(mesh_t),       pointer :: mesh =>null()
+    type(interface_xc_t)        :: funct
   end type functional_t
 
-  interface functional_start
-    module procedure functional_start_mesh
-    module procedure functional_start_der
-  end interface functional_start
+  interface functional_get
+    module procedure functional_get_info
+    module procedure functional_get_sim
+    module procedure functional_get_mesh
+  end interface functional_get
 
-  interface functional_get_energy
-    module procedure functional_get_energy_from_exc
-    module procedure functional_get_energy_from_density
-  end interface functional_get_energy
+  interface functional_calc
+    module procedure functional_calc_energy
+    module procedure functional_calc_potential
+    module procedure functional_calc_energy_and_potential
+  end interface functional_calc
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine functional_init(this, config)
-    type(functional_t),          intent(out) :: this
-    type(json_object_t), target, intent(in)  :: config
-    !
-    integer :: ierr
-    !
+  subroutine functional_init(this, id, nspin)
+    type(functional_t), intent(out) :: this
+    integer,            intent(in)  :: id
+    integer,            intent(in)  :: nspin
+
     PUSH_SUB(functional_init)
-    this%config=>config
-    nullify(this%mesh)
-    call json_get(this%config, "family", this%family, ierr)
-    if(ierr/=JSON_OK)this%family=XC_NONE
-    ASSERT(this%family>XC_UNKNOWN)
-    if(this%family>XC_NONE)then
-      select case(this%family)
-      case(XC_FAMILY_LDA)
-        SAFE_ALLOCATE(this%lda)
-        call lda_init(this%lda, config)
-      case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-        SAFE_ALLOCATE(this%gga)
-        call gga_init(this%gga, config)
-      !case(XC_FAMILY_MGGA)
-      !case(XC_FAMILY_OEP)
-      case default
-        call functional_end(this)
-        ASSERT(.false.)
-      end select
-    end if
+
+    nullify(this%sim,this%mesh)
+    call interface_xc_init(this%funct, id, nspin)
+
     POP_SUB(functional_init)
-    return
   end subroutine functional_init
 
   ! ---------------------------------------------------------
-  subroutine functional_start_mesh(this, mesh)
-    type(functional_t),   intent(inout) :: this
-    type(mesh_t), target, intent(in)    :: mesh
-    !
-    PUSH_SUB(functional_start_mesh)
+  subroutine functional_start(this, sim, fine)
+    type(functional_t),         intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
+    logical,          optional, intent(in)    :: fine
+
+    type(grid_t),        pointer :: grid
+    type(derivatives_t), pointer :: der
+    logical                      :: fn
+
+    PUSH_SUB(functional_start)
+
+    ASSERT(.not.associated(this%sim))
     ASSERT(.not.associated(this%mesh))
-    this%mesh=>mesh
-    if(this%family>XC_NONE)then
-      select case(this%family)
-      case(XC_FAMILY_LDA)
-        ASSERT(associated(this%lda))
-        call lda_start(this%lda, mesh%sb%dim)
-      case default
-        call functional_end(this)
-        ASSERT(.false.)
-      end select
+    this%sim=>sim
+    call simulation_get(this%sim, grid)
+    ASSERT(associated(grid))
+    fn=.false.
+    if(grid%have_fine_mesh)then
+      if(present(fine))fn=fine
     end if
-    POP_SUB(functional_start_mesh)
-    return
-  end subroutine functional_start_mesh
+    call simulation_get(this%sim, this%mesh, fine=fn)
+    ASSERT(associated(this%mesh))
+    call simulation_get(this%sim, der, fine=fn)
+    ASSERT(associated(der))
+    call interface_xc_start(this%funct, this%mesh, der)
+
+    POP_SUB(functional_start)
+  end subroutine functional_start
 
   ! ---------------------------------------------------------
-  subroutine functional_start_der(this, der)
-    type(functional_t),          intent(inout) :: this
-    type(derivatives_t), target, intent(in)    :: der
-    !
-    PUSH_SUB(functional_start_der)
-    ASSERT(.not.associated(this%mesh))
-    this%mesh=>der%mesh
-    if(this%family>XC_NONE)then
-      select case(this%family)
-      case(XC_FAMILY_LDA)
-        ASSERT(associated(this%lda))
-        call lda_start(this%lda, this%mesh%sb%dim)
-      case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-        ASSERT(associated(this%gga))
-        call gga_start(this%gga, der)
-      !case(XC_FAMILY_MGGA)
-      !case(XC_FAMILY_OEP)
-      case default
-        call functional_end(this)
-        ASSERT(.false.)
-      end select
-    end if
-    POP_SUB(functional_start_der)
-    return
-  end subroutine functional_start_der
+  subroutine functional_get_info(this, id, family, kind, nspin, polarized, ndim)
+    type(functional_t), intent(in)  :: this
+    integer,  optional, intent(out) :: id
+    integer,  optional, intent(out) :: family
+    integer,  optional, intent(out) :: kind
+    integer,  optional, intent(out) :: nspin
+    logical,  optional, intent(out) :: polarized
+    integer,  optional, intent(out) :: ndim
+
+    PUSH_SUB(functional_get_info)
+
+    call interface_xc_get(this%funct, id, family, kind, nspin, polarized, ndim)
+
+    POP_SUB(functional_get_info)
+  end subroutine functional_get_info
 
   ! ---------------------------------------------------------
-  elemental function functional_get_kind(this) result(kind)
-    type(functional_t), intent(in) :: this
-    !
-    integer :: kind
-    !
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      kind=lda_get_kind(this%lda)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      kind=gga_get_kind(this%gga)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
-    case default
-      kind=XC_UNKNOWN
-    end select
-    return
-  end function functional_get_kind
+  subroutine functional_get_sim(this, that)
+    type(functional_t),  target, intent(in) :: this
+    type(simulation_t), pointer             :: that
+
+    PUSH_SUB(functional_get_sim)
+
+    nullify(that)
+    if(associated(this%sim)) that => this%sim
+
+    POP_SUB(functional_get_sim)
+  end subroutine functional_get_sim
 
   ! ---------------------------------------------------------
-  function functional_get_energy_from_exc(this, density, exc) result(energy)
-    type(functional_t),            intent(in)  :: this
-    real(kind=wp), dimension(:,:), intent(in)  :: density
-    real(kind=wp), dimension(:),   intent(in)  :: exc
-    !
-    real(kind=wp) :: energy
-    !
-    real(kind=wp), dimension(size(exc)) :: enrg
-    !
-    PUSH_SUB(functional_get_energy_from_exc)
-    enrg=sum(density, dim=2)*exc
-    energy=dmf_integrate(this%mesh, enrg)
-    POP_SUB(functional_get_energy_from_exc)
-    return
-  end function functional_get_energy_from_exc
+  subroutine functional_get_mesh(this, that)
+    type(functional_t), target, intent(in) :: this
+    type(mesh_t),      pointer             :: that
+
+    PUSH_SUB(functional_get_mesh)
+
+    nullify(that)
+    if(associated(this%mesh)) that => this%mesh
+
+    POP_SUB(functional_get_mesh)
+  end subroutine functional_get_mesh
 
   ! ---------------------------------------------------------
-  function functional_get_energy_from_density(this, density) result(energy)
-    type(functional_t),            intent(in)  :: this
-    real(kind=wp), dimension(:,:), intent(in)  :: density
-    !
-    real(kind=wp) :: energy
-    !
-    real(kind=wp), dimension(size(density,dim=1)) :: exc
-    !
-    PUSH_SUB(functional_get_energy_from_density)
-    call functional_get_exc(this, density, exc)
-    energy=functional_get_energy_from_exc(this, density, exc)
-    POP_SUB(functional_get_energy_from_density)
-    return
-  end function functional_get_energy_from_density
-
-  ! ---------------------------------------------------------
-  subroutine functional_get_exc(this, density, exc)
+  subroutine functional_exc(this, density, exc)
     type(functional_t),            intent(in)  :: this
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:),   intent(out) :: exc
-    !
-    PUSH_SUB(functional_get_exc)
-    select case(this%family)
+
+    integer :: family
+
+    PUSH_SUB(functional_exc)
+
+    call functional_get(this, family=family)
+    select case(family)
     case(XC_FAMILY_LDA)
-      call lda_get_exc(this%lda, density, exc)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_get_exc(this%gga, density, exc)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
+      call interface_xc_lda_exc(this%funct, density, exc)
+    case(XC_FAMILY_GGA)
+      call interface_xc_gga_exc(this%funct, density, exc)
     case default
       ASSERT(.false.)
     end select
-    POP_SUB(functional_get_exc)
-    return
-  end subroutine functional_get_exc
+
+    POP_SUB(functional_exc)
+  end subroutine functional_exc
 
   ! ---------------------------------------------------------
-  subroutine functional_get_exc_and_vxc(this, density, exc, vxc)
+  subroutine functional_vxc(this, density, vxc)
+    type(functional_t),            intent(in)  :: this
+    real(kind=wp), dimension(:,:), intent(in)  :: density
+    real(kind=wp), dimension(:,:), intent(out) :: vxc
+
+    integer :: family
+
+    PUSH_SUB(functional_vxc)
+
+    call functional_get(this, family=family)
+    select case(family)
+    case(XC_FAMILY_LDA)
+      call interface_xc_lda_vxc(this%funct, density, vxc)
+    case(XC_FAMILY_GGA)
+      call interface_xc_gga_vxc(this%funct, density, vxc)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(functional_vxc)
+  end subroutine functional_vxc
+
+  ! ---------------------------------------------------------
+  subroutine functional_exc_vxc(this, density, exc, vxc)
     type(functional_t),            intent(in)  :: this
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:),   intent(out) :: exc
     real(kind=wp), dimension(:,:), intent(out) :: vxc
-    !
-    PUSH_SUB(functional_get_exc_and_vxc)
-    select case(this%family)
+
+    integer :: family
+
+    PUSH_SUB(functional_exc_vxc)
+
+    call functional_get(this, family=family)
+    select case(family)
     case(XC_FAMILY_LDA)
-      call lda_get_exc_and_vxc(this%lda, density, exc, vxc)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_get_exc_and_vxc(this%gga, density, exc, vxc)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
+      call interface_xc_lda_exc_vxc(this%funct, density, exc, vxc)
+    case(XC_FAMILY_GGA)
+      call interface_xc_gga_exc_vxc(this%funct, density, exc, vxc)
     case default
       ASSERT(.false.)
     end select
-    POP_SUB(functional_get_exc_and_vxc)
-    return
-  end subroutine functional_get_exc_and_vxc
+
+    POP_SUB(functional_exc_vxc)
+  end subroutine functional_exc_vxc
 
   ! ---------------------------------------------------------
-  subroutine functional_get_energy_and_potential(this, density, energy, potential)
+  function functional_energy(this, density, exc) result(energy)
+    type(functional_t),            intent(in)  :: this
+    real(kind=wp), dimension(:,:), intent(in)  :: density
+    real(kind=wp), dimension(:),   intent(in)  :: exc
+
+    real(kind=wp) :: energy
+
+    real(kind=wp), dimension(this%mesh%np) :: enrg
+    integer                                :: ip
+
+    PUSH_SUB(functional_energy)
+
+    do ip = 1, this%mesh%np
+      enrg(ip)=sum(density(ip,:))*exc(ip)
+    end do
+    energy=dmf_integrate(this%mesh, enrg)
+
+    POP_SUB(functional_energy)
+  end function functional_energy
+
+  ! ---------------------------------------------------------
+  subroutine functional_calc_energy(this, density, energy)
+    type(functional_t),            intent(in)  :: this
+    real(kind=wp), dimension(:,:), intent(in)  :: density
+    real(kind=wp),                 intent(out) :: energy
+
+    real(kind=wp), dimension(this%mesh%np) :: exc
+
+    PUSH_SUB(functional_calc_energy)
+
+    call functional_exc(this, density, exc)
+    energy=functional_energy(this, density, exc)
+
+    POP_SUB(functional_calc_energy)
+  end subroutine functional_calc_energy
+
+  ! ---------------------------------------------------------
+  subroutine functional_calc_potential(this, density, potential)
+    type(functional_t),            intent(in)  :: this
+    real(kind=wp), dimension(:,:), intent(in)  :: density
+    real(kind=wp), dimension(:,:), intent(out) :: potential
+
+    PUSH_SUB(functional_calc_potential)
+
+    call functional_vxc(this, density, potential)
+
+    POP_SUB(functional_calc_potential)
+  end subroutine functional_calc_potential
+
+  ! ---------------------------------------------------------
+  subroutine functional_calc_energy_and_potential(this, density, energy, potential)
     type(functional_t),            intent(in)  :: this
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp),                 intent(out) :: energy
     real(kind=wp), dimension(:,:), intent(out) :: potential
-    !
-    real(kind=wp), dimension(size(density,dim=1)) :: exc
-    !
-    PUSH_SUB(functional_get_energy_and_potential)
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      call lda_get_exc_and_vxc(this%lda, density, exc, potential)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_get_exc_and_vxc(this%gga, density, exc, potential)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
-    case default
-      ASSERT(.false.)
-    end select
-    energy=functional_get_energy_from_exc(this, density, exc)
-    POP_SUB(functional_get_energy_and_potential)
-    return
-  end subroutine functional_get_energy_and_potential
 
-  ! ---------------------------------------------------------
-  subroutine functional_get_potential(this, density, potential)
-    type(functional_t),            intent(in)  :: this
-    real(kind=wp), dimension(:,:), intent(in)  :: density
-    real(kind=wp), dimension(:,:), intent(out) :: potential
-    !
-    PUSH_SUB(functional_get_potential)
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      call lda_get_vxc(this%lda, density, potential)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_get_vxc(this%gga, density, potential)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
-    case default
-      ASSERT(.false.)
-    end select
-    POP_SUB(functional_get_potential)
-    return
-  end subroutine functional_get_potential
+    real(kind=wp), dimension(this%mesh%np) :: exc
+
+    PUSH_SUB(functional_calc_energy_and_potential)
+
+    call functional_exc_vxc(this, density, exc, potential)
+    energy=functional_energy(this, density, exc)
+
+    POP_SUB(functional_calc_energy_and_potential)
+  end subroutine functional_calc_energy_and_potential
 
   ! ---------------------------------------------------------
   subroutine functional_copy(this, that)
     type(functional_t), intent(inout) :: this
     type(functional_t), intent(in)    :: that
-    !
+
     PUSH_SUB(functional_copy)
+
     call functional_end(this)
-    this%config=>that%config
-    this%mesh=>that%mesh
-    this%family=that%family
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      SAFE_ALLOCATE(this%lda)
-      call lda_copy(this%lda, that%lda)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      SAFE_ALLOCATE(this%gga)
-      call gga_copy(this%gga, that%gga)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
-    case default
-      nullify(this%lda, this%lda)
-      ASSERT(this%family==XC_NONE)
-    end select
+    this%sim => that%sim
+    this%mesh => that%mesh
+    call interface_xc_copy(this%funct, that%funct)
+
     POP_SUB(functional_copy)
-    return
   end subroutine functional_copy
 
   ! ---------------------------------------------------------
   subroutine functional_end(this)
     type(functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(functional_end)
-    select case(this%family)
-    case(XC_FAMILY_LDA)
-      call lda_end(this%lda)
-      SAFE_DEALLOCATE_P(this%lda)
-    case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-      call gga_end(this%gga)
-      SAFE_DEALLOCATE_P(this%gga)
-    !case(XC_FAMILY_MGGA)
-    !case(XC_FAMILY_OEP)
-    end select
-    this%family=XC_NONE
-    nullify(this%gga, this%lda, this%mesh, this%config)
+
+    nullify(this%sim,this%mesh)
+    call interface_xc_end(this%funct)
+
     POP_SUB(functional_end)
-    return
   end subroutine functional_end
 
 end module functional_m

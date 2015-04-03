@@ -232,6 +232,7 @@ contains
     call json_get(this%config, "nspin", nspin, ierr)
     if(ierr/=JSON_OK)nspin=default_nspin
     ASSERT(nspin>0)
+    ASSERT(nspin<3)
     call json_get(this%config, "allocate", alloc, ierr)
     if(ierr/=JSON_OK)alloc=.true.
     if(nspin>1)then
@@ -544,15 +545,17 @@ contains
   end function base_density_get_nspin
 
   ! ---------------------------------------------------------
-  !elemental 
-  subroutine base_density_get_info(this, size, nspin)
+  subroutine base_density_get_info(this, size, nspin, fine)
     type(base_density_t), intent(in)  :: this
     integer,    optional, intent(out) :: size
     integer,    optional, intent(out) :: nspin
+    logical,    optional, intent(out) :: fine
 
-    if(present(size)) size = base_density_get_size(this)
-    if(present(nspin)) nspin = base_density_get_nspin(this)
+    PUSH_SUB(base_density_get_info)
 
+    call storage_get(this%data, size=size, dim=nspin, fine=fine)
+
+    POP_SUB(base_density_get_info)
   end subroutine base_density_get_info
 
   ! ---------------------------------------------------------
@@ -632,91 +635,51 @@ contains
   end subroutine base_density_get_total_density
 
   ! ---------------------------------------------------------
-  !pure 
-  subroutine base_density_adjust_spin_1_n(this, that)
+  pure subroutine base_density_adjust_spin_1_n(this, that)
     real(kind=wp),               intent(out) :: this
     real(kind=wp), dimension(:), intent(in)  :: that
-
-    PUSH_SUB(base_density_adjust_spin_1_n)
 
     select case(size(that))
     case(1)
       this=that(1)
     case(2)
       this=sum(that)
-    case(4)
-      ASSERT(.false.)
     case default
-      ASSERT(.false.)
+      this=-1.0_wp
     end select
 
-    POP_SUB(base_density_adjust_spin_1_n)
   end subroutine base_density_adjust_spin_1_n
 
   ! ---------------------------------------------------------
-  !pure 
-  subroutine base_density_adjust_spin_2_n(this, that)
+  pure subroutine base_density_adjust_spin_2_n(this, that)
     real(kind=wp), dimension(:), intent(out) :: this
     real(kind=wp), dimension(:), intent(in)  :: that
-
-    PUSH_SUB(base_density_adjust_spin_2_n)
 
     select case(size(that))
     case(1)
       this=0.5_wp*that(1)
     case(2)
       this=that
-    case(4)
-      ASSERT(.false.)
     case default
-      ASSERT(.false.)
+      this=-1.0_wp
     end select
 
-    POP_SUB(base_density_adjust_spin_2_n)
   end subroutine base_density_adjust_spin_2_n
 
   ! ---------------------------------------------------------
-  !pure 
-  subroutine base_density_adjust_spin_4_n(this, that)
+  pure subroutine base_density_adjust_spin(this, that)
     real(kind=wp), dimension(:), intent(out) :: this
     real(kind=wp), dimension(:), intent(in)  :: that
-
-    PUSH_SUB(base_density_adjust_spin_4_n)
-
-    select case(size(that))
-    case(1)
-      ASSERT(.false.)
-    case(2)
-      ASSERT(.false.)
-    case(4)
-      this=that
-    case default
-      ASSERT(.false.)
-    end select
-
-    POP_SUB(base_density_adjust_spin_4_n)
-  end subroutine base_density_adjust_spin_4_n
-
-  ! ---------------------------------------------------------
-  !pure 
-  subroutine base_density_adjust_spin(this, that)
-    real(kind=wp), dimension(:), intent(out) :: this
-    real(kind=wp), dimension(:), intent(in)  :: that
-
-    PUSH_SUB(base_density_adjust_spin)
 
     select case(size(this))
     case(1)
       call base_density_adjust_spin_1_n(this(1), that)
     case(2)
       call base_density_adjust_spin_2_n(this, that)
-    case(4)
-      call base_density_adjust_spin_4_n(this, that)
     case default
-      ASSERT(.false.)
+      this=-1.0_wp
     end select
 
-    POP_SUB(base_density_adjust_spin)
   end subroutine base_density_adjust_spin
 
   ! ---------------------------------------------------------

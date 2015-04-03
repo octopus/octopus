@@ -41,8 +41,9 @@ module simulation_m
   use json_m,  only: operator(==), json_hash
   use kinds_m, only: wp
 
-  use grid_m, only: grid_t
-  use json_m, only: JSON_OK, json_object_t, json_get
+  use derivatives_m, only: derivatives_t
+  use grid_m,        only: grid_t
+  use json_m,        only: JSON_OK, json_object_t, json_get
 
   use space_m, only: &
     space_t
@@ -151,6 +152,7 @@ module simulation_m
     module procedure simulation_get_geometry
     module procedure simulation_get_simul_box
     module procedure simulation_get_mesh
+    module procedure simulation_get_derivatives
     module procedure simulation_get_grid
     module procedure simulation_get_domain
   end interface simulation_get
@@ -527,6 +529,29 @@ contains
     POP_SUB(simulation_get_mesh)
     return
   end subroutine simulation_get_mesh
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_derivatives(this, that, fine)
+    type(simulation_t),   intent(in) :: this
+    type(derivatives_t), pointer     :: that
+    logical,    optional, intent(in) :: fine
+    !
+    logical :: fn
+    !
+    PUSH_SUB(simulation_get_derivatives)
+    fn=.false.
+    nullify(that)
+    if(present(fine))fn=fine
+    if(associated(this%grid))then
+      if(fn)then
+        that=>this%grid%fine%der
+      else
+        that=>this%grid%der
+      end if
+    end if
+    POP_SUB(simulation_get_derivatives)
+    return
+  end subroutine simulation_get_derivatives
 
   ! ---------------------------------------------------------
   subroutine simulation_get_grid(this, that)

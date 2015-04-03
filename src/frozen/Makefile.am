@@ -21,15 +21,13 @@
 noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =		\
-	interface_xc.F90	\
-	lda.F90			\
-	gga.F90			\
-	functional.F90		\
 	basis.F90		\
 	strng.F90		\
+	interface_xc.F90	\
 	config_dict.F90		\
 	domain.F90		\
 	simulation.F90		\
+	functional.F90		\
 	intrpl.F90		\
 	storage.F90		\
 	base_geom.F90		\
@@ -99,16 +97,13 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
-interface_xc.o	: interface_xc.F90
-lda.o 		: lda.F90 interface_xc.o
-gga.o 		: gga.F90 interface_xc.o
-functional.o 	: functional.F90 gga.o lda.o interface_xc.o
-
 basis.o 	: basis.F90
 strng.o 	: strng.F90
+interface_xc.o	: interface_xc.F90
 config_dict.o	: config_dict.F90 strng.o 
 domain.o 	: domain.F90 config_dict.o
 simulation.o	: simulation.F90 domain.o config_dict.o basis.o
+functional.o 	: functional.F90 simulation.o interface_xc.o
 intrpl.o 	: intrpl.F90 simulation.o domain.o basis.o
 storage.o 	: storage.F90 intrpl.o simulation.o basis.o
 
