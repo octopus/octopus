@@ -323,6 +323,7 @@ contains
     PUSH_SUB(base_term_update_pass)
     nullify(subs)
     call base_term__reset__(this)
+    call term_update(this)
     call base_term_init(iter, this)
     do
       nullify(subs)
@@ -333,7 +334,6 @@ contains
     end do
     call base_term_end(iter)
     nullify(subs)
-    call term_update(this)
     POP_SUB(base_term_update_pass)
     return
   end subroutine base_term_update_pass

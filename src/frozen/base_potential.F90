@@ -71,7 +71,8 @@ module base_potential_m
     simulation_t
 
   use base_system_m, only: &
-    base_system_t
+    base_system_t,         &
+    base_system_get
 
 #define TEMPLATE_NAME base_potential
 #define INCLUDE_PREFIX
@@ -259,8 +260,7 @@ contains
     call base_potential__inull__(this)
     this%config=>config
     this%sys=>sys
-    call json_get(this%config, "nspin", nspin, ierr)
-    if(ierr/=JSON_OK)nspin=1
+    call base_system_get(this%sys, nspin=nspin)
     call json_get(this%config, "allocate", alloc, ierr)
     if(ierr/=JSON_OK)alloc=.true.
     call storage_init(this%data, nspin, full=.false., allocate=alloc)
@@ -421,6 +421,7 @@ contains
     PUSH_SUB(base_potential_update_pass)
     nullify(subs)
     call base_potential__reset__(this)
+    call potential_update(this)
     call base_potential_init(iter, this)
     do
       nullify(subs)
@@ -431,7 +432,6 @@ contains
     end do
     call base_potential_end(iter)
     nullify(subs)
-    call potential_update(this)
     POP_SUB(base_potential_update_pass)
     return
   end subroutine base_potential_update_pass
@@ -647,10 +647,10 @@ contains
     PUSH_SUB(base_potential__copy__)
     call base_potential__end__(this)
     if(associated(that%config).and.associated(that%sys))then
-      call base_potential_init(this, that%sys, that%config)
+      call base_potential__init__(this, that%sys, that%config)
       this%energy=that%energy
       if(associated(that%sim))then
-        call base_potential_start(this, that%sim)
+        call base_potential__start__(this, that%sim)
         call storage_copy(this%data, that%data)
       end if
     end if
