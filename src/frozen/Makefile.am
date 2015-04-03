@@ -120,7 +120,7 @@ base_ionic.o		: base_ionic.F90 base_term.o base_system.o base_geom.o
 base_potential.o	: base_potential.F90 base_system.o storage.o 
 base_functional.o	: base_functional.F90 base_system.o base_states.o base_density.o storage.o functional.o
 base_external.o 	: base_external.F90 base_potential.o 
-base_hamiltonian.o 	: base_hamiltonian.F90 base_potential.o base_term.o base_system.o 
+base_hamiltonian.o 	: base_hamiltonian.F90 base_functional.o base_potential.o base_term.o base_system.o 
 base_model.o 		: base_model.F90 base_hamiltonian.o base_system.o simulation.o config_dict.o
 base_handle.o 		: base_handle.F90 base_model.o intrpl.o config_dict.o
 base_config.o 		: base_config.F90 base_handle.o intrpl.o 
@@ -165,6 +165,7 @@ ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 ssys_ionic.o		: ssys_ionic.F90 base_ionic.o
 ssys_functional.o	: ssys_functional.F90 base_functional.o
 ssys_external.o		: ssys_external.F90 base_external.o
+#ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o live_functional.o base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_external.o ssys_ionic.o base_hamiltonian.o
 # ssys_model.o		: ssys_model.F90 ssys_hamiltonian.F90 ssys_system.o base_model.o
 # ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
