@@ -21,10 +21,9 @@ module fio_mesh_m
     mesh_read_fingerprint, &
     mesh_x_global
 
-  use imesh_m, only:            &
-    fio_mesh_t    => mesh_t,    &
-    fio_mesh_copy => mesh_copy, &
-    fio_mesh_end  => mesh_end
+  use mesh_m, only:           &
+    fio_mesh_t   => mesh_t,   &
+    fio_mesh_end => mesh_end
 
   use fio_simul_box_m, only: &
     fio_simul_box_t
@@ -165,6 +164,18 @@ contains
     POP_SUB(fio_mesh_init)
     return
   end subroutine fio_mesh_init
+
+  ! ---------------------------------------------------------
+  subroutine fio_mesh_copy(this, that)
+    type(fio_mesh_t), intent(out) :: this
+    type(fio_mesh_t), intent(in)  :: that
+    !
+    PUSH_SUB(fio_mesh_copy)
+    ASSERT(.false.)
+    this=that
+    POP_SUB(fio_mesh_copy)
+    return
+  end subroutine fio_mesh_copy
 
 end module fio_mesh_m
 

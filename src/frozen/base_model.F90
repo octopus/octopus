@@ -38,8 +38,9 @@ module base_model_m
   use messages_m
   use profiling_m
 
-  use json_m,   only: operator(==), json_hash
-  use kinds_m,  only: wp
+  use grid_m,  only: grid_t
+  use json_m,  only: operator(==), json_hash
+  use kinds_m, only: wp
 
   use json_m, only: JSON_OK, json_object_t, json_get
 
@@ -60,9 +61,6 @@ module base_model_m
 
   use geometry_m, only: &
     geometry_t
-
-  use igrid_m, only: &
-    grid_t
 
   use simulation_m, only: &
     simulation__init__,   &

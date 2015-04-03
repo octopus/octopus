@@ -21,8 +21,6 @@
 noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =		\
-	imesh.F90		\
-	igrid.F90		\
 	interface_xc.F90	\
 	lda.F90			\
 	gga.F90			\
@@ -101,8 +99,6 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
-imesh.o 	: imesh.F90
-igrid.o 	: igrid.F90
 interface_xc.o	: interface_xc.F90
 lda.o 		: lda.F90 interface_xc.o
 gga.o 		: gga.F90 interface_xc.o
@@ -112,7 +108,7 @@ basis.o 	: basis.F90
 strng.o 	: strng.F90
 config_dict.o	: config_dict.F90 strng.o 
 domain.o 	: domain.F90 config_dict.o
-simulation.o	: simulation.F90 domain.o config_dict.o igrid.o basis.o
+simulation.o	: simulation.F90 domain.o config_dict.o basis.o
 intrpl.o 	: intrpl.F90 simulation.o domain.o basis.o
 storage.o 	: storage.F90 intrpl.o simulation.o basis.o
 
@@ -131,8 +127,8 @@ base_config.o 		: base_config.F90 base_handle.o intrpl.o
 
 fio_simul_box.o 	: fio_simul_box.F90 base_geom.o
 fio_curvilinear.o 	: fio_curvilinear.F90 fio_simul_box.o base_geom.o
-fio_mesh.o 		: fio_mesh.F90 fio_simul_box.o imesh.o
-fio_grid.o 		: fio_grid.F90 fio_curvilinear.o fio_mesh.o igrid.o
+fio_mesh.o 		: fio_mesh.F90 fio_simul_box.o
+fio_grid.o 		: fio_grid.F90 fio_curvilinear.o fio_mesh.o
 fio_simulation.o 	: fio_simulation.F90 fio_grid.o simulation.o
 fio_density.o 		: fio_density.F90 fio_simulation.o base_density.o
 fio_states.o 		: fio_states.F90 fio_density.o base_states.o
@@ -140,8 +136,8 @@ fio_system.o 		: fio_system.F90 fio_states.o base_system.o
 fio_external.o 		: fio_external.F90 fio_simulation.o base_external.o
 fio_hamiltonian.o	: fio_hamiltonian.F90 fio_external.o fio_system.o base_hamiltonian.o
 fio_model.o 		: fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o
-fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o igrid.o
-fio_config.o 		: fio_config.F90 fio_handle.o base_config.o igrid.o
+fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o
+fio_config.o 		: fio_config.F90 fio_handle.o base_config.o
 
 frozen_density.o 	: frozen_density.F90 fio_density.o base_density.o
 frozen_states.o 	: frozen_states.F90 frozen_density.o fio_states.o base_states.o

@@ -41,7 +41,8 @@ module simulation_m
   use json_m,  only: operator(==), json_hash
   use kinds_m, only: wp
 
-  use json_m,   only: JSON_OK, json_object_t, json_get
+  use grid_m, only: grid_t
+  use json_m, only: JSON_OK, json_object_t, json_get
 
   use space_m, only: &
     space_t
@@ -54,10 +55,6 @@ module simulation_m
 
   use mesh_m, only: &
     mesh_t
-
-  use igrid_m, only: &
-    grid_t,          &
-    grid_get
 
   use config_dict_m, only: &
     CONFIG_DICT_OK,        &
@@ -149,6 +146,7 @@ module simulation_m
 
   interface simulation_get
     module procedure simulation_get_config
+    module procedure simulation_get_info
     module procedure simulation_get_space
     module procedure simulation_get_geometry
     module procedure simulation_get_simul_box
@@ -441,6 +439,21 @@ contains
   end subroutine simulation_get_simulation
 
   ! ---------------------------------------------------------
+  subroutine simulation_get_info(this, ndim)
+    type(simulation_t), intent(in)  :: this
+    integer,  optional, intent(out) :: ndim
+    !
+    PUSH_SUB(simulation_get_info)
+    if(present(ndim))then
+      ndim=0
+      if(associated(this%space))&
+        ndim=this%space%dim
+    end if
+    POP_SUB(simulation_get_info)
+    return
+  end subroutine simulation_get_info
+
+  ! ---------------------------------------------------------
   subroutine simulation_get_config(this, that)
     type(simulation_t),   target, intent(in) :: this
     type(json_object_t), pointer             :: that
@@ -487,7 +500,7 @@ contains
     PUSH_SUB(simulation_get_simul_box)
     nullify(that)
     if(associated(this%grid))&
-      call grid_get(this%grid, that)
+      that=>this%grid%sb
     POP_SUB(simulation_get_simul_box)
     return
   end subroutine simulation_get_simul_box
@@ -500,7 +513,7 @@ contains
     PUSH_SUB(simulation_get_mesh)
     nullify(that)
     if(associated(this%grid))&
-      call grid_get(this%grid, that)
+      that=>this%grid%mesh
     POP_SUB(simulation_get_mesh)
     return
   end subroutine simulation_get_mesh

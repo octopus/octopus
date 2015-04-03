@@ -17,9 +17,8 @@ module fio_grid_m
   use stencil_m,        only: stencil_t
   use transfer_table_m, only: transfer_table_t
 
-  use igrid_m, only:          &
-    fio_grid_t   => grid_t,   &
-    fio_grid_get => grid_get
+  use grid_m, only:       &
+    fio_grid_t => grid_t
 
   use fio_simul_box_m, only: &
     fio_simul_box_t,         &
@@ -48,7 +47,6 @@ module fio_grid_m
   public ::         &
     fio_grid_t,     &
     fio_grid_init,  &
-    fio_grid_get,   &
     fio_grid_copy,  &
     fio_grid_end
 

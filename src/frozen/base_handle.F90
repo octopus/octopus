@@ -38,8 +38,9 @@ module base_handle_m
   use messages_m
   use profiling_m
 
-  use json_m,   only: operator(==), json_hash
-  use kinds_m,  only: wp
+  use grid_m,  only: grid_t
+  use json_m,  only: operator(==), json_hash
+  use kinds_m, only: wp
 
   use json_m, only: JSON_OK, json_object_t, json_init, json_get, json_end
   use json_m, only: json_array_t, json_array_iterator_t, json_next
@@ -55,9 +56,6 @@ module base_handle_m
     config_dict_set,       &
     config_dict_get,       &
     config_dict_end
-
-  use igrid_m, only: &
-    grid_t
 
   use base_model_m, only: &
     base_model__init__,   &
