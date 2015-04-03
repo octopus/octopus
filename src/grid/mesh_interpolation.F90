@@ -48,6 +48,8 @@ module mesh_interpolation_m
   interface mesh_interpolation_evaluate
     module procedure dmesh_interpolation_evaluate
     module procedure zmesh_interpolation_evaluate
+    module procedure dmesh_interpolation_evaluate_vec
+    module procedure zmesh_interpolation_evaluate_vec
   end interface mesh_interpolation_evaluate
 
 contains
