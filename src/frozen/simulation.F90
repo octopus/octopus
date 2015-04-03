@@ -506,14 +506,24 @@ contains
   end subroutine simulation_get_simul_box
 
   ! ---------------------------------------------------------
-  subroutine simulation_get_mesh(this, that)
+  subroutine simulation_get_mesh(this, that, fine)
     type(simulation_t), intent(in) :: this
     type(mesh_t),      pointer     :: that
+    logical,  optional, intent(in) :: fine
+    !
+    logical :: fn
     !
     PUSH_SUB(simulation_get_mesh)
+    fn=.false.
     nullify(that)
-    if(associated(this%grid))&
-      that=>this%grid%mesh
+    if(present(fine))fn=fine
+    if(associated(this%grid))then
+      if(fn)then
+        that=>this%grid%fine%mesh
+      else
+        that=>this%grid%mesh
+      end if
+    end if
     POP_SUB(simulation_get_mesh)
     return
   end subroutine simulation_get_mesh

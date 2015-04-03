@@ -12,6 +12,7 @@ module storage_m
   use grid_m,       only: grid_t
   use kinds_m,      only: wp, operator(.equal.)
   use mesh_m,       only: mesh_t
+  use multigrid_m,  only: INJECTION, dmultigrid_coarse2fine, dmultigrid_fine2coarse
 
   use simulation_m, only: &
     simulation_t,         &
@@ -45,6 +46,7 @@ module storage_m
     storage_get,           &
     storage_get_size,      &
     storage_get_dimension, &
+    storage_transfer,      &
     storage_copy,          &
     storage_end
 
@@ -56,11 +58,13 @@ module storage_m
   type, public :: storage_t
     private
     type(simulation_t),                pointer :: sim     =>null()
+    type(grid_t),                      pointer :: grid    =>null()
     type(mesh_t),                      pointer :: mesh    =>null()
     logical                                    :: alloc   = .true.
     logical                                    :: full    = .true.
     logical                                    :: fine    = .false.
     integer                                    :: ndim    = 0
+    integer                                    :: size    = 0
     real(kind=wp)                              :: default = 0.0_wp
     real(kind=wp), dimension(:,:), allocatable :: data
   end type storage_t
@@ -83,6 +87,7 @@ module storage_m
   end interface storage_eval
 
   interface storage_get
+    module procedure storage_get_info
     module procedure storage_get_sim
     module procedure storage_get_storage_1d
     module procedure storage_get_storage_md
@@ -109,7 +114,7 @@ contains
     logical,       optional, intent(in)  :: allocate
     !
     PUSH_SUB(storage_init_simple)
-    nullify(this%sim, this%mesh)
+    nullify(this%sim, this%grid, this%mesh)
     this%full=.true.
     if(present(full))this%full=full
     this%alloc=.true.
@@ -119,6 +124,7 @@ contains
       ASSERT(ndim>0)
       this%ndim=ndim
     end if
+    this%size=0
     this%default=0.0_wp
     if(present(default))this%default=default
     POP_SUB(storage_init_simple)
@@ -131,11 +137,8 @@ contains
     type(storage_t), intent(in)  :: that
     !
     PUSH_SUB(storage_init_copy)
-    ASSERT(associated(that%sim))
-    ASSERT(associated(that%mesh))
     ASSERT(that%ndim>0)
     call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
-    call storage_start(this, that%sim, that%fine)
     POP_SUB(storage_init_copy)
     return
   end subroutine storage_init_copy
@@ -146,34 +149,31 @@ contains
     type(simulation_t), target, intent(in)    :: sim
     logical,          optional, intent(in)    :: fine
     !
-    type(grid_t), pointer :: grid
-    !
     PUSH_SUB(storage_start)
-    nullify(grid)
     ASSERT(.not.associated(this%sim))
+    ASSERT(.not.associated(this%grid))
     ASSERT(.not.associated(this%mesh))
     ASSERT(this%ndim>0)
     ASSERT(.not.allocated(this%data))
     this%sim=>sim
+    call simulation_get(this%sim, this%grid)
+    ASSERT(associated(this%grid))
     this%fine=.false.
-    if(present(fine))this%fine=fine
-    call simulation_get(sim, grid)
-    ASSERT(associated(grid))
-    if(this%fine)then
-      this%mesh=>grid%fine%mesh
-    else
-      this%mesh=>grid%mesh
+    if(this%grid%have_fine_mesh)then
+      if(present(fine))this%fine=fine
     end if
-    nullify(grid)
+    call simulation_get(this%sim, this%mesh, this%fine)
+    ASSERT(associated(this%mesh))
     ASSERT(this%mesh%np>0)
     ASSERT(this%mesh%np_part>0)
     ASSERT(this%mesh%np<this%mesh%np_part)
+    if(this%full)then
+      this%size=this%mesh%np_part
+    else
+      this%size=this%mesh%np
+    end if
     if(this%alloc)then
-      if(this%full)then
-        SAFE_ALLOCATE(this%data(this%mesh%np_part,this%ndim))
-      else
-        SAFE_ALLOCATE(this%data(this%mesh%np,this%ndim))
-      end if
+      SAFE_ALLOCATE(this%data(this%size,this%ndim))
     end if
     call storage_reset(this)
     POP_SUB(storage_start)
@@ -192,7 +192,7 @@ contains
     ASSERT(this%ndim>0)
     if(this%alloc)then
       if(this%full)then
-        do indx=this%mesh%np+1, size(this%data,dim=1)
+        do indx=this%mesh%np+1, this%size
           this%data(indx,:)=0.0_wp
         end do
       end if
@@ -214,9 +214,11 @@ contains
     ASSERT(associated(this%sim))
     ASSERT(associated(this%mesh))
     ASSERT(this%ndim>0)
+    ASSERT(this%size>0)
     if(this%alloc)then
       SAFE_DEALLOCATE_A(this%data)
     end if
+    this%size=0
     POP_SUB(storage_stop)
     return
   end subroutine storage_stop
@@ -232,6 +234,7 @@ contains
     ASSERT(associated(this%sim))
     ASSERT(associated(this%mesh))
     ASSERT(this%ndim>0)
+    ASSERT(this%size>0)
     if(this%alloc)then
       dflt=this%default
       if(present(default))dflt=default
@@ -252,12 +255,17 @@ contains
     PUSH_SUB(storage_accumulate)
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(that%grid))
     ASSERT(associated(this%mesh))
     ASSERT(associated(that%mesh))
     ASSERT(associated(this%mesh,that%mesh))
     ASSERT(this%ndim>0)
     ASSERT(that%ndim>0)
     ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size>0)
+    ASSERT(that%size>0)
+    ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
     if(this%alloc.and.that%alloc)then
       do indx = 1, this%mesh%np
@@ -268,6 +276,16 @@ contains
     POP_SUB(storage_accumulate)
     return
   end subroutine storage_accumulate
+
+  ! ---------------------------------------------------------
+  elemental function storage_is_fine(this) result(that)
+    type(storage_t), intent(in) :: this
+    !
+    logical :: that
+    !
+    that=this%fine
+    return
+  end function storage_is_fine
 
   ! ---------------------------------------------------------
   elemental function storage_get_size(this) result(that)
@@ -294,6 +312,24 @@ contains
   end function storage_get_dimension
 
   ! ---------------------------------------------------------
+  subroutine storage_get_info(this, fine, dim, size)
+    type(storage_t), target, intent(in)  :: this
+    logical,       optional, intent(out) :: fine
+    integer,       optional, intent(out) :: dim
+    integer,       optional, intent(out) :: size
+    !
+    PUSH_SUB(storage_get_sim)
+    if(present(fine))&
+      fine=storage_is_fine(this)
+    if(present(dim))&
+      dim=storage_get_dimension(this)
+    if(present(size))&
+      size=storage_get_size(this)
+    POP_SUB(storage_get_sim)
+    return
+  end subroutine storage_get_info
+
+  ! ---------------------------------------------------------
   subroutine storage_get_sim(this, that)
     type(storage_t),     target, intent(in) :: this
     type(simulation_t), pointer             :: that
@@ -316,6 +352,7 @@ contains
     if(allocated(this%data))then
       ASSERT(this%alloc)
       ASSERT(this%ndim==1)
+      ASSERT(this%size>1)
       that=>this%data(:,1)
     end if
     POP_SUB(storage_get_storage_1d)
@@ -332,11 +369,60 @@ contains
     if(allocated(this%data))then
       ASSERT(this%alloc)
       ASSERT(this%ndim>0)
+      ASSERT(this%size>1)
       that=>this%data
     end if
     POP_SUB(storage_get_storage_md)
     return
   end subroutine storage_get_storage_md
+
+  ! ---------------------------------------------------------
+  subroutine storage_transfer(this, that)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    !
+    real(kind=wp), dimension(this%size) :: buff
+    integer                             :: indx
+    !
+    PUSH_SUB(storage_transfer)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(that%grid))
+    ASSERT(associated(this%grid,that%grid))
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(that%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(that%ndim>0)
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size>0)
+    ASSERT(that%size>0)
+    ASSERT(this%default.equal.that%default)
+    ASSERT(this%alloc.and.that%alloc)
+    if(this%fine.eqv.that%fine)then
+      ASSERT(associated(this%mesh,that%mesh))
+      do indx = 1, this%mesh%np
+        this%data(indx,:)=that%data(indx,:)
+      end do
+    else
+      if(this%fine)then
+        do indx = 1, this%ndim
+          buff=that%data(:,indx)
+          call dmultigrid_coarse2fine(this%grid%fine%tt, this%grid%der, this%mesh, &
+            buff, this%data(:,indx), order=2)
+        end do
+      else
+        do indx = 1, this%ndim
+          buff=that%data(:,indx)
+          call dmultigrid_fine2coarse(this%grid%fine%tt, this%grid%fine%der, this%mesh, &
+            buff, this%data(:,indx), INJECTION)
+        end do
+      end if
+    end if
+    call storage_update(this)
+    POP_SUB(storage_transfer)
+    return
+  end subroutine storage_transfer
 
   ! ---------------------------------------------------------
   subroutine storage_copy_storage(this, that)
@@ -364,10 +450,11 @@ contains
     type(storage_t), intent(inout) :: this
     !
     PUSH_SUB(storage_end_storage)
-    nullify(this%sim, this%mesh)
+    nullify(this%sim, this%grid, this%mesh)
     this%full=.true.
     this%fine=.false.
     this%ndim=0
+    this%size=0
     this%default=0.0_wp
     if(this%alloc)then
       SAFE_DEALLOCATE_A(this%data)
