@@ -804,7 +804,8 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = .svn
+EXCLUDE                = .svn \
+                         frozen
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -875,8 +876,7 @@ IMAGE_PATH             =
 # code is scanned, but not when the output code is generated. If lines are added
 # or removed, the anchors will not be placed correctly.
 
-# I think this is executed from the src/XXX directory containing each file
-INPUT_FILTER           = "cpp -E  -I. -I.. -I../external_libs/metis-5.1/  -Iinclude -I../external_libs/spglib-1.5.2/src -I../liboct_parser -I../external_libs/fortrancl -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_SCALAPACK -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
+INPUT_FILTER           = "cpp -E -I. -I.. -I../external_libs/metis-5.1  -Iinclude -I../external_libs/spglib-1.5.2/src -I../liboct_parser -I../external_libs/fortrancl -DSHARE_OCTOPUS='share/octopus'"
 
 # The FILTER_PATTERNS tag can be used to specify filters on a per file pattern
 # basis. Doxygen will compare the file name with each pattern and apply the
