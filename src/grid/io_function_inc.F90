@@ -1120,19 +1120,43 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
  
   subroutine out_openscad()
-    integer :: ip, ii, jp, jj, kk, ll
+    integer :: ip, ii, jp, jj, kk, ll, npoly
     type(openscad_file_t) :: cad_file
     type(polyhedron_t) :: poly
-    FLOAT, parameter :: isosurface_value = CNST(0.21)
+    FLOAT :: isosurface_value
 
     integer, allocatable :: edges(:), triangles(:, :)
     integer :: iunit, cubeindex, cube_point(0:7)
-    FLOAT :: vertlist(1:3, 0:11)
+    FLOAT :: vertlist(1:3, 0:11), minff, maxff
 
     PUSH_SUB(X(io_function_output_global).out_openscad)
 
     ASSERT(present(geo))
 
+#ifdef R_TREAL
+    maxff = maxval(ff)
+    minff = minval(ff)
+    write(message(1),*) 'Minimum value = ', minff, ' Maximum value = ', maxff
+#else
+    maxff = maxval(abs(ff))
+    minff = minval(abs(ff))
+    write(message(1),*) 'Minimum magnitude = ', minff, ' Maximum magnitude = ', maxff
+#endif
+    call messages_info(1)
+
+    !%Variable OpenSCADIsovalue
+    !%Type float
+    !%Default (max+min)/2
+    !%Section Output
+    !%Description
+    !% The value for the isosurface in OpenSCAD, when writing output of a field with <tt>OutputHow = openscad</tt>.
+    !% It is expressed in <tt>UnitsOutput</tt> for the relevant quantity. For complex fields, the isovalue is
+    !% for the magnitude of the field.
+    !%End
+    call parse_variable('OpenSCADIsovalue', (maxff + minff) / M_TWO, isosurface_value, unit)
+    write(message(1),*) 'OpenSCAD output at isovalue ', isosurface_value, " ", trim(units_abbrev(unit))
+    call messages_info(1)
+    
     SAFE_ALLOCATE(edges(0:255))
     SAFE_ALLOCATE(triangles(1:16, 0:255))
 
@@ -1157,6 +1181,22 @@ contains
 
     call geometry_write_openscad(geo, cad_file = cad_file)
 
+    if(isosurface_value > maxff .or. isosurface_value < minff) then
+      if(isosurface_value > maxff) then
+        message(1) = "OpenSCADIsovalue is larger than the maximum for the field. No polyhedra will be output."
+      else
+        message(1) = "OpenSCADIsovalue is smaller than the minimum for the field. No polyhedra will be output."
+        ! You might expect the surface to be that of the simulation box in this case.
+        ! It is not, since we discard polyhedra on the edge.
+      endif
+
+      call messages_warning(1)
+      call openscad_file_end(cad_file)
+      POP_SUB(X(io_function_output_global).out_openscad)
+      return
+    endif
+
+    npoly = 0
     do ip = 1, np_max
       ii = mesh%idx%lxyz(ip, 1)
       jj = mesh%idx%lxyz(ip, 2)
@@ -1184,7 +1224,8 @@ contains
       if(X(inside_isolevel)(ff, cube_point(7), isosurface_value)) cubeindex = cubeindex + 128
 
       if(edges(cubeindex) == 0) cycle
-
+      npoly = npoly + 1
+      
       vertlist = CNST(3.333333333333333333)
 
       if(iand(edges(cubeindex), 1) /= 0) then
@@ -1242,8 +1283,15 @@ contains
       call polyhedron_end(poly)
 
     end do
-
+    
     call openscad_file_end(cad_file)
+    write(message(1),'(a,i9,a,a)') ' Wrote ', npoly, ' polyhedra to ', trim(dir)//'/'//trim(fname)//".scad"
+    call messages_info(1)
+
+    if(npoly == 0) then
+      message(1) = "There were no points inside the isosurface for OpenSCAD output."
+      call messages_warning(1)
+    endif
 
     POP_SUB(X(io_function_output_global).out_openscad)
   end subroutine out_openscad
