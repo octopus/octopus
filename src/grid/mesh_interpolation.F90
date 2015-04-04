@@ -20,14 +20,19 @@
 #include "global.h"
 
 module mesh_interpolation_m
+  use comm_m
   use iso_c_binding
+  use geometry_m
   use global_m
   use io_m
   use loct_math_m
   use mesh_m
   use messages_m
+  use mpi_m
   use profiling_m
-
+  use par_vec_m
+  use simul_box_m
+  
   implicit none
   private
 

@@ -269,7 +269,7 @@ program oct_test
       call messages_new_line()
       call messages_info()
 
-      call dmesh_interpolation_test(sys%gr%mesh)
+      call dmesh_interpolation_test(sys%gr%mesh, sys%geo)
     endif
 
     if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
@@ -279,7 +279,7 @@ program oct_test
       call messages_new_line()
       call messages_info()
 
-      call zmesh_interpolation_test(sys%gr%mesh)
+      call zmesh_interpolation_test(sys%gr%mesh, sys%geo)
     endif
 
     call system_end(sys)
