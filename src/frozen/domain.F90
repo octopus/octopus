@@ -60,11 +60,11 @@ module domain_m
     config_dict_copy,      &
     config_dict_end
 
-#define TEMPLATE_NAME domain
+#define TEMPLATE_PREFIX domain
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -82,6 +82,7 @@ module domain_m
     domain_init,      &
     domain_start,     &
     domain_in_domain, &
+    domain_get,       &
     domain_copy,      &
     domain_end
 
@@ -110,6 +111,11 @@ module domain_m
     module procedure domain_init_copy
   end interface domain_init
 
+  interface domain_get
+    module procedure domain_get_domain_by_config
+    module procedure domain_get_domain_by_name
+  end interface domain_get
+
   interface domain_copy
     module procedure domain_copy_domain
   end interface domain_copy
@@ -122,11 +128,11 @@ module domain_m
   integer, public, parameter :: DOMAIN_KEY_ERROR   = DOMAIN_HASH_KEY_ERROR
   integer, public, parameter :: DOMAIN_EMPTY_ERROR = DOMAIN_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME domain
+#define TEMPLATE_PREFIX domain
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
   
@@ -309,6 +315,40 @@ contains
   end subroutine domain__add__
 
   ! ---------------------------------------------------------
+  subroutine domain_get_domain_by_config(this, config, that)
+    type(domain_t),      intent(in) :: this
+    type(json_object_t), intent(in) :: config
+    type(domain_t),     pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(domain_get_domain_by_config)
+    nullify(that)
+    call domain_hash_get(this%hash, config, that, ierr)
+    if(ierr/=DOMAIN_OK)nullify(that)
+    POP_SUB(domain_get_domain_by_config)
+    return
+  end subroutine domain_get_domain_by_config
+
+  ! ---------------------------------------------------------
+  subroutine domain_get_domain_by_name(this, name, that)
+    type(domain_t),   intent(in) :: this
+    character(len=*), intent(in) :: name
+    type(domain_t),  pointer     :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(domain_get_domain_by_name)
+    nullify(config, that)
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)&
+      call domain_get(this, config, that)
+    POP_SUB(domain_get_domain_by_name)
+    return
+  end subroutine domain_get_domain_by_name
+
+  ! ---------------------------------------------------------
   function domain_in_domain_aux(this, x) result(in)
     type(domain_t),              intent(in) :: this
     real(kind=wp), dimension(:), intent(in) :: x
@@ -428,11 +468,11 @@ contains
     return
   end subroutine domain_end_domain
 
-#define TEMPLATE_NAME domain
+#define TEMPLATE_PREFIX domain
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module domain_m
 

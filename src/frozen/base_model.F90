@@ -92,24 +92,23 @@ module base_model_m
     base_system_set,       &
     base_system_get
 
-  use base_hamiltonian_m, only: &
-    base_hamiltonian__init__,   &
-    base_hamiltonian__start__,  &
-    base_hamiltonian__update__, &
-    base_hamiltonian__stop__,   &
-    base_hamiltonian__add__,    &
-    base_hamiltonian__copy__,   &
-    base_hamiltonian__end__
+  use root_hamiltonian_m, only: &
+    root_hamiltonian__init__,   &
+    root_hamiltonian__start__,  &
+    root_hamiltonian__update__, &
+    root_hamiltonian__stop__,   &
+    root_hamiltonian__add__,    &
+    root_hamiltonian__copy__,   &
+    root_hamiltonian__end__
 
   use base_hamiltonian_m, only: &
-    base_hamiltonian_t,         &
-    base_hamiltonian_get
+    base_hamiltonian_t
 
-#define TEMPLATE_NAME base_model
+#define TEMPLATE_PREFIX base_model
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -174,7 +173,8 @@ module base_model_m
   end interface base_model_init
 
   interface base_model_get
-    module procedure base_model_get_model
+    module procedure base_model_get_model_by_config
+    module procedure base_model_get_model_by_name
     module procedure base_model_get_config
     module procedure base_model_get_simulation
     module procedure base_model_get_system
@@ -193,11 +193,11 @@ module base_model_m
   integer, public, parameter :: BASE_MODEL_KEY_ERROR   = BASE_MODEL_HASH_KEY_ERROR
   integer, public, parameter :: BASE_MODEL_EMPTY_ERROR = BASE_MODEL_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_model
+#define TEMPLATE_PREFIX base_model
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -298,7 +298,7 @@ contains
        if(ierr==JSON_OK)call simulation__init__(this%sim, space, cnfg)
        nullify(cnfg, space)
        call json_get(this%config, "hamiltonian", cnfg, ierr)
-       if(ierr==JSON_OK)call base_hamiltonian__init__(this%hm, this%sys, cnfg)
+       if(ierr==JSON_OK)call root_hamiltonian__init__(this%hm, this%sys, cnfg)
     end if
     nullify(cnfg)
     POP_SUB(base_model__init__begin)
@@ -325,7 +325,7 @@ contains
       call base_model__iinit__(this, that%config)
       call simulation__init__(this%sim, that%sim)
       call base_system__init__(this%sys, that%sys)
-      call base_hamiltonian__init__(this%hm, that%hm)
+      call root_hamiltonian__init__(this%hm, that%hm)
     end if
     POP_SUB(base_model__init__copy)
     return
@@ -405,7 +405,7 @@ contains
       call simulation__start__(this%sim)
     end if
     call base_system__start__(this%sys, this%sim)
-    call base_hamiltonian__start__(this%hm, this%sim)
+    call root_hamiltonian__start__(this%hm, this%sim)
     POP_SUB(base_model__start__)
     return
   end subroutine base_model__start__
@@ -441,7 +441,7 @@ contains
     !
     PUSH_SUB(base_model__update__)
     call base_system__update__(this%sys)
-    call base_hamiltonian__update__(this%hm)
+    call root_hamiltonian__update__(this%hm)
     POP_SUB(base_model__update__)
     return
   end subroutine base_model__update__
@@ -476,7 +476,7 @@ contains
     !
     PUSH_SUB(base_model__stop__)
     call base_system__stop__(this%sys)
-    call base_hamiltonian__stop__(this%hm)
+    call root_hamiltonian__stop__(this%hm)
     POP_SUB(base_model__stop__)
     return
   end subroutine base_model__stop__
@@ -522,13 +522,30 @@ contains
     call base_model_hash_set(this%hash, config, that)
     call simulation__add__(this%sim, that%sim, config)
     call base_system__add__(this%sys, that%sys, config)
-    call base_hamiltonian__add__(this%hm, that%hm, config)
+    call root_hamiltonian__add__(this%hm, that%hm, config)
     POP_SUB(base_model__add__)
     return
   end subroutine base_model__add__
 
   ! ---------------------------------------------------------
-  subroutine base_model_get_model(this, name, that)
+  subroutine base_model_get_model_by_config(this, config, that)
+    type(base_model_t),  intent(in) :: this
+    type(json_object_t), intent(in) :: config
+    type(base_model_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_model_get_model_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_model_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_MODEL_OK)nullify(that)
+    POP_SUB(base_model_get_model_by_config)
+    return
+  end subroutine base_model_get_model_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_model_get_model_by_name(this, name, that)
     type(base_model_t),  intent(in) :: this
     character(len=*),    intent(in) :: name
     type(base_model_t), pointer     :: that
@@ -536,16 +553,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_model_get_model)
+    PUSH_SUB(base_model_get_model_by_name)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_model_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_MODEL_OK)nullify(that)
-    end if
-    POP_SUB(base_model_get_model)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_model_get(this, config, that)
+    POP_SUB(base_model_get_model_by_name)
     return
-  end subroutine base_model_get_model
+  end subroutine base_model_get_model_by_name
 
   ! ---------------------------------------------------------
   subroutine base_model_get_config(this, that)
@@ -617,7 +633,7 @@ contains
     call base_model__icopy__(this, that)
     call simulation__copy__(this%sim, that%sim)
     call base_system__copy__(this%sys, that%sys)
-    call base_hamiltonian__copy__(this%hm, that%hm)
+    call root_hamiltonian__copy__(this%hm, that%hm)
     POP_SUB(base_model__copy__begin)
     return
   end subroutine base_model__copy__begin
@@ -681,7 +697,7 @@ contains
     !
     PUSH_SUB(base_model__end__)
     call base_model__iend__(this)
-    call base_hamiltonian__end__(this%hm)
+    call root_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
     call simulation__end__(this%sim)
     POP_SUB(base_model__end__)
@@ -708,11 +724,11 @@ contains
     return
   end subroutine base_model_end_model
 
-#define TEMPLATE_NAME base_model
+#define TEMPLATE_PREFIX base_model
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_model_m
 

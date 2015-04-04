@@ -94,12 +94,12 @@ module base_functional_m
     base_density_t,         &
     base_density_get
 
-#define TEMPLATE_NAME base_functional
+#define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -183,7 +183,8 @@ module base_functional_m
   end interface base_functional_set
 
   interface base_functional_get
-    module procedure base_functional_get_functional
+    module procedure base_functional_get_functional_by_config
+    module procedure base_functional_get_functional_by_name
     module procedure base_functional_get_info
     module procedure base_functional_get_config
     module procedure base_functional_get_system
@@ -205,12 +206,12 @@ module base_functional_m
   integer, public, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_HASH_KEY_ERROR
   integer, public, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_functional
+#define TEMPLATE_PREFIX base_functional
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -594,7 +595,24 @@ contains
   end subroutine base_functional__add__
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_functional(this, name, that)
+  subroutine base_functional_get_functional_by_config(this, config, that)
+    type(base_functional_t),  intent(in) :: this
+    type(json_object_t),      intent(in) :: config
+    type(base_functional_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_functional_get_functional_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_functional_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_FUNCTIONAL_OK)nullify(that)
+    POP_SUB(base_functional_get_functional_by_config)
+    return
+  end subroutine base_functional_get_functional_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_functional_by_name(this, name, that)
     type(base_functional_t),  intent(in) :: this
     character(len=*),        intent(in) :: name
     type(base_functional_t), pointer     :: that
@@ -602,17 +620,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_functional_get_functional)
+    PUSH_SUB(base_functional_get_functional_by_name)
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_functional_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_FUNCTIONAL_OK)nullify(that)
-    end if
-    POP_SUB(base_functional_get_functional)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_functional_get(this, config, that)
+    POP_SUB(base_functional_get_functional_by_name)
     return
-  end subroutine base_functional_get_functional
+  end subroutine base_functional_get_functional_by_name
 
   ! ---------------------------------------------------------
   subroutine base_functional_set_info(this, energy)
@@ -802,11 +818,11 @@ contains
     return
   end subroutine base_functional_end_functional
 
-#define TEMPLATE_NAME base_functional
+#define TEMPLATE_PREFIX base_functional
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 #define TEMPLATE_NAME base_functional
 #define INCLUDE_BODY

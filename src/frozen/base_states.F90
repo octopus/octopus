@@ -71,11 +71,11 @@ module base_states_m
     base_density_t,         &
     base_density_get
 
-#define TEMPLATE_NAME base_states
+#define TEMPLATE_PREFIX base_states
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -140,7 +140,8 @@ module base_states_m
   end interface base_states_set
 
   interface base_states_get
-    module procedure base_states_get_states
+    module procedure base_states_get_states_by_config
+    module procedure base_states_get_states_by_name
     module procedure base_states_get_info
     module procedure base_states_get_config
     module procedure base_states_get_simulation
@@ -159,11 +160,11 @@ module base_states_m
   integer, public, parameter :: BASE_STATES_KEY_ERROR   = BASE_STATES_HASH_KEY_ERROR
   integer, public, parameter :: BASE_STATES_EMPTY_ERROR = BASE_STATES_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_states
+#define TEMPLATE_PREFIX base_states
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
     
@@ -469,7 +470,24 @@ contains
   end subroutine base_states__add__
     
   ! ---------------------------------------------------------
-  subroutine base_states_get_states(this, name, that)
+  subroutine base_states_get_states_by_config(this, config, that)
+    type(base_states_t),  intent(in) :: this
+    type(json_object_t),  intent(in) :: config
+    type(base_states_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_states_get_states_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_states_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_STATES_OK)nullify(that)
+    POP_SUB(base_states_get_states_by_config)
+    return
+  end subroutine base_states_get_states_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_states_get_states_by_name(this, name, that)
     type(base_states_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_states_t), pointer     :: that
@@ -477,16 +495,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_states_get_states)
+    PUSH_SUB(base_states_get_states_by_name)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_states_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_STATES_OK)nullify(that)
-    end if
-    POP_SUB(base_states_get_states)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_states_get(this, config, that)
+    POP_SUB(base_states_get_states_by_name)
     return
-  end subroutine base_states_get_states
+  end subroutine base_states_get_states_by_name
 
   ! ---------------------------------------------------------
   subroutine base_states_set_info(this, charge)
@@ -666,11 +683,11 @@ contains
     return
   end subroutine base_states_end_states
 
-#define TEMPLATE_NAME base_states
+#define TEMPLATE_PREFIX base_states
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_states_m
 

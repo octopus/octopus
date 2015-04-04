@@ -80,11 +80,11 @@ module simulation_m
   use domain_m, only: &
     domain_t
 
-#define TEMPLATE_NAME domain
+#define TEMPLATE_PREFIX simulation
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -146,6 +146,8 @@ module simulation_m
   end interface simulation_set
 
   interface simulation_get
+    module procedure simulation_get_simulation_by_config
+    module procedure simulation_get_simulation_by_name
     module procedure simulation_get_config
     module procedure simulation_get_info
     module procedure simulation_get_space
@@ -169,11 +171,11 @@ module simulation_m
   integer, parameter :: SIMULATION_KEY_ERROR   = SIMULATION_HASH_KEY_ERROR
   integer, parameter :: SIMULATION_EMPTY_ERROR = SIMULATION_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME simulation
+#define TEMPLATE_PREFIX simulation
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -383,6 +385,42 @@ contains
     POP_SUB(simulation__add__)
     return
   end subroutine simulation__add__
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_simulation_by_config(this, config, that)
+    type(simulation_t),  intent(in) :: this
+    type(json_object_t), intent(in) :: config
+    type(simulation_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(simulation_get_simulation_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call simulation_hash_get(this%hash, config, that, ierr)
+    if(ierr/=SIMULATION_OK)nullify(that)
+    POP_SUB(simulation_get_simulation_by_config)
+    return
+  end subroutine simulation_get_simulation_by_config
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_simulation_by_name(this, name, that)
+    type(simulation_t),  intent(in) :: this
+    character(len=*),    intent(in) :: name
+    type(simulation_t), pointer     :: that
+    !
+    type(json_object_t), pointer :: config
+    integer                      :: ierr
+    !
+    PUSH_SUB(simulation_get_simulation_by_name)
+    nullify(config, that)
+    ASSERT(associated(this%config))
+    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
+    if(ierr==CONFIG_DICT_OK)&
+      call simulation_get(this, config, that)
+    POP_SUB(simulation_get_simulation_by_name)
+    return
+  end subroutine simulation_get_simulation_by_name
 
   ! ---------------------------------------------------------
   subroutine simulation_set_space(this, that)
@@ -678,11 +716,11 @@ contains
     return
   end subroutine simulation_end_simulation
 
-#define TEMPLATE_NAME simulation
+#define TEMPLATE_PREFIX simulation
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module simulation_m
 

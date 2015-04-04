@@ -74,12 +74,12 @@ module base_potential_m
     base_system_t,         &
     base_system_get
 
-#define TEMPLATE_NAME base_potential
+#define TEMPLATE_PREFIX base_potential
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -155,7 +155,8 @@ module base_potential_m
   end interface base_potential_set
 
   interface base_potential_get
-    module procedure base_potential_get_potential
+    module procedure base_potential_get_potential_by_config
+    module procedure base_potential_get_potential_by_name
     module procedure base_potential_get_info
     module procedure base_potential_get_config
     module procedure base_potential_get_system
@@ -176,12 +177,12 @@ module base_potential_m
   integer, public, parameter :: BASE_POTENTIAL_KEY_ERROR   = BASE_POTENTIAL_HASH_KEY_ERROR
   integer, public, parameter :: BASE_POTENTIAL_EMPTY_ERROR = BASE_POTENTIAL_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_potential
+#define TEMPLATE_PREFIX base_potential
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -520,7 +521,24 @@ contains
   end subroutine base_potential__add__
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_potential(this, name, that)
+  subroutine base_potential_get_potential_by_config(this, config, that)
+    type(base_potential_t),  intent(in) :: this
+    type(json_object_t),     intent(in) :: config
+    type(base_potential_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_potential_get_potential_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_potential_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_POTENTIAL_OK)nullify(that)
+    POP_SUB(base_potential_get_potential_by_config)
+    return
+  end subroutine base_potential_get_potential_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_get_potential_by_name(this, name, that)
     type(base_potential_t),  intent(in) :: this
     character(len=*),        intent(in) :: name
     type(base_potential_t), pointer     :: that
@@ -528,17 +546,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_potential_get_potential)
+    PUSH_SUB(base_potential_get_potential_by_name)
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_potential_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_POTENTIAL_OK)nullify(that)
-    end if
-    POP_SUB(base_potential_get_potential)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_potential_get(this, config, that)
+    POP_SUB(base_potential_get_potential_by_name)
     return
-  end subroutine base_potential_get_potential
+  end subroutine base_potential_get_potential_by_name
 
   ! ---------------------------------------------------------
   subroutine base_potential_set_info(this, energy)
@@ -721,12 +737,12 @@ contains
     return
   end subroutine base_potential_end_potential
 
-#define TEMPLATE_NAME base_potential
+#define TEMPLATE_PREFIX base_potential
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #include "intrpl_inc.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_potential_m
 

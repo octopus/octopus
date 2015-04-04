@@ -42,6 +42,12 @@ module base_density_m
   use simulation_m
   use storage_m
 
+#define TEMPLATE_PREFIX base_density
+#define INCLUDE_PREFIX
+#include "iterator_code.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_PREFIX
+
   implicit none
 
   private
@@ -115,7 +121,8 @@ module base_density_m
   end interface base_density_init
 
   interface base_density_get
-    module procedure base_density_get_density
+    module procedure base_density_get_density_by_config
+    module procedure base_density_get_density_by_name
     module procedure base_density_get_info
     module procedure base_density_get_config
     module procedure base_density_get_simulation
@@ -144,11 +151,11 @@ module base_density_m
   integer, public, parameter :: BASE_DENSITY_KEY_ERROR   = BASE_DENSITY_HASH_KEY_ERROR
   integer, public, parameter :: BASE_DENSITY_EMPTY_ERROR = BASE_DENSITY_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_density
+#define TEMPLATE_PREFIX base_density
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -506,7 +513,25 @@ contains
   end subroutine base_density__add__
 
   ! ---------------------------------------------------------
-  subroutine base_density_get_density(this, name, that)
+  subroutine base_density_get_density_by_config(this, config, that)
+    type(base_density_t),  intent(in) :: this
+    type(json_object_t),   intent(in) :: config
+    type(base_density_t), pointer     :: that
+
+    integer :: ierr
+
+    PUSH_SUB(base_density_get_density_by_config)
+
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_density_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_DENSITY_OK)nullify(that)
+
+    POP_SUB(base_density_get_density_by_config)
+  end subroutine base_density_get_density_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_density_get_density_by_name(this, name, that)
     type(base_density_t),  intent(in) :: this
     character(len=*),      intent(in) :: name
     type(base_density_t), pointer     :: that
@@ -514,17 +539,16 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_density_get_density)
+    PUSH_SUB(base_density_get_density_by_name)
 
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_density_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_DENSITY_OK)nullify(that)
-    end if
+    if(ierr==CONFIG_DICT_OK)&
+      call base_density_get(this, config, that)
 
-    POP_SUB(base_density_get_density)
-  end subroutine base_density_get_density
+    POP_SUB(base_density_get_density_by_name)
+  end subroutine base_density_get_density_by_name
 
   ! ---------------------------------------------------------
   elemental function base_density_get_size(this) result(that)
@@ -776,11 +800,11 @@ contains
     POP_SUB(base_density_end_density)
   end subroutine base_density_end_density
 
-#define TEMPLATE_NAME base_density
+#define TEMPLATE_PREFIX base_density
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   ! ---------------------------------------------------------
   subroutine base_density_intrpl_init(this, that, type)

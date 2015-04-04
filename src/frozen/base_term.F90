@@ -58,11 +58,11 @@ module base_term_m
   use base_system_m, only: &
     base_system_t
 
-#define TEMPLATE_NAME base_term
+#define TEMPLATE_PREFIX base_term
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -128,7 +128,8 @@ module base_term_m
   end interface base_term_set
 
   interface base_term_get
-    module procedure base_term_get_term
+    module procedure base_term_get_term_by_config
+    module procedure base_term_get_term_by_name
     module procedure base_term_get_info
     module procedure base_term_get_config
     module procedure base_term_get_system
@@ -146,11 +147,11 @@ module base_term_m
   integer, public, parameter :: BASE_TERM_KEY_ERROR   = BASE_TERM_HASH_KEY_ERROR
   integer, public, parameter :: BASE_TERM_EMPTY_ERROR = BASE_TERM_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_term
+#define TEMPLATE_PREFIX base_term
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -381,7 +382,24 @@ contains
   end subroutine base_term__add__
 
   ! ---------------------------------------------------------
-  subroutine base_term_get_term(this, name, that)
+  subroutine base_term_get_term_by_config(this, config, that)
+    type(base_term_t),   intent(in) :: this
+    type(json_object_t), intent(in) :: config
+    type(base_term_t),  pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_term_get_term_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_term_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_TERM_OK)nullify(that)
+    POP_SUB(base_term_get_term_by_config)
+    return
+  end subroutine base_term_get_term_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_term_get_term_by_name(this, name, that)
     type(base_term_t),  intent(in) :: this
     character(len=*),   intent(in) :: name
     type(base_term_t), pointer     :: that
@@ -389,17 +407,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_term_get_term)
+    PUSH_SUB(base_term_get_term_by_name)
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_term_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_TERM_OK)nullify(that)
-    end if
-    POP_SUB(base_term_get_term)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_term_get(this, config, that)
+    POP_SUB(base_term_get_term_by_name)
     return
-  end subroutine base_term_get_term
+  end subroutine base_term_get_term_by_name
 
   ! ---------------------------------------------------------
   subroutine base_term_set_info(this, energy)
@@ -528,11 +544,11 @@ contains
     return
   end subroutine base_term_end_term
 
-#define TEMPLATE_NAME base_term
+#define TEMPLATE_PREFIX base_term
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_term_m
 

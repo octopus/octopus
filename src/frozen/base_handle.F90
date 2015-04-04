@@ -70,11 +70,11 @@ module base_handle_m
     base_model_t,         &
     base_model_get
 
-#define TEMPLATE_NAME base_handle
+#define TEMPLATE_PREFIX base_handle
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -141,7 +141,8 @@ module base_handle_m
   end interface base_handle_init
 
   interface base_handle_get
-    module procedure base_handle_get_handle
+    module procedure base_handle_get_handle_by_config
+    module procedure base_handle_get_handle_by_name
     module procedure base_handle_get_type
     module procedure base_handle_get_config
     module procedure base_handle_get_model
@@ -159,11 +160,11 @@ module base_handle_m
   integer, public, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
   integer, public, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_handle
+#define TEMPLATE_PREFIX base_handle
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -519,7 +520,24 @@ contains
   end subroutine base_handle__set__
 
   ! ---------------------------------------------------------
-  subroutine base_handle_get_handle(this, name, that)
+  subroutine base_handle_get_handle_by_config(this, config, that)
+    type(base_handle_t),  intent(in) :: this
+    type(json_object_t),  intent(in) :: config
+    type(base_handle_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_handle_get_handle_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_handle_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_HANDLE_OK)nullify(that)
+    POP_SUB(base_handle_get_handle_by_config)
+    return
+  end subroutine base_handle_get_handle_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_handle_by_name(this, name, that)
     type(base_handle_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_handle_t), pointer     :: that
@@ -527,16 +545,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_handle_get_handle)
+    PUSH_SUB(base_handle_get_handle_by_name)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_handle_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_HANDLE_OK)nullify(that)
-    end if
-    POP_SUB(base_handle_get_handle)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_handle_get(this, config, that)
+    POP_SUB(base_handle_get_handle_by_name)
     return
-  end subroutine base_handle_get_handle
+  end subroutine base_handle_get_handle_by_name
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_type(this, that)
@@ -684,11 +701,11 @@ contains
     return
   end subroutine base_handle_end_handle
 
-#define TEMPLATE_NAME base_handle
+#define TEMPLATE_PREFIX base_handle
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_handle_m
 

@@ -91,11 +91,11 @@ module base_system_m
     base_states_t,         &
     base_states_get
 
-#define TEMPLATE_NAME base_system
+#define TEMPLATE_PREFIX base_system
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
   implicit none
 
@@ -166,7 +166,8 @@ module base_system_m
   end interface base_system_set
 
   interface base_system_get
-    module procedure base_system_get_system
+    module procedure base_system_get_system_by_config
+    module procedure base_system_get_system_by_name
     module procedure base_system_get_info
     module procedure base_system_get_config
     module procedure base_system_get_simulation
@@ -187,11 +188,11 @@ module base_system_m
   integer, public, parameter :: BASE_SYSTEM_KEY_ERROR   = BASE_SYSTEM_HASH_KEY_ERROR
   integer, public, parameter :: BASE_SYSTEM_EMPTY_ERROR = BASE_SYSTEM_HASH_EMPTY_ERROR
 
-#define TEMPLATE_NAME base_system
+#define TEMPLATE_PREFIX base_system
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 contains
 
@@ -516,7 +517,24 @@ contains
   end subroutine base_system__add__
 
   ! ---------------------------------------------------------
-  subroutine base_system_get_system(this, name, that)
+  subroutine base_system_get_system_by_config(this, config, that)
+    type(base_system_t),  intent(in) :: this
+    type(json_object_t),  intent(in) :: config
+    type(base_system_t), pointer     :: that
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(base_system_get_system_by_config)
+    nullify(that)
+    ASSERT(associated(this%config))
+    call base_system_hash_get(this%hash, config, that, ierr)
+    if(ierr/=BASE_SYSTEM_OK)nullify(that)
+    POP_SUB(base_system_get_system_by_config)
+    return
+  end subroutine base_system_get_system_by_config
+
+  ! ---------------------------------------------------------
+  subroutine base_system_get_system_by_name(this, name, that)
     type(base_system_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_system_t), pointer     :: that
@@ -524,16 +542,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
     !
-    PUSH_SUB(base_system_get_system)
+    PUSH_SUB(base_system_get_system_by_name)
     nullify(that)
+    ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)then
-      call base_system_hash_get(this%hash, config, that, ierr)
-      if(ierr/=BASE_SYSTEM_OK)nullify(that)
-    end if
-    POP_SUB(base_system_get_system)
+    if(ierr==CONFIG_DICT_OK)&
+      call base_system_get(this, config, that)
+    POP_SUB(base_system_get_system_by_name)
     return
-  end subroutine base_system_get_system
+  end subroutine base_system_get_system_by_name
 
   ! ---------------------------------------------------------
   subroutine base_system_set_simulation(this, that)
@@ -733,11 +750,11 @@ contains
     return
   end subroutine base_system_end_system
 
-#define TEMPLATE_NAME base_system
+#define TEMPLATE_PREFIX base_system
 #define INCLUDE_BODY
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
-#undef TEMPLATE_NAME
+#undef TEMPLATE_PREFIX
 
 end module base_system_m
 
