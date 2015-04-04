@@ -114,7 +114,9 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
        do ipt = 1, npt
          pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
          lvalues(ipt) = CNST(0.0)
-         if(pt(ipt) > 0 .and. pt(ipt) <= mesh%np) lvalues(ipt) = values(pt(ipt))
+         boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
+         inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
+         if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
       end do
 #endif
     else
@@ -200,21 +202,17 @@ subroutine X(mesh_interpolation_test)(mesh, geo)
  
   ! generate the points
   if(mesh%mpi_grp%rank == 0) then
-    itest = 1
-    do
+    do itest = 1, ntest_points
       ip = 1 + nint(loct_ran_flat(random_gen_pointer, CNST(0.0), CNST(1.0))*(mesh%np - 1))
       do idir = 1, mesh%sb%dim
         xx(idir, itest) = mesh%x(ip, idir) + mesh%spacing(idir)*loct_ran_flat(random_gen_pointer, CNST(-1.0), CNST(1.0))
       end do
-      if( .not. simul_box_in_box(mesh%sb, geo, xx(:, itest))) cycle
       call messages_write('Point')
       call messages_write(itest)
       do idir = 1, mesh%sb%dim
         call messages_write(xx(idir, itest))
       end do
       call messages_info()
-      if(itest == ntest_points) exit
-      itest = itest + 1
     end do
   end if
 
