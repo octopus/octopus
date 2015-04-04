@@ -449,13 +449,13 @@ contains
           else
             st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
-#ifdef HAVE_MPI
+          
           if(mesh%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
             st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
           end if
-#endif
+          
           ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it

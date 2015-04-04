@@ -101,13 +101,16 @@ module par_vec_m
   public ::                        &
     vec_init,                      &
     vec_end,                       &
-    vec_global2local,              &
     vec_index2local,               &
     vec_scatter,                   &
     vec_gather,                    &
     vec_allgather
 
 #endif
+
+  public ::                        &
+    vec_global2local    
+  
   !> Parallel information
   type pv_t
     ! The content of these members is process-dependent.
@@ -203,8 +206,12 @@ module par_vec_m
   type(profile_t), save :: prof_scatter
   type(profile_t), save :: prof_allgather
 
+#endif
+  
 contains
 
+#ifdef HAVE_MPI
+  
   !> Initializes a pv_type object (parallel vector).
   !! It computes the local-to-global and global-to-local index tables
   !! and the ghost point exchange.
@@ -831,6 +838,8 @@ contains
 
   end subroutine vec_end
 
+#endif
+  
   ! ---------------------------------------------------------
   !> Returns local number of global point ip on partition inode.
   !! If the result is zero, the point is neither a local nor a ghost
@@ -845,13 +854,23 @@ contains
 
 ! no push_sub because called too frequently
 
+#ifdef HAVE_MPI
+    
     vec_global2local = 0
     if(associated(vp%global)) then
       nn = iihash_lookup(vp%global(inode), ip, found)
       if(found) vec_global2local = nn
     end if
 
+#else
+
+    vec_global2local = ip
+
+#endif
+
   end function vec_global2local
+
+#ifdef HAVE_MPI
 
   !> Change the value of one dimension (1=x, 2=y, 3=z) 
   !! according to the given value and return the local point
