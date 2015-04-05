@@ -88,6 +88,7 @@ libfrozen_a_SOURCES =		\
 	ssys_config.F90
 
 noinst_HEADERS =		\
+	kfunctionals_list.F90   \
 	util.h			\
 	template.h		\
 	tsingle.F90		\
