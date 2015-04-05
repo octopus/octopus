@@ -82,7 +82,7 @@ libfrozen_a_SOURCES =		\
 	ssys_functional.F90	\
 	ssys_external.F90	\
 	ssys_tnadd.F90		\
-	ssys_hamiltonian.F90	#\
+	ssys_hamiltonian.F90	\
 	ssys_model.F90		\
 	ssys_handle.F90		\
 	ssys_config.F90
@@ -171,6 +171,6 @@ ssys_functional.o	: ssys_functional.F90 base_functional.o
 ssys_external.o		: ssys_external.F90 base_external.o
 ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o live_functional.o live_system.o base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o root_hamiltonian.o simulation.o
-# ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
-# ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
-# ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o frozen_config.o fio_config.F90 base_config.o functional.o
+ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
+ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
+ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o frozen_config.o fio_config.F90 base_config.o functional.o
