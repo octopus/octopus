@@ -136,6 +136,10 @@ module base_potential_m
     module procedure base_potential__init__copy
   end interface base_potential__init__
 
+  interface base_potential__copy__
+    module procedure base_potential__copy__potential
+  end interface base_potential__copy__
+
   interface base_potential__end__
     module procedure base_potential__end__potential
   end interface base_potential__end__
@@ -161,6 +165,7 @@ module base_potential_m
     module procedure base_potential_get_config
     module procedure base_potential_get_system
     module procedure base_potential_get_simulation
+    module procedure base_potential_get_storage
     module procedure base_potential_get_potential_1d
     module procedure base_potential_get_potential_md
   end interface base_potential_get
@@ -656,11 +661,11 @@ contains
   end subroutine base_potential_get_potential_md
 
   ! ---------------------------------------------------------
-  subroutine base_potential__copy__(this, that)
+  subroutine base_potential__copy__potential(this, that)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
     !
-    PUSH_SUB(base_potential__copy__)
+    PUSH_SUB(base_potential__copy__potential)
     call base_potential__end__(this)
     if(associated(that%config).and.associated(that%sys))then
       call base_potential__init__(this, that%sys, that%config)
@@ -670,9 +675,9 @@ contains
         call storage_copy(this%data, that%data)
       end if
     end if
-    POP_SUB(base_potential__copy__)
+    POP_SUB(base_potential__copy__potential)
     return
-  end subroutine base_potential__copy__
+  end subroutine base_potential__copy__potential
 
   ! ---------------------------------------------------------
   recursive subroutine base_potential_copy_potential(this, that)

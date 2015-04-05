@@ -37,8 +37,8 @@ libfrozen_a_SOURCES =		\
 	base_term.F90		\
 	base_ionic.F90		\
 	base_potential.F90	\
-	base_functional.F90	\
 	base_external.F90	\
+	base_functional.F90	\
 	root_hamiltonian.F90	\
 	base_hamiltonian.F90	\
 	base_model.F90		\
@@ -81,6 +81,7 @@ libfrozen_a_SOURCES =		\
 	ssys_ionic.F90		\
 	ssys_functional.F90	\
 	ssys_external.F90	\
+	ssys_tnadd.F90		\
 	ssys_hamiltonian.F90	#\
 	ssys_model.F90		\
 	ssys_handle.F90		\
@@ -119,8 +120,8 @@ base_system.o 		: base_system.F90 base_states.o base_geom.o simulation.o config_
 base_term.o 		: base_term.F90 base_system.o config_dict.o
 base_ionic.o		: base_ionic.F90 base_term.o base_system.o base_geom.o 
 base_potential.o	: base_potential.F90 base_system.o simulation.o storage.o config_dict.o
-base_functional.o	: base_functional.F90 base_system.o base_states.o base_density.o simulation.o storage.o functional.o config_dict.o
 base_external.o 	: base_external.F90 base_potential.o base_system.o base_geom.o
+base_functional.o	: base_functional.F90 base_system.o base_states.o base_density.o simulation.o storage.o functional.o config_dict.o
 root_hamiltonian.o 	: root_hamiltonian.F90 base_functional.o base_potential.o base_term.o base_system.o simulation.o storage.o config_dict.o strng.o 
 base_hamiltonian.o 	: base_hamiltonian.F90 root_hamiltonian.o base_system.o base_geom.o simulation.o config_dict.o
 base_model.o 		: base_model.F90 base_hamiltonian.o root_hamiltonian.o base_system.o simulation.o config_dict.o
@@ -167,8 +168,8 @@ ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 ssys_ionic.o		: ssys_ionic.F90 base_ionic.o
 ssys_functional.o	: ssys_functional.F90 base_functional.o
 ssys_external.o		: ssys_external.F90 base_external.o
-#ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o live_functional.o live_system.o base_hamiltonian.o
-ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o root_hamiltonian.o simulation.o
-# ssys_model.o		: ssys_model.F90 ssys_hamiltonian.F90 ssys_system.o base_model.o
+ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o live_functional.o live_system.o base_hamiltonian.o
+ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o root_hamiltonian.o simulation.o
+# ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
 # ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o
 # ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o frozen_config.o fio_config.F90 base_config.o functional.o

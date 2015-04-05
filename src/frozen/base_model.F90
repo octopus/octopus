@@ -289,18 +289,15 @@ contains
     nullify(cnfg, space)
     call base_model__iinit__(this, config)
     call json_get(this%config, "system", cnfg, ierr)
-    if(ierr==JSON_OK)then
-       call base_system__init__(this%sys, cnfg)
-       nullify(cnfg)
-       call base_system_get(this%sys, space)
-       ASSERT(associated(space))
-       call json_get(this%config, "simulation", cnfg, ierr)
-       if(ierr==JSON_OK)call simulation__init__(this%sim, space, cnfg)
-       nullify(cnfg, space)
-       call json_get(this%config, "hamiltonian", cnfg, ierr)
-       if(ierr==JSON_OK)call root_hamiltonian__init__(this%hm, this%sys, cnfg)
-    end if
+    ASSERT(ierr==JSON_OK)
+    call base_system__init__(this%sys, cnfg)
     nullify(cnfg)
+    call base_system_get(this%sys, space)
+    ASSERT(associated(space))
+    call json_get(this%config, "simulation", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call simulation__init__(this%sim, space, cnfg)
+    nullify(cnfg, space)
     POP_SUB(base_model__init__begin)
     return
   end subroutine base_model__init__begin
@@ -309,8 +306,27 @@ contains
   subroutine base_model__init__finish(this)
     type(base_model_t), intent(inout) :: this
     !
+    type(json_object_t), pointer :: cnfg
+    type(base_model_iterator_t)  :: iter
+    type(base_model_t),  pointer :: subs
+    integer                      :: ierr
+    !
     PUSH_SUB(base_model__init__finish)
+    nullify(cnfg, subs)
     call base_system__init__(this%sys)
+    call json_get(this%config, "hamiltonian", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call root_hamiltonian__init__(this%hm, this%sys, cnfg)
+    nullify(cnfg)
+    call base_model_init(iter, this)
+    do
+      nullify(cnfg, subs)
+      call base_model_next(iter, cnfg, subs, ierr)
+      if(ierr/=BASE_MODEL_OK)exit
+      call root_hamiltonian__add__(this%hm, subs%hm, cnfg)
+    end do
+    call base_model_end(iter)
+    nullify(cnfg, subs)
     POP_SUB(base_model__init__finish)
     return
   end subroutine base_model__init__finish
@@ -321,12 +337,10 @@ contains
     type(base_model_t), intent(in)  :: that
     !
     PUSH_SUB(base_model__init__copy)
-    if(associated(that%config))then
-      call base_model__iinit__(this, that%config)
-      call simulation__init__(this%sim, that%sim)
-      call base_system__init__(this%sys, that%sys)
-      call root_hamiltonian__init__(this%hm, that%hm)
-    end if
+    ASSERT(associated(that%config))
+    call base_model__iinit__(this, that%config)
+    call simulation__init__(this%sim, that%sim)
+    call base_system__init__(this%sys, that%sys)
     POP_SUB(base_model__init__copy)
     return
   end subroutine base_model__init__copy
@@ -522,7 +536,6 @@ contains
     call base_model_hash_set(this%hash, config, that)
     call simulation__add__(this%sim, that%sim, config)
     call base_system__add__(this%sys, that%sys, config)
-    call root_hamiltonian__add__(this%hm, that%hm, config)
     POP_SUB(base_model__add__)
     return
   end subroutine base_model__add__
@@ -642,8 +655,23 @@ contains
   subroutine base_model__copy__finish(this)
     type(base_model_t), intent(inout) :: this
     !
+    type(json_object_t), pointer :: cnfg
+    type(base_model_iterator_t)  :: iter
+    type(base_model_t),  pointer :: subs
+    integer                      :: ierr
+    !
     PUSH_SUB(base_model__copy__finish)
+    nullify(cnfg, subs)
     call base_system__copy__(this%sys)
+    call base_model_init(iter, this)
+    do
+      nullify(cnfg, subs)
+      call base_model_next(iter, cnfg, subs, ierr)
+      if(ierr/=BASE_MODEL_OK)exit
+      call root_hamiltonian__add__(this%hm, subs%hm, cnfg)
+    end do
+    call base_model_end(iter)
+    nullify(cnfg, subs)
     POP_SUB(base_model__copy__finish)
     return
   end subroutine base_model__copy__finish

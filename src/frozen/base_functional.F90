@@ -164,6 +164,10 @@ module base_functional_m
     module procedure base_functional__init__copy
   end interface base_functional__init__
 
+  interface base_functional__copy__
+    module procedure base_functional__copy__functional
+  end interface base_functional__copy__
+
   interface base_functional__end__
     module procedure base_functional__end__functional
   end interface base_functional__end__
@@ -190,6 +194,7 @@ module base_functional_m
     module procedure base_functional_get_system
     module procedure base_functional_get_density
     module procedure base_functional_get_simulation
+    module procedure base_functional_get_storage
     module procedure base_functional_get_functional_1d
     module procedure base_functional_get_functional_md
   end interface base_functional_get
@@ -688,6 +693,17 @@ contains
   end subroutine base_functional_get_simulation
 
   ! ---------------------------------------------------------
+  subroutine base_functional_get_storage(this, that)
+    type(base_functional_t), target, intent(in) :: this
+    type(storage_t),        pointer             :: that
+    !
+    PUSH_SUB(base_functional_get_storage)
+    that=>this%data
+    POP_SUB(base_functional_get_storage)
+    return
+  end subroutine base_functional_get_storage
+
+  ! ---------------------------------------------------------
   subroutine base_functional_get_system(this, that)
     type(base_functional_t), target, intent(in) :: this
     type(base_system_t),    pointer             :: that
@@ -736,11 +752,11 @@ contains
   end subroutine base_functional_get_functional_md
 
   ! ---------------------------------------------------------
-  subroutine base_functional__copy__(this, that)
+  subroutine base_functional__copy__functional(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
     !
-    PUSH_SUB(base_functional__copy__)
+    PUSH_SUB(base_functional__copy__functional)
     call base_functional__end__(this)
     if(associated(that%config).and.associated(that%sys))then
       call base_functional__init__(this, that%sys, that%config)
@@ -750,9 +766,9 @@ contains
         call storage_copy(this%data, that%data)
       end if
     end if
-    POP_SUB(base_functional__copy__)
+    POP_SUB(base_functional__copy__functional)
     return
-  end subroutine base_functional__copy__
+  end subroutine base_functional__copy__functional
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_copy_functional(this, that)

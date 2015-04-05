@@ -22,6 +22,10 @@ module ssys_hamiltonian_m
     ssys_ionic_t,         &
     ssys_ionic_update
 
+  use ssys_tnadd_m, only: &
+    ssys_tnadd_t,         &
+    ssys_tnadd_update
+
   use root_hamiltonian_m, only: &
     root_hamiltonian__get__
 
@@ -75,6 +79,7 @@ module ssys_hamiltonian_m
     module procedure ssys_hamiltonian_get_system
     module procedure ssys_hamiltonian_get_external
     module procedure ssys_hamiltonian_get_ionic
+    module procedure ssys_hamiltonian_get_tnadd
   end interface ssys_hamiltonian_get
 
 contains
@@ -85,6 +90,7 @@ contains
     !
     type(ssys_external_t), pointer :: pext
     type(ssys_ionic_t),    pointer :: pion
+    type(ssys_tnadd_t),    pointer :: tndd
     !
     PUSH_SUB(ssys_hamiltonian_update)
     nullify(pext, pion)
@@ -96,6 +102,10 @@ contains
     ASSERT(associated(pion))
     call ssys_ionic_update(pion)
     nullify(pion)
+    call ssys_hamiltonian_get(this, tndd)
+    ASSERT(associated(tndd))
+    call ssys_tnadd_update(tndd)
+    nullify(tndd)
     POP_SUB(ssys_hamiltonian_update)
     return
   end subroutine ssys_hamiltonian_update
@@ -154,6 +164,17 @@ contains
     POP_SUB(ssys_hamiltonian_get_ionic)
     return
   end subroutine ssys_hamiltonian_get_ionic
+
+  ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian_get_tnadd(this, that)
+    type(ssys_hamiltonian_t), intent(in) :: this
+    type(ssys_tnadd_t),      pointer     :: that
+    !
+    PUSH_SUB(ssys_hamiltonian_get_tnadd)
+    call root_hamiltonian__get__(this, "tnadd", that)
+    POP_SUB(ssys_hamiltonian_get_tnadd)
+    return
+  end subroutine ssys_hamiltonian_get_tnadd
 
 end module ssys_hamiltonian_m
 

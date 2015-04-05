@@ -3,6 +3,7 @@
 #if defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
 
   use storage_m, only: &
+    storage_t,         &
     storage_init,      &
     storage_eval,      &
     storage_copy,      &
@@ -37,6 +38,10 @@
     module procedure TEMPLATE(intrpl_init)
   end interface TEMPLATE(_init__)
 
+  interface TEMPLATE(_copy__)
+    module procedure TEMPLATE(intrpl_copy)
+  end interface TEMPLATE(_copy__)
+  
   interface TEMPLATE(_end__)
     module procedure TEMPLATE(intrpl_end)
   end interface TEMPLATE(_end__)
@@ -70,12 +75,18 @@
     type(TEMPLATE(intrpl_t)),  intent(out) :: this
     type(TEMPLATE(t)), target, intent(in)  :: that
     integer,         optional, intent(in)  :: type
-    !
+
+    type(storage_t), pointer :: data
+
     PUSH_SUB(TEMPLATE(intrpl_init))
+
+    nullify(data)
     this%self=>that
-    call storage_init(this%intrp, that%data, type)
+    call TEMPLATE(get)(that, data)
+    ASSERT(associated(data))
+    call storage_init(this%intrp, data, type)
+
     POP_SUB(TEMPLATE(intrpl_init))
-    return
   end subroutine TEMPLATE(intrpl_init)
 
   ! ---------------------------------------------------------
@@ -84,11 +95,12 @@
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp),               intent(out) :: v
     integer,                     intent(out) :: ierr
-    !
+
     PUSH_SUB(TEMPLATE(intrpl_eval_1d))
+
     call storage_eval(this%intrp, x, v, ierr)
+
     POP_SUB(TEMPLATE(intrpl_eval_1d))
-    return
   end subroutine TEMPLATE(intrpl_eval_1d)
 
   ! ---------------------------------------------------------
@@ -97,51 +109,55 @@
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp), dimension(:), intent(out) :: v
     integer,                     intent(out) :: ierr
-    !
+
     PUSH_SUB(TEMPLATE(intrpl_eval_md))
+
     call storage_eval(this%intrp, x, v, ierr)
+
     POP_SUB(TEMPLATE(intrpl_eval_md))
-    return
   end subroutine TEMPLATE(intrpl_eval_md)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_get)(this, that)
     type(TEMPLATE(intrpl_t)), intent(in) :: this
     type(TEMPLATE(t)),       pointer     :: that
-    !
+
     PUSH_SUB(TEMPLATE(intrpl_get))
+
     nullify(that)
     if(associated(this%self))&
       that=>this%self
+
     POP_SUB(TEMPLATE(intrpl_get))
-    return
   end subroutine TEMPLATE(intrpl_get)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_copy)(this, that)
     type(TEMPLATE(intrpl_t)), intent(out) :: this
     type(TEMPLATE(intrpl_t)), intent(in)  :: that
-    !
+
     PUSH_SUB(TEMPLATE(intrpl_copy))
+
     call TEMPLATE(intrpl_end)(this)
     if(associated(that%self))then
       this%self=>that%self
       call storage_copy(this%intrp, that%intrp)
     end if
+
     POP_SUB(TEMPLATE(intrpl_copy))
-    return
   end subroutine TEMPLATE(intrpl_copy)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_end)(this)
     type(TEMPLATE(intrpl_t)), intent(inout) :: this
-    !
+
     PUSH_SUB(TEMPLATE(intrpl_end))
+
     if(associated(this%self))&
       call storage_end(this%intrp)
     nullify(this%self)
+
     POP_SUB(TEMPLATE(intrpl_end))
-    return
   end subroutine TEMPLATE(intrpl_end)
 
 #endif
