@@ -22,6 +22,7 @@
 EXTRA_DIST =                   \
 	mk_varinfo.pl          \
 	mk_functionals_list.pl \
+	mk_kfunctionals_list.pl \
 	preprocess.pl          \
 	var2html.pl            \
 	svn_release_number.sh  \
