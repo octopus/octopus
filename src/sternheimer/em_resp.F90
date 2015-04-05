@@ -45,7 +45,7 @@ module em_resp_m
   use restart_m
   use simul_box_m
   use smear_m
-  use sort_m
+  use sort_om
   use species_m
   use states_m
   use states_dim_m

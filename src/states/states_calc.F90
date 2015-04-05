@@ -59,7 +59,7 @@ module states_calc_m
   use physics_op_m
   use profiling_m
   use restart_m
-  use sort_m
+  use sort_om
   use scalapack_m
   use simul_box_m
   use smear_m

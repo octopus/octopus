@@ -22,7 +22,7 @@
 module lalg_adv_m
   use global_m
   use lapack_m
-  use sort_m
+  use sort_om
   use messages_m
   use mpi_m
   use profiling_m

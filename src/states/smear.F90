@@ -29,7 +29,7 @@ module smear_m
   use messages_m
   use parser_m
   use profiling_m
-  use sort_m
+  use sort_om
   use unit_m
   use unit_system_m
   use varinfo_m

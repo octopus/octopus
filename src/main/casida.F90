@@ -44,7 +44,7 @@ module casida_m
   use profiling_m
   use restart_m
   use simul_box_m
-  use sort_m
+  use sort_om
   use states_m
   use states_dim_m
   use states_restart_m
