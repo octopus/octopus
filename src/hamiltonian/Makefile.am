@@ -41,7 +41,8 @@ libhamiltonian_a_SOURCES =         \
 	pcm.F90			   \
 	scdm.F90                   \
 	functionals.F90            \
-	xc.F90
+	xc.F90                     \
+	ion_interaction.F90
 
 noinst_HEADERS =                      \
 	lasers_inc.F90                \
@@ -69,7 +70,7 @@ rkb_projector.o : rkb_projector.F90 species_pot.o
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
 projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o species_pot.o
-epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o kick.o
+epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o kick.o ion_interaction.o
 hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o gauge_field.o hamiltonian_base.o pcm.o scdm.o functionals.o
 scf_tol.o : scf_tol.F90 
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector.o epot.o projector_matrix.o xc.o
@@ -82,6 +83,7 @@ pcm.o : pcm.F90
 scdm.o : scdm.F90 scdm_inc.F90 xc.o
 functionals.o : functionals.F90 
 xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o 
+ion_interaction.o : ion_interaction.F90
 #boundaries_abs.o : boundaries_abs.F90 
 #boundaries_ecs.o : boundaries_ecs.F90 
 #boundaries.o : boundaries.F90 boundaries_ecs.o boundaries_abs.o
