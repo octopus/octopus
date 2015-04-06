@@ -532,7 +532,7 @@ sub run_match_new {
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
 
   }else{ # error
-    printf STDERR "Unknown command '$func'\n";
+    printf STDERR "ERROR: Unknown command '$func'\n";
     return 0;
   }
 
@@ -542,7 +542,7 @@ sub run_match_new {
   # Perl gives error code shifted, for some reason.
   $exit_code = $? >> 8;
   if($exit_code) {
-      print STDERR "Match command failed: $shell_command\n";
+      print STDERR "ERROR: Match command failed: $shell_command\n";
       return 0;
   }
 
@@ -555,13 +555,17 @@ sub run_match_new {
   }
 
   if(length($value) == 0) {
-      print STDERR "Match command returned nothing: $shell_command\n";
+      print STDERR "ERROR: Match command returned nothing: $shell_command\n";
       return 0;
   }
 
   if(!looks_like_number($value)) {
-      print STDERR "Match command returned non-numeric value '$value': $shell_command\n";
+      print STDERR "ERROR: Match command returned non-numeric value '$value': $shell_command\n";
       return 0;
+  }
+
+  if(!looks_like_number($ref_value)) {
+      print STDERR "WARNING: Match command has non-numeric reference value '$value'.\n";
   }
 
   # at this point, we know that the command was successful, and returned a number.
