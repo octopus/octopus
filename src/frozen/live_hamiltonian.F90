@@ -11,11 +11,11 @@ module live_hamiltonian_m
   use simulation_m, only: &
     simulation_t
 
-  use live_system_m, only: &
-    live_system_t
+  use base_system_m, only: &
+    base_system_t
 
-  use live_external_m, only: &
-    live_external_t
+  use base_external_m, only: &
+    base_external_t
 
   use root_hamiltonian_m, only: &
     root_hamiltonian__get__
@@ -70,7 +70,7 @@ contains
   ! ---------------------------------------------------------
   subroutine live_hamiltonian_get_system(this, that)
     type(live_hamiltonian_t), intent(in) :: this
-    type(live_system_t),     pointer     :: that
+    type(base_system_t),     pointer     :: that
     !
     PUSH_SUB(live_hamiltonian_get_system)
     call base_hamiltonian_get(this, that)
@@ -92,7 +92,7 @@ contains
   ! ---------------------------------------------------------
   subroutine live_hamiltonian_get_external(this, that)
     type(live_hamiltonian_t), intent(in) :: this
-    type(live_external_t),   pointer     :: that
+    type(base_external_t),   pointer     :: that
     !
     PUSH_SUB(live_hamiltonian_get_external)
     call root_hamiltonian__get__(this, "external", that)

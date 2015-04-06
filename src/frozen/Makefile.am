@@ -66,13 +66,7 @@ libfrozen_a_SOURCES =		\
 	frozen_model.F90	\
 	frozen_handle.F90	\
 	frozen_config.F90	\
-	live_density.F90	\
-	live_states.F90		\
-	live_system.F90		\
-	live_functional.F90	\
-	live_external.F90	\
 	live_hamiltonian.F90	\
-	live_model.F90		\
 	live_handle.F90		\
 	live_config.F90		\
 	ssys_density.F90	\
@@ -153,13 +147,7 @@ frozen_model.o 		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_mod
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o base_handle.o
 frozen_config.o 	: frozen_config.F90 frozen_handle.o base_hamiltonian.o base_config.o
 
-live_density.o		: live_density.F90 base_density.o
-live_states.o		: live_states.F90 live_density.o base_states.o
-live_system.o		: live_system.F90 live_states.o base_system.o
-live_functional.o	: live_functional.F90 base_functional.o
-live_external.o		: live_external.F90 base_external.o
-live_hamiltonian.o	: live_hamiltonian.F90 live_external.o live_system.o base_hamiltonian.o root_hamiltonian.o simulation.o
-live_model.o		: live_model.F90 live_system.o base_model.o
+live_hamiltonian.o	: live_hamiltonian.F90 base_hamiltonian.o root_hamiltonian.o simulation.o
 live_handle.o		: live_handle.F90 base_handle.o
 live_config.o		: live_config.F90 live_handle.o base_hamiltonian.o base_config.o intrpl.o
 
@@ -169,7 +157,7 @@ ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 ssys_ionic.o		: ssys_ionic.F90 base_ionic.o
 ssys_functional.o	: ssys_functional.F90 base_functional.o
 ssys_external.o		: ssys_external.F90 base_external.o
-ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o live_functional.o live_system.o base_hamiltonian.o
+ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o root_hamiltonian.o simulation.o
 ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
 ssys_handle.o		: ssys_handle.F90 ssys_model.o live_handle.o frozen_handle.o base_handle.o

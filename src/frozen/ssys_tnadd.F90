@@ -17,8 +17,8 @@ module ssys_tnadd_m
     ssys_tnadd_start => root_hamiltonian__start__, &
     ssys_tnadd_stop  => root_hamiltonian__stop__
 
-  use base_hamiltonian_m, only: &
-    base_hamiltonian_set
+  !use base_hamiltonian_m, only: &
+  !  base_hamiltonian_set
 
   use base_hamiltonian_m, only:               &
     ssys_tnadd_t    => base_hamiltonian_t,    &
@@ -36,9 +36,9 @@ module ssys_tnadd_m
     SSYS_TNADD_KEY_ERROR   => BASE_HAMILTONIAN_KEY_ERROR,   &
     SSYS_TNADD_EMPTY_ERROR => BASE_HAMILTONIAN_EMPTY_ERROR
 
-  use live_functional_m, only: &
-    live_functional_t,         &
-    live_functional_get
+  use base_functional_m, only: &
+    base_functional_t,         &
+    base_functional_get
 
   use ssys_functional_m, only: &
     ssys_functional_t,         &
@@ -73,7 +73,7 @@ contains
     type(ssys_tnadd_t), intent(inout) :: this
 
     real(kind=wp), dimension(:,:), pointer :: lpot, spot, tpot
-    type(live_functional_t),       pointer :: live
+    type(base_functional_t),       pointer :: live
     type(ssys_functional_t),       pointer :: ssys
     real(kind=wp)                          :: lenr, senr
 
@@ -83,8 +83,8 @@ contains
     call root_hamiltonian__update__(this)
     call root_hamiltonian__get__(this, "live", live)
     ASSERT(associated(live))
-    call live_functional_get(live, energy=lenr)
-    call live_functional_get(live, lpot)
+    call base_functional_get(live, energy=lenr)
+    call base_functional_get(live, lpot)
     ASSERT(associated(lpot))
     nullify(live)
     call root_hamiltonian__get__(this, "total", ssys)
@@ -93,8 +93,8 @@ contains
     call ssys_functional_get(ssys, spot)
     ASSERT(associated(spot))
     nullify(ssys)
-    call base_hamiltonian_set(this, energy=(senr-lenr))
-    call ssys_tnadd_get(this, tpot)
+    !call base_hamiltonian_set(this, energy=(senr-lenr))
+    !call ssys_tnadd_get(this, tpot)
     tpot=spot-lpot
     nullify(lpot, spot, tpot)
 
