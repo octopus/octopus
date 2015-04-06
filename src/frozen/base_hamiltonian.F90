@@ -94,7 +94,7 @@ module base_hamiltonian_m
 
   interface base_hamiltonian_update
     module procedure base_hamiltonian_update_hamiltonian
-    module procedure base_hamiltonian_update_pass
+!    module procedure base_hamiltonian_update_pass
   end interface base_hamiltonian_update
 
   interface base_hamiltonian_copy
@@ -231,42 +231,42 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     !
     PUSH_SUB(base_hamiltonian_update_hamiltonian)
-    call base_hamiltonian_update(this, root_hamiltonian__update__)
+!    call base_hamiltonian_update(this, root_hamiltonian__update__)
     POP_SUB(base_hamiltonian_update_hamiltonian)
     return
   end subroutine base_hamiltonian_update_hamiltonian
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian_update_pass(this, hamiltonian_update)
-    type(base_hamiltonian_t), intent(inout) :: this
-    interface
-      subroutine hamiltonian_update(this)
-        import :: base_hamiltonian_t
-        type(base_hamiltonian_t), intent(inout) :: this
-      end subroutine hamiltonian_update
-    end interface
-    !
-    type(base_hamiltonian_iterator_t) :: iter
-    type(base_hamiltonian_t), pointer :: subs
-    integer                           :: ierr
-    !
-    PUSH_SUB(base_hamiltonian_update_pass)
-    nullify(subs)
-    call root_hamiltonian__reset__(this)
-    call hamiltonian_update(this)
-    call base_hamiltonian_init(iter, this)
-    do
-      nullify(subs)
-      call base_hamiltonian_next(iter, subs, ierr)
-      if(ierr/=BASE_HAMILTONIAN_OK)exit
-      call base_hamiltonian_update(subs, hamiltonian_update)
-      call root_hamiltonian__acc__(this, subs)
-    end do
-    call base_hamiltonian_end(iter)
-    nullify(subs)
-    POP_SUB(base_hamiltonian_update_pass)
-    return
-  end subroutine base_hamiltonian_update_pass
+!  recursive subroutine base_hamiltonian_update_pass(this, hamiltonian_update)
+!    type(base_hamiltonian_t), intent(inout) :: this
+!    interface
+!      subroutine hamiltonian_update(this)
+!        import :: base_hamiltonian_t
+!        type(base_hamiltonian_t), intent(inout) :: this
+!      end subroutine hamiltonian_update
+!    end interface
+!    !
+!    type(base_hamiltonian_iterator_t) :: iter
+!    type(base_hamiltonian_t), pointer :: subs
+!    integer                           :: ierr
+!    !
+!    PUSH!_SUB(base_hamiltonian_update_pass)
+!    nullify(subs)
+!    call root_hamiltonian__reset__(this)
+!    call hamiltonian_update(this)
+!    call base_hamiltonian_init(iter, this)
+!    do
+!      nullify(subs)
+!      call base_hamiltonian_next(iter, subs, ierr)
+!      if(ierr/=BASE_HAMILTONIAN_OK)exit
+!      call base_hamiltonian_update(subs, hamiltonian_update)
+!      call root_hamiltonian__acc__(this, subs)
+!    end do
+!    call base_hamiltonian_end(iter)
+!    nullify(subs)
+!    POP!_SUB(base_hamiltonian_update_pass)
+!    return
+!  end subroutine base_hamiltonian_update_pass
 
   ! ---------------------------------------------------------
   recursive subroutine base_hamiltonian_stop(this)
