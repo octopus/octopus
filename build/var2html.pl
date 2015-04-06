@@ -21,7 +21,7 @@
 
 use Getopt::Std;
 
-getopts "hs:b:";
+getopts "hb:";
 
 if($opt_h) {
     print <<"EndOfUsage";
@@ -36,22 +36,20 @@ EndOfUsage
     exit 0;
 }
 
-$top_srcdir = ($opt_s ? $opt_s : ".");
 $top_builddir = ($opt_b ? $opt_b : ".");
 
 $doc = "$top_builddir/doc";
 $share = "$top_builddir/share";
 
+if(!-d $doc) {
+    print STDERR "The output directory $doc does not exist.\n";
+    exit(1);
+}
+
 if(!-f "$share/varinfo_orig") {
-    print stderr <<"EndOfErrorMsg";
-
-The src and share directory could not be found. Please run
-this script from the octopus toplevel directory or set -s and
--b options appropriately.
-
-EndOfErrorMsg
-
-    exit 1;
+    print STDERR "The input file $share/varinfo_orig does not exist.\n";
+    print STDERR "The script mk_varinfo.pl must be run before this script.\n";
+    exit(1);
 }
 
 # configuration
