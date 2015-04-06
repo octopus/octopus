@@ -145,8 +145,8 @@ contains
     type(mesh_t),          intent(in)    :: mesh
     type(submesh_t),       intent(in)    :: sm
     type(rkb_projector_t), intent(in)    :: rkb_p
-    CMPLX,                 intent(in)    :: psi(:, :)  !< psi(kb%n_s, 2)
-    CMPLX,                 intent(inout) :: ppsi(:, :) !< ppsi(kb%n_s, 2)
+    CMPLX,                 intent(in)    :: psi(:, :)  !< (kb%n_s, 2)
+    CMPLX,                 intent(inout) :: ppsi(:, :) !< (kb%n_s, 2)
 
     CMPLX :: uvpsi(1:2, 1:2)
 #ifdef HAVE_MPI
@@ -176,7 +176,7 @@ contains
     type(submesh_t),       intent(in)  :: sm
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)
-    CMPLX,                 intent(out) :: uvpsi(1:2, 1:2)    
+    CMPLX,                 intent(out) :: uvpsi(:,:) !< (2, 2)    
 
     integer :: idim, n_s, is
 
@@ -214,7 +214,7 @@ contains
   !> THREADSAFE
   subroutine rkb_project_ket(rkb_p, uvpsi, psi)
     type(rkb_projector_t), intent(in)    :: rkb_p
-    CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
+    CMPLX,                 intent(in)    :: uvpsi(:, :) !< (2, 2)
     CMPLX,                 intent(inout) :: psi(:, :)
 
     integer :: idim, jdim, n_s, is
