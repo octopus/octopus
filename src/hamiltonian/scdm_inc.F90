@@ -66,7 +66,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
     do ii = 1, nval
       ! KSt(i,:) = st%dpsi(:,st%d%dim,i,st%d%nik)
-#if HAVE_MPI
+#ifdef HAVE_MPI
       call vec_gather(mesh%vp, 0, state_global, st%X(psi)(1:mesh%np,st%d%dim,ii,st%d%nik))
 #endif
       if (scdm%root) KSt(ii,:)  = st%occ(ii,1)*state_global(:)
@@ -204,7 +204,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
 !---! --------------------- SERIAL END ------------------------------------
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
 
@@ -216,7 +216,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     temp_state(:,:) = M_ZERO
     ! this is only non-zero on root
     if(scdm%root) temp_state(:,1) =  scdm%st%X(psi)(1:mesh%np_global,st%d%dim,ii,scdm%st%d%nik)
-#if HAVE_MPI
+#ifdef HAVE_MPI
     call MPI_Bcast(temp_state(1,1),mesh%np_global , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
@@ -229,7 +229,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
   SAFE_DEALLOCATE_A(temp_state)
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   ! broadcast the centers to all processes
   call MPI_Bcast(scdm%center(1,1),size(scdm%center) ,MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
@@ -328,7 +328,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   end do
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   error = M_ZERO
   call MPI_Allreduce(error_tmp, error, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
 #else

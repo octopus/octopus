@@ -386,7 +386,7 @@ ierr results:
 void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
      (double * freq, const fint * tag, fint * ierr, STR_F_TYPE dirname STR_ARG1)
 {
-#if HAVE_DIRENT_H && HAVE_CLOSEDIR && HAVE_READDIR && HAVE_STRCHR && HAVE_STRTOD
+#if defined(HAVE_DIRENT_H) && defined(HAVE_CLOSEDIR) && defined(HAVE_READDIR) && defined(HAVE_STRCHR) && defined(HAVE_STRTOD)
 
   DIR * dir;
   struct dirent * ent;

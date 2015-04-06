@@ -147,7 +147,7 @@ contains
     if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
          call messages_not_implemented("SCDM with mixed-periodicity")  
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
     call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
 #endif
     scdm%root = (rank ==0)
