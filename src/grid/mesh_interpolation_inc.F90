@@ -192,7 +192,7 @@ subroutine X(mesh_interpolation_test)(mesh, geo)
 
   if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call MPI_Bcast(coeff(1), mesh%sb%dim, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(coeff, mesh%sb%dim, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
   
@@ -218,7 +218,7 @@ subroutine X(mesh_interpolation_test)(mesh, geo)
 
   if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call MPI_Bcast(xx(1, 1), MAX_DIM*ntest_points, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(xx, MAX_DIM*ntest_points, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
 
