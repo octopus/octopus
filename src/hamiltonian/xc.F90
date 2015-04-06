@@ -152,6 +152,24 @@ contains
 
     end do
 
+    if(xcs%functional(FUNC_X,1)%family /= XC_FAMILY_NONE) then
+      if(xcs%functional(FUNC_X,1)%type /= XC_EXCHANGE) then
+        message(1) = "Internal error: Exchange has been set to a non-exchange functional from libxc."
+        call messages_fatal(1, only_root_writes = .true.)
+      endif
+      if(xcs%functional(FUNC_C,1)%type == XC_EXCHANGE_CORRELATION) then
+        message(1) = "Cannot set an exchange functional and an exchange-correlation functional in XCFunctional."
+        call messages_fatal(1, only_root_writes = .true.)
+      endif
+    endif
+
+    if(xcs%functional(FUNC_C,1)%family /= XC_FAMILY_NONE) then
+      if(xcs%functional(FUNC_C,1)%type /= XC_EXCHANGE .and. xcs%functional(FUNC_C,1)%type /= XC_EXCHANGE_CORRELATION) then
+        message(1) = "Internal error: Correlation has been set to a non-correlation functional from libxc."
+        call messages_fatal(1, only_root_writes = .true.)
+      endif
+    endif
+    
     xcs%family = ior(xcs%family, xcs%functional(FUNC_X,1)%family)
     xcs%family = ior(xcs%family, xcs%functional(FUNC_C,1)%family)
 
