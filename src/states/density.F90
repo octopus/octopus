@@ -33,7 +33,6 @@ module density_m
   use grid_m
   use io_m
   use kpoints_m
-  use live_density_m
   use loct_m
   use math_m
   use mesh_m
@@ -91,7 +90,7 @@ contains
     FLOAT,                target,   intent(out)   :: density(:, :)
     FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
-    type(live_density_t), pointer :: live_density
+    type(base_density_t), pointer :: live_density
 
     PUSH_SUB(density_calc_init)
 
@@ -106,7 +105,7 @@ contains
       ASSERT(associated(this%subsys_density))
       call ssys_density_get(this%subsys_density, "live", live_density)
       ASSERT(associated(live_density))
-      call live_density_get(live_density, this%density)
+      call base_density_get(live_density, this%density)
       ASSERT(associated(this%density))
     else
       this%density => density

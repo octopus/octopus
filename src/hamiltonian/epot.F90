@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -21,6 +22,7 @@
 
 module epot_m
   use atom_m
+  use base_external_m
   use comm_m
   use derivatives_m
   use double_grid_m
@@ -36,7 +38,6 @@ module epot_m
   use lalg_basic_m
   use lasers_m
   use linear_response_m
-  use live_external_m
   use loct_math_m
   use logrid_m
   use mesh_m
@@ -591,7 +592,7 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    type(live_external_t), pointer :: live_external
+    type(base_external_t), pointer :: live_external
     FLOAT, dimension(:),   pointer :: vpsl
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: Imdensity(:)
@@ -619,7 +620,7 @@ contains
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
       call ssys_external_get(ep%subsys_external, "live", live_external)
       ASSERT(associated(live_external))
-      call live_external_get(live_external, vpsl)
+      call base_external_get(live_external, vpsl)
       ASSERT(associated(vpsl))
     else
       ! Sets the vpsl pointer to the total potential.

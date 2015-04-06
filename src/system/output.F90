@@ -46,7 +46,6 @@ module output_m
   use kpoints_m
   use lasers_m
   use linear_response_m
-  use live_density_m
   use loct_m
   use loct_math_m
   use magnetic_m
