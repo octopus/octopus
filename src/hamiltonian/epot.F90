@@ -1090,6 +1090,7 @@ contains
     CMPLX   :: sumatoms, tmp(1:MAX_DIM)
     FLOAT, parameter :: alpha = CNST(1.1313708)
     CMPLX, allocatable :: phase(:)
+    type(profile_t), save :: prof_short, prof_long
 
     PUSH_SUB(ion_interaction_periodic)
 
@@ -1110,6 +1111,8 @@ contains
     
     rcut = CNST(6.0)/alpha
 
+    call profiling_in(prof_short, "EWALD_SHORT")
+    
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
       species => geo%atom(iatom)%species
@@ -1143,6 +1146,10 @@ contains
       call periodic_copy_end(pc)
     end do
 
+    call profiling_out(prof_short)
+
+    call profiling_in(prof_long, "EWALD_LONG")
+    
     ! self-interaction
     eself = M_ZERO
     charge = M_ZERO
@@ -1208,6 +1215,8 @@ contains
         end do
       end do
     end do
+
+    call profiling_out(prof_long)
     
     energy = ereal + efourier + eself
     
