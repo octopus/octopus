@@ -10,8 +10,9 @@ Input: 01-free_electrons.01-ground_state.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 6
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 535738.21201662
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 535738.20362713
+#These matches are disabled since the ion-ion energy calculation is wrong
+#match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 535738.21201662
+#match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 535738.20362713
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 0.00838949
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.00000000
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; 0.00000000
