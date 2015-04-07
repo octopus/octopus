@@ -50,117 +50,148 @@ contains
     FLOAT,    dimension(:,:), intent(out)   :: force
     
     FLOAT, parameter :: alpha = CNST(1.1313708)
-    
-    FLOAT, dimension(sb%dim) :: r, f
+    FLOAT, allocatable:: r(:), f(:)
     FLOAT :: rr, dd, zi, zj, epsilon, sigma
     integer :: iatom, jatom, natom, iindex, jindex
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof
     logical,  allocatable :: in_box(:)
 
-    call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
     PUSH_SUB(ion_interaction_calculate)
+    call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
 
+    SAFE_ALLOCATE(r(1:sb%dim))
+    SAFE_ALLOCATE(f(1:sb%dim))    
+    
     energy = M_ZERO
-    force(1:sb%dim,1:geo%natoms) = M_ZERO
+    force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
+
       ASSERT(geo%ncatoms==0)
-      ! This depends on the area, but we should check if it is fully consistent.        
+
       spci => geo%atom(1)%species
+      ! This depends on the area, but we should check if it is fully consistent.        
       if( species_type(spci) == SPECIES_JELLIUM_SLAB ) then
-        energy = energy +M_PI *species_zval(spci)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
-          & *( sb%lsize(3) - species_jthick(spci) /M_THREE ) 
+        energy = energy + &
+          M_PI*species_zval(spci)**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*(sb%lsize(3) - species_jthick(spci)/M_THREE)
       else
         call ion_interaction_periodic(geo, sb, energy, force)
       end if
+
     else
+      
       natom = geo%natoms + geo%ncatoms
+
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
           in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms+iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
+          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
         end do
       end if
+      
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
-        spci=>geo%atom(iatom)%species
-        zi=species_zval(spci)
+        
+        spci => geo%atom(iatom)%species
+        zi = species_zval(spci)
+
         select case(species_type(spci))
         case(SPECIES_JELLIUM)
-          energy=energy+(M_THREE/M_FIVE)*zi**2/species_jradius(spci)
+          energy = energy + (M_THREE/M_FIVE)*zi**2/species_jradius(spci)
           ! The part depending on the simulation sphere is neglected
+          
         case(SPECIES_JELLIUM_SLAB)
-          energy=energy-M_PI*zi**2/(M_FOUR*sb%lsize(1)*sb%lsize(2)) &
-            *species_jthick(spci)/M_THREE
+          energy = energy - M_PI*zi**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*species_jthick(spci)/M_THREE
           ! The part depending on the simulation box transverse dimension is neglected
         end select
-        do jatom = iatom+1, geo%natoms
+        
+        do jatom = iatom + 1, geo%natoms
+
           if(ignore_external_ions) then
             if(.not. in_box(jatom)) cycle
           end if
-          spcj=>geo%atom(jatom)%species
-          r=geo%atom(iatom)%x(1:sb%dim)-geo%atom(jatom)%x(1:sb%dim)
-          rr=sqrt(sum(r**2))
-          iindex=species_index(spci)
-          jindex=species_index(spcj)
-          select case(geo%ionic_interaction_type(iindex,jindex))
+          
+          spcj => geo%atom(jatom)%species
+
+          r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim)
+
+          rr = sqrt(sum(r**2))
+          iindex = species_index(spci)
+          jindex = species_index(spcj)
+          
+          select case(geo%ionic_interaction_type(iindex, jindex))
           case(INTERACTION_COULOMB)
-            zj=species_zval(spcj)
+            zj = species_zval(spcj)
             !the force
-            dd=zi*zj/rr
-            f=(dd/rr**2)*r
-            force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+f
-            force(1:sb%dim,jatom)=force(1:sb%dim,jatom)-f
+            dd = zi*zj/rr
+            f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
+            force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
+            force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
             !energy
-            energy=energy+dd
+            energy=energy + dd
+
           case(INTERACTION_LJ)
-            epsilon=geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
-            sigma  =geo%ionic_interaction_parameter(LJ_SIGMA,   iindex, jindex)
+            epsilon= geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
+            sigma  = geo%ionic_interaction_parameter(LJ_SIGMA,   iindex, jindex)
             dd = (sigma/rr)**6
+
             !the force
-            f=(CNST(24.0)*epsilon*(dd/rr**2)*(CNST(2.0)*dd-M_ONE))*r
-            force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+f
-            force(1:sb%dim,jatom)=force(1:sb%dim,jatom)-f
+            f(1:sb%dim) = (CNST(24.0)*epsilon*(dd/rr**2)*(CNST(2.0)*dd - M_ONE))*r
+            force(1:sb%dim, iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
+            force(1:sb%dim, jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
+
             !energy
-            energy=energy+CNST(4.0)*epsilon*dd*(dd-M_ONE)
+            energy = energy + CNST(4.0)*epsilon*dd*(dd - M_ONE)
           end select
+          
         end do !jatom
       end do !iatom
+      
       do iatom = 1, geo%natoms
+
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
+        
         do jatom = 1, geo%ncatoms
           if(ignore_external_ions) then
             if(.not. in_box(geo%natoms+jatom)) cycle
           end if
-          r=geo%atom(iatom)%x(1:sb%dim)-geo%catom(jatom)%x(1:sb%dim)
-          rr=sqrt(sum(r**2))
+          
+          r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%catom(jatom)%x(1:sb%dim)
+          rr = sqrt(sum(r**2))
           !INTERACTION_COULOMB
-          zi=species_zval(geo%atom(iatom)%species)
-          zj=geo%catom(jatom)%charge
+          zi = species_zval(geo%atom(iatom)%species)
+          zj = geo%catom(jatom)%charge
           !the force
-          dd=zi*zj/rr
-          force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+(dd/rr*2)*r
+          dd = zi*zj/rr
+          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + (dd/rr*2)*r(1:sb%dim)
           !energy
-          energy=energy+dd
+          energy = energy + dd
+          
         end do !jatom
       end do !iatom
+      
     end if
+
     SAFE_DEALLOCATE_A(in_box)
+    SAFE_DEALLOCATE_A(r)
+    SAFE_DEALLOCATE_A(f)
+    
     call profiling_out(ion_ion_prof)
+    
     POP_SUB(ion_interaction_calculate)
-    return
   end subroutine ion_interaction_calculate
 
   ! ---------------------------------------------------------
+  
   subroutine ion_interaction_periodic(geo, sb, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
@@ -249,8 +280,6 @@ contains
     ! And the long-range part, using an Ewald sum
     SAFE_ALLOCATE(phase(1:geo%natoms))
 
-    ! First the G = 0 term (charge was calculated previously)
-    efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
 
     ! get a converged value for the cutoff in g
     rcut = sum(sb%klattice(1:sb%dim, 1))**2
@@ -258,7 +287,12 @@ contains
       rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim))**2)
     end do
 
-    isph = ceiling(CNST(6.0)*alpha/rcut)
+    rcut = sqrt(rcut)
+    
+    isph = ceiling(CNST(9.5)*alpha/rcut)
+
+    ! First the G = 0 term (charge was calculated previously)
+    efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
 
     do ix = -isph, isph
       do iy = -isph, isph
@@ -270,10 +304,10 @@ contains
 
           gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
           gg2 = sum(gg(1:sb%dim)**2)
-          
+
           ! g=0 must be removed from the sum
           if(gg2 < M_EPSILON) cycle
-
+          
           gx = -CNST(0.25)*gg2/alpha**2
 
           if(gx < CNST(-36.0)) cycle
@@ -284,10 +318,8 @@ contains
 
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
-            zi = species_zval(geo%atom(iatom)%species)
-            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
-            gx = sum(gg(1:sb%dim)*xi(1:sb%dim))
-            phase(iatom) = zi*TOCMPLX(cos(gx), sin(gx))
+            gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
+            phase(iatom) = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
             sumatoms = sumatoms + phase(iatom)
           end do
           
