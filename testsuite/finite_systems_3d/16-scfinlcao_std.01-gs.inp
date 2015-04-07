@@ -31,3 +31,5 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 
 SCFinLCAO = yes
 ExperimentalFeatures = yes
+Output = geometry + density
+OutputHow = openscad
