@@ -4,7 +4,6 @@
 
 \date   Started 4/09/07
 \author George
-\version\verbatim $Id: gk_mkpqueue.h 13005 2012-10-23 22:34:36Z karypis $ \endverbatim
 */
 
 

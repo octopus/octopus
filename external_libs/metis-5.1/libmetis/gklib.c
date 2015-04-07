@@ -5,7 +5,6 @@
 \date   Started 4/12/2007
 \author George  
 \author Copyright 1997-2009, Regents of the University of Minnesota 
-\version\verbatim $Id: gklib.c 10395 2011-06-23 23:28:06Z karypis $ \endverbatim
 */
 
 

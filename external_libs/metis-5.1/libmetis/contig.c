@@ -5,7 +5,6 @@
 \date Started 7/15/98
 \author George
 \author Copyright 1997-2009, Regents of the University of Minnesota 
-\version $Id: contig.c 10513 2011-07-07 22:06:03Z karypis $
 */
 
 #include "metislib.h"

@@ -5,7 +5,6 @@
 \date   Started 5/12/2011
 \author George  
 \author Copyright 1997-2009, Regents of the University of Minnesota 
-\version\verbatim $Id: auxapi.c 10409 2011-06-25 16:58:34Z karypis $ \endverbatim
 */
 
 

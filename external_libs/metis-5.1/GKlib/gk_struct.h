@@ -4,7 +4,6 @@
 
 \date   Started 3/27/2007
 \author George
-\version\verbatim $Id: gk_struct.h 13005 2012-10-23 22:34:36Z karypis $ \endverbatim
 */
 
 #ifndef _GK_STRUCT_H_

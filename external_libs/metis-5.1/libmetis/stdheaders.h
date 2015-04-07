@@ -8,7 +8,6 @@
  * Started 8/27/94
  * George
  *
- * $Id: stdheaders.h 5993 2009-01-07 02:09:57Z karypis $
  */
 
 #ifndef _LIBMETIS_STDHEADERS_H_

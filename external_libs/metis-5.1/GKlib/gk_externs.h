@@ -4,7 +4,6 @@
 
 \date   Started 3/27/2007
 \author George
-\version\verbatim $Id: gk_externs.h 10711 2011-08-31 22:23:04Z karypis $ \endverbatim
 */
 
 #include <config.h>

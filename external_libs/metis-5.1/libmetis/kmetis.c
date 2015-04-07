@@ -6,7 +6,6 @@
 \date   Started 7/28/1997
 \author George  
 \author Copyright 1997-2011, Regents of the University of Minnesota 
-\version\verbatim $Id: kmetis.c 13905 2013-03-25 13:21:20Z karypis $ \endverbatim
 */
 
 #include "metislib.h"

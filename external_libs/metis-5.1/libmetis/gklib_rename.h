@@ -8,7 +8,6 @@
  * Started 10/2/97
  * George
  *
- * $Id: gklib_rename.h 10395 2011-06-23 23:28:06Z karypis $
  *
  */
 

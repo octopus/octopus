@@ -8,7 +8,6 @@
  * Started 7/25/97
  * George
  *
- * $Id: stat.c 9942 2011-05-17 22:09:52Z karypis $
  *
  */
 

@@ -12,7 +12,6 @@ which is used for code generation.
 
 \date   Started 9/28/95
 \author George
-\version\verbatim $Id: blas.c 11848 2012-04-20 13:47:37Z karypis $ \endverbatim
 */
 
 #include <GKlib.h>

@@ -8,7 +8,6 @@
  * Started 9/29/97
  * George
  *
- * $Id: meshpart.c 13931 2013-03-29 16:48:48Z karypis $
  *
  */
 

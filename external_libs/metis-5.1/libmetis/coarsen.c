@@ -5,7 +5,6 @@
 \date Started 7/23/97
 \author George  
 \author Copyright 1997-2011, Regents of the University of Minnesota 
-\version\verbatim $Id: coarsen.c 13936 2013-03-30 03:59:09Z karypis $ \endverbatim
 */
 
 

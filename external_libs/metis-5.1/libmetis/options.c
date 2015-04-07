@@ -5,7 +5,6 @@
   \date   Started 5/12/2011
   \author George  
   \author Copyright 1997-2011, Regents of the University of Minnesota 
-  \version\verbatim $Id: options.c 13901 2013-03-24 16:17:03Z karypis $ \endverbatim
   */
 
 #include "metislib.h"

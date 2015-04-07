@@ -10,7 +10,6 @@ these routines where defined.
 
 \date   Started 4/4/07
 \author George
-\version\verbatim $Id: sort.c 10796 2011-09-23 21:33:09Z karypis $ \endverbatim
 */
 
 #include <GKlib.h>

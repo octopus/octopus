@@ -8,7 +8,6 @@
  * Started 8/1/97
  * George
  *
- * $Id: separator.c 10481 2011-07-05 18:01:23Z karypis $
  *
  */
 

@@ -8,7 +8,6 @@
  * Started 8/1/97
  * George
  *
- * $Id: srefine.c 10515 2011-07-08 15:46:18Z karypis $
  *
  */
 

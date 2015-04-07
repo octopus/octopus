@@ -8,7 +8,6 @@
  * Started 8/1/97
  * George
  *
- * $Id: sfm.c 10874 2011-10-17 23:13:00Z karypis $
  *
  */
 
