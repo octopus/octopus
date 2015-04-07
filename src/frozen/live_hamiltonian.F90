@@ -17,16 +17,16 @@ module live_hamiltonian_m
   use base_external_m, only: &
     base_external_t
 
-  use root_hamiltonian_m, only: &
-    root_hamiltonian__get__
+  use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
 
-  use root_hamiltonian_m, only:                            &
-    live_hamiltonian_init   => root_hamiltonian__init__,   &
-    live_hamiltonian_start  => root_hamiltonian__start__,  &
-    live_hamiltonian_update => root_hamiltonian__update__, &
-    live_hamiltonian_stop   => root_hamiltonian__stop__,   &
-    live_hamiltonian_copy   => root_hamiltonian__copy__,   &
-    live_hamiltonian_end    => root_hamiltonian__end__
+  use base_hamiltonian_m, only:                            &
+    live_hamiltonian_init   => base_hamiltonian__init__,   &
+    live_hamiltonian_start  => base_hamiltonian__start__,  &
+    live_hamiltonian_update => base_hamiltonian__update__, &
+    live_hamiltonian_stop   => base_hamiltonian__stop__,   &
+    live_hamiltonian_copy   => base_hamiltonian__copy__,   &
+    live_hamiltonian_end    => base_hamiltonian__end__
 
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
@@ -95,7 +95,7 @@ contains
     type(base_external_t),   pointer     :: that
     !
     PUSH_SUB(live_hamiltonian_get_external)
-    call root_hamiltonian__get__(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(live_hamiltonian_get_external)
     return
   end subroutine live_hamiltonian_get_external

@@ -26,15 +26,15 @@ module ssys_hamiltonian_m
     ssys_tnadd_t,         &
     ssys_tnadd_update
 
-  use root_hamiltonian_m, only: &
-    root_hamiltonian__get__
+  use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
 
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
 
-  use root_hamiltonian_m, only:                          &
-    ssys_hamiltonian_start => root_hamiltonian__start__, &
-    ssys_hamiltonian_stop  => root_hamiltonian__stop__
+  use base_hamiltonian_m, only:                          &
+    ssys_hamiltonian_start => base_hamiltonian__start__, &
+    ssys_hamiltonian_stop  => base_hamiltonian__stop__
 
   use base_hamiltonian_m, only:                     &
     ssys_hamiltonian_t    => base_hamiltonian_t,    &
@@ -149,7 +149,7 @@ contains
     type(ssys_external_t),   pointer     :: that
     !
     PUSH_SUB(ssys_hamiltonian_get_external)
-    call root_hamiltonian__get__(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(ssys_hamiltonian_get_external)
     return
   end subroutine ssys_hamiltonian_get_external
@@ -160,7 +160,7 @@ contains
     type(ssys_ionic_t),      pointer     :: that
     !
     PUSH_SUB(ssys_hamiltonian_get_ionic)
-    call root_hamiltonian__get__(this, "ionic", that)
+    call base_hamiltonian__get__(this, "ionic", that)
     POP_SUB(ssys_hamiltonian_get_ionic)
     return
   end subroutine ssys_hamiltonian_get_ionic
@@ -171,7 +171,7 @@ contains
     type(ssys_tnadd_t),      pointer     :: that
     !
     PUSH_SUB(ssys_hamiltonian_get_tnadd)
-    call root_hamiltonian__get__(this, "tnadd", that)
+    call base_hamiltonian__get__(this, "tnadd", that)
     POP_SUB(ssys_hamiltonian_get_tnadd)
     return
   end subroutine ssys_hamiltonian_get_tnadd

@@ -92,14 +92,14 @@ module base_model_m
     base_system_set,       &
     base_system_get
 
-  use root_hamiltonian_m, only: &
-    root_hamiltonian__init__,   &
-    root_hamiltonian__start__,  &
-    root_hamiltonian__update__, &
-    root_hamiltonian__stop__,   &
-    root_hamiltonian__add__,    &
-    root_hamiltonian__copy__,   &
-    root_hamiltonian__end__
+  use base_hamiltonian_m, only: &
+    base_hamiltonian__init__,   &
+    base_hamiltonian__start__,  &
+    base_hamiltonian__update__, &
+    base_hamiltonian__stop__,   &
+    base_hamiltonian__add__,    &
+    base_hamiltonian__copy__,   &
+    base_hamiltonian__end__
 
   use base_hamiltonian_m, only: &
     base_hamiltonian_t
@@ -316,14 +316,14 @@ contains
     call base_system__init__(this%sys)
     call json_get(this%config, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call root_hamiltonian__init__(this%hm, this%sys, cnfg)
+    call base_hamiltonian__init__(this%hm, this%sys, cnfg)
     nullify(cnfg)
     call base_model_init(iter, this)
     do
       nullify(cnfg, subs)
       call base_model_next(iter, cnfg, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
-      call root_hamiltonian__add__(this%hm, subs%hm, cnfg)
+      call base_hamiltonian__add__(this%hm, subs%hm, cnfg)
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
@@ -419,7 +419,7 @@ contains
       call simulation__start__(this%sim)
     end if
     call base_system__start__(this%sys, this%sim)
-    call root_hamiltonian__start__(this%hm, this%sim)
+    call base_hamiltonian__start__(this%hm, this%sim)
     POP_SUB(base_model__start__)
     return
   end subroutine base_model__start__
@@ -455,7 +455,7 @@ contains
     !
     PUSH_SUB(base_model__update__)
     call base_system__update__(this%sys)
-    call root_hamiltonian__update__(this%hm)
+    call base_hamiltonian__update__(this%hm)
     POP_SUB(base_model__update__)
     return
   end subroutine base_model__update__
@@ -490,7 +490,7 @@ contains
     !
     PUSH_SUB(base_model__stop__)
     call base_system__stop__(this%sys)
-    call root_hamiltonian__stop__(this%hm)
+    call base_hamiltonian__stop__(this%hm)
     POP_SUB(base_model__stop__)
     return
   end subroutine base_model__stop__
@@ -646,7 +646,7 @@ contains
     call base_model__icopy__(this, that)
     call simulation__copy__(this%sim, that%sim)
     call base_system__copy__(this%sys, that%sys)
-    call root_hamiltonian__copy__(this%hm, that%hm)
+    call base_hamiltonian__copy__(this%hm, that%hm)
     POP_SUB(base_model__copy__begin)
     return
   end subroutine base_model__copy__begin
@@ -668,7 +668,7 @@ contains
       nullify(cnfg, subs)
       call base_model_next(iter, cnfg, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
-      call root_hamiltonian__add__(this%hm, subs%hm, cnfg)
+      call base_hamiltonian__add__(this%hm, subs%hm, cnfg)
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
@@ -725,7 +725,7 @@ contains
     !
     PUSH_SUB(base_model__end__)
     call base_model__iend__(this)
-    call root_hamiltonian__end__(this%hm)
+    call base_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
     call simulation__end__(this%sim)
     POP_SUB(base_model__end__)

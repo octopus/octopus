@@ -19,15 +19,15 @@ module fio_hamiltonian_m
     fio_external_t,         &
     fio_external_update
 
-  use root_hamiltonian_m, only: &
-    root_hamiltonian__get__
+  use base_hamiltonian_m, only: &
+    base_hamiltonian__get__
 
-  use root_hamiltonian_m, only:                         &
-    fio_hamiltonian_init  => root_hamiltonian__init__,  &
-    fio_hamiltonian_start => root_hamiltonian__start__, &
-    fio_hamiltonian_stop  => root_hamiltonian__stop__,  &
-    fio_hamiltonian_copy  => root_hamiltonian__copy__,  &
-    fio_hamiltonian_end   => root_hamiltonian__end__
+  use base_hamiltonian_m, only:                         &
+    fio_hamiltonian_init  => base_hamiltonian__init__,  &
+    fio_hamiltonian_start => base_hamiltonian__start__, &
+    fio_hamiltonian_stop  => base_hamiltonian__stop__,  &
+    fio_hamiltonian_copy  => base_hamiltonian__copy__,  &
+    fio_hamiltonian_end   => base_hamiltonian__end__
 
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
@@ -111,7 +111,7 @@ contains
     type(fio_external_t),   pointer     :: that
     !
     PUSH_SUB(fio_hamiltonian_get_external)
-    call root_hamiltonian__get__(this, "external", that)
+    call base_hamiltonian__get__(this, "external", that)
     POP_SUB(fio_hamiltonian_get_external)
     return
   end subroutine fio_hamiltonian_get_external

@@ -8,14 +8,14 @@ module ssys_tnadd_m
 
   use kinds_m, only: wp
 
-  use root_hamiltonian_m, only: &
-    root_hamiltonian__update__, &
-    root_hamiltonian__acc__,    &
-    root_hamiltonian__get__
+  use base_hamiltonian_m, only: &
+    base_hamiltonian__update__, &
+    base_hamiltonian__acc__,    &
+    base_hamiltonian__get__
 
-  use root_hamiltonian_m, only:                    &
-    ssys_tnadd_start => root_hamiltonian__start__, &
-    ssys_tnadd_stop  => root_hamiltonian__stop__
+  use base_hamiltonian_m, only:                    &
+    ssys_tnadd_start => base_hamiltonian__start__, &
+    ssys_tnadd_stop  => base_hamiltonian__stop__
 
   !use base_hamiltonian_m, only: &
   !  base_hamiltonian_set
@@ -80,14 +80,14 @@ contains
     PUSH_SUB(ssys_tnadd_update)
 
     nullify(live, ssys)
-    call root_hamiltonian__update__(this)
-    call root_hamiltonian__get__(this, "live", live)
+    call base_hamiltonian__update__(this)
+    call base_hamiltonian__get__(this, "live", live)
     ASSERT(associated(live))
     call base_functional_get(live, energy=lenr)
     call base_functional_get(live, lpot)
     ASSERT(associated(lpot))
     nullify(live)
-    call root_hamiltonian__get__(this, "total", ssys)
+    call base_hamiltonian__get__(this, "total", ssys)
     ASSERT(associated(ssys))
     call ssys_functional_get(ssys, energy=senr)
     call ssys_functional_get(ssys, spot)
