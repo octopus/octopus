@@ -10,6 +10,7 @@
 #ifndef _GK_MKSORT_H_
 #define _GK_MKSORT_H_
 
+/* 
  * Adopted from GNU glibc by Mjt.
  * See stdlib/qsort.c in glibc */
 
