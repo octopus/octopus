@@ -10,7 +10,6 @@ else
 	    ! -name \*.o ! -name \*.a ! -name \*.so \
             -exec grep '$Id:' \{\} \; \
             | grep '$Id: ' \
-            | tr -d \#\!\* | awk '{print $3,"["$2,$4"]"}' \
+            | tr -d \#\!\* | awk '{print $3}' \
             | grep -v 'qw(' | sort -n | tail -1
-
 fi
