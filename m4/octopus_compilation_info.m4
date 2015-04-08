@@ -45,5 +45,7 @@ AC_DEFINE_UNQUOTED([FC], ["$FC $truefc"], [Fortran compiler])
 AC_DEFINE_UNQUOTED([CFLAGS], ["${CFLAGS:0:130}"], [C compiler])
 AC_DEFINE_UNQUOTED([FCFLAGS], ["${FCFLAGS:0:130}"], [Fortran compiler])
 
+LATEST_SVN=$rev
+AC_SUBST([LATEST_SVN])
 ]
 )
