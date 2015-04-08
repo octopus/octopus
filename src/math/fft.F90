@@ -20,9 +20,6 @@
 
 #include "global.h"
 
-#define FFT_MAX 10
-#define FFT_NULL -1
-
 !> Fast Fourier Transform module.
 !! This module provides a single interface that works with different
 !! FFT implementations.
@@ -99,7 +96,10 @@ module fft_m
        FFTLIB_NFFT  = 4, &
        FFTLIB_PNFFT = 5
        
-
+  integer, parameter :: &
+    FFT_MAX  = 10, &
+    FFT_NULL = -1
+  
   type fft_t
     integer     :: slot    !< in which slot do we have this fft
 

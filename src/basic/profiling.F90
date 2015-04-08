@@ -133,7 +133,7 @@ module profiling_m
        PROFILING_MEMORY      = 2, &
        PROFILING_MEMORY_FULL = 4
 
-#define MAX_MEMORY_VARS 25
+  integer, parameter :: MAX_MEMORY_VARS = 25
 
   type profile_vars_t
     integer                  :: mode    !< 1=time, 2=memory, 4=memory_full

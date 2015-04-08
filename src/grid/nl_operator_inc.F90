@@ -36,7 +36,12 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   R_TYPE,  pointer :: pfi(:), pfo(:)
 !  FLOAT, allocatable :: wre(:), wim(:)
   R_BASE, allocatable :: wre(:), wim(:)  
-
+#ifdef R_TREAL
+  integer, parameter :: logldf = 0
+#else
+  integer, parameter :: logldf = 1
+#endif
+  
   PUSH_SUB(X(nl_operator_operate_batch))
 
   ASSERT(batch_type(fi) == R_TYPE_VAL)
@@ -124,13 +129,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
           pfi => fi%states_linear(ist)%X(psi)(:)
           pfo => fo%states_linear(ist)%X(psi)(:)
           
-#ifdef R_TREAL
-#define LOGLDF 0
-#else
-#define LOGLDF 1
-#endif
-          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
-#undef LOGLDF
+          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), logldf, pfo(1))
         end do
       end if
       !$omp end parallel

@@ -53,11 +53,12 @@ module mesh_init_m
     mesh_init_stage_3
 
   type(profile_t), save :: mesh_init_prof
+
+  integer, parameter :: INNER_POINT = 1
+  integer, parameter :: ENLARGEMENT_POINT = 2
   
 contains
 
-#define ENLARGEMENT_POINT 2
-#define INNER_POINT 1
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   type(mesh_t),                intent(inout) :: mesh
