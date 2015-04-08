@@ -199,7 +199,7 @@ contains
 
     PUSH_SUB(fio_external_get_potential_1d)
 
-    call base_external_get(this, that, total)
+    call base_potential_get(this, that, total)
 
     POP_SUB(fio_external_get_potential_1d)
   end subroutine fio_external_get_potential_1d
