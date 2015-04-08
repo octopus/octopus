@@ -21,7 +21,6 @@
 
 module output_m
   use base_density_m
-  use base_external_m
   use basins_m
   use cube_function_m
   use cube_m

@@ -22,7 +22,6 @@
 
 module epot_m
   use atom_m
-  use base_external_m
   use comm_m
   use derivatives_m
   use double_grid_m
@@ -593,7 +592,7 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    type(base_external_t), pointer :: live_external
+    type(ssys_external_t), pointer :: live_external
     FLOAT, dimension(:),   pointer :: vpsl
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: Imdensity(:)
@@ -621,7 +620,7 @@ contains
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
       call ssys_external_get(ep%subsys_external, "live", live_external)
       ASSERT(associated(live_external))
-      call base_external_get(live_external, vpsl)
+      call ssys_external_get(live_external, vpsl)
       ASSERT(associated(vpsl))
     else
       ! Sets the vpsl pointer to the total potential.

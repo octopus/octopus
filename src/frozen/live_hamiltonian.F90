@@ -14,8 +14,8 @@ module live_hamiltonian_m
   use base_system_m, only: &
     base_system_t
 
-  use base_external_m, only: &
-    base_external_t
+  use base_potential_m, only: &
+    base_potential_t
 
   use base_hamiltonian_m, only: &
     base_hamiltonian__get__
@@ -91,8 +91,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine live_hamiltonian_get_external(this, that)
-    type(live_hamiltonian_t), intent(in) :: this
-    type(base_external_t),   pointer     :: that
+    type(live_hamiltonian_t),  intent(in) :: this
+    type(base_potential_t),   pointer     :: that
     !
     PUSH_SUB(live_hamiltonian_get_external)
     call base_hamiltonian__get__(this, "external", that)

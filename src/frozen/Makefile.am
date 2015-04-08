@@ -37,7 +37,6 @@ libfrozen_a_SOURCES =		\
 	base_term.F90		\
 	base_ionic.F90		\
 	base_potential.F90	\
-	base_external.F90	\
 	base_functional.F90	\
 	base_hamiltonian.F90	\
 	base_model.F90		\
@@ -114,7 +113,6 @@ base_system.o 		: base_system.F90 base_states.o base_geom.o simulation.o config_
 base_term.o 		: base_term.F90 base_system.o config_dict.o
 base_ionic.o		: base_ionic.F90 base_term.o base_system.o base_geom.o 
 base_potential.o	: base_potential.F90 base_system.o simulation.o storage.o config_dict.o
-base_external.o 	: base_external.F90 base_potential.o base_system.o base_geom.o
 base_functional.o	: base_functional.F90 base_system.o base_states.o base_density.o simulation.o storage.o functional.o config_dict.o
 base_hamiltonian.o 	: base_hamiltonian.F90 base_functional.o base_potential.o base_term.o base_system.o simulation.o storage.o config_dict.o strng.o
 base_model.o 		: base_model.F90 base_hamiltonian.o base_system.o simulation.o config_dict.o
@@ -129,7 +127,7 @@ fio_simulation.o 	: fio_simulation.F90 fio_grid.o simulation.o
 fio_density.o 		: fio_density.F90 fio_simulation.o base_density.o
 fio_states.o 		: fio_states.F90 fio_density.o base_states.o
 fio_system.o 		: fio_system.F90 fio_states.o base_system.o
-fio_external.o 		: fio_external.F90 fio_simulation.o base_external.o
+fio_external.o 		: fio_external.F90 fio_simulation.o base_potential.o
 fio_hamiltonian.o	: fio_hamiltonian.F90 fio_external.o fio_system.o fio_simulation.o base_hamiltonian.o
 fio_model.o 		: fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o base_geom.o
 fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o
@@ -139,7 +137,7 @@ frozen_density.o 	: frozen_density.F90 fio_density.o base_density.o simulation.o
 frozen_states.o 	: frozen_states.F90 frozen_density.o fio_states.o fio_density.o base_states.o
 frozen_system.o 	: frozen_system.F90 frozen_states.o fio_system.o fio_states.o base_system.o
 frozen_ionic.o	 	: frozen_ionic.F90 base_ionic.o
-frozen_external.o 	: frozen_external.F90 fio_external.o base_external.o simulation.o intrpl.o basis.o
+frozen_external.o 	: frozen_external.F90 fio_external.o base_potential.o simulation.o intrpl.o basis.o
 frozen_hamiltonian.o	: frozen_hamiltonian.F90 frozen_external.o frozen_ionic.o frozen_system.o fio_hamiltonian.o fio_external.o base_hamiltonian.o
 frozen_model.o 		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_model.o fio_hamiltonian.o fio_system.o base_model.o
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o base_handle.o
@@ -154,7 +152,7 @@ ssys_states.o		: ssys_states.F90 ssys_density.o base_states.o
 ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 ssys_ionic.o		: ssys_ionic.F90 base_ionic.o
 ssys_functional.o	: ssys_functional.F90 base_functional.o
-ssys_external.o		: ssys_external.F90 base_external.o
+ssys_external.o		: ssys_external.F90 base_potential.o
 ssys_tnadd.o		: ssys_tnadd.F90 ssys_functional.o ssys_system.o base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o simulation.o
 ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
