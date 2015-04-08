@@ -249,7 +249,7 @@ contains
     !% in time, adds up to zero (this essentially means that the sum of all the cosine 
     !% coefficients is zero).
     !%Option control_rt 7
-    !% EXPERIMENTAL
+    !% (experimental)
     !%End
     call parse_integer(datasets_check('OCTControlFunctionRepresentation'), &
       ctr_rt, cf_common%representation)

@@ -219,23 +219,23 @@ contains
     !% The target operator is a projection operator on a transformation of the ground-state 
     !% orbitals defined by the block <tt>OCTTargetTransformStates</tt>.
     !%Option oct_tg_userdefined 4
-    !% Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
+    !% (Experimental) Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
     !%Option oct_tg_jdensity 5
     !% (Experimental)
     !%Option oct_tg_local 6
-    !% The target operator is a local operator.
+    !% (Experimental) The target operator is a local operator.
     !%Option oct_tg_td_local 7
-    !% The target operator is a time-dependent local operator.
+    !% (Experimental) The target operator is a time-dependent local operator.
     !%Option oct_tg_exclude_state 8
-    !% Target operator is the projection onto the complement of a given state, given by the
+    !% (Experimental) Target operator is the projection onto the complement of a given state, given by the
     !% block <tt>OCTTargetTransformStates</tt>. This means that the target operator is the unity
     !% operator minus the projector onto that state.
     !%Option oct_tg_hhg 9
-    !% The target is the optimization of the HHG yield. You must supply the <tt>OCTOptimizeHarmonicSpectrum</tt>
+    !% (Experimental) The target is the optimization of the HHG yield. You must supply the <tt>OCTOptimizeHarmonicSpectrum</tt>
     !% block, and it attempts to optimize the maximum of the spectrum around each harmonic peak. You may
     !% use only one of the gradient-less optimization schemes.
     !%Option oct_tg_velocity 10
-    !% The target is a function of the velocities of the nuclei at the end of the influence of
+    !% (Experimental) The target is a function of the velocities of the nuclei at the end of the influence of
     !% the external field, defined by <tt>OCTVelocityTarget</tt>
     !%Option oct_tg_hhgnew 12
     !% (Experimental) The target is the optimization of the HHG yield. You must supply the
@@ -247,6 +247,19 @@ contains
     !% (Experimental)
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
+      if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
+      if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
+      if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
+      if(tg%type == oct_tg_local) call messages_experimental('OCTTargetOperator = oct_tg_local')
+      if(tg%type == oct_tg_td_local) call messages_experimental('OCTTargetOperator = oct_tg_td_local')
+      if(tg%type == oct_tg_exclude_state) call messages_experimental('OCTTargetOperator = oct_tg_exclude_state')
+      if(tg%type == oct_tg_hhg) call messages_experimental('OCTTargetOperator = oct_tg_hhg')
+      if(tg%type == oct_tg_velocity) call messages_experimental('OCTTargetOperator = oct_tg_velocity')
+      if(tg%type == oct_tg_hhgnew) call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
+      if(tg%type == oct_tg_classical) call messages_experimental('OCTTargetOperator = oct_tg_classical')
+      if(tg%type == oct_tg_spin) call messages_experimental('OCTTargetOperator = oct_tg_spin')
+
+
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
       call input_error('OCTTargetOperator')
 
