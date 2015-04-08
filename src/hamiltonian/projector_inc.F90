@@ -99,7 +99,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     return
   end if
 
-  SAFE_ALLOCATE(reduce_buffer(1:nreduce, 1:dim))
+  SAFE_ALLOCATE(reduce_buffer(1:dim, 1:nreduce))
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
@@ -134,18 +134,18 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           ii = ireduce(ipj, ll, mm, ist)
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
+            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
+              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
             else
-              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
+              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
-              lpsi(1:ns, 1:dim), reduce_buffer(ii:, 1:dim))
+              lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
           end select
         end do ! mm
       end do ! ll
@@ -174,6 +174,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       lpsi(1:ns, 1:dim) = M_ZERO
 
+      ! FIXME: restore openmp
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
@@ -181,18 +182,18 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
+            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
+              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
             else
-              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
+              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(ii:, 1:dim), lpsi(1:ns, 1:dim))
+              pj(ipj)%reltype, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
           end select
           
         end do ! mm

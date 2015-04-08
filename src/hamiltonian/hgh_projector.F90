@@ -126,6 +126,18 @@ contains
     POP_SUB(hgh_projector_end)
   end subroutine hgh_projector_end
 
+  ! ---------------------------------------------------------
+  !> index from (1:3, 1:4) to linear array
+  integer function hgh_index(kk, jj)
+    integer, intent(in) :: kk
+    integer, intent(in) :: jj
+
+    ! no push/pop, threadsafe
+
+    hgh_index = (kk-1)*3 + jj
+    
+  end function hgh_index
+
 #include "undef.F90"
 #include "real.F90"
 #include "hgh_projector_inc.F90"

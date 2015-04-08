@@ -36,13 +36,13 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   type(submesh_t),       intent(in)    :: sm
   type(hgh_projector_t), intent(in)    :: hgh_p
   integer,               intent(in)    :: dim
-  R_TYPE,                intent(in)    :: psi(:, :)  !< psi(hgh\%n_s, dim)
-  R_TYPE,                intent(inout) :: ppsi(:, :) !< ppsi(hgh\%n_s, dim)
+  R_TYPE,                intent(in)    :: psi(:, :)  !< (hgh\%n_s, dim)
+  R_TYPE,                intent(inout) :: ppsi(:, :) !< (hgh\%n_s, dim)
   integer,               intent(in)    :: reltype
 
-  R_TYPE :: uvpsi(1:2, 1:4, 1:3)
+  R_TYPE :: uvpsi(1:2, 1:12)
 #ifdef HAVE_MPI
-  R_TYPE :: uvpsi_tmp(1:2, 1:4, 1:3)
+  R_TYPE :: uvpsi_tmp(1:2, 1:12)
 #endif
 
   call X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
@@ -67,7 +67,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   integer,               intent(in)  :: dim
   integer,               intent(in)  :: reltype
   R_TYPE,                intent(in)  :: psi(:, :)
-  R_TYPE,                intent(out) :: uvpsi(1:2, 1:4, 1:3)
+  R_TYPE,                intent(out) :: uvpsi(:,:) !< (dim, 12)
 
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
@@ -100,7 +100,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   do idim = 1, dim
     do kk = 1, 4
       do jj = 1, 3
-        uvpsi(idim, kk, jj) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
+        uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
       end do
     end do
   end do
@@ -115,7 +115,7 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   type(hgh_projector_t), intent(in)    :: hgh_p
   integer,               intent(in)    :: dim
   integer,               intent(in)    :: reltype
-  R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
+  R_TYPE,                intent(in)    :: uvpsi(:,:) !< (dim, 12)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim
@@ -127,7 +127,7 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   do idim = 1, dim
     do jj = 1, 3
       do ii = 1, 3
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))*hgh_p%p(1:n_s, ii)
       end do
     end do
   end do
@@ -141,7 +141,7 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
       do kk = 1, 3
         do jj = 1, 3
           do ii = 1, 3
-            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj)*uvpsi(idim, kk, jj)*hgh_p%p(1:n_s, ii)
+            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))*hgh_p%p(1:n_s, ii)
           end do
         end do
       end do
