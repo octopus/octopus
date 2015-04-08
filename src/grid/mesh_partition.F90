@@ -787,7 +787,7 @@ contains
     
     integer              :: ii, jj         ! Counter.
     integer              :: iunit          ! For debug output to files.
-    character(len=3)     :: filenum
+    character(len=6)     :: filenum
 
     if(.not. in_debug_mode) return
 
@@ -796,8 +796,9 @@ contains
     call io_mkdir('debug/mesh_partition')
 
     ! Debug output. Write points of each partition in a different file.
-    write(filenum, '(i3.3)') mesh%mpi_grp%rank+1
+    write(filenum, '(i6.6)') mesh%mpi_grp%rank+1
 
+    ! without boundary
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
       action='write')
     do ii = 1, mesh%np
@@ -806,6 +807,7 @@ contains
     end do
     call io_close(iunit)
 
+    ! with boundary included
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
       action='write')
     do ii = 1, mesh%np
@@ -818,10 +820,9 @@ contains
     end do
     call io_close(iunit)
 
+    ! points from enlargement
     if(mpi_grp_is_root(mpi_world)) then
-      ! Write points from enlargement to file with number p+1.
-      write(filenum, '(i3.3)') mesh%mpi_grp%size+1
-      iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+      iunit = io_open('debug/mesh_partition/mesh_partition_boundary', &
         action='write')
       do ii = mesh%np_global+1, mesh%np_part_global
         write(iunit, '(i8,99f18.8)') ii, mesh_x_global(mesh, ii)
