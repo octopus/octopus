@@ -192,14 +192,13 @@ contains
   end subroutine fio_external_get_simulation
 
   ! ---------------------------------------------------------
-  subroutine fio_external_get_potential_1d(this, that, total)
+  subroutine fio_external_get_potential_1d(this, that)
     type(fio_external_t),                   intent(in) :: this
     real(kind=wp),           dimension(:), pointer     :: that
-    real(kind=wp), optional, dimension(:), pointer     :: total
 
     PUSH_SUB(fio_external_get_potential_1d)
 
-    call base_potential_get(this, that, total)
+    call base_potential_get(this, that)
 
     POP_SUB(fio_external_get_potential_1d)
   end subroutine fio_external_get_potential_1d
