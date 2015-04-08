@@ -156,7 +156,6 @@ module base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_PREFIX
-!#include "intrpl_inc.F90"
 #include "iterator_code.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
@@ -347,7 +346,6 @@ module base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_HEADER
-!#include "intrpl_inc.F90"
 #include "iterator_code.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
@@ -535,8 +533,7 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t),         intent(in)  :: config
     !
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: type, ierr
+    integer :: type, ierr
     !
     PUSH_SUB(hterm__init__hterm)
     call json_get(config, "type", type, ierr)
@@ -1879,7 +1876,6 @@ contains
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_BODY
-!#include "intrpl_inc.F90"
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX

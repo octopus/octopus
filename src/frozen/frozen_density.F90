@@ -40,11 +40,7 @@ module frozen_density_m
 
   use base_density_m, only:                   &
     frozen_density_t    => base_density_t,    &
-    frozen_density_eval => base_density_eval, &
     frozen_density_get  => base_density_get
-
-  use base_density_m, only:                           &
-    frozen_density_intrpl_t => base_density_intrpl_t
 
   implicit none
 
@@ -58,13 +54,9 @@ module frozen_density_m
     frozen_density_start,  &
     frozen_density_update, &
     frozen_density_stop,   &
-    frozen_density_eval,   &
     frozen_density_get,    &
     frozen_density_copy,   &
     frozen_density_end
-
-  public ::                  &
-    frozen_density_intrpl_t
 
 contains
 

@@ -24,16 +24,12 @@ module ssys_density_m
     ssys_density_del  => base_density_del,  &
     ssys_density_init => base_density_init, &
     ssys_density_next => base_density_next, &
-    ssys_density_eval => base_density_eval, &
     ssys_density_get  => base_density_get,  &
     ssys_density_copy => base_density_copy, &
     ssys_density_end  => base_density_end
 
   use base_density_m, only:                             &
     ssys_density_iterator_t => base_density_iterator_t
-
-  use base_density_m, only:                         &
-    ssys_density_intrpl_t => base_density_intrpl_t
 
   use base_density_m, only:                               &
     SSYS_DENSITY_OK          => BASE_DENSITY_OK,          &
@@ -52,16 +48,12 @@ module ssys_density_m
     ssys_density_update, &
     ssys_density_stop,   &
     ssys_density_next,   &
-    ssys_density_eval,   &
     ssys_density_get,    &
     ssys_density_copy,   &
     ssys_density_end
 
   public ::                  &
     ssys_density_iterator_t
-
-  public ::                &
-    ssys_density_intrpl_t
 
   public ::                   &
     SSYS_DENSITY_OK,          &

@@ -23,12 +23,6 @@ module base_external_m
     base_system_t,         &
     base_system_get
 
-  use base_potential_m, only: &
-    BASE_POTENTIAL_INTRPL_OK
-
-  use base_potential_m, only: &
-    base_potential_eval
-
   use base_potential_m, only:                            &
     base_external__init__   => base_potential__init__,   &
     base_external__start__  => base_potential__start__,  &
@@ -56,9 +50,6 @@ module base_external_m
 
   use base_potential_m, only:                              &
     base_external_iterator_t => base_potential_iterator_t
-
-  use base_potential_m, only:                          &
-    base_external_intrpl_t => base_potential_intrpl_t
 
   use base_potential_m, only:                          &
     BASE_EXTERNAL_NAME_LEN => BASE_POTENTIAL_NAME_LEN
@@ -91,7 +82,6 @@ module base_external_m
     base_external_update, &
     base_external_stop,   &
     base_external_next,   &
-    base_external_eval,   &
     base_external_set,    &
     base_external_get,    &
     base_external_copy,   &
@@ -101,15 +91,14 @@ module base_external_m
     base_external_iterator_t
 
   public ::                 &
-    base_external_intrpl_t
-
-  public ::                 &
     BASE_EXTERNAL_NAME_LEN
 
   public ::                    &
     BASE_EXTERNAL_OK,          &
     BASE_EXTERNAL_KEY_ERROR,   &
     BASE_EXTERNAL_EMPTY_ERROR
+
+#if 0
 
 contains
 
@@ -190,6 +179,8 @@ contains
     POP_SUB(base_external_intrpl_eval)
     return
   end subroutine base_external_eval
+
+#endif
 
 end module base_external_m
 

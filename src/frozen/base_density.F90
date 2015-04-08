@@ -45,7 +45,6 @@ module base_density_m
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -146,7 +145,6 @@ module base_density_m
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -771,61 +769,8 @@ contains
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_BODY
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
-
-#if 0
-
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_eval_1d(this, x, val)
-    type(base_density_intrpl_t), intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp),               intent(out) :: val
-
-    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
-    real(kind=wp), dimension(1)                                 :: tv1
-    integer                                                     :: ierr
-
-    PUSH_SUB(base_density_intrpl_eval_1d)
-
-    if(base_density_get_nspin(this%self)==1)then
-      call storage_eval(this%intrp, x, val, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
-    else
-      call storage_eval(this%intrp, x, tvl, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
-      call base_density_adjust_spin(tv1, tvl)
-      val=tv1(1)
-    end if
-
-    POP_SUB(base_density_intrpl_eval_1d)
-  end subroutine base_density_intrpl_eval_1d
-
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_eval_2d(this, x, val)
-    type(base_density_intrpl_t), intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp), dimension(:), intent(out) :: val
-
-    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
-    integer                                                     :: ierr
-
-    PUSH_SUB(base_density_intrpl_eval_2d)
-
-    if(base_density_get_nspin(this%self)==size(val))then
-      call storage_eval(this%intrp, x, val, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
-    else
-      call storage_eval(this%intrp, x, tvl, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
-      call base_density_adjust_spin(val, tvl)
-    end if
-
-    POP_SUB(base_density_intrpl_eval_2d)
-  end subroutine base_density_intrpl_eval_2d
-
-#endif
 
 end module base_density_m
 

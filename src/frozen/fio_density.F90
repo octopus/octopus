@@ -13,22 +13,26 @@ module fio_density_m
   use path_m,      only: path_join
 
   use base_density_m, only: &
-    base_density__update__
+    base_density__init__,   &
+    base_density__update__, &
+    base_density__copy__,   &
+    base_density__end__
 
   use base_density_m, only:                     &
-    fio_density_init  => base_density__init__,  &
     fio_density_start => base_density__start__, &
-    fio_density_stop  => base_density__stop__,  &
-    fio_density_copy  => base_density__copy__,  &
-    fio_density_end   => base_density__end__
+    fio_density_stop  => base_density__stop__
 
-  use base_density_m, only:                &
-    fio_density_t    => base_density_t,    &
-    fio_density_eval => base_density_eval, &
-    fio_density_get  => base_density_get
+  use base_density_m, only: &
+    base_density_get
 
-  use base_density_m, only:                        &
-    fio_density_intrpl_t => base_density_intrpl_t
+  use base_density_m, only:          &
+    fio_density_t => base_density_t
+
+#define TEMPLATE_NAME fio_density
+#define INCLUDE_PREFIX
+#include "intrpl_inc.F90"
+#undef INCLUDE_PREFIX
+#undef TEMPLATE_NAME
 
   implicit none
 
@@ -39,15 +43,62 @@ module fio_density_m
     fio_density_start,  &
     fio_density_update, &
     fio_density_stop,   &
-    fio_density_eval,   &
     fio_density_get,    &
     fio_density_copy,   &
     fio_density_end
 
-  public ::               &
-    fio_density_intrpl_t
+#define TEMPLATE_NAME fio_density
+#define INCLUDE_HEADER
+#include "intrpl_inc.F90"
+#undef INCLUDE_HEADER
+#undef TEMPLATE_NAME
+
+  interface fio_density_init
+    module procedure fio_density_init_density
+    module procedure fio_density_init_copy
+  end interface fio_density_init
+
+  interface fio_density_get
+    module procedure fio_density_get_info
+    module procedure fio_density_get_config
+    module procedure fio_density_get_simulation
+    module procedure fio_density_get_density_1d
+    module procedure fio_density_get_density_2d
+  end interface fio_density_get
+
+  interface fio_density_copy
+    module procedure fio_density_copy_density
+  end interface fio_density_copy
+
+  interface fio_density_end
+    module procedure fio_density_end_density
+  end interface fio_density_end
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_init_density(this, config)
+    type(fio_density_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: config
+
+    PUSH_SUB(fio_density_init_density)
+
+    call base_density__init__(this, config)
+
+    POP_SUB(fio_density_init_density)
+  end subroutine fio_density_init_density
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_init_copy(this, that)
+    type(fio_density_t), intent(out) :: this
+    type(fio_density_t), intent(in)  :: that
+
+    PUSH_SUB(fio_density_init_copy)
+
+    call base_density__init__(this, that)
+
+    POP_SUB(fio_density_init_copy)
+  end subroutine fio_density_init_copy
 
   ! ---------------------------------------------------------
   subroutine fio_density_read(this, dir, file, ispin)
@@ -55,12 +106,13 @@ contains
     character(len=*),    intent(in)    :: dir
     character(len=*),    intent(in)    :: file
     integer,             intent(in)    :: ispin
-    !
+
     real(kind=wp), dimension(:,:), pointer :: dnst
     character(len=MAX_PATH_LEN)            :: fpth
     integer                                :: np, ierr
-    !
+
     PUSH_SUB(fio_density_read)
+
     nullify(dnst)
     call fio_density_get(this, dnst)
     ASSERT(associated(dnst))
@@ -74,21 +126,22 @@ contains
       call messages_fatal(2)
     end if
     nullify(dnst)
+
     POP_SUB(fio_density_read)
-    return
   end subroutine fio_density_read
 
   ! ---------------------------------------------------------
   subroutine fio_density_update(this)
     type(fio_density_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
     type(json_array_iterator_t)  :: iter
     character(len=MAX_PATH_LEN)  :: dir, file
     integer                      :: isp, nspin, ierr
-    !
+
     PUSH_SUB(fio_density_update)
+
     nullify(cnfg, list)
     call fio_density_get(this, cnfg)
     ASSERT(associated(cnfg))
@@ -110,9 +163,153 @@ contains
     ASSERT(isp==nspin)
     nullify(cnfg, list)
     call base_density__update__(this)
+
     POP_SUB(fio_density_update)
-    return
   end subroutine fio_density_update
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_info(this, size, nspin, fine)
+    type(fio_density_t), intent(in)  :: this
+    integer,    optional, intent(out) :: size
+    integer,    optional, intent(out) :: nspin
+    logical,    optional, intent(out) :: fine
+
+    PUSH_SUB(fio_density_get_info)
+
+    call base_density_get(this, size=size, nspin=nspin, fine=fine)
+
+    POP_SUB(fio_density_get_info)
+  end subroutine fio_density_get_info
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_config(this, that)
+    type(fio_density_t), target, intent(in) :: this
+    type(json_object_t), pointer             :: that
+
+    PUSH_SUB(fio_density_get_config)
+
+    call base_density_get(this, that)
+
+    POP_SUB(fio_density_get_config)
+  end subroutine fio_density_get_config
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_simulation(this, that)
+    type(fio_density_t), target, intent(in) :: this
+    type(simulation_t),  pointer             :: that
+
+    PUSH_SUB(fio_density_get_simulation)
+
+    call base_density_get(this, that)
+
+    POP_SUB(fio_density_get_simulation)
+  end subroutine fio_density_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_density_1d(this, that, total)
+    type(fio_density_t),                   intent(in) :: this
+    real(kind=wp),           dimension(:), pointer     :: that
+    real(kind=wp), optional, dimension(:), pointer     :: total
+
+    PUSH_SUB(fio_density_get_density_1d)
+
+    call fio_density_get(this, that, total)
+
+    POP_SUB(fio_density_get_density_1d)
+  end subroutine fio_density_get_density_1d
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_density_2d(this, that)
+    type(fio_density_t),           intent(in) :: this
+    real(kind=wp), dimension(:,:), pointer     :: that
+
+    PUSH_SUB(density_get_fio_density_2d)
+
+    call base_density_get(this, that)
+
+    POP_SUB(fio_density_get_density_2d)
+  end subroutine fio_density_get_density_2d
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_copy_density(this, that)
+    type(fio_density_t), intent(inout) :: this
+    type(fio_density_t), intent(in)    :: that
+
+    PUSH_SUB(fio_density_copy_density)
+
+    call base_density__copy__(this, that)
+
+    POP_SUB(fio_density_copy_density)
+  end subroutine fio_density_copy_density
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_end_density(this)
+    type(fio_density_t), intent(inout) :: this
+
+    PUSH_SUB(fio_density_end_density)
+
+    call base_density__end__(this)
+
+    POP_SUB(fio_density_end_density)
+  end subroutine fio_density_end_density
+
+#define TEMPLATE_NAME fio_density
+#define INCLUDE_BODY
+#include "intrpl_inc.F90"
+#undef INCLUDE_BODY
+#undef TEMPLATE_NAME
+
+#if 0
+
+  ! ---------------------------------------------------------
+  subroutine base_density_intrpl_eval_1d(this, x, val)
+    type(base_density_intrpl_t), intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp),               intent(out) :: val
+
+    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
+    real(kind=wp), dimension(1)                                 :: tv1
+    integer                                                     :: ierr
+
+    PUSH_SUB(base_density_intrpl_eval_1d)
+
+    if(base_density_get_nspin(this%self)==1)then
+      call storage_eval(this%intrp, x, val, ierr)
+      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
+    else
+      call storage_eval(this%intrp, x, tvl, ierr)
+      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
+      call base_density_adjust_spin(tv1, tvl)
+      val=tv1(1)
+    end if
+
+    POP_SUB(base_density_intrpl_eval_1d)
+  end subroutine base_density_intrpl_eval_1d
+
+  ! ---------------------------------------------------------
+  subroutine base_density_intrpl_eval_2d(this, x, val)
+    type(base_density_intrpl_t), intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp), dimension(:), intent(out) :: val
+
+    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
+    integer                                                     :: ierr
+
+    PUSH_SUB(base_density_intrpl_eval_2d)
+
+    if(base_density_get_nspin(this%self)==size(val))then
+      call storage_eval(this%intrp, x, val, ierr)
+      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
+    else
+      call storage_eval(this%intrp, x, tvl, ierr)
+      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
+      call base_density_adjust_spin(val, tvl)
+    end if
+
+    POP_SUB(base_density_intrpl_eval_2d)
+  end subroutine base_density_intrpl_eval_2d
+
+#endif
 
 end module fio_density_m
 

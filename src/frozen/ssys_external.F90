@@ -22,16 +22,12 @@ module ssys_external_m
     ssys_external_t    => base_external_t,    &
     ssys_external_init => base_external_init, &
     ssys_external_next => base_external_next, &
-    ssys_external_eval => base_external_eval, &
     ssys_external_get  => base_external_get,  &
     ssys_external_copy => base_external_copy, &
     ssys_external_end  => base_external_end
 
   use base_external_m, only:                             &
     ssys_external_iterator_t => base_external_iterator_t
-
-  use base_external_m, only:                         &
-    ssys_external_intrpl_t => base_external_intrpl_t
 
   use base_external_m, only:                                &
     SSYS_EXTERNAL_OK          => BASE_EXTERNAL_OK,          &
@@ -48,16 +44,12 @@ module ssys_external_m
     ssys_external_update, &
     ssys_external_stop,   &
     ssys_external_next,   &
-    ssys_external_eval,   &
     ssys_external_get,    &
     ssys_external_copy,   &
     ssys_external_end
 
   public ::                   &
     ssys_external_iterator_t
-
-  public ::                 &
-    ssys_external_intrpl_t
 
   public ::                    &
     SSYS_EXTERNAL_OK,          &

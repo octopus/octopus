@@ -77,7 +77,6 @@ module base_potential_m
 #define TEMPLATE_PREFIX base_potential
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -185,7 +184,6 @@ module base_potential_m
 #define TEMPLATE_PREFIX base_potential
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -745,7 +743,6 @@ contains
 #define TEMPLATE_PREFIX base_potential
 #define INCLUDE_BODY
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 

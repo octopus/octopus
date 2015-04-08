@@ -37,11 +37,7 @@ module frozen_external_m
 
   use base_external_m, only:                    &
     frozen_external_t    => base_external_t,    &
-    frozen_external_eval => base_external_eval, &
     frozen_external_get  => base_external_get
-
-  use base_external_m, only:                            &
-    frozen_external_intrpl_t => base_external_intrpl_t
 
   implicit none
 
@@ -55,13 +51,9 @@ module frozen_external_m
     frozen_external_start,  &
     frozen_external_update, &
     frozen_external_stop,   &
-    frozen_external_eval,   &
     frozen_external_get,    &
     frozen_external_copy,   &
     frozen_external_end
-
-  public ::                   &
-    frozen_external_intrpl_t
 
 contains
 
@@ -78,7 +70,7 @@ contains
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
     real(kind=wp)                            :: pot
-    integer                                  :: indx, np
+    integer                                  :: indx, np, ierr
     !
     PUSH_SUB(frozen_external_update_intrpl)
     nullify(potn, sim, space, mesh)
@@ -96,7 +88,7 @@ contains
     SAFE_ALLOCATE(x(space%dim))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      call fio_external_eval(intrpl, x, pot)
+      call fio_external_eval(intrpl, x, pot, ierr)
       potn(indx)=potn(indx)+pot
     end do
     SAFE_DEALLOCATE_A(x)

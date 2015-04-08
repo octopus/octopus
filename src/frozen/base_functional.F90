@@ -97,7 +97,6 @@ module base_functional_m
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -214,7 +213,6 @@ module base_functional_m
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
-#include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -839,12 +837,6 @@ contains
 #include "iterator_code.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
-
-#define TEMPLATE_NAME base_functional
-#define INCLUDE_BODY
-#include "intrpl_inc.F90"
-#undef INCLUDE_BODY
-#undef TEMPLATE_NAME
 
 end module base_functional_m
 

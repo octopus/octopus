@@ -16,11 +16,7 @@ module ssys_functional_m
 
   use base_functional_m, only:                    &
     ssys_functional_t    => base_functional_t,    &
-    ssys_functional_eval => base_functional_eval, &
     ssys_functional_get  => base_functional_get
-
-  use base_functional_m, only:                            &
-    ssys_functional_intrpl_t => base_functional_intrpl_t
 
   implicit none
 
@@ -31,7 +27,6 @@ module ssys_functional_m
     ssys_functional_start,  &
     ssys_functional_update, &
     ssys_functional_stop,   &
-    ssys_functional_eval,   &
     ssys_functional_get,    &
     ssys_functional_copy,   &
     ssys_functional_end

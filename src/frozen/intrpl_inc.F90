@@ -14,6 +14,9 @@
     INTRPL_OD,        &
     INTRPL_NI
 
+  use simulation_m, only: &
+    simulation_t
+
 #endif
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
 
@@ -38,22 +41,22 @@
     type(intrpl_t)             :: intrp
   end type TEMPLATE(intrpl_t)
 
+#if 0
+
   interface TEMPLATE(_init__)
     module procedure TEMPLATE(intrpl_init)
   end interface TEMPLATE(_init__)
-
-#if 0
 
   interface TEMPLATE(_copy__)
     module procedure TEMPLATE(intrpl_copy)
   end interface TEMPLATE(_copy__)
 
-#endif
-  
   interface TEMPLATE(_end__)
     module procedure TEMPLATE(intrpl_end)
   end interface TEMPLATE(_end__)
 
+#endif
+  
   interface TEMPLATE(init)
     module procedure TEMPLATE(intrpl_init)
   end interface TEMPLATE(init)
@@ -86,14 +89,18 @@
     real(kind=wp),   optional, intent(in)  :: default
 
     real(kind=wp), dimension(:,:), pointer :: data
+    type(simulation_t),            pointer :: sim
 
     PUSH_SUB(TEMPLATE(intrpl_init))
 
-    nullify(data)
+    nullify(data, sim)
     this%self=>that
+    call TEMPLATE(get)(that, sim)
+    ASSERT(associated(sim))
     call TEMPLATE(get)(that, data)
     ASSERT(associated(data))
-    call intrpl_init(this%intrp, that%sim, data, type=type, default=default)
+    call intrpl_init(this%intrp, sim, data, type=type, default=default)
+    nullify(data, sim)
 
     POP_SUB(TEMPLATE(intrpl_init))
   end subroutine TEMPLATE(intrpl_init)
