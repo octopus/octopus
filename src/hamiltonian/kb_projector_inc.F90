@@ -31,26 +31,30 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   type(submesh_t),      intent(in)    :: sm
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
-  R_TYPE,               intent(in)    :: psi(:, :)  !< psi(kb%n_s, dim)
-  R_TYPE,               intent(inout) :: ppsi(:, :) !< ppsi(kb%n_s, dim)
+  R_TYPE,               intent(in)    :: psi(:, :)  !< (kb%n_s, dim)
+  R_TYPE,               intent(inout) :: ppsi(:, :) !< (kb%n_s, dim)
 
-  R_TYPE :: uvpsi(1:2)
+  R_TYPE, allocatable :: uvpsi(:,:)
 #if defined(HAVE_MPI)
-  R_TYPE :: uvpsi_tmp(1:2)
+  R_TYPE, allocatable :: uvpsi_tmp(:,:)
 #endif
 
   PUSH_SUB(X(kb_project))
 
+  SAFE_ALLOCATE(uvpsi(1:kb_p%n_c, 1:dim))
   call X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(uvpsi, uvpsi_tmp, 2, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    SAFE_ALLOCATE(uvpsi_tmp(1:kb_p%n_c, 1:dim))
+    call MPI_Allreduce(uvpsi, uvpsi_tmp, size(uvpsi), R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     uvpsi = uvpsi_tmp
+    SAFE_DEALLOCATE_A(uvpsi_tmp)
   end if
 #endif
 
   call X(kb_project_ket)(kb_p, dim, uvpsi, ppsi)
+  SAFE_DEALLOCATE_A(uvpsi)
 
   POP_SUB(X(kb_project))
 
@@ -63,8 +67,8 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   type(submesh_t),      intent(in)  :: sm
   type(kb_projector_t), intent(in)  :: kb_p
   integer,              intent(in)  :: dim
-  R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:ns, 1:dim)
-  R_TYPE,               intent(out) :: uvpsi(1:kb_p%n_c, 1:dim)
+  R_TYPE,               intent(in)  :: psi(:,:)   !< (1:ns, 1:dim)
+  R_TYPE,               intent(out) :: uvpsi(:,:) !< (1:kb_p%n_c, 1:dim)
 
   integer :: ic, idim, ns, is
 
@@ -110,8 +114,8 @@ end subroutine X(kb_project_bra)
 subroutine X(kb_project_ket)(kb_p, dim, uvpsi, psi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
-  R_TYPE,               intent(inout) :: uvpsi(1:kb_p%n_c, 1:dim)
-  R_TYPE,               intent(inout) :: psi(:, :) !< psi(1:ns, 1:dim)
+  R_TYPE,               intent(inout) :: uvpsi(:,:) !< (1:kb_p%n_c, 1:dim)
+  R_TYPE,               intent(inout) :: psi(:, :) !< (1:ns, 1:dim)
 
   integer :: ic, idim, ns, is
 
@@ -141,7 +145,7 @@ end subroutine X(kb_project_ket)
 subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
-  R_TYPE,               intent(inout) :: uvpsi(1:kb_p%n_c, 1:dim)
+  R_TYPE,               intent(inout) :: uvpsi(:,:) !< (1:kb_p%n_c, 1:dim)
   
   integer :: idim
 
