@@ -33,6 +33,10 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   integer :: ip, ixc, spin_channels
   type(xc_functl_t), pointer :: functl(:)
 
+  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
+
+  PUSH_SUB(xc_get_fxc)
+
   if(present(zfxc)) then
     ASSERT(ispin  ==  SPINORS)
     spinors_fxc = .true.
@@ -42,13 +46,9 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
     spinors_fxc = .false.
   end if
 
-  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
-
-  PUSH_SUB(xc_get_fxc)
-
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)) /= XC_FAMILY_NONE) then
-    message(1) = "Only LDA functionals are authorized for now in xc_get_fxc."
+  if(iand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
+    message(1) = "Only LDA functionals are authorized for now in XCKernel."
     call messages_fatal(1)
   end if
 
@@ -57,6 +57,13 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   else
     functl => xcs%kernel(:, 2)
   end if
+
+  do ixc = 1, 2
+    if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_FXC) == 0) then
+      message(1) = "Cannot calculate kernel. This functional does not have fxc available."
+      call messages_fatal(1)
+    endif
+  enddo
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
