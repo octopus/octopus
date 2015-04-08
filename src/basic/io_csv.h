@@ -1,4 +1,3 @@
-#if 0
 /*
   Copyright (C) 2009 octopus team
 
@@ -17,7 +16,6 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301, USA.
 */
-#endif
 
 #ifndef IO_CSV_H
 #define IO_CSV_H

@@ -1,4 +1,3 @@
-#if 0
 /*
   Copyright (C) 2009 X. Andrade
 
@@ -19,14 +18,9 @@
 
   $Id$
 */
-#endif
 
 #ifndef IO_BINARY_H
 #define IO_BINARY_H
-
-#if 0
-/* These values must not be changed, as they are used in the restart files */
-#endif
 
 #define TYPE_FLOAT          0
 #define TYPE_DOUBLE         1
