@@ -1,3 +1,4 @@
+
 #include "global.h"
 
 module storage_m
@@ -18,44 +19,24 @@ module storage_m
     simulation_t,         &
     simulation_get
 
-  use intrpl_m, only: &
-    intrpl_init
-
-  use intrpl_m, only: &
-    intrpl_t,         &
-    intrpl_eval,      &
-    intrpl_copy,      &
-    intrpl_end
-
-  use intrpl_m, only:               &
-    STORAGE_INTRPL_OK => INTRPL_OK, &
-    STORAGE_INTRPL_OD => INTRPL_OD, &
-    STORAGE_INTRPL_NI => INTRPL_NI
-
   implicit none
 
   private
-  public ::                &
-    storage_init,          &
-    storage_start,         &
-    storage_update,        &
-    storage_stop,          &
-    storage_reset,         &
-    storage_accumulate,    &
-    storage_eval,          &
-    storage_get,           &
-    storage_get_size,      &
-    storage_get_dimension, &
-    storage_transfer,      &
-    storage_copy,          &
+  public ::             &
+    storage_t,          &
+    storage_init,       &
+    storage_start,      &
+    storage_update,     &
+    storage_stop,       &
+    storage_reset,      &
+    storage_accumulate, &
+    storage_reduce,     &
+    storage_get,        &
+    storage_transfer,   &
+    storage_copy,       &
     storage_end
 
-  public ::            &
-    STORAGE_INTRPL_OK, &
-    STORAGE_INTRPL_OD, &
-    STORAGE_INTRPL_NI
-
-  type, public :: storage_t
+  type :: storage_t
     private
     type(simulation_t),                pointer :: sim     =>null()
     type(grid_t),                      pointer :: grid    =>null()
@@ -69,22 +50,10 @@ module storage_m
     real(kind=wp), dimension(:,:), allocatable :: data
   end type storage_t
 
-  type, public :: storage_intrpl_t
-    private
-    type(storage_t), pointer :: self =>null()
-    type(intrpl_t)           :: intrp
-  end type storage_intrpl_t
-
   interface storage_init
     module procedure storage_init_simple
     module procedure storage_init_copy
-    module procedure storage_intrpl_init
   end interface storage_init
-
-  interface storage_eval
-    module procedure storage_intrpl_eval_1d
-    module procedure storage_intrpl_eval_md
-  end interface storage_eval
 
   interface storage_get
     module procedure storage_get_info
@@ -92,16 +61,6 @@ module storage_m
     module procedure storage_get_storage_1d
     module procedure storage_get_storage_md
   end interface storage_get
-
-  interface storage_copy
-    module procedure storage_copy_storage
-    module procedure storage_intrpl_copy
-  end interface storage_copy
-
-  interface storage_end
-    module procedure storage_end_storage
-    module procedure storage_intrpl_end
-  end interface storage_end
 
 contains
 
@@ -278,38 +237,37 @@ contains
   end subroutine storage_accumulate
 
   ! ---------------------------------------------------------
-  elemental function storage_is_fine(this) result(that)
-    type(storage_t), intent(in) :: this
+  subroutine storage_reduce(this, that)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
     !
-    logical :: that
+    integer :: indx
     !
-    that=this%fine
+    PUSH_SUB(storage_reduce)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(that%grid))
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(that%mesh))
+    ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(that%ndim>0)
+    ASSERT(this%ndim==1)
+    ASSERT(this%ndim<=that%ndim)
+    ASSERT(this%size>0)
+    ASSERT(that%size>0)
+    ASSERT(this%size==that%size)
+    ASSERT(this%default.equal.that%default)
+    if(this%alloc.and.that%alloc)then
+      do indx = 1, this%mesh%np
+        this%data(indx,1)=sum(that%data(indx,:))
+      end do
+      call storage_update(this)
+    end if
+    POP_SUB(storage_reduce)
     return
-  end function storage_is_fine
-
-  ! ---------------------------------------------------------
-  elemental function storage_get_size(this) result(that)
-    type(storage_t), intent(in) :: this
-    !
-    integer :: that
-    !
-    that=0
-    if(associated(this%mesh))&
-      that=this%mesh%np
-    return
-  end function storage_get_size
-
-  ! ---------------------------------------------------------
-  elemental function storage_get_dimension(this) result(that)
-    type(storage_t), intent(in) :: this
-    !
-    integer :: that
-    !
-    that=0
-    if(this%ndim>0)&
-      that=this%ndim
-    return
-  end function storage_get_dimension
+  end subroutine storage_reduce
 
   ! ---------------------------------------------------------
   subroutine storage_get_info(this, fine, dim, size)
@@ -319,12 +277,15 @@ contains
     integer,       optional, intent(out) :: size
     !
     PUSH_SUB(storage_get_sim)
-    if(present(fine))&
-      fine=storage_is_fine(this)
-    if(present(dim))&
-      dim=storage_get_dimension(this)
-    if(present(size))&
-      size=storage_get_size(this)
+    if(present(fine))fine=this%fine
+    if(present(dim))then
+      dim=0
+      if(this%ndim>0)dim=this%ndim
+    end if
+    if(present(size))then
+      size=0
+      if(associated(this%mesh))size=this%mesh%np
+    end if
     POP_SUB(storage_get_sim)
     return
   end subroutine storage_get_info
@@ -425,11 +386,11 @@ contains
   end subroutine storage_transfer
 
   ! ---------------------------------------------------------
-  subroutine storage_copy_storage(this, that)
+  subroutine storage_copy(this, that)
     type(storage_t), intent(inout) :: this
     type(storage_t), intent(in)    :: that
     !
-    PUSH_SUB(storage_copy_storage)
+    PUSH_SUB(storage_copy)
     call storage_end(this)
     if(that%ndim>0)then
       call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
@@ -441,15 +402,15 @@ contains
         end if
       end if
     end if
-    POP_SUB(storage_copy_storage)
+    POP_SUB(storage_copy)
     return
-  end subroutine storage_copy_storage
+  end subroutine storage_copy
 
   ! ---------------------------------------------------------
-  subroutine storage_end_storage(this)
+  subroutine storage_end(this)
     type(storage_t), intent(inout) :: this
     !
-    PUSH_SUB(storage_end_storage)
+    PUSH_SUB(storage_end)
     nullify(this%sim, this%grid, this%mesh)
     this%full=.true.
     this%fine=.false.
@@ -460,83 +421,9 @@ contains
       SAFE_DEALLOCATE_A(this%data)
     end if
     this%alloc=.true.
-    POP_SUB(storage_end_storage)
+    POP_SUB(storage_end)
     return
-  end subroutine storage_end_storage
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_init(this, that, type)
-    type(storage_intrpl_t),  intent(out) :: this
-    type(storage_t), target, intent(in)  :: that
-    integer,       optional, intent(in)  :: type
-    !
-    PUSH_SUB(storage_intrpl_init)
-    nullify(this%self)
-    if(allocated(that%data))then
-      ASSERT(that%alloc)
-      this%self=>that
-      call intrpl_init(this%intrp, that%sim, that%data, type=type, default=that%default)
-    end if
-    POP_SUB(storage_intrpl_init)
-    return
-  end subroutine storage_intrpl_init
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_eval_1d(this, x, val, ierr)
-    type(storage_intrpl_t),       intent(in)  :: this
-    real(kind=wp),  dimension(:), intent(in)  :: x
-    real(kind=wp),                intent(out) :: val
-    integer,                      intent(out) :: ierr
-    !
-    PUSH_SUB(storage_intrpl_eval_1d)
-    ierr=STORAGE_INTRPL_NI
-    if(associated(this%self))&
-      call intrpl_eval(this%intrp, x, val, ierr)
-    POP_SUB(storage_intrpl_eval_1d)
-    return
-  end subroutine storage_intrpl_eval_1d
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_eval_md(this, x, val, ierr)
-    type(storage_intrpl_t),       intent(in)  :: this
-    real(kind=wp),  dimension(:), intent(in)  :: x
-    real(kind=wp),  dimension(:), intent(out) :: val
-    integer,                      intent(out) :: ierr
-    !
-    PUSH_SUB(storage_intrpl_eval_md)
-    ierr=STORAGE_INTRPL_NI
-    if(associated(this%self))&
-      call intrpl_eval(this%intrp, x, val, ierr)
-    POP_SUB(storage_intrpl_eval_md)
-    return
-  end subroutine storage_intrpl_eval_md
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_copy(this, that)
-    type(storage_intrpl_t), intent(inout) :: this
-    type(storage_intrpl_t), intent(in)    :: that
-    !
-    PUSH_SUB(storage_intrpl_copy)
-    call storage_intrpl_end(this)
-    if(associated(that%self))then
-      this%self=>that%self
-      call intrpl_copy(this%intrp, that%intrp)
-    end if
-    POP_SUB(storage_intrpl_copy)
-    return
-  end subroutine storage_intrpl_copy
-
-  ! ---------------------------------------------------------
-  subroutine storage_intrpl_end(this)
-    type(storage_intrpl_t), intent(inout) :: this
-    !
-    PUSH_SUB(storage_intrpl_end)
-    if(associated(this%self))&
-      call intrpl_end(this%intrp)
-    nullify(this%self)
-    POP_SUB(storage_intrpl_end)
-    return
-  end subroutine storage_intrpl_end
+  end subroutine storage_end
 
 end module storage_m
 

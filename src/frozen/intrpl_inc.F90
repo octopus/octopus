@@ -2,23 +2,23 @@
 
 #if defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
 
-  use storage_m, only: &
-    storage_t,         &
-    storage_init,      &
-    storage_eval,      &
-    storage_copy,      &
-    storage_end
+  use intrpl_m, only: &
+    intrpl_t,         &
+    intrpl_init,      &
+    intrpl_eval,      &
+    intrpl_copy,      &
+    intrpl_end
 
-  use storage_m, only: &
-    storage_intrpl_t
-
-  use storage_m, only:                        &
-    TEMPLATE(INTRPL_OK) => STORAGE_INTRPL_OK, &
-    TEMPLATE(INTRPL_OD) => STORAGE_INTRPL_OD, &
-    TEMPLATE(INTRPL_NI) => STORAGE_INTRPL_NI
+  use intrpl_m, only: &
+    INTRPL_OK,        &
+    INTRPL_OD,        &
+    INTRPL_NI
 
 #endif
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
+
+  public ::             &
+    TEMPLATE(intrpl_t)
 
   public ::         &
     TEMPLATE(eval)
@@ -28,19 +28,27 @@
     TEMPLATE(INTRPL_OD), &
     TEMPLATE(INTRPL_NI)
 
-  type, public :: TEMPLATE(intrpl_t)
+  integer, parameter :: TEMPLATE(INTRPL_OK) = INTRPL_OK
+  integer, parameter :: TEMPLATE(INTRPL_OD) = INTRPL_OD
+  integer, parameter :: TEMPLATE(INTRPL_NI) = INTRPL_NI
+
+  type :: TEMPLATE(intrpl_t)
     private
     type(TEMPLATE(t)), pointer :: self =>null()
-    type(storage_intrpl_t)     :: intrp
+    type(intrpl_t)             :: intrp
   end type TEMPLATE(intrpl_t)
 
   interface TEMPLATE(_init__)
     module procedure TEMPLATE(intrpl_init)
   end interface TEMPLATE(_init__)
 
+#if 0
+
   interface TEMPLATE(_copy__)
     module procedure TEMPLATE(intrpl_copy)
   end interface TEMPLATE(_copy__)
+
+#endif
   
   interface TEMPLATE(_end__)
     module procedure TEMPLATE(intrpl_end)
@@ -71,12 +79,13 @@
 #if !defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && defined(INCLUDE_BODY)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(intrpl_init)(this, that, type)
+  subroutine TEMPLATE(intrpl_init)(this, that, type, default)
     type(TEMPLATE(intrpl_t)),  intent(out) :: this
     type(TEMPLATE(t)), target, intent(in)  :: that
     integer,         optional, intent(in)  :: type
+    real(kind=wp),   optional, intent(in)  :: default
 
-    type(storage_t), pointer :: data
+    real(kind=wp), dimension(:,:), pointer :: data
 
     PUSH_SUB(TEMPLATE(intrpl_init))
 
@@ -84,7 +93,7 @@
     this%self=>that
     call TEMPLATE(get)(that, data)
     ASSERT(associated(data))
-    call storage_init(this%intrp, data, type)
+    call intrpl_init(this%intrp, that%sim, data, type=type, default=default)
 
     POP_SUB(TEMPLATE(intrpl_init))
   end subroutine TEMPLATE(intrpl_init)
@@ -98,7 +107,8 @@
 
     PUSH_SUB(TEMPLATE(intrpl_eval_1d))
 
-    call storage_eval(this%intrp, x, v, ierr)
+    ierr=TEMPLATE(INTRPL_NI)
+    if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
 
     POP_SUB(TEMPLATE(intrpl_eval_1d))
   end subroutine TEMPLATE(intrpl_eval_1d)
@@ -112,7 +122,8 @@
 
     PUSH_SUB(TEMPLATE(intrpl_eval_md))
 
-    call storage_eval(this%intrp, x, v, ierr)
+    ierr=TEMPLATE(INTRPL_NI)
+    if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
 
     POP_SUB(TEMPLATE(intrpl_eval_md))
   end subroutine TEMPLATE(intrpl_eval_md)
@@ -141,7 +152,7 @@
     call TEMPLATE(intrpl_end)(this)
     if(associated(that%self))then
       this%self=>that%self
-      call storage_copy(this%intrp, that%intrp)
+      call intrpl_copy(this%intrp, that%intrp)
     end if
 
     POP_SUB(TEMPLATE(intrpl_copy))
@@ -154,7 +165,7 @@
     PUSH_SUB(TEMPLATE(intrpl_end))
 
     if(associated(this%self))&
-      call storage_end(this%intrp)
+      call intrpl_end(this%intrp)
     nullify(this%self)
 
     POP_SUB(TEMPLATE(intrpl_end))

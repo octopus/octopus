@@ -80,7 +80,7 @@ contains
     type(space_t),                   pointer :: space
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
-    integer                                  :: indx, np, nspin
+    integer                                  :: indx, np, nspin, ierr
     !
     PUSH_SUB(frozen_density_update_intrpl)
     nullify(dnst, sim, space, mesh)
@@ -100,7 +100,7 @@ contains
     SAFE_ALLOCATE(rho(nspin))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      call fio_density_eval(intrpl, x, rho)
+      call fio_density_eval(intrpl, x, rho, ierr)
       dnst(indx,:)=dnst(indx,:)+rho
     end do
     SAFE_DEALLOCATE_A(rho)

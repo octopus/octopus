@@ -45,12 +45,16 @@ module base_density_m
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_PREFIX
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
   implicit none
 
   private
+  public ::         &
+    base_density_t
+
   public ::                 &
     base_density__init__,   &
     base_density__start__,  &
@@ -70,10 +74,14 @@ module base_density_m
     base_density_update, &
     base_density_stop,   &
     base_density_next,   &
-    base_density_eval,   &
     base_density_get,    &
     base_density_copy,   &
     base_density_end
+
+  public ::                   &
+    BASE_DENSITY_OK,          &
+    BASE_DENSITY_KEY_ERROR,   &
+    BASE_DENSITY_EMPTY_ERROR
 
 #define LIST_TEMPLATE_NAME base_density
 #define LIST_INCLUDE_HEADER
@@ -85,7 +93,7 @@ module base_density_m
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
 
-  type, public :: base_density_t
+  type :: base_density_t
     private
     type(json_object_t),  pointer :: config =>null()
     type(simulation_t),   pointer :: sim    =>null()
@@ -97,27 +105,18 @@ module base_density_m
     type(base_density_list_t)     :: list
   end type base_density_t
 
-  type, public :: base_density_intrpl_t
-    private
-    type(base_density_t), pointer :: self =>null()
-    type(storage_intrpl_t)        :: intrp
-  end type base_density_intrpl_t
- 
   interface base_density__init__
     module procedure base_density__init__density
     module procedure base_density__init__copy
-    module procedure base_density_intrpl_init
   end interface base_density__init__
 
   interface base_density__end__
     module procedure base_density__end__density
-    module procedure base_density_intrpl_end
   end interface base_density__end__
 
   interface base_density_init
     module procedure base_density_init_density
     module procedure base_density_init_copy
-    module procedure base_density_intrpl_init
   end interface base_density_init
 
   interface base_density_get
@@ -130,30 +129,24 @@ module base_density_m
     module procedure base_density_get_density_2d
   end interface base_density_get
 
-  interface base_density_eval
-    module procedure base_density_intrpl_eval_1d
-    module procedure base_density_intrpl_eval_2d
-  end interface base_density_eval
-
   interface base_density_copy
     module procedure base_density_copy_density
-    module procedure base_density_intrpl_copy
   end interface base_density_copy
 
   interface base_density_end
     module procedure base_density_end_density
-    module procedure base_density_intrpl_end
   end interface base_density_end
 
   integer, parameter :: default_nspin = 1
 
-  integer, public, parameter :: BASE_DENSITY_OK          = BASE_DENSITY_HASH_OK
-  integer, public, parameter :: BASE_DENSITY_KEY_ERROR   = BASE_DENSITY_HASH_KEY_ERROR
-  integer, public, parameter :: BASE_DENSITY_EMPTY_ERROR = BASE_DENSITY_HASH_EMPTY_ERROR
+  integer, parameter :: BASE_DENSITY_OK          = BASE_DENSITY_HASH_OK
+  integer, parameter :: BASE_DENSITY_KEY_ERROR   = BASE_DENSITY_HASH_KEY_ERROR
+  integer, parameter :: BASE_DENSITY_EMPTY_ERROR = BASE_DENSITY_HASH_EMPTY_ERROR
 
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_HEADER
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -312,15 +305,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density__istart__(this, sim)
-    type(base_density_t),       intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: sim
+    type(base_density_t), target, intent(inout) :: this
+    type(simulation_t),   target, intent(in)    :: sim
 
     PUSH_SUB(base_density__istart__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim=>sim
-    if(base_density_get_nspin(this)>1)&
+    if(.not.associated(this%total,this%data))&
       call storage_start(this%total, sim, fine=.true.)
     call storage_start(this%data, sim, fine=.true.)
 
@@ -375,26 +368,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density__update__(this)
-    type(base_density_t), intent(inout) :: this
-
-    real(kind=wp), dimension(:,:), pointer :: prho
-    real(kind=wp), dimension(:),   pointer :: trho
-    integer                                :: indx
+    type(base_density_t), target, intent(inout) :: this
 
     PUSH_SUB(base_density__update__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    nullify(prho, trho)
     call storage_update(this%data)
-    if(base_density_get_nspin(this)>1)then
-      call storage_get(this%data, prho)
-      call storage_get(this%total, trho)
-      do indx = 1, base_density_get_size(this)
-        trho(indx)=sum(prho(indx,:))
-      end do
-      call storage_update(this%total)
-      nullify(prho, trho)
+    if(.not.associated(this%total,this%data))then
+      call storage_reduce(this%total, this%data)
     end if
 
     POP_SUB(base_density__update__)
@@ -427,13 +409,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density__stop__(this)
-    type(base_density_t), intent(inout) :: this
+    type(base_density_t), target, intent(inout) :: this
 
     PUSH_SUB(base_density__stop__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(base_density_get_nspin(this)>1)&
+    if(.not.associated(this%total,this%data))&
       call storage_stop(this%total)
     call storage_stop(this%data)
 
@@ -551,24 +533,6 @@ contains
   end subroutine base_density_get_density_by_name
 
   ! ---------------------------------------------------------
-  elemental function base_density_get_size(this) result(that)
-    type(base_density_t), intent(in) :: this
-
-    integer :: that
-
-    that=storage_get_size(this%data)
-  end function base_density_get_size
-
-  ! ---------------------------------------------------------
-  elemental function base_density_get_nspin(this) result(that)
-    type(base_density_t), intent(in) :: this
-
-    integer :: that
-
-    that=storage_get_dimension(this%data)
-  end function base_density_get_nspin
-
-  ! ---------------------------------------------------------
   subroutine base_density_get_info(this, size, nspin, fine)
     type(base_density_t), intent(in)  :: this
     integer,    optional, intent(out) :: size
@@ -658,6 +622,8 @@ contains
     POP_SUB(base_density_get_total_density)
   end subroutine base_density_get_total_density
 
+#if 0
+
   ! ---------------------------------------------------------
   pure subroutine base_density_adjust_spin_1_n(this, that)
     real(kind=wp),               intent(out) :: this
@@ -706,6 +672,8 @@ contains
 
   end subroutine base_density_adjust_spin
 
+#endif
+
   ! ---------------------------------------------------------
   subroutine base_density__copy__(this, that)
     type(base_density_t), target, intent(inout) :: this
@@ -719,7 +687,7 @@ contains
       if(associated(that%sim))then
         call base_density__start__(this, that%sim)
         call storage_copy(this%data, that%data)
-        if(base_density_get_nspin(this)>1)then
+        if(.not.associated(this%total,this%data))then
           call storage_copy(this%total, that%total)
         else
           this%total=>this%data
@@ -762,11 +730,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density__end__density(this)
-    type(base_density_t), intent(inout) :: this
+    type(base_density_t), target, intent(inout) :: this
 
     PUSH_SUB(base_density__end__density)
 
-    if(base_density_get_nspin(this)>1)then
+    if(.not.associated(this%total,this%data))then
       call storage_end(this%total)
       SAFE_DEALLOCATE_P(this%total)
     end if
@@ -803,22 +771,11 @@ contains
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_BODY
 #include "iterator_code.F90"
+#include "intrpl_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_init(this, that, type)
-    type(base_density_intrpl_t),  intent(out) :: this
-    type(base_density_t), target, intent(in)  :: that
-    integer,            optional, intent(in)  :: type
-
-    PUSH_SUB(base_density_intrpl_init)
-
-    this%self=>that
-    call storage_init(this%intrp, that%data, type)
-
-    POP_SUB(base_density_intrpl_init)
-  end subroutine base_density_intrpl_init
+#if 0
 
   ! ---------------------------------------------------------
   subroutine base_density_intrpl_eval_1d(this, x, val)
@@ -868,30 +825,7 @@ contains
     POP_SUB(base_density_intrpl_eval_2d)
   end subroutine base_density_intrpl_eval_2d
 
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_copy(this, that)
-    type(base_density_intrpl_t), intent(out) :: this
-    type(base_density_intrpl_t), intent(in)  :: that
-
-    PUSH_SUB(base_density_intrpl_copy)
-
-    this%self=>that%self
-    call storage_copy(this%intrp, that%intrp)
-
-    POP_SUB(base_density_intrpl_copy)
-  end subroutine base_density_intrpl_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_end(this)
-    type(base_density_intrpl_t), intent(inout) :: this
-
-    PUSH_SUB(base_density_intrpl_end)
-
-    nullify(this%self)
-    call storage_end(this%intrp)
-
-    POP_SUB(base_density_intrpl_end)
-  end subroutine base_density_intrpl_end
+#endif
 
 end module base_density_m
 
