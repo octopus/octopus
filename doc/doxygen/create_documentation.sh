@@ -29,26 +29,33 @@ oct_base_dir=$PWD
 cd $oct_base_dir
 
 echo "Configuring"
-autoreconf -i
-./configure
-cd src/include
-make
-# to produce config_F90.h and options.h
+build/mk_varinfo.pl -s . -b .
+# to produce options.h
+
+# set all -DHAVE options
+sed s'|#undef HAVE_|#define HAVE_|' config.h.in | grep '^#define' > src/include/config_F90.h
+# make dummy headers
+touch src/include/mpi.h
+touch src/include/fcs_fconfig.h
+
 cd $oct_base_dir/src
 
-# FIXME: set all -DHAVE_ via
-# sed s'|/\* \#undef HAVE_|#define HAVE_|' ../config.h | grep '^#define' > include/config_F90.h
-# FIXME: provide header files (e.g. fcs_config.h)
+# FIXME: set FCCPP and version in Doxyfile
 
 echo "Creating documentation"
 
 # Doxyfile is for version 1.8.6
 cp $dox_dir/Doxyfile .
 cp $dox_dir/octopus.png .
-#copy to the new location
-sed -i "s|doxygen_doc|$dox_dir|" Doxyfile
-#call doxygen
 doxygen
 
 cd ..
+
+# undo modifications to this directory
+cd src/include
+rm config_F90.h
+make config_F90.h
+rm mpi.h fcs_fconfig.h
+cd ../..
+
 echo "Doxygen documentation created in $dox_dir/html/index.html"
