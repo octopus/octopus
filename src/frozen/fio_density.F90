@@ -213,7 +213,7 @@ contains
 
     PUSH_SUB(fio_density_get_density_1d)
 
-    call fio_density_get(this, that, total)
+    call base_density_get(this, that, total)
 
     POP_SUB(fio_density_get_density_1d)
   end subroutine fio_density_get_density_1d
