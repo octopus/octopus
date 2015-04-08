@@ -210,8 +210,6 @@ contains
       end if
     end if
 
-    ! FIXME: check on presence of XC_FLAGS_HAVE_EXC, XC_FLAGS_HAVE_VXC
-
 !    XC_NON_RELATIVISTIC     =   0
 !    XC_RELATIVISTIC         =   1
 
@@ -269,7 +267,7 @@ contains
     case(XC_LDA_C_2D_PRM)
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 
-      ! FIXME: libxc has XC_GGA_X_LBM, isn't that the modified one?
+      ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
       !%Type logical
