@@ -282,7 +282,7 @@ contains
     box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
     if (der%mesh%sb%periodic_dim.eq.3) then
       !enlargement factor to fit he simulationbox boundary
-      ! ? not sure
+      ! not sure
       enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
     else ! non-periodic case
       enlarge = M_TWO
@@ -301,8 +301,11 @@ contains
     ! set up poisson solver used for the exchange operator with scdm states
     ! this replictaes poisson_kernel_init()
     scdm%poisson%poisson_soft_coulomb_param = M_ZERO
-    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
-    !call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_NOCUT)
+    if (der%mesh%sb%periodic_dim.eq.3) then
+      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_NOCUT)
+    else !non periodic case
+      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
+    endif
 
     ! create poisson object
     SAFE_ALLOCATE(scdm%poisson%der)
@@ -317,7 +320,7 @@ contains
     scdm_is_init = .true.
 
     call messages_write('done SCDM init')
-    
+
     POP_SUB(scdm_init)
   end subroutine scdm_init
 

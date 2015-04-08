@@ -59,7 +59,8 @@ module poisson_fft_m
        POISSON_FFT_KERNEL_CYL       =  1,      &
        POISSON_FFT_KERNEL_PLA       =  2,      &
        POISSON_FFT_KERNEL_NOCUT     =  3,      &
-       POISSON_FFT_KERNEL_CORRECTED =  4
+       POISSON_FFT_KERNEL_CORRECTED =  4,      &
+       POISSON_FFT_KERNEL_HOCKNEY   =  5
 
   type poisson_fft_t
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
@@ -68,13 +69,14 @@ module poisson_fft_m
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq)
+  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
     type(poisson_fft_t), intent(out)   :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
+    type(cube_t), optional             :: fullcube !< needed for Hockney kerenl
 
     PUSH_SUB(poisson_fft_init)
 
@@ -85,7 +87,19 @@ contains
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
       this%qq(1:mesh%sb%periodic_dim) = qq(1:mesh%sb%periodic_dim)
     endif
-    
+
+    if(kernel == POISSON_FFT_KERNEL_HOCKNEY) then
+      if(.not.present(fullcube)) then
+        message(1) = "Hockney's FFT-kernel needs cube of full unit cell "
+        call messages_fatal(1)
+      else
+        if(.not.associated(fullcube%fft)) then
+          message(1) = "Hockney's FFT-kernel needs PoissonSolver=fft"
+          call messages_fatal(1)
+        endif
+      endif
+    endif
+
     select case(mesh%sb%dim)
     case(1)
       ASSERT(present(soft_coulb_param))
@@ -111,24 +125,27 @@ contains
         message(1) = "Invalid Poisson FFT kernel for 2D."
         call messages_fatal(1)
       end select
-      
+
     case(3)
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH, POISSON_FFT_KERNEL_CORRECTED)
         call poisson_fft_build_3d_0d(this, mesh, cube, kernel)
-        
+
       case(POISSON_FFT_KERNEL_CYL)
         call poisson_fft_build_3d_1d(this, mesh, cube)
-        
+
       case(POISSON_FFT_KERNEL_PLA)
         call poisson_fft_build_3d_2d(this, mesh, cube)
-        
+
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_3d_3d(this, mesh, cube)
 
+      case(POISSON_FFT_KERNEL_HOCKNEY)
+        call poisson_fft_build_3d_3d_hockney(this, mesh, cube, fullcube)
+
       case default
         message(1) = "Invalid Poisson FFT kernel for 3D."
-        call messages_fatal(1)        
+        call messages_fatal(1)
       end select
     end select
 
@@ -144,11 +161,11 @@ contains
     PUSH_SUB(get_cutoff)
 
     call parse_variable('PoissonCutoffRadius', default_r_c, r_c, units_inp%length)
-    
+
     call messages_write('Info: Poisson Cutoff Radius     =')
     call messages_write(r_c, units = units_out%length, fmt = '(f6.1)')
     call messages_info()
-    
+
     if ( r_c > default_r_c + M_EPSILON) then
       call messages_write('Poisson cutoff radius is larger than cell size.', new_line = .true.)
       call messages_write('You can see electrons in neighboring cell(s).')
@@ -194,7 +211,7 @@ contains
     FLOAT :: temp(3), modg2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
-    
+
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
@@ -214,7 +231,7 @@ contains
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
 #ifdef HAVE_NFFT
-         !HH not very elegant 
+         !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 #endif
 
@@ -239,6 +256,112 @@ contains
   end subroutine poisson_fft_build_3d_3d
   !-----------------------------------------------------------------
 
+  !-----------------------------------------------------------------
+  !! Kernel for Hockneys algorithm that solves the poisson equation
+  !< in a small box while respecting the periodicity of a larger box
+  !< A. Damle, L. Lin, L. Ying, JCTC, 2015
+  !< DOI: 10.1021/ct500985f, supplementary info  
+  subroutine poisson_fft_build_3d_3d_hockney(this, mesh, cube, fullcube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
+    type(cube_t),        intent(in)    :: fullcube
+
+    integer :: ix, iy, iz, ixx(3), db(3), nfs(3), nrs(3), nfs_s(3), nrs_s(3)
+    FLOAT :: temp(3), modg2
+    FLOAT :: gg(3)
+    FLOAT, allocatable :: fft_Coulb_small_RS(:,:,:)
+    FLOAT, allocatable :: fft_Coulb_RS(:,:,:)
+    CMPLX, allocatable :: fft_Coulb_small_FS(:,:,:), fft_Coulb_FS(:,:,:)
+
+    PUSH_SUB(poisson_fft_build_3d_3d_hockney)
+
+    ! dimensions of large boxes
+    nfs(1:3) = fullcube%fs_n_global(1:3)
+    nrs(1:3) = fullcube%rs_n_global(1:3)
+
+    SAFE_ALLOCATE(fft_Coulb_FS(1:nfs(1),1:nfs(2),1:nfs(3)))
+    SAFE_ALLOCATE(fft_Coulb_RS(1:nrs(1),1:nrs(2),1:nrs(3)))
+
+    ! dimensions of small boxes x_s
+    nfs_s(1:3) = cube%fs_n_global(1:3)
+    nrs_s(1:3) = cube%rs_n_global(1:3)
+
+    SAFE_ALLOCATE(fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
+    SAFE_ALLOCATE(fft_Coulb_small_RS(1:nrs_s(1),1:nrs_s(2),1:nrs_s(3)))
+
+    ! build full periodic Coulomb potenital in Fourier space
+    fft_Coulb_FS = M_ZERO
+
+    db(1:3) = fullcube%rs_n_global(1:3)
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+    
+    do ix = 1, nfs(1)
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      do iy = 1, nfs(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, nfs(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+          
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          
+          if(abs(modg2) > M_EPSILON) then
+            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+          else
+            fft_Coulb_FS(ix, iy, iz) = M_ZERO
+          end if
+        end do
+      end do
+    end do
+    
+    forall(iz=1:nfs(3), iy=1:nfs(2), ix=1:nfs(1))
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
+    
+    ! get periodic Coulomb potential in real space
+    call dfft_backward(fullcube%fft,fft_Coulb_FS,fft_Coulb_RS)
+
+    !  copy to small box by respecting this pattern
+    !  full periodic coulomb: |abc--------------------------xyz|
+    !                Hockney: |abcxyz|
+    do ix = 1, nrs_s(1)
+      if(ix.le.nrs_s(1)/2+1) then
+        ixx(1)=ix
+      else
+        ixx(1) = nrs(1) - nrs_s(1)+ix
+      end if
+      do iy = 1, nrs_s(2)
+        if(iy.le.nrs_s(2)/2+1) then
+          ixx(2)=iy
+        else
+          ixx(2) = nrs(2) - nrs_s(2)+iy
+        end if
+        do iz = 1, nrs_s(3)
+          if(iz.le.nrs_s(3)/2+1) then
+            ixx(3)=iz
+          else
+            ixx(3) = nrs(3) - nrs_s(3)+iz
+          endif
+          fft_Coulb_small_RS(ix,iy,iz) = fft_Coulb_RS(ixx(1),ixx(2),ixx(3))
+        end do
+      end do
+    end do
+    ! make Hockney kernel in Fourier space
+    call dfft_forward(cube%fft,fft_Coulb_small_RS,fft_Coulb_small_FS)
+    !dummy copy for type conversion
+    fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)) = &
+                                                  fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3))
+
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
+
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_RS)
+    SAFE_DEALLOCATE_A(fft_Coulb_small_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_small_RS)
+
+    POP_SUB(poisson_fft_build_3d_3d_hockney)
+
+  end subroutine poisson_fft_build_3d_3d_hockney
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
@@ -397,7 +520,7 @@ contains
           end if
         end do
       end do
- 
+
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
     end do
 
@@ -456,7 +579,7 @@ contains
         do lz = 1, n3
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
-            
+
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
 #ifdef HAVE_NFFT
           !HH
@@ -559,7 +682,7 @@ contains
     POP_SUB(poisson_fft_build_2d_0d)
   end subroutine poisson_fft_build_2d_0d
   !-----------------------------------------------------------------
-    
+
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
@@ -672,7 +795,7 @@ contains
 
     call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
-    
+
     POP_SUB(poisson_fft_build_1d_1d)
   end subroutine poisson_fft_build_1d_1d
   !-----------------------------------------------------------------
@@ -709,7 +832,7 @@ contains
 
     call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
-    
+
     POP_SUB(poisson_fft_build_1d_0d)
   end subroutine poisson_fft_build_1d_0d
   !-----------------------------------------------------------------
@@ -742,13 +865,13 @@ contains
     type(cube_function_t) :: cf
 
     PUSH_SUB(poisson_fft_solve)
-    
+
     average_to_zero_ = .false.
     if (present(average_to_zero)) average_to_zero_ = average_to_zero
     average = M_ZERO !this avoids a non-initialized warning
 
-    call cube_function_null(cf)    
-    call dcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED)) 
+    call cube_function_null(cf)
+    call dcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
     ! put the density in the cube
     if (cube%parallel_in_domains) then
@@ -756,7 +879,7 @@ contains
     else
       if(mesh%parallel_in_domains) then
         call dmesh_to_cube(mesh, rho, cube, cf, local = .true.)
-      else 
+      else
         call dmesh_to_cube(mesh, rho, cube, cf)
       end if
     end if
@@ -766,7 +889,7 @@ contains
 
     !now the cube has the potential
     if(average_to_zero_) average = cube_function_surface_average(cube, cf)
-    
+
     ! move the potential back to the mesh
     if (cube%parallel_in_domains) then
       call dcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
@@ -779,12 +902,12 @@ contains
     end if
 
     if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
-    
+
     call dcube_function_free_RS(cube, cf) ! memory is no longer needed
 
     POP_SUB(poisson_fft_solve)
   end subroutine poisson_fft_solve
-  
+
 end module poisson_fft_m
 
 !! Local Variables:
