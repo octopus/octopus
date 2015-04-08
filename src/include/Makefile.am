@@ -44,6 +44,6 @@ RUN_SCRIPT:
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 clean-local:
-	rm -f options.h
+	rm -f config_F90.h options.h
 
 .PHONY: RUN_SCRIPT
