@@ -101,6 +101,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     return
   endif
 
+  do ixc = 1, 2
+    if(functl(ixc)%family /= XC_FAMILY_NONE .and. iand(functl(ixc)%family, XC_FAMILY_OEP) == 0) then
+      ASSERT(iand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
+    endif
+  enddo
+  
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
@@ -557,22 +563,6 @@ contains
       call lalg_axpy(der%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
     end do
     SAFE_DEALLOCATE_A(gf)
-
-    ! FIXME: should we do this for any functional lacking XC_FLAGS_HAVE_EXC?
-    ! If LB94, we can calculate an approximation to the energy from
-    ! Levy-Perdew relation PRA 32, 2010 (1985)
-    if(calc_energy .and. functl(1)%id == XC_GGA_X_LB) then
-      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
-
-      do is = 1, spin_channels
-        call dderivatives_grad(der, dedd(:, is), gf(:,:))
-        do ip = 1, der%mesh%np
-          ex_per_vol(ip) = ex_per_vol(ip) - dens(ip, is) * sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gf(ip, 1:der%mesh%sb%dim))
-        end do
-      end do
-
-      SAFE_DEALLOCATE_A(gf)
-    end if
 
     POP_SUB(xc_get_vxc.gga_process)
   end subroutine gga_process

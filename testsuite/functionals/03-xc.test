@@ -220,8 +220,8 @@ match ; gga_x_optpbe_vdw Exchange              ; GREP(static/info, 'Exchange    
 match ; gga_x_optpbe_vdw Int[n*v_xc]           ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.39988484
 
 Input: 03-xc.gga_x_lb.inp
-match ; gga_x_lb Exchange                      ; GREP(static/info, 'Exchange    =', 20)   ; -0.20502974
-match ; gga_x_lb Int[n*v_xc]                   ; GREP(static/info, 'Int\[n\*v_xc\] =', 20)   ; -0.55604296
+match ; gga_x_lb Exchange                      ; GREPFIELD(static/info, 'Exchange    =', 3) ;  0.0
+match ; gga_x_lb Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.55604296
 
 Input: 03-xc.gga_xc_hcth_93.inp
 match ; gga_xc_hcth_93 Correlation             ; GREP(static/info, 'Correlation =', 20)   ; -0.34470063
