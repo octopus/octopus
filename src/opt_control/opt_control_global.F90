@@ -170,7 +170,7 @@ contains
       !%Section Calculation Modes::Optimal Control
       !%Default 1.0
       !%Description 
-      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can suppy the "eta" and "delta" parameters
+      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can supply the "eta" and "delta" parameters
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
@@ -180,7 +180,7 @@ contains
       !%Section Calculation Modes::Optimal Control
       !%Default 0.0
       !%Description 
-      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can suppy the "eta" and "delta" parameters
+      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can supply the "eta" and "delta" parameters
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
