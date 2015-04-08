@@ -171,7 +171,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
       ASSERT(.not. batch_is_packed(hpsib))
 
       if(hm%scdm_EXX)  then
-        call scdm_init(hm%hf_st, der, hm%scdm)
+        call scdm_init(hm%hf_st, der,psolver%cube, hm%scdm)
         call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
         ! to apply the scdm exact exchange we need the state on the global mesh
         SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))

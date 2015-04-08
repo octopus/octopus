@@ -121,13 +121,14 @@ contains
   !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
   !!                            selected columns of the density matrix
   !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-  subroutine scdm_init(st,der,scdm)
+  subroutine scdm_init(st,der,fullcube,scdm)
     
     type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
     type(derivatives_t) :: der
+    type(cube_t) :: fullcube !< cube of the full cell
     type(scdm_t) :: scdm
-    type(cmplxscl_t) :: cmplxscl
     
+    type(cmplxscl_t) :: cmplxscl
     integer :: ii, jj, kk, ip, rank
     !debug
     integer :: temp(3)
@@ -274,7 +275,6 @@ contains
  
     ! without nfft we have to double the box 
 #ifndef HAVE_NFFT
-    if (der%mesh%sb%periodic_dim > 0) call messages_not_implemented("periodic SSCDM  without NFFT library")  
     box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
 # else
@@ -302,7 +302,8 @@ contains
     ! this replictaes poisson_kernel_init()
     scdm%poisson%poisson_soft_coulomb_param = M_ZERO
     if (der%mesh%sb%periodic_dim.eq.3) then
-      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_NOCUT)
+      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
+                            kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
     else !non periodic case
       call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
     endif
