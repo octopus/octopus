@@ -170,9 +170,9 @@ contains
   ! ---------------------------------------------------------
   subroutine fio_density_get_info(this, size, nspin, fine)
     type(fio_density_t), intent(in)  :: this
-    integer,    optional, intent(out) :: size
-    integer,    optional, intent(out) :: nspin
-    logical,    optional, intent(out) :: fine
+    integer,   optional, intent(out) :: size
+    integer,   optional, intent(out) :: nspin
+    logical,   optional, intent(out) :: fine
 
     PUSH_SUB(fio_density_get_info)
 
@@ -183,8 +183,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_config(this, that)
-    type(fio_density_t), target, intent(in) :: this
-    type(json_object_t), pointer             :: that
+    type(fio_density_t),  intent(in) :: this
+    type(json_object_t), pointer     :: that
 
     PUSH_SUB(fio_density_get_config)
 
@@ -195,8 +195,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_simulation(this, that)
-    type(fio_density_t), target, intent(in) :: this
-    type(simulation_t),  pointer             :: that
+    type(fio_density_t),  intent(in) :: this
+    type(simulation_t),  pointer     :: that
 
     PUSH_SUB(fio_density_get_simulation)
 
@@ -207,7 +207,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_density_1d(this, that, total)
-    type(fio_density_t),                   intent(in) :: this
+    type(fio_density_t),                    intent(in) :: this
     real(kind=wp),           dimension(:), pointer     :: that
     real(kind=wp), optional, dimension(:), pointer     :: total
 
@@ -220,7 +220,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_density_2d(this, that)
-    type(fio_density_t),           intent(in) :: this
+    type(fio_density_t),            intent(in) :: this
     real(kind=wp), dimension(:,:), pointer     :: that
 
     PUSH_SUB(density_get_fio_density_2d)
