@@ -25,7 +25,7 @@
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
 
-#if HAVE_PSPIO
+#ifdef HAVE_PSPIO
 
     logical :: found, has_kb
     integer :: idir
@@ -108,7 +108,7 @@
   end subroutine ps_pspio_init
 
 
-#if HAVE_PSPIO
+#ifdef HAVE_PSPIO
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_info(ps, pspdata)

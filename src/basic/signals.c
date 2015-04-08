@@ -27,7 +27,7 @@
 
 
 void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
-#if HAVE_SIGACTION && HAVE_SIGNAL_H
+#if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
   struct sigaction act;
 
   act.sa_handler = SIG_IGN;
@@ -40,7 +40,7 @@ void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
 }
 
 void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
-#if HAVE_SIGACTION && HAVE_SIGNAL_H
+#if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
   struct sigaction act;
 
   act.sa_handler = SIG_DFL;

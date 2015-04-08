@@ -33,7 +33,7 @@ module ps_m
   use ps_fhi_m
   use ps_hgh_m
   use ps_in_grid_m
-#if HAVE_PSPIO
+#ifdef HAVE_PSPIO
   use pspio_f90_lib_m
   use pspio_f90_types_m
 #endif
