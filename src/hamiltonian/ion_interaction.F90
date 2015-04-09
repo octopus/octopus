@@ -46,6 +46,12 @@ module ion_interaction_m
   type ion_interaction_t
     FLOAT :: alpha
   end type ion_interaction_t
+
+  integer, parameter ::            &
+    ION_COMPONENT_REAL     = 1,    &
+    ION_COMPONENT_SELF     = 2,    &
+    ION_COMPONENT_FOURIER  = 3,    &
+    ION_NUM_COMPONENTS      = 3
   
 contains
 
@@ -84,13 +90,15 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force)
+  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
     type(ion_interaction_t),  intent(in)    :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
     logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
-    FLOAT,    dimension(:,:), intent(out)   :: force
+    FLOAT,                    intent(out)   :: force(:, :)
+    FLOAT, optional,          intent(out)   :: energy_components(:)
+    FLOAT, optional,          intent(out)   :: force_components(:, :, :)
     
     FLOAT, allocatable:: r(:), f(:)
     FLOAT :: rr, dd, zi, zj, epsilon, sigma
@@ -103,8 +111,18 @@ contains
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
 
     SAFE_ALLOCATE(r(1:sb%dim))
-    SAFE_ALLOCATE(f(1:sb%dim))    
-    
+    SAFE_ALLOCATE(f(1:sb%dim))
+
+    if(present(energy_components)) then
+      ASSERT(ubound(energy_components, dim = 1) == ION_NUM_COMPONENTS)
+      energy_components = CNST(0.0)
+    end if      
+
+    if(present(force_components)) then
+      ASSERT(all(ubound(force_components) == (/sb%dim, geo%natoms, ION_NUM_COMPONENTS/)))
+      force_components = CNST(0.0)
+    end if 
+
     energy = M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
@@ -118,7 +136,7 @@ contains
         energy = energy + &
           M_PI*species_zval(spci)**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*(sb%lsize(3) - species_jthick(spci)/M_THREE)
       else
-        call ion_interaction_periodic(this, geo, sb, energy, force)
+        call ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
       end if
 
     else
@@ -234,12 +252,14 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_periodic(this, geo, sb, energy, force)
-    type(ion_interaction_t),   intent(in)     :: this
+  subroutine ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
+    type(ion_interaction_t),   intent(in)    :: this
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< sb%dim, geo%natoms
+    FLOAT, optional,           intent(out)   :: energy_components(:)
+    FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
     type(species_t), pointer :: species
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
@@ -305,6 +325,10 @@ contains
       
       call periodic_copy_end(pc)
     end do
+
+    if(present(force_components)) then
+      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
+    end if
 
     call profiling_out(prof_short)
 
@@ -377,12 +401,23 @@ contains
       end do
     end do
 
-    call profiling_out(prof_long)
-    
-    energy = ereal + efourier + eself
-    
     SAFE_DEALLOCATE_A(phase)
 
+    if(present(energy_components)) then
+      energy_components(ION_COMPONENT_REAL) = ereal
+      energy_components(ION_COMPONENT_SELF) = eself
+      energy_components(ION_COMPONENT_FOURIER) = efourier      
+    end if
+
+    if(present(force_components)) then
+      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_FOURIER) = &
+        force(1:sb%dim, 1:geo%natoms) - force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL)
+    end if
+
+    energy = ereal + efourier + eself
+    
+    call profiling_out(prof_long)
+    
     POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
 
@@ -394,7 +429,8 @@ contains
 
     type(ion_interaction_t) :: ion_interaction
     FLOAT :: energy
-    FLOAT, allocatable :: force(:, :)
+    FLOAT, allocatable :: force(:, :), force_components(:, :, :)
+    FLOAT :: energy_components(1:ION_NUM_COMPONENTS)
     integer :: iatom, idir
     
     PUSH_SUB(ion_interaction_test)
@@ -402,23 +438,59 @@ contains
     call ion_interaction_init(ion_interaction)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force)
+    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
+      energy_components = energy_components, force_components = force_components)
 
-    call messages_write('Energy')
+    call messages_write('Ionic energy        =')
     call messages_write(energy, fmt = '(f20.10)')
     call messages_info()
+
+    call messages_write('Real space energy   =')
+    call messages_write(energy_components(ION_COMPONENT_REAL), fmt = '(f20.10)')
+    call messages_info()
+
+    call messages_write('Self energy         =')
+    call messages_write(energy_components(ION_COMPONENT_SELF), fmt = '(f20.10)')
+    call messages_info()
+
+    call messages_write('Fourier energy      =')
+    call messages_write(energy_components(ION_COMPONENT_FOURIER), fmt = '(f20.10)')
+    call messages_info()
     
+    call messages_info()
+
     do iatom = 1, geo%natoms
-      call messages_write('Force atom')
+      call messages_write('Ionic force         atom')
       call messages_write(iatom)
+      call messages_write(' =')
       do idir = 1, sb%dim
         call messages_write(force(idir, iatom), fmt = '(f20.10)')
       end do
       call messages_info()
+
+      call messages_write('Real space force    atom')
+      call messages_write(iatom)
+      call messages_write(' =')
+      do idir = 1, sb%dim
+        call messages_write(force_components(idir, iatom, ION_COMPONENT_REAL), fmt = '(f20.10)')
+      end do
+      call messages_info()
+
+      call messages_write('Fourier space force atom')
+      call messages_write(iatom)
+      call messages_write(' =')
+      do idir = 1, sb%dim
+        call messages_write(force_components(idir, iatom, ION_COMPONENT_FOURIER), fmt = '(f20.10)')
+      end do
+      call messages_info()
+
+      call messages_info()
     end do
-    
+
     SAFE_DEALLOCATE_A(force)
+    SAFE_DEALLOCATE_A(force_components)
     
     call ion_interaction_end(ion_interaction)
     
