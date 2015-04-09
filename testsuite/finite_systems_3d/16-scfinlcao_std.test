@@ -45,6 +45,9 @@ match ; Bond 1->5 trans x ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2,
 match ; Bond 1->5 rot x   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 2); -108.23
 match ; Bond 1->5 cyl h   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 3);    3.325918
 match ; Number polyhedra  ; GREPFIELD(out, 'polyhedra', 2); 836
+match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 2.9732944087543614E-010
+match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 0.29093634145326080
+match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14546817087529512
 # FIXME: surface is incorrect in parallel
 #match ; Polyhedron point 1; LINEFIELD(static/density.scad, 319, 2); -3.469457
 #match ; Polyhedron point 2; LINEFIELD(static/density.scad, 320, 3); -2.951370
