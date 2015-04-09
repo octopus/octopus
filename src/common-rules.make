@@ -143,8 +143,7 @@ SUFFIXES = _oct.f90 .F90 .o
 CTAGS = ctags-exuberant -e
 
 # Cleaning.
-CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* *_oct.f90 config_F90.h
-
+CLEANFILES = *~ *.bak *.mod *.o *_oct.f90
 
 # Local Variables:
 # mode: Makefile
