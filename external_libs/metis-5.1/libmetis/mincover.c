@@ -8,7 +8,6 @@
  * Started 8/1/97
  * George
  *
- * $Id: mincover.c 9942 2011-05-17 22:09:52Z karypis $
  */
 
 #include "metislib.h"

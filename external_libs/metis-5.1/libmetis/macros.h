@@ -8,7 +8,6 @@
  * Started 9/25/94
  * George
  *
- * $Id: macros.h 10060 2011-06-02 18:56:30Z karypis $
  *
  */
 

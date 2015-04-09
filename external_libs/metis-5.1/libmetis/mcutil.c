@@ -7,7 +7,6 @@
  * Started 2/15/98
  * George
  *
- * $Id: mcutil.c 13901 2013-03-24 16:17:03Z karypis $
  *
  */
 

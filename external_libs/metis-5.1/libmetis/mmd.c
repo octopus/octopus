@@ -16,7 +16,6 @@
  * The meaning of invperm, and perm vectors is different from that
  * in genqmd_ of SparsPak
  *
- * $Id: mmd.c 5993 2009-01-07 02:09:57Z karypis $
  */
 
 #include "metislib.h"

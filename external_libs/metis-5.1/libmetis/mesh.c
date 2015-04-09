@@ -9,7 +9,6 @@
  * Started 8/18/97
  * George
  *
- * $Id: mesh.c 13804 2013-03-04 23:49:08Z karypis $
  *
  */
 

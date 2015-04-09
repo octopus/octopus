@@ -5,7 +5,6 @@
 \date   Started 7/28/1997
 \author George 
 \author  Copyright 1997-2009, Regents of the University of Minnesota 
-\version $Id: kwayrefine.c 10737 2011-09-13 13:37:25Z karypis $ 
 */
 
 #include "metislib.h"

@@ -7,7 +7,6 @@ routines.
 
 \date   Started 2/22/05
 \author George
-\version\verbatim $Id: b64.c 10711 2011-08-31 22:23:04Z karypis $ \endverbatim
 
 \verbatim 
 $Copyright$ 

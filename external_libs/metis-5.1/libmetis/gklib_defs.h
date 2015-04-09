@@ -4,7 +4,6 @@
 
 \date  Started 12/23/2008
 \author George
-\version\verbatim $Id: gklib_defs.h 10395 2011-06-23 23:28:06Z karypis $ \endverbatim
 */
 
 #ifndef _LIBMETIS_GKLIB_H_

@@ -8,7 +8,6 @@
  * Started 8/27/94
  * George
  *
- * $Id: metislib.h 10655 2011-08-02 17:38:11Z benjamin $
  */
 
 #ifndef _LIBMETIS_METISLIB_H_

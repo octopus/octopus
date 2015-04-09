@@ -6,7 +6,6 @@ This file contains functions dealing with error reporting and termination
 
 \author George
 \date 1/1/2007
-\version\verbatim $Id: error.c 10711 2011-08-31 22:23:04Z karypis $ \endverbatim
 */
 
 

@@ -7,7 +7,6 @@
  *
  * \date 6/13/2008
  * \author George Karypis
- * \version\verbatim $Id: itemsets.c 11075 2011-11-11 22:31:52Z karypis $ \endverbatim
  */
 
 #include <GKlib.h>

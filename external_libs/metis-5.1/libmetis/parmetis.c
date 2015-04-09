@@ -8,7 +8,6 @@
  * Started 10/14/97
  * George
  *
- * $Id: parmetis.c 10481 2011-07-05 18:01:23Z karypis $
  *
  */
 

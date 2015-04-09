@@ -5,7 +5,6 @@
 \date Started 7/23/97
 \author George  
 \author Copyright 1997-2011, Regents of the University of Minnesota 
-\version\verbatim $Id: balance.c 10187 2011-06-13 13:46:57Z karypis $ \endverbatim
 */
 
 #include "metislib.h"

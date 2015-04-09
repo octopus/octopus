@@ -4,7 +4,6 @@
  * \brief Various routines with dealing with sparse graphs 
  *
  * \author George Karypis
- * \version\verbatim $Id: graph.c 13328 2012-12-31 14:57:40Z karypis $ \endverbatim
  */
 
 #include <GKlib.h>

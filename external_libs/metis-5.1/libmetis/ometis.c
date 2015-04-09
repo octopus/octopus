@@ -9,7 +9,6 @@
  * Started 7/24/97
  * George
  *
- * $Id: ometis.c 10513 2011-07-07 22:06:03Z karypis $
  *
  */
 

@@ -8,7 +8,6 @@
  * Started 9/26/95
  * George
  *
- * $Id: struct.h 13900 2013-03-24 15:27:07Z karypis $
  */
 
 #ifndef _LIBMETIS_STRUCT_H_

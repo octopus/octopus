@@ -8,7 +8,6 @@
  * Started 10/2/97
  * George
  *
- * $Id: rename.h 13933 2013-03-29 22:20:46Z karypis $
  *
  */
 
