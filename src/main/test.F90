@@ -25,6 +25,7 @@ program oct_test
   use derivatives_m
   use fft_m
   use io_m
+  use ion_interaction_m
   use mesh_interpolation_m
   use parser_m
   use poisson_m
@@ -68,6 +69,8 @@ program oct_test
   !% Tests the implementation of the orthogonalization routines.
   !%Option interpolation 4
   !% Test the interpolation routines.
+  !%Option ion_interaction 5
+  !% Tests the ion-ion interaction routines.
   !%End
   call parse_variable('TestMode', OPTION_HARTREE, test_mode)
 
@@ -158,7 +161,9 @@ program oct_test
   case(OPTION_ORTHOGONALIZATION)
     call test_orthogonalization()
   case(OPTION_INTERPOLATION)
-    call test_interpolation()  
+    call test_interpolation()
+  case(OPTION_ION_INTERACTION)
+    call test_ion_interaction() 
   end select
 
   call fft_all_end()
@@ -286,6 +291,24 @@ program oct_test
 
     POP_SUB(test_interpolation)
   end subroutine test_interpolation
+
+
+  ! ---------------------------------------------------------
+
+  subroutine test_ion_interaction()
+    type(system_t) :: sys
+
+    PUSH_SUB(test_interpolation)
+
+    call system_init(sys)
+
+    call ion_interaction_test(sys%geo, sys%gr%sb)
+
+    call system_end(sys)
+
+    POP_SUB(test_interpolation)
+  end subroutine test_ion_interaction
+  
 
 end program oct_test
 

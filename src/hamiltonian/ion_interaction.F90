@@ -40,7 +40,8 @@ module ion_interaction_m
     ion_interaction_t,             &
     ion_interaction_init,          &
     ion_interaction_end,           &
-    ion_interaction_calculate
+    ion_interaction_calculate,     &
+    ion_interaction_test
 
   type ion_interaction_t
     FLOAT :: alpha
@@ -385,6 +386,45 @@ contains
     POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
 
+  ! --------------------------------------------------------------
+  
+  subroutine ion_interaction_test(geo, sb)
+    type(geometry_t),         intent(in)    :: geo
+    type(simul_box_t),        intent(in)    :: sb
+
+    type(ion_interaction_t) :: ion_interaction
+    FLOAT :: energy
+    FLOAT, allocatable :: force(:, :)
+    integer :: iatom, idir
+    
+    PUSH_SUB(ion_interaction_test)
+
+    call ion_interaction_init(ion_interaction)
+
+    SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
+    
+    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force)
+
+    call messages_write('Energy')
+    call messages_write(energy, fmt = '(f20.10)')
+    call messages_info()
+    
+    do iatom = 1, geo%natoms
+      call messages_write('Force atom')
+      call messages_write(iatom)
+      do idir = 1, sb%dim
+        call messages_write(force(idir, iatom), fmt = '(f20.10)')
+      end do
+      call messages_info()
+    end do
+    
+    SAFE_DEALLOCATE_A(force)
+    
+    call ion_interaction_end(ion_interaction)
+    
+    POP_SUB(ion_interaction_test)
+  end subroutine ion_interaction_test
+    
 end module ion_interaction_m
 
 !! Local Variables:
