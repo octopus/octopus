@@ -15,6 +15,8 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id$
+
 ! ---------------------------------------------------------
 subroutine xc_kli_pauli_solve(mesh, st, oep)
   type(mesh_t),   intent(in)    :: mesh
@@ -56,7 +58,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       do ist = st%st_start,st%st_end
         call states_get_state(st, mesh, jj, ist, 1, psij)
         weighted_hf(1:mesh%np,ii,jj) = weighted_hf(1:mesh%np,ii,jj) + &
-             &oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
+          oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
       end do
     end do
   end do
@@ -205,7 +207,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       end do KLI_iteration
 
       write(message(1), '(a,i4,a,es14.6)') &
-           &"Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
+        "Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
       message(2) = ''
       call messages_info(2)
       !
