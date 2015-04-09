@@ -284,10 +284,10 @@ contains
                   else
                     rff_global = dpsi
                   end if
-                  if (chunk == gr%mesh%mpi_grp%size .or. ist == st%d%nik*st%nst*st%d%dim) then
+                  if (chunk == gr%mesh%mpi_grp%size .or. ist*ik == st%d%nik*st%nst*st%d%dim) then
                     do iwt = 1, chunk
                       if (iwt-1 == gr%mesh%mpi_grp%rank) then
-                        call drestart_write_mesh_function(restart, trim(filename_tmp)          , &
+                        call drestart_write_mesh_function(restart, trim(filename_tmp), &
                              gr%mesh, rff_global, err, root = iwt-1, is_global = .true.)
                       end if
                     end do
