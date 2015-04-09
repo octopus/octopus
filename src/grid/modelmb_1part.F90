@@ -15,12 +15,12 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!
-!  general module for modelmb particles (eg 4 electrons in 1D equiv to
-!  1 in 4D). Also calculate different densities on request.
-!
+!! $Id$
+
 #include "global.h"
 
+!>  general module for modelmb particles (eg 4 electrons in 1D equiv to
+!!  1 in 4D). Also calculate different densities on request.
 module modelmb_1part_m
 
   use global_m
