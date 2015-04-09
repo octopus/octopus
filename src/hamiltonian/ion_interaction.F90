@@ -26,30 +26,71 @@ module ion_interaction_m
   use loct_math_m
   use messages_m
   use mpi_m
+  use parser_m
   use periodic_copy_m
   use profiling_m
   use simul_box_m
   use species_m
+  use unit_system_m
 
   implicit none
 
   private
   public ::                        &
+    ion_interaction_t,             &
+    ion_interaction_init,          &
+    ion_interaction_end,           &
     ion_interaction_calculate
 
+  type ion_interaction_t
+    FLOAT :: alpha
+  end type ion_interaction_t
+  
 contains
 
+  subroutine ion_interaction_init(this)
+    type(ion_interaction_t), intent(out)   :: this
+
+    PUSH_SUB(ion_interaction_init)
+
+    !%Variable EwaldAlpha
+    !%Type float
+    !%Default 1.1313708
+    !%Section Hamiltonian
+    !%Description
+    !% The value 'Alpha' that controls the splitting of the Coulomb
+    !% interaction in the Ewald sum used to calculation the ion-ion
+    !% interaction for periodic systems. This value affects the speed
+    !% of the calculation, normally users do not need to modify it.
+    !%End
+    call parse_variable('EwaldAlpha', CNST(1.1313708), this%alpha)
+    
+    POP_SUB(ion_interaction_init)
+  end subroutine ion_interaction_init
+  
+  ! ---------------------------------------------------------
+  
+  subroutine ion_interaction_end(this)
+    type(ion_interaction_t), intent(inout) :: this
+
+    PUSH_SUB(ion_interaction_end)
+
+    this%alpha = -CNST(1.0)
+    
+    POP_SUB(ion_interaction_end)
+  end subroutine ion_interaction_end
+  
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(geo, sb, ignore_external_ions, energy, force)
+  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force)
+    type(ion_interaction_t),  intent(in)    :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
     logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,    dimension(:,:), intent(out)   :: force
     
-    FLOAT, parameter :: alpha = CNST(1.1313708)
     FLOAT, allocatable:: r(:), f(:)
     FLOAT :: rr, dd, zi, zj, epsilon, sigma
     integer :: iatom, jatom, natom, iindex, jindex
@@ -76,7 +117,7 @@ contains
         energy = energy + &
           M_PI*species_zval(spci)**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*(sb%lsize(3) - species_jthick(spci)/M_THREE)
       else
-        call ion_interaction_periodic(geo, sb, energy, force)
+        call ion_interaction_periodic(this, geo, sb, energy, force)
       end if
 
     else
@@ -192,7 +233,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_periodic(geo, sb, energy, force)
+  subroutine ion_interaction_periodic(this, geo, sb, energy, force)
+    type(ion_interaction_t),   intent(in)     :: this
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
@@ -206,7 +248,6 @@ contains
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms, tmp(1:MAX_DIM)
-    FLOAT, parameter :: alpha = CNST(1.1313708)
     CMPLX, allocatable :: phase(:)
     type(profile_t), save :: prof_short, prof_long
 
@@ -227,7 +268,7 @@ contains
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
     
-    rcut = CNST(6.0)/alpha
+    rcut = CNST(6.0)/this%alpha
 
     call profiling_in(prof_short, "EWALD_SHORT")
     
@@ -248,7 +289,7 @@ contains
           
           if(rr < CNST(1e-5)) cycle
           
-          erfc = M_ONE - loct_erf(alpha*rr)
+          erfc = M_ONE - loct_erf(this%alpha*rr)
 
           ! energy
           ereal = ereal + M_HALF*zj*zi*erfc/rr
@@ -256,7 +297,7 @@ contains
           ! force
           force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
             M_HALF*zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
-            (erfc/rr + M_TWO*alpha/sqrt(M_PI)*exp(-(alpha*rr)**2))/rr**2
+            (erfc/rr + M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*rr)**2))/rr**2
         end do
         
       end do
@@ -274,7 +315,7 @@ contains
     do iatom = 1, geo%natoms
       zi = species_zval(geo%atom(iatom)%species)
       charge = charge + zi
-      eself = eself - alpha/sqrt(M_PI)*zi**2
+      eself = eself - this%alpha/sqrt(M_PI)*zi**2
     end do
 
     ! And the long-range part, using an Ewald sum
@@ -289,10 +330,10 @@ contains
 
     rcut = sqrt(rcut)
     
-    isph = ceiling(CNST(9.5)*alpha/rcut)
+    isph = ceiling(CNST(9.5)*this%alpha/rcut)
 
     ! First the G = 0 term (charge was calculated previously)
-    efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
+    efourier = -M_PI*charge**2/(M_TWO*this%alpha**2*sb%rcell_volume)
 
     do ix = -isph, isph
       do iy = -isph, isph
@@ -308,7 +349,7 @@ contains
           ! g=0 must be removed from the sum
           if(gg2 < M_EPSILON) cycle
           
-          gx = -CNST(0.25)*gg2/alpha**2
+          gx = -CNST(0.25)*gg2/this%alpha**2
 
           if(gx < CNST(-36.0)) cycle
 

@@ -137,6 +137,7 @@ module epot_m
 
     logical :: force_total_enforce
 
+    type(ion_interaction_t) :: ion_interaction
   end type epot_t
 
 contains
@@ -522,6 +523,8 @@ contains
       nullify(ep%poisson_solver)
     end if
 
+    call ion_interaction_init(ep%ion_interaction)
+
     POP_SUB(epot_init)
   end subroutine epot_init
 
@@ -534,6 +537,8 @@ contains
 
     PUSH_SUB(epot_end)
 
+    call ion_interaction_end(ep%ion_interaction)
+    
     if(ep%have_density) then
       nullify(ep%poisson_solver)
     end if
@@ -688,7 +693,7 @@ contains
     end if
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
+    call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
