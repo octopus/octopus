@@ -45,7 +45,6 @@ module poisson_fft_m
   use unit_system_m
 
   implicit none
-
   private
   public ::                  &
     poisson_fft_t,           &
@@ -76,7 +75,7 @@ contains
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
-    type(cube_t), optional             :: fullcube !< needed for Hockney kerenl
+    type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kerenl
 
     PUSH_SUB(poisson_fft_init)
 
@@ -86,19 +85,19 @@ contains
     if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
       this%qq(1:mesh%sb%periodic_dim) = qq(1:mesh%sb%periodic_dim)
-    endif
+    end if
 
     if(kernel == POISSON_FFT_KERNEL_HOCKNEY) then
-      if(.not.present(fullcube)) then
+      if (.not. present(fullcube)) then
         message(1) = "Hockney's FFT-kernel needs cube of full unit cell "
         call messages_fatal(1)
       else
-        if(.not.associated(fullcube%fft)) then
+        if (.not.associated(fullcube%fft)) then
           message(1) = "Hockney's FFT-kernel needs PoissonSolver=fft"
           call messages_fatal(1)
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
 
     select case(mesh%sb%dim)
     case(1)
@@ -257,10 +256,10 @@ contains
   !-----------------------------------------------------------------
 
   !-----------------------------------------------------------------
-  !! Kernel for Hockneys algorithm that solves the poisson equation
-  !< in a small box while respecting the periodicity of a larger box
-  !< A. Damle, L. Lin, L. Ying, JCTC, 2015
-  !< DOI: 10.1021/ct500985f, supplementary info  
+  !> Kernel for Hockneys algorithm that solves the poisson equation
+  !! in a small box while respecting the periodicity of a larger box
+  !! A. Damle, L. Lin, L. Ying, JCTC, 2015
+  !! DOI: 10.1021/ct500985f, supplementary info  
   subroutine poisson_fft_build_3d_3d_hockney(this, mesh, cube, fullcube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
@@ -350,7 +349,8 @@ contains
     call dfft_forward(cube%fft,fft_Coulb_small_RS,fft_Coulb_small_FS)
     !dummy copy for type conversion
     fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)) = &
-                                                  fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3))
+                                                 TOFLOAT( fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
+
 
     call dfourier_space_op_init(this%coulb, cube, fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
 
