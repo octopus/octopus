@@ -625,10 +625,9 @@ contains
 
       ! This is temporary debugging information.
       if(in_debug_mode .and. mc%par_strategy /= P_STRATEGY_SERIAL) then
-        if(mpi_world%rank == 0) then
-          write(0,'(a)') 'Debug: MPI Task Assignment to MPI Groups'
-          write(0,'(5a10)') 'World', 'Domains', 'States', 'K-Points', 'Other'
-        endif
+        write(message(1),'(a)') 'Debug: MPI Task Assignment to MPI Groups'
+        write(message(2),'(5a10)') 'World', 'Domains', 'States', 'K-Points', 'Other'
+        call messages_info(1)
 
         if(mc%node_type == P_SLAVE) then
           node_type = "slave"
@@ -636,9 +635,11 @@ contains
           node_type = "master"
         endif
         do irank = 0, mpi_world%size - 1
-          if(mpi_world%rank == irank) &
-            write(0,'(5i10,5x,a)') mpi_world%rank, mc%who_am_i(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_STATES), &
+          if(mpi_world%rank == irank) then
+            write(message(1),'(5i10,5x,a)') mpi_world%rank, mc%who_am_i(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_STATES), &
             mc%who_am_i(P_STRATEGY_KPOINTS), mc%who_am_i(P_STRATEGY_OTHER), trim(node_type)
+            call messages_info(1, all_nodes = .true.)
+          endif
           call MPI_Barrier(mpi_world%comm, mpi_err)
         enddo
       endif
