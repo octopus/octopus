@@ -95,11 +95,11 @@
       write(unit = iunit, iostat = ierr, fmt = 100)
       write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
       write(unit = iunit, iostat = ierr, fmt = '(a25,a1,a1,a10)') &
-        & '# all absorptions are in ',units_out%length%abbrev,'*',units_out%time%abbrev
+        '# all absorptions are in ',units_out%length%abbrev,'*',units_out%time%abbrev
       write(unit = iunit, iostat = ierr, fmt = '(a1)') '#'
       write(unit = iunit, iostat = ierr, fmt = '(a19,41x,a17)') '#        Energy    ', 'absorption'
       write(unit = iunit, iostat = ierr, fmt = '(a15,13x,a5,15x,a7,13x,a7,13x,a7)') &
-        & '#        [1/cm]','total','FT(<x>)','FT(<y>)','FT(<z>)'
+        '#        [1/cm]','total','FT(<x>)','FT(<y>)','FT(<z>)'
       write(unit = iunit, iostat = ierr, fmt = 0100) 
 
       do ifreq = 1, max_freq
@@ -141,7 +141,7 @@
       do while(.true.)
 
         read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-          & charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
+          charge, dipole(iter, 1), dipole(iter, 2), dipole(iter, 3)
 
         time(iter) =  units_to_atomic(units_out%time, time(iter))
 

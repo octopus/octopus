@@ -137,7 +137,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   end do
 
   if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, gamma, &
-&      dim = (/mb_1part%npt, mb_1part%npt/))
+    dim = (/mb_1part%npt, mb_1part%npt/))
 
   SAFE_DEALLOCATE_A(forward_map_gamma)
   SAFE_DEALLOCATE_A(icoord_map)

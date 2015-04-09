@@ -808,12 +808,12 @@ subroutine output_etsf_io_low_error_handle(error_data)
   write(0,*) "    *** ETSF I/O ERROR"
   write(0,*) "    ***"
   write(0,*) "    *** Backtrace          : ", &
-    & trim(error_data%backtrace(error_data%backtraceId)), "()"
+    trim(error_data%backtrace(error_data%backtraceId)), "()"
   do i = error_data%backtraceId - 1, 1, -1
     write(0,*) "    ***                      ", trim(error_data%backtrace(i)), "()"
   end do
   write(0,*) "    *** Action performed   : ", trim(error_data%access_mode_str), &
-    & " ", trim(error_data%target_type_str)
+    " ", trim(error_data%target_type_str)
   if (trim(error_data%target_name) /= "") then
     write(0,*) "    *** Target (name)      : ", trim(error_data%target_name)
   end if

@@ -255,7 +255,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 7, ldpsi*tsize)
 
     call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
-      & sp + 1/), (/this%pack%size_real(1), 1/))
+      sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
 
@@ -291,7 +291,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_CL_PACKED)
 
     tsize = types_get_size(batch_type(this))&
-      &/types_get_size(TYPE_FLOAT)
+      /types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
 #ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
@@ -308,7 +308,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 7, this%pack%size_real(1))
 
     call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
-      & sp + 1/), (/this%pack%size_real(1), 1/))
+      sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
 
