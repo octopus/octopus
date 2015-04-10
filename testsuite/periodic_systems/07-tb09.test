@@ -14,8 +14,8 @@ match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -41.91336041
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -51.15076275
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -41.91320199
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -51.15060457
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.66647752
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3.86297517
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; 0.00000000
@@ -51,8 +51,8 @@ match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -41.91336038
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -51.15076275
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -41.91320222
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -51.15060457
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.66647784
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3.86297499
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; 0.00000000
