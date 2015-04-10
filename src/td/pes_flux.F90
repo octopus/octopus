@@ -60,6 +60,8 @@ module pes_flux_m
     integer           :: output
     integer           :: interval
 
+    integer, pointer  :: nsrfcpnt_start(:)
+    integer, pointer  :: nsrfcpnt_end(:)
     FLOAT, pointer    :: kpnt(:,:)         !< coordinates of all k-points
     integer, pointer  :: srfcpnt(:)        !< returns the index of the points on the surface
     FLOAT, pointer    :: srfcnrml(:,:)     !< (unit) vectors normal to the surface
@@ -233,6 +235,9 @@ contains
     SAFE_DEALLOCATE_P(flux%srfcpnt)
     SAFE_DEALLOCATE_P(flux%srfcnrml)
 
+    SAFE_DEALLOCATE_P(flux%nsrfcpnt_start)
+    SAFE_DEALLOCATE_P(flux%nsrfcpnt_end)
+
     SAFE_DEALLOCATE_P(flux%vlkvphase)
 
     POP_SUB(pes_flux_end)
@@ -302,14 +307,18 @@ contains
     FLOAT, allocatable :: vp(:)
     CMPLX, allocatable :: wf(:,:,:,:), gwf(:,:,:,:,:)
     FLOAT              :: phi, kk
+    integer            :: start(1:MAX_DIM), end(1:MAX_DIM)
     FLOAT              :: krr, vec
     CMPLX              :: planewf   ! plane waves for each k-point on the surface
 
     PUSH_SUB(pes_flux_calc)
 
-    dim=mesh%sb%dim
+    dim  = mesh%sb%dim
     nsrf = flux%nsrfcpnts
-    nkp = flux%nkpnts
+    nkp  = flux%nkpnts
+
+    start(1:dim) = flux%nsrfcpnt_start(1:dim)
+    end(1:dim)   = flux%nsrfcpnt_end(1:dim)
 
     SAFE_ALLOCATE(wf(1:flux%nsrfcpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     wf = M_z0
@@ -402,12 +411,12 @@ contains
           do idim = 1, st%d%dim
             do ikp = 1, flux%nkpnts
               do dir = 1, dim
-                flux%Jk(ikp, idim, ist, ik, 1:nsrf, dir) =                                   & 
-                                          flux%Jk(ikp, idim, ist, ik, 1:nsrf, dir) +     &
-                conjg(flux%phik(ikp, 1:nsrf)) *                                       & 
-                (    flux%kpnt(ikp, dir) * wf(1:nsrf, idim, ist, ik)                    &
-                    - M_zI * gwf(1:nsrf, idim, ist, ik, dir)                            &
-                    - M_TWO * vp(dir) / P_c *  wf(1:nsrf, idim, ist, ik))
+                flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) =                   &
+                  flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) +                 &
+                  conjg(flux%phik(ikp, start(dir):end(dir))) *                            & 
+                  (    flux%kpnt(ikp, dir) * wf(start(dir):end(dir), idim, ist, ik)       &
+                                   - M_zI * gwf(start(dir):end(dir), idim, ist, ik, dir)  &
+                  - M_TWO * vp(dir) / P_c *  wf(start(dir):end(dir), idim, ist, ik))
               end do
             end do
           end do
@@ -445,14 +454,20 @@ contains
     type(pes_flux_t), intent(inout) :: flux
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
 
-    integer, allocatable  :: which_surface(:)
+    integer, allocatable  :: which_surface(:), aux(:)
     FLOAT                 :: xx(MAX_DIM), rr, dd
-    integer               :: ip, ierr, idim, isp
+    integer               :: ip, ierr, idim, isp, dir, start
 
     PUSH_SUB(pes_flux_getsrfc)
 
+    SAFE_ALLOCATE(flux%nsrfcpnt_start(1:mesh%sb%dim))
+    SAFE_ALLOCATE(flux%nsrfcpnt_end(1:mesh%sb%dim))
+
     SAFE_ALLOCATE(which_surface(1:mesh%np))
-    which_surface(:) = 0
+    which_surface = 0
+
+    SAFE_ALLOCATE(aux(1:mesh%sb%dim))
+    aux = 0
 
     flux%nsrfcpnts = 0 
     do ip = 1, mesh%np
@@ -468,9 +483,11 @@ contains
         end if
       end do
       if(isp > 1) then
-        which_surface(ip) = 0                                ! corners are not counted
+        ! corners are not counted
+        which_surface(ip) = 0
         flux%nsrfcpnts = flux%nsrfcpnts - isp
       else if(isp == 1) then
+        ! points in absorbing zone are not counted either
         do idim = 1, mesh%sb%dim
           dd = abs(xx(idim)) - (mesh%sb%lsize(idim) - border(idim))
           if(dd >= mesh%spacing(idim)) then 
@@ -479,29 +496,45 @@ contains
           end if
         end do
       end if
-      ! if(isp == M_ONE) flux%is_on_surface(ip) = M_ONE      ! corners are not counted
-      ! flux%is_on_surface(ip) = isp                         ! corners are counted 2x
     end do
 
     SAFE_ALLOCATE(flux%srfcpnt(1:flux%nsrfcpnts))
-    flux%srfcpnt(:) = 0
+    flux%srfcpnt = 0
 
     SAFE_ALLOCATE(flux%srfcnrml(1:flux%nsrfcpnts, 1:mesh%sb%dim))
     flux%srfcnrml = M_ZERO
 
-    isp = 0 
+    ! number of surface points with normal vector in +-x, +-y, and +-z direction separately
     do ip = 1, mesh%np
       if(which_surface(ip) /= 0) then
-        isp = isp + 1
+        dir = abs(which_surface(ip))
+        aux(dir) = aux(dir) + 1
+      end if
+    end do
 
-        flux%srfcpnt(isp)  = ip
+    start = 1
+    do dir = 1, mesh%sb%dim
+      flux%nsrfcpnt_start(dir) = start
+      start = start + aux(dir)
+      flux%nsrfcpnt_end(dir)   = start - 1
+    end do
+
+    ! Fill up flux%srfcpnt in correct ordering
+    aux(1:mesh%sb%dim) = flux%nsrfcpnt_start(1:mesh%sb%dim) - 1
+    do ip = 1, mesh%np
+      if(which_surface(ip) /= 0) then
+        dir = abs(which_surface(ip))
+        aux(dir) = aux(dir) + 1
+
+        flux%srfcpnt(aux(dir)) = ip
         ! surface normal should point to the inside? Does not make a difference.
         ! add the surface element !!!
-        flux%srfcnrml(isp, abs(which_surface(ip))) = sign(1, which_surface(ip))
+        flux%srfcnrml(aux(dir), dir) = sign(1, which_surface(ip))
       end if
     end do
 
     SAFE_DEALLOCATE_A(which_surface)
+    SAFE_DEALLOCATE_A(aux)
 
     write(*,*) 'Surface points:', flux%nsrfcpnts
     do isp = 1, flux%nsrfcpnts
