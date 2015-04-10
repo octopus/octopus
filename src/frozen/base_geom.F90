@@ -133,6 +133,9 @@ module base_geom_m
   implicit none
 
   private
+  public ::      &
+    base_geom_t
+
   public ::            &
     base_geom__init__, &
     base_geom__add__,  &
@@ -148,6 +151,11 @@ module base_geom_m
     base_geom_copy, &
     base_geom_end
 
+  public ::                &
+    BASE_GEOM_OK,          &
+    BASE_GEOM_KEY_ERROR,   &
+    BASE_GEOM_EMPTY_ERROR
+
 #define LIST_TEMPLATE_NAME base_geom
 #define LIST_INCLUDE_HEADER
 #include "tlist.F90"
@@ -158,7 +166,11 @@ module base_geom_m
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
 
-  type, public :: base_geom_t
+  integer, parameter :: BASE_GEOM_OK          = BASE_GEOM_HASH_OK
+  integer, parameter :: BASE_GEOM_KEY_ERROR   = BASE_GEOM_HASH_KEY_ERROR
+  integer, parameter :: BASE_GEOM_EMPTY_ERROR = BASE_GEOM_HASH_EMPTY_ERROR
+
+  type :: base_geom_t
     private
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
@@ -223,10 +235,6 @@ module base_geom_m
     module procedure base_geom_end_geom
     module procedure base_geom_iterator_end
   end interface base_geom_end
-
-  integer, public, parameter :: BASE_GEOM_OK          = BASE_GEOM_HASH_OK
-  integer, public, parameter :: BASE_GEOM_KEY_ERROR   = BASE_GEOM_HASH_KEY_ERROR
-  integer, public, parameter :: BASE_GEOM_EMPTY_ERROR = BASE_GEOM_HASH_EMPTY_ERROR
 
 #define TEMPLATE_PREFIX base_geom
 #define EXCLUDE_TYPE

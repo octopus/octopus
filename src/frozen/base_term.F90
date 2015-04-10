@@ -118,11 +118,6 @@ module base_term_m
     module procedure base_term_init_copy
   end interface base_term_init
 
-  interface base_term_update
-    module procedure base_term_update_term
-    module procedure base_term_update_pass
-  end interface base_term_update
-
   interface base_term_set
     module procedure base_term_set_info
   end interface base_term_set
@@ -298,46 +293,28 @@ contains
   end subroutine base_term__update__
 
   ! ---------------------------------------------------------
-  subroutine base_term_update_term(this)
+  recursive subroutine base_term_update(this)
     type(base_term_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_term_update_term)
-    call base_term_update_pass(this, base_term__update__)
-    POP_SUB(base_term_update_term)
-    return
-  end subroutine base_term_update_term
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_term_update_pass(this, term_update)
-    type(base_term_t), intent(inout) :: this
-    interface
-      subroutine term_update(this)
-        import :: base_term_t
-        type(base_term_t), intent(inout) :: this
-      end subroutine term_update
-    end interface
     !
     type(base_term_iterator_t) :: iter
     type(base_term_t), pointer :: subs
     integer                    :: ierr
     !
-    PUSH_SUB(base_term_update_pass)
+    PUSH_SUB(base_term_update)
     nullify(subs)
-    call base_term__reset__(this)
-    call term_update(this)
     call base_term_init(iter, this)
     do
       nullify(subs)
       call base_term_next(iter, subs, ierr)
       if(ierr/=BASE_TERM_OK)exit
-      call base_term_update(subs, term_update)
-      call base_term__acc__(this, subs)
+      call base_term_update(subs)
     end do
     call base_term_end(iter)
     nullify(subs)
-    POP_SUB(base_term_update_pass)
+    call base_term__update__(this)
+    POP_SUB(base_term_update)
     return
-  end subroutine base_term_update_pass
+  end subroutine base_term_update
 
   ! ---------------------------------------------------------
   subroutine base_term__reset__(this)

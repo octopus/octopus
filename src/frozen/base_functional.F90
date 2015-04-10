@@ -106,6 +106,7 @@ module base_functional_m
   public ::                    &
     base_functional__init__,   &
     base_functional__start__,  &
+    base_functional__calc__,   &
     base_functional__update__, &
     base_functional__stop__,   &
     base_functional__reset__,  &
@@ -176,11 +177,6 @@ module base_functional_m
     module procedure base_functional_init_copy
   end interface base_functional_init
 
-  interface base_functional_update
-    module procedure base_functional_update_functional
-    module procedure base_functional_update_pass
-  end interface base_functional_update
- 
   interface base_functional_set
     module procedure base_functional_set_info
   end interface base_functional_set
@@ -427,7 +423,7 @@ contains
   end subroutine base_functional_start
 
   ! ---------------------------------------------------------
-  subroutine base_functional__update__(this)
+  subroutine base_functional__calc__(this)
     type(base_functional_t), intent(inout) :: this
     !
     real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
@@ -436,7 +432,7 @@ contains
     integer                                :: kind
     logical                                :: fine
     !
-    PUSH_SUB(base_functional__update__)
+    PUSH_SUB(base_functional__calc__)
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     nullify(fptn, potn, dnst)
@@ -466,53 +462,47 @@ contains
         this%energy=this%factor*enrg
         fptn=this%factor*fptn
       end if
-      call storage_update(this%data)
+      call base_functional__update__(this)
     end if
+    POP_SUB(base_functional__calc__)
+    return
+  end subroutine base_functional__calc__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__update__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_functional__update__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call storage_update(this%data)
     POP_SUB(base_functional__update__)
     return
   end subroutine base_functional__update__
 
   ! ---------------------------------------------------------
-  subroutine base_functional_update_functional(this)
+  recursive subroutine base_functional_update(this)
     type(base_functional_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_functional_update_functional)
-    call base_functional_update_pass(this, base_functional__update__)
-    POP_SUB(base_functional_update_functional)
-    return
-  end subroutine base_functional_update_functional
- 
-  ! ---------------------------------------------------------
-  recursive subroutine base_functional_update_pass(this, functional_update)
-    type(base_functional_t), intent(inout) :: this
-    interface
-      subroutine functional_update(this)
-        import :: base_functional_t
-        type(base_functional_t), intent(inout) :: this
-      end subroutine functional_update
-    end interface
     !
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
     integer                          :: ierr
     !
-    PUSH_SUB(base_functional_update_pass)
+    PUSH_SUB(base_functional_update)
     nullify(subs)
-    call base_functional__reset__(this)
-    call functional_update(this)
     call base_functional_init(iter, this)
     do
       nullify(subs)
       call base_functional_next(iter, subs, ierr)
       if(ierr/=BASE_FUNCTIONAL_OK)exit
-      call base_functional_update(subs, functional_update)
-      call base_functional__acc__(this, subs)
+      call base_functional_update(subs)
     end do
     call base_functional_end(iter)
     nullify(subs)
-    POP_SUB(base_functional_update_pass)
+    call base_functional__update__(this)
+    POP_SUB(base_functional_update)
     return
-  end subroutine base_functional_update_pass
+  end subroutine base_functional_update
 
   ! ---------------------------------------------------------
   subroutine base_functional__stop__(this)

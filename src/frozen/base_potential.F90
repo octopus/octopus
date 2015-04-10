@@ -148,11 +148,6 @@ module base_potential_m
     module procedure base_potential_init_copy
   end interface base_potential_init
 
-  interface base_potential_update
-    module procedure base_potential_update_potential
-    module procedure base_potential_update_pass
-  end interface base_potential_update
- 
   interface base_potential_set
     module procedure base_potential_set_info
   end interface base_potential_set
@@ -399,46 +394,28 @@ contains
   end subroutine base_potential__update__
 
   ! ---------------------------------------------------------
-  subroutine base_potential_update_potential(this)
+  recursive subroutine base_potential_update(this)
     type(base_potential_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_potential_update_potential)
-    call base_potential_update_pass(this, base_potential__update__)
-    POP_SUB(base_potential_update_potential)
-    return
-  end subroutine base_potential_update_potential
- 
-  ! ---------------------------------------------------------
-  recursive subroutine base_potential_update_pass(this, potential_update)
-    type(base_potential_t), intent(inout) :: this
-    interface
-      subroutine potential_update(this)
-        import :: base_potential_t
-        type(base_potential_t), intent(inout) :: this
-      end subroutine potential_update
-    end interface
     !
     type(base_potential_iterator_t) :: iter
     type(base_potential_t), pointer :: subs
     integer                         :: ierr
     !
-    PUSH_SUB(base_potential_update_pass)
+    PUSH_SUB(base_potential_update)
     nullify(subs)
-    call base_potential__reset__(this)
-    call potential_update(this)
     call base_potential_init(iter, this)
     do
       nullify(subs)
       call base_potential_next(iter, subs, ierr)
       if(ierr/=BASE_POTENTIAL_OK)exit
-      call base_potential_update(subs, potential_update)
-      call base_potential__acc__(this, subs)
+      call base_potential_update(subs)
     end do
     call base_potential_end(iter)
     nullify(subs)
-    POP_SUB(base_potential_update_pass)
+    call base_potential__update__(this)
+    POP_SUB(base_potential_update)
     return
-  end subroutine base_potential_update_pass
+  end subroutine base_potential_update
 
   ! ---------------------------------------------------------
   subroutine base_potential__stop__(this)

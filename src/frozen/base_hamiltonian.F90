@@ -312,11 +312,6 @@ module base_hamiltonian_m
     module procedure base_hamiltonian_init_copy
   end interface base_hamiltonian_init
 
-  interface base_hamiltonian_update
-    module procedure base_hamiltonian_update_hamiltonian
-    module procedure base_hamiltonian_update_pass
-  end interface base_hamiltonian_update
-
 #if 0
 
   interface base_hamiltonian_set
@@ -1278,46 +1273,28 @@ contains
   end subroutine base_hamiltonian__update__
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_update_hamiltonian(this)
+  recursive subroutine base_hamiltonian_update(this)
     type(base_hamiltonian_t), intent(inout) :: this
-    !
-    PUSH_SUB(base_hamiltonian_update_hamiltonian)
-    call base_hamiltonian_update(this, base_hamiltonian__update__)
-    POP_SUB(base_hamiltonian_update_hamiltonian)
-    return
-  end subroutine base_hamiltonian_update_hamiltonian
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian_update_pass(this, hamiltonian_update)
-    type(base_hamiltonian_t), intent(inout) :: this
-    interface
-      subroutine hamiltonian_update(this)
-        import :: base_hamiltonian_t
-        type(base_hamiltonian_t), intent(inout) :: this
-      end subroutine hamiltonian_update
-    end interface
     !
     type(base_hamiltonian_iterator_t) :: iter
     type(base_hamiltonian_t), pointer :: subs
     integer                           :: ierr
     !
-    PUSH_SUB(base_hamiltonian_update_pass)
+    PUSH_SUB(base_hamiltonian_update)
     nullify(subs)
-    call base_hamiltonian__reset__(this)
-    call hamiltonian_update(this)
     call base_hamiltonian_init(iter, this)
     do
       nullify(subs)
       call base_hamiltonian_next(iter, subs, ierr)
       if(ierr/=BASE_HAMILTONIAN_OK)exit
-      call base_hamiltonian_update(subs, hamiltonian_update)
-      call base_hamiltonian__acc__(this, subs)
+      call base_hamiltonian_update(subs)
     end do
     call base_hamiltonian_end(iter)
     nullify(subs)
-    POP_SUB(base_hamiltonian_update_pass)
+    call base_hamiltonian__update__(this)
+    POP_SUB(base_hamiltonian_update)
     return
-  end subroutine base_hamiltonian_update_pass
+  end subroutine base_hamiltonian_update
 
   ! ---------------------------------------------------------
   recursive subroutine base_hamiltonian__stop__(this)
