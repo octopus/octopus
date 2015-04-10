@@ -1096,8 +1096,8 @@ contains
           ereal = ereal + M_HALF*zj*zi*erfc/rr
           
           ! force
-          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
-            M_HALF*zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
+          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) - &
+            zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
             (erfc/rr + M_TWO*alpha/sqrt(M_PI)*exp(-(alpha*rr)**2))/rr**2
         end do
         
