@@ -55,7 +55,7 @@ program oct_local_multipoles
   type local_domain_t
     integer                         :: nd              !< number of local domains.
     type(box_union_t), allocatable  :: domain(:)       !< boxes that form each domain.
-    character(len=80), allocatable  :: clist(:)        !< list of centers for each domain.
+    character(len=500), allocatable :: clist(:)        !< list of centers for each domain.
     character(len=15), allocatable  :: lab(:)          !< declared name for each domain.
     integer, allocatable            :: dshape(:)       !< shape of box for each domain.
     logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
@@ -739,12 +739,12 @@ contains
     integer,           intent(in)  :: dsh(:)
     logical,           intent(out) :: inside(:,:)
 
-    integer               :: how, ib, id, ierr, ip, ix, nb, rankmin
+    integer               :: how, ia, ib, id, ierr, ip, ix, nb, rankmin
     integer               :: max_check
-    integer, allocatable  :: dunit(:), domain_map(:,:)
-    FLOAT                 :: dmin
+    integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
+    FLOAT                 :: dmin, dd
     FLOAT, allocatable    :: xi(:), dble_domain_map(:,:), domain_mesh(:)
-    logical               :: extra_write
+    logical               :: extra_write, lduseatomicradii
     character(len=64)     :: filename
 
     PUSH_SUB(bader_union_inside)
@@ -752,10 +752,39 @@ contains
     SAFE_ALLOCATE(xi(1:sys%space%dim))
     inside = .false.
 
+
+    !%Variable LDUseAtomicRadii
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% If set, atomic radii will be used to assign lone pairs to ion. 
+    !%End
+    call parse_variable('LDUseAtomicRadii', .false., lduseatomicradii)
+
     do id = 1, nd
       if( dsh(id) /= BADER ) then
         call box_union_inside_vec(dom(id), sys%gr%mesh%np, sys%gr%mesh%x, inside(:,id))
       else
+      ! Assign basins%map to ions
+        if (lduseatomicradii .and. (id == 1)) then
+          SAFE_ALLOCATE(ion_map(sys%geo%natoms))
+          do ia = 1, sys%geo%natoms
+            ion_map(ia) = basins%map(mesh_nearest_point(sys%gr%mesh, sys%geo%atom(ia)%x, dmin, rankmin)) 
+          end do
+      ! Assign lonely pair to ion in a atomic radii distance
+          do ip = 1, sys%gr%mesh%np
+            if( all(ion_map(:) /= basins%map(ip)) ) then
+              do ia = 1, sys%geo%natoms
+                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) & 
+                      - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
+                dd = sqrt(dd)
+                if ( dd < species_def_h(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
+              end do
+            end if
+          end do
+          SAFE_DEALLOCATE_A(ion_map)
+        end if
         nb = box_union_get_nboxes(dom(id))
         max_check = nb
         SAFE_ALLOCATE(domain_map(nd,max_check))
