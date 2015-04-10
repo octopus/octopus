@@ -1437,11 +1437,11 @@ contains
 
       case(OPTION_MIN_RADIUS)
         call check_duplication(OPTION_MIN_RADIUS)
-        call parse_block_float(blk, row, icol + 1, spec%def_h)
+        call parse_block_float(blk, row, icol + 1, spec%def_h, unit = units_inp%length)
 
       case(OPTION_MAX_SPACING)
         call check_duplication(OPTION_MAX_SPACING)
-        call parse_block_float(blk, row, icol + 1, spec%def_rsize)
+        call parse_block_float(blk, row, icol + 1, spec%def_rsize, unit = units_inp%length)
 
       case(OPTION_LMAX)
         call check_duplication(OPTION_LMAX)
@@ -1471,7 +1471,7 @@ contains
 
       case(OPTION_MASS)
         call check_duplication(OPTION_MASS)
-        call parse_block_float(blk, row, icol + 1, spec%mass)
+        call parse_block_float(blk, row, icol + 1, spec%mass, unit = units_inp%mass)
 
       case(OPTION_VALENCE)
         call check_duplication(OPTION_VALENCE)

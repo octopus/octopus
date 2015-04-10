@@ -478,8 +478,7 @@ contains
           message(2) = "are given as reduced coordinates."
           call messages_fatal(2)
         end if
-        call parse_block_float(blk, row, 2, rsize)
-        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
         if(rsize < M_ZERO) call messages_input_error('radius')
         call parse_block_string(blk, row, 3, clist)
         nb = 0
@@ -487,30 +486,24 @@ contains
           if(loct_isinstringlist(ic, clist)) nb = nb + 1
         end do
       case(SPHERE)
-        call parse_block_float(blk, row, 2, rsize)
-        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
         if(rsize < M_ZERO) call messages_input_error('radius')
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + ic, center(ic))
-          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+          call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
         end do
       case(CYLINDER)
-        call parse_block_float(blk, row, 2, rsize)
-        rsize = units_from_atomic(units_inp%length**(-1), rsize)
+        call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
         if(rsize < M_ZERO) call messages_input_error('radius')
-        call parse_block_float(blk, row, 3, xsize)
+        call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
         do ic = 1, dim 
-          call parse_block_float(blk, row, 3 + ic, center(ic))
-          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+          call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
         end do
       case(PARALLELEPIPED)
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + ic, lsize(ic))
-          lsize(ic) = units_from_atomic(units_inp%length**(-1), lsize(ic))
+          call parse_block_float(blk, row, 2 + ic, lsize(ic), unit = units_inp%length)
         end do
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + dim + ic, center(ic))
-          center(ic) = units_from_atomic(units_inp%length**(-1), center(ic))
+          call parse_block_float(blk, row, 2 + dim + ic, center(ic), unit = units_inp%length)
         end do
       case(BADER)
         ! FIXME: when input error exists --> segmentation fault appears
