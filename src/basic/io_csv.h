@@ -1,3 +1,4 @@
+#if 0
 /*
   Copyright (C) 2009 octopus team
 
@@ -17,7 +18,12 @@
   02110-1301, USA.
 
   $Id$
+
+Note: This comment header is excluded by the preprocessor since this
+file is included in both C and Fortran source files, and thus neither
+comment style should be used.
 */
+#endif
 
 #ifndef IO_CSV_H
 #define IO_CSV_H

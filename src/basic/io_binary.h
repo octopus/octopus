@@ -1,3 +1,4 @@
+#if 0
 /*
   Copyright (C) 2009 X. Andrade
 
@@ -17,10 +18,19 @@
   02110-1301, USA.
 
   $Id$
+
+Note: This comment header is excluded by the preprocessor since this
+file is included in both C and Fortran source files, and thus neither
+comment style should be used.
 */
+#endif
 
 #ifndef IO_BINARY_H
 #define IO_BINARY_H
+
+#if 0
+/* These values must not be changed, as they are used in the restart files */
+#endif
 
 #define TYPE_FLOAT          0
 #define TYPE_DOUBLE         1
