@@ -180,19 +180,19 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
         do ii = 1,psib%nst
           psi_global(:,:) = M_ZERO
-#if HAVE_MPI
+#ifdef HAVE_MPI
           call vec_gather(der%mesh%vp, 0, psi_global(1:der%mesh%np_global,1),epsib%states(ii)%X(psi)(:,1) )
           call MPI_Bcast(psi_global(1,1),der%mesh%np_global , R_MPITYPE, 0, der%mesh%mpi_grp%comm, mpi_err)
 #endif
           ! use globel hpsi for now
           hpsi_global(:,:) = M_ZERO
-#if HAVE_MPI
+#ifdef HAVE_MPI
           call vec_gather(der%mesh%vp, 0, hpsi_global(1:der%mesh%np_global,1),hpsib%states(ii)%X(psi)(:,1) )
 #endif
           ! call with global hpsi
           call X(scdm_exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, hm%exx_coef)
           ! call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef) 
-#if HAVE_MPI
+#ifdef HAVE_MPI
           call vec_scatter(der%mesh%vp,0, hpsi_global(1:der%mesh%np_global,1), hpsib%states(ii)%X(psi)(:,1))
 #endif
         end do
@@ -547,7 +547,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   temp_state_global(:,:) = M_ZERO
   if(der%mesh%parallel_in_domains) then
      temp_state_global(:,1) = hpsi(:,1)
-#if HAVE_MPI
+#ifdef HAVE_MPI
      call MPI_Allreduce(temp_state_global, hpsi, der%mesh%np_global, R_MPITYPE, MPI_SUM, der%mesh%vp%comm, mpi_err)
 #endif
   end if
