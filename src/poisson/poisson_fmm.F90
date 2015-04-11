@@ -54,8 +54,6 @@ module poisson_fmm_m
 #ifdef HAVE_LIBFM
   use fcs_module
   use iso_fortran_env
-#else
-#define fcs_integer_kind_isoc 4
 #endif
 
   implicit none
@@ -67,6 +65,10 @@ module poisson_fmm_m
     poisson_fmm_init,            &
     poisson_fmm_end,             &
     poisson_fmm_solve
+
+#ifndef HAVE_LIBFM
+  integer, parameter :: fcs_integer_kind_isoc = 4
+#endif
 
   type poisson_fmm_t
     FLOAT   :: delta_E_fmm
