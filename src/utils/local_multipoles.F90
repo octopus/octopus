@@ -732,12 +732,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bader_union_inside(basins, nd, dom, lab, dsh, inside)
-    type(basins_t),    intent(in)  :: basins
-    integer,           intent(in)  :: nd 
-    type(box_union_t), intent(in)  :: dom(:)
-    character(len=15), intent(in)  :: lab(:)
-    integer,           intent(in)  :: dsh(:)
-    logical,           intent(out) :: inside(:,:)
+    type(basins_t),    intent(inout) :: basins
+    integer,           intent(in)    :: nd 
+    type(box_union_t), intent(in)    :: dom(:)
+    character(len=15), intent(in)    :: lab(:)
+    integer,           intent(in)    :: dsh(:)
+    logical,           intent(out)   :: inside(:,:)
 
     integer               :: how, ia, ib, id, ierr, ip, ix, nb, rankmin
     integer               :: max_check
