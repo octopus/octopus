@@ -265,7 +265,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     end do
 
     ! make list with points in the box
-    if (all(out_of_index_range==(/.false.,.false.,.false./)) ) then
+    if (all(out_of_index_range .eqv. (/.false.,.false.,.false./)) ) then
       temp_box(:,:,:) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
            icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
            icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
@@ -290,8 +290,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! NOTE: in principle this would be needed only for the periodic 
     !       dimensions, because above we have made sure that in 
     !       all other directions there are no points out of the mesh 
-    if(any(out_of_mesh        == (/.true.,.true.,.true./)) .or. &
-       any(out_of_index_range == (/.true.,.true.,.true./)) ) then
+    if(any(out_of_mesh        .eqv. (/.true.,.true.,.true./)) .or. &
+       any(out_of_index_range .eqv. (/.true.,.true.,.true./)) ) then
       
       ! dimension of full simulation box
       nn = scdm%full_cube_n
