@@ -35,8 +35,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   R_TYPE, allocatable :: rho(:), pot(:), rho2(:)
   FLOAT  :: exx, error, error_tmp
   R_TYPE, allocatable :: state_global(:), temp_state(:,:)
-  integer :: ix(3)
-  logical :: outside
+  integer,  allocatable :: temp_box(:,:,:)
+  integer :: ix(3), nr(3,2)
+  logical :: out_of_index_range(3), out_of_mesh(3)
 
   FLOAT :: t0,t1, t2, t3, t4
   FLOAT :: temp(3)
@@ -45,7 +46,10 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   PUSH_SUB(X(scdm_localize))
   ! check if already localized
-  if(scdm_is_local) return
+  if(scdm_is_local) then
+    POP_SUB(X(scdm_localize))
+    return
+  end if
 
   call cpu_time(t0)
   if (st%lnst /= st%nst) call messages_not_implemented("SCDM with state parallelization")
@@ -239,6 +243,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   count = 0
   error_tmp = M_ZERO
   scdm%X(psi)(:,:) =  M_ZERO
+  SAFE_ALLOCATE(temp_box(1:2*scdm%box_size+1,1:2*scdm%box_size+1,1:2*scdm%box_size+1))
   do vv = scdm%st_start, scdm%st_end
     count = count + 1
     ! find integer index of center
@@ -248,52 +253,107 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! find index of center in the mesh
     ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
 
-    ! if(periodic boundary..)
-    call check_periodic_box(mesh%idx,icenter(:),scdm%box_size,scdm%periodic(count))
+    ! make sure that box does not fall out of range of the index structure 
+    call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
+    
+    ! only periodic dimensions can be out of range
+    do idim=1,3
+      if(out_of_index_range(idim).and.idim > mesh%sb%periodic_dim) then
+        message(1) = 'SCDM box out of index range in non-periodic dimension'
+        call messages_fatal(1)
+      end if
+    end do
 
     ! make list with points in the box
-    if (.not.scdm%periodic(count)) then
-      scdm%box(:,:,:,count) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
+    if (all(out_of_index_range==(/.false.,.false.,.false./)) ) then
+      temp_box(:,:,:) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
            icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
            icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
-    else
-      ! in case there are periodic replica go through every point
-      do i1 = -scdm%box_size, scdm%box_size
+      
+      ! check if all indices are within the mesh
+      out_of_mesh(1:3) = .false.
+      do idim=1,3
+        if(minval(minval(temp_box,dim=idim)) < 1 .or. &
+           maxval(maxval(temp_box,dim=idim)) > mesh%np_global) then
+          out_of_mesh(idim) = .true.
+          ! can only be out of mesh in periodic direction
+          if(idim > mesh%sb%periodic_dim ) then
+            message(1) = 'SCDM box out of mesh in non-periodic dimension'
+            call messages_fatal(1)
+          end if
+        end if
+      end do
+      
+    end if
+    !
+    ! in case there are periodic replica go through every point
+    ! NOTE: in principle this would be needed only for the periodic 
+    !       dimensions, because above we have made sure that in 
+    !       all other directions there are no points out of the mesh 
+    if(any(out_of_mesh        == (/.true.,.true.,.true./)) .or. &
+       any(out_of_index_range == (/.true.,.true.,.true./)) ) then
+      
+      ! dimension of full simulation box
+      nn = scdm%full_cube_n
+      ! limits of the indices that are on the mesh
+      ! NOTE: this should already be defined somewhere, but I didnt find it
+      do idim=1,3
+        if(mod(scdm%full_cube_n(idim),2) == 0 ) then
+          nr(idim,1) = -nn(idim)/2
+          nr(idim,2) =  nn(idim)/2-1
+        else
+          nr(idim,1) = -nn(idim)/2
+          nr(idim,2) =  nn(idim)/2
+        end if
+      end do
+
+      do  i1 = -scdm%box_size, scdm%box_size
         do i2 = -scdm%box_size, scdm%box_size
           do i3 = -scdm%box_size, scdm%box_size
 
             ix(:) = icenter(:)+(/i1,i2,i3/)
 
-            outside = .false.
-            do idim = 1, 3
-              if (ix(idim) < mesh%idx%nr(1,idim) .or. &
-                   ix(idim) > mesh%idx%nr(2,idim)) then
-                outside = .true.
-                exit
+            do idim=1,3
+              if( ix(idim) < nr(idim,1)) then
+                ix(idim) = ix(idim) + nn(idim)
+              else if( ix(idim) > nr(idim,2)) then
+                ix(idim) = ix(idim) - nn(idim)
               end if
             end do
-
-            if (outside) then 
-              ! map point to equivalent one in cell
-              do idim=1,3 ! should be dim...
-                if (ix(idim) < mesh%idx%nr(1,idim)) then
-                  ix(idim) = ix(idim)+mesh%idx%ll(idim)
-                elseif (ix(idim) > mesh%idx%nr(2,idim)) then
-                  ix(idim) = ix(idim)-mesh%idx%ll(idim)
-                end if
-              end do
-            end if
+            
             ! indices of box are 1-based
             j1 = i1 + scdm%box_size + 1
             j2 = i2 + scdm%box_size + 1
             j3 = i3 + scdm%box_size + 1
-            scdm%box(j1,j2,j3,count) = mesh%idx%lxyz_inv(ix(1),ix(2),ix(3))
+            temp_box(j1,j2,j3) = mesh%idx%lxyz_inv(ix(1),ix(2),ix(3))
 
+            !if(temp_box(j1,j2,j3) < 1 .or. temp_box(j1,j2,j3) > mesh%np_global) then
+            !  print *, 'fail'
+            !  print *, nr
+            ! print *, ix
+            !endif
+            
           end do!i3
         end do!i2
       end do!i1
-
+      
     end if
+
+    ! check that box is well defined now
+    if(minval(temp_box) <= 0.or.maxval(temp_box) > mesh%np_global ) then
+      !print *, vv, minval(temp_box), maxval(temp_box),  mesh%np_global
+      !do i1=1,scdm%box_size*2+1
+      !  do i2=1,scdm%box_size*2+1
+      !    do i3=1,scdm%box_size*2+1
+      !      write(333,*) real(temp_box(i1,i2,i3))
+      !    enddo
+      !  enddo
+      !end do
+      message(1) = 'SCDM box mapping failed'
+      call messages_fatal(1)
+    end if
+    
+    scdm%box(:,:,:,count) = temp_box(:,:,:)
 
     ! copy points to box
     ! this box refers to the global mesh
@@ -315,19 +375,21 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !    scdm%X(psi)(:,count) = scdm%X(psi)(:,count)/(dot_product(scdm%X(psi)(:,count),scdm%X(psi)(:,count))*mesh%volume_element)
     !    !
     !    ! for testing zero outside the box
-    !    scdm%st%X(psi)(:,st%d%dim,v,scdm%st%d%nik) = 0.
-    !    do j=1,scdm%box_size*2+1
-    !       do k=1,scdm%box_size*2+1
-    !          do l=1,scdm%box_size*2+1
-    !             ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
-    !             scdm%st%X(psi)(scdm%box(j,k,l,v),st%d%dim,v,scdm%st%d%nik) = scdm%X(psi)(ip,count)
+    !    scdm%st%X(psi)(:,st%d%dim,vv,scdm%st%d%nik) = 0.
+    !    do jj=1,scdm%box_size*2+1
+    !       do kk=1,scdm%box_size*2+1
+    !          do ll=1,scdm%box_size*2+1
+    !             ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
+    !             scdm%st%X(psi)(scdm%box(jj,kk,ll,vv),st%d%dim,vv,scdm%st%d%nik) = scdm%X(psi)(ip,count)
     !          enddo
     !       enddo
     !    enddo
     ! endif
-
+    
   end do
 
+  SAFE_DEALLOCATE_A(temp_box)
+  
 #ifdef HAVE_MPI
   error = M_ZERO
   call MPI_Allreduce(error_tmp, error, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)

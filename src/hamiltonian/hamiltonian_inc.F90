@@ -191,7 +191,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 #endif
           ! call with global hpsi
           call X(scdm_exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, hm%exx_coef)
-          ! call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, exx_coef) 
+           !call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, hm%exx_coef) 
 #ifdef HAVE_MPI
           call vec_scatter(der%mesh%vp,0, hpsi_global(1:der%mesh%np_global,1), hpsib%states(ii)%X(psi)(:,1))
 #endif
@@ -441,7 +441,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
       call states_get_state(hm%hf_st, der%mesh, jst, ik2, psi2)
 ! for testting: full scdm state
-!psi2(1:der%mesh%np,1) = scdm%st%X(psi)(1:der%mesh%np,1,jst,1)
+!psi2(1:der%mesh%np,1) = hm%scdm%st%X(psi)(1:der%mesh%np,1,jst,1)
 
       if(hm%cmplxscl%space) psi2 = R_CONJ(psi2)
 

@@ -90,6 +90,9 @@ module scdm_m
     type(cube_t)     :: boxcube     !< cube of the small box (used for fft in poisson solver
                                     !! has doubled size for truncation)
     integer, pointer :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
+    
+    integer          :: full_cube_n(3) !< dimension of cube of fullsimulation cell
+    
     FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
     CMPLX, pointer   :: zpsi(:,:)   ! ^
     type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
@@ -141,7 +144,10 @@ contains
     
     PUSH_SUB(scdm_init)
     ! check if already initialized
-    if (scdm_is_init) return
+    if (scdm_is_init) then
+      POP_SUB(scdm_init)
+      return
+    end if
     
     if (st%lnst /= st%nst) call messages_not_implemented("SCDM with state parallelization")
     if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling")
@@ -164,6 +170,8 @@ contains
     if (scdm%re_ortho_normalize) scdm%st%d%orth_method = ORTH_CHOLESKY_SERIAL
 
     call parse_variable('SCDM_verbose', .false., scdm%verbose)
+
+    scdm%full_cube_n = fullcube%rs_n_global
 
     ! allocate centers
     SAFE_ALLOCATE(scdm%center(1:3,1:scdm%st%nst))
@@ -402,20 +410,20 @@ contains
     POP_SUB(zRRQR)
   end subroutine zRRQR
 
-  !> check if there are points outside simulation cell (index range of idx) by
+  !> check if there are points outside index range of idx by
   !! checking the corners only. This is intended for rectangular cells
   !! should be generalized to arbitrary shapes (but then need to check the faces)
-  subroutine check_periodic_box(idx,center,size,periodic)
+  subroutine check_box_in_index(idx,center,size,out)
     type(index_t),    intent(in)  :: idx
     integer, intent(in)           :: center(:)
     integer, intent(in)           :: size
-    logical, intent(out)          :: periodic
+    logical, intent(out)          :: out(3)
 
     ! internal
     integer :: ix(3), corner(3,8), i1, idim
 
-    PUSH_SUB(check_periodic_box)
-    periodic = .false.
+    PUSH_SUB(check_box_in_index)
+    out(1:3) = .false.
 
     ! make the sign pattern for corners
     corner(:,1) = (/1,1,1/)
@@ -426,18 +434,18 @@ contains
     corner(:,6) = (/-1,1,-1/)
     corner(:,7) = (/-1,-1,1/)
     corner(:,8) = (/-1,-1,-1/)
-    
-    do i1=1,8
-      ix(:)=center(:) + size*corner(:,i1)
-      do idim=1,3
+
+    do idim=1,3
+      do i1=1,8
+        ix(:)=center(:) + size*corner(:,i1)
         if (ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
-          periodic = .true. 
-          return
+          out(idim) = .true. 
+          exit
         end if
       end do
     end do
-    POP_SUB(check_periodic_box)
-  end subroutine check_periodic_box
+    POP_SUB(check_box_in_index)
+  end subroutine check_box_in_index
 
 
 
