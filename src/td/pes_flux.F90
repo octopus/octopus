@@ -418,14 +418,14 @@ contains
                wf(isp) = st%occ(ist, ik) * psi(flux%srfcpnt(isp))
               gwf(isp, 1:mesh%sb%dim) = st%occ(ist, ik) * gpsi(flux%srfcpnt(isp), 1:mesh%sb%dim) 
             end do
-            do ikp = 1, flux%nkpnts
-              do dir = 1, dim
-                flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) =    &
-                  flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) +  &
-                  conjg(flux%phik(ikp, start(dir):end(dir))) *             & 
-                  (    flux%kpnt(ikp, dir) * wf(start(dir):end(dir))       &
-                                   - M_zI * gwf(start(dir):end(dir), dir)  &
-                  - M_TWO * vp(dir) / P_c *  wf(start(dir):end(dir)))
+            do dir = 1, dim
+              do isp = start(dir), end(dir)
+                flux%Jk(1:flux%nkpnts, idim, ist, ik, isp, dir) =    &
+                  flux%Jk(1:flux%nkpnts, idim, ist, ik, isp, dir) +  &
+                  conjg(flux%phik(1:flux%nkpnts, isp)) *             & 
+                  (    flux%kpnt(1:flux%nkpnts, dir) * wf(isp)       &
+                                   - M_zI * gwf(isp, dir)  &
+                  - M_TWO * vp(dir) / P_c *  wf(isp))
               end do
             end do
           end do
