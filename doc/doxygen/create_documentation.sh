@@ -49,6 +49,11 @@ cp $dox_dir/Doxyfile .
 cp $dox_dir/octopus.png .
 doxygen
 
+# clean up and move results
+mv html $dox_dir
+rm Doxyfile
+mv octopus.png $dox_dir/html
+
 cd ..
 
 # undo modifications to this directory
