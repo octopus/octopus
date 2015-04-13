@@ -302,10 +302,10 @@ contains
 
     integer            :: ik, ist, idim, ikp, isp, rankmin, il, iph, ikk, dim,nsrf,nkp, dir
     FLOAT              :: dmin
-    CMPLX, allocatable :: gzpsi(:,:)
+    CMPLX, allocatable :: gpsi(:,:), psi(:)
     CMPLX, allocatable :: fluxx(:)
     FLOAT, allocatable :: vp(:)
-    CMPLX, allocatable :: wf(:,:,:,:), gwf(:,:,:,:,:)
+    CMPLX, allocatable :: wf(:), gwf(:,:)
     FLOAT              :: phi, kk
     integer            :: start(1:MAX_DIM), end(1:MAX_DIM)
     FLOAT              :: krr, vec
@@ -320,14 +320,17 @@ contains
     start(1:dim) = flux%nsrfcpnt_start(1:dim)
     end(1:dim)   = flux%nsrfcpnt_end(1:dim)
 
-    SAFE_ALLOCATE(wf(1:flux%nsrfcpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+    SAFE_ALLOCATE(wf(1:flux%nsrfcpnts))
     wf = M_z0
 
-    SAFE_ALLOCATE(gwf(1:flux%nsrfcpnts, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(gwf(1:flux%nsrfcpnts, 1:mesh%sb%dim))
     gwf = M_z0
 
-    SAFE_ALLOCATE(gzpsi(1:mesh%np, 1:mesh%sb%dim))
-    gzpsi = M_z0
+    SAFE_ALLOCATE(psi(1:mesh%np_part))
+    psi = M_z0
+
+    SAFE_ALLOCATE(gpsi(1:mesh%np, 1:mesh%sb%dim))
+    gpsi = M_z0
 
     SAFE_ALLOCATE(fluxx(1:mesh%sb%dim))
     fluxx = M_z0
@@ -358,23 +361,23 @@ contains
     if(flux%interval > 0 .and. mod(iter, flux%interval) == 0) then
 !      write(*,*) 'test01'
 
-      ! get states and derivatives
-      ! change this to states_get_state...
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-!            write(*,*) 'before grad.'
-            call zderivatives_grad(gr%der, st%zpsi(:, idim, ist, ik), gzpsi)
-!            write(*,*) 'after grad.'
-            do isp = 1, flux%nsrfcpnts
-              ! here one should call an interpolation scheme, now
-              ! we just take the wave function at the nearest grid point
-              wf(isp, idim, ist, ik) = st%occ(ist, ik) * st%zpsi(flux%srfcpnt(isp), idim, ist, ik)
-              gwf(isp, idim, ist, ik, :) = st%occ(ist, ik) * gzpsi(flux%srfcpnt(isp), :)
-            end do
-          end do
-        end do
-      end do
+!      ! get states and derivatives
+!      ! change this to states_get_state...
+!      do ik = st%d%kpt%start, st%d%kpt%end
+!        do ist = st%st_start, st%st_end
+!          do idim = 1, st%d%dim
+!!            write(*,*) 'before grad.'
+!            call zderivatives_grad(gr%der, st%zpsi(:, idim, ist, ik), gzpsi)
+!!            write(*,*) 'after grad.'
+!            do isp = 1, flux%nsrfcpnts
+!              ! here one should call an interpolation scheme, now
+!              ! we just take the wave function at the nearest grid point
+!              wf(isp, idim, ist, ik) = st%occ(ist, ik) * st%zpsi(flux%srfcpnt(isp), idim, ist, ik)
+!              gwf(isp, idim, ist, ik, :) = st%occ(ist, ik) * gzpsi(flux%srfcpnt(isp), :)
+!            end do
+!          end do
+!        end do
+!      end do
    
 !      write(*,*) 'test02'
    
@@ -409,14 +412,20 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
+            call states_get_state(st, mesh, idim, ist, ik, psi)
+            call zderivatives_grad(gr%der, psi, gpsi)
+            do isp = 1, flux%nsrfcpnts
+               wf(isp) = st%occ(ist, ik) * psi(flux%srfcpnt(isp))
+              gwf(isp, 1:mesh%sb%dim) = st%occ(ist, ik) * gpsi(flux%srfcpnt(isp), 1:mesh%sb%dim) 
+            end do
             do ikp = 1, flux%nkpnts
               do dir = 1, dim
-                flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) =                   &
-                  flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) +                 &
-                  conjg(flux%phik(ikp, start(dir):end(dir))) *                            & 
-                  (    flux%kpnt(ikp, dir) * wf(start(dir):end(dir), idim, ist, ik)       &
-                                   - M_zI * gwf(start(dir):end(dir), idim, ist, ik, dir)  &
-                  - M_TWO * vp(dir) / P_c *  wf(start(dir):end(dir), idim, ist, ik))
+                flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) =    &
+                  flux%Jk(ikp, idim, ist, ik, start(dir):end(dir), dir) +  &
+                  conjg(flux%phik(ikp, start(dir):end(dir))) *             & 
+                  (    flux%kpnt(ikp, dir) * wf(start(dir):end(dir))       &
+                                   - M_zI * gwf(start(dir):end(dir), dir)  &
+                  - M_TWO * vp(dir) / P_c *  wf(start(dir):end(dir)))
               end do
             end do
           end do
@@ -433,7 +442,8 @@ contains
 
     SAFE_DEALLOCATE_A(wf)
     SAFE_DEALLOCATE_A(gwf)
-    SAFE_DEALLOCATE_A(gzpsi)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(fluxx)
     SAFE_DEALLOCATE_A(vp)
 
