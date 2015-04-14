@@ -50,9 +50,8 @@ cp $dox_dir/octopus.png .
 doxygen
 
 # clean up and move results
-mv html $dox_dir
-rm Doxyfile
-mv octopus.png $dox_dir/html
+mv doxygen_doc $dox_dir/
+rm Doxyfile octopus.png
 
 cd ..
 
@@ -63,4 +62,4 @@ make config_F90.h
 rm mpi.h fcs_fconfig.h
 cd ../..
 
-echo "Doxygen documentation created in $dox_dir/html/index.html"
+echo "Doxygen documentation created in $dox_dir/doxygen_doc/html"
