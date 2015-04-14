@@ -1,4 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
+# $Id$
 
 Test       : Complex-scaling - harmonic oscillator
 Options    : arpack
