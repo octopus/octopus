@@ -75,7 +75,7 @@ module nfft_m
   type nfft_t
 
     integer           :: N(3)       !> size of the nfft bandwidths
-    integer           :: M          !> Number of the nfft nodes
+    integer           :: M(3)          !> Number of the nfft nodes
     integer           :: is_real    !> is the fft real or complex
     integer           :: dim        !> the dimension
     integer           :: fftN(3)    !> size of the fft used
@@ -168,12 +168,12 @@ contains
   subroutine nfft_init(nfft, nn, dim, mm, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
     integer,           intent(inout) :: nn(3) !> nfft bandwidths
-    integer,           intent(inout) :: mm    !> nfft nodes
+    integer,           intent(inout) :: mm(3) !> nfft nodes
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
     logical, optional, intent(in)    :: optimize
 
-    integer :: ii, jj, idir, my_nn(3)
+    integer :: ii, jj, idir, my_nn(3), idim
     logical :: optimize_
     integer :: nfft_flags
 
@@ -193,6 +193,11 @@ contains
       nfft%sigma = M_TWO
       nfft%precompute = NFFT_PRE_PSI
     end if
+    
+    ! set not used dimensions to 1
+    do idim=1,3
+      if(idim > dim) nfft%M(idim) = 1
+    end do
 
     call nfft_guru_options(nfft)
 
@@ -209,18 +214,19 @@ contains
                     nfft_MALLOC_F + nfft_FFTW_INIT + nfft_FFT_OUT_OF_PLACE
 
       nfft_flags = nfft_flags + nfft%precompute
-      call  oct_nfft_init_guru(nfft%plan, dim, nn, mm**dim, my_nn, nfft%mm, &
+
+      call  oct_nfft_init_guru(nfft%plan, dim, nn, mm(1)*mm(2)*mm(3), my_nn, nfft%mm, &
                     nfft_flags, FFTW_MEASURE + FFTW_DESTROY_INPUT)
 
     else ! Default interfaces
 
       select case(dim)
       case(3)
-        call oct_nfft_init_3d(nfft%plan, nn(1), nn(2),nn(3), mm*mm*mm)
+        call oct_nfft_init_3d(nfft%plan, nn(1), nn(2),nn(3), mm(1)*mm(2)*mm(3))
       case(2)
-        call oct_nfft_init_2d(nfft%plan, nn(1), nn(2), mm*mm)
+        call oct_nfft_init_2d(nfft%plan, nn(1), nn(2), mm(1)*mm(2))
       case(1)
-        call oct_nfft_init_1d(nfft%plan,nn(1),mm)
+        call oct_nfft_init_1d(nfft%plan,nn(1),mm(1))
       end select
 
     end if
@@ -248,10 +254,9 @@ contains
     call messages_new_line()
 
     call messages_write("      Spatial nodes             M = ")
-    mm = 1
-    do idir = 1,  nfft%dim
-      mm = mm * nfft%M
-    end do
+
+    mm = nfft%M(1)*nfft%M(2)*nfft%M(3)
+ 
     call messages_write(mm)
     call messages_new_line()
 
@@ -344,8 +349,9 @@ contains
 
 
 
-    FLOAT   :: x1_(1:nfft%M), x2_(1:nfft%M), x3_(1:nfft%M)
-    FLOAT   :: length, cc, eps, dX(1:nfft%M-1,1:3)
+    FLOAT   :: x1_(1:nfft%M(1)), x2_(1:nfft%M(2)), x3_(1:nfft%M(3))
+    FLOAT   :: length, cc, eps, dX1(1:nfft%M(1)-1),  dX2(1:nfft%M(2)-1), dX3(1:nfft%M(3)-1)
+
     integer :: ii
 
     PUSH_SUB(nfft_precompute)
@@ -366,12 +372,16 @@ contains
         call oct_nfft_precompute_one_psi_3d(nfft%plan, nfft%M, x1_, x2_, x3_)
 
         ! Set the normalization factor
-        do ii = 1, nfft%M-1
-          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
-          dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
-          dX(ii,3)= abs(x3_(ii+1)-x3_(ii))
+        do ii = 1, nfft%M(1)-1
+          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
+        end  do
+        do ii = 1, nfft%M(2)-1
+          dX2(ii)= abs(x2_(ii+1)-x2_(ii))
         end do
-        nfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)) * minval(dX(:,3)))
+        do ii = 1, nfft%M(3)-1
+          dX3(ii)= abs(x3_(ii+1)-x3_(ii))
+        end do
+        nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)) * minval(dX3(:)))
 
       case(2)
         length = (maxval(X1)-minval(X1))*eps
@@ -383,24 +393,26 @@ contains
         call oct_nfft_precompute_one_psi_2d(nfft%plan, nfft%M, x1_, x2_)
 
         ! Set the normalization factor
-        do ii = 1, nfft%M-1
-          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
-          dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
+        do ii = 1, nfft%M(1)-1
+          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
         end do
-        nfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)))
+        do ii = 1, nfft%M(2)-1
+          dX2(ii)= abs(x2_(ii+1)-x2_(ii))
+        end do
+        nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)))
 
 
       case(1)
         length = (maxval(X1)-minval(X1))*eps
         cc = (minval(X1)+maxval(X1))/M_TWO
         x1_ =(X1-cc)/length
-        call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M,x1_)
+        call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M(1),x1_)
 
         ! Set the normalization factor
-        do ii = 1, nfft%M-1
-          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
+        do ii = 1, nfft%M(1)-1
+          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
         end do
-        nfft%norm = M_ONE/(minval(dX(:,1)))
+        nfft%norm = M_ONE/(minval(dX1(:)))
 
     end select
 

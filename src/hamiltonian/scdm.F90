@@ -140,7 +140,7 @@ contains
     integer,  allocatable:: iend(:)
     integer,  allocatable:: ilsize(:)
     integer :: box(3)
-    FLOAT :: dummy, enlarge
+    FLOAT :: dummy, enlarge(3)
     
     PUSH_SUB(scdm_init)
     ! check if already initialized
@@ -293,7 +293,7 @@ contains
       ! not sure
       enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
     else ! non-periodic case
-      enlarge = M_TWO
+      enlarge(1:3) = M_TWO
     end if
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, &
          fft_type=FFT_COMPLEX, fft_library=FFTLIB_NFFT, &

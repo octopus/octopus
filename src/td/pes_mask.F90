@@ -116,7 +116,7 @@ module pes_mask_m
     !< we implicitly assume k to be the same for all directions
     
     FLOAT            :: enlarge                !< Fourier space enlargement
-    FLOAT            :: enlarge_2p                !< Two-point space enlargement
+    FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
     
     FLOAT :: start_time              !< the time we switch on the photoelectron detector   
     FLOAT :: energyMax 
@@ -405,10 +405,12 @@ contains
     !% Note: needs <tt> PESMaskPlaneWaveProjection = nfft_map or pnfft_map </tt>.
     !%End
     
-    call parse_variable('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p)
+    call parse_variable('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
     
-    if ( mask%enlarge_2p /= M_ONE ) then
-      call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p)
+    if ( mask%enlarge_2p(1) /= M_ONE ) then
+      call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
+!HH FIXME this has to be more general
+mask%enlarge_2p(:) = mask%enlarge_2p(1)
       if (mask%pw_map_how /=  PW_MAP_NFFT .and. mask%pw_map_how /=  PW_MAP_PNFFT) then
         message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
         message(2) = "or pnfft_map in order to run properly." 
@@ -416,7 +418,7 @@ contains
       endif        
     end if
     
-    if( mask%enlarge_2p < M_ONE ) then
+    if( mask%enlarge_2p(1) < M_ONE ) then
       message(1) = "PESMask2PEnlargeFactor must be bigger than one."
       call messages_fatal(1) 
     end if
@@ -437,7 +439,6 @@ contains
     
     !Enlarge the bounding box region
     mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge)
-    
     
     select case(mask%pw_map_how)
     case(PW_MAP_FFT)
@@ -485,10 +486,9 @@ contains
       !FIXME: this part is a bit messy and should be integrated into cube_init
       
       !NFFT initialization
-      
       ! we just add 2 points for the enlarged region
-      if (mask%enlarge_2p /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
-      
+      if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
                      spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p )
                      
@@ -499,7 +499,7 @@ contains
       
     case(PW_MAP_PNFFT)  
     
-      if (mask%enlarge_2p /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
 
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
                      spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
@@ -811,7 +811,6 @@ contains
     if(mask%pw_map_how /= PW_MAP_PNFFT .and. &
        mask%pw_map_how /= PW_MAP_NFFT) mask%Lk = - mask%Lk ! to make up with octopus rs -> fs convention 
 
-
     POP_SUB(pes_mask_init)
   end subroutine pes_mask_init
 
@@ -867,7 +866,8 @@ contains
 
       if (mask%pw_map_how  ==   PW_MAP_NFFT) then
         !The Fourier space is shrunk by the factor mask%enlarge_2p
-        mask%Lk(ii) = (ii - nn/2 - 1)*temp/(mask%enlarge_2p)
+!HH FIXME this factor is wrong for non-cubic enlargement
+        mask%Lk(ii) = (ii - nn/2 - 1)*temp/(mask%enlarge_2p(1))
       else
         mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
       end if
@@ -1462,6 +1462,7 @@ contains
       
     case(PW_MAP_NFFT)
     call zfft_backward(mask%cube%fft, wfin, wfout, norm)
+
     wfout = wfout * norm
 !       call zfft_forward(mask%cube%fft, wfin, wfout)
       

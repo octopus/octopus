@@ -100,36 +100,34 @@ void FC_FUNC(oct_nfft_precompute_one_psi_1d, OCT_NFFT_PRECOMPUTE_ONE_PSI_1D)
 }
 
 void FC_FUNC(oct_nfft_precompute_one_psi_2d, OCT_NFFT_PRECOMPUTE_ONE_PSI_2D)
-     (nfft_plan *plan, int *m, double* X1, double* X2)
+     (nfft_plan *plan, int *M, double* X1, double* X2)
 {
    int ii;
    int jj;
-   int M = *m;
-   
-   for (ii=0; ii< M; ii++){
-     for (jj=0; jj< M; jj++){
-       plan->x[2*(M * ii + jj) + 0] =  X1[ii];
-       plan->x[2*(M * ii + jj) + 1] =  X2[jj];
+
+   for (ii=0; ii< M[0]; ii++){
+     for (jj=0; jj< M[1]; jj++){
+       plan->x[2*(M[0] * ii + jj) + 0] =  X1[ii];
+       plan->x[2*(M[0] * ii + jj) + 1] =  X2[jj];
      }
-   }
+    }
 
-
+ 
    if(plan->nfft_flags & PRE_ONE_PSI)
      nfft_precompute_one_psi(plan);
 }
 
 void FC_FUNC(oct_nfft_precompute_one_psi_3d, OCT_NFFT_PRECOMPUTE_ONE_PSI_3D)
-     (nfft_plan *plan, int *m, double* X1, double* X2, double* X3)
+     (nfft_plan *plan, int *M, double* X1, double* X2, double* X3)
 {
    int ii,jj,kk;
-   int M = *m;
 
-   for (ii=0;ii< M;ii++){
-     for (jj=0;jj< M;jj++){
-       for (kk=0;kk< M;kk++){
-         plan->x[3*(M*M*ii+M*jj+kk) + 0] =  X1[ii];
-         plan->x[3*(M*M*ii+M*jj+kk) + 1] =  X2[jj];
-         plan->x[3*(M*M*ii+M*jj+kk) + 2] =  X3[kk];
+   for (ii=0;ii< M[0];ii++){
+     for (jj=0;jj< M[1];jj++){
+       for (kk=0;kk< M[2];kk++){
+         plan->x[3*(M[0]*M[1]*ii + M[0]*jj+kk) + 0] =  X1[ii];
+         plan->x[3*(M[0]*M[1]*ii + M[0]*jj+kk) + 1] =  X2[jj];
+         plan->x[3*(M[0]*M[1]*ii + M[0]*jj+kk) + 2] =  X3[kk];
        }
      }
    }
@@ -144,34 +142,33 @@ void FC_FUNC(oct_nfft_precompute_one_psi_3d, OCT_NFFT_PRECOMPUTE_ONE_PSI_3D)
 
 // ********** COMPLEX ************
 void FC_FUNC(zoct_set_f, ZOCT_SET_F)
-    (nfft_plan *plan, int *m, int *DIM, double complex *VAL, int *IX, int *IY, int *IZ)
+    (nfft_plan *plan, int *M, int *DIM, double complex *VAL, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
+
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
   int iz = *IZ;
   double complex val = *VAL;
   
-
    switch (dim){
      case 1:
        plan->f[ix-1] = val;
      break;
      case 2:
-       plan->f[(ix-1)*M + (iy-1)] = val;
+       plan->f[(ix-1)*M[0] + (iy-1)] = val;
      break;
      case 3:
-       plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)] = val;
+       plan->f[(ix-1)*M[0]*M[1] + (iy-1)*M[0] + (iz-1)] = val;
      break;
-   }
+     }
 
 }
 
 void FC_FUNC(zoct_get_f, ZOCT_GET_F)
-    (nfft_plan *plan, int *m, int *DIM, double complex *val, int *IX, int *IY, int *IZ)
+    (nfft_plan *plan, int *M, int *DIM, double complex *val, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
+
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -183,10 +180,10 @@ void FC_FUNC(zoct_get_f, ZOCT_GET_F)
        *val = plan->f[ix-1];
      break;
      case 2:
-       *val = plan->f[(ix-1)*M + (iy-1)];
+       *val = plan->f[(ix-1)*M[0] + (iy-1)];
      break;
      case 3:
-       *val = plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)];
+       *val = plan->f[(ix-1)*M[0]*M[1] + (iy-1)*M[0] + (iz-1)];
      break;
    }
 
@@ -241,9 +238,9 @@ void FC_FUNC(zoct_get_f_hat, ZOCT_GET_F_HAT)
 
 // ********** DOUBLE ************
 void FC_FUNC(doct_set_f, DOCT_SET_F)
-    (nfft_plan *plan, int *m, int *DIM, double *VAL, int *IX, int *IY, int *IZ)
+    (nfft_plan *plan, int *M, int *DIM, double *VAL, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
+
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -256,19 +253,19 @@ void FC_FUNC(doct_set_f, DOCT_SET_F)
        plan->f[ix-1] = val;
      break;
      case 2:
-       plan->f[(ix-1)*M + (iy-1)] = val;
+       plan->f[(ix-1)*M[0] + (iy-1)] = val;
      break;
      case 3:
-       plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)] = val;
+       plan->f[(ix-1)*M[0]*M[1] + (iy-1)*M[0] + (iz-1)] = val;
      break;
    }
 
 }
 
 void FC_FUNC(doct_get_f, DOCT_GET_F)
-    (nfft_plan *plan, int *m, int *DIM, double *val, int *IX, int *IY, int *IZ)
+    (nfft_plan *plan, int *M, int *DIM, double *val, int *IX, int *IY, int *IZ)
 {
-  int M = *m;
+
   int dim = *DIM;
   int ix = *IX;
   int iy = *IY;
@@ -280,10 +277,10 @@ void FC_FUNC(doct_get_f, DOCT_GET_F)
        *val = plan->f[ix-1];
      break;
      case 2:
-       *val = plan->f[(ix-1)*M + (iy-1)];
+       *val = plan->f[(ix-1)*M[0] + (iy-1)];
      break;
      case 3:
-       *val = plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)];
+       *val = plan->f[(ix-1)*M[0]*M[1] + (iy-1)*M[0] + (iz-1)];
      break;
    }
 

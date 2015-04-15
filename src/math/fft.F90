@@ -334,6 +334,7 @@ contains
         !The underlying FFT grids are optimized inside the nfft_init routine
         if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
       end do 
+
     case (FFTLIB_PNFFT)
           
       do ii = 1, fft_dim
@@ -510,7 +511,7 @@ contains
 #ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
      call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
-                    fft_dim, fft_array(jj)%rs_n_global(1) , type, optimize = .true.)
+                    fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
 #endif
 
     case (FFTLIB_PFFT)
@@ -694,7 +695,7 @@ contains
     end select
     
     this = fft_array(jj)
-    
+
     ! Write information
     if (.not. (library_ == FFTLIB_NFFT .or. library_ == FFTLIB_PNFFT)) then
       call messages_write('Info: FFT grid dimensions       =')

@@ -28,19 +28,19 @@ subroutine X(nfft_forward1)(nfft, in, out)
     
   select case(nfft%dim)
     case (1)
-      MM(1) = nfft%M
+      MM(1) = nfft%M(1)
       MM(2) = 1
       MM(3) = 1
 
     case (2)
-      MM(1) = nfft%M
-      MM(2) = nfft%M
+      MM(1) = nfft%M(1)
+      MM(2) = nfft%M(2)
       MM(3) = 1
 
     case (3)
-      MM(1) = nfft%M
-      MM(2) = nfft%M
-      MM(3) = nfft%M
+      MM(1) = nfft%M(1)
+      MM(2) = nfft%M(2)
+      MM(3) = nfft%M(3)
 
   end select 
 
@@ -79,19 +79,19 @@ subroutine X(nfft_backward1)(nfft, in, out)
 
   select case(nfft%dim)
     case (1)
-      MM(1) = nfft%M
+      MM(1) = nfft%M(1)
       MM(2) = 1
       MM(3) = 1
 
     case (2)
-      MM(1) = nfft%M
-      MM(2) = nfft%M
+      MM(1) = nfft%M(1)
+      MM(2) = nfft%M(2)
       MM(3) = 1
 
     case (3)
-      MM(1) = nfft%M
-      MM(2) = nfft%M
-      MM(3) = nfft%M
+      MM(1) = nfft%M(1)
+      MM(2) = nfft%M(2)
+      MM(3) = nfft%M(3)
 
   end select
 
@@ -102,9 +102,7 @@ subroutine X(nfft_backward1)(nfft, in, out)
       end do
     end do
   end do
-
   call oct_nfft_adjoint(nfft%plan)
-
   do ix = 1,nfft%N(1)
     do iy = 1, nfft%N(2)
       do iz = 1, nfft%N(3)

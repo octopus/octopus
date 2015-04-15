@@ -104,7 +104,7 @@ contains
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
     logical, optional, intent(in)  :: need_partition !< Should we calculate and store the cube partition?
     FLOAT, optional, intent(in)    :: spacing(3)        
-    FLOAT, optional, intent(in)    :: tp_enlarge     !< Two point enlargement factor. Can be used with (p)nfft 
+    FLOAT, optional, intent(in)    :: tp_enlarge(3)  !< Two point enlargement factor. Can be used with (p)nfft 
                                                      !! enlarge the box by moving outward the cube first and last points  
                                                      !! in each direction. The resulting boundaries are rescaled by tp_enlarge.
 
@@ -122,7 +122,7 @@ contains
 
     ASSERT(present(tp_enlarge) .eqv. present(spacing))
 
-    tp_enlarge_ = optional_default(tp_enlarge, M_ONE)
+    tp_enlarge_ = optional_default(tp_enlarge(1), M_ONE)
     ASSERT(tp_enlarge_ >= M_ONE)
 
     effdim_fft = min (3, sb%dim)
@@ -214,9 +214,9 @@ contains
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
       endif
-      
+
       if(present(tp_enlarge)) call cube_tp_fft_defaults(cube, fft_library_)
-      
+
       call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
            mpi_comm=mpi_comm, mpi_grp = mpi_grp_)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
@@ -224,7 +224,7 @@ contains
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
 
-      if(present(tp_enlarge)) call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
+      if(present(tp_enlarge)) call cube_init_coords(cube, tp_enlarge, spacing, fft_library_)
 
       if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then 
         call fft_init_stage1(cube%fft,cube%Lrs)
@@ -317,49 +317,56 @@ contains
   ! ---------------------------------------------------------
   subroutine cube_init_coords(cube, enlarge, spacing, fft_library)
     type(cube_t), intent(inout) :: cube
-    FLOAT,        intent(in) :: enlarge
+    FLOAT,        intent(in) :: enlarge(3)
     FLOAT,        intent(in) :: spacing(3)
     integer,      intent(in) :: fft_library
     
     FLOAT   :: temp
-    integer :: ii, nn
+    integer :: ii, nn(3), maxn, idim
 
     PUSH_SUB(cube_init_coords)
 
 
-    nn = cube%fs_n_global(1) ! assume we have a cube nn(1:3) = nn 
-
-    SAFE_ALLOCATE(cube%Lrs(1:nn, 1:3))
+    nn(1:3) = cube%fs_n_global(1:3) 
+ 
+    maxn = maxval(nn) 
+    SAFE_ALLOCATE(cube%Lrs(1:maxn, 1:3))
     
     !! Real space coordinates 
-    if (enlarge > M_ONE) then
-      do ii = 2, nn - 1 
-        cube%Lrs(ii, 1:3) = (ii - int(nn/2) -1) * spacing(1)
-      end do
-      cube%Lrs(1,  1:3) = (-int(nn/2)) * spacing(1) * enlarge 
-      cube%Lrs(nn, 1:3) = (int(nn/2))  * spacing(1) * enlarge
-      
-    else
-      do ii = 1, nn 
-        cube%Lrs(ii, 1:3) = (ii - int(nn/2) -1) * spacing(1)
-      end do
-    end if
+    do idim=1,3 
+      if (enlarge(idim) > M_ONE ) then
+        do ii = 2, nn(idim) - 1 
+          cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
+        end do
+        cube%Lrs(1,        idim) = (-int(nn(idim)/2)) * spacing(idim) * enlarge(idim)
+        cube%Lrs(nn(idim), idim) = (int(nn(idim)/2))  * spacing(idim) * enlarge(idim)
+      else
+        do ii = 1, nn(idim) 
+          cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
+        end do
+      end if
+    end do
 
 
     !! Fourier space coordinates 
     if(fft_library /= FFTLIB_NONE) then
 
-      SAFE_ALLOCATE(cube%Lfs(1:nn, 1:3))
+      SAFE_ALLOCATE(cube%Lfs(1:maxn, 1:3))
 
-      temp = M_TWO * M_PI / (nn * spacing(1))
+      do idim=1,3
+        temp = M_TWO * M_PI / (nn(idim) * spacing(idim))
 !temp = M_PI / (nn * spacing(1))
-      do ii = 1, nn
-        if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
-          !The Fourier space is shrunk by the enlarge factor
-          cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/enlarge
-        else
-          cube%Lfs(ii, 1:3) = pad_feq(ii,nn, .true.) * temp
-        end if
+        do ii = 1, nn(idim)
+          if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
+            !The Fourier space is shrunk by the enlarge factor
+            !cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/enlarge
+!HH NOTE:
+!not sure this is the right general factor
+            cube%Lfs(ii, idim) = (ii - nn(idim)/2 - 1)*temp/enlarge(idim)
+          else
+            cube%Lfs(ii, idim) = pad_feq(ii,nn(idim), .true.) * temp
+          end if
+        end do
       end do
     end if
     
