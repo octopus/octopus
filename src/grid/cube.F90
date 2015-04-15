@@ -112,7 +112,6 @@ contains
     integer :: effdim_fft
     logical :: optimize(3)
     type(mpi_grp_t) :: mpi_grp_
-    FLOAT  :: tp_enlarge_
 
     PUSH_SUB(cube_init)
 
@@ -121,9 +120,6 @@ contains
     fft_type_ = optional_default(fft_type, FFT_NONE)
 
     ASSERT(present(tp_enlarge) .eqv. present(spacing))
-
-    tp_enlarge_ = optional_default(tp_enlarge(1), M_ONE)
-    ASSERT(tp_enlarge_ >= M_ONE)
 
     effdim_fft = min (3, sb%dim)
 
