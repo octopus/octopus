@@ -346,11 +346,10 @@ contains
     ! And the long-range part, using an Ewald sum
     SAFE_ALLOCATE(phase(1:geo%natoms))
 
-
     ! get a converged value for the cutoff in g
-    rcut = sum(sb%klattice(1:sb%dim, 1))**2
-    do idim = 2, sb%dim
-      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim))**2)
+    rcut = huge(rcut)
+    do idim = 1, sb%dim
+      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
