@@ -19,8 +19,10 @@ module fio_curvilinear_m
     CURV_METHOD_BRIGGS,    &
     CURV_METHOD_MODINE
 
+  use curvilinear_m, only:              &
+    fio_curvilinear_t => curvilinear_t
+
   use curvilinear_m, only:                    &
-    fio_curvilinear_t    => curvilinear_t,    &
     fio_curvilinear_copy => curvilinear_copy, &
     fio_curvilinear_end  => curvilinear_end
 
@@ -30,8 +32,10 @@ module fio_curvilinear_m
   implicit none
 
   private
+  public ::            &
+    fio_curvilinear_t
+
   public ::               &
-    fio_curvilinear_t,    &
     fio_curvilinear_init, &
     fio_curvilinear_copy, &
     fio_curvilinear_end
@@ -50,11 +54,12 @@ contains
     type(fio_simul_box_t),   intent(in)  :: sb
     type(geometry_t),        intent(in)  :: geo
     type(json_object_t),     intent(in)  :: config
-    !
+
     real(kind=wp), dimension(MAX_DIM) :: spcng
     integer                           :: ierr
-    !
+
     PUSH_SUB(fio_curvilinear_init)
+
     call json_get(config, "method", this%method, ierr)
     if(ierr/=JSON_OK)this%method=CURV_METHOD_UNIFORM
     select case(this%method)
@@ -68,8 +73,8 @@ contains
       if(sb%dim<MAX_DIM)spcng(sb%dim+1:)=0.0_wp
       call curv_modine_init(this%modine, sb, geo, spcng)
     end select
+
     POP_SUB(fio_curvilinear_init)
-    return
   end subroutine fio_curvilinear_init
 
 end module fio_curvilinear_m

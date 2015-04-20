@@ -17,16 +17,20 @@ module fio_simul_box_m
     simul_box_load,        &
     simul_box_lookup_init
 
+  use simul_box_m, only:            &
+    fio_simul_box_t => simul_box_t
+
   use simul_box_m, only:                  &
-    fio_simul_box_t    => simul_box_t,    &
     fio_simul_box_copy => simul_box_copy, &
     fio_simul_box_end  => simul_box_end
 
   implicit none
 
   private
+  public ::          &
+    fio_simul_box_t
+
   public ::             &
-    fio_simul_box_t,    &
     fio_simul_box_init, &
     fio_simul_box_copy, &
     fio_simul_box_end
@@ -38,11 +42,12 @@ contains
     type(fio_simul_box_t), intent(out) :: this
     type(geometry_t),      intent(in)  :: geo
     type(json_object_t),   intent(in)  :: config
-    !
+
     character(len=MAX_PATH_LEN) :: dir, file
     integer                     :: ierr
-    !
+
     PUSH_SUB(fio_simul_box_init)
+
     call json_get(config, "dir", dir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(config, "file", file, ierr)
@@ -62,8 +67,8 @@ contains
       write(unit=message(3), fmt="(a,i10)") "I/O Error: ", ierr
       call messages_fatal(3)
     end if
+
     POP_SUB(fio_simul_box_init)
-    return
   end subroutine fio_simul_box_init
 
 end module fio_simul_box_m

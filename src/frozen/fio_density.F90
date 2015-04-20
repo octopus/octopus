@@ -12,21 +12,17 @@ module fio_density_m
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
+  use base_density_m, only:          &
+    fio_density_t => base_density_t
+
   use base_density_m, only: &
     base_density__init__,   &
     base_density__update__, &
     base_density__copy__,   &
     base_density__end__
 
-  use base_density_m, only:                     &
-    fio_density_start => base_density__start__, &
-    fio_density_stop  => base_density__stop__
-
   use base_density_m, only: &
     base_density_get
-
-  use base_density_m, only:          &
-    fio_density_t => base_density_t
 
 #define TEMPLATE_NAME fio_density
 #define INCLUDE_PREFIX
@@ -37,14 +33,19 @@ module fio_density_m
   implicit none
 
   private
-  public ::             &
-    fio_density_t,      &
-    fio_density_init,   &
-    fio_density_start,  &
-    fio_density_update, &
-    fio_density_stop,   &
-    fio_density_get,    &
-    fio_density_copy,   &
+  public ::        &
+    fio_density_t
+
+  public ::              &
+    fio_density__load__
+
+  public ::           &
+    fio_density_eval
+
+  public ::           &
+    fio_density_init, &
+    fio_density_get,  &
+    fio_density_copy, &
     fio_density_end
 
 #define TEMPLATE_NAME fio_density
@@ -57,6 +58,11 @@ module fio_density_m
     module procedure fio_density_init_density
     module procedure fio_density_init_copy
   end interface fio_density_init
+
+  interface fio_density_eval
+    module procedure fio_density_eval_1d
+    module procedure fio_density_eval_md
+  end interface fio_density_eval
 
   interface fio_density_get
     module procedure fio_density_get_info
@@ -101,7 +107,7 @@ contains
   end subroutine fio_density_init_copy
 
   ! ---------------------------------------------------------
-  subroutine fio_density_read(this, dir, file, ispin)
+  subroutine fio_density__read__(this, dir, file, ispin)
     type(fio_density_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dir
     character(len=*),    intent(in)    :: file
@@ -111,7 +117,7 @@ contains
     character(len=MAX_PATH_LEN)            :: fpth
     integer                                :: np, ierr
 
-    PUSH_SUB(fio_density_read)
+    PUSH_SUB(fio_density__read__)
 
     nullify(dnst)
     call fio_density_get(this, dnst)
@@ -127,11 +133,11 @@ contains
     end if
     nullify(dnst)
 
-    POP_SUB(fio_density_read)
-  end subroutine fio_density_read
+    POP_SUB(fio_density__read__)
+  end subroutine fio_density__read__
 
   ! ---------------------------------------------------------
-  subroutine fio_density_update(this)
+  subroutine fio_density__load__(this)
     type(fio_density_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
@@ -140,7 +146,7 @@ contains
     character(len=MAX_PATH_LEN)  :: dir, file
     integer                      :: isp, nspin, ierr
 
-    PUSH_SUB(fio_density_update)
+    PUSH_SUB(fio_density__load__)
 
     nullify(cnfg, list)
     call fio_density_get(this, cnfg)
@@ -157,15 +163,15 @@ contains
       call json_next(iter, file, ierr)
       if(ierr/=JSON_OK)exit
       isp=isp+1
-      call fio_density_read(this, trim(adjustl(dir)), trim(adjustl(file)), isp)
+      call fio_density__read__(this, trim(adjustl(dir)), trim(adjustl(file)), isp)
     end do
     call json_end(iter)
     ASSERT(isp==nspin)
     nullify(cnfg, list)
     call base_density__update__(this)
 
-    POP_SUB(fio_density_update)
-  end subroutine fio_density_update
+    POP_SUB(fio_density__load__)
+  end subroutine fio_density__load__
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_info(this, size, nspin, fine)
@@ -253,63 +259,113 @@ contains
     POP_SUB(fio_density_end_density)
   end subroutine fio_density_end_density
 
+  ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin_1_n(this, that)
+    real(kind=wp),               intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this=that(1)
+    case(2)
+      this=sum(that)
+    case default
+      this=-1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin_1_n
+
+  ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin_2_n(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this=0.5_wp*that(1)
+    case(2)
+      this=that
+    case default
+      this=-1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin_2_n
+
+  ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(this))
+    case(1)
+      call fio_density_adjust_spin_1_n(this(1), that)
+    case(2)
+      call fio_density_adjust_spin_2_n(this, that)
+    case default
+      this=-1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_eval_1d(this, x, val)
+    type(fio_density_intrpl_t),  intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp),               intent(out) :: val
+
+    real(kind=wp), allocatable, dimension(:) :: tvl
+    real(kind=wp),              dimension(1) :: tv1
+    integer                                  :: ierr, nspin
+
+    PUSH_SUB(fio_density_eval_1d)
+
+    call fio_density_get(this%self, nspin=nspin)
+    if(nspin==1)then
+      call fio_density_intrpl_eval(this, x, val, ierr)
+      if(ierr/=FIO_DENSITY_INTRPL_OK)val=0.0_wp
+    else
+      SAFE_ALLOCATE(tvl(1:nspin))
+      call fio_density_intrpl_eval(this, x, tvl, ierr)
+      if(ierr/=FIO_DENSITY_INTRPL_OK)tvl=0.0_wp
+      call fio_density_adjust_spin(tv1, tvl)
+      SAFE_DEALLOCATE_A(tvl)
+      val=tv1(1)
+    end if
+
+    POP_SUB(fio_density_eval_1d)
+  end subroutine fio_density_eval_1d
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_eval_md(this, x, val)
+    type(fio_density_intrpl_t),  intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp), dimension(:), intent(out) :: val
+
+    real(kind=wp), allocatable, dimension(:) :: tvl
+    integer                                  :: ierr, nspin
+
+    PUSH_SUB(fio_density_eval_md)
+
+    call fio_density_get(this%self, nspin=nspin)
+    if(nspin==size(val))then
+      call fio_density_intrpl_eval(this, x, val, ierr)
+      if(ierr/=FIO_DENSITY_INTRPL_OK)val=0.0_wp
+    else
+      SAFE_ALLOCATE(tvl(1:nspin))
+      call fio_density_intrpl_eval(this, x, tvl, ierr)
+      if(ierr/=FIO_DENSITY_INTRPL_OK)tvl=0.0_wp
+      call fio_density_adjust_spin(val, tvl)
+      SAFE_DEALLOCATE_A(tvl)
+    end if
+
+    POP_SUB(fio_density_eval_md)
+  end subroutine fio_density_eval_md
+
 #define TEMPLATE_NAME fio_density
 #define INCLUDE_BODY
 #include "intrpl_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_NAME
-
-#if 0
-
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_eval_1d(this, x, val)
-    type(base_density_intrpl_t), intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp),               intent(out) :: val
-
-    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
-    real(kind=wp), dimension(1)                                 :: tv1
-    integer                                                     :: ierr
-
-    PUSH_SUB(base_density_intrpl_eval_1d)
-
-    if(base_density_get_nspin(this%self)==1)then
-      call storage_eval(this%intrp, x, val, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
-    else
-      call storage_eval(this%intrp, x, tvl, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
-      call base_density_adjust_spin(tv1, tvl)
-      val=tv1(1)
-    end if
-
-    POP_SUB(base_density_intrpl_eval_1d)
-  end subroutine base_density_intrpl_eval_1d
-
-  ! ---------------------------------------------------------
-  subroutine base_density_intrpl_eval_2d(this, x, val)
-    type(base_density_intrpl_t), intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp), dimension(:), intent(out) :: val
-
-    real(kind=wp), dimension(base_density_get_nspin(this%self)) :: tvl
-    integer                                                     :: ierr
-
-    PUSH_SUB(base_density_intrpl_eval_2d)
-
-    if(base_density_get_nspin(this%self)==size(val))then
-      call storage_eval(this%intrp, x, val, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)val=0.0_wp
-    else
-      call storage_eval(this%intrp, x, tvl, ierr)
-      if(ierr/=STORAGE_INTRPL_OK)tvl=0.0_wp
-      call base_density_adjust_spin(val, tvl)
-    end if
-
-    POP_SUB(base_density_intrpl_eval_2d)
-  end subroutine base_density_intrpl_eval_2d
-
-#endif
 
 end module fio_density_m
 

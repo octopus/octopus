@@ -125,8 +125,8 @@ fio_density.o 		: fio_density.F90 fio_simulation.o base_density.o
 fio_states.o 		: fio_states.F90 fio_density.o base_states.o
 fio_system.o 		: fio_system.F90 fio_states.o base_system.o
 fio_external.o 		: fio_external.F90 fio_system.o fio_simulation.o base_potential.o
-fio_hamiltonian.o	: fio_hamiltonian.F90 fio_external.o fio_system.o fio_simulation.o base_hamiltonian.o
-fio_model.o 		: fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o base_geom.o
+fio_hamiltonian.o       : fio_hamiltonian.F90 fio_external.o fio_system.o base_hamiltonian.o
+fio_model.o             : fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o
 fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o
 fio_config.o 		: fio_config.F90 fio_handle.o base_hamiltonian.o base_config.o intrpl.o
 

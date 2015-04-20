@@ -15,14 +15,17 @@ module fio_mesh_m
   use mesh_cube_map_m,      only: mesh_cube_map_init
   !use mesh_init_m,          only: mesh_get_vol_pp
   use mpi_m,                only: mpi_grp_t
+  use path_m,               only: path_join
 
   use mesh_m, only:        &
     mesh_load,             &
     mesh_read_fingerprint, &
     mesh_x_global
 
+  use mesh_m, only:       &
+    fio_mesh_t => mesh_t
+
   use mesh_m, only:           &
-    fio_mesh_t   => mesh_t,   &
     fio_mesh_end => mesh_end
 
   use fio_simul_box_m, only: &
@@ -31,8 +34,10 @@ module fio_mesh_m
   implicit none
 
   private
+  public ::     &
+    fio_mesh_t
+
   public ::         &
-    fio_mesh_t,     &
     fio_mesh_init,  &
     fio_mesh_copy,  &
     fio_mesh_end
@@ -46,12 +51,13 @@ contains
     integer,               intent(in)  :: ndim
     type(mpi_grp_t),       intent(in)  :: mpi_grp
     type(json_object_t),   intent(in)  :: config
-    !
-    character(len=MAX_PATH_LEN) :: dir
+
+    character(len=MAX_PATH_LEN) :: dir, fpth
     integer                     :: ierr
     integer                     :: i11, i21, i12, i22, i13, i23
-    !
+
     PUSH_SUB(fio_index_init)
+
     SAFE_ALLOCATE(this%lxyz(np,MAX_DIM))
     i11=this%nr(1,1)
     i21=this%nr(2,1)
@@ -64,19 +70,21 @@ contains
     ASSERT(ierr==JSON_OK)
     call index_load_lxyz(this, np, dir, mpi_grp, ierr)
     if(ierr/=0) then
-      message(1) = "Error: failed to read file: '"//trim(adjustl(dir))//"/lxyz.obf'."
+      call path_join(dir, "lxyz.obf", fpth)
+      message(1) = "Error: failed to read file: '"//trim(adjustl(fpth))//"'."
       call messages_fatal(1)
     end if
     call checksum_calculate(1, np*ndim, this%lxyz(1,1), this%checksum)
+
     POP_SUB(fio_index_init)
-    return
   end subroutine fio_index_init
 
   ! ---------------------------------------------------------
   subroutine fio_index_end(this)
     type(index_t), intent(inout) :: this
-    !
+
     PUSH_SUB(fio_index_end)
+
     if(this%is_hypercube)call hypercube_end(this%hypercube)
     this%is_hypercube=.false.
     this%dim=0
@@ -88,40 +96,26 @@ contains
     nullify(this%lxyz_inv)
     this%enlarge=0
     this%checksum=0
+
     POP_SUB(fio_index_end)
-    return
   end subroutine fio_index_end
 
   ! ---------------------------------------------------------
-  subroutine fio_mesh__init__(this, sb, cv, config)
+  subroutine fio_mesh_init(this, sb, cv, mpi_grp, config)
     type(fio_mesh_t),              intent(out) :: this
     type(fio_simul_box_t), target, intent(in)  :: sb
     type(curvilinear_t),   target, intent(in)  :: cv
+    type(mpi_grp_t),               intent(in)  :: mpi_grp
     type(json_object_t),           intent(in)  :: config
-    !
-    integer :: ierr
-    !
-    PUSH_SUB(fio_mesh__init__)
+
+    character(len=MAX_PATH_LEN) :: dir, file
+    integer                     :: i, ia, ib, ierr
+
+    PUSH_SUB(fio_mesh_init)
+
     ASSERT(.not.sb%mr_flag)
     this%sb=>sb
     this%cv=>cv
-    this%spacing=0.0_wp
-    call json_get(config, "spacing", this%spacing(1:sb%dim), ierr=ierr)
-    ASSERT(ierr==JSON_OK)
-    POP_SUB(fio_mesh__init__)
-    return
-  end subroutine fio_mesh__init__
-
-  ! ---------------------------------------------------------
-  subroutine fio_mesh__start__(this, mpi_grp, config)
-    type(fio_mesh_t),    intent(inout) :: this
-    type(mpi_grp_t),     intent(in)    :: mpi_grp
-    type(json_object_t), intent(in)    :: config
-    !
-    character(len=MAX_PATH_LEN) :: dir, file
-    integer                     :: i, ia, ib, ierr
-    !
-    PUSH_SUB(fio_mesh__start__)
     call json_get(config, "dir", dir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(config, "file", file, ierr)
@@ -130,6 +124,9 @@ contains
     if(ierr==0)then
       this%np=this%np_global
       this%np_part=this%np_part_global
+      this%spacing=0.0_wp
+      call json_get(config, "spacing", this%spacing(1:this%sb%dim), ierr=ierr)
+      ASSERT(ierr==JSON_OK)
       call fio_index_init(this%idx, this%np_part_global, this%sb%dim, mpi_grp, config)
       call mesh_read_fingerprint(this, dir, "grid", mpi_grp, ia, ib, ierr)
       ASSERT((ia==0).and.(ib==0).and.(ierr==0))
@@ -146,35 +143,21 @@ contains
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr
       call messages_fatal(2)
     end if
-    POP_SUB(fio_mesh__start__)
-    return
-  end subroutine fio_mesh__start__
 
-  ! ---------------------------------------------------------
-  subroutine fio_mesh_init(this, sb, cv, mpi_grp, config)
-    type(fio_mesh_t),      intent(out) :: this
-    type(fio_simul_box_t), intent(in)  :: sb
-    type(curvilinear_t),   intent(in)  :: cv
-    type(mpi_grp_t),       intent(in)  :: mpi_grp
-    type(json_object_t),   intent(in)  :: config
-    !
-    PUSH_SUB(fio_mesh_init)
-    call fio_mesh__init__(this, sb, cv, config)
-    call fio_mesh__start__(this, mpi_grp, config)
     POP_SUB(fio_mesh_init)
-    return
   end subroutine fio_mesh_init
 
   ! ---------------------------------------------------------
   subroutine fio_mesh_copy(this, that)
     type(fio_mesh_t), intent(out) :: this
     type(fio_mesh_t), intent(in)  :: that
-    !
+
     PUSH_SUB(fio_mesh_copy)
+
     ASSERT(.false.)
     this=that
+
     POP_SUB(fio_mesh_copy)
-    return
   end subroutine fio_mesh_copy
 
 end module fio_mesh_m

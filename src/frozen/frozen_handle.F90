@@ -16,7 +16,7 @@ module frozen_handle_m
     fio_handle_t,         &
     fio_handle_init,      &
     fio_handle_start,     &
-    fio_handle_update,    &
+    !fio_handle_update,    &
     fio_handle_stop,      &
     fio_handle_get
 
@@ -119,7 +119,7 @@ contains
       call base_handle_next(iter, cnfg, hndl, ierr)
       if(ierr/=BASE_HANDLE_OK)exit
       call fio_handle_start(hndl, mpi_world)
-      call fio_handle_update(hndl)
+      !call fio_handle_update(hndl)
       call frozen_handle__update__(this, hndl, cnfg)
       call fio_handle_stop(hndl)
     end do

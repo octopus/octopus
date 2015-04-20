@@ -9,80 +9,126 @@ module fio_simulation_m
   use geometry_m, only: geometry_t
   use json_m,     only: JSON_OK, json_object_t, json_get
   use mpi_m,      only: mpi_grp_t
-  use space_m,    only: space_t
+
+  use base_geom_m, only: &
+    base_geom_t
+
+  use base_geom_m, only: &
+    base_geom_get
 
   use fio_grid_m, only: &
-    fio_grid_t,         &
+    fio_grid_t
+
+  use fio_grid_m, only: &
     fio_grid_init,      &
+    fio_grid_start,     &
+    fio_grid_stop,      &
     fio_grid_end
 
+  use simulation_m, only:             &
+    fio_simulation_t => simulation_t
+
   use simulation_m, only: &
-    simulation__start__
-
-  use simulation_m, only:                      &
-    fio_simulation_init => simulation__init__, &
-    fio_simulation_copy => simulation__copy__, &
-    fio_simulation_end  => simulation__end__
-
-  use simulation_m, only:                 &
-    fio_simulation_t   => simulation_t,   &
-    fio_simulation_get => simulation_get
+    simulation_get
 
   implicit none
 
   private
-  public ::               &
-    fio_simulation_t,     &
-    fio_simulation_init,  &
-    fio_simulation_start, &
-    fio_simulation_stop,  &
-    fio_simulation_get,   &
-    fio_simulation_copy,  &
-    fio_simulation_end
+  public ::           &
+    fio_simulation_t
+
+  public ::                  &
+    fio_simulation__new__,   &
+    fio_simulation__del__,   &
+    fio_simulation__start__, &
+    fio_simulation__stop__
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_simulation_start(this, geo, mpi_grp)
-    type(fio_simulation_t), intent(inout) :: this
-    type(geometry_t),       intent(in)    :: geo
-    type(mpi_grp_t),        intent(in)    :: mpi_grp
-    !
-    type(json_object_t),  pointer :: scfg, gcfg
-    type(fio_grid_t),     pointer :: grid
-    integer                       :: ierr
-    !
-    PUSH_SUB(fio_simulation_start)
-    nullify(grid, scfg, gcfg)
-    call fio_simulation_get(this, scfg)
+  subroutine fio_simulation__new__(this, grid, geom)
+    type(fio_simulation_t), intent(in) :: this
+    type(fio_grid_t),      pointer     :: grid
+    type(base_geom_t),      intent(in) :: geom
+
+    type(json_object_t), pointer :: scfg, gcfg
+    type(geometry_t),    pointer :: pgeo
+    integer                      :: ierr
+
+    PUSH_SUB(fio_simulation__new__)
+
+    nullify(grid, scfg, gcfg, pgeo)
+    call simulation_get(this, scfg)
     ASSERT(associated(scfg))
+    call base_geom_get(geom, pgeo)
+    ASSERT(associated(pgeo))
     call json_get(scfg, "grid", gcfg, ierr)
     ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(grid)
-    call fio_grid_init(grid, geo, mpi_grp, gcfg)
-    call simulation__start__(this, grid, geo)
-    nullify(grid, scfg, gcfg)
-    POP_SUB(fio_simulation_start)
-    return
-  end subroutine fio_simulation_start
+    call fio_grid_init(grid, pgeo, gcfg)
+    nullify(scfg, gcfg, pgeo)
+
+    POP_SUB(fio_simulation__new__)
+  end subroutine fio_simulation__new__
   
   ! ---------------------------------------------------------
-  subroutine fio_simulation_stop(this)
-    type(fio_simulation_t), intent(inout) :: this
-    !
+  subroutine fio_simulation__del__(this)
+    type(fio_simulation_t), intent(in) :: this
+
     type(fio_grid_t), pointer :: grid
-    !
-    PUSH_SUB(fio_simulation_stop)
+
+    PUSH_SUB(fio_simulation__del__)
+
     nullify(grid)
-    call fio_simulation_get(this, grid)
+    call simulation_get(this, grid)
     ASSERT(associated(grid))
     call fio_grid_end(grid)
     SAFE_DEALLOCATE_P(grid)
     nullify(grid)
-    POP_SUB(fio_simulation_stop)
-    return
-  end subroutine fio_simulation_stop
+
+    POP_SUB(fio_simulation__del__)
+  end subroutine fio_simulation__del__
   
+  ! ---------------------------------------------------------
+  subroutine fio_simulation__start__(this, grid, mpi_grp)
+    type(fio_simulation_t), intent(in)    :: this
+    type(fio_grid_t),       intent(inout) :: grid
+    type(mpi_grp_t),        intent(in)    :: mpi_grp
+
+    type(json_object_t), pointer :: scfg, gcfg
+    integer                      :: ierr
+
+    PUSH_SUB(fio_simulation__start__)
+
+
+    nullify(scfg, gcfg)
+    call simulation_get(this, scfg)
+    ASSERT(associated(scfg))
+    call json_get(scfg, "grid", gcfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_grid_start(grid, mpi_grp, gcfg)
+    nullify(scfg, gcfg)
+
+    POP_SUB(fio_simulation__start__)
+  end subroutine fio_simulation__start__
+
+  ! ---------------------------------------------------------
+  subroutine fio_simulation__stop__(this)
+    type(fio_simulation_t), intent(in) :: this
+
+    type(fio_grid_t), pointer :: grid
+
+    PUSH_SUB(fio_simulation__stop__)
+
+    nullify(grid)
+    call simulation_get(this, grid)
+    ASSERT(associated(grid))
+    call fio_grid_stop(grid)
+    nullify(grid)
+
+    POP_SUB(fio_simulation__stop__)
+  end subroutine fio_simulation__stop__
+
 end module fio_simulation_m
 
 !! Local Variables:
