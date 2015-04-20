@@ -283,6 +283,8 @@ contains
     call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
     call local_write_init(local%writ, local%nd, local%lab, 0, dt)
 
+    !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
+
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
       call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, &
@@ -722,6 +724,7 @@ contains
     iunit = restart_open(restart, filename)
     call restart_write(restart, iunit, lines, lcl%nd+2, ierr)
     call restart_end(restart)
+    call io_close(iunit)
     SAFE_DEALLOCATE_A(lines)
     
     SAFE_DEALLOCATE_A(ff2)
@@ -779,7 +782,7 @@ contains
                 dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) & 
                       - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
                 dd = sqrt(dd)
-                if ( dd < species_def_h(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
+                if ( dd < species_def_rsize(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
               end do
             end if
           end do

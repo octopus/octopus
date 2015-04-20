@@ -52,9 +52,10 @@ module local_write_m
   private
   public ::         &
     local_write_t,     &
+    local_write_check_hm, &
     local_write_init,  &
-    local_write_end,   &
-    local_write_iter
+    local_write_iter,  &
+    local_write_end   
 
   integer, parameter ::   &
     LOCAL_OUT_MULTIPOLES  =  1, &
@@ -77,6 +78,18 @@ module local_write_m
   end type local_write_t
 
 contains
+
+  ! ---------------------------------------------------------
+  logical function local_write_check_hm(writ) result(check)
+    type(local_write_t), intent(out)   :: writ
+
+    PUSH_SUB(local_write_check_hm)
+    check = .false.
+    if (any(writ%out(LOCAL_OUT_POTENTIAL, :)%write) .or. &
+        any(writ%out(LOCAL_OUT_ENERGY, :)%write) ) check = .true.
+
+    PUSH_SUB(local_write_check_hm)
+  end function local_write_check_hm
 
   ! ---------------------------------------------------------
   subroutine local_write_init(writ, nd, lab, iter, dt)
