@@ -12,65 +12,58 @@ module frozen_states_m
     fio_density_t
 
   use fio_states_m, only: &
-    fio_states_t,         &
-    fio_states_get
+    fio_states_t
 
-  use frozen_density_m, only: &
-    frozen_density__update__
+  use fio_states_m, only: &
+    fio_states_get
 
   use frozen_density_m, only: &
     frozen_density_t
 
-  use base_states_m, only:                         & 
-    frozen_states_init   => base_states__init__,   &
-    frozen_states_start  => base_states__start__,  &
-    frozen_states_update => base_states__update__, &
-    frozen_states_stop   => base_states__stop__,   &
-    frozen_states_copy   => base_states__copy__,   &
-    frozen_states_end    => base_states__end__
+  use base_states_m, only:            & 
+    frozen_states_t => base_states_t
+
+  use frozen_density_m, only: &
+    frozen_density__acc__
 
   use base_states_m, only:                & 
-    frozen_states_t   => base_states_t,   &
     frozen_states_get => base_states_get
 
   implicit none
 
   private
-  public ::                  &
-    frozen_states__update__
+  public ::          &
+    frozen_states_t
 
   public ::               &
-    frozen_states_t,      &
-    frozen_states_init,   &
-    frozen_states_start,  &
-    frozen_states_update, &
-    frozen_states_stop,   &
-    frozen_states_get,    &
-    frozen_states_copy,   &
-    frozen_states_end
+    frozen_states__acc__
+
+  public ::            &
+    frozen_states_get
 
 contains
     
   ! ---------------------------------------------------------
-  subroutine frozen_states__update__(this, that, config)
+  subroutine frozen_states__acc__(this, that, config)
     type(frozen_states_t), intent(inout) :: this
     type(fio_states_t),    intent(in)    :: that
     type(json_object_t),   intent(in)    :: config
-    !
+
     type(frozen_density_t), pointer :: mrho
     type(fio_density_t),    pointer :: srho
-    !
-    PUSH_SUB(frozen_states__update__)
+
+    PUSH_SUB(frozen_states__acc__)
+
     nullify(mrho, srho)
     call frozen_states_get(this, mrho)
     ASSERT(associated(mrho))
     call fio_states_get(that, srho)
     ASSERT(associated(srho))
-    call frozen_density__update__(mrho, srho, config)
+    call frozen_density__acc__(mrho, srho, config)
     nullify(mrho, srho)
-    POP_SUB(frozen_states__update__)
-    return
-  end subroutine frozen_states__update__
+
+    POP_SUB(frozen_states__acc__)
+  end subroutine frozen_states__acc__
 
 end module frozen_states_m
 

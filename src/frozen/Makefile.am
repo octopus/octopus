@@ -132,10 +132,10 @@ fio_config.o 		: fio_config.F90 fio_handle.o base_hamiltonian.o base_config.o in
 
 frozen_density.o 	: frozen_density.F90 fio_density.o base_density.o simulation.o intrpl.o basis.o
 frozen_states.o 	: frozen_states.F90 frozen_density.o fio_states.o fio_density.o base_states.o
-frozen_system.o 	: frozen_system.F90 frozen_states.o fio_system.o fio_states.o base_system.o
+frozen_system.o		: frozen_system.F90 frozen_states.o fio_system.o base_system.o
 frozen_external.o 	: frozen_external.F90 fio_external.o base_potential.o simulation.o intrpl.o basis.o
 frozen_hamiltonian.o	: frozen_hamiltonian.F90 frozen_external.o frozen_system.o fio_hamiltonian.o fio_external.o base_hamiltonian.o
-frozen_model.o 		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_model.o fio_hamiltonian.o fio_system.o base_model.o
+frozen_model.o		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_model.o base_model.o
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o base_handle.o
 frozen_config.o 	: frozen_config.F90 frozen_handle.o base_hamiltonian.o base_config.o
 

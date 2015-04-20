@@ -12,8 +12,8 @@ module ssys_handle_m
 
   use frozen_handle_m, only: &
     frozen_handle_init,      &
-    frozen_handle_start,     &
-    frozen_handle_update
+    frozen_handle_start !,     &
+    !frozen_handle_update
 
   use frozen_handle_m, only: &
     HNDL_TYPE_FRZN
@@ -152,7 +152,7 @@ contains
       select case(type)
       case(HNDL_TYPE_FRZN)
         call frozen_handle_start(hndl, grid)
-        call frozen_handle_update(hndl)
+        !call frozen_handle_update(hndl)
       case(HNDL_TYPE_LIVE)
         call live_handle_start(hndl, grid)
         call live_handle_update(hndl)

@@ -14,55 +14,49 @@ module frozen_external_m
 
   use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
 
+  use simulation_m, only: &
+    simulation_t
+
+  use simulation_m, only: &
+    simulation_get
+
   use fio_external_m, only: &
-    fio_external_t,         &
+    fio_external_t
+
+  use fio_external_m, only: &
     fio_external_init,      &
-    !fio_external_eval,      &
+    fio_external_eval,      &
     fio_external_end
 
   use fio_external_m, only: &
     fio_external_intrpl_t
 
-  use simulation_m, only: &
-    simulation_t,         &
-    simulation_get
+  use base_potential_m, only:              &
+    frozen_external_t => base_potential_t
 
-  use base_potential_m, only:                           &
-    frozen_external_init   => base_potential__init__,   &
-    frozen_external_start  => base_potential__start__,  &
-    frozen_external_update => base_potential__update__, &
-    frozen_external_stop   => base_potential__stop__,   &
-    frozen_external_copy   => base_potential__copy__,   &
-    frozen_external_end    => base_potential__end__
-
-  use base_potential_m, only:                    &
-    frozen_external_t    => base_potential_t,    &
-    frozen_external_get  => base_potential_get
+  use base_potential_m, only:                  &
+    frozen_external_get => base_potential_get
 
   implicit none
 
   private
-  public ::                    &
-    frozen_external__update__
+  public ::            &
+    frozen_external_t
 
   public ::                 &
-    frozen_external_t,      &
-    frozen_external_init,   &
-    frozen_external_start,  &
-    frozen_external_update, &
-    frozen_external_stop,   &
-    frozen_external_get,    &
-    frozen_external_copy,   &
-    frozen_external_end
+    frozen_external__acc__
+
+  public ::              &
+    frozen_external_get
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine  frozen_external_update_intrpl(this, intrpl, config)
+  subroutine  frozen_external__acc__intrpl(this, intrpl, config)
     type(frozen_external_t),     intent(inout) :: this
     type(fio_external_intrpl_t), intent(in)    :: intrpl
     type(json_object_t),         intent(in)    :: config
-    !
+
     real(kind=wp), dimension(:),     pointer :: potn
     real(kind=wp), dimension(:), allocatable :: x
     type(simulation_t),              pointer :: sim
@@ -70,9 +64,10 @@ contains
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
     real(kind=wp)                            :: pot
-    integer                                  :: indx, np, ierr
-    !
-    PUSH_SUB(frozen_external_update_intrpl)
+    integer                                  :: indx, np
+
+    PUSH_SUB(frozen_external__acc__intrpl)
+
     nullify(potn, sim, space, mesh)
     call frozen_external_get(this, sim)
     ASSERT(associated(sim))
@@ -88,35 +83,36 @@ contains
     SAFE_ALLOCATE(x(space%dim))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      !call fio_external_eval(intrpl, x, pot, ierr)
+      call fio_external_eval(intrpl, x, pot)
       potn(indx)=potn(indx)+pot
     end do
     SAFE_DEALLOCATE_A(x)
     nullify(potn, space, mesh)
     call basis_end(basis)
-    POP_SUB(frozen_external_update_intrpl)
-    return
-  end subroutine frozen_external_update_intrpl
+
+    POP_SUB(frozen_external__acc__intrpl)
+  end subroutine frozen_external__acc__intrpl
 
   ! ---------------------------------------------------------
-  subroutine frozen_external__update__(this, that, config)
+  subroutine frozen_external__acc__(this, that, config)
     type(frozen_external_t), intent(inout) :: this
     type(fio_external_t),    intent(in)    :: that
     type(json_object_t),     intent(in)    :: config
-    !
+
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
     type(json_array_iterator_t)  :: iter
     type(fio_external_intrpl_t)  :: intrp
     integer                      :: type, ierr
-    !
+
     PUSH_SUB(frozen_external__update__)
+
     nullify(cnfg, list)
     call json_get(config, "type", type, ierr)
     if(ierr==JSON_OK)then
-      !call fio_external_init(intrp, that, type)
+      call fio_external_init(intrp, that, type)
     else
-      !call fio_external_init(intrp, that)
+      call fio_external_init(intrp, that)
     end if
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -125,14 +121,14 @@ contains
        nullify(cnfg)
        call json_next(iter, cnfg, ierr)
        if(ierr/=JSON_OK)exit
-       !call frozen_external_update_intrpl(this, intrp, cnfg)
+       call frozen_external__acc__intrpl(this, intrp, cnfg)
     end do
     call json_end(iter)
     nullify(cnfg, list)
-    !call fio_external_end(intrp)
-    POP_SUB(frozen_external__update__)
-    return
-  end subroutine frozen_external__update__
+    call fio_external_end(intrp)
+
+    POP_SUB(frozen_external__acc__)
+  end subroutine frozen_external__acc__
 
 end module frozen_external_m
 

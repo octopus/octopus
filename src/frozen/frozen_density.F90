@@ -17,51 +17,45 @@ module frozen_density_m
   use intrpl_m, only: NEAREST
 
   use simulation_m, only: &
-    simulation_t,         &
+    simulation_t
+
+  use simulation_m, only: &
     simulation_get
 
   use fio_density_m, only: &
-    fio_density_t,         &
+    fio_density_t
+
+  use fio_density_m, only: &
     fio_density_init,      &
-    !fio_density_eval,      &
+    fio_density_eval,      &
     fio_density_get,       &
     fio_density_end
 
   use fio_density_m, only: &
     fio_density_intrpl_t
 
-  use base_density_m, only:                          &
-    frozen_density_init   => base_density__init__,   &
-    frozen_density_start  => base_density__start__,  &
-    frozen_density_update => base_density__update__, &
-    frozen_density_stop   => base_density__stop__,   &
-    frozen_density_copy   => base_density__copy__,   &
-    frozen_density_end    => base_density__end__
+  use base_density_m, only:             &
+    frozen_density_t => base_density_t
 
-  use base_density_m, only:                   &
-    frozen_density_t    => base_density_t,    &
-    frozen_density_get  => base_density_get
+  use base_density_m, only:                 &
+    frozen_density_get => base_density_get
 
   implicit none
 
   private
-  public ::                   &
-    frozen_density__update__
+  public ::           &
+    frozen_density_t
 
   public ::                &
-    frozen_density_t,      &
-    frozen_density_init,   &
-    frozen_density_start,  &
-    frozen_density_update, &
-    frozen_density_stop,   &
-    frozen_density_get,    &
-    frozen_density_copy,   &
-    frozen_density_end
+    frozen_density__acc__
+
+  public ::             &
+    frozen_density_get
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine  frozen_density_update_intrpl(this, intrpl, config)
+  subroutine  frozen_density__acc__intrpl(this, intrpl, config)
     type(frozen_density_t),     intent(inout) :: this
     type(fio_density_intrpl_t), intent(in)    :: intrpl
     type(json_object_t),        intent(in)    :: config
@@ -72,9 +66,10 @@ contains
     type(space_t),                   pointer :: space
     type(mesh_t),                    pointer :: mesh
     type(basis_t)                            :: basis
-    integer                                  :: indx, np, nspin, ierr
-    !
-    PUSH_SUB(frozen_density_update_intrpl)
+    integer                                  :: indx, np, nspin
+
+    PUSH_SUB(frozen_density__acc__intrpl)
+
     nullify(dnst, sim, space, mesh)
     call frozen_density_get(this, sim)
     ASSERT(associated(sim))
@@ -88,38 +83,40 @@ contains
     ASSERT(associated(dnst))
     call frozen_density_get(this, size=np, nspin=nspin)
     ASSERT(nspin>0)
+    ASSERT(nspin<3)
     SAFE_ALLOCATE(x(space%dim))
     SAFE_ALLOCATE(rho(nspin))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      !call fio_density_eval(intrpl, x, rho, ierr)
+      call fio_density_eval(intrpl, x, rho)
       dnst(indx,:)=dnst(indx,:)+rho
     end do
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(x)
     nullify(dnst, space, mesh)
     call basis_end(basis)
-    POP_SUB(frozen_density_update_intrpl)
-    return
-  end subroutine frozen_density_update_intrpl
+
+    POP_SUB(frozen_density__acc__intrpl)
+  end subroutine frozen_density__acc__intrpl
 
   ! ---------------------------------------------------------
-  subroutine frozen_density__update__(this, that, config)
+  subroutine frozen_density__acc__(this, that, config)
     type(frozen_density_t), intent(inout) :: this
     type(fio_density_t),    intent(in)    :: that
     type(json_object_t),    intent(in)    :: config
-    !
+
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
     type(json_array_iterator_t)  :: iter
     type(fio_density_intrpl_t)   :: intrp
     integer                      :: type, ierr
-    !
-    PUSH_SUB(frozen_density__update__)
+
+    PUSH_SUB(frozen_density__acc__)
+
     nullify(cnfg, list)
     call json_get(config, "type", type, ierr)
     if(ierr/=JSON_OK)type=NEAREST
-    !call fio_density_init(intrp, that, type)
+    call fio_density_init(intrp, that, type)
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(json_len(list)>0)
@@ -128,14 +125,14 @@ contains
        nullify(cnfg)
        call json_next(iter, cnfg, ierr)
        if(ierr/=JSON_OK)exit
-       !call frozen_density_update_intrpl(this, intrp, cnfg)
+       call frozen_density__acc__intrpl(this, intrp, cnfg)
     end do
     call json_end(iter)
     nullify(cnfg, list)
-    !call fio_density_end(intrp)
-    POP_SUB(frozen_density__update__)
-    return
-  end subroutine frozen_density__update__
+    call fio_density_end(intrp)
+
+    POP_SUB(frozen_density__acc__)
+  end subroutine frozen_density__acc__
 
 end module frozen_density_m
  
