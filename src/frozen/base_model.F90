@@ -398,8 +398,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_model__start__(this, grid)
-    type(base_model_t),     intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
+    type(base_model_t), intent(inout) :: this
+    type(grid_t),       intent(in)    :: grid
     !
     type(base_geom_t), pointer :: geom
     type(geometry_t),  pointer :: geo
@@ -407,17 +407,13 @@ contains
     PUSH_SUB(base_model__start__)
     nullify(geom, geo)
     call base_model__istart__(this)
-    if(present(grid))then
-      call base_system_get(this%sys, geom)
-      ASSERT(associated(geom))
-      call base_geom_get(geom, geo)
-      ASSERT(associated(geo))
-      nullify(geom)
-      call simulation__start__(this%sim, grid, geo)
-      nullify(geo)
-    else
-      call simulation__start__(this%sim)
-    end if
+    call base_system_get(this%sys, geom)
+    ASSERT(associated(geom))
+    call base_geom_get(geom, geo)
+    ASSERT(associated(geo))
+    nullify(geom)
+    call simulation__start__(this%sim, grid, geo)
+    nullify(geo)
     call base_system__start__(this%sys, this%sim)
     call base_hamiltonian__start__(this%hm, this%sim)
     POP_SUB(base_model__start__)

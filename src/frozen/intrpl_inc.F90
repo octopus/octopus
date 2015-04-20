@@ -23,14 +23,6 @@
   public ::             &
     TEMPLATE(intrpl_t)
 
-  public ::         &
-    TEMPLATE(eval)
-
-  public ::              &
-    TEMPLATE(INTRPL_OK), &
-    TEMPLATE(INTRPL_OD), &
-    TEMPLATE(INTRPL_NI)
-
   integer, parameter :: TEMPLATE(INTRPL_OK) = INTRPL_OK
   integer, parameter :: TEMPLATE(INTRPL_OD) = INTRPL_OD
   integer, parameter :: TEMPLATE(INTRPL_NI) = INTRPL_NI
@@ -65,10 +57,10 @@
     module procedure TEMPLATE(intrpl_get)
   end interface TEMPLATE(get)
 
-  interface TEMPLATE(eval)
-    module procedure TEMPLATE(intrpl_eval_1d)
-    module procedure TEMPLATE(intrpl_eval_md)
-  end interface TEMPLATE(eval)
+  interface TEMPLATE(intrpl_eval)
+    module procedure INTERNAL(intrpl_eval_1d)
+    module procedure INTERNAL(intrpl_eval_md)
+  end interface TEMPLATE(intrpl_eval)
 
   interface TEMPLATE(copy)
     module procedure TEMPLATE(intrpl_copy)
@@ -106,34 +98,34 @@
   end subroutine TEMPLATE(intrpl_init)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(intrpl_eval_1d)(this, x, v, ierr)
+  subroutine INTERNAL(intrpl_eval_1d)(this, x, v, ierr)
     type(TEMPLATE(intrpl_t)),    intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp),               intent(out) :: v
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(TEMPLATE(intrpl_eval_1d))
+    PUSH_SUB(INTERNAL(intrpl_eval_1d))
 
     ierr=TEMPLATE(INTRPL_NI)
     if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
 
-    POP_SUB(TEMPLATE(intrpl_eval_1d))
-  end subroutine TEMPLATE(intrpl_eval_1d)
+    POP_SUB(INTERNAL(intrpl_eval_1d))
+  end subroutine INTERNAL(intrpl_eval_1d)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(intrpl_eval_md)(this, x, v, ierr)
+  subroutine INTERNAL(intrpl_eval_md)(this, x, v, ierr)
     type(TEMPLATE(intrpl_t)),    intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp), dimension(:), intent(out) :: v
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(TEMPLATE(intrpl_eval_md))
+    PUSH_SUB(INTERNAL(intrpl_eval_md))
 
     ierr=TEMPLATE(INTRPL_NI)
     if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
 
-    POP_SUB(TEMPLATE(intrpl_eval_md))
-  end subroutine TEMPLATE(intrpl_eval_md)
+    POP_SUB(INTERNAL(intrpl_eval_md))
+  end subroutine INTERNAL(intrpl_eval_md)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_get)(this, that)

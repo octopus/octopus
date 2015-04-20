@@ -333,32 +333,22 @@ contains
 
   ! ---------------------------------------------------------
   subroutine simulation__start__(this, grid, geo)
-    type(simulation_t),         intent(inout) :: this
-    type(grid_t),     optional, intent(in)    :: grid
-    type(geometry_t), optional, intent(in)    :: geo
+    type(simulation_t), intent(inout) :: this
+    type(grid_t),       intent(in)    :: grid
+    type(geometry_t),   intent(in)    :: geo
     !
     PUSH_SUB(simulation__start__)
-    if(present(grid).and.present(geo))then
-      call simulation__istart__(this, grid, geo)
-      call domain__start__(this%domain, grid%sb, geo)
-    else
-      if((.not.associated(this%grid)).and.(.not.associated(this%geo)))then
-        ASSERT(associated(this%prnt))
-        ASSERT(associated(this%prnt%geo))
-        ASSERT(associated(this%prnt%grid))
-        call simulation__istart__(this, this%prnt%grid, this%prnt%geo)
-      end if
-      call domain__start__(this%domain)
-    end if
+    call simulation__istart__(this, grid, geo)
+    call domain__start__(this%domain, grid%sb, geo)
     POP_SUB(simulation__start__)
     return
   end subroutine simulation__start__
 
   ! ---------------------------------------------------------
   subroutine simulation_start(this, grid, geo)
-    type(simulation_t),         intent(inout) :: this
-    type(grid_t),     optional, intent(in)    :: grid
-    type(geometry_t), optional, intent(in)    :: geo
+    type(simulation_t), intent(inout) :: this
+    type(grid_t),       intent(in)    :: grid
+    type(geometry_t),   intent(in)    :: geo
     !
     PUSH_SUB(simulation_start)
     call simulation__start__(this, grid, geo)

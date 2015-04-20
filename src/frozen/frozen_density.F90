@@ -23,7 +23,7 @@ module frozen_density_m
   use fio_density_m, only: &
     fio_density_t,         &
     fio_density_init,      &
-    fio_density_eval,      &
+    !fio_density_eval,      &
     fio_density_get,       &
     fio_density_end
 
@@ -92,7 +92,7 @@ contains
     SAFE_ALLOCATE(rho(nspin))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      call fio_density_eval(intrpl, x, rho, ierr)
+      !call fio_density_eval(intrpl, x, rho, ierr)
       dnst(indx,:)=dnst(indx,:)+rho
     end do
     SAFE_DEALLOCATE_A(rho)
@@ -119,7 +119,7 @@ contains
     nullify(cnfg, list)
     call json_get(config, "type", type, ierr)
     if(ierr/=JSON_OK)type=NEAREST
-    call fio_density_init(intrp, that, type)
+    !call fio_density_init(intrp, that, type)
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(json_len(list)>0)
@@ -128,11 +128,11 @@ contains
        nullify(cnfg)
        call json_next(iter, cnfg, ierr)
        if(ierr/=JSON_OK)exit
-       call frozen_density_update_intrpl(this, intrp, cnfg)
+       !call frozen_density_update_intrpl(this, intrp, cnfg)
     end do
     call json_end(iter)
     nullify(cnfg, list)
-    call fio_density_end(intrp)
+    !call fio_density_end(intrp)
     POP_SUB(frozen_density__update__)
     return
   end subroutine frozen_density__update__

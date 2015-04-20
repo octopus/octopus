@@ -8,12 +8,13 @@ module storage_m
   use profiling_m
 
 #if defined(HAVE_MPI)
-  use boundaries_m, only: dvec_ghost_update
+  use boundaries_m,    only: dvec_ghost_update
 #endif
-  use grid_m,       only: grid_t
-  use kinds_m,      only: wp, operator(.equal.)
-  use mesh_m,       only: mesh_t
-  use multigrid_m,  only: INJECTION, dmultigrid_coarse2fine, dmultigrid_fine2coarse
+  use grid_m,          only: grid_t
+  use kinds_m,         only: wp, operator(.equal.)
+  use mesh_m,          only: mesh_t
+  use multigrid_m,     only: INJECTION, dmultigrid_coarse2fine, dmultigrid_fine2coarse
+  use mesh_function_m, only: dmf_integrate, dmf_dotp
 
   use simulation_m, only: &
     simulation_t,         &
@@ -29,6 +30,7 @@ module storage_m
     storage_update,     &
     storage_stop,       &
     storage_reset,      &
+    storage_integrate,  &
     storage_accumulate, &
     storage_reduce,     &
     storage_get,        &
@@ -54,6 +56,11 @@ module storage_m
     module procedure storage_init_simple
     module procedure storage_init_copy
   end interface storage_init
+
+  interface storage_integrate
+    module procedure storage_integrate_intg
+    module procedure storage_integrate_dotp
+  end interface storage_integrate
 
   interface storage_get
     module procedure storage_get_info
@@ -203,6 +210,94 @@ contains
     POP_SUB(storage_reset)
     return
   end subroutine storage_reset
+
+  ! ---------------------------------------------------------
+  subroutine storage_integrate_intg(this, value)
+    type(storage_t), intent(in)  :: this
+    real(kind=wp),   intent(out) :: value
+    !
+    integer :: indx
+    !
+    PUSH_SUB(storage_integrate_intg)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(this%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(this%size>0)
+    value=0.0_wp
+    if(this%alloc)then
+      do indx = 1, this%ndim
+        value=value+dmf_integrate(this%mesh, this%data(:,indx))
+      end do
+    end if
+    POP_SUB(storage_integrate_intg)
+    return
+  end subroutine storage_integrate_intg
+
+  ! ---------------------------------------------------------
+  subroutine storage_integrate_dotp_aux(this, that, value)
+    type(storage_t), intent(in)  :: this
+    type(storage_t), intent(in)  :: that
+    real(kind=wp),   intent(out) :: value
+    !
+    integer :: indx
+    !
+    PUSH_SUB(storage_integrate_dotp_aux)
+    ASSERT(associated(this%mesh,that%mesh))
+    value=0.0_wp
+    do indx = 1, this%ndim
+      value=value+dmf_dotp(this%mesh, this%data(:,indx), that%data(:,indx))
+    end do
+    POP_SUB(storage_integrate_dotp_aux)
+    return
+  end subroutine storage_integrate_dotp_aux
+
+  ! ---------------------------------------------------------
+  subroutine storage_integrate_dotp(this, that, value)
+    type(storage_t), target, intent(in)  :: this
+    type(storage_t), target, intent(in)  :: that
+    real(kind=wp),           intent(out) :: value
+    !
+    type(storage_t), pointer :: cdat, fdat
+    type(storage_t)          :: data
+    !
+    PUSH_SUB(storage_integrate_dotp)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(that%grid))
+    ASSERT(associated(this%grid,that%grid))
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(that%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(that%ndim>0)
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size>0)
+    ASSERT(that%size>0)
+    value=0.0_wp
+    nullify(cdat, fdat)
+    if(this%alloc.and.that%alloc)then
+      if(this%fine.eqv.that%fine)then
+        call storage_integrate_dotp_aux(this, that, value)
+      else
+        if(this%fine)then
+          cdat=>that
+          fdat=>this
+        else
+          cdat=>this
+          fdat=>that
+        end if
+        call storage_init(data, cdat)
+        call storage_start(data, cdat%sim)
+        call storage_transfer(data, fdat)
+        call storage_integrate_dotp_aux(cdat, data, value)
+        call storage_end(data)
+        nullify(cdat, fdat)
+      end if
+    end if
+    POP_SUB(storage_integrate_dotp)
+    return
+  end subroutine storage_integrate_dotp
 
   ! ---------------------------------------------------------
   subroutine storage_accumulate(this, that)
