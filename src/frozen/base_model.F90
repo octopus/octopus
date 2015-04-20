@@ -83,6 +83,8 @@ module base_model_m
     base_system__start__,  &
     base_system__update__, &
     base_system__stop__,   &
+    base_system__reset__,  &
+    base_system__acc__,    &
     base_system__add__,    &
     base_system__copy__,   &
     base_system__end__
@@ -97,6 +99,8 @@ module base_model_m
     base_hamiltonian__start__,  &
     base_hamiltonian__update__, &
     base_hamiltonian__stop__,   &
+    base_hamiltonian__reset__,  &
+    base_hamiltonian__acc__,    &
     base_hamiltonian__add__,    &
     base_hamiltonian__copy__,   &
     base_hamiltonian__end__
@@ -118,6 +122,8 @@ module base_model_m
     base_model__start__,  &
     base_model__update__, &
     base_model__stop__,   &
+    base_model__reset__,  &
+    base_model__acc__,    &
     base_model__add__,    &
     base_model__copy__,   &
     base_model__end__
@@ -423,7 +429,7 @@ contains
   ! ---------------------------------------------------------
   recursive subroutine base_model_start(this, grid)
     type(base_model_t),     intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
+    type(grid_t),       intent(in)    :: grid
     !
     type(base_model_iterator_t) :: iter
     type(base_model_t), pointer :: subs
@@ -514,6 +520,29 @@ contains
     POP_SUB(base_model_stop)
     return
   end subroutine base_model_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_model__reset__(this)
+    type(base_model_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_model__reset__)
+    call base_system__reset__(this%sys)
+    call base_hamiltonian__reset__(this%hm)
+    POP_SUB(base_model__reset__)
+    return
+  end subroutine base_model__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_model__acc__(this, that)
+    type(base_model_t), intent(inout) :: this
+    type(base_model_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_model__acc__)
+    call base_system__acc__(this%sys, that%sys)
+    call base_hamiltonian__acc__(this%hm, that%hm)
+    POP_SUB(base_model__acc__)
+    return
+  end subroutine base_model__acc__
 
   ! ---------------------------------------------------------
   subroutine base_model__add__(this, that, config)

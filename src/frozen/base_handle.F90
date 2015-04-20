@@ -62,6 +62,7 @@ module base_handle_m
     base_model__start__,  &
     base_model__update__, &
     base_model__stop__,   &
+    base_model__reset__,  &
     base_model__add__,    &
     base_model__copy__,   &
     base_model__end__
@@ -84,6 +85,7 @@ module base_handle_m
     base_handle__start__,  &
     base_handle__update__, &
     base_handle__stop__,   &
+    base_handle__reset__,  &
     base_handle__add__,    &
     base_handle__copy__,   &
     base_handle__end__
@@ -384,8 +386,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
-    type(base_handle_t),    intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
+    type(base_handle_t), intent(inout) :: this
+    type(grid_t),        intent(in)    :: grid
     !
     PUSH_SUB(base_handle__start__)
     call base_handle__istart__(this)
@@ -396,8 +398,8 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_start(this, grid)
-    type(base_handle_t),    intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
+    type(base_handle_t), intent(inout) :: this
+    type(grid_t),        intent(in)    :: grid
     !
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: subs
@@ -487,6 +489,16 @@ contains
     POP_SUB(base_handle_stop)
     return
   end subroutine base_handle_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_handle__reset__(this)
+    type(base_handle_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_handle__reset__)
+    call base_model__reset__(this%model)
+    POP_SUB(base_handle__reset__)
+    return
+  end subroutine base_handle__reset__
 
   ! ---------------------------------------------------------
   subroutine base_handle__add__(this, that, config)

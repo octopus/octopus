@@ -82,17 +82,17 @@ module base_functional_m
   use simulation_m, only: &
     simulation_t
 
-  use base_system_m, only: &
-    base_system_t,         &
-    base_system_get
+  use base_density_m, only: &
+    base_density_t,         &
+    base_density_get
 
   use base_states_m, only: &
     base_states_t,         &
     base_states_get
 
-  use base_density_m, only: &
-    base_density_t,         &
-    base_density_get
+  use base_system_m, only: &
+    base_system_t,         &
+    base_system_get
 
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX
@@ -106,9 +106,9 @@ module base_functional_m
   public ::                    &
     base_functional__init__,   &
     base_functional__start__,  &
-    base_functional__calc__,   &
     base_functional__update__, &
     base_functional__stop__,   &
+    base_functional__calc__,   &
     base_functional__reset__,  &
     base_functional__acc__,    &
     base_functional__add__,    &
@@ -122,6 +122,7 @@ module base_functional_m
     base_functional_start,  &
     base_functional_update, &
     base_functional_stop,   &
+    base_functional_calc,   &
     base_functional_next,   &
     base_functional_set,    &
     base_functional_get,    &
@@ -148,7 +149,6 @@ module base_functional_m
     private
     type(json_object_t),  pointer :: config  =>null()
     type(base_system_t),  pointer :: sys     =>null()
-    type(base_density_t), pointer :: density =>null()
     type(simulation_t),   pointer :: sim     =>null()
     real(kind=wp)                 :: factor  = 1.0_wp
     real(kind=wp)                 :: energy  = 0.0_wp
@@ -270,7 +270,7 @@ contains
     type(base_functional_t), intent(inout) :: this
     !
     PUSH_SUB(base_functional__inull__)
-    nullify(this%config, this%sys, this%density, this%sim, this%raii%prnt)
+    nullify(this%config, this%sys, this%sim, this%raii%prnt)
     this%factor=1.0_wp
     this%energy=0.0_wp
     POP_SUB(base_functional__inull__)
@@ -283,19 +283,12 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
     !
-    type(base_states_t), pointer :: states
-    integer                      :: id, nspin, ierr
+    integer :: id, nspin, ierr
     !
     PUSH_SUB(base_functional__init__functional)
     call base_functional__inull__(this)
-    nullify(states)
     this%config=>config
     this%sys=>sys
-    call base_system_get(this%sys, states)
-    ASSERT(associated(states))
-    call base_states_get(states, this%density)
-    ASSERT(associated(this%density))
-    nullify(states)
     call json_get(config, "factor", this%factor, ierr)
     if(ierr/=JSON_OK)this%factor=1.0_wp
     call json_get(config, "functional", id, ierr)
@@ -423,52 +416,6 @@ contains
   end subroutine base_functional_start
 
   ! ---------------------------------------------------------
-  subroutine base_functional__calc__(this)
-    type(base_functional_t), intent(inout) :: this
-    !
-    real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
-    type(storage_t)                        :: data
-    real(kind=wp)                          :: enrg
-    integer                                :: kind
-    logical                                :: fine
-    !
-    PUSH_SUB(base_functional__calc__)
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    nullify(fptn, potn, dnst)
-    call base_functional__reset__(this)
-    call base_functional_get(this, kind=kind)
-    if(kind>FUNCT_XC_NONE)then
-      call storage_get(this%data, potn)
-      ASSERT(associated(potn))
-      fptn=>potn
-      call base_density_get(this%density, fine=fine)
-      if(fine)then
-        call storage_init(data, this%data)
-        call storage_start(data, this%sim, fine)
-        call storage_get(data, fptn)
-        ASSERT(associated(fptn))
-      end if
-      call base_density_get(this%density, dnst)
-      ASSERT(associated(dnst))
-      call functional_calc(this%funct, dnst, enrg, fptn)
-      if(fine)then
-        call storage_transfer(this%data, data)
-        call storage_end(data)
-        nullify(fptn)
-        fptn=>potn
-      end if
-      if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
-        this%energy=this%factor*enrg
-        fptn=this%factor*fptn
-      end if
-      call base_functional__update__(this)
-    end if
-    POP_SUB(base_functional__calc__)
-    return
-  end subroutine base_functional__calc__
-
-  ! ---------------------------------------------------------
   subroutine base_functional__update__(this)
     type(base_functional_t), intent(inout) :: this
     !
@@ -540,6 +487,79 @@ contains
     POP_SUB(base_functional_stop)
     return
   end subroutine base_functional_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__calc__(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
+    type(base_density_t),          pointer :: density
+    type(storage_t)                        :: data
+    integer                                :: kind
+    logical                                :: fine
+    !
+    PUSH_SUB(base_functional__calc__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(fptn, potn, dnst, density)
+    call base_functional__reset__(this)
+    call base_functional_get(this, kind=kind)
+    if(kind>FUNCT_XC_NONE)then
+      call storage_get(this%data, potn)
+      ASSERT(associated(potn))
+      fptn=>potn
+      call base_functional_get(this, density)
+      ASSERT(associated(density))
+      call base_density_get(density, fine=fine)
+      if(fine)then
+        call storage_init(data, this%data)
+        call storage_start(data, this%sim, fine)
+        call storage_get(data, fptn)
+        ASSERT(associated(fptn))
+      end if
+      call base_density_get(density, dnst)
+      ASSERT(associated(dnst))
+      nullify(density)
+      call functional_calc(this%funct, dnst, this%energy, fptn)
+      if(fine)then
+        call storage_transfer(this%data, data)
+        call storage_end(data)
+        nullify(fptn)
+        fptn=>potn
+      end if
+      if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
+        this%energy=this%factor*this%energy
+        fptn=this%factor*fptn
+      end if
+      call base_functional__update__(this)
+    end if
+    POP_SUB(base_functional__calc__)
+    return
+  end subroutine base_functional__calc__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_functional_calc(this)
+    type(base_functional_t), intent(inout) :: this
+    !
+    type(base_functional_iterator_t) :: iter
+    type(base_functional_t), pointer :: subs
+    integer                          :: ierr
+    !
+    PUSH_SUB(base_functional_calc)
+    nullify(subs)
+    call base_functional_init(iter, this)
+    do
+      nullify(subs)
+      call base_functional_next(iter, subs, ierr)
+      if(ierr/=BASE_FUNCTIONAL_OK)exit
+      call base_functional_calc(subs)
+    end do
+    call base_functional_end(iter)
+    nullify(subs)
+    call base_functional__calc__(this)
+    POP_SUB(base_functional_calc)
+    return
+  end subroutine base_functional_calc
 
   ! ---------------------------------------------------------
   subroutine base_functional__reset__(this)
@@ -709,10 +729,15 @@ contains
     type(base_functional_t), intent(in) :: this
     type(base_density_t),   pointer     :: that
     !
+    type(base_states_t), pointer :: st
+    !
     PUSH_SUB(base_functional_get_density)
     nullify(that)
-    if(associated(this%density))&
-      that=>this%density
+    if(associated(this%sys))then
+      call base_system_get(this%sys, st)
+      if(associated(st))&
+        call base_states_get(st, that)
+    end if
     POP_SUB(base_functional_get_density)
     return
   end subroutine base_functional_get_density

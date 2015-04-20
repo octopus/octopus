@@ -124,6 +124,7 @@ module base_density_m
     module procedure base_density_get_info
     module procedure base_density_get_config
     module procedure base_density_get_simulation
+    module procedure base_density_get_storage
     module procedure base_density_get_density_1d
     module procedure base_density_get_density_2d
   end interface base_density_get
@@ -447,12 +448,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_density__reset__(this)
-    type(base_density_t), intent(inout) :: this
+    type(base_density_t), target, intent(inout) :: this
 
     PUSH_SUB(base_density__reset__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    if(.not.associated(this%total,this%data))&
+      call storage_reset(this%total)
     call storage_reset(this%data)
 
     POP_SUB(base_density__reset__)
@@ -571,27 +574,45 @@ contains
   end subroutine base_density_get_simulation
 
   ! ---------------------------------------------------------
-  subroutine base_density_get_storage(this, that)
+  subroutine base_density_get_storage(this, that, total)
     type(base_density_t), target, intent(in) :: this
     type(storage_t),     pointer             :: that
+    logical,            optional, intent(in) :: total
+
+    logical :: itotal
 
     PUSH_SUB(base_density_get_storage)
 
-    that=>this%data
+    nullify(that)
+    itotal=.false.
+    if(present(total)) itotal = total
+    if(itotal)then
+      if(associated(this%total)) that => this%total
+    else
+      that => this%data
+    end if
 
     POP_SUB(base_density_get_storage)
   end subroutine base_density_get_storage
 
   ! ---------------------------------------------------------
   subroutine base_density_get_density_1d(this, that, total)
-    type(base_density_t),                   intent(in) :: this
-    real(kind=wp),           dimension(:), pointer     :: that
-    real(kind=wp), optional, dimension(:), pointer     :: total
+    type(base_density_t),         intent(in) :: this
+    real(kind=wp), dimension(:), pointer     :: that
+    logical,            optional, intent(in) :: total
+
+    logical :: itotal
 
     PUSH_SUB(base_density_get_density_1d)
 
-    call storage_get(this%data, that)
-    if(present(total))call base_density_get_total_density(this, total)
+    nullify(that)
+    itotal=.false.
+    if(present(total)) itotal = total
+    if(itotal)then
+      call storage_get(this%total, that)
+    else
+      call storage_get(this%data, that)
+    end if
 
     POP_SUB(base_density_get_density_1d)
   end subroutine base_density_get_density_1d
@@ -607,70 +628,6 @@ contains
 
     POP_SUB(base_density_get_density_2d)
   end subroutine base_density_get_density_2d
-
-  ! ---------------------------------------------------------
-  subroutine base_density_get_total_density(this, that)
-    type(base_density_t),         intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
-
-    PUSH_SUB(base_density_get_total_density)
-
-    call storage_get(this%total, that)
-
-    POP_SUB(base_density_get_total_density)
-  end subroutine base_density_get_total_density
-
-#if 0
-
-  ! ---------------------------------------------------------
-  pure subroutine base_density_adjust_spin_1_n(this, that)
-    real(kind=wp),               intent(out) :: this
-    real(kind=wp), dimension(:), intent(in)  :: that
-
-    select case(size(that))
-    case(1)
-      this=that(1)
-    case(2)
-      this=sum(that)
-    case default
-      this=-1.0_wp
-    end select
-
-  end subroutine base_density_adjust_spin_1_n
-
-  ! ---------------------------------------------------------
-  pure subroutine base_density_adjust_spin_2_n(this, that)
-    real(kind=wp), dimension(:), intent(out) :: this
-    real(kind=wp), dimension(:), intent(in)  :: that
-
-    select case(size(that))
-    case(1)
-      this=0.5_wp*that(1)
-    case(2)
-      this=that
-    case default
-      this=-1.0_wp
-    end select
-
-  end subroutine base_density_adjust_spin_2_n
-
-  ! ---------------------------------------------------------
-  pure subroutine base_density_adjust_spin(this, that)
-    real(kind=wp), dimension(:), intent(out) :: this
-    real(kind=wp), dimension(:), intent(in)  :: that
-
-    select case(size(this))
-    case(1)
-      call base_density_adjust_spin_1_n(this(1), that)
-    case(2)
-      call base_density_adjust_spin_2_n(this, that)
-    case default
-      this=-1.0_wp
-    end select
-
-  end subroutine base_density_adjust_spin
-
-#endif
 
   ! ---------------------------------------------------------
   subroutine base_density__copy__(this, that)

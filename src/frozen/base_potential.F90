@@ -70,6 +70,13 @@ module base_potential_m
   use simulation_m, only: &
     simulation_t
 
+  use base_density_m, only: &
+    base_density_t
+
+  use base_states_m, only: &
+    base_states_t,         &
+    base_states_get
+
   use base_system_m, only: &
     base_system_t,         &
     base_system_get
@@ -158,6 +165,7 @@ module base_potential_m
     module procedure base_potential_get_info
     module procedure base_potential_get_config
     module procedure base_potential_get_system
+    module procedure base_potential_get_density
     module procedure base_potential_get_simulation
     module procedure base_potential_get_storage
     module procedure base_potential_get_potential_1d
@@ -549,15 +557,41 @@ contains
   end subroutine base_potential_set_info
  
   ! ---------------------------------------------------------
-  subroutine base_potential_get_info(this, size, nspin, energy)
-    type(base_potential_t),  intent(in)  :: this
-    integer,       optional, intent(out) :: size
-    integer,       optional, intent(out) :: nspin
-    real(kind=wp), optional, intent(out) :: energy
+  subroutine base_potential_get_energy(this, energy, except)
+    type(base_potential_t),                   intent(in)  :: this
+    real(kind=wp),                  optional, intent(out) :: energy
+    character(len=*), dimension(:), optional, intent(in)  :: except
+    !
+    type(base_potential_t), pointer :: subs
+    integer                         :: indx
+    !
+    PUSH_SUB(base_potential_get_energy)
+    nullify(subs)
+    energy=this%energy
+    if(present(except))then
+      do indx = 1, size(except)
+        nullify(subs)
+        call base_potential_get(this, trim(adjustl(except(indx))), subs)
+        ASSERT(associated(subs))
+        energy=energy-subs%energy
+      end do
+      nullify(subs)
+    end if
+    POP_SUB(base_potential_get_energy)
+    return
+  end subroutine base_potential_get_energy
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_get_info(this, size, nspin, energy, except)
+    type(base_potential_t),                   intent(in)  :: this
+    integer,                        optional, intent(out) :: size
+    integer,                        optional, intent(out) :: nspin
+    real(kind=wp),                  optional, intent(out) :: energy
+    character(len=*), dimension(:), optional, intent(in)  :: except
     !
     PUSH_SUB(base_potential_get_info)
     if(present(energy))&
-      energy=this%energy
+      call base_potential_get_energy(this, energy, except)
     call storage_get(this%data, size=size, dim=nspin)
     POP_SUB(base_potential_get_info)
     return
@@ -588,6 +622,24 @@ contains
     POP_SUB(base_potential_get_system)
     return
   end subroutine base_potential_get_system
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_get_density(this, that)
+    type(base_potential_t), target, intent(in) :: this
+    type(base_density_t),  pointer             :: that
+    !
+    type(base_states_t), pointer :: st
+    !
+    PUSH_SUB(base_potential_get_)
+    nullify(that)
+    if(associated(this%sys))then
+      call base_system_get(this%sys, st)
+      if(associated(st))&
+        call base_states_get(st, that)
+    end if
+    POP_SUB(base_potential_get_)
+    return
+  end subroutine base_potential_get_density
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_simulation(this, that)

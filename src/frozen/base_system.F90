@@ -83,6 +83,8 @@ module base_system_m
     base_states__start__,  &
     base_states__update__, &
     base_states__stop__,   &
+    base_states__reset__,  &
+    base_states__acc__,    &
     base_states__add__,    &
     base_states__copy__,   &
     base_states__end__
@@ -105,6 +107,8 @@ module base_system_m
     base_system__start__,  &
     base_system__update__, &
     base_system__stop__,   &
+    base_system__reset__,  &
+    base_system__acc__,    &
     base_system__add__,    &
     base_system__copy__,   &
     base_system__end__
@@ -494,6 +498,31 @@ contains
     POP_SUB(base_system_stop)
     return
   end subroutine base_system_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_system__reset__(this)
+    type(base_system_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_system__reset__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_states__reset__(this%st)
+    POP_SUB(base_system__reset__)
+    return
+  end subroutine base_system__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__acc__(this, that)
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_system__acc__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_states__acc__(this%st, that%st)
+    POP_SUB(base_system__acc__)
+    return
+  end subroutine base_system__acc__
 
   ! ---------------------------------------------------------
   subroutine base_system__add__(this, that, config)

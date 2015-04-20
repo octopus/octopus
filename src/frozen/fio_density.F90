@@ -207,9 +207,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_density_1d(this, that, total)
-    type(fio_density_t),                    intent(in) :: this
-    real(kind=wp),           dimension(:), pointer     :: that
-    real(kind=wp), optional, dimension(:), pointer     :: total
+    type(fio_density_t),          intent(in) :: this
+    real(kind=wp), dimension(:), pointer     :: that
+    logical,            optional, intent(in) :: total
 
     PUSH_SUB(fio_density_get_density_1d)
 

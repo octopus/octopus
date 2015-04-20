@@ -63,6 +63,8 @@ module base_states_m
     base_density__start__,  &
     base_density__update__, &
     base_density__stop__,   &
+    base_density__reset__,  &
+    base_density__acc__,    &
     base_density__add__,    &
     base_density__copy__,   &
     base_density__end__
@@ -80,11 +82,16 @@ module base_states_m
   implicit none
 
   private
+  public ::        &
+    base_states_t
+
   public ::                &
     base_states__init__,   &
     base_states__start__,  &
     base_states__update__, &
     base_states__stop__,   &
+    base_states__reset__,  &
+    base_states__acc__,    &
     base_states__add__,    &
     base_states__copy__,   &
     base_states__end__
@@ -112,7 +119,7 @@ module base_states_m
 #include "thash.F90"
 #undef HASH_INCLUDE_HEADER
 
-  type, public :: base_states_t
+  type :: base_states_t
     private
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
@@ -449,6 +456,34 @@ contains
     POP_SUB(base_states_stop)
     return
   end subroutine base_states_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_states__reset__(this)
+    type(base_states_t), intent(inout) :: this
+    !
+    PUSH_SUB(base_states__reset__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    this%charge=0.0_wp
+    call base_density__reset__(this%density)
+    POP_SUB(base_states__reset__)
+    return
+  end subroutine base_states__reset__
+    
+  ! ---------------------------------------------------------
+  subroutine base_states__acc__(this, that)
+    type(base_states_t), intent(inout) :: this
+    type(base_states_t), intent(in)    :: that
+
+    PUSH_SUB(base_states__acc__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    this%charge=this%charge+that%charge
+    call base_density__acc__(this%density, that%density)
+
+    POP_SUB(base_states__acc__)
+  end subroutine base_states__acc__
 
   ! ---------------------------------------------------------
   subroutine base_states__add__(this, that, config)
