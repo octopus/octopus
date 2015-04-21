@@ -208,11 +208,6 @@ program propagation_spectrum
         reference_multipoles = .false.
       else
         reference_multipoles = .true.
-        if(calculate_tensor) then
-          write(message(1),'(a)') 'When using a reference multipoles file, the code cannot make use of'
-          write(message(2),'(a)') 'symmetries.'
-          call messages_fatal(2)
-        end if
         ref_file = io_open(trim(reffname), action='read', status='old', die=.false.)
         if(ref_file < 0) then
           write(message(1),'(3a)') 'No "',trim(reffname), '" file found.'
@@ -255,7 +250,11 @@ program propagation_spectrum
         do ii = 1, jj
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), action='write')
-          call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
+          if(.not.reference_multipoles) then
+            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
+          else
+            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum, ref_file)
+          end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
           in_file(ii)  = io_open(trim(filename(ii)), action='read', status='old')
