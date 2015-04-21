@@ -10,8 +10,8 @@ module frozen_handle_m
   use json_m, only: json_object_t
   use mpi_m,  only: mpi_world
 
-  use fio_model_m, only: &
-    fio_model_t
+  use base_model_m, only: &
+    base_model_t
 
   use fio_handle_m, only: &
     fio_handle_t
@@ -21,9 +21,6 @@ module frozen_handle_m
     fio_handle_start,     &
     fio_handle_stop,      &
     fio_handle_get
-
-  use frozen_model_m, only: &
-    frozen_model_t
 
   use frozen_model_m, only: &
     frozen_model__acc__
@@ -126,8 +123,8 @@ contains
     type(fio_handle_t),    intent(in)    :: that
     type(json_object_t),   intent(in)    :: config
 
-    type(frozen_model_t), pointer :: mmdl
-    type(fio_model_t),    pointer :: smdl
+    type(base_model_t), pointer :: mmdl
+    type(base_model_t), pointer :: smdl
 
     PUSH_SUB(frozen_handle__acc__)
 

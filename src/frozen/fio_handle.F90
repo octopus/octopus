@@ -9,8 +9,8 @@ module fio_handle_m
   use json_m, only: json_object_t
   use mpi_m,  only: mpi_grp_t
 
-  use fio_model_m, only: &
-    fio_model_t
+  use base_model_m, only: &
+    base_model_t
 
   use fio_model_m, only: &
     fio_model__load__
@@ -75,7 +75,7 @@ contains
     type(fio_handle_t), intent(inout) :: this
     type(mpi_grp_t),    intent(in)    :: mpi_grp
 
-    type(fio_model_t), pointer :: mdl
+    type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_start)
 
@@ -93,7 +93,7 @@ contains
   subroutine fio_handle__load__(this)
     type(fio_handle_t), intent(inout) :: this
 
-    type(fio_model_t), pointer :: mdl
+    type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle__load__)
 
@@ -110,7 +110,7 @@ contains
   subroutine fio_handle_stop(this)
     type(fio_handle_t), intent(inout) :: this
 
-    type(fio_model_t), pointer :: mdl
+    type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_stop)
 
@@ -127,7 +127,7 @@ contains
   subroutine fio_handle_end(this)
     type(fio_handle_t), intent(inout) :: this
 
-    type(fio_model_t), pointer :: mdl
+    type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_end)
 
