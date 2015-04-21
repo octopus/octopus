@@ -52,10 +52,10 @@ subroutine td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
         
         call batch_copy(st%group%psib(ib, ik), zpsib_dt, reference = .false.)
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
-        
-        !propagate the state dt/2 and dt with H(time - dt)
-        call exponential_apply_batch_dual(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(CNST(2.0)*mu), time - dt, &
-          zpsib_dt, dt/mu)
+       
+        !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(CNST(2.0)*mu), time - dt, &
+          psib2 = zpsib_dt, deltat2 = dt/mu)
         
         !use the dt propagation to calculate the density
         call density_calc_accumulate(dens_calc, ik, zpsib_dt)

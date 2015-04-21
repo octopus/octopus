@@ -51,7 +51,6 @@ module exponential_m
     exponential_copy,            &
     exponential_end,             &
     exponential_apply_batch,     &
-    exponential_apply_batch_dual,&
     exponential_apply,           &
     exponential_apply_all
 
@@ -579,16 +578,19 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time, Imdeltat, Imtime)
-    type(exponential_t),   intent(inout) :: te
-    type(derivatives_t),   intent(inout) :: der
-    type(hamiltonian_t),   intent(inout) :: hm
-    integer,               intent(in)    :: ik
-    type(batch_t), target, intent(inout) :: psib
-    FLOAT,                 intent(in)    :: deltat
-    FLOAT,                 intent(in)    :: time
-    FLOAT, optional,     intent(in)    :: Imdeltat
-    FLOAT, optional,     intent(in)    :: Imtime
+  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time, Imdeltat, Imtime, psib2, deltat2, Imdeltat2)
+    type(exponential_t),             intent(inout) :: te
+    type(derivatives_t),             intent(inout) :: der
+    type(hamiltonian_t),             intent(inout) :: hm
+    integer,                         intent(in)    :: ik
+    type(batch_t), target,           intent(inout) :: psib
+    FLOAT,                           intent(in)    :: deltat
+    FLOAT,                           intent(in)    :: time
+    FLOAT, optional,                 intent(in)    :: Imdeltat
+    FLOAT, optional,                 intent(in)    :: Imtime
+    type(batch_t), target, optional, intent(inout) :: psib2
+    FLOAT, optional,                 intent(in)    :: deltat2
+    FLOAT, optional,                 intent(in)    :: Imdeltat2
     
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
@@ -597,24 +599,40 @@ contains
     PUSH_SUB(exponential_apply_batch)
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
-
+    ASSERT(present(psib2) .eqv. present(deltat2))
+    
     cmplxscl = .false.
     if(present(Imdeltat) .and. present(Imtime)) cmplxscl = .true. 
-  
+
+    if(cmplxscl .and. present(psib2)) then
+      ASSERT(present(Imdeltat2))
+    end if
 
     if (te%exp_method == EXP_TAYLOR) then 
       call taylor_series_batch()
     else
+
+      if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
       
       do ii = 1, psib%nst
         psi  => psib%states(ii)%zpsi
         ist  =  psib%states(ii)%ist
 
         if (cmplxscl) then
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time, Imdeltat = Imdeltat, Imtime =Imtime )
+          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time, Imdeltat = Imdeltat, Imtime = Imtime )
         else 
           call exponential_apply(te, der, hm, psi, ist, ik, deltat, time)
         end if
+
+        if(present(psib2)) then
+          if (cmplxscl) then
+            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, time, &
+              Imdeltat = Imdeltat2, Imtime = Imtime)
+          else 
+            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, time)
+          end if
+        end if
+        
       end do
 
     end if
@@ -624,7 +642,7 @@ contains
   contains
     
     subroutine taylor_series_batch()
-      CMPLX :: zfact
+      CMPLX :: zfact, zfact2
       CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
       integer :: iter
       logical :: zfact_is_real
@@ -642,6 +660,7 @@ contains
       st_end = psib%states(psib%nst)%ist
 
       zfact = M_z1
+      zfact2 = M_z1
       zfact_is_real = .true.
 
       call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
@@ -649,18 +668,22 @@ contains
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_pack(psib)
+        if(present(psib2)) call batch_pack(psib2, copy = .false.)
         call batch_pack(psi1b, copy = .false.)
         call batch_pack(hpsi1b, copy = .false.)
       end if
       
       call batch_copy_data(der%mesh%np, psib, psi1b)
+      if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
         if(cmplxscl) then
           zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
+          if(present(deltat2)) zfact2 = zfact2*(-M_zI*(deltat2 + M_zI * Imdeltat2))/iter
           zfact_is_real = .false.
         else
           zfact = zfact*(-M_zI*deltat)/iter
+          if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
           zfact_is_real = .not. zfact_is_real
         end if
         ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
@@ -676,8 +699,10 @@ contains
         
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
         else
           call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, zfact2, hpsi1b, psib2)
         end if
 
         if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
@@ -687,6 +712,7 @@ contains
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
+        if(present(psib2)) call batch_unpack(psib2)
         call batch_unpack(psib)
       end if
 
@@ -704,26 +730,6 @@ contains
     
   end subroutine exponential_apply_batch
 
-  ! ----------------------------------------------------------
-  
-  subroutine exponential_apply_batch_dual(te, der, hm, psib, ik, deltat, time, psib2, deltat2)
-    type(exponential_t),   intent(inout) :: te
-    type(derivatives_t),   intent(inout) :: der
-    type(hamiltonian_t),   intent(inout) :: hm
-    integer,               intent(in)    :: ik
-    type(batch_t), target, intent(inout) :: psib
-    FLOAT,                 intent(in)    :: deltat
-    FLOAT,                 intent(in)    :: time
-    type(batch_t), target, intent(inout) :: psib2
-    FLOAT,                 intent(in)    :: deltat2
-
-    call batch_copy_data(der%mesh%np, psib, psib2)
-    
-    call exponential_apply_batch(te, der, hm, psib, ik, deltat, time)
-    call exponential_apply_batch(te, der, hm, psib2, ik, deltat2, time)
-    
-  end subroutine exponential_apply_batch_dual
-    
   ! ---------------------------------------------------------
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
