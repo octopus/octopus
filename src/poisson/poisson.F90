@@ -191,7 +191,7 @@ contains
     !%Option NoPoisson -999
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
-    !% Fast multipole method. Requires FMM library.
+    !% (Experimental) Fast multipole method. Requires FMM library.
     !%Option direct_sum -1                                      
     !% Direct evaluation of the Hartree potential (only for finite systems).
     !%Option fft 0
@@ -211,8 +211,8 @@ contains
     !%Option sete 9
     !% (Obsolete) SETE solver.
     !%Option libisf 10
-    !% (Experimental) Meant to be exactly the same as Interpolating
-    !% Scaling Functions Poisson solver, but using an external
+    !% Meant to be exactly the same as Interpolating
+    !% Scaling Functions (isf) Poisson solver, but using an external
     !% library, taken from BigDFT 1.7.6. Only for finite systems.
     !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
     !% found in <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures>Octopus</a>
@@ -442,9 +442,7 @@ contains
       end if
 
       if (this%method == POISSON_LIBISF) then
-#ifdef HAVE_LIBISF
-        call messages_experimental('LIBISF Poisson solver')
-#else
+#ifndef HAVE_LIBISF
         message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
         call messages_fatal(1)
 #endif
