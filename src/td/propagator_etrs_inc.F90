@@ -34,7 +34,7 @@ subroutine td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
 
   FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
   integer :: ik, ib
-  type(batch_t) :: zpsib_save
+  type(batch_t) :: zpsib_dt
   type(density_calc_t) :: dens_calc
 
   PUSH_SUB(propagator_dt.td_etrs)
@@ -50,19 +50,17 @@ subroutine td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         
-        !save the state
-        call batch_copy(st%group%psib(ib, ik), zpsib_save, reference = .false.)
-        if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_save, copy = .false.)
-        call batch_copy_data(gr%der%mesh%np, st%group%psib(ib, ik), zpsib_save)
+        call batch_copy(st%group%psib(ib, ik), zpsib_dt, reference = .false.)
+        if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
         
-        !propagate the state dt with H(time - dt)
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/mu, time - dt)
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        !propagate the state dt/2 and dt with H(time - dt)
+        call exponential_apply_batch_dual(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(CNST(2.0)*mu), time - dt, &
+          zpsib_dt, dt/mu)
+        
+        !use the dt propagation to calculate the density
+        call density_calc_accumulate(dens_calc, ik, zpsib_dt)
 
-        !restore the saved state
-        call batch_copy_data(gr%der%mesh%np, zpsib_save, st%group%psib(ib, ik))
-
-        call batch_end(zpsib_save)
+        call batch_end(zpsib_dt)
         
       end do
     end do
@@ -74,14 +72,17 @@ subroutine td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
     call hamiltonian_update(hm, gr%mesh, time = time - dt)
-  end if
-  
-  ! propagate dt/2 with H(time - dt)
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%group%block_start, st%group%block_end
-      call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
+
+  else
+
+    ! propagate dt/2 with H(time - dt)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
+      end do
     end do
-  end do
+    
+  end if
   
   ! propagate dt/2 with H(t)
   

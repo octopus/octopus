@@ -51,6 +51,7 @@ module exponential_m
     exponential_copy,            &
     exponential_end,             &
     exponential_apply_batch,     &
+    exponential_apply_batch_dual,&
     exponential_apply,           &
     exponential_apply_all
 
@@ -703,7 +704,26 @@ contains
     
   end subroutine exponential_apply_batch
 
+  ! ----------------------------------------------------------
+  
+  subroutine exponential_apply_batch_dual(te, der, hm, psib, ik, deltat, time, psib2, deltat2)
+    type(exponential_t),   intent(inout) :: te
+    type(derivatives_t),   intent(inout) :: der
+    type(hamiltonian_t),   intent(inout) :: hm
+    integer,               intent(in)    :: ik
+    type(batch_t), target, intent(inout) :: psib
+    FLOAT,                 intent(in)    :: deltat
+    FLOAT,                 intent(in)    :: time
+    type(batch_t), target, intent(inout) :: psib2
+    FLOAT,                 intent(in)    :: deltat2
 
+    call batch_copy_data(der%mesh%np, psib, psib2)
+    
+    call exponential_apply_batch(te, der, hm, psib, ik, deltat, time)
+    call exponential_apply_batch(te, der, hm, psib2, ik, deltat2, time)
+    
+  end subroutine exponential_apply_batch_dual
+    
   ! ---------------------------------------------------------
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
