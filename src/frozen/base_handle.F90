@@ -304,7 +304,7 @@ contains
   end subroutine base_handle_init_handle
 
   ! ---------------------------------------------------------
-  subroutine base_handle_init_pass(this, config, handle_init)
+  recursive subroutine base_handle_init_pass(this, config, handle_init)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
     interface
