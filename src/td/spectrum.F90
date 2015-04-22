@@ -2256,7 +2256,7 @@ contains
           if(cmplxft) then
 
             eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
-            ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
+            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end
               do ii = 1, time_function%nst_linear
                 energy_function%states_linear(ii)%dpsi(ienergy) = &
@@ -2269,7 +2269,7 @@ contains
           else
 
             eidt = exp( -energy * time_step)
-            ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
+            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end
               do ii = 1, time_function%nst_linear
                 energy_function%states_linear(ii)%dpsi(ienergy) = &
