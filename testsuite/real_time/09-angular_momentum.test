@@ -92,7 +92,7 @@ match ; Lz [step  75]     ; LINEFIELD(td.general/angular, -26, 5) ; -5.132227395
 match ; Lz [step 100]     ; LINEFIELD(td.general/angular, -1, 5) ; -2.601120844702e-02
 
 
-Util : oct-rotatory_strength
+Util : oct-propagation_spectrum
 Input      : 09-angular_momentum.04-rotatory_strength.inp
 match ; R(0) sum rule 1; GREPFIELD(rotatory_strength, "R(0) sum rule", 6) ; -0.178145E-03
 match ; R(0) sum rule 2; GREPFIELD(rotatory_strength, "R(0) sum rule", 7) ; -0.548747E-03

@@ -23,16 +23,19 @@ include $(srcdir)/../common-rules.make
 
 EXEEXT =
 
-EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spectrum \
+EXTRA_PROGRAMS = oct-propagation_spectrum \
+	         oct-harmonic-spectrum \
                  oct-casida_spectrum      \
                  oct-vibrational_spectrum \
                  oct-infrared_spectrum    \
-                 oct-xyz-anim oct-center-geom oct-help \
+                 oct-xyz-anim \
+                 oct-center-geom \
+                 oct-help \
                  oct-oscillator-strength \
-		 oct-dielectric-function \
-		 oct-photoelectron_spectrum \
-		 oct-convert \
-     oct-local_multipoles
+                 oct-dielectric-function \
+                 oct-photoelectron_spectrum \
+                 oct-convert \
+                 oct-local_multipoles
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -62,18 +65,6 @@ oct_oscillator_strength_LDADD    = $(top_builddir)/src/td/libtd.a \
 
 oct_dielectric_function_SOURCES = dielectric_function.F90
 oct_dielectric_function_LDADD    = $(top_builddir)/src/td/libtd.a \
-                                   $(top_builddir)/src/hamiltonian/libhamiltonian.a \
-                                   $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
-                                   $(top_builddir)/src/grid/libgrid.a \
-                                   $(top_builddir)/src/ions/libions.a \
-                                   $(top_builddir)/src/species/libspecies.a \
-                                   $(top_builddir)/src/math/libmath.a \
-                                   $(top_builddir)/src/basic/libbasic.a \
-                                   $(other_LIBS)
-
-oct_rotatory_strength_SOURCES = rotatory_strength.F90
-oct_rotatory_strength_LDADD      = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
@@ -187,10 +178,9 @@ oct_help_LDADD                   = $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES)
 
 propagation_spectrum.o : propagation_spectrum.F90 
-rotatory_strength.o : rotatory_strength.F90 
 harmonic_spectrum.o : harmonic_spectrum.F90 
 xyzanim.o : xyzanim.F90 
 casida_spectrum.o : casida_spectrum.F90 

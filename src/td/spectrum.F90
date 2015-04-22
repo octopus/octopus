@@ -76,10 +76,11 @@ module spectrum_m
     SPECTRUM_TRANSFORM_SIN   = 2,  &
     SPECTRUM_TRANSFORM_COS   = 3
 
-  integer, public, parameter ::    &
-    SPECTRUM_ABSORPTION      = 1,  &
-    SPECTRUM_ENERGYLOSS      = 2,  &
-    SPECTRUM_P_POWER         = 3
+  integer, public, parameter :: &
+    SPECTRUM_ABSORPTION    = 1, &
+    SPECTRUM_ENERGYLOSS    = 2, &
+    SPECTRUM_P_POWER       = 3, &
+    SPECTRUM_ROTATORY      = 4
 
   integer, public, parameter ::       &
     SPECTRUM_FOURIER            = 1,  &
@@ -134,6 +135,8 @@ contains
     !% Dynamic structure factor (also known as energy-loss function or spectrum).
     !%Option DipolePower 3
     !% Power spectrum of the dipole moment.
+    !%Option RotatoryStrength 4
+    !% Rotatory strength spectrum.
     !%End
 
     call parse_variable('PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
