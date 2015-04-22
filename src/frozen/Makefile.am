@@ -141,7 +141,7 @@ frozen_config.o 	: frozen_config.F90 frozen_handle.o base_hamiltonian.o base_con
 
 live_hamiltonian.o	: live_hamiltonian.F90 base_hamiltonian.o simulation.o
 live_handle.o		: live_handle.F90 base_handle.o
-live_config.o		: live_config.F90 live_handle.o base_hamiltonian.o base_config.o intrpl.o
+live_config.o		: live_config.F90 live_handle.o base_hamiltonian.o base_config.o
 
 ssys_density.o		: ssys_density.F90 base_density.o
 ssys_states.o		: ssys_states.F90 ssys_density.o base_states.o

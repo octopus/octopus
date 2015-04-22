@@ -6,16 +6,20 @@ module fio_model_m
   use messages_m
   use profiling_m
 
-  use mpi_m, only: mpi_grp_t
+  use grid_m, only: grid_t
+  use mpi_m,  only: mpi_grp_t
+
+  use simulation_m, only: &
+    simulation_t
 
   use base_geom_m, only: &
     base_geom_t
 
-  use fio_grid_m, only: &
-    fio_grid_t
+  use base_system_m, only: &
+    base_system_t
 
-  use fio_simulation_m, only: &
-    fio_simulation_t
+  use base_hamiltonian_m, only: &
+    base_hamiltonian_t
 
   use fio_simulation_m, only: &
     fio_simulation__new__,    &
@@ -24,16 +28,10 @@ module fio_model_m
     fio_simulation__stop__
 
   use fio_system_m, only: &
-    fio_system_t
-
-  use fio_system_m, only: &
     fio_system__load__
 
   use fio_system_m, only: &
     fio_system_get
-
-  use fio_hamiltonian_m, only: &
-    fio_hamiltonian_t
 
   use fio_hamiltonian_m, only: &
     fio_hamiltonian__load__
@@ -77,10 +75,10 @@ contains
     type(fio_model_t), intent(inout) :: this
     type(mpi_grp_t),   intent(in)    :: mpi_grp
 
-    type(fio_system_t),     pointer :: sys
-    type(base_geom_t),      pointer :: geom
-    type(fio_simulation_t), pointer :: sim
-    type(fio_grid_t),       pointer :: grid
+    type(base_system_t), pointer :: sys
+    type(base_geom_t),   pointer :: geom
+    type(simulation_t),  pointer :: sim
+    type(grid_t),        pointer :: grid
 
     PUSH_SUB(fio_model_start)
 
@@ -103,8 +101,8 @@ contains
   subroutine fio_model__load__(this)
     type(fio_model_t), intent(inout) :: this
 
-    type(fio_system_t),      pointer :: sys
-    type(fio_hamiltonian_t), pointer :: hml
+    type(base_system_t),      pointer :: sys
+    type(base_hamiltonian_t), pointer :: hml
 
     PUSH_SUB(fio_model__load__)
 
@@ -125,7 +123,7 @@ contains
   subroutine fio_model_stop(this)
     type(fio_model_t), intent(inout) :: this
 
-    type(fio_simulation_t), pointer :: sim
+    type(simulation_t), pointer :: sim
 
     PUSH_SUB(fio_model_stop)
 
@@ -143,7 +141,7 @@ contains
   subroutine fio_model_end(this)
     type(fio_model_t), intent(inout) :: this
 
-    type(fio_simulation_t), pointer :: sim
+    type(simulation_t), pointer :: sim
 
     PUSH_SUB(fio_model_end)
 

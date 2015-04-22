@@ -20,8 +20,8 @@ module ssys_handle_m
 
   use live_handle_m, only: &
     live_handle_init,      &
-    live_handle_start,     &
-    live_handle_update
+    live_handle_start !,     &
+    !live_handle_update
 
   use live_handle_m, only: &
     HNDL_TYPE_LIVE
@@ -155,7 +155,7 @@ contains
         !call frozen_handle_update(hndl)
       case(HNDL_TYPE_LIVE)
         call live_handle_start(hndl, grid)
-        call live_handle_update(hndl)
+        !call live_handle_update(hndl)
       case default
         message(1)="Unknown subsystems type."
         call messages_fatal(1)
