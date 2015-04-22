@@ -186,7 +186,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
     end if
 
   case("csv")
-    if (mesh%sb%box_shape /= PARALLELEPIPED) then
+    if (mesh%sb%box_shape /= PARALLELEPIPED .and. mesh%sb%box_shape /= HYPERCUBE) then
       message(1) = "Box shape must be parallelepiped when a .csv file is used."
       call messages_fatal(1)
     end if 
@@ -227,7 +227,8 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
         x_out(ii,1) = real(ii-1, REAL_PRECISION)
       end do
         
-      call X(mf_interpolate_points)(2, int(dims(1), FC_INTEGER_SIZE), x_in(:,:),&
+! TODO: find out why this was called with ndim 2 as a first argument, in the mesh%sb%dim 1 case
+      call X(mf_interpolate_points)(1, int(dims(1), FC_INTEGER_SIZE), x_in(:,:),&
         read_ff, cube%rs_n_global(1), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)

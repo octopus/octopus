@@ -22,6 +22,7 @@
 module output_m
   use base_density_m
   use basins_m
+  use batch_m
   use cube_function_m
   use cube_m
   use current_m
@@ -49,6 +50,7 @@ module output_m
   use loct_math_m
   use magnetic_m
   use mesh_m
+  use mesh_batch_m
   use mesh_function_m
   use messages_m
   use modelmb_density_matrix_m
@@ -271,9 +273,6 @@ contains
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential bit(26)
     !% Outputs the (scalar) time-dependent potential.
-    !%Option mmb bit(27)
-    !% This flag turns on the output for model many-body calculations, for
-    !% particles described in the <tt>DescribeParticlesModelMB</tt> block.
     !%Option mmb_wfs bit(28)
     !% Triggers the ModelMB wavefunctions to be output for each state.
     !%Option mmb_den bit(29)
@@ -307,10 +306,6 @@ contains
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
       call messages_input_error('Output')
-    end if
-
-    if(iand(outp%what, OPTION_MMB) /= 0) then
-      call messages_experimental("Model many-body state analysis")
     end if
 
     if(iand(outp%what, OPTION_MMB_WFS) /= 0) then
@@ -533,7 +528,7 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION_MATRIX_ELEMENTS + OPTION_BERKELEYGW + OPTION_DOS + &
-      OPTION_TPA + OPTION_MMB + OPTION_MMB_DEN + OPTION_J_FLOW
+      OPTION_TPA + OPTION_MMB_DEN + OPTION_J_FLOW
 
     ! we are using a what that has a how.
     if(iand(outp%what, not(what_no_how)) /= 0) then

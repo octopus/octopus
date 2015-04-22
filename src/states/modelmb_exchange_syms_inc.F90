@@ -1,4 +1,4 @@
-!! Copyright (C) 2009 N. Helbig and M. Verstraete
+!! Copyright (C) 2015 N. Helbig and M. Verstraete
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,10 +18,9 @@
 !! $Id$
 
 !> project out states with proper symmetry for cases which are of symmetry = unknown
-subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
-           modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, tproj_1yd)
+subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, young_used, &
+&   wf, symmetries_satisfied, tproj_1yd, nspindown_out, iyoung_out, norm)
   FLOAT,                    intent(in)    :: eigenval
-  integer,                  intent(in)    :: iunit
   type(grid_t),             intent(in)    :: gr
   integer,                  intent(in)    :: mm
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
@@ -30,6 +29,9 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
   R_TYPE,                   intent(inout) :: wf(:) !< will be antisymmetrized on output
   logical,                  intent(out)   :: symmetries_satisfied
   logical,                  intent(in)    :: tproj_1yd
+  integer,                  intent(out)   :: nspindown_out(:) !< (1:modelmbparticles%ntype_of_particle)
+  integer,                  intent(out)   :: iyoung_out(:) !< (1:modelmbparticles%ntype_of_particle)
+  FLOAT,                    intent(out)   :: norm
 
   integer :: npptype
   integer :: iyoung
@@ -44,15 +46,11 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
   integer, allocatable :: dg_combo_ndown(:,:)
   integer, allocatable :: sym_ok_alltypes(:)
 
-  FLOAT :: norm
-
   R_TYPE, allocatable  :: antisymwf(:,:,:)              ! stores progressive steps of antisymmetrized wf
   R_TYPE, allocatable  :: fermicompwf(:,:,:)              ! stores progressive steps of antisymmetrized wf
 
   type(batch_t) :: wfbatch
   R_TYPE :: wfdotp(1,1)
-
-  character(len=500) :: youngstring
 
   PUSH_SUB(X(modelmb_sym_state))
 
@@ -107,11 +105,8 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
     call X(modelmb_sym_state_1diag)(gr, &
        modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
        dg_combo_iy(:, idiagram_combo), &
-       antisymwf, sym_ok_alltypes, norm, youngstring)
+       antisymwf, sym_ok_alltypes, norm)
    
-    if (iunit > 0) write (iunit, '(a,I5,3x,E16.6,5x,E14.6,2x,a)') &
-                          "  ", mm, eigenval, norm, trim(youngstring)
-
     ! test the overall symmetrization (no 0.0 norms for present combination of Young diagrams)
     ! check if all types of particles have been properly symmetrized
     if (sum(sym_ok_alltypes) == modelmbparticles%ntype_of_particle .and. abs(norm) > 1.e-6) then
@@ -119,7 +114,11 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
       symmetries_satisfied = .true.
       young_used (idiagram_combo) = 1
       ! eventually exit the combo loop
-      if (tproj_1yd) exit
+      if (tproj_1yd) then
+        nspindown_out = dg_combo_ndown(:, idiagram_combo)
+        iyoung_out = dg_combo_iy(:, idiagram_combo)
+        exit
+      end if
     end if
 
   end do ! idiagram_combo
@@ -152,7 +151,7 @@ end subroutine X(modelmb_sym_state)
 !> project out states for a single combination of Young diagrams (1 diagram for each particle type)
 subroutine X(modelmb_sym_state_1diag)(gr, &
            modelmbparticles, nspindown_in, iyoung_in, &
-           antisymwf, sym_ok_alltypes, norm, youngstring)
+           antisymwf, sym_ok_alltypes, norm)
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   type(grid_t),             intent(in)    :: gr
   integer,                  intent(in)    :: nspindown_in(:) !< (1:modelmbparticles%ntype_of_particle)
@@ -160,7 +159,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
   R_TYPE,                   intent(inout) :: antisymwf(:,:,:) !< will be antisymmetrized on output
   integer,                  intent(out)   :: sym_ok_alltypes(:) !< (1:modelmbparticles%ntype_of_particle)
   FLOAT,                    intent(out)   :: norm
-  character(len=500),       intent(out)   :: youngstring
 
   !local vars
   integer :: ipart1, npptype
@@ -197,7 +195,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
   !   then the whole itype loop is skipped
   norm = M_ONE
 
-  youngstring = ""
   tmpstring = ""
 
   ofst_so_far = 0
@@ -263,9 +260,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
     call young_end (young)
 
     SAFE_DEALLOCATE_A(ofst)
-
-    write (tmpstring, '(3x,I4,1x,I4)') nspindown_in(itype), iyoung_in(itype)
-    youngstring = trim(youngstring) // trim(tmpstring)
 
     if (gr%mesh%parallel_in_domains) then
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
@@ -466,6 +460,93 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   POP_SUB(X(modelmb_antisym_1spin))
 
 end subroutine X(modelmb_antisym_1spin)
+
+! ---------------------------------------------------------
+!
+!> routine to loop over projection of all states wrt fermionic or bosonic character
+!
+subroutine X(modelmb_sym_all_states) (gr, st, geo)
+  type(states_t),         intent(inout) :: st
+  type(grid_t),           intent(inout) :: gr
+  type(geometry_t),       intent(in)    :: geo
+
+  integer :: mm, itype
+  integer :: ierr
+  integer :: tdrun
+  integer :: ncombo
+  integer, allocatable :: ndiagrams(:)
+  integer, allocatable :: young_used(:)
+  integer, allocatable :: young_used_save(:)
+  logical :: symmetries_satisfied, impose_exch_symmetry
+  R_TYPE, allocatable :: wf(:)
+
+  PUSH_SUB(X(modelmb_sym_all_states))
+
+  impose_exch_symmetry = .true.
+  ! this is ugly, but no other way to tell if we are in td run.
+  ! other option is to extract present routine and call explicitly from outside output_all. Dont wanna.
+  ! TODO : find a better fix now that we are calling from scf
+  tdrun = -1
+  if (tdrun > 0) impose_exch_symmetry = .false.
+
+  SAFE_ALLOCATE(wf(1:gr%mesh%np))
+
+  ! treat all particle types
+  SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
+  ndiagrams = 1
+  do itype = 1, st%modelmbparticles%ntype_of_particle
+    call young_ndiagrams (st%modelmbparticles%nparticles_per_type(itype), ndiagrams(itype))
+  end do
+
+  ncombo = product(ndiagrams)
+
+  SAFE_ALLOCATE(young_used(1:ncombo))
+  SAFE_ALLOCATE(young_used_save(1:ncombo))
+  young_used = 0
+  young_used_save = 0
+
+  do mm = 1, st%nst
+    call states_get_state(st, gr%mesh, 1, mm, 1, wf)
+
+    symmetries_satisfied = .true.
+    if (impose_exch_symmetry) then
+      if (mm > 1) then
+        ! if eigenval is not degenerate reset young_used
+        if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > 1.e-5) then
+          young_used_save = 0
+        end if
+      end if
+
+      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
+        st%modelmbparticles, ncombo, young_used_save, wf, symmetries_satisfied, .true.,&
+        st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
+! print this to log file 
+      write (message(1), '(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
+      call messages_info(1)
+
+      young_used = 0
+      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
+        st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.,&
+        st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
+      write (message(1), '(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
+      call messages_info(1)
+    end if
+
+    ! push back the projected state - this may overwrite with a bunch of 0s if we found a bosonic state...
+    call states_set_state(st, gr%mesh, 1, mm, 1, wf)
+
+  end do
+
+  SAFE_DEALLOCATE_A(ndiagrams)
+  SAFE_DEALLOCATE_A(young_used)
+  SAFE_DEALLOCATE_A(young_used_save)
+
+
+  SAFE_DEALLOCATE_A(wf)
+
+  POP_SUB(X(modelmb_sym_all_states))
+
+end subroutine X(modelmb_sym_all_states)
 
 !! Local Variables:
 !! mode: f90

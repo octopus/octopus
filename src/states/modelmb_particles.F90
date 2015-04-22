@@ -126,28 +126,33 @@ contains
     
     ! read in scalar dimensions
     
+    !%Variable NParticleModelmb
+    !%Type integer
+    !%Section States::ModelMB
+    !%Default  0
+    !%Description
+    !% Number of particles in modelmb space. 
+    !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
+    !%End
+    call parse_variable('NParticleModelmb', 0, this%nparticle)
+    call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
+    
+    if (this%nparticle == 0) then
+      POP_SUB(modelmb_particles_init)
+      return
+    end if
+
     !%Variable NDimModelmb
     !%Type integer
     !%Section States::ModelMB
-    !%Default -1
+    !%Default 1
     !%Description
     !% Number of dimensions for modelmb space.
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%
     !%End
-    call parse_variable('NDimModelmb', gr%sb%dim, this%ndim)
+    call parse_variable('NDimModelmb', 1, this%ndim)
     call messages_print_var_option(stdout, "NDimModelmb", this%ndim)
-    
-    !%Variable NParticleModelmb
-    !%Type integer
-    !%Section States::ModelMB
-    !%Default 0
-    !%Description
-    !% Number of particles in modelmb space. 
-    !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
-    !%End
-    call parse_variable('NParticleModelmb', 1, this%nparticle)
-    call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
     
     !%Variable NTypeParticleModelmb
     !%Type integer

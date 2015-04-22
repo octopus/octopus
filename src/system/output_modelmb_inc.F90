@@ -22,46 +22,33 @@
 !> routine for output of model many-body quantities.
 !
 subroutine X(output_modelmb) (dir, gr, st, geo, outp)
-  type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
+  type(states_t),         intent(in) :: st
+  type(grid_t),           intent(in) :: gr ! may have to revert to intent inout if some subroutine complains
   character(len=*),       intent(in)    :: dir
   type(geometry_t),       intent(in)    :: geo
   type(output_t),         intent(in)    :: outp
 
-  integer :: mm, iunit, itype
-  integer :: ierr
-  integer :: tdrun
+  integer :: mm
+  integer :: ierr, iunit
   integer :: ncombo
+  integer :: itype
   integer, allocatable :: ndiagrams(:)
   integer, allocatable :: young_used(:)
-  logical :: symmetries_satisfied, impose_exch_symmetry
+  logical :: symmetries_satisfied
   R_TYPE, allocatable :: wf(:)
   character(len=80) :: dirname
   character(len=80) :: filename
+  character(len=500) :: youngstring, tmpstring
   type(modelmb_denmat_t) :: denmat
   type(unit_t)  :: fn_unit
 
-
   PUSH_SUB(X(output_modelmb))
-
-  impose_exch_symmetry = .true.
-  ! this is ugly, but no other way to tell if we are in td run.
-  ! other option is to extract present routine and call explicitly from outside output_all. Don`t wanna.
-  tdrun = index(dir, 'td.')
-  if (tdrun > 0) impose_exch_symmetry = .false.
 
   ! make sure directory exists
   call io_mkdir(trim(dir))
   ! all model mb stuff should be in this directory
   dirname = trim(dir)//'/modelmb'
   call io_mkdir(trim(dirname))
-
-  SAFE_ALLOCATE(wf(1:gr%mesh%np))
-
-  call modelmb_density_matrix_nullify(denmat)
-  if(iand(outp%what, OPTION_MMB_DEN) /= 0) then
-    call modelmb_density_matrix_init(dirname, st, denmat)
-  end if
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'
@@ -83,30 +70,31 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
   SAFE_ALLOCATE(young_used(1:ncombo))
   young_used = 0
 
-
   ! write header
   write (iunit, '(a)') '  state        eigenvalue         projection   nspindown Young# for each type'
 
+  SAFE_ALLOCATE(wf(1:gr%mesh%np))
+
+  call modelmb_density_matrix_nullify(denmat)
+  if(iand(outp%what, OPTION_MMB_DEN) /= 0) then
+    call modelmb_density_matrix_init(dirname, st, denmat)
+  end if
+
   do mm = 1, st%nst
+!TODO : check if therer is another interface for get_states to avoid trivial slice of wf
     call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
+    youngstring = ""
+    do itype = 1, st%modelmbparticles%ntype_of_particle
+      write (tmpstring, '(3x,I4,1x,I4)') st%mmb_nspindown(itype,mm), st%mmb_iyoung(itype,mm)
+      youngstring = trim(youngstring) // trim(tmpstring)
+    end do
+    write (iunit, '(a,I5,3x,E16.6,5x,E14.6,2x,a)') &
+      "  ", mm, st%eigenval(mm,1), st%mmb_proj(mm), trim(youngstring)
+
     symmetries_satisfied = .true.
-    if (impose_exch_symmetry) then
-      if (mm > 1) then
-        ! if eigenval is not degenerate reset young_used
-        if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > 1.e-5) then
-          young_used = 0
-        end if
-      end if
-
-      call X(modelmb_sym_state)(st%eigenval(mm,1), iunit, gr, mm, &
-        st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
-      write (iunit,'(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
-      young_used = 0
-
-      call X(modelmb_sym_state)(st%eigenval(mm,1), iunit, gr, mm, &
-        st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
-      write (iunit,'(a,l1)') "symmetries_satisfied2 ", symmetries_satisfied
+    if (st%mmb_proj(mm) < 1.e-6) then
+      symmetries_satisfied = .false.
     end if
 
     if(iand(outp%what, OPTION_MMB_DEN) /= 0 .and. symmetries_satisfied) then
@@ -123,9 +111,6 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
   end do
 
   call io_close(iunit)
-
-  SAFE_DEALLOCATE_A(ndiagrams)
-  SAFE_DEALLOCATE_A(young_used)
 
   SAFE_DEALLOCATE_A(wf)
 

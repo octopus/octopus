@@ -223,7 +223,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     call states_write_tpa (trim(dir), gr, st)
   end if
 
-  if(iand(outp%what, OPTION_MMB) /= 0) then
+  if(iand(outp%what, OPTION_MMB_DEN+OPTION_MMB_WFS) /= 0) then
     if (states_are_real(st)) then
       call doutput_modelmb (trim(dir), gr, st, geo, outp)
     else

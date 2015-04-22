@@ -43,6 +43,7 @@ module scf_m
   use mesh_function_m
   use messages_m
   use mix_m
+  use modelmb_exchange_syms_m
   use mpi_m
   use mpi_lib_m
   use multigrid_m
@@ -766,6 +767,10 @@ contains
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
+
+      if (finish .and. st%modelmbparticles%nparticle > 0) then
+        call modelmb_sym_all_states (gr, st, geo)
+      end if
 
       if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information

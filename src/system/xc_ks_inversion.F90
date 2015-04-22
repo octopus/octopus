@@ -215,8 +215,6 @@ contains
 
     PUSH_SUB(invertks_2part)
     
-    !call parse_variable('InvertKSStabilizer', M_HALF, stabilizer)
-    
     np = gr%mesh%np
     
     SAFE_ALLOCATE(sqrtrho(1:gr%der%mesh%np_part, 1:nspin))
@@ -334,9 +332,10 @@ contains
         
     integer :: ii, jj, ierr, asym1, asym2
     integer :: iunit, verbosity, counter, np
+    integer :: max_iter
     FLOAT :: rr, shift
     FLOAT :: alpha, beta
-    FLOAT :: stabilizer, convdensity, diffdensity
+    FLOAT :: convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
     character(len=256) :: fname
@@ -354,17 +353,6 @@ contains
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End    
     call parse_variable('InvertKSConvAbsDens', CNST(1e-5), convdensity)
-
-    !%Variable InvertKSStabilizer
-    !%Type float
-    !%Default 0.5
-    !%Section Calculation Modes::Invert KS
-    !%Description
-    !% Additive constant <i>c</i> in the iterative calculation of the KS potential
-    !% <math>v(\alpha+1)=\frac{\rho(\alpha)+c}{\rho_{target}+c} v(\alpha)</math>
-    !% ensures that very small densities do not cause numerical problems.
-    !%End
-    call parse_variable('InvertKSStabilizer', M_HALF, stabilizer)
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -386,6 +374,15 @@ contains
       call messages_input_error('InvertKSVerbosity')
       call messages_fatal(1)
     endif
+
+    !%Variable InvertKSMaxIter
+    !%Type integer
+    !%Default 200
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% Selects how many iterations of inversion will be done in the iterative scheme
+    !%End
+    call parse_variable('InvertKSMaxIter', 200, max_iter)  
            
     SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
 
@@ -399,7 +396,7 @@ contains
     counter = 0
     alpha = CNST(0.05)
 
-    do while(diffdensity > convdensity)
+    do while(diffdensity > convdensity .and. counter < max_iter)
       
       counter = counter + 1 
       beta = diffdensity*0.001 !parameter to avoid numerical problems due to small denominator
