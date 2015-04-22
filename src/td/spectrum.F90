@@ -61,9 +61,9 @@ module spectrum_m
     spectrum_hsfunction_min,       &
     spectrum_mult_info,            &
     spectrum_fix_time_limits,      &
-    count_time_steps,              &
-    signal_damp,                   &
-    fourier_transform
+    spectrum_count_time_steps,     &
+    spectrum_signal_damp,          &
+    spectrum_fourier_transform
 
   integer, public, parameter ::    &
     SPECTRUM_DAMP_NONE       = 0,  &
@@ -634,12 +634,12 @@ contains
     end if
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
     if(cmplxscl) then
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_EXP, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_EXP, spectrum%noise, &
         istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
     else
-      call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
         istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
     end if
     
@@ -860,11 +860,11 @@ contains
     call batch_init(transformb_cos, 3, 1, nspin, transform_cos)
     call batch_init(transformb_sin, 3, 1, nspin, transform_sin)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, spectrum%start_time, dt, dipoleb)
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, spectrum%start_time, dt, dipoleb)
 
-    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
          istart + 1, iend + 1, spectrum%start_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, transformb_cos)
-    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
          istart + 1, iend + 1, spectrum%start_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, transformb_sin)
 
     do ie = 0, no_e
@@ -964,8 +964,8 @@ contains
     end if
 
     ! get time_steps and dt, and make sure that dt is the same in the two files
-    call count_time_steps(in_file_sin, time_steps_sin, dt_sin)
-    call count_time_steps(in_file_cos, time_steps_cos, dt_cos)
+    call spectrum_count_time_steps(in_file_sin, time_steps_sin, dt_sin)
+    call spectrum_count_time_steps(in_file_cos, time_steps_cos, dt_cos)
 
     if(dt_sin /= dt_cos) then
       message(1) = "dt is different in ftchds.cos and ftchds.sin!"
@@ -1125,11 +1125,11 @@ contains
     call batch_add_state(respb, resp)
     call batch_add_state(imspb, imsp)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
-    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, angularb, 1, no_e + 1, spectrum%energy_step, respb)
-    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, angularb, 1, no_e + 1, spectrum%energy_step, imspb)
 
     call batch_end(angularb)
@@ -1682,9 +1682,9 @@ contains
       call batch_add_state(sps_batch, sps)
       call batch_add_state(spc_batch, spc)
 
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
 
       do ie = 0, no_e
@@ -1788,9 +1788,9 @@ contains
       call batch_add_state(sps_batch, sps)
       call batch_add_state(spc_batch, spc)
 
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
 
       do ie = 0, no_e
@@ -1936,7 +1936,7 @@ contains
       call unit_system_get(file_units, UNITS_ATOMIC)
     end if
 
-    call count_time_steps(iunit, time_steps, dt)
+    call spectrum_count_time_steps(iunit, time_steps, dt)
     dt = units_to_atomic(file_units%time, dt) ! units_out is OK
 
     POP_SUB(spectrum_mult_info)
@@ -1945,7 +1945,7 @@ contains
 
 
   ! ---------------------------------------------------------  
-  subroutine count_time_steps(iunit, time_steps, dt)
+  subroutine spectrum_count_time_steps(iunit, time_steps, dt)
     integer, intent(in)  :: iunit
     integer, intent(out) :: time_steps
     FLOAT,   intent(out) :: dt
@@ -1973,7 +1973,7 @@ contains
     end if
 
     POP_SUB(count_time_steps)
-  end subroutine count_time_steps
+  end subroutine spectrum_count_time_steps
   ! ---------------------------------------------------------
 
 
@@ -2089,7 +2089,7 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, t0, time_step, time_function)
+  subroutine spectrum_signal_damp(damp_type, damp_factor, time_start, time_end, t0, time_step, time_function)
     integer,            intent(in)    :: damp_type
     FLOAT,              intent(in)    :: damp_factor    
     integer,            intent(in)    :: time_start
@@ -2147,7 +2147,7 @@ contains
 
     POP_SUB(signal_damp)
 
-  end subroutine signal_damp
+  end subroutine spectrum_signal_damp
   ! -------------------------------------------------------
 
   ! -------------------------------------------------------
@@ -2160,7 +2160,7 @@ contains
   !! real function by \f$ \cos(w*(t-t0)) \f$, the sine Fourier transform is computed by multiplying the real function
   !! by \f$ \sin(w*(t-t0)) \f$, and the "exponential" transform is computed by multiplying the real function by
   !! \f$ e(-I*w*t0)*e(-w*t) \f$.
-  subroutine fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
+  subroutine spectrum_fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function, cmplxscl)
     integer,                  intent(in)    :: method
     integer,                  intent(in)    :: transform
@@ -2310,7 +2310,7 @@ contains
 
     POP_SUB(fourier_transform)
 
-  end subroutine fourier_transform
+  end subroutine spectrum_fourier_transform
 
 end module spectrum_m
 

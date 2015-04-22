@@ -224,12 +224,12 @@
     call batch_init(vafb, 1)
     call batch_add_state(vafb, vaf)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
 
     call batch_init(ftvafb, 1)
     call batch_add_state(ftvafb, ftvaf)
 
-    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, nvaf, M_ZERO, deltat, vafb, 1, max_freq, spectrum%energy_step, ftvafb)
 
     call batch_end(vafb)

@@ -101,7 +101,7 @@ program dielectric_function
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
-  call count_time_steps(in_file, time_steps, dt)
+  call spectrum_count_time_steps(in_file, time_steps, dt)
   
   time_steps = time_steps + 1
 
@@ -142,11 +142,11 @@ program dielectric_function
     call batch_add_state(ftimagb, ftimag(0:,  ii))
   end do
 
-  call signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, M_ZERO, dt, vecpotb)
+  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, M_ZERO, dt, vecpotb)
 
-  call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+  call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
     istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
-  call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+  call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
     istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
 
   call batch_end(vecpotb)
