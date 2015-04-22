@@ -87,13 +87,15 @@ module base_hamiltonian_m
 #if 0
 
   use storage_m, only:  &
-    storage_t,          &
+    storage_t
+
+  use storage_m, only:  &
     storage_init,       &
     storage_start,      &
     storage_update,     &
     storage_stop,       &
     storage_reset,      &
-    storage_accumulate, &
+    storage_add,        &
     storage_get,        &
     storage_copy,       &
     storage_end
@@ -135,6 +137,9 @@ module base_hamiltonian_m
     base_potential_t,         &
     base_potential_get
 
+  use base_functional_m, only: &
+    base_functional_t
+
 #if 0
 
   use base_functional_m, only: &
@@ -149,7 +154,6 @@ module base_hamiltonian_m
     base_functional__end__
 
   use base_functional_m, only: &
-    base_functional_t,         &
     base_functional_get
 
 #endif
@@ -294,7 +298,7 @@ module base_hamiltonian_m
   interface base_hamiltonian__get__
     module procedure base_hamiltonian__get__term
     module procedure base_hamiltonian__get__potn
-    !module procedure base_hamiltonian__get__fnct
+    module procedure base_hamiltonian__get__fnct
     module procedure base_hamiltonian__get__hmlt
   end interface base_hamiltonian__get__
 
@@ -1400,7 +1404,7 @@ contains
     this%energy=this%energy+energy
     !call base_potential_get(that, data)
     !ASSERT(associated(data))
-    !call storage_accumulate(this%data, data)
+    !call storage_add(this%data, data)
     POP_SUB(base_hamiltonian__acc__potn)
     return
   end subroutine base_hamiltonian__acc__potn
@@ -1422,7 +1426,7 @@ contains
     this%energy=this%energy+energy
     !call base_functional_get(that, data)
     !ASSERT(associated(data))
-    !call storage_accumulate(this%data, data)
+    !call storage_add(this%data, data)
     POP_SUB(base_hamiltonian__acc__fnct)
     return
   end subroutine base_hamiltonian__acc__fnct
@@ -1454,7 +1458,7 @@ contains
     call hterm_dict_end(iter)
     nullify(mhtr, shtr)
     this%energy=this%energy+that%energy
-    !call storage_accumulate(this%data, that%data)
+    !call storage_add(this%data, that%data)
     POP_SUB(base_hamiltonian__acc__hmlt)
     return
   end subroutine base_hamiltonian__acc__hmlt
@@ -1591,8 +1595,6 @@ contains
     return
   end subroutine base_hamiltonian__get__potn
 
-#if 0
-
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__get__fnct(this, name, that)
     type(base_hamiltonian_t), intent(in) :: this
@@ -1602,16 +1604,20 @@ contains
     type(hterm_t), pointer :: htrm
     !
     PUSH_SUB(base_hamiltonian__get__fnct)
+
+#if 0
+
     nullify(that, htrm)
     call base_hamiltonian__iget__(this, name, htrm)
     if(associated(htrm))&
       call hterm__get__(htrm, that)
     nullify(htrm)
+
+#endif
+
     POP_SUB(base_hamiltonian__get__fnct)
     return
   end subroutine base_hamiltonian__get__fnct
-
-#endif
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__get__hmlt(this, name, that)
@@ -1632,11 +1638,10 @@ contains
   end subroutine base_hamiltonian__get__hmlt
 
   ! ---------------------------------------------------------
-  !subroutine base_hamiltonian_get_info(this, size, nspin, energy)
-  subroutine base_hamiltonian_get_info(this, energy)
+  subroutine base_hamiltonian_get_info(this, size, nspin, energy)
     type(base_hamiltonian_t), intent(in)  :: this
-    !integer,        optional, intent(out) :: size
-    !integer,        optional, intent(out) :: nspin
+    integer,        optional, intent(out) :: size
+    integer,        optional, intent(out) :: nspin
     real(kind=wp),  optional, intent(out) :: energy
     !
     PUSH_SUB(base_hamiltonian_get_info)

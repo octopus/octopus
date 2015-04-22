@@ -12,16 +12,14 @@ module ssys_handle_m
 
   use frozen_handle_m, only: &
     frozen_handle_init,      &
-    frozen_handle_start !,     &
-    !frozen_handle_update
+    frozen_handle_start
 
   use frozen_handle_m, only: &
     HNDL_TYPE_FRZN
 
   use live_handle_m, only: &
     live_handle_init,      &
-    live_handle_start !,     &
-    !live_handle_update
+    live_handle_start
 
   use live_handle_m, only: &
     HNDL_TYPE_LIVE
@@ -33,12 +31,16 @@ module ssys_handle_m
     base_handle__add__
 
   use base_handle_m, only: &
-    base_handle_t,         &
+    base_handle_t
+
+  use base_handle_m, only: &
     base_handle_init,      &
     base_handle_get
 
+  use base_handle_m, only:          &
+    ssys_handle_t => base_handle_t
+
   use base_handle_m, only:                &
-    ssys_handle_t    => base_handle_t,    &
     ssys_handle_stop => base_handle_stop, &
     ssys_handle_next => base_handle_next, &
     ssys_handle_get  => base_handle_get,  &
@@ -57,8 +59,10 @@ module ssys_handle_m
 
   private
 
+  public ::        &
+    ssys_handle_t
+
   public ::             &
-    ssys_handle_t,      &
     ssys_handle_init,   &
     ssys_handle_start,  &
     ssys_handle_update, &
@@ -152,10 +156,8 @@ contains
       select case(type)
       case(HNDL_TYPE_FRZN)
         call frozen_handle_start(hndl, grid)
-        !call frozen_handle_update(hndl)
       case(HNDL_TYPE_LIVE)
         call live_handle_start(hndl, grid)
-        !call live_handle_update(hndl)
       case default
         message(1)="Unknown subsystems type."
         call messages_fatal(1)

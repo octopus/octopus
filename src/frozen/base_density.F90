@@ -470,7 +470,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call storage_accumulate(this%data, that%data)
+    call storage_add(this%data, that%data)
 
     POP_SUB(base_density__acc__)
   end subroutine base_density__acc__

@@ -73,7 +73,8 @@ module base_functional_m
     storage_update,     &
     storage_stop,       &
     storage_reset,      &
-    storage_accumulate, &
+    storage_add,        &
+    storage_sub,        &
     storage_get,        &
     storage_transfer,   &
     storage_copy,       &
@@ -111,6 +112,7 @@ module base_functional_m
     base_functional__calc__,   &
     base_functional__reset__,  &
     base_functional__acc__,    &
+    base_functional__sub__,    &
     base_functional__add__,    &
     base_functional__copy__,   &
     base_functional__end__
@@ -583,10 +585,24 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     this%energy = this%energy + that%energy
-    call storage_accumulate(this%data, that%data)
+    call storage_add(this%data, that%data)
     POP_SUB(base_functional__acc__)
     return
   end subroutine base_functional__acc__
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__sub__(this, that)
+    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), intent(in)    :: that
+    !
+    PUSH_SUB(base_functional__sub__)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    this%energy = this%energy - that%energy
+    call storage_sub(this%data, that%data)
+    POP_SUB(base_functional__sub__)
+    return
+  end subroutine base_functional__sub__
 
   ! ---------------------------------------------------------
   subroutine base_functional__add__(this, that, config)

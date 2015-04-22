@@ -55,16 +55,16 @@ module base_potential_m
     config_dict_copy,      &
     config_dict_end
 
-  use storage_m, only:  &
-    storage_t,          &
-    storage_init,       &
-    storage_start,      &
-    storage_update,     &
-    storage_stop,       &
-    storage_reset,      &
-    storage_accumulate, &
-    storage_get,        &
-    storage_copy,       &
+  use storage_m, only: &
+    storage_t,         &
+    storage_init,      &
+    storage_start,     &
+    storage_update,    &
+    storage_stop,      &
+    storage_reset,     &
+    storage_add,       &
+    storage_get,       &
+    storage_copy,      &
     storage_end
 
   use simulation_m, only: &
@@ -484,7 +484,7 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     this%energy=this%energy+that%energy
-    call storage_accumulate(this%data, that%data)
+    call storage_add(this%data, that%data)
     POP_SUB(base_potential__acc__)
     return
   end subroutine base_potential__acc__

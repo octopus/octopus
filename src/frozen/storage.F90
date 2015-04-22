@@ -31,7 +31,8 @@ module storage_m
     storage_stop,       &
     storage_reset,      &
     storage_integrate,  &
-    storage_accumulate, &
+    storage_add,        &
+    storage_sub,        &
     storage_reduce,     &
     storage_get,        &
     storage_transfer,   &
@@ -300,13 +301,13 @@ contains
   end subroutine storage_integrate_dotp
 
   ! ---------------------------------------------------------
-  subroutine storage_accumulate(this, that)
+  subroutine storage_add(this, that)
     type(storage_t), intent(inout) :: this
     type(storage_t), intent(in)    :: that
     !
     integer :: indx
     !
-    PUSH_SUB(storage_accumulate)
+    PUSH_SUB(storage_add)
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
     ASSERT(associated(this%grid))
@@ -327,9 +328,41 @@ contains
       end do
       call storage_update(this)
     end if
-    POP_SUB(storage_accumulate)
+    POP_SUB(storage_add)
     return
-  end subroutine storage_accumulate
+  end subroutine storage_add
+
+  ! ---------------------------------------------------------
+  subroutine storage_sub(this, that)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    !
+    integer :: indx
+    !
+    PUSH_SUB(storage_sub)
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%grid))
+    ASSERT(associated(that%grid))
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(that%mesh))
+    ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim>0)
+    ASSERT(that%ndim>0)
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size>0)
+    ASSERT(that%size>0)
+    ASSERT(this%size==that%size)
+    ASSERT(this%default.equal.that%default)
+    if(this%alloc.and.that%alloc)then
+      do indx = 1, this%mesh%np
+        this%data(indx,:)=this%data(indx,:)-that%data(indx,:)
+      end do
+      call storage_update(this)
+    end if
+    POP_SUB(storage_sub)
+    return
+  end subroutine storage_sub
 
   ! ---------------------------------------------------------
   subroutine storage_reduce(this, that)

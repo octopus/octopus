@@ -311,31 +311,11 @@ contains
   end subroutine ssys_config_parse_ionic
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_functional(this, id, factor, name)
-    type(json_object_t),        intent(out) :: this
-    integer,                    intent(in)  :: id
-    real(kind=wp),              intent(in)  :: factor
-    character(len=*), optional, intent(in)  :: name
-
-    PUSH_SUB(ssys_config_parse_functional)
-
-    call json_init(this)
-    call json_set(this, "type", HMLT_TYPE_FNCT)
-    if(present(name))&
-      call json_set(this, "subsystem", name)
-    call json_set(this, "functional", id)
-    call json_set(this, "factor", factor)
-
-    POP_SUB(ssys_config_parse_functional)
-  end subroutine ssys_config_parse_functional
-
-  ! ---------------------------------------------------------
   subroutine ssys_config_parse_tnadd(this)
     type(json_object_t), intent(inout) :: this
 
-    type(json_object_t), pointer :: cnfg
-    real(kind=wp)                :: factor
-    integer                      :: type, id, ierr
+    real(kind=wp) :: factor
+    integer       :: type, id, ierr
 
     !%Variable TnaddFactor
     !%Type float
@@ -347,10 +327,8 @@ contains
 
     PUSH_SUB(ssys_config_parse_tnadd)
 
-    nullify(cnfg)
     call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_set(this, "allocate", .true.)
+    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_FNCT)
     call parse_variable('TnaddFunctional', FUNCT_XC_NONE, id)
     call json_set(this, "functional", id)
     if(id>FUNCT_XC_NONE)then
@@ -360,14 +338,6 @@ contains
         call messages_warning(1)
       end if
       call json_set(this, "factor", factor)
-      SAFE_ALLOCATE(cnfg)
-      call ssys_config_parse_functional(cnfg, id, factor)
-      call json_set(this, "total", cnfg)
-      nullify(cnfg)
-      SAFE_ALLOCATE(cnfg)
-      call ssys_config_parse_functional(cnfg, id, factor, "live")
-      call json_set(this, "live", cnfg)
-      nullify(cnfg)
     end if
 
     POP_SUB(ssys_config_parse_tnadd)
