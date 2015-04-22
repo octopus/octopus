@@ -65,10 +65,10 @@
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  
-    !%Variable PropagationSpectrumTimeStepFactor
+    !%Variable VibrationalSpectrumTimeStepFactor
     !%Type integer
     !%Default 10
-    !%Section Utilities::oct-propagation_spectrum
+    !%Section Utilities::oct-vibrational_spectrum
     !%Description
     !% In the calculation of the vibrational spectrum it not necessary
     !% to read the velocity at every time step. This variable controls
@@ -76,8 +76,8 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call parse_variable('PropagationSpectrumTimeStepFactor', 10, skip)
-    if(skip <= 0) call messages_input_error('PropagationSpectrumTimeStepFactor')
+    call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
+    if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
 
