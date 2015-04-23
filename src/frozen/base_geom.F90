@@ -8,7 +8,7 @@
 #undef LIST_INCLUDE_BODY
 
 #define LIST_TEMPLATE_NAME atom
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_TEMPLATE_NAME
 
 #undef DICT_TEMPLATE_NAME
@@ -19,7 +19,7 @@
 #undef DICT_INCLUDE_BODY
 
 #define DICT_TEMPLATE_NAME species
-#include "tdict.F90"
+#include "tdict_inc.F90"
 #undef DICT_TEMPLATE_NAME
 
 #undef LIST_TEMPLATE_NAME
@@ -39,20 +39,10 @@
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
 
-#define LIST_TEMPLATE_NAME base_geom
-#define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
 #define HASH_TEMPLATE_NAME base_geom
 #define HASH_KEY_TEMPLATE_NAME json
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_geom
-
-#define HASH_INCLUDE_PREFIX
-#include "thash.F90"
-#undef HASH_INCLUDE_PREFIX
 
 module base_geom_m
 
@@ -60,8 +50,15 @@ module base_geom_m
   use messages_m
   use profiling_m
 
-  use json_m,   only: operator(==), json_object_t, json_hash
-  use kinds_m,  only: wp
+#define LIST_TEMPLATE_NAME base_geom
+#define LIST_INCLUDE_PREFIX
+#include "tlist_inc.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_INCLUDE_PREFIX
+#include "thash_inc.F90"
+#undef HASH_INCLUDE_PREFIX
 
   use atom_m,    only: atom_t, atom_set_species, atom_get_label, atom_end
   use basis_m,   only: basis_t, basis_init, basis_to_external, basis_end
@@ -125,7 +122,7 @@ module base_geom_m
 #define TEMPLATE_PREFIX base_geom
 #define EXCLUDE_TYPE
 #define INCLUDE_PREFIX
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_PREFIX
 #undef EXCLUDE_TYPE
 #undef TEMPLATE_PREFIX
@@ -146,7 +143,6 @@ module base_geom_m
     base_geom_new,  &
     base_geom_del,  &
     base_geom_init, &
-    base_geom_next, &
     base_geom_get,  &
     base_geom_copy, &
     base_geom_end
@@ -158,12 +154,12 @@ module base_geom_m
 
 #define LIST_TEMPLATE_NAME base_geom
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_HEADER
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
   integer, parameter :: BASE_GEOM_OK          = BASE_GEOM_HASH_OK
@@ -184,7 +180,7 @@ module base_geom_m
     type(base_geom_list_t)       :: list
   end type base_geom_t
 
-  type, public :: base_geom_iterator_t
+  type :: base_geom_iterator_t
     private
     type(base_geom_t),    pointer :: self =>null()
     type(atom_list_iterator_t)    :: aitr
@@ -239,7 +235,7 @@ module base_geom_m
 #define TEMPLATE_PREFIX base_geom
 #define EXCLUDE_TYPE
 #define INCLUDE_HEADER
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_HEADER
 #undef EXCLUDE_TYPE
 #undef TEMPLATE_PREFIX
@@ -248,12 +244,12 @@ contains
 
 #define LIST_TEMPLATE_NAME base_geom
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_BODY
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
@@ -799,7 +795,7 @@ contains
 #define TEMPLATE_PREFIX base_geom
 #define EXCLUDE_TYPE
 #define INCLUDE_BODY
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_BODY
 #undef EXCLUDE_TYPE
 #undef TEMPLATE_PREFIX

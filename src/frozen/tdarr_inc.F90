@@ -24,6 +24,23 @@
 #define DARR_GROWTH_FACTOR 1.1
 #endif
 
+#undef DARR_INCLUDE_MODULE
+#if !defined(DARR_INCLUDE_PREFIX) && !defined(DARR_INCLUDE_HEADER) && !defined(DARR_INCLUDE_BODY)
+#define DARR_INCLUDE_MODULE
+#endif
+
+#if defined(DARR_INCLUDE_PREFIX) && defined(DARR_INCLUDE_HEADER)
+#error "Only one off 'DARR_INCLUDE_PREFIX' or 'DARR_INCLUDE_HEADER' can be defined."
+#endif
+
+#if defined(DARR_INCLUDE_PREFIX) && defined(DARR_INCLUDE_BODY)
+#error "Only one off 'DARR_INCLUDE_PREFIX' or 'DARR_INCLUDE_BODY' can be defined."
+#endif
+
+#if defined(DARR_INCLUDE_HEADER) && defined(DARR_INCLUDE_BODY)
+#error "Only one off 'DARR_INCLUDE_HEADER' or 'DARR_INCLUDE_BODY' can be defined."
+#endif
+
 #undef SINGLE_TEMPLATE_NAME
 #undef SINGLE_TYPE_NAME
 #undef SINGLE_TYPE_MODULE_NAME
@@ -33,16 +50,12 @@
 
 #define SINGLE_TEMPLATE_NAME DARR_TEMPLATE_NAME
 #define SINGLE_TYPE_NAME DARR_TYPE_NAME
-#define SINGLE_INCLUDE_PREFIX
-#include "tsingle.F90"
-#undef SINGLE_INCLUDE_PREFIX
 
 #undef TEMPLATE_PREFIX
 #define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
 #include "template.h"
 
-#if !defined(DARR_INCLUDE_PREFIX)
-#if !defined(DARR_INCLUDE_HEADER) && !defined(DARR_INCLUDE_BODY)
+#if defined(DARR_INCLUDE_MODULE)
 
 module TEMPLATE(darr_m)
 
@@ -50,7 +63,17 @@ module TEMPLATE(darr_m)
   use messages_m
   use profiling_m
 
+#endif
+#if defined(DARR_INCLUDE_PREFIX) || defined(DARR_INCLUDE_MODULE)
+
+#define SINGLE_INCLUDE_PREFIX
+#include "tsingle_inc.F90"
+#undef SINGLE_INCLUDE_PREFIX
+
   use kinds_m, only: wp
+
+#endif
+#if defined(DARR_INCLUDE_MODULE)
 
   use DARR_TYPE_MODULE_NAME, only: &
     DARR_TYPE_NAME
@@ -82,10 +105,12 @@ module TEMPLATE(darr_m)
     TEMPLATE(darr_iterator_t)
 
 #endif
-#if !defined(DARR_INCLUDE_BODY)
+#if defined(DARR_INCLUDE_HEADER) || defined(DARR_INCLUDE_MODULE)
+
 #define SINGLE_INCLUDE_HEADER
-#include "tsingle.F90"
+#include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_HEADER
+
 #define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
 #include "template.h"
 
@@ -130,15 +155,17 @@ module TEMPLATE(darr_m)
   end interface TEMPLATE(darr_end)
 
 #endif
-#if !defined(DARR_INCLUDE_HEADER) && !defined(DARR_INCLUDE_BODY)
+#if defined(DARR_INCLUDE_MODULE)
 
 contains
   
 #endif
-#if !defined(DARR_INCLUDE_HEADER)
+#if defined(DARR_INCLUDE_BODY) || defined(DARR_INCLUDE_MODULE)
+
 #define SINGLE_INCLUDE_BODY
-#include "tsingle.F90"
+#include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_BODY
+
 #define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
 #include "template.h"
 
@@ -436,11 +463,10 @@ contains
   end subroutine INTERNAL(darr_iterator_end)
 
 #endif
-#if !defined(DARR_INCLUDE_HEADER) && !defined(DARR_INCLUDE_BODY)
+#if defined(DARR_INCLUDE_MODULE)
 
 end module TEMPLATE(darr_m)
 
-#endif
 #endif
 
 #undef SINGLE_TEMPLATE_NAME

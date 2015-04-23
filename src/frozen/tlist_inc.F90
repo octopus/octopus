@@ -1,5 +1,6 @@
 #include "global.h"
 #include "util.h"
+
 !LIST: LIST_TEMPLATE_NAME
 !LIST: LIST_TYPE_NAME
 !LIST: LIST_TYPE_MODULE_NAME
@@ -15,12 +16,28 @@
 #error "'LIST_TEMPLATE_NAME' must be defined"
 #endif
 
+#undef LIST_INCLUDE_MODULE
+#if !defined(LIST_INCLUDE_PREFIX) && !defined(LIST_INCLUDE_HEADER) && !defined(LIST_INCLUDE_BODY)
+#define LIST_INCLUDE_MODULE
+#endif
+
+#if defined(LIST_INCLUDE_PREFIX) && defined(LIST_INCLUDE_HEADER)
+#error "Only one off 'LIST_INCLUDE_PREFIX' or 'LIST_INCLUDE_HEADER' can be defined."
+#endif
+
+#if defined(LIST_INCLUDE_PREFIX) && defined(LIST_INCLUDE_BODY)
+#error "Only one off 'LIST_INCLUDE_PREFIX' or 'LIST_INCLUDE_BODY' can be defined."
+#endif
+
+#if defined(LIST_INCLUDE_HEADER) && defined(LIST_INCLUDE_BODY)
+#error "Only one off 'LIST_INCLUDE_HEADER' or 'LIST_INCLUDE_BODY' can be defined."
+#endif
+
 #undef TEMPLATE_PREFIX
 #define TEMPLATE_PREFIX LIST_TEMPLATE_NAME
 #include "template.h"
 
-#if !defined(LIST_INCLUDE_PREFIX)
-#if !defined(LIST_INCLUDE_HEADER) && !defined(LIST_INCLUDE_BODY)
+#if defined(LIST_INCLUDE_MODULE)
 
 module TEMPLATE(list_m)
 
@@ -34,7 +51,6 @@ module TEMPLATE(list_m)
   implicit none
 
   private
-
   public ::                     &
     TEMPLATE(LIST_OK),          &
     TEMPLATE(LIST_EMPTY_ERROR), &
@@ -60,7 +76,7 @@ module TEMPLATE(list_m)
     TEMPLATE(list_iterator_t)
 
 #endif
-#if !defined(LIST_INCLUDE_BODY)
+#if defined(LIST_INCLUDE_HEADER) || defined(LIST_INCLUDE_MODULE)
 
   type :: INTERNAL(node_t)
     private
@@ -112,12 +128,12 @@ module TEMPLATE(list_m)
   integer, parameter :: TEMPLATE(LIST_INDEX_ERROR) =-2
 
 #endif
-#if !defined(LIST_INCLUDE_HEADER) && !defined(LIST_INCLUDE_BODY)
+#if defined(LIST_INCLUDE_MODULE)
 
 contains
   
 #endif
-#if !defined(LIST_INCLUDE_HEADER)
+#if defined(LIST_INCLUDE_BODY) || defined(LIST_INCLUDE_MODULE)
 
   ! -----------------------------------------------------
   subroutine INTERNAL(node_init)(this, that)
@@ -759,11 +775,10 @@ contains
   end subroutine INTERNAL(list_iterator_end)
 
 #endif
-#if !defined(LIST_INCLUDE_HEADER) && !defined(LIST_INCLUDE_BODY)
+#if defined(LIST_INCLUDE_MODULE)
 
 end module TEMPLATE(list_m)
 
-#endif
 #endif
 
 #undef TEMPLATE_PREFIX

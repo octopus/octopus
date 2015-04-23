@@ -16,12 +16,28 @@
 #error "'SINGLE_TEMPLATE_NAME' must be defined"
 #endif
 
+#undef SINGLE_INCLUDE_MODULE
+#if !defined(SINGLE_INCLUDE_PREFIX) && !defined(SINGLE_INCLUDE_HEADER) && !defined(SINGLE_INCLUDE_BODY)
+#define SINGLE_INCLUDE_MODULE
+#endif
+
+#if defined(SINGLE_INCLUDE_PREFIX) && defined(SINGLE_INCLUDE_HEADER)
+#error "Only one off 'SINGLE_INCLUDE_PREFIX' or 'SINGLE_INCLUDE_HEADER' can be defined."
+#endif
+
+#if defined(SINGLE_INCLUDE_PREFIX) && defined(SINGLE_INCLUDE_BODY)
+#error "Only one off 'SINGLE_INCLUDE_PREFIX' or 'SINGLE_INCLUDE_BODY' can be defined."
+#endif
+
+#if defined(SINGLE_INCLUDE_HEADER) && defined(SINGLE_INCLUDE_BODY)
+#error "Only one off 'SINGLE_INCLUDE_HEADER' or 'SINGLE_INCLUDE_BODY' can be defined."
+#endif
+
 #undef TEMPLATE_PREFIX
 #define TEMPLATE_PREFIX SINGLE_TEMPLATE_NAME
 #include "template.h"
 
-#if !defined(SINGLE_INCLUDE_PREFIX)
-#if !defined(SINGLE_INCLUDE_HEADER) && !defined(SINGLE_INCLUDE_BODY)
+#if defined(SINGLE_INCLUDE_MODULE)
 
 module TEMPLATE(single_m)
 
@@ -46,7 +62,7 @@ module TEMPLATE(single_m)
     TEMPLATE(single_end)
 
 #endif
-#if !defined(SINGLE_INCLUDE_BODY)
+#if defined(SINGLE_INCLUDE_HEADER) || defined(SINGLE_INCLUDE_MODULE)
 
   type :: TEMPLATE(single_t)
     private
@@ -70,12 +86,12 @@ module TEMPLATE(single_m)
   end interface TEMPLATE(single_set)
 
 #endif
-#if !defined(SINGLE_INCLUDE_HEADER) && !defined(SINGLE_INCLUDE_BODY)
+#if defined(SINGLE_INCLUDE_MODULE)
 
 contains
 
 #endif
-#if !defined(SINGLE_INCLUDE_HEADER)
+#if defined(SINGLE_INCLUDE_BODY) || defined(SINGLE_INCLUDE_MODULE)
 
   ! -----------------------------------------------------	
   subroutine INTERNAL(single_init_value)(this, that)
@@ -192,11 +208,10 @@ contains
   end subroutine TEMPLATE(single_end)
 
 #endif
-#if !defined(SINGLE_INCLUDE_HEADER) && !defined(SINGLE_INCLUDE_BODY)
+#if defined(SINGLE_INCLUDE_MODULE)
 
 end module TEMPLATE(single_m)
 
-#endif
 #endif
 
 #undef TEMPLATE_PREFIX

@@ -80,12 +80,12 @@ noinst_HEADERS =		\
 	kfunctionals_list.F90   \
 	util.h			\
 	template.h		\
-	tsingle.F90		\
-	tdarr.F90		\
-	tlist.F90		\
-	thash.F90		\
-	tdict.F90		\
-	iterator_code.F90	\
+	tsingle_inc.F90		\
+	tdarr_inc.F90		\
+	tlist_inc.F90		\
+	thash_inc.F90		\
+	tdict_inc.F90		\
+	iterator_inc.F90	\
 	intrpl_inc.F90		
 
 include $(srcdir)/../common-rules.make

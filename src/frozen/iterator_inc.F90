@@ -33,9 +33,20 @@
 
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
 
+  public ::             &
+    TEMPLATE(NAME_LEN)
+
+  public ::               &
+    TEMPLATE(iterator_t)
+
+  public ::         &
+    TEMPLATE(next)
+
+  integer, parameter :: TEMPLATE(NAME_LEN) = CONFIG_DICT_NAME_LEN
+
 #if !defined(EXCLUDE_TYPE)
 
-  type, public :: TEMPLATE(iterator_t)
+  type :: TEMPLATE(iterator_t)
     private
     type(TEMPLATE(t)),   pointer :: self =>null()
     type(config_dict_iterator_t) :: iter
@@ -68,8 +79,6 @@
   end interface TEMPLATE(end)
 
 #endif
-
-  integer, public, parameter :: TEMPLATE(NAME_LEN) = CONFIG_DICT_NAME_LEN
 
 #endif
 #if !defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && defined(INCLUDE_BODY)

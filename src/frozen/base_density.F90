@@ -1,3 +1,4 @@
+
 #include "global.h"
 
 #undef LIST_TEMPLATE_NAME
@@ -17,36 +18,65 @@
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
 
-#define LIST_TEMPLATE_NAME base_density
-#define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
 #define HASH_TEMPLATE_NAME base_density
 #define HASH_KEY_TEMPLATE_NAME json
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_density
 
-#define HASH_INCLUDE_PREFIX
-#include "thash.F90"
-#undef HASH_INCLUDE_PREFIX
-
 module base_density_m
-  use config_dict_m
+
   use global_m
-  use json_m
-  use kinds_m
   use messages_m
   use profiling_m
-  use simulation_m
-  use storage_m
+
+#define LIST_TEMPLATE_NAME base_density
+#define LIST_INCLUDE_PREFIX
+#include "tlist_inc.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_INCLUDE_PREFIX
+#include "thash_inc.F90"
+#undef HASH_INCLUDE_PREFIX
 
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_PREFIX
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
+
+  use json_m,  only: JSON_OK, json_get
+  use kinds_m, only: wp
+
+  use config_dict_m, only: &
+    CONFIG_DICT_OK
+
+  use config_dict_m, only: &
+    config_dict_t
+
+  use config_dict_m, only: &
+    config_dict_init,      &
+    config_dict_set,       &
+    config_dict_get,       &
+    config_dict_end
+    
+  use simulation_m, only: &
+    simulation_t
+
+  use storage_m, only: &
+    storage_t
+
+  use storage_m, only: &
+    storage_init,      &
+    storage_start,     &
+    storage_update,    &
+    storage_stop,      &
+    storage_reset,     &
+    storage_reduce,    &
+    storage_add,       &
+    storage_get,       &
+    storage_copy,      &
+    storage_end
 
   implicit none
 
@@ -72,7 +102,6 @@ module base_density_m
     base_density_start,  &
     base_density_update, &
     base_density_stop,   &
-    base_density_next,   &
     base_density_get,    &
     base_density_copy,   &
     base_density_end
@@ -84,12 +113,12 @@ module base_density_m
 
 #define LIST_TEMPLATE_NAME base_density
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_HEADER
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
   type :: base_density_t
@@ -145,7 +174,7 @@ module base_density_m
 
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_HEADER
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -153,12 +182,12 @@ contains
 
 #define LIST_TEMPLATE_NAME base_density
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_BODY
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
@@ -725,7 +754,7 @@ contains
 
 #define TEMPLATE_PREFIX base_density
 #define INCLUDE_BODY
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 

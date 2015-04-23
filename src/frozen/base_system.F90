@@ -17,20 +17,10 @@
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
 
-#define LIST_TEMPLATE_NAME base_system
-#define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
 #define HASH_TEMPLATE_NAME base_system
 #define HASH_KEY_TEMPLATE_NAME json
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_system
-
-#define HASH_INCLUDE_PREFIX
-#include "thash.F90"
-#undef HASH_INCLUDE_PREFIX
 
 module base_system_m
 
@@ -38,10 +28,18 @@ module base_system_m
   use messages_m
   use profiling_m
 
-  use json_m,   only: operator(==), json_hash
-  use kinds_m,  only: wp
+#define LIST_TEMPLATE_NAME base_system
+#define LIST_INCLUDE_PREFIX
+#include "tlist_inc.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
+
+#define HASH_INCLUDE_PREFIX
+#include "thash_inc.F90"
+#undef HASH_INCLUDE_PREFIX
 
   use json_m,  only: JSON_OK, json_object_t, json_get
+  use kinds_m, only: wp
 
   use config_dict_m, only: &
     CONFIG_DICT_OK,        &
@@ -95,7 +93,7 @@ module base_system_m
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_PREFIX
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -120,7 +118,6 @@ module base_system_m
     base_system_start,  &
     base_system_update, &
     base_system_stop,   &
-    base_system_next,   &
     base_system_set,    &
     base_system_get,    &
     base_system_copy,   &
@@ -128,12 +125,12 @@ module base_system_m
 
 #define LIST_TEMPLATE_NAME base_system
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_HEADER
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
   type, public :: base_system_t
@@ -194,7 +191,7 @@ module base_system_m
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_HEADER
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -202,12 +199,12 @@ contains
 
 #define LIST_TEMPLATE_NAME base_system
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_BODY
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 
   subroutine base_system_new(this, that)
@@ -781,7 +778,7 @@ contains
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_BODY
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 

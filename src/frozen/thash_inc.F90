@@ -45,6 +45,13 @@
 #error "'HASH_VAL_TEMPLATE_NAME' must be defined"
 #endif
 
+#undef IHASH_TMPL_NAME
+#if defined(HASH_TEMPLATE_NAME)
+#define IHASH_TMPL_NAME HASH_TEMPLATE_NAME
+#else
+#define IHASH_TMPL_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,HASH_VAL_TEMPLATE_NAME)
+#endif
+
 #if !defined(HASH_INITIAL_SIZE)
 #define HASH_INITIAL_SIZE 7
 #endif
@@ -52,11 +59,21 @@
 #define HASH_GROWTH_FACTOR 1.5
 #endif
 
-#undef IHASH_TMPL_NAME
-#if defined(HASH_TEMPLATE_NAME)
-#define IHASH_TMPL_NAME HASH_TEMPLATE_NAME
-#else
-#define IHASH_TMPL_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,HASH_VAL_TEMPLATE_NAME)
+#undef HASH_INCLUDE_MODULE
+#if !defined(HASH_INCLUDE_PREFIX) && !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
+#define HASH_INCLUDE_MODULE
+#endif
+
+#if defined(HASH_INCLUDE_PREFIX) && defined(HASH_INCLUDE_HEADER)
+#error "Only one off 'HASH_INCLUDE_PREFIX' or 'HASH_INCLUDE_HEADER' can be defined."
+#endif
+
+#if defined(HASH_INCLUDE_PREFIX) && defined(HASH_INCLUDE_BODY)
+#error "Only one off 'HASH_INCLUDE_PREFIX' or 'HASH_INCLUDE_BODY' can be defined."
+#endif
+
+#if defined(HASH_INCLUDE_HEADER) && defined(HASH_INCLUDE_BODY)
+#error "Only one off 'HASH_INCLUDE_HEADER' or 'HASH_INCLUDE_BODY' can be defined."
 #endif
 
 #undef LIST_TEMPLATE_NAME
@@ -75,14 +92,8 @@
 
 #define LIST_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,pair)
 #define LIST_TYPE_NAME DECORATE(IHASH_TMPL_NAME,i_pair_t)
-#define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
-#undef LIST_INCLUDE_PREFIX
 
 #define DARR_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,pair_list)
-#define DARR_INCLUDE_PREFIX
-#include "tdarr.F90"
-#undef DARR_INCLUDE_PREFIX
 
 #undef LIST
 #undef DARR
@@ -93,14 +104,27 @@
 #define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
 
-#if !defined(HASH_INCLUDE_PREFIX)
-#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
+#if defined(HASH_INCLUDE_MODULE)
 
 module TEMPLATE(hash_m)
 
   use global_m
   use messages_m
   use profiling_m
+
+#endif
+#if defined(HASH_INCLUDE_PREFIX) || defined(HASH_INCLUDE_MODULE)
+
+#define LIST_INCLUDE_PREFIX
+#include "tlist_inc.F90"
+#undef LIST_INCLUDE_PREFIX
+
+#define DARR_INCLUDE_PREFIX
+#include "tdarr_inc.F90"
+#undef DARR_INCLUDE_PREFIX
+
+#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#include "template.h"
 
   use kinds_m, only: wp
 
@@ -110,6 +134,9 @@ module TEMPLATE(hash_m)
 
   use HASH_KEY_FUNCTION_MODULE_NAME, only: &
     HASH_KEY_FUNCTION_NAME
+
+#endif
+#if defined(HASH_INCLUDE_MODULE)
 
   use HASH_VAL_TYPE_MODULE_NAME, only: &
     HASH_VAL_TYPE_NAME
@@ -139,15 +166,25 @@ module TEMPLATE(hash_m)
     TEMPLATE(hash_iterator_t)
 
 #endif
-#if !defined(HASH_INCLUDE_BODY)
+#if defined(HASH_INCLUDE_HEADER) || defined(HASH_INCLUDE_MODULE)
+
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
+
 #define DARR_INCLUDE_HEADER
-#include "tdarr.F90"
+#include "tdarr_inc.F90"
 #undef DARR_INCLUDE_HEADER
+
 #define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
+
+  real(kind=wp), parameter :: INTERNAL(HASH_FACTOR) = DECORATE(HASH_GROWTH_FACTOR,wp)
+  integer,       parameter :: INTERNAL(HASH_SIZE)   = HASH_INITIAL_SIZE
+
+  integer, parameter :: TEMPLATE(HASH_OK)          = 0
+  integer, parameter :: TEMPLATE(HASH_KEY_ERROR)   =-1
+  integer, parameter :: TEMPLATE(HASH_EMPTY_ERROR) =-2
 
   interface INTERNAL(pair_set)
     module procedure INTERNAL(pair_set_key)
@@ -207,26 +244,22 @@ module TEMPLATE(hash_m)
     module procedure INTERNAL(hash_iterator_end)
   end interface TEMPLATE(hash_end)
 
-  real(kind=wp), parameter :: INTERNAL(HASH_FACTOR) = DECORATE(HASH_GROWTH_FACTOR,wp)
-  integer,       parameter :: INTERNAL(HASH_SIZE)   = HASH_INITIAL_SIZE
-
-  integer, parameter :: TEMPLATE(HASH_OK)          = 0
-  integer, parameter :: TEMPLATE(HASH_KEY_ERROR)   =-1
-  integer, parameter :: TEMPLATE(HASH_EMPTY_ERROR) =-2
-
 #endif
-#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
+#if defined(HASH_INCLUDE_MODULE)
 
 contains
 
 #endif
-#if !defined(HASH_INCLUDE_HEADER)
+#if defined(HASH_INCLUDE_BODY) || defined(HASH_INCLUDE_MODULE)
+
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
+
 #define DARR_INCLUDE_BODY
-#include "tdarr.F90"
+#include "tdarr_inc.F90"
 #undef DARR_INCLUDE_BODY
+
 #define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
 
@@ -841,11 +874,10 @@ contains
   end subroutine INTERNAL(hash_iterator_end)
 
 #endif
-#if !defined(HASH_INCLUDE_HEADER) && !defined(HASH_INCLUDE_BODY)
+#if defined(HASH_INCLUDE_MODULE)
 
 end module TEMPLATE(hash_m)
 
-#endif
 #endif
 
 #undef LIST

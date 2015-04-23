@@ -17,20 +17,10 @@
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
 
-#define LIST_TEMPLATE_NAME base_handle
-#define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
 #define HASH_TEMPLATE_NAME base_handle
 #define HASH_KEY_TEMPLATE_NAME json
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_handle
-
-#define HASH_INCLUDE_PREFIX
-#include "thash.F90"
-#undef HASH_INCLUDE_PREFIX
 
 module base_handle_m
 
@@ -38,10 +28,17 @@ module base_handle_m
   use messages_m
   use profiling_m
 
-  use grid_m,  only: grid_t
-  use json_m,  only: operator(==), json_hash
-  use kinds_m, only: wp
+#define LIST_TEMPLATE_NAME base_handle
+#define LIST_INCLUDE_PREFIX
+#include "tlist_inc.F90"
+#undef LIST_INCLUDE_PREFIX
+#undef LIST_TEMPLATE_NAME
 
+#define HASH_INCLUDE_PREFIX
+#include "thash_inc.F90"
+#undef HASH_INCLUDE_PREFIX
+
+  use grid_m, only: grid_t
   use json_m, only: JSON_OK, json_object_t, json_init, json_get, json_end
   use json_m, only: json_array_t, json_array_iterator_t, json_next
 
@@ -73,7 +70,7 @@ module base_handle_m
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_PREFIX
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -97,19 +94,18 @@ module base_handle_m
     base_handle_start,  &
     base_handle_update, &
     base_handle_stop,   &
-    base_handle_next,   &
     base_handle_get,    &
     base_handle_copy,   &
     base_handle_end
 
 #define LIST_TEMPLATE_NAME base_handle
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_HEADER
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
   integer, public, parameter :: HNDL_TYPE_NONE = 0
@@ -164,7 +160,7 @@ module base_handle_m
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_HEADER
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -172,12 +168,12 @@ contains
 
 #define LIST_TEMPLATE_NAME base_handle
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
 #define HASH_INCLUDE_BODY
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 
   subroutine base_handle_new(this, that)
@@ -715,7 +711,7 @@ contains
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_BODY
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 

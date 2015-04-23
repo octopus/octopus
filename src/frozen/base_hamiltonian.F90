@@ -24,9 +24,15 @@
 #undef DICT_INCLUDE_HEADER
 #undef DICT_INCLUDE_BODY
 
+module base_hamiltonian_m
+
+  use global_m
+  use messages_m
+  use profiling_m
+
 #define LIST_TEMPLATE_NAME base_hamiltonian
 #define LIST_INCLUDE_PREFIX
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
@@ -35,7 +41,7 @@
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_hamiltonian
 #define HASH_INCLUDE_PREFIX
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME
@@ -44,34 +50,14 @@
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_PREFIX
-#include "tdict.F90"
+#include "tdict_inc.F90"
 #undef DICT_INCLUDE_PREFIX
 #undef DICT_TEMPLATE_NAME
 
-module base_hamiltonian_m
-
-  use global_m
-  use messages_m
-  use profiling_m
-
-  use json_m,   only: operator(==), json_hash
-  use kinds_m,  only: wp
-
-  use strng_m, only: &
-    operator(==)
-
-  use strng_m, only:                   &
-    string_t       => strng_t,         &
-    string_init    => strng_init,      &
-    string_hash    => strng_hash,      &
-    string_tolower => strng_tolower,   &
-    string_get     => strng_get,       &
-    string_copy    => strng_copy,      &
-    string_end     => strng_end
-
-  use json_m, only: JSON_OK, JSON_TYPE_ERROR
-  use json_m, only: json_object_t, json_object_iterator_t
-  use json_m, only: json_init, json_get, json_next, json_end
+  use json_m,  only: JSON_OK, JSON_TYPE_ERROR
+  use json_m,  only: json_object_t, json_object_iterator_t
+  use json_m,  only: json_init, json_get, json_next, json_end
+  use kinds_m, only: wp
 
   use config_dict_m, only: &
     config_dict_t,         &
@@ -160,7 +146,7 @@ module base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_PREFIX
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
@@ -191,7 +177,6 @@ module base_hamiltonian_m
     base_hamiltonian_start,  &
     base_hamiltonian_update, &
     base_hamiltonian_stop,   &
-    base_hamiltonian_next,   &
     base_hamiltonian_set,    &
     base_hamiltonian_get,    &
     base_hamiltonian_copy,   &
@@ -211,7 +196,7 @@ module base_hamiltonian_m
 
 #define LIST_TEMPLATE_NAME base_hamiltonian
 #define LIST_INCLUDE_HEADER
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
@@ -220,7 +205,7 @@ module base_hamiltonian_m
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_hamiltonian
 #define HASH_INCLUDE_HEADER
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME
@@ -229,7 +214,7 @@ module base_hamiltonian_m
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_HEADER
-#include "tdict.F90"
+#include "tdict_inc.F90"
 #undef DICT_INCLUDE_HEADER
 #undef DICT_TEMPLATE_NAME
 
@@ -343,7 +328,7 @@ module base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_HEADER
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_HEADER
 #undef TEMPLATE_PREFIX
 
@@ -351,7 +336,7 @@ contains
 
 #define LIST_TEMPLATE_NAME base_hamiltonian
 #define LIST_INCLUDE_BODY
-#include "tlist.F90"
+#include "tlist_inc.F90"
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
@@ -360,7 +345,7 @@ contains
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_hamiltonian
 #define HASH_INCLUDE_BODY
-#include "thash.F90"
+#include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME
@@ -369,7 +354,7 @@ contains
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_BODY
-#include "tdict.F90"
+#include "tdict_inc.F90"
 #undef DICT_INCLUDE_BODY
 #undef DICT_TEMPLATE_NAME
 
@@ -1849,7 +1834,7 @@ contains
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_BODY
-#include "iterator_code.F90"
+#include "iterator_inc.F90"
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 
