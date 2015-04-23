@@ -44,6 +44,7 @@ module td_m
   use math_m
   use mesh_m
   use messages_m
+  use modelmb_exchange_syms_m
   use mpi_m
   use parser_m
   use PES_m
@@ -317,6 +318,10 @@ contains
 
       if((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
          iter == td%max_iter .or. stopping) then ! output
+        ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
+        if (st%modelmbparticles%nparticle > 0) then
+          call modelmb_sym_all_states (gr, st, geo)
+        end if
         call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
