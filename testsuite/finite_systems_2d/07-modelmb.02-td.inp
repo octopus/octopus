@@ -37,7 +37,7 @@ k=1.0
 "electron"      | 1 | 3
 %
 
-Output = mmb + mmb_den + mmb_wfs
+Output = mmb_den + mmb_wfs
 OutputHow = plane_z + axis_x
 
 TDTimeStep = 0.01
