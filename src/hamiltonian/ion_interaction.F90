@@ -51,7 +51,7 @@ module ion_interaction_m
     ION_COMPONENT_REAL     = 1,    &
     ION_COMPONENT_SELF     = 2,    &
     ION_COMPONENT_FOURIER  = 3,    &
-    ION_NUM_COMPONENTS      = 3
+    ION_NUM_COMPONENTS     = 3
   
 contains
 
@@ -70,7 +70,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(1.1313708), this%alpha)
+    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
