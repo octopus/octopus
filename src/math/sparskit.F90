@@ -43,14 +43,16 @@ module sparskit_m
     SK_MINVAL  = SK_CG,          &
     SK_MAXVAL  = SK_DQGMRES
 
-#ifdef HAVE_SPARSKIT
-
   public ::                      &
-    sparskit_solver_t,           &
-    sparskit_solver_init,        &
-    dsparskit_solver_run,        &
-    zsparskit_solver_run,        &
-    sparskit_solver_end
+    sparskit_solver_t
+  
+#ifdef HAVE_SPARSKIT
+    public ::                      &
+      sparskit_solver_init,        &
+      dsparskit_solver_run,        &
+      zsparskit_solver_run,        &
+      sparskit_solver_end
+#endif
 
   type sparskit_solver_t
     logical :: is_complex           !< whether set up for complex (otherwise real)
@@ -72,6 +74,7 @@ module sparskit_m
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
 
+#ifdef HAVE_SPARSKIT
 
 contains
 

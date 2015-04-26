@@ -22,7 +22,8 @@
 module propagator_base_m
   use exponential_m
   use potential_interpolation_m
-
+  use sparskit_m
+  
   implicit none
 
   private
@@ -51,11 +52,9 @@ module propagator_base_m
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     integer             :: scf_propagation_steps 
     logical             :: first
-#ifdef HAVE_SPARSKIT
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
-#endif
-    FLOAT              :: scf_threshold
+    FLOAT               :: scf_threshold
   end type propagator_t
 
 end module propagator_base_m
