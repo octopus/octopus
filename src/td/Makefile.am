@@ -33,16 +33,16 @@ libtd_a_SOURCES =                         \
 	pes_flux.F90                      \
 	potential_interpolation.F90       \
 	propagator_base.F90               \
+	propagator_cn.F90                 \
 	propagator_etrs.F90               \
 	propagator_expmid.F90             \
 	propagator_magnus.F90             \
+	propagator_qoct.F90               \
 	propagator_rk.F90                 \
 	propagator.F90
 
 noinst_HEADERS =                          \
 	pes_mask_out_inc.F90              \
-	propagator_qoct_inc.F90           \
-	propagator_cn_inc.F90             \
 	td_init_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -56,11 +56,13 @@ pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90 tdpsf.o
 pes_flux.o : pes_flux.F90
 tdpsf.o: tdpsf.F90
 spectrum.o: spectrum.F90
-propagator_base.o : propagator_base.F90
+propagator_base.o : propagator_base.F90 potential_interpolation.o
+propagator_cn.o : propagator_cn.F90 propagator_base.o
 propagator_etrs.o : propagator_etrs.F90 propagator_base.o
 propagator_expmid.o : propagator_expmid.F90 propagator_base.o
 propagator_magnus.o : propagator_magnus.F90 propagator_base.o
+propagator_qoct.o : propagator_qoct.F90 propagator_base.o
 propagator_rk.o : propagator_rk.F90 propagator_base.o
-propagator.o: propagator.F90 propagator_qoct_inc.F90 propagator_rk.o propagator_cn_inc.F90 propagator_magnus.o propagator_expmid.o propagator_etrs.o potential_interpolation.o propagator_base.o
+propagator.o: propagator.F90 propagator_qoct.o propagator_rk.o propagator_cn.o propagator_magnus.o propagator_expmid.o propagator_etrs.o potential_interpolation.o propagator_base.o
 td_write.o: td_write.F90 spectrum.o td_calc.o
 td.o: td.F90 td_init_inc.F90 spectrum.o pes.o td_write.o propagator.o potential_interpolation.o

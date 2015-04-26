@@ -50,9 +50,11 @@ module propagator_m
   use potential_interpolation_m
   use profiling_m
   use propagator_base_m
+  use propagator_cn_m
   use propagator_etrs_m
   use propagator_expmid_m
   use propagator_magnus_m
+  use propagator_qoct_m
   use propagator_rk_m
   use scf_m
   use species_m
@@ -78,12 +80,6 @@ module propagator_m
     propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
     propagator_dt_bo
-
-  type(grid_t),            pointer, private :: grid_p
-  type(hamiltonian_t),     pointer, private :: hm_p
-  type(propagator_t),      pointer, private :: tr_p
-  integer,                 private :: ik_op, ist_op, dim_op
-  FLOAT,                   private :: t_op, dt_op
 
 contains
 
@@ -761,9 +757,6 @@ contains
 
     POP_SUB(propagator_dt_bo)
   end subroutine propagator_dt_bo
-
-#include "propagator_cn_inc.F90"
-#include "propagator_qoct_inc.F90"
 
 end module propagator_m
 
