@@ -40,15 +40,16 @@ module propagation_m
   use messages_m
   use mpi_m
   use opt_control_state_m
-  use target_m
+  use propagator_m
+  use propagator_base_m
   use profiling_m
   use restart_m
   use species_m
   use states_m
   use states_restart_m
   use system_m
+  use target_m
   use td_m
-  use propagator_m
   use td_write_m
   use v_ks_m
   use varinfo_m

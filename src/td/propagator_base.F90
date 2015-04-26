@@ -20,39 +20,8 @@
 #include "global.h"
 
 module propagator_base_m
-  use comm_m
-  use density_m
-  use energy_calc_m
   use exponential_m
-  use forces_m
-  use gauge_field_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use lalg_basic_m
-  use lasers_m
-  use loct_pointer_m
-  use parser_m
-  use math_m
-  use mesh_function_m
-  use messages_m
-  use multicomm_m
-  use opencl_m
-  use opt_control_state_m
-  use output_m
   use potential_interpolation_m
-  use profiling_m
-  use scf_m
-  use species_m
-  use states_dim_m
-  use solvers_m
-  use sparskit_m
-  use states_m
-  use v_ks_m
-  use varinfo_m
-  use xc_m
 
   implicit none
 

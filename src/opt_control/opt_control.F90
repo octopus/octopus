@@ -29,6 +29,7 @@ module opt_control_m
   use geometry_m
   use global_m
   use grid_m
+  use initst_m
   use output_m
   use hamiltonian_m
   use io_m
@@ -39,18 +40,18 @@ module opt_control_m
   use mesh_m
   use minimizer_m
   use opt_control_global_m
-  use opt_control_state_m
-  use propagation_m
   use opt_control_iter_m
-  use target_m
-  use initst_m
+  use opt_control_state_m
   use profiling_m
+  use propagation_m
   use propagator_m
+  use propagator_base_m
   use restart_m
   use simul_box_m
   use states_m
   use states_dim_m
   use system_m
+  use target_m
   use td_m
 
   implicit none
