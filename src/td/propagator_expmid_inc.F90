@@ -45,10 +45,10 @@ subroutine exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_f
     !FIXME: not adapted yet
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       if(hm%cmplxscl%space) then
-        call vksinterp_interpolate(tr%vksold, 3, &
+        call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
       else
-        call vksinterp_interpolate(tr%vksold, 3, &
+        call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc)
       end if
     end if
@@ -82,10 +82,10 @@ subroutine exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_f
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       if(hm%cmplxscl%space) then
-        call vksinterp_interpolate(tr%vksold, 3, &
+        call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc, hm%imvhxc)
       else
-        call vksinterp_interpolate(tr%vksold, 3, &
+        call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc)
       end if
     end if
@@ -120,7 +120,7 @@ subroutine exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_f
       ! FIXME: check this interpolation!! 
       ! probably need some rethinking 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        call vksinterp_interpolate(tr%vksold, 3, &
+        call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time+dt/M_TWO, hm%vhxc, hm%imvhxc)
       end if
       

@@ -50,6 +50,7 @@ module propagator_m
   use opencl_m
   use opt_control_state_m
   use output_m
+  use potential_interpolation_m
   use profiling_m
   use restart_m
   use scf_m
@@ -76,11 +77,7 @@ module propagator_m
     propagator_set_scf_prop,        &
     propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
-    propagator_dt_bo,               &
-    vksinterp_t,                    &
-    vksinterp_dump,                 &
-    vksinterp_load
-
+    propagator_dt_bo
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -95,17 +92,11 @@ module propagator_m
     PROP_RUNGE_KUTTA2            = 14, & 
     PROP_EXPLICIT_RUNGE_KUTTA4   = 15
 
-  type vksinterp_t
-    private
-    FLOAT, pointer      :: v_old(:, :, :) => null()
-    FLOAT, pointer      :: Imv_old(:, :, :) => null()
-  end type vksinterp_t
-
   type propagator_t
     integer             :: method           !< Which evolution method to use.
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     !> Storage of the KS potential of previous iterations.
-    type(vksinterp_t) :: vksold
+    type(potential_interpolation_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     integer             :: scf_propagation_steps 
@@ -129,8 +120,6 @@ module propagator_m
 
 contains
 
-#include "propagator_vksold_inc.F90"
-
   ! ---------------------------------------------------------
   subroutine propagator_nullify(this)
     type(propagator_t), intent(out) :: this
@@ -139,7 +128,7 @@ contains
 
     !this%method
     !call exponential_nullify(this%te)
-    call vksinterp_nullify(this%vksold)
+    call potential_interpolation_nullify(this%vksold)
     this%vmagnus=>null() 
     !this%scf_propagation_steps 
     !this%first
@@ -185,7 +174,7 @@ contains
 #endif
     end select
 
-    call vksinterp_copy(tro%vksold, tri%vksold)
+    call potential_interpolation_copy(tro%vksold, tri%vksold)
 
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
@@ -406,7 +395,7 @@ contains
       end if
     end if
 
-    call vksinterp_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin)
+    call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin)
 
     call exponential_init(tr%te) ! initialize propagator
 
@@ -493,7 +482,7 @@ contains
 
     PUSH_SUB(propagator_end)
 
-    call vksinterp_end(tr%vksold)
+    call potential_interpolation_end(tr%vksold)
 
     select case(tr%method)
     case(PROP_MAGNUS)
@@ -522,9 +511,9 @@ contains
     PUSH_SUB(propagator_run_zero_iter)
 
     if(hm%cmplxscl%space) then
-      call vksinterp_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
     else
-      call vksinterp_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc)   
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc)   
     end if
 
     POP_SUB(propagator_run_zero_iter)
@@ -585,9 +574,9 @@ contains
     end if
 
     if(cmplxscl) then
-      call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
     else
-      call vksinterp_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
     end if
 
     select case(tr%method)
@@ -623,7 +612,7 @@ contains
 
       ! First, compare the new potential to the extrapolated one.
       call v_ks_calc(ks, hm, st, geo, time = time - dt)
-      call vksinterp_diff(tr%vksold, gr, st%d%nspin, hm%vhxc, 0, d_max)
+      call potential_interpolation_diff(tr%vksold, gr, st%d%nspin, hm%vhxc, 0, d_max)
 
       if(d_max > tr%scf_threshold) then
 
@@ -637,7 +626,7 @@ contains
               call states_set_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
             end do
           end do
-          call vksinterp_set(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+          call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
           vaux(:, :) = hm%vhxc(:, :)
 
           select case(tr%method)

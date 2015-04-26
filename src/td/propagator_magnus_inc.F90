@@ -41,7 +41,7 @@ subroutine td_magnus(hm, gr, st, tr, time, dt)
   
   if(hm%theory_level /= INDEPENDENT_PARTICLES) then
     do j = 1, 2
-      call vksinterp_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
+      call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
       call hamiltonian_update(hm, gr%mesh)
     end do
   else

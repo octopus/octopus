@@ -152,9 +152,9 @@ subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
     SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
     if(hm%cmplxscl%space) SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
     if(hm%cmplxscl%space) then
-      call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
     else
-      call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
     end if
     call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
     if(hm%cmplxscl%space) call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
@@ -172,7 +172,7 @@ subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
   if(tr%method == PROP_CAETRS) then
     call v_ks_calc_finish(ks, hm)
     
-    call vksinterp_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
+    call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
     call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
       tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
     
@@ -194,7 +194,7 @@ subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
 
   end if
   
-  call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+  call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
 
   ! move the ions to time t
   if(ion_dynamics_ions_move(ions)) then

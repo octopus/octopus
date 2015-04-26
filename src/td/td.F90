@@ -50,6 +50,7 @@ module td_m
   use PES_m
   use profiling_m
   use projector_m
+  use potential_interpolation_m
   use restart_m
   use scdm_m
   use scf_m
@@ -652,7 +653,7 @@ contains
     if (err /= 0) ierr = ierr + 1
 
     cmplxscl = st%cmplxscl%space      
-    call vksinterp_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
+    call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
 
     call pes_dump(restart, td%pesv, st, err)
@@ -705,7 +706,7 @@ contains
 
     ! read potential from previous interactions
     cmplxscl = st%cmplxscl%space
-    call vksinterp_load(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
+    call potential_interpolation_load(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
 
     if (err2 /= 0) ierr = ierr + 2
 

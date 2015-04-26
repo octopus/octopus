@@ -518,7 +518,7 @@ subroutine td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
     call hamiltonian_update(hm, gr%mesh, time = time)
     if(.not.hamiltonian_oct_exchange(hm_p)) then
       if (i==1) then
-        call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
+        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
         i = i + 1
       else
         vhxc1_op = hm%vhxc

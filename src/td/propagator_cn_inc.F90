@@ -74,10 +74,10 @@ subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
   end if
 
   if(hm%cmplxscl%space) then
-    call vksinterp_interpolate(tr%vksold, 3, &
+    call potential_interpolation_interpolate(tr%vksold, 3, &
       time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
   else
-    call vksinterp_interpolate(tr%vksold, 3, &
+    call potential_interpolation_interpolate(tr%vksold, 3, &
       time, dt, time -dt/M_TWO, hm%vhxc)
   end if
   
@@ -137,7 +137,7 @@ subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
     dt_op = - dt !propagate backwards
     t_op  = time + dt/M_TWO
         
-    call vksinterp_interpolate(tr%vksold, 3,  &
+    call potential_interpolation_interpolate(tr%vksold, 3,  &
       time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
 
     call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
