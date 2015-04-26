@@ -49,6 +49,8 @@ module propagator_m
   use output_m
   use potential_interpolation_m
   use profiling_m
+  use propagator_base_m
+  use propagator_etrs_m
   use scf_m
   use species_m
   use states_dim_m
@@ -73,35 +75,6 @@ module propagator_m
     propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
     propagator_dt_bo
-
-  integer, public, parameter ::        &
-    PROP_ETRS                    = 2,  &
-    PROP_AETRS                   = 3,  &
-    PROP_EXPONENTIAL_MIDPOINT    = 4,  &
-    PROP_CRANK_NICOLSON          = 5,  &
-    PROP_CRANK_NICOLSON_SPARSKIT = 6,  &
-    PROP_MAGNUS                  = 7,  &
-    PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
-    PROP_CAETRS                  = 12, &
-    PROP_RUNGE_KUTTA4            = 13, &
-    PROP_RUNGE_KUTTA2            = 14, & 
-    PROP_EXPLICIT_RUNGE_KUTTA4   = 15
-
-  type propagator_t
-    integer             :: method           !< Which evolution method to use.
-    type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
-    !> Storage of the KS potential of previous iterations.
-    type(potential_interpolation_t) :: vksold
-    !> Auxiliary function to store the Magnus potentials.
-    FLOAT, pointer      :: vmagnus(:, :, :) => null() 
-    integer             :: scf_propagation_steps 
-    logical             :: first
-#ifdef HAVE_SPARSKIT
-    type(sparskit_solver_t), pointer :: tdsk
-    integer             :: tdsk_size
-#endif
-    FLOAT              :: scf_threshold
-  end type propagator_t
 
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
@@ -795,7 +768,6 @@ contains
 #include "propagator_magnus_inc.F90"
 #include "propagator_qoct_inc.F90"
 #include "propagator_expmid_inc.F90"
-#include "propagator_etrs_inc.F90"
 
 end module propagator_m
 
