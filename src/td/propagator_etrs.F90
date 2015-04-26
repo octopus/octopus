@@ -42,6 +42,7 @@ module propagator_etrs_m
   use propagator_base_m
   use states_dim_m
   use states_m
+  use types_m
   use v_ks_m
 
   implicit none
