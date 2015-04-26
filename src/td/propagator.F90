@@ -51,6 +51,9 @@ module propagator_m
   use profiling_m
   use propagator_base_m
   use propagator_etrs_m
+  use propagator_expmid_m
+  use propagator_magnus_m
+  use propagator_rk_m
   use scf_m
   use species_m
   use states_dim_m
@@ -79,12 +82,8 @@ module propagator_m
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
   type(propagator_t),      pointer, private :: tr_p
-  type(states_t),          pointer, private :: st_p
-  type(xc_t),              pointer, private :: xc_p
   integer,                 private :: ik_op, ist_op, dim_op
   FLOAT,                   private :: t_op, dt_op
-  FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
-  logical :: move_ions_op
 
 contains
 
@@ -764,10 +763,7 @@ contains
   end subroutine propagator_dt_bo
 
 #include "propagator_cn_inc.F90"
-#include "propagator_rk_inc.F90"
-#include "propagator_magnus_inc.F90"
 #include "propagator_qoct_inc.F90"
-#include "propagator_expmid_inc.F90"
 
 end module propagator_m
 
