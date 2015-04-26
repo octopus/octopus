@@ -28,6 +28,7 @@ module propagator_rk_m
   use global_m
   use hamiltonian_m
   use ion_dynamics_m
+  use mesh_function_m
   use messages_m
   use opt_control_state_m
   use profiling_m

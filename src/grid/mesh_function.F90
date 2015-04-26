@@ -85,6 +85,7 @@ module mesh_function_m
 
   ! These variables are to be used by the "distdot" function, that is outside the module
   ! but inside this file.
+  ! FIXME: This is very ugly, at least these values should be set by a function.
   public :: mesh_aux
   logical, public :: sp_parallel
   integer, public :: sp_np, sp_dim, sp_st1, sp_st2, sp_kp1, sp_kp2, sp_comm
