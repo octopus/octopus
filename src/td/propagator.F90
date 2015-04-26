@@ -22,13 +22,10 @@
 module propagator_m
   use batch_m
   use batch_ops_m
-  use blas_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use cmplxscl_m
   use comm_m
-  use cube_function_m
   use density_m
   use energy_calc_m
   use exponential_m
@@ -52,14 +49,12 @@ module propagator_m
   use output_m
   use potential_interpolation_m
   use profiling_m
-  use restart_m
   use scf_m
   use species_m
   use states_dim_m
   use solvers_m
   use sparskit_m
   use states_m
-  use types_m
   use v_ks_m
   use varinfo_m
   use xc_m

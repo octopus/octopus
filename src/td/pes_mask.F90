@@ -31,7 +31,6 @@ module pes_mask_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use index_m
   use io_binary_m
   use io_function_m
   use io_m
@@ -46,16 +45,13 @@ module pes_mask_m
 #endif
   use output_m
   use parser_m
-  use poisson_m
   use profiling_m
   use restart_m
   use qshep_m
   use sort_om
   use simul_box_m
-  use states_io_m
   use states_m
   use string_m
-  use system_m
   use tdpsf_m
   use unit_m
   use unit_system_m
@@ -949,7 +945,7 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     FLOAT,            intent(in)    :: R(2)
     FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-    integer :: ip, ierr, dir
+    integer :: ip, dir
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
     CMPLX,allocatable :: mask_fn(:)

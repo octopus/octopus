@@ -20,28 +20,16 @@
 #include "global.h"
 
 module pes_rc_m
-  use comm_m
-  use geometry_m
   use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_binary_m
-  use io_function_m
   use io_m
-  use math_m
   use mesh_m
   use messages_m
   use mpi_m
-  use output_m
   use parser_m
   use profiling_m
-  use simul_box_m
   use states_m
-  use string_m
   use unit_m
   use unit_system_m
-  use varinfo_m
-  use varinfo_m
 
   private
 

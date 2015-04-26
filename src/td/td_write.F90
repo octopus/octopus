@@ -22,13 +22,11 @@
 module td_write_m
   use iso_c_binding
   use excited_states_m
-  use forces_m
   use gauge_field_m
   use geometry_m
   use global_m
   use grid_m
   use output_m
-  use hamiltonian_base_m
   use hamiltonian_m
   use io_m
   use ion_dynamics_m
@@ -42,20 +40,17 @@ module td_write_m
   use mesh_m
   use messages_m
   use mpi_m
-  use mpi_debug_m
   use mpi_lib_m
   use parser_m
   use partial_charges_m
   use pert_m
   use profiling_m
   use restart_m
-  use spectrum_m
   use states_m
   use states_calc_m
   use states_dim_m
   use states_restart_m
   use td_calc_m
-  use tdfunction_m
   use types_m
   use unit_m
   use unit_system_m

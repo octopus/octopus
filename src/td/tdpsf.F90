@@ -25,7 +25,6 @@ module tdpsf_m
   use loct_math_m
   use mesh_m
   use messages_m
-  use mpi_m
   use parser_m
   use profiling_m
   use unit_m

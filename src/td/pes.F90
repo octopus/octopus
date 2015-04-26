@@ -32,7 +32,6 @@ module pes_m
   use pes_mask_m
   use pes_rc_m
   use pes_flux_m
-  use profiling_m
   use restart_m
   use simul_box_m
   use states_m

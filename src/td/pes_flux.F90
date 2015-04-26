@@ -24,17 +24,13 @@ module pes_flux_m
   use messages_m
   use mesh_m
   use profiling_m
-  use varinfo_m
   use parser_m
   use states_m
   use grid_m
   use derivatives_m
   use hamiltonian_m
   use lasers_m
-  use io_function_m
   use io_m
-  use unit_m
-  use unit_system_m
   use simul_box_m
 
   implicit none
