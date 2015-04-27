@@ -21,8 +21,10 @@
 #include "global.h"
 
 module ion_interaction_m
+  use comm_m
   use geometry_m
   use global_m
+  use distributed_m
   use loct_math_m
   use messages_m
   use mpi_m
@@ -262,7 +264,7 @@ contains
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
-    integer :: iatom, jatom, icopy
+    integer :: iatom, jatom, icopy, atom_start, atom_end
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
@@ -293,7 +295,7 @@ contains
     call profiling_in(prof_short, "EWALD_SHORT")
     
     ! the short-range part is calculated directly
-    do iatom = 1, geo%natoms
+    do iatom = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
@@ -302,7 +304,7 @@ contains
       do icopy = 1, periodic_copy_num(pc)
         xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
         
-        do jatom = 1, geo%natoms
+        do jatom = 1,  geo%natoms
           zj = species_zval(geo%atom(jatom)%species)
           rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
@@ -323,6 +325,11 @@ contains
       
       call periodic_copy_end(pc)
     end do
+
+    if(geo%atoms_dist%parallel) then
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ereal)
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, force)
+    end if
 
     if(present(force_components)) then
       force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
