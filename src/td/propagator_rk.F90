@@ -36,6 +36,7 @@ module propagator_rk_m
   use profiling_m
   use propagator_base_m
   use species_m
+  use sparskit_m
   use states_m
   use v_ks_m
   use xc_m
