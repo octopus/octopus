@@ -21,6 +21,7 @@
 
 module propagator_rk_m
   use batch_ops_m
+  use comm_m
   use density_m
   use forces_m
   use grid_m
@@ -31,6 +32,7 @@ module propagator_rk_m
   use mesh_function_m
   use messages_m
   use opt_control_state_m
+  use potential_interpolation_m
   use profiling_m
   use propagator_base_m
   use species_m
@@ -51,6 +53,8 @@ module propagator_rk_m
   type(hamiltonian_t),     pointer, private :: hm_p
   type(states_t),          pointer, private :: st_p
   type(xc_t),              pointer, private :: xc_p
+  type(propagator_t),      pointer, private :: tr_p
+  integer,                 private :: dim_op
   FLOAT,                   private :: t_op, dt_op
   FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
   logical :: move_ions_op
@@ -444,9 +448,6 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
 
-#ifndef HAVE_SPARSKIT
-    ASSERT(.false.)
-#else
     integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, idim, j, ip
     integer :: i
     FLOAT :: dres
@@ -592,8 +593,10 @@ contains
       end do
 
       t_op  = time - dt
+#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk2op, td_rk2opt, zpsi, rhs)
-
+#endif
+      
       k2 = M_z0
       j = 1
       do ik = kp1, kp2
@@ -638,8 +641,8 @@ contains
     SAFE_DEALLOCATE_A(rhs)
     SAFE_DEALLOCATE_A(vhxc1_op)
     SAFE_DEALLOCATE_A(vpsl1_op)
+
     POP_SUB(propagator_dt.td_runge_kutta2)
-#endif
   end subroutine td_runge_kutta2
 
 
@@ -654,9 +657,6 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
 
-#ifndef HAVE_SPARSKIT
-    ASSERT(.false.)
-#else
     integer :: np_part, np, idim, ip, ist, ik, j, kp1, kp2, st1, st2, nspin
     FLOAT :: dres
     CMPLX, allocatable :: inhpsi(:)
@@ -846,8 +846,10 @@ contains
       end do
 
       t_op  = time - dt
+#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk4op, td_rk4opt, zpsi, rhs)
-
+#endif
+      
       k1 = M_z0
       k2 = M_z0
       j = 1
@@ -911,8 +913,8 @@ contains
     SAFE_DEALLOCATE_A(vpsl2_op)
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
+
     POP_SUB(propagator_dt.td_runge_kutta4)
-#endif
   end subroutine td_runge_kutta4
 
   ! ---------------------------------------------------------
