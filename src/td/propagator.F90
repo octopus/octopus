@@ -46,6 +46,7 @@ module propagator_m
   use propagator_qoct_m
   use propagator_rk_m
   use scf_m
+  use sparskit_m
   use states_m
   use v_ks_m
   use varinfo_m
@@ -75,13 +76,11 @@ contains
     !this%method
     !call exponential_nullify(this%te)
     call potential_interpolation_nullify(this%vksold)
-    this%vmagnus=>null() 
+    this%vmagnus => null() 
     !this%scf_propagation_steps 
     !this%first
 
-#ifdef HAVE_SPARSKIT
     nullify(this%tdsk)
-#endif
 
     POP_SUB(propagator_nullify)
   end subroutine propagator_nullify
@@ -100,22 +99,23 @@ contains
     select case(tro%method)
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
-#ifdef HAVE_SPARSKIT
+
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
+#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
 #endif
-#ifdef HAVE_SPARSKIT
     case(PROP_RUNGE_KUTTA4)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
+#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
 #endif
-#ifdef HAVE_SPARSKIT
     case(PROP_RUNGE_KUTTA2)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
+#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
 #endif
     end select
