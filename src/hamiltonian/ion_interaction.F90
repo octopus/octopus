@@ -254,14 +254,13 @@ contains
   
   subroutine ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
     type(ion_interaction_t),   intent(in)    :: this
-    type(geometry_t),  target, intent(in)    :: geo
+    type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< sb%dim, geo%natoms
     FLOAT, optional,           intent(out)   :: energy_components(:)
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
-    type(species_t), pointer :: species
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
@@ -295,8 +294,7 @@ contains
     
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
-      species => geo%atom(iatom)%species
-      if (.not. species_represents_real_atom(species)) cycle
+      if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
