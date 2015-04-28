@@ -94,6 +94,7 @@ module messages_m
     module procedure messages_print_var_values
     module procedure messages_print_var_valuer
     module procedure messages_print_var_valuel
+    module procedure messages_print_var_valuear
   end interface messages_print_var_value
 
   interface messages_write
@@ -664,6 +665,36 @@ contains
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(lstring)//']'
 
   end subroutine messages_print_var_valuel
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_valuear(iunit, var, val, unit)
+    integer,                intent(in) :: iunit
+    character(len=*),       intent(in) :: var
+    FLOAT,                  intent(in) :: val(:)
+    type(unit_t), optional, intent(in) :: unit
+
+    integer :: ii
+    character(len=10) :: floatstring
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
+    call messages_write('Input: ['//trim(var)//' = (')
+    do ii = 1, size(val)      
+      write(floatstring,'(g10.4)') val(ii)
+      call messages_write(trim(adjustl(floatstring)))
+      if(ii < size(val)) call messages_write(', ')
+    end do
+    call messages_write(')')
+    if(present(unit)) then
+      call messages_write(' '//trim(units_abbrev(unit))//']')
+    else
+      call messages_write(']')
+    end if           
+    call messages_info()
+
+  end subroutine messages_print_var_valuear
   ! ---------------------------------------------------------
 
 
