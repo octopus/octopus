@@ -705,11 +705,20 @@ contains
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
     end do
 
-    do ia = 1, geo%natoms
+    do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(ep%proj(ia)%type == M_NONE) cycle
       ps => species_ps(geo%atom(ia)%species)
       call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
+
+    if(geo%atoms_dist%parallel) then
+      do ia = 1, geo%natoms
+        if(ep%proj(ia)%type == M_NONE) cycle
+        ps => species_ps(geo%atom(ia)%species)
+        call submesh_broadcast(ep%proj(ia)%sphere, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
+          geo%atoms_dist%node(ia), geo%atoms_dist%mpi_grp)
+      end do
+    end if
     
     do ia = 1, geo%natoms
       atm => geo%atom(ia)

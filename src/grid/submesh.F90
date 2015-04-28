@@ -42,6 +42,7 @@ module submesh_m
     submesh_t,                   &
     submesh_null,                &
     submesh_init,                &
+    submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
     dsm_integrate,               &
@@ -258,6 +259,56 @@ contains
     POP_SUB(submesh_init)
   end subroutine submesh_init
 
+  ! --------------------------------------------------------------
+
+  subroutine submesh_broadcast(this, mesh, center, radius, root, mpi_grp)
+    type(submesh_t),      intent(inout)  :: this
+    type(mesh_t), target, intent(in)     :: mesh
+    FLOAT,                intent(in)     :: center(:)
+    FLOAT,                intent(in)     :: radius
+    integer,              intent(in)     :: root
+    type(mpi_grp_t),      intent(in)     :: mpi_grp
+
+    integer :: nparray(1:2)
+
+    PUSH_SUB(submesh_broadcast)
+
+    if(root /= mpi_grp%rank) then    
+      this%mesh => mesh
+      this%center(1:mesh%sb%dim) = center(1:mesh%sb%dim)
+      this%radius = radius
+    end if
+
+    if(mpi_grp%size > 1) then
+
+      if(root == mpi_grp%rank) nparray = (/this%np, this%np_part/)
+#ifdef HAVE_MPI
+      call MPI_Bcast(nparray, 2, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
+      call MPI_Barrier(mpi_grp%comm, mpi_err)
+#endif
+      this%np = nparray(1)
+      this%np_part = nparray(2)
+
+      if(root /= mpi_grp%rank) then
+        this%has_points = (this%np > 0)
+        SAFE_ALLOCATE(this%map(1:this%np_part))
+        SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
+      end if
+
+#ifdef HAVE_MPI
+      if(this%np_part > 0) then
+        call MPI_Bcast(this%map(1), this%np_part, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
+        call MPI_Barrier(mpi_grp%comm, mpi_err)
+        call MPI_Bcast(this%x(1, 0), this%np_part*(mesh%sb%dim + 1), MPI_FLOAT, root, mpi_grp%comm, mpi_err)
+        call MPI_Barrier(mpi_grp%comm, mpi_err)
+      end if
+#endif
+
+    end if
+
+    POP_SUB(submesh_broadcast)
+  end subroutine submesh_broadcast
+   
   ! --------------------------------------------------------------
 
   subroutine submesh_end(this)
