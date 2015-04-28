@@ -605,7 +605,8 @@ contains
     CMPLX,    allocatable :: zdensity(:)
     CMPLX,    allocatable :: ztmp(:)
     type(profile_t), save :: epot_reduce
-
+    type(ps_t), pointer :: ps
+    
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
 
@@ -702,6 +703,16 @@ contains
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
+    end do
+
+    do ia = 1, geo%natoms
+      if(ep%proj(ia)%type == M_NONE) cycle
+      ps => species_ps(geo%atom(ia)%species)
+      call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
+    end do
+    
+    do ia = 1, geo%natoms
+      atm => geo%atom(ia)
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
       if(.not. projector_is(ep%proj(ia), M_NONE)) ep%non_local = .true.
     end do
