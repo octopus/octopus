@@ -753,11 +753,12 @@ contains
   !> Some fft-libraries (only NFFT for the moment) need an additional 
   !! precomputation stage that depends on the spatial grid whose size 
   !! may change after fft_init
-  subroutine fft_init_stage1(this, XX)
+  subroutine fft_init_stage1(this, XX, nn)
     type(fft_t),       intent(inout) :: this     !< FFT data type
     !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
     !! and z-axis XX(:,3) 
-    FLOAT, optional,   intent(in)    :: XX(:,:)  
+    FLOAT,   optional,   intent(in)    :: XX(:,:)  
+    integer, optional,   intent(in)    :: nn(:)  
  
     integer :: slot
 
@@ -771,7 +772,8 @@ contains
     !Do nothing 
     case (FFTLIB_NFFT)
 #ifdef HAVE_NFFT
-      call nfft_precompute(fft_array(slot)%nfft, XX(:,1),XX(:,2),XX(:,3)) 
+      call nfft_precompute(fft_array(slot)%nfft, &
+          XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
 #endif
     case (FFTLIB_PFFT)
     !Do nothing 
