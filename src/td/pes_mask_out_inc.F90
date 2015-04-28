@@ -248,14 +248,15 @@ end subroutine pes_mask_create_full_map
 !!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
   FLOAT,          intent(in)    :: pesK(:,:,:)
-  FLOAT,          intent(in)    :: Lk(:)
+  FLOAT,          intent(in)    :: Lk(:,:)
+  integer,        intent(in)    :: ll(:)
   integer,        intent(in)    :: dim
   FLOAT, pointer, intent(inout) :: cube_f(:)
   type(qshep_t),  intent(out)   :: interp
   
-  integer :: np, ii, ll(3), ix, iy, iz
+  integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
   FLOAT, allocatable ::  kx(:),ky(:),kz(:)
 
@@ -263,13 +264,7 @@ subroutine pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
 
   call messages_write("Initializing Qshep interpolator... ")
-  call messages_info()
-
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK,ii) 
-  end do
-  
+  call messages_info()  
   
   np = ll(1)*ll(2)*ll(3)  
 
@@ -293,11 +288,11 @@ subroutine pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
 
   ii=1
   do ix = 1, ll(1)
-    KK(1) = Lk(ix)
+    KK(1) = Lk(ix, 1)
     do iy = 1, ll(2)
-      KK(2) = Lk(iy)
+      KK(2) = Lk(iy, 2)
       do iz = 1, ll(3)
-        KK(3) = Lk(iz)
+        KK(3) = Lk(iz, 3)
 
         cube_f(ii) =  pesK(ix,iy,iz)
 
@@ -350,10 +345,11 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
+subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
-  FLOAT,             intent(in) :: Lk(:)
+  FLOAT,             intent(in) :: Lk(:,:)
+  integer,           intent(in) :: ll(:)  
   integer,           intent(in) :: how
   type(simul_box_t), intent(in) :: sb 
   
@@ -362,23 +358,19 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, how, sb)
   character(len=512) :: filename
   type(cube_t) :: cube
   type(cube_function_t) :: cf
-  integer :: ll(3),ii
+  integer :: ii
   FLOAT :: dk(3)  
 
   PUSH_SUB(pes_mask_output_full_mapM)
-
-  ll = 1
-  do ii = 1, 3
-    ll(ii) = size(pesK,ii) 
-  end do
 
   call cube_init(cube, ll, sb)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
 
-  dk= abs(Lk(2)-Lk(1))
-  do ii = 1, 3
+  dk(:) = M_ZERO
+  dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
+  do ii = 1, sb%dim
     dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
   end do
   
@@ -438,11 +430,11 @@ contains
     end do
 
     do ix = 1, ll(1)
-      KK(1) = Lk(ix)
+      KK(1) = Lk(ix,1)
       do iy = 1, ll(2)
-        KK(2) = Lk(iy)
+        KK(2) = Lk(iy,2)
         do iz = 1, ll(3)
-          KK(3) = Lk(iz)
+          KK(3) = Lk(iz,3)
  
             write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
                     units_from_atomic(sqrt(units_out%energy), KK(1)),&
@@ -464,9 +456,10 @@ end subroutine pes_mask_output_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrate)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, integrate)
   FLOAT,            intent(in) :: pesK(:,:,:)
-  FLOAT,            intent(in) :: Lk(:)
+  FLOAT,            intent(in) :: Lk(:,:)
+  integer,          intent(in) :: ll(:)
   character(len=*), intent(in) :: file
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: pol(3)
@@ -475,12 +468,11 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrat
 
   integer              :: ii, ix, iy, iunit
   FLOAT                :: KK(3),temp
-  integer              :: ll(3)
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
   FLOAT                :: rotation(1:dim,1:dim)
 ! integration
-  FLOAT                :: K, KKK(3), theta, phi, Dphi, Dk
+  FLOAT                :: K, KKK(3), theta, phi, Dphi, Dk(3)
   integer              :: iph, Nphi
 
 
@@ -491,20 +483,17 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrat
   
   iunit = io_open(file, action='write')
 
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK, ii) 
-  end do
 
-  ASSERT(size(pesK, 1) == size(Lk,1))
+  ASSERT(size(pesK, 1) == ll(1))
 
   SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
-  SAFE_ALLOCATE(Lk_(1:size(Lk,1), 1:3))
+  SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
 
-  Dk = abs(Lk(2)-Lk(1)) 
+  Dk(:) = M_ZERO
+  Dk(1:dim) = abs(Lk(2,1:dim)-Lk(1,1:dim))
   
   do ii = 1, 3
-    Lk_(:,ii) = Lk(:)
+    Lk_(:,ii) = Lk(:,ii)
     call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
   end do  
   
@@ -552,7 +541,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrat
       print *,rotation(3,:)
     end if
 
-    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
     do ix = 1, ll(1)
      do iy = 1, ll(2)
@@ -602,29 +591,29 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrat
          case (INTEGRATE_KX)
            temp = M_ZERO
            do ii =1, ll(1)
-              KKK(:) = KK(:) + (/Lk(ii), M_ZERO, M_ZERO/)
+              KKK(:) = KK(:) + (/Lk(ii,1), M_ZERO, M_ZERO/)
               temp = temp + &
                             abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
            end do
-           temp = temp * Dk  
+           temp = temp * Dk(1)  
          
          case (INTEGRATE_KY)
            temp = M_ZERO
            do ii =1, ll(2)
-              KKK(:) = KK(:) + (/M_ZERO, Lk(ii), M_ZERO/)
+              KKK(:) = KK(:) + (/M_ZERO, Lk(ii,2), M_ZERO/)
               temp = temp + &
                             abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
            end do
-           temp = temp * Dk  
+           temp = temp * Dk(2)  
          
          case (INTEGRATE_KZ)
            temp = M_ZERO
            do ii =1, ll(3)
-              KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii)/)
+              KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii,3)/)
               temp = temp + &
                             abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
            end do
-           temp = temp * Dk  
+           temp = temp * Dk(3)  
 
        end select
    
@@ -649,10 +638,11 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, dim, pol, dir, integrat
 end subroutine pes_mask_output_full_mapM_cut
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
+subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:)
+  FLOAT,            intent(in) :: Lk(:,:)
+  integer,          intent(in) :: ll(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: Emax
   FLOAT,            intent(in) :: Estep
@@ -704,7 +694,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, dim, dir, Emax, Estep)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -767,10 +757,11 @@ end subroutine pes_mask_output_ar_polar_M
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
+subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:)
+  FLOAT,            intent(in) :: Lk(:,:)
+  integer,          intent(in) :: ll(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: Emax
   FLOAT,            intent(in) :: Estep
@@ -823,7 +814,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -896,10 +887,11 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, dim, dir, Emax, Estep)
 end subroutine pes_mask_output_ar_plane_M
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Emax, Estep)
+subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, ll, dim, dir, Emin, Emax, Estep)
   FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:)
+  FLOAT,            intent(in) :: Lk(:,:)
+  integer,          intent(in) :: ll(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: Emin
   FLOAT,            intent(in) :: Emax
@@ -952,7 +944,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, dim, dir, Emin, Em
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1165,10 +1157,11 @@ end subroutine pes_mask_write_2D_map
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_power_totalM(pesK, file, Lk, dim, Emax, Estep, interpolate)
+subroutine pes_mask_output_power_totalM(pesK, file, Lk, ll, dim, Emax, Estep, interpolate)
   FLOAT,            intent(in) :: pesK(:,:,:)
   character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:)
+  FLOAT,            intent(in) :: Lk(:,:)
+  integer,          intent(in) :: ll(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: Emax
   FLOAT,            intent(in) :: Estep
@@ -1187,14 +1180,9 @@ subroutine pes_mask_output_power_totalM(pesK, file, Lk, dim, Emax, Estep, interp
 
   FLOAT :: Dtheta, Dphi, theta, phi,EE
   integer :: Ntheta, Nphi, ith, iph
-  integer :: ll(3)
 
   PUSH_SUB(pes_mask_output_power_totalM)
 
-  ll = 1
-  do ii = 1, dim
-    ll(ii) = size(pesK,ii) 
-  end do
 
   step= Estep
   nn  = int(Emax/step)
@@ -1216,11 +1204,11 @@ subroutine pes_mask_output_power_totalM(pesK, file, Lk, dim, Emax, Estep, interp
   if ( (.not. interpolate) .or.  (dim  ==  1) ) then 
 
     do ix = 1,ll(1)
-      KK(1) = Lk(ix)
+      KK(1) = Lk(ix, 1)
       do iy = 1, ll(2)
-        KK(2) = Lk(iy)
+        KK(2) = Lk(iy, 2)
         do iz = 1, ll(3)
-          KK(3) = Lk(iz)
+          KK(3) = Lk(iz, 3)
 
           if(KK(1) /= 0 .or. KK(2) /= 0 .or. KK(3) /= 0) then
             ! the power spectrum
@@ -1253,7 +1241,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, Lk, dim, Emax, Estep, interp
     ! Interpolate the output
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1352,42 +1340,40 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
   Dphi = M_PI/Nphi
 
   SAFE_ALLOCATE(pes(1:nn))
-  pes = M_ZERO
+  pes(:) = M_ZERO
 
   SAFE_ALLOCATE(npoints(1:nn))
-  npoints = M_ZERO
+  npoints(:) = M_ZERO
 
   !in 1D we do not interpolate 
   if ((.not. mask%interpolate_out) .or. (mask%mesh%sb%dim  ==  1) ) then 
 
     do ix = 1, mask%ll(1)
-      KK(1) = mask%Lk(ix)
+      KK(1) = mask%Lk(ix, 1)
       do iy = 1, mask%ll(2)
-        KK(2) = mask%Lk(iy)
+        KK(2) = mask%Lk(iy, 2)
         do iz = 1, mask%ll(3)
-          KK(3) = mask%Lk(iz)
+          KK(3) = mask%Lk(iz, 3)
           
-          if(KK(1) /= 0 .or. KK(2) /= 0 .or. KK(3) /= 0) then
-            ! the power spectrum
-            vec = sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO
-            ii = int(vec / step) + 1
-            
-            if(ii <= nn) then
-              do ik = 1,st%d%nik
-                do ist = 1, st%nst
-                  if(present(wfAk))then
-                    pes(ii) = pes(ii) + st%occ(ist, ik) * &
-                      sum(abs(mask%k(ix, iy, iz, :, ist, ik) + wfAk(ix,iy,iz,:, ist, ik)  )**2)
-                  else 
-                    pes(ii) = pes(ii) + st%occ(ist, ik) * sum(abs(mask%k(ix, iy, iz, :, ist, ik)  )**2)
-                  end if
-                end do
+          ! the power spectrum
+          vec = sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO
+          ii = int(vec / step) + 1
+          
+          if(ii <= nn) then
+            do ik = 1,st%d%nik
+              do ist = 1, st%nst
+                if(present(wfAk))then
+                  pes(ii) = pes(ii) + st%occ(ist, ik) * &
+                    sum(abs(mask%k(ix, iy, iz, :, ist, ik) + wfAk(ix,iy,iz,:, ist, ik)  )**2)
+                else 
+                  pes(ii) = pes(ii) + st%occ(ist, ik) * sum(abs(mask%k(ix, iy, iz, :, ist, ik)  )**2)
+                end if
               end do
-              npoints(ii) = npoints(ii) + M_ONE
-            end if
-            !Multiply for the correct Jacobian factor
-!            pes(ii) = pes(ii)*sqrt(2*vec)**(mask%mesh%sb%dim - 2) 
+            end do
+            npoints(ii) = npoints(ii) + M_ONE
           end if
+          !Multiply for the correct Jacobian factor
+!            pes(ii) = pes(ii)*sqrt(2*vec)**(mask%mesh%sb%dim - 2) 
           
         end do
       end do
@@ -1411,11 +1397,11 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
         
         ii=1
         do ix = 1, mask%ll(1)
-          KK(1) = mask%Lk(ix)
+          KK(1) = mask%Lk(ix, 1)
           do iy = 1, mask%ll(2)
-            KK(2) = mask%Lk(iy)
+            KK(2) = mask%Lk(iy, 2)
             do iz = 1, mask%ll(3)
-              KK(3) = mask%Lk(iz)
+              KK(3) = mask%Lk(iz, 3)
               
               do ik = 1,st%d%nik
                 do ist = 1, st%nst
@@ -1474,11 +1460,11 @@ subroutine pes_mask_output_power_total(mask, st, file, wfAk)
         
         ii=1
         do ix = 1, mask%ll(1)
-          KK(1) = mask%Lk(ix)
+          KK(1) = mask%Lk(ix, 1)
           do iy = 1, mask%ll(2)
-            KK(2) = mask%Lk(iy)
+            KK(2) = mask%Lk(iy, 2)
             do iz = 1, mask%ll(3)
-              KK(3) = mask%Lk(iz)
+              KK(3) = mask%Lk(iz, 3)
               
               do ik = 1,st%d%nik
                 do ist = 1, st%nst
@@ -1689,12 +1675,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
     ! Output the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
     pol = (/M_ZERO, M_ZERO, M_ONE/)
-    call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, &
+    call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%ll, mask%mesh%sb%dim, pol = pol, &
                                      dir = 3, integrate = INTEGRATE_NONE )
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
-    call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%mesh%sb%dim, mask%energyMax, mask%energyStep, mask%interpolate_out)
+    call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+                                      mask%energyMax, mask%energyStep, mask%interpolate_out)
 
   end if
 
@@ -1715,14 +1702,13 @@ subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   integer,          intent(out) :: dim  
   FLOAT,            intent(out) :: Emax
   FLOAT,            intent(out) :: Estep
-  integer,          intent(out) :: ll
-  FLOAT, pointer,   intent(out) :: Lk(:)
+  integer,          intent(out) :: ll(:)
+  FLOAT, pointer,   intent(out) :: Lk(:,:)
   FLOAT, pointer,   intent(out) :: RR(:)
 
 
   character(len=256) :: filename, dummy
-
-  integer :: iunit,ii
+  integer :: iunit, ii, idim, ierr
 
 
   PUSH_SUB(pes_mask_read_info)
@@ -1741,14 +1727,24 @@ subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   read(iunit, *) dummy, Estep
   read(iunit, *) 
 
-  read(iunit, *) dummy, ll
+  read(iunit, '(4x,i18)',  advance='no', iostat = ierr) ll(1)
+  idim=2
+  do while( (ierr == 0) .and. (idim <= dim) )
+    read(iunit, '(2x,i18)',  advance='no', iostat = ierr) ll(idim)
+    idim=idim+1
+  end do
+  read(iunit, *) 
    
-  SAFE_ALLOCATE(lk(1:ll))
+  SAFE_ALLOCATE(Lk(1:maxval(ll(:)), 1:3))
+  Lk = M_ZERO
 
-  do ii=1, ll
-    read(iunit, '(es19.12)') Lk(ii)
+  do ii=1, maxval(ll(:))
+    do idim = 1, dim
+      read(iunit, '(2x,es19.12)', advance='no') Lk(ii, idim)
+    end do
+    read(iunit, *)
   end do 
-
+  
 
   call io_close(iunit)       
 
@@ -1765,7 +1761,7 @@ subroutine pes_mask_write_info(mask, dir)
 
   character(len=256) :: filename
 
-  integer :: iunit,ii
+  integer :: iunit,ii,idim
 
   PUSH_SUB(pes_mask_write_info)
 
@@ -1780,9 +1776,17 @@ subroutine pes_mask_write_info(mask, dir)
   write(iunit, '(a10,2x,es19.12)') 'Estep', mask%energyStep
   write(iunit, '(a)') '-------'
 
-  write(iunit, '(a,2x,i18)') 'nK', mask%ll(1)
-  do ii=1, mask%ll(1)
-    write(iunit, '(es19.12)')  mask%Lk(ii)
+  write(iunit, '(a)', advance='no') 'nK'
+  do idim = 1, mask%mesh%sb%dim
+    write(iunit, '(2x,i18)', advance='no') mask%ll(idim)
+  end do 
+  write(iunit, '(1x)')
+     
+  do ii=1, maxval(mask%ll(:))
+    do idim = 1, mask%mesh%sb%dim
+      write(iunit, '(2x,es19.12)', advance='no')  mask%Lk(ii, idim)
+    end do
+    write(iunit, '(1x)')
   end do 
 
 

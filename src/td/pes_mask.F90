@@ -34,22 +34,24 @@ module pes_mask_m
   use io_binary_m
   use io_function_m
   use io_m
+  use kpoints_m
   use lasers_m
   use math_m
-  use mesh_m
   use mesh_cube_parallel_map_m
+  use mesh_m
   use messages_m
   use mpi_m
 #if defined(HAVE_NETCDF)
   use netcdf
-#endif
+#endif  
   use output_m
   use parser_m
   use profiling_m
-  use restart_m
   use qshep_m
-  use sort_om
+  use restart_m
   use simul_box_m
+  use sort_om
+  use states_dim_m
   use states_m
   use string_m
   use tdpsf_m
@@ -85,11 +87,12 @@ module pes_mask_m
   
   type pes_mask_t
     CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
-    
+                                               !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
+                                               
     ! mesh- and cube-related stuff      
     integer          :: np                     !< number of mesh points associated with the mesh
     !< (either mesh%np or mesh%np_global)
-    integer          :: ll(3)                  !< the size of the square mesh
+    integer          :: ll(3)                  !< the size of the parallelepipedic mesh
     integer          :: fs_n_global(1:3)       !< the dimensions of the cube in fourier space
     integer          :: fs_n(1:3)              !< the dimensions of the local portion of the cube in fourier space
     integer          :: fs_istart(1:3)         !< where does the local portion of the cube start in fourier space
@@ -108,10 +111,9 @@ module pes_mask_m
     FLOAT, pointer :: ufn(:) => NULL()         !< user-defined mask function
     logical        :: user_def
     
-    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
-    !< we implicitly assume k to be the same for all directions
+    FLOAT, pointer :: Lk(:,:) => NULL()        !< associate a k value to an cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
     
-    FLOAT            :: enlarge                !< Fourier space enlargement
+    FLOAT            :: enlarge(3)             !< Fourier space enlargement
     FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
     
     FLOAT :: start_time              !< the time we switch on the photoelectron detector   
@@ -194,7 +196,7 @@ contains
     
     integer :: il, it, ll(3)
     FLOAT :: field(3)
-    FLOAT :: DeltaE, MaxE, pCutOff
+    FLOAT :: DeltaE, MaxE, pCutOff, tmp
     FLOAT :: width 
     integer :: defaultMask,k1,k2,st1,st2
     integer :: cols_pesmask_block, idim, ip
@@ -206,6 +208,10 @@ contains
     PUSH_SUB(pes_mask_init)
         
     mask%mesh => mesh  
+    
+    if(mesh%sb%periodic_dim > 0) &
+      call messages_experimental("PES_mask with periodic dimensions")
+    
     
     write(message(1),'(a,i1,a)') 'Info: Calculating PES using mask technique.'
     call messages_info(1)
@@ -373,12 +379,22 @@ contains
     !% This helps to avoid wavefunction wrapping at the boundaries.
     !%End
 
-    call parse_variable('PESMaskEnlargeFactor', M_ONE, mask%enlarge)
+    mask%enlarge = M_ONE
+    call parse_variable('PESMaskEnlargeFactor', M_ONE, mask%enlarge(1))
     
-    if ( mask%enlarge /= M_ONE ) then
-      call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge)
+    if ( mask%enlarge(1) /= M_ONE ) then
+
+      mask%enlarge(sb%periodic_dim+1:sb%dim) = mask%enlarge(1)
+      mask%enlarge(1:sb%periodic_dim) = M_ONE
+      
+      if(sb%periodic_dim > 0) then
+        call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge(1:sb%dim))
+      else
+        call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge(1))
+      end if
+      
     end if
-    if( mask%enlarge < M_ONE ) then
+    if( mask%enlarge(1) < M_ONE ) then
       message(1) = "PESMaskEnlargeFactor must be bigger than one."
       call messages_fatal(1) 
     end if
@@ -401,12 +417,35 @@ contains
     !% Note: needs <tt> PESMaskPlaneWaveProjection = nfft_map or pnfft_map </tt>.
     !%End
     
+    mask%enlarge_2p = M_ONE
     call parse_variable('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
+
     
     if ( mask%enlarge_2p(1) /= M_ONE ) then
-      call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
-!HH FIXME this has to be more general
-mask%enlarge_2p(:) = mask%enlarge_2p(1)
+
+      mask%enlarge_2p(sb%periodic_dim+1:sb%dim) = mask%enlarge_2p(1)
+      mask%enlarge_2p(1:sb%periodic_dim) = M_ONE
+
+      if(sb%periodic_dim > 0) then
+        call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1:sb%dim))
+      else
+        call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
+      end if
+
+                  
+!       call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
+!       if(sb%periodic_dim > 0) then
+!         call messages_write("Info: Enlarge non-periodic dimensions only:")
+!         call messages_new_line()
+!         call messages_write("      Enlarge = ( ")
+!         do idim = 1, sb%dim
+!           call messages_write(mask%enlarge_2p(idim))
+!           if(idim < sb%dim) call messages_write(", ")
+!         end do
+!         call messages_write(" )")
+!         call messages_info()
+!       end if
+        
       if (mask%pw_map_how /=  PW_MAP_NFFT .and. mask%pw_map_how /=  PW_MAP_PNFFT) then
         message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
         message(2) = "or pnfft_map in order to run properly." 
@@ -433,12 +472,13 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
       mask%ll(1:3) = mesh%idx%ll(1:3)    
     end if
     
-    !Enlarge the bounding box region
-    mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge)
+    !Enlarge the cube region
+    mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge(1:sb%dim))
     
     select case(mask%pw_map_how)
     case(PW_MAP_FFT)
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll)
+      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll, &
+                      spacing = mesh%spacing )
       mask%ll = ll !FFT optimization may change these values
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global 
@@ -446,7 +486,7 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     case(PW_MAP_PFFT)
       ASSERT(mask%mesh%parallel_in_domains)
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll, &
-        mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
+                     mpi_grp = mask%mesh%mpi_grp, need_partition=.true., spacing = mesh%spacing)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
       
@@ -467,7 +507,8 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
       end if
       
     case(PW_MAP_BARE_FFT)
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll)
+      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll, &
+                     spacing = mesh%spacing )
       mask%ll = ll 
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global 
@@ -544,7 +585,8 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     call cube_function_null(mask%cM)    
     call zcube_function_alloc_RS(mask%cube, mask%cM, force_alloc = .true.)
     
-    SAFE_ALLOCATE(mask%Lk(1:mask%fs_n_global(1)))
+    SAFE_ALLOCATE(mask%Lk(1:maxval(mask%fs_n_global(:)),1:3))
+    mask%Lk(:,:) = M_ZERO
     
     st1 = st%st_start
     st2 = st%st_end
@@ -734,7 +776,11 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     !%Description
     !% The maximum energy for the PES spectrum.
     !%End
-    MaxE = maxval(mask%Lk)**2/2
+    MaxE = M_EPSILON
+    do idim = 1, mesh%sb%dim
+      tmp = maxval(mask%Lk(1:mask%ll(idim),1:mesh%sb%dim))**M_TWO/M_TWO
+      if (tmp > MaxE) MaxE = tmp
+    end do
     call parse_variable('PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax, unit = units_out%energy)
 
@@ -744,7 +790,7 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     !%Description
     !% The PES spectrum energy step.
     !%End
-    DeltaE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
+    DeltaE = minval(mask%Lk(2,1:mesh%sb%dim)-mask%Lk(1,1:mesh%sb%dim))**M_TWO/M_TWO
     call parse_variable('PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     
@@ -850,25 +896,32 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
   subroutine pes_mask_generate_Lk(mask)
     type(pes_mask_t), intent(inout) :: mask
 
-    integer :: ii,nn
+    integer :: ii,nn(3),dim
     FLOAT   :: temp
 
     PUSH_SUB(pes_mask_generate_Lk)
-
-    temp = M_TWO * M_PI / (mask%fs_n_global(1) * mask%spacing(1))
-    nn = mask%fs_n_global(1)
-
-    do ii = 1, mask%fs_n_global(1)
-
-      if (mask%pw_map_how  ==   PW_MAP_NFFT) then
-        !The Fourier space is shrunk by the factor mask%enlarge_2p
-!HH FIXME this factor is wrong for non-cubic enlargement
-        mask%Lk(ii) = (ii - nn/2 - 1)*temp/(mask%enlarge_2p(1))
-      else
-        mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
-      end if
-
-    end do
+    
+    mask%Lk(:,1:mask%mesh%sb%dim)= mask%cube%Lfs(:,1:mask%mesh%sb%dim)
+!     do ii=1, maxval(mask%ll(:))
+!        print *,ii, mask%Lk(ii,1), mask%Lk(ii,2)
+!     end do
+    
+!     dim = mesh%sb%dim
+!     temp = M_TWO * M_PI / (mask%fs_n_global(1) * mask%spacing(1))
+!     nn(1:dim) = mask%fs_n_global(1:dim)
+!
+!     do ii = 1, mask%fs_n_global(1)
+!
+!       if (mask%pw_map_how  ==   PW_MAP_NFFT) then
+!         !The Fourier space is shrunk by the factor mask%enlarge_2p
+! !HH FIXME this factor is wrong for non-cubic enlargement
+!         mask%Lk(ii,1:mesh%sb%dim) = (ii - nn/2 - 1)* &
+!                                   temp/(mask%enlarge_2p(1:mesh%sb%dim))
+!       else
+!         mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
+!       end if
+!
+!     end do
 
     POP_SUB(pes_mask_generate_Lk)
   end subroutine pes_mask_generate_Lk
@@ -888,16 +941,16 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
     
     mask%Mk = M_ZERO
 
-    Emax = maxval(mask%Lk)**2 / M_TWO
+    Emax = maxval(mask%Lk(:,:))**2 / M_TWO
 
     power = 8 
 
     do kx = 1, mask%ll(1)
-      KK(1) = mask%Lk(kx) 
+      KK(1) = mask%Lk(kx,1) 
       do ky = 1, mask%ll(2)
-        KK(2) = mask%Lk(ky)
+        KK(2) = mask%Lk(ky,2)
         do kz = 1, mask%ll(3)
-          KK(3) = mask%Lk(kz)
+          KK(3) = mask%Lk(kz,3)
           
           EE = sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO
 
@@ -1112,32 +1165,53 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
   !!\f]
   !! \note velocity gauge is implied 
   ! ---------------------------------------------------------
-  subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
+  subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf, ikpoint)
     type(pes_mask_t), intent(in)    :: mask
     type(mesh_t),     intent(in)    :: mesh
     FLOAT,            intent(in)    :: dt
     integer,          intent(in)    :: iter
     CMPLX,            intent(inout) :: wf(:,:,:)
+    integer,          intent(in)    :: ikpoint
     
     integer ::  ix, iy, iz
     FLOAT :: vec
-    FLOAT :: KK(1:3)
+    FLOAT :: KK(1:3), kpoint(1:3)
 
     PUSH_SUB(pes_mask_Volkov_time_evolution_wf)
-
     ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)      
+
+
+    kpoint = M_ZERO
+    if(mesh%sb%periodic_dim > 0) then
+      kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, ikpoint)
+    end if
+  
     do ix = 1, mask%ll(1)
-      KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
+      KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1, 1)
       do iy = 1, mask%ll(2)
-        KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
+        KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1, 2)
         do iz = 1, mask%ll(3)
-          KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
-          vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+          KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1, 3)
+          vec = sum(( KK(1:mesh%sb%dim) &
+                + kpoint(1:mesh%sb%dim) &
+                - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
           wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
         end do
       end do
     end do
-      
+
+!     do ix = 1, mask%ll(1)
+!       KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
+!       do iy = 1, mask%ll(2)
+!         KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
+!         do iz = 1, mask%ll(3)
+!           KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
+!           vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+!           wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
+!         end do
+!       end do
+!     end do
+    
     POP_SUB(pes_mask_Volkov_time_evolution_wf)
   end subroutine pes_mask_Volkov_time_evolution_wf
 
@@ -1689,8 +1763,9 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
               
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
-              call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs)     ! cf1 = \tilde{\Psi}_B(k,t2)
-              
+              call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
+                                                     states_dim_get_kpoint_index(st%d, ik))
+                                                     
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                 + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)
               
@@ -1727,31 +1802,31 @@ mask%enlarge_2p(:) = mask%enlarge_2p(1)
               ! Phase Space Filter
               !----------------------------------------
               
-            case(PES_MASK_MODE_PSF)
-              
-              call tdpsf_X_to_K(mask%psf,cf1%zRs,cf3%Fs)
-              call tdpsf_K_to_X(mask%psf,cf3%Fs,cf2%zRs)
-              
-              cf2%zRs = cf1%zRs - cf2%zRs
-              
-              if(mask%back_action) then
-                cf1%Fs = mask%k(:,:,:, idim, ist, ik) - cf4%Fs
-                call pes_mask_K_to_X(mask,mesh,cf1%Fs, mask%k(:,:,:, idim, ist, ik))
-                cf2%Fs = cf2%Fs + mask%k(:,:,:, idim, ist, ik)
-              end if
-              
-              !substitute the KS wf with the filtered one
-              call pes_mask_cube_to_mesh(mask, cf2, psi)
-              call states_set_state(st, mask%mesh, idim, ist, ik, psi)
-              
-              !the out-going part of the wf
-              cf4%zRs = cf1%zRs - cf2%zRs
-              call pes_mask_X_to_K(mask,mesh,cf4%zRs,cf3%Fs) 
-              
-              call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
-              cf4%Fs = mask%k(:,:,:, idim, ist, ik)            
-              
-              mask%k(:,:,:, idim, ist, ik) =  cf4%Fs + cf3%Fs
+!             case(PES_MASK_MODE_PSF)
+!
+!               call tdpsf_X_to_K(mask%psf,cf1%zRs,cf3%Fs)
+!               call tdpsf_K_to_X(mask%psf,cf3%Fs,cf2%zRs)
+!
+!               cf2%zRs = cf1%zRs - cf2%zRs
+!
+!               if(mask%back_action) then
+!                 cf1%Fs = mask%k(:,:,:, idim, ist, ik) - cf4%Fs
+!                 call pes_mask_K_to_X(mask,mesh,cf1%Fs, mask%k(:,:,:, idim, ist, ik))
+!                 cf2%Fs = cf2%Fs + mask%k(:,:,:, idim, ist, ik)
+!               end if
+!
+!               !substitute the KS wf with the filtered one
+!               call pes_mask_cube_to_mesh(mask, cf2, psi)
+!               call states_set_state(st, mask%mesh, idim, ist, ik, psi)
+!
+!               !the out-going part of the wf
+!               cf4%zRs = cf1%zRs - cf2%zRs
+!               call pes_mask_X_to_K(mask,mesh,cf4%zRs,cf3%Fs)
+!
+!               call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
+!               cf4%Fs = mask%k(:,:,:, idim, ist, ik)
+!
+!               mask%k(:,:,:, idim, ist, ik) =  cf4%Fs + cf3%Fs
               
               
             case default

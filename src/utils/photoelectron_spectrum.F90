@@ -47,7 +47,7 @@ program photoelectron_spectrum
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2), pvec(3)
   FLOAT                :: center(3)
-  FLOAT, pointer       :: lk(:),RR(:)
+  FLOAT, pointer       :: Lk(:,:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpol
   
@@ -58,7 +58,7 @@ program photoelectron_spectrum
   character(len=512) :: filename
 
   !Initial values
-  ll = 1 
+  ll(:) = 1 
   mode = 1
   interpol = .true. 
 
@@ -100,14 +100,14 @@ program photoelectron_spectrum
                                      uPhspan, pol, center, pvec, integrate)
   if(interp  ==  0) interpol = .false.
 
-  call pes_mask_read_info("td.general/", dim, Emax, Estep, ll(1), Lk,RR)
+  call pes_mask_read_info("td.general/", dim, Emax, Estep, ll(:), Lk,RR)
 
   write(message(1), '(a)') 'Read PES info file.'
   call messages_info(1)
 
-  do ii=2, dim
-    ll(ii) = ll(1)
-  end do    
+!   do ii=2, dim
+!     ll(ii) = ll(1)
+!   end do
   
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
 
@@ -141,13 +141,13 @@ program photoelectron_spectrum
   case(1) ! Energy-resolved
     write(message(1), '(a)') 'Compute energy-resolved PES'
     call messages_info(1)
-    call pes_mask_output_power_totalM(pesk,'./PES_power.sum', Lk, dim, Emax, Estep, interpol)
+    call pes_mask_output_power_totalM(pesk,'./PES_power.sum', Lk, ll, dim, Emax, Estep, interpol)
  
  
   case(2) ! Angle and energy resolved
     write(message(1), '(a)') 'Compute angle- and energy-resolved PES'
     call messages_info(1)
-    call pes_mask_output_ar_polar_M(pesk,'./PES_angle_energy.map', Lk, dim, pol, Emax, Estep)
+    call pes_mask_output_ar_polar_M(pesk,'./PES_angle_energy.map', Lk, ll, dim, pol, Emax, Estep)
 
 
   case(3) ! On a plane
@@ -174,7 +174,7 @@ program photoelectron_spectrum
       filename = "PES_velocity.map.i_"//trim(index2var(integrate))//"."//index2axis(dir)//"=0"
     end if
     
-    call pes_mask_output_full_mapM_cut(pesk, filename, Lk, dim, pol, dir, integrate)    
+    call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate)    
 
   case(4) ! Angle energy resolved on plane 
     write(message(1), '(a)') 'Compute angle and energy-resolved PES'
@@ -185,7 +185,7 @@ program photoelectron_spectrum
       Estep = Emax/size(Lk,1)
     end if
 
-    call pes_mask_output_ar_plane_M(pesk,'./PES_energy.map', Lk, dim, pol, Emax, Estep)
+    call pes_mask_output_ar_plane_M(pesk,'./PES_energy.map', Lk, ll, dim, pol, Emax, Estep)
 
   case(5) ! Angular-resolved  
 
@@ -201,7 +201,7 @@ program photoelectron_spectrum
      Estep = Emax/size(Lk,1)
     end if
  
-    call pes_mask_output_ar_spherical_cut_M(pesk,'./PES_sphere.map', Lk, dim, pol, Emin, Emax, Estep)       
+    call pes_mask_output_ar_spherical_cut_M(pesk,'./PES_sphere.map', Lk, ll, dim, pol, Emin, Emax, Estep)       
 
   case(6) ! Full momentum resolved matrix 
  
@@ -214,7 +214,7 @@ program photoelectron_spectrum
     write(message(1), '(a)') 'Compute full momentum-resolved PES'
     call messages_info(1)
 
-    call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk, how, sb)        
+    call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk, ll, how, sb)        
 
     call simul_box_end(sb)
     call geometry_end(geo)
