@@ -112,14 +112,19 @@ contains
     integer :: effdim_fft
     logical :: optimize(3)
     type(mpi_grp_t) :: mpi_grp_
+    FLOAT   :: tp_enlarge_(3)
 
     PUSH_SUB(cube_init)
 
     ASSERT(all(nn(1:3) > 0))
 
     fft_type_ = optional_default(fft_type, FFT_NONE)
+    tp_enlarge_(:) = (/M_ONE, M_ONE, M_ONE/)    
+    if(present(tp_enlarge)) tp_enlarge_(:)=tp_enlarge(:)
 
-    ASSERT(present(tp_enlarge) .eqv. present(spacing))
+    if (present(tp_enlarge)) then
+      ASSERT(present(spacing))
+    end if
 
     effdim_fft = min (3, sb%dim)
 
@@ -220,10 +225,11 @@ contains
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
 
-      if(present(tp_enlarge)) call cube_init_coords(cube, tp_enlarge, spacing, fft_library_)
+      if(present(tp_enlarge) .or. present(spacing)) call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
+!       call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
 
       if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then 
-        call fft_init_stage1(cube%fft,cube%Lrs)
+        call fft_init_stage1(cube%fft, cube%Lrs, cube%rs_n_global)
         !set local dimensions after stage1 - needed for PNFFT 
         call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
              cube%rs_istart, cube%fs_istart)
@@ -311,9 +317,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine cube_init_coords(cube, enlarge, spacing, fft_library)
+  subroutine cube_init_coords(cube, tp_enlarge, spacing, fft_library)
     type(cube_t), intent(inout) :: cube
-    FLOAT,        intent(in) :: enlarge(3)
+    FLOAT,        intent(in) :: tp_enlarge(3)
     FLOAT,        intent(in) :: spacing(3)
     integer,      intent(in) :: fft_library
     
@@ -324,18 +330,19 @@ contains
 
 
     nn(1:3) = cube%fs_n_global(1:3) 
- 
+
     maxn = maxval(nn) 
     SAFE_ALLOCATE(cube%Lrs(1:maxn, 1:3))
+    cube%Lrs(:,:) = M_ZERO
     
     !! Real space coordinates 
     do idim=1,3 
-      if (enlarge(idim) > M_ONE ) then
+      if (tp_enlarge(idim) > M_ONE ) then
         do ii = 2, nn(idim) - 1 
           cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
         end do
-        cube%Lrs(1,        idim) = (-int(nn(idim)/2)) * spacing(idim) * enlarge(idim)
-        cube%Lrs(nn(idim), idim) = (int(nn(idim)/2))  * spacing(idim) * enlarge(idim)
+        cube%Lrs(1,        idim) = (-int(nn(idim)/2)) * spacing(idim) * tp_enlarge(idim)
+        cube%Lrs(nn(idim), idim) = (int(nn(idim)/2))  * spacing(idim) * tp_enlarge(idim)
       else
         do ii = 1, nn(idim) 
           cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
@@ -348,17 +355,18 @@ contains
     if(fft_library /= FFTLIB_NONE) then
 
       SAFE_ALLOCATE(cube%Lfs(1:maxn, 1:3))
+      cube%Lfs(:,:) = M_ZERO
 
       do idim=1,3
         temp = M_TWO * M_PI / (nn(idim) * spacing(idim))
 !temp = M_PI / (nn * spacing(1))
         do ii = 1, nn(idim)
           if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
-            !The Fourier space is shrunk by the enlarge factor
-            !cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/enlarge
+            !The Fourier space is shrunk by the tp_enlarge factor
+            !cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/tp_enlarge
 !HH NOTE:
 !not sure this is the right general factor
-            cube%Lfs(ii, idim) = (ii - nn(idim)/2 - 1)*temp/enlarge(idim)
+            cube%Lfs(ii, idim) = (ii - nn(idim)/2 - 1)*temp/tp_enlarge(idim)
           else
             cube%Lfs(ii, idim) = pad_feq(ii,nn(idim), .true.) * temp
           end if
