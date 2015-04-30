@@ -20,7 +20,6 @@
 #include "global.h"
 
 module output_m
-  use base_density_m
   use basins_m
   use batch_m
   use cube_function_m

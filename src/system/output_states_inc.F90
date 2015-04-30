@@ -30,8 +30,8 @@ subroutine output_states(st, gr, geo, dir, outp)
   type(unit_t) :: fn_unit
   type(ssys_density_iterator_t)        :: iter
   type(ssys_density_t),        pointer :: subsys_density
-  type(base_density_t),        pointer :: base_density
-  character(len=BASE_DENSITY_NAME_LEN) :: name
+  type(ssys_density_t),        pointer :: base_density
+  character(len=SSYS_DENSITY_NAME_LEN) :: name
   FLOAT,  dimension(:,:),      pointer :: pdensity
   FLOAT, allocatable :: dtmp(:), elf(:,:)
   CMPLX, allocatable :: ztmp(:)
@@ -67,9 +67,9 @@ subroutine output_states(st, gr, geo, dir, outp)
         call ssys_density_next(iter, name, base_density, ierr)
         if(ierr/=SSYS_DENSITY_OK)exit
         ASSERT(associated(base_density))
-        call base_density_get(base_density, pdensity)
+        call ssys_density_get(base_density, pdensity)
         ASSERT(associated(pdensity))
-        call base_density_get(base_density, nspin=nspin)
+        call ssys_density_get(base_density, nspin=nspin)
         ASSERT(nspin>0)
         do is = 1, nspin
           if(nspin>1) then
