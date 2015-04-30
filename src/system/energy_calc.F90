@@ -242,7 +242,7 @@ contains
           trim(message(3)), units_from_atomic(units_out%energy, hm%energy%Imextern_non_local)
         call messages_info(3, iunit)
       end if
-      if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+      if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       endif  

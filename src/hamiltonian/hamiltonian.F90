@@ -346,8 +346,9 @@ contains
     call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
 
     nullify(hm%vberry)
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
       ! only need vberry if there is a field in a periodic direction
+      ! and we are not setting a gauge field
       if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
         SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
       endif
@@ -923,6 +924,13 @@ contains
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
       this%hm_base%uniform_vector_potential = &
         this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
+    end if
+    
+    ! the electric field for a periodic system through the gauge field
+    if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
+      ASSERT(present(time))
+      this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
+        this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time*this%ep%e_field(1:mesh%sb%periodic_dim)
     end if
 
     ! the vector potential of a static magnetic field
