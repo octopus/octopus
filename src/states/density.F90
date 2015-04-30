@@ -21,7 +21,6 @@
 
 module density_m
   use blas_m
-  use base_density_m
   use batch_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
@@ -90,7 +89,7 @@ contains
     FLOAT,                target,   intent(out)   :: density(:, :)
     FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
-    type(base_density_t), pointer :: live_density
+    type(ssys_density_t), pointer :: live_density
 
     PUSH_SUB(density_calc_init)
 
@@ -105,7 +104,7 @@ contains
       ASSERT(associated(this%subsys_density))
       call ssys_density_get(this%subsys_density, "live", live_density)
       ASSERT(associated(live_density))
-      call base_density_get(live_density, this%density)
+      call ssys_density_get(live_density, this%density)
       ASSERT(associated(this%density))
     else
       this%density => density
@@ -332,7 +331,7 @@ contains
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
     type(ssys_density_iterator_t)   :: iter
-    type(base_density_t),   pointer :: base_density
+    type(ssys_density_t),   pointer :: ssys_density
     FLOAT,  dimension(:,:), pointer :: pdensity
     integer :: ispin, ip, ierr
     type(profile_t), save :: reduce_prof
@@ -387,17 +386,17 @@ contains
       SAFE_DEALLOCATE_A(tmpdensity)
     end if
 
-    nullify(base_density, pdensity)
+    nullify(ssys_density, pdensity)
     if(associated(this%subsys_density))then
       !> Calculate the total density.
       this%total_density=M_ZERO
       call ssys_density_init(iter, this%subsys_density)
       do
-        nullify(base_density, pdensity)
-        call ssys_density_next(iter, base_density, ierr)
-        if(ierr/=BASE_DENSITY_OK)exit
-        ASSERT(associated(base_density))
-        call base_density_get(base_density, pdensity)
+        nullify(ssys_density, pdensity)
+        call ssys_density_next(iter, ssys_density, ierr)
+        if(ierr/=SSYS_DENSITY_OK)exit
+        ASSERT(associated(ssys_density))
+        call ssys_density_get(ssys_density, pdensity)
         ASSERT(associated(pdensity))
         do ispin = 1, this%st%d%nspin
           forall(ip=1:this%gr%fine%mesh%np)
@@ -406,7 +405,7 @@ contains
         end do
       end do
       call ssys_density_end(iter)
-      nullify(base_density, pdensity)
+      nullify(ssys_density, pdensity)
     end if
 
     POP_SUB(density_calc_end)
