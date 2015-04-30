@@ -77,7 +77,6 @@ contains
     type(pes_rc_t), intent(out) :: this
     !
     PUSH_SUB(pes_rc_nullify)
-    !this%npoints      = 0
     this%points        =>null()
     this%points_global =>null()
     this%filenames     =>null()
@@ -94,34 +93,11 @@ contains
     !
     PUSH_SUB(pes_mask_nullify)
     this%k=>null()
-    !this%ll=0
-    !this%np=0
-    !this%spacing=M_ZERO
     this%mesh=>null()
-    !call cube_nullify(this%cube)
     this%ext_pot=>null()
     this%Mk=>null()
-    !call cube_function_nullify(this%cM)
     this%mask_R=>null()
-    !this%shape=0
     this%Lk=>null()
-    !this%enlarge
-    !thisenlarge_nfft
-    !this%llr
-    !this%energyMax 
-    !this%energyStep 
-    !this%sw_evolve
-    !this%back_action
-    !this%add_psia
-    !this%interpolate_out
-    !this%filter_k
-    !this%mode
-    !this%pw_map_how
-    !call fft_nullify(this%fft)
-#if defined(HAVE_NFFT) 
-    !call nfft_nullify(this%nfft)
-#endif
-    !call tdpsf_nullify(this%psf)
     POP_SUB(pes_mask_nullify)
     return
   end subroutine pes_mask_nullify

@@ -27,7 +27,6 @@ libtd_a_SOURCES =                         \
 	td_calc.F90                       \
 	td_write.F90                      \
 	td.F90                            \
-	tdpsf.F90                         \
 	pes_rc.F90                        \
 	pes_mask.F90                      \
 	pes_flux.F90                      \
@@ -52,9 +51,8 @@ depend:
 
 pes.o: pes.F90 pes_mask.o pes_rc.o pes_flux.o
 pes_rc.o : pes_rc.F90
-pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90 tdpsf.o
+pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90
 pes_flux.o : pes_flux.F90
-tdpsf.o: tdpsf.F90
 spectrum.o: spectrum.F90
 propagator_base.o : propagator_base.F90 potential_interpolation.o
 propagator_cn.o : propagator_cn.F90 propagator_base.o
