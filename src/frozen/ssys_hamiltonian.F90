@@ -59,9 +59,6 @@ module ssys_hamiltonian_m
   public ::             &
     ssys_hamiltonian_t
 
-  public ::               &
-    ssys_hamiltonian_acc
-
   public ::                  &
     ssys_hamiltonian_init,   &
     ssys_hamiltonian_start,  &

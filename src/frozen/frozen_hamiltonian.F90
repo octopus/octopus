@@ -89,17 +89,15 @@ contains
   end subroutine frozen_hamiltonian__acc__
 
   ! ---------------------------------------------------------
-  !subroutine frozen_hamiltonian_get_info(this, size, nspin, energy)
-  subroutine frozen_hamiltonian_get_info(this, energy)
+  subroutine frozen_hamiltonian_get_info(this, size, nspin, energy)
     type(frozen_hamiltonian_t), intent(in)  :: this
-    !integer,          optional, intent(out) :: size
-    !integer,          optional, intent(out) :: nspin
+    integer,          optional, intent(out) :: size
+    integer,          optional, intent(out) :: nspin
     real(kind=wp),    optional, intent(out) :: energy
 
     PUSH_SUB(frozen_hamiltonian_get_info)
 
-    !call base_hamiltonian_get(this, size=size, nspin=nspin, energy=energy)
-    call base_hamiltonian_get(this, energy=energy)
+    call base_hamiltonian_get(this, size=size, nspin=nspin, energy=energy)
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine frozen_hamiltonian_get_info

@@ -95,7 +95,7 @@ contains
     SAFE_DEALLOCATE_P(this%lxyz_inv)
     nullify(this%lxyz_inv)
     this%enlarge=0
-    this%checksum=0
+    this%checksum=int(0,kind=kind(this%checksum))
 
     POP_SUB(fio_index_end)
   end subroutine fio_index_end

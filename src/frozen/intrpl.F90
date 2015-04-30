@@ -18,15 +18,17 @@ module intrpl_m
     simulation_t,         &
     simulation_get
 
+  use storage_m, only: &
+    storage_t,         &
+    storage_get
+
   implicit none
 
   private
-  public ::               &
-    intrpl_init,          &
-    intrpl_inited,        &
-    intrpl_get_dimension, &
-    intrpl_eval,          &
-    intrpl_copy,          &
+  public ::      &
+    intrpl_init, &
+    intrpl_eval, &
+    intrpl_copy, &
     intrpl_end
 
   integer, public, parameter :: NONE    = 0
@@ -54,12 +56,6 @@ module intrpl_m
     real(kind=wp)                            :: default = 0.0_wp
     type(intrp_t), dimension(:), allocatable :: intr
   end type intrpl_t
-
-  interface intrpl_init
-    module procedure intrpl_init_1d
-    module procedure intrpl_init_2d
-    module procedure intrpl_init_null
-  end interface intrpl_init
 
   interface intrpl_eval
     module procedure intrpl_eval_1d
@@ -159,99 +155,40 @@ contains
   end subroutine intrp_end
 
   ! ---------------------------------------------------------
-  subroutine intrpl_init_common(this, sim, ndim, type, default)
-    type(intrpl_t),             intent(out) :: this
-    type(simulation_t), target, intent(in)  :: sim
-    integer,                    intent(in)  :: ndim
-    integer,          optional, intent(in)  :: type
-    real(kind=wp),    optional, intent(in)  :: default
+  subroutine intrpl_init(this, that, type)
+    type(intrpl_t),    intent(out) :: this
+    type(storage_t),   intent(in)  :: that
+    integer, optional, intent(in)  :: type
     !
-    type(grid_t), pointer :: grid
+    real(kind=wp), dimension(:,:), pointer :: data
+    integer                                :: indx
     !
-    PUSH_SUB(intrpl_init_common)
-    nullify(grid)
+    PUSH_SUB(intrpl_init)
+    nullify(data)
     ASSERT(.not.associated(this%sim))
     ASSERT(.not.associated(this%mesh))
     ASSERT(.not.associated(this%domain))
-    this%sim=>sim
-    this%nint=ndim
-    call simulation_get(sim, grid)
-    ASSERT(associated(grid))
-    this%mesh=>grid%mesh
-    nullify(grid)
-    call simulation_get(sim, this%domain)
+    call storage_get(that, this%sim)
+    ASSERT(associated(this%sim))
+    call storage_get(that, this%mesh)
+    ASSERT(associated(this%mesh))
+    call simulation_get(this%sim, this%domain)
     ASSERT(associated(this%domain))
     this%type=NEAREST
     if(present(type))this%type=type
-    if(this%type>NONE)then
-      SAFE_ALLOCATE(this%intr(this%nint))
-    end if
-    this%default=0.0_wp
-    if(present(default))this%default=default
-    POP_SUB(intrpl_init_common)
-    return
-  end subroutine intrpl_init_common
-
-  ! ---------------------------------------------------------
-  subroutine intrpl_init_1d(this, sim, vals, type, default)
-    type(intrpl_t),              intent(out) :: this
-    type(simulation_t),          intent(in)  :: sim
-    real(kind=wp), dimension(:), intent(in)  :: vals
-    integer,           optional, intent(in)  :: type
-    real(kind=wp),     optional, intent(in)  :: default
-    !
-    PUSH_SUB(intrpl_init_1d)
-    call intrpl_init_common(this, sim, 1, type, default)
-    if(this%type>NONE)&
-      call intrp_init(this%intr(1), this%mesh, vals, this%type)
-    POP_SUB(intrpl_init_1d)
-    return
-  end subroutine intrpl_init_1d
-
-  ! ---------------------------------------------------------
-  subroutine intrpl_init_2d(this, sim, vals, type, default)
-    type(intrpl_t),                intent(out) :: this
-    type(simulation_t),            intent(in)  :: sim
-    real(kind=wp), dimension(:,:), intent(in)  :: vals
-    integer,             optional, intent(in)  :: type
-    real(kind=wp),       optional, intent(in)  :: default
-    !
-    integer :: i
-    !
-    PUSH_SUB(intrpl_init_2d)
-    call intrpl_init_common(this, sim, size(vals,dim=2), type, default)
+    call storage_get(that, dim=this%nint, default=this%default)
     ASSERT(this%nint>0)
     if(this%type>NONE)then
-      do i = 1, this%nint
-        call intrp_init(this%intr(i), this%mesh, vals(:,i), this%type)
+      SAFE_ALLOCATE(this%intr(this%nint))
+      call storage_get(that, data)
+      ASSERT(associated(data))
+      do indx = 1, this%nint
+        call intrp_init(this%intr(indx), this%mesh, data(:,indx), this%type)
       end do
     end if
-    POP_SUB(intrpl_init_2d)
+    POP_SUB(intrpl_init)
     return
-  end subroutine intrpl_init_2d
-
-  ! ---------------------------------------------------------
-  subroutine intrpl_init_null(this, default)
-    type(intrpl_t),          intent(out) :: this
-    real(kind=wp), optional, intent(in)  :: default
-    !
-    nullify(this%mesh, this%domain)
-    this%type=NONE
-    this%nint=0
-    this%default=0.0_wp
-    if(present(default))this%default=default
-    return
-  end subroutine intrpl_init_null
-
-  ! ---------------------------------------------------------
-  elemental function intrpl_inited(this) result(that)
-    type(intrpl_t), intent(in) :: this
-    !
-    logical :: that
-    !
-    that=(allocated(this%intr))
-    return
-  end function intrpl_inited
+  end subroutine intrpl_init
 
   ! ---------------------------------------------------------
   function intrpl_nearest_index(this, x) result(n)
@@ -275,16 +212,6 @@ contains
     POP_SUB(intrpl_nearest_index)
     return
   end function intrpl_nearest_index
-
-  ! ---------------------------------------------------------
-  elemental function intrpl_get_dimension(this) result(dim)
-    type(intrpl_t), intent(in) :: this
-    !
-    integer :: dim
-    !
-    dim=this%nint
-    return
-  end function intrpl_get_dimension
 
   ! ---------------------------------------------------------
   function intrpl_in_domain(this, x) result(in)

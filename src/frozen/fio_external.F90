@@ -24,6 +24,9 @@ module fio_external_m
     base_geom_next,      &
     base_geom_end
 
+  use fio_simulation_m, only: &
+    fio_simulation_t
+
   use fio_system_m, only: &
     fio_system_t,         &
     fio_system_get
@@ -80,6 +83,7 @@ module fio_external_m
     module procedure fio_external_get_config
     module procedure fio_external_get_simulation
     module procedure fio_external_get_system
+    module procedure fio_external_get_storage
     module procedure fio_external_get_potential_1d
     module procedure fio_external_get_potential_md
   end interface fio_external_get
@@ -198,8 +202,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_external_get_simulation(this, that)
-    type(fio_external_t), intent(in) :: this
-    type(simulation_t),  pointer     :: that
+    type(fio_external_t),    intent(in) :: this
+    type(fio_simulation_t), pointer     :: that
 
     PUSH_SUB(fio_external_get_simulation)
 
@@ -219,6 +223,18 @@ contains
 
     POP_SUB(fio_external_get_system)
   end subroutine fio_external_get_system
+
+  ! ---------------------------------------------------------
+  subroutine fio_external_get_storage(this, that)
+    type(fio_external_t), intent(in) :: this
+    type(storage_t),     pointer     :: that
+
+    PUSH_SUB(fio_external_get_storage)
+
+    call base_potential_get(this, that)
+
+    POP_SUB(fio_external_get_storage)
+  end subroutine fio_external_get_storage
 
   ! ---------------------------------------------------------
   subroutine fio_external_get_potential_1d(this, that)

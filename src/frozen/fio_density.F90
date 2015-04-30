@@ -12,6 +12,9 @@ module fio_density_m
   use kinds_m,     only: wp
   use path_m,      only: path_join
 
+  use fio_simulation_m, only: &
+    fio_simulation_t
+
   use base_density_m, only:          &
     fio_density_t => base_density_t
 
@@ -68,6 +71,7 @@ module fio_density_m
     module procedure fio_density_get_info
     module procedure fio_density_get_config
     module procedure fio_density_get_simulation
+    module procedure fio_density_get_storage
     module procedure fio_density_get_density_1d
     module procedure fio_density_get_density_2d
   end interface fio_density_get
@@ -201,8 +205,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_simulation(this, that)
-    type(fio_density_t),  intent(in) :: this
-    type(simulation_t),  pointer     :: that
+    type(fio_density_t),     intent(in) :: this
+    type(fio_simulation_t), pointer     :: that
 
     PUSH_SUB(fio_density_get_simulation)
 
@@ -210,6 +214,18 @@ contains
 
     POP_SUB(fio_density_get_simulation)
   end subroutine fio_density_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_get_storage(this, that)
+    type(fio_density_t), intent(in) :: this
+    type(storage_t),    pointer     :: that
+
+    PUSH_SUB(fio_density_get_storage)
+
+    call base_density_get(this, that)
+
+    POP_SUB(fio_density_get_storage)
+  end subroutine fio_density_get_storage
 
   ! ---------------------------------------------------------
   subroutine fio_density_get_density_1d(this, that, total)

@@ -9,12 +9,18 @@ module ssys_external_m
   use kinds_m, only: wp
 
   use storage_m, only: &
-    storage_t,         &
+    storage_t
+
+  use storage_m, only: &
     storage_integrate
 
   use ssys_density_m, only: &
-    ssys_density_t,         &
-    ssys_density_update,    &
+    ssys_density_t
+
+  use base_potential_m, only:            &
+    ssys_external_t => base_potential_t
+
+  use ssys_density_m, only: &
     ssys_density_get
 
   use base_potential_m, only: &
@@ -22,12 +28,8 @@ module ssys_external_m
     base_potential__reset__,  &
     base_potential__acc__
 
-  use base_potential_m, only:            &
-    ssys_external_t => base_potential_t
-
   use base_potential_m, only: &
-    base_potential_set,       &
-    base_potential_get
+    base_potential_set
 
   use base_potential_m, only:                      &
     ssys_external_new    => base_potential_new,    &
@@ -37,6 +39,7 @@ module ssys_external_m
     ssys_external_update => base_potential_update, &
     ssys_external_stop   => base_potential_stop,   &
     ssys_external_next   => base_potential_next,   &
+    ssys_external_get    => base_potential_get,    &
     ssys_external_copy   => base_potential_copy,   &
     ssys_external_end    => base_potential_end
 
@@ -58,8 +61,7 @@ module ssys_external_m
     ssys_external_t
 
   public ::             &
-    ssys_external_calc, &
-    ssys_external_acc
+    ssys_external_calc
 
   public ::               &
     ssys_external_new,    &
@@ -84,77 +86,102 @@ module ssys_external_m
     SSYS_EXTERNAL_KEY_ERROR,   &
     SSYS_EXTERNAL_EMPTY_ERROR
 
-  interface ssys_external_get
-    module procedure ssys_external_get_potential_by_name
-    module procedure ssys_external_get_info
-    module procedure ssys_external_get_potential_1d
-    module procedure ssys_external_get_potential_md
-  end interface ssys_external_get
-
 contains
 
   ! ---------------------------------------------------------
-  subroutine ssys_external__calc__(this, that)
+  subroutine ssys_external__acc__energy(this, that)
     type(ssys_external_t), intent(inout) :: this
     type(ssys_external_t), intent(in)    :: that
 
-    type(ssys_density_t), pointer :: density
-    type(storage_t),      pointer :: pdat, ddat
-    real(kind=wp)                 :: energy
+    real(kind=wp) :: oenrg, ienrg
 
-    PUSH_SUB(ssys_external__calc__)
+    PUSH_SUB(ssys_external__acc__energy)
 
-    nullify(density, pdat, ddat)
-    energy=0.0_wp
-    call base_potential_get(this, density)
-    ASSERT(associated(density))
-    call ssys_density_update(density)
-    call ssys_density_get(density, ddat, total=.true.)
-    ASSERT(associated(ddat))
-    nullify(density)
-    call base_potential_get(that, pdat)
-    ASSERT(associated(pdat))
-    call storage_integrate(pdat, ddat, energy)
-    nullify(pdat, ddat)
-    call base_potential_set(this, energy=energy)
+    call ssys_external_get(this, energy=oenrg)
+    call ssys_external_get(that, energy=ienrg)
+    call base_potential_set(this, energy=(oenrg+ienrg))
 
-    POP_SUB(ssys_external__calc__)
-  end subroutine ssys_external__calc__
+    POP_SUB(ssys_external__acc__energy)
+  end subroutine ssys_external__acc__energy
 
   ! ---------------------------------------------------------
-  subroutine ssys_external_calc(this)
+  subroutine ssys_external__sub__energy(this, that)
+    type(ssys_external_t), intent(inout) :: this
+    type(ssys_external_t), intent(in)    :: that
+
+    real(kind=wp) :: oenrg, ienrg
+
+    PUSH_SUB(ssys_external__sub__energy)
+
+    call ssys_external_get(this, energy=oenrg)
+    call ssys_external_get(that, energy=ienrg)
+    call base_potential_set(this, energy=(oenrg-ienrg))
+
+    POP_SUB(ssys_external__sub__energy)
+  end subroutine ssys_external__sub__energy
+
+  ! ---------------------------------------------------------
+  subroutine ssys_external__calc__energy(this, that)
+    type(ssys_external_t), intent(inout) :: this
+    type(storage_t),       intent(in)    :: that
+
+    type(ssys_density_t), pointer :: density
+    type(storage_t),      pointer :: data
+    real(kind=wp)                 :: energy
+
+    PUSH_SUB(ssys_external__calc__energy)
+
+    nullify(density, data)
+    call ssys_external_get(this, density)
+    ASSERT(associated(density))
+    call ssys_density_get(density, data, total=.true.)
+    ASSERT(associated(data))
+    nullify(density)
+    call storage_integrate(that, data, energy)
+    nullify(data)
+    call base_potential_set(this, energy=energy)
+
+    POP_SUB(ssys_external__calc__energy)
+  end subroutine ssys_external__calc__energy
+
+  ! ---------------------------------------------------------
+  subroutine ssys_external_calc_energy(this)
     type(ssys_external_t), intent(inout) :: this
 
     type(ssys_external_iterator_t) :: iter
     type(ssys_external_t), pointer :: subs
+    type(storage_t),       pointer :: data
     integer                        :: ierr
 
-    PUSH_SUB(ssys_external_calc)
+    PUSH_SUB(ssys_external_calc_energy)
 
-    nullify(subs)
-    call ssys_external__calc__(this, this)
+    nullify(subs, data)
+    call base_potential_set(this, energy=0.0_wp)
+    call ssys_external_get(this, data)
+    ASSERT(associated(data))
     call ssys_external_init(iter, this)
     do
       nullify(subs)
       call ssys_external_next(iter, subs, ierr)
       if(ierr/=SSYS_EXTERNAL_OK)exit
-      call ssys_external__calc__(subs, this)
+      call ssys_external__calc__energy(subs, data)
+      call ssys_external__acc__energy(this, subs)
     end do
     call ssys_external_end(iter)
-    nullify(subs)
+    nullify(subs, data)
 
-    POP_SUB(ssys_external_calc)
-  end subroutine ssys_external_calc
+    POP_SUB(ssys_external_calc_energy)
+  end subroutine ssys_external_calc_energy
 
   ! ---------------------------------------------------------
-  subroutine ssys_external_acc(this)
+  subroutine ssys_external_calc_potential(this)
     type(ssys_external_t), intent(inout) :: this
 
     type(ssys_external_iterator_t) :: iter
     type(ssys_external_t), pointer :: subs
     integer                        :: ierr
 
-    PUSH_SUB(ssys_external_acc)
+    PUSH_SUB(ssys_external_calc_potential)
 
     nullify(subs)
     call base_potential__reset__(this)
@@ -169,90 +196,27 @@ contains
     nullify(subs)
     call base_potential__update__(this)
 
-    POP_SUB(ssys_external_acc)
-  end subroutine ssys_external_acc
+    POP_SUB(ssys_external_calc_potential)
+  end subroutine ssys_external_calc_potential
 
   ! ---------------------------------------------------------
-  subroutine ssys_external_get_potential_by_name(this, name, that)
-    type(ssys_external_t),  intent(in) :: this
-    character(len=*),       intent(in) :: name
-    type(ssys_external_t), pointer     :: that
+  subroutine ssys_external_calc(this)
+    type(ssys_external_t), intent(inout) :: this
 
-    PUSH_SUB(ssys_external_get_potential_by_name)
+    type(ssys_external_t), pointer :: live
 
-    call base_potential_get(this, name, that)
+    PUSH_SUB(ssys_external_calc)
 
-    POP_SUB(ssys_external_get_potential_by_name)
-  end subroutine ssys_external_get_potential_by_name
+    nullify(live)
+    call ssys_external_calc_potential(this)
+    call ssys_external_calc_energy(this)
+    call ssys_external_get(this, "live", live)
+    ASSERT(associated(live))
+    call ssys_external__sub__energy(this, live)
+    nullify(live)
 
-  ! ---------------------------------------------------------
-  subroutine ssys_external_get_energy(this, energy, except)
-    type(ssys_external_t),                    intent(in)  :: this
-    real(kind=wp),                            intent(out) :: energy
-    character(len=*), dimension(:), optional, intent(in)  :: except
-
-    type(ssys_external_t), pointer :: subs
-    real(kind=wp)                  :: enrg
-    integer                        :: indx
-
-    PUSH_SUB(ssys_external_get_energy)
-
-    nullify(subs)
-    call base_potential_get(this, energy=energy)
-    if(present(except))then
-      do indx = 1, size(except)
-        nullify(subs)
-        call base_potential_get(this, trim(adjustl(except(indx))), subs)
-        ASSERT(associated(subs))
-        call base_potential_get(subs, energy=enrg)
-        energy=energy-enrg
-      end do
-      nullify(subs)
-    end if
-
-    POP_SUB(ssys_external_get_energy)
-  end subroutine ssys_external_get_energy
-
-  ! ---------------------------------------------------------
-  subroutine ssys_external_get_info(this, size, nspin, energy, except)
-    type(ssys_external_t),                    intent(in)  :: this
-    integer,                        optional, intent(out) :: size
-    integer,                        optional, intent(out) :: nspin
-    real(kind=wp),                  optional, intent(out) :: energy
-    character(len=*), dimension(:), optional, intent(in)  :: except
-
-    PUSH_SUB(ssys_external_get_info)
-
-    if(present(energy))&
-      call ssys_external_get_energy(this, energy, except)
-    call base_potential_get(this, size=size, nspin=nspin)
-
-    POP_SUB(ssys_external_get_info)
-  end subroutine ssys_external_get_info
-
-  ! ---------------------------------------------------------
-  subroutine ssys_external_get_potential_1d(this, that)
-    type(ssys_external_t),        intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
-
-    PUSH_SUB(ssys_external_get_potential_1d)
-
-    call base_potential_get(this, that)
-
-    POP_SUB(ssys_external_get_potential_1d)
-  end subroutine ssys_external_get_potential_1d
-
-  ! ---------------------------------------------------------
-  subroutine ssys_external_get_potential_md(this, that)
-    type(ssys_external_t),          intent(in) :: this
-    real(kind=wp), dimension(:,:), pointer     :: that
-
-    PUSH_SUB(ssys_external_get_potential_md)
-
-    call base_potential_get(this, that)
-
-    POP_SUB(ssys_external_get_potential_md)
-  end subroutine ssys_external_get_potential_md
+    POP_SUB(ssys_external_calc)
+  end subroutine ssys_external_calc
 
 end module ssys_external_m
 

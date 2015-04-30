@@ -14,8 +14,8 @@
     INTRPL_OD,        &
     INTRPL_NI
 
-  use simulation_m, only: &
-    simulation_t
+  use storage_m, only: &
+    storage_t
 
 #endif
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
@@ -74,25 +74,21 @@
 #if !defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && defined(INCLUDE_BODY)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(intrpl_init)(this, that, type, default)
+  subroutine TEMPLATE(intrpl_init)(this, that, type)
     type(TEMPLATE(intrpl_t)),  intent(out) :: this
     type(TEMPLATE(t)), target, intent(in)  :: that
     integer,         optional, intent(in)  :: type
-    real(kind=wp),   optional, intent(in)  :: default
 
-    real(kind=wp), dimension(:,:), pointer :: data
-    type(simulation_t),            pointer :: sim
+    type(storage_t), pointer :: data
 
     PUSH_SUB(TEMPLATE(intrpl_init))
 
-    nullify(data, sim)
+    nullify(data)
     this%self=>that
-    call TEMPLATE(get)(that, sim)
-    ASSERT(associated(sim))
     call TEMPLATE(get)(that, data)
     ASSERT(associated(data))
-    call intrpl_init(this%intrp, sim, data, type=type, default=default)
-    nullify(data, sim)
+    call intrpl_init(this%intrp, data, type=type)
+    nullify(data)
 
     POP_SUB(TEMPLATE(intrpl_init))
   end subroutine TEMPLATE(intrpl_init)

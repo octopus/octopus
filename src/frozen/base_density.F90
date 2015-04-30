@@ -1,4 +1,3 @@
-
 #include "global.h"
 
 #undef LIST_TEMPLATE_NAME

@@ -57,19 +57,11 @@ contains
   subroutine fio_hamiltonian__load__(this)
     type(fio_hamiltonian_t), intent(inout) :: this
 
-    type(json_object_t),  pointer :: cnfg
     type(fio_external_t), pointer :: epot
-    real(kind=wp)                 :: energy
-    integer                       :: ierr
 
     PUSH_SUB(fio_hamiltonian__load__)
 
-    nullify(cnfg, epot)
-    call fio_hamiltonian_get(this, cnfg)
-    call json_get(cnfg, "energy", energy, ierr)
-    if(ierr/=JSON_OK)energy=0.0_wp
-    nullify(cnfg)
-    call base_hamiltonian_set(this, energy=energy)
+    nullify(epot)
     call fio_hamiltonian_get_external(this, epot)
     ASSERT(associated(epot))
     call fio_external__load__(epot)

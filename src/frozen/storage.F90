@@ -65,6 +65,8 @@ module storage_m
   interface storage_get
     module procedure storage_get_info
     module procedure storage_get_sim
+    module procedure storage_get_grid
+    module procedure storage_get_mesh
     module procedure storage_get_storage_1d
     module procedure storage_get_storage_md
   end interface storage_get
@@ -397,14 +399,14 @@ contains
   end subroutine storage_reduce
 
   ! ---------------------------------------------------------
-  subroutine storage_get_info(this, fine, dim, size)
+  subroutine storage_get_info(this, dim, size, fine, default)
     type(storage_t), target, intent(in)  :: this
-    logical,       optional, intent(out) :: fine
     integer,       optional, intent(out) :: dim
     integer,       optional, intent(out) :: size
+    logical,       optional, intent(out) :: fine
+    real(kind=wp), optional, intent(out) :: default
     !
     PUSH_SUB(storage_get_sim)
-    if(present(fine))fine=this%fine
     if(present(dim))then
       dim=0
       if(this%ndim>0)dim=this%ndim
@@ -413,6 +415,8 @@ contains
       size=0
       if(associated(this%mesh))size=this%mesh%np
     end if
+    if(present(fine))fine=this%fine
+    if(present(default))default=this%default
     POP_SUB(storage_get_sim)
     return
   end subroutine storage_get_info
@@ -429,6 +433,32 @@ contains
     POP_SUB(storage_get_sim)
     return
   end subroutine storage_get_sim
+
+  ! ---------------------------------------------------------
+  subroutine storage_get_grid(this, that)
+    type(storage_t), target, intent(in) :: this
+    type(grid_t),   pointer             :: that
+    !
+    PUSH_SUB(storage_get_grid)
+    nullify(that)
+    if(associated(this%grid))&
+      that=>this%grid
+    POP_SUB(storage_get_grid)
+    return
+  end subroutine storage_get_grid
+
+  ! ---------------------------------------------------------
+  subroutine storage_get_mesh(this, that)
+    type(storage_t), target, intent(in) :: this
+    type(mesh_t),   pointer             :: that
+    !
+    PUSH_SUB(storage_get_mesh)
+    nullify(that)
+    if(associated(this%mesh))&
+      that=>this%mesh
+    POP_SUB(storage_get_mesh)
+    return
+  end subroutine storage_get_mesh
 
   ! ---------------------------------------------------------
   subroutine storage_get_storage_1d(this, that)
@@ -539,15 +569,15 @@ contains
     !
     PUSH_SUB(storage_end)
     nullify(this%sim, this%grid, this%mesh)
+    this%alloc=.true.
     this%full=.true.
     this%fine=.false.
     this%ndim=0
     this%size=0
     this%default=0.0_wp
-    if(this%alloc)then
+    if(allocated(this%data))then
       SAFE_DEALLOCATE_A(this%data)
     end if
-    this%alloc=.true.
     POP_SUB(storage_end)
     return
   end subroutine storage_end

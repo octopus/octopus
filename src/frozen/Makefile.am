@@ -28,8 +28,8 @@ libfrozen_a_SOURCES =		\
 	domain.F90		\
 	simulation.F90		\
 	functional.F90		\
-	intrpl.F90		\
 	storage.F90		\
+	intrpl.F90		\
 	base_geom.F90		\
 	base_density.F90	\
 	base_states.F90		\
@@ -100,8 +100,8 @@ config_dict.o	: config_dict.F90 strng.o
 domain.o 	: domain.F90 config_dict.o
 simulation.o	: simulation.F90 domain.o config_dict.o
 functional.o 	: functional.F90 simulation.o interface_xc.o
-intrpl.o 	: intrpl.F90 simulation.o domain.o
 storage.o 	: storage.F90 simulation.o
+intrpl.o 	: intrpl.F90 storage.o simulation.o domain.o
 
 base_geom.o 		: base_geom.F90 config_dict.o strng.o basis.o
 base_density.o 		: base_density.F90 storage.o simulation.o config_dict.o
