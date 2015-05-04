@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_m
+  use base_hamiltonian_m
   use batch_m
   use batch_ops_m
   use blas_m
@@ -61,7 +62,6 @@ module hamiltonian_m
   use simul_box_m
   use smear_m
   use species_m
-  use ssys_hamiltonian_m
   use states_m
   use states_dim_m
   use types_m
@@ -124,7 +124,7 @@ module hamiltonian_m
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
-    !type(ssys_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
+    type(base_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
@@ -294,7 +294,7 @@ contains
     !cmplxscl: copy cmplxscl initialized in states.F90
     call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
 
-    !nullify(hm%subsys_hm)
+    nullify(hm%subsys_hm)
 
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
@@ -583,7 +583,7 @@ contains
 
     call hamiltonian_base_end(hm%hm_base)
 
-    !nullify(hm%subsys_hm)
+    nullify(hm%subsys_hm)
     
 #ifdef HAVE_OPENCL
     if(associated(hm%phase) .and. opencl_is_enabled()) then
