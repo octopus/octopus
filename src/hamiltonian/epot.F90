@@ -25,7 +25,6 @@ module epot_m
   use comm_m
   use derivatives_m
   use double_grid_m
-  use frozen_external_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -732,7 +731,7 @@ contains
 
     if(associated(ep%subsys_external))then
       ! Calculates the total potential by summing all the subsystem contributions.
-      call ssys_external_update(ep%subsys_external)
+      call ssys_external_calc(ep%subsys_external)
     end if
   
     POP_SUB(epot_generate)
