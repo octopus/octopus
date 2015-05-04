@@ -62,6 +62,7 @@ module hamiltonian_m
   use simul_box_m
   use smear_m
   use species_m
+  use ssys_external_m
   use states_m
   use states_dim_m
   use types_m

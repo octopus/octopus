@@ -269,6 +269,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
+  type(ssys_external_t), pointer :: live_external
+  FLOAT, dimension(:),   pointer :: vpsl
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
 #ifdef HAVE_OPENCL
   integer :: pnp, offset, ispin
@@ -278,11 +280,24 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   PUSH_SUB(X(hamiltonian_external))
 
   SAFE_ALLOCATE(vpsl_spin(1:mesh%np, 1:this%d%nspin))
-  vpsl_spin(1:mesh%np, 1) = this%ep%vpsl(1:mesh%np)
+
+  nullify(live_external, vpsl)
+  if(associated(this%ep%subsys_external))then
+    ! Sets the vpsl pointer to the "live" part of the subsystem potential.
+    call ssys_external_get(this%ep%subsys_external, "live", live_external)
+    ASSERT(associated(live_external))
+    call ssys_external_get(live_external, vpsl)
+    ASSERT(associated(vpsl))
+  else
+    ! Sets the vpsl pointer to the total potential.
+    vpsl=>this%ep%vpsl
+  end if
+
+  vpsl_spin(1:mesh%np, 1) = vpsl(1:mesh%np)
   if(this%d%ispin == SPINORS) then
     ! yes this means a little unnecessary computation in the later call,
     ! but with the great benefit of being able to reuse an existing routine
-    vpsl_spin(1:mesh%np, 2) = this%ep%vpsl(1:mesh%np)
+    vpsl_spin(1:mesh%np, 2) = vpsl(1:mesh%np)
     vpsl_spin(1:mesh%np, 3) = M_ZERO
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   endif
@@ -301,7 +316,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 #ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
     call opencl_create_buffer(vpsl_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
-    call opencl_write_buffer(vpsl_buff, mesh%np, this%ep%vpsl)
+    call opencl_write_buffer(vpsl_buff, mesh%np, vpsl)
 
     offset = 0
     do ispin = 1, this%d%nspin
