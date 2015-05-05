@@ -65,7 +65,9 @@ module output_m
   use smear_m
   use ssys_density_m
   use ssys_external_m
+  use ssys_hamiltonian_m
   use ssys_states_m
+  use ssys_tnadd_m
   use string_m
   use species_m
   use states_m

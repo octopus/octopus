@@ -30,9 +30,11 @@
     integer :: is, err, idir
     character(len=MAX_PATH_LEN) :: fname
     type(ssys_external_iterator_t)        :: iter
-    type(ssys_external_t),        pointer :: ssys_external
+    type(ssys_external_t),        pointer :: subsys_external
+    type(ssys_tnadd_t),           pointer :: subsys_tnadd
     character(len=SSYS_EXTERNAL_NAME_LEN) :: name
-    FLOAT,          dimension(:), pointer :: potential
+    FLOAT,        dimension(:),   pointer :: xpot
+    FLOAT,        dimension(:,:), pointer :: tpot
     FLOAT, allocatable :: v0(:,:), nxc(:)
     FLOAT, allocatable :: current(:, :, :)
 
@@ -53,21 +55,22 @@
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
       end if
 
+      nullify(subsys_external, xpot)
       if(associated(hm%ep%subsys_external))then
         call ssys_external_init(iter, hm%ep%subsys_external)
         do
-          nullify(ssys_external, potential)
-          call ssys_external_next(iter, name, ssys_external, err)
+          nullify(subsys_external, xpot)
+          call ssys_external_next(iter, name, subsys_external, err)
           if(err/=SSYS_EXTERNAL_OK)exit
-          ASSERT(associated(ssys_external))
-          call ssys_external_get(ssys_external, potential)
-          ASSERT(associated(potential))
+          ASSERT(associated(subsys_external))
+          call ssys_external_get(subsys_external, xpot)
+          ASSERT(associated(xpot))
           write(fname, "(a,'-',a)") "v0", trim(adjustl(name))
           call dio_function_output(outp%how, dir, fname, der%mesh, &
-            potential, units_out%energy, err, geo = geo, grp = grp)
+            xpot, units_out%energy, err, geo = geo, grp = grp)
         end do
         call ssys_external_end(iter)
-        nullify(ssys_external, potential)
+        nullify(subsys_external, xpot)
       end if
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -77,6 +80,25 @@
           call zio_function_output(outp%how, dir, 'vh', der%mesh, & 
             hm%vhartree + M_zI* hm%Imvhartree, units_out%energy, err, geo = geo, grp = grp)
         end if
+
+        nullify(subsys_tnadd, tpot)
+        if(associated(hm%subsys_hm))then
+          call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
+          ASSERT(associated(subsys_tnadd))
+          call ssys_tnadd_get(subsys_tnadd, tpot)
+          ASSERT(associated(tpot))
+          do is = 1, min(hm%d%ispin, 2)
+            if(hm%d%ispin == 1) then
+              write(fname, '(a)') 'tnadd'
+            else
+              write(fname, '(a,i1)') 'tnadd-sp', is
+            endif
+            call dio_function_output(outp%how, dir, fname, der%mesh, &
+              tpot(:,is), units_out%energy, err, geo = geo, grp = grp)
+          end do
+          nullify(subsys_tnadd, tpot)
+        end if
+        
         do is = 1, min(hm%d%ispin, 2)
           if(hm%d%ispin == 1) then
             write(fname, '(a)') 'vxc'
