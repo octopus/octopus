@@ -226,13 +226,14 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family)
-    type(hamiltonian_t),      intent(out)   :: hm
-    type(grid_t),     target, intent(inout) :: gr
-    type(geometry_t), target, intent(inout) :: geo
-    type(states_t),   target, intent(inout) :: st
-    integer,                  intent(in)    :: theory_level
-    integer,                  intent(in)    :: xc_family
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, subsys_hm)
+    type(hamiltonian_t),                        intent(out)   :: hm
+    type(grid_t),                       target, intent(inout) :: gr
+    type(geometry_t),                   target, intent(inout) :: geo
+    type(states_t),                     target, intent(inout) :: st
+    integer,                                    intent(in)    :: theory_level
+    integer,                                    intent(in)    :: xc_family
+    type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
     type(states_dim_t), pointer :: states_dim
@@ -298,6 +299,11 @@ contains
     call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
 
     nullify(hm%subsys_hm)
+    if(present(subsys_hm))then
+      ! Set Subsystems Hamiltonian pointer.
+      ASSERT(.not.hm%cmplxscl%space)
+      hm%subsys_hm=>subsys_hm
+    end if
 
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
@@ -346,7 +352,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space, subsys_hm)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
