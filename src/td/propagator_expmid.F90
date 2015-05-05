@@ -45,14 +45,14 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: mu
+    FLOAT,                           intent(in)    :: ionic_scale
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
@@ -82,7 +82,7 @@ contains
       !move the ions to time 'time - dt/2'
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, ionic_scale*CNST(0.5)*dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
       end if
 
@@ -98,8 +98,8 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
           call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, &
-            real(zdt/mu,REAL_PRECISION), real(zt - zdt/M_z2,REAL_PRECISION), &
-            Imdeltat = aimag(zdt/mu), Imtime = aimag(zt -  zdt / M_z2 ) )
+            real(zdt, REAL_PRECISION), real(zt - zdt/M_z2,REAL_PRECISION), &
+            Imdeltat = aimag(zdt), Imtime = aimag(zt -  zdt / M_z2 ) )
 
         end do
       end do
@@ -118,7 +118,7 @@ contains
       !move the ions to time 'time - dt/2'
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, ionic_scale*CNST(0.5)*dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
       end if
 
@@ -131,7 +131,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
 
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt, time - dt/M_TWO)
 
         end do
       end do
@@ -155,8 +155,8 @@ contains
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
             call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik,&
-              real(-zdt/mu, REAL_PRECISION), real(zt + zdt/M_z2, REAL_PRECISION), &
-              Imdeltat = aimag(-zdt/mu), Imtime = aimag(zt +  zdt / M_z2 ) )
+              real(-zdt, REAL_PRECISION), real(zt + zdt/M_z2, REAL_PRECISION), &
+              Imdeltat = aimag(-zdt), Imtime = aimag(zt +  zdt / M_z2 ) )
           end do
         end do
 
@@ -175,7 +175,7 @@ contains
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt/mu, time + dt/M_TWO)
+            call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt, time + dt/M_TWO)
           end do
         end do
 

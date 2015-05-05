@@ -188,6 +188,8 @@ contains
 
     call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
+    td%dt = td%dt/td%mu
+    
     if(parse_is_defined('TDMaxSteps') .and. parse_is_defined('TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
       call messages_fatal()

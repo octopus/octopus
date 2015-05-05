@@ -470,7 +470,7 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, nt, ions, geo, &
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, &
     gauge_force, scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
@@ -479,7 +479,7 @@ contains
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: mu
+    FLOAT,                           intent(in)    :: ionic_scale
     integer,                         intent(in)    :: nt
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
@@ -527,11 +527,11 @@ contains
 
     select case(tr%method)
     case(PROP_ETRS)
-      call td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+      call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
@@ -577,11 +577,11 @@ contains
 
           select case(tr%method)
           case(PROP_ETRS)
-            call td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+            call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
           case(PROP_AETRS, PROP_CAETRS)
-            call td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+            call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
           case(PROP_EXPONENTIAL_MIDPOINT)
-            call exponential_midpoint(hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+            call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
           case(PROP_CRANK_NICOLSON)
             call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
           case(PROP_RUNGE_KUTTA4)
@@ -621,7 +621,7 @@ contains
     generate = .false.
     if(ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
         generate = .true.
       end if
     end if

@@ -57,7 +57,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -65,7 +65,7 @@ contains
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: mu
+    FLOAT,                           intent(in)    :: ionic_scale
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
@@ -92,8 +92,8 @@ contains
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(CNST(2.0)*mu), time - dt, &
-            psib2 = zpsib_dt, deltat2 = dt/mu)
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time - dt, &
+            psib2 = zpsib_dt, deltat2 = dt)
 
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, ik, zpsib_dt)
@@ -116,7 +116,7 @@ contains
       ! propagate dt/2 with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time - dt)
         end do
       end do
 
@@ -126,7 +126,7 @@ contains
 
     ! first move the ions to time t
     if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
+      call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -141,7 +141,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time)
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time)
       end do
     end do
 
@@ -162,7 +162,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
+  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -170,7 +170,7 @@ contains
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: mu
+    FLOAT,                           intent(in)    :: ionic_scale
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
@@ -203,7 +203,7 @@ contains
     ! propagate half of the time step with H(time - dt)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time - dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time - dt)
       end do
     end do
 
@@ -215,7 +215,7 @@ contains
         tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
       forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
-        vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
       end forall
 
       ! copy vold to a cl buffer
@@ -236,7 +236,7 @@ contains
 
     ! move the ions to time t
     if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
+      call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -290,7 +290,7 @@ contains
           call profiling_out(phase_prof)
         end if
 
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time)
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time)
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
         if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_unpack(st%group%psib(ib, ik))
