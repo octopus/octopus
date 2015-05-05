@@ -58,6 +58,7 @@ module epot_m
   use spline_filter_m
   use ssys_external_m
   use ssys_hamiltonian_m
+  use ssys_ionic_m
   use states_m
   use states_dim_m
   use submesh_m
@@ -152,6 +153,7 @@ contains
     type(ssys_hamiltonian_t), optional, intent(in)    :: subsys_hm
 
 
+    type(ssys_ionic_t), pointer :: subsys_ionic
     integer :: ispec, ip, idir, ia, gauge_2d
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
@@ -523,6 +525,15 @@ contains
     end if
 
     call ion_interaction_init(ep%ion_interaction)
+
+    nullify(subsys_ionic)
+    if(present(subsys_hm))then
+      ASSERT(.not.cmplxscl)
+      call ssys_hamiltonian_get(subsys_hm, subsys_ionic)
+      ASSERT(associated(subsys_ionic))
+      call ion_interaction_add_subsys_ionic(ep%ion_interaction, subsys_ionic)
+      nullify(subsys_ionic)
+    end if
 
     POP_SUB(epot_init)
   end subroutine epot_init
