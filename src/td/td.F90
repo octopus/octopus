@@ -109,7 +109,7 @@ contains
     type(system_t),        intent(inout) :: sys
     type(hamiltonian_t),   intent(inout) :: hm
 
-    integer :: default_time_steps
+    integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
 
     PUSH_SUB(td_init)
@@ -217,9 +217,9 @@ contains
     !% Number of time-propagation steps that will be performed. You
     !% cannot use this variable together with <tt>TDPropagationTime</tt>.
     !%End
-    default_time_steps = 1500
-    if(propagation_time > CNST(0.0)) default_time_steps = nint(propagation_time/td%dt)
-    call parse_variable('TDMaxSteps', default_time_steps, td%max_iter)
+    default = 1500
+    if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
+    call parse_variable('TDMaxSteps', default, td%max_iter)
 
     if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
 
@@ -288,16 +288,19 @@ contains
 
     !%Variable TDEnergyUpdateIter
     !%Type integer
-    !%Default 10
     !%Section Time-Dependent::Propagation
     !%Description
-    !% This variable controls after how many iterations Octopus updates the total energy
-    !% during a time-propagation run. For iterations where the energy is not updated, the
-    !% last calculated value is reported. If you set this variable to 1,
-    !% the energy will be calculated in each step.
-    !%End 
+    !% This variable controls after how many iterations Octopus
+    !% updates the total energy during a time-propagation run. For
+    !% iterations where the energy is not updated, the last calculated
+    !% value is reported. If you set this variable to 1, the energy
+    !% will be calculated in each step. The default value is 10,
+    !% unless the ions move, in which case the default is 1.
+    !%End
 
-    call parse_variable('TDEnergyUpdateIter', 10, td%energy_update_iter)
+    default = 10
+    if(ion_dynamics_ions_move(td%ions)) default = 1
+    call parse_variable('TDEnergyUpdateIter', default, td%energy_update_iter)
 
     POP_SUB(td_init)
   end subroutine td_init
