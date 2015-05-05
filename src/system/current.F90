@@ -183,10 +183,10 @@ contains
           
             call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
 
-            do ist = st%st_start, st%st_end
-            
+            do ist = states_block_min(st, ib), states_block_max(st, ib)
+
               do idim = 1, st%d%dim
-                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
+                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
                 call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
