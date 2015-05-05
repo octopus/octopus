@@ -329,23 +329,25 @@ contains
         if(abs(dd) < mesh%spacing(idim) .and. dd >= M_ZERO) then 
           isp = isp + 1 
           which_surface(ip) = int(sign(M_ONE, xx(idim))) * idim     ! +-x=+-1, +-y=+-2
-          this%nsrfcpnts = this%nsrfcpnts + 1
         end if
       end do
       if(isp > 1) then
         ! edges or corners are not counted
         which_surface(ip) = 0
-        this%nsrfcpnts = this%nsrfcpnts - isp
       else if(isp == 1) then
         ! points in absorbing zone are not counted either
         do idim = 1, dim 
           dd = abs(xx(idim)) - (mesh%sb%lsize(idim) - border(idim))
           if(dd >= mesh%spacing(idim)) then 
             which_surface(ip) = 0
-            this%nsrfcpnts = this%nsrfcpnts - 1
           end if
         end do
       end if
+    end do
+
+    this%nsrfcpnts = 0 
+    do ip = 1, mesh%np_global
+      if(which_surface(ip) /= 0) this%nsrfcpnts = this%nsrfcpnts + 1
     end do
 
     SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
