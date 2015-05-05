@@ -45,6 +45,7 @@ module system_m
   use species_m
   use simul_box_m
   use sort_om
+  use ssys_model_m
   use states_m
   use states_dim_m
   use unit_m
@@ -61,13 +62,14 @@ module system_m
     system_h_setup
 
   type system_t
-    type(space_t)             :: space
-    type(geometry_t)          :: geo
-    type(grid_t),     pointer :: gr    !< the mesh
-    type(states_t),   pointer :: st    !< the states
-    type(v_ks_t)              :: ks    !< the Kohn-Sham potentials
-    type(output_t)            :: outp  !< the output
-    type(multicomm_t)         :: mc    !< index and domain communicators
+    type(space_t)               :: space
+    type(geometry_t)            :: geo
+    type(grid_t),       pointer :: gr    !< the mesh
+    type(states_t),     pointer :: st    !< the states
+    type(ssys_model_t), pointer :: subsys_model !< the Subsystems model pointer.
+    type(v_ks_t)                :: ks    !< the Kohn-Sham potentials
+    type(output_t)              :: outp  !< the output
+    type(multicomm_t)           :: mc    !< index and domain communicators
   end type system_t
 
 contains
@@ -82,6 +84,8 @@ contains
     
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
+
+    nullify(sys%subsys_model)
 
     call opencl_init(mpi_world)
     call octcl_kernel_global_init()
@@ -160,6 +164,8 @@ contains
     
     call output_end(sys%outp)
     
+    nullify(sys%subsys_model)
+
     if(associated(sys%st)) then
       call states_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
