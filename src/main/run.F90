@@ -28,6 +28,7 @@ module run_m
   use ground_state_m
   use hamiltonian_m
   use invert_ks_m
+  use json_m
   use parser_m
   use messages_m
   use mpi_debug_m
@@ -42,6 +43,8 @@ module run_m
   use profiling_m
   use pulpo_m
   use restart_m
+  use ssys_config_m
+  use ssys_handle_m
   use static_pol_m
   use system_m
   use td_m
@@ -123,6 +126,8 @@ contains
     type(system_t)      :: sys
     type(hamiltonian_t) :: hm
     type(profile_t)     :: calc_mode_prof
+    type(json_object_t) :: config
+    type(ssys_handle_t) :: subsys_handle
     logical :: fromScratch
 
     PUSH_SUB(run)
@@ -247,6 +252,8 @@ contains
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       call hamiltonian_end(hm)
       call system_end(sys)
+      call ssys_handle_end(subsys_handle)
+      call json_end(config)
       call fft_all_end()
     end if
 
