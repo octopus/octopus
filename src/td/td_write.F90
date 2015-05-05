@@ -2081,9 +2081,9 @@ contains
 
     PUSH_SUB(td_write_total_current)
 
-    if(iter == 0) then
+    if(mpi_grp_is_root(mpi_world) .and. iter == 0) then
       call td_write_print_header_init(out_total_current)
-      
+
       ! first line: column names
       call write_iter_header_start(out_total_current)
       
@@ -2099,8 +2099,6 @@ contains
     
     ASSERT(associated(st%current))
 
-    call write_iter_start(out_total_current)
-
     total_current = CNST(0.0)
     do idir = 1, gr%sb%dim
       do ispin = 1, st%d%nspin
@@ -2109,10 +2107,12 @@ contains
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
     end do
 
-    call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
-
-    call write_iter_nl(out_total_current)
-
+    if(mpi_grp_is_root(mpi_world)) then
+      call write_iter_start(out_total_current)
+      call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+      call write_iter_nl(out_total_current)
+    end if
+      
     POP_SUB(td_write_total_current)
   end subroutine td_write_total_current
 
