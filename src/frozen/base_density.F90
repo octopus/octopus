@@ -717,9 +717,11 @@ contains
 
     PUSH_SUB(base_density__end__density)
 
-    if(.not.associated(this%total,this%data))then
-      call storage_end(this%total)
-      SAFE_DEALLOCATE_P(this%total)
+    if(associated(this%total))then
+      if(.not.associated(this%total,this%data))then
+        call storage_end(this%total)
+        SAFE_DEALLOCATE_P(this%total)
+      end if
     end if
     call storage_end(this%data)
     call base_density__inull__(this)
