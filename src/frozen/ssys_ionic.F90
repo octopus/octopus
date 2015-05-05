@@ -21,11 +21,11 @@ module ssys_ionic_m
     base_geom_next,      &
     base_geom_end
 
-  use ssys_system_m, only: &
-    ssys_system_t
+  use base_system_m, only: &
+    base_system_t
 
-  use ssys_system_m, only: &
-    ssys_system_get
+  use base_system_m, only: &
+    base_system_get
 
   use base_term_m, only:         &
     ssys_ionic_t => base_term_t
@@ -35,7 +35,8 @@ module ssys_ionic_m
     base_term__reset__
 
   use base_term_m, only: &
-    base_term_set
+    base_term_set,       &
+    base_term_get
 
   use base_term_m, only:                   &
     ssys_ionic_new    => base_term_new,    &
@@ -43,7 +44,6 @@ module ssys_ionic_m
     ssys_ionic_init   => base_term_init,   &
     ssys_ionic_update => base_term_update, &
     ssys_ionic_next   => base_term_next,   &
-    ssys_ionic_get    => base_term_get,    &
     ssys_ionic_copy   => base_term_copy,   &
     ssys_ionic_end    => base_term_end
 
@@ -65,15 +65,17 @@ module ssys_ionic_m
     ssys_ionic_t
 
   public ::                 &
-    ssys_ionic_new,         &
-    ssys_ionic_del,         &
-    ssys_ionic_init,        &
-    ssys_ionic_update,      &
     ssys_ionic_calc,        &
-    ssys_ionic_interaction, &
-    ssys_ionic_next,        &
-    ssys_ionic_get,         &
-    ssys_ionic_copy,        &
+    ssys_ionic_interaction
+
+  public ::            &
+    ssys_ionic_new,    &
+    ssys_ionic_del,    &
+    ssys_ionic_init,   &
+    ssys_ionic_update, &
+    ssys_ionic_next,   &
+    ssys_ionic_get,    &
+    ssys_ionic_copy,   &
     ssys_ionic_end
 
   public ::                &
@@ -92,15 +94,10 @@ module ssys_ionic_m
     module procedure ssys_ionic__atom_interaction__force
   end interface ssys_ionic__atom_interaction__
 
-  interface ssys_ionic__interaction__
-    module procedure ssys_ionic__interaction__energy
-    module procedure ssys_ionic__interaction__force
-  end interface ssys_ionic__interaction__
-
-  interface ssys_ionic_interaction
-    module procedure ssys_ionic_interaction_energy
-    module procedure ssys_ionic_interaction_force
-  end interface ssys_ionic_interaction
+  interface ssys_ionic_get
+    module procedure ssys_ionic_get_term_by_name
+    module procedure ssys_ionic_get_info
+  end interface ssys_ionic_get
 
 contains
 
@@ -166,78 +163,10 @@ contains
   end subroutine ssys_ionic__atom_interaction__force
 
   ! ---------------------------------------------------------
-  subroutine ssys_ionic__interaction__energy(this, atom, energy)
-    type(ssys_ionic_t), intent(in)  :: this
-    type(atom_t),       intent(in)  :: atom
-    real(kind=wp),      intent(out) :: energy
-
-    type(ssys_system_t), pointer :: sys
-    type(base_geom_t),   pointer :: geom
-    type(atom_t),        pointer :: iatom
-    type(base_geom_iterator_t)   :: iter
-    real(kind=wp)                :: enrg
-
-    PUSH_SUB(ssys_ionic__interaction__energy)
-
-    energy=0.0_wp
-    nullify(sys, geom, iatom)
-    call ssys_ionic_get(this, sys)
-    ASSERT(associated(sys))
-    call ssys_system_get(sys, geom)
-    ASSERT(associated(geom))
-    call base_geom_init(iter, geom)
-    do
-      nullify(iatom)
-      call base_geom_next(iter, iatom)
-      if(.not.associated(iatom))exit
-      call ssys_ionic__atom_interaction__(iatom, atom, enrg)
-      energy=energy+enrg
-    end do
-    call base_geom_end(iter)
-    nullify(sys, geom, iatom)
-
-    POP_SUB(ssys_ionic__interaction__energy)
-  end subroutine ssys_ionic__interaction__energy
-
-  ! ---------------------------------------------------------
-  subroutine ssys_ionic__interaction__force(this, atom, force)
-    type(ssys_ionic_t),          intent(in)  :: this
-    type(atom_t),                intent(in)  :: atom
-    real(kind=wp), dimension(:), intent(out) :: force
-
-    type(ssys_system_t),          pointer :: sys
-    type(base_geom_t),            pointer :: geom
-    type(atom_t),                 pointer :: iatom
-    type(base_geom_iterator_t)            :: iter
-    real(kind=wp), dimension(size(force)) :: frc
-
-    PUSH_SUB(ssys_ionic__interaction__force)
-
-    force=0.0_wp
-    nullify(sys, geom, iatom)
-    call ssys_ionic_get(this, sys)
-    ASSERT(associated(sys))
-    call ssys_system_get(sys, geom)
-    ASSERT(associated(geom))
-    call base_geom_init(iter, geom)
-    do
-      nullify(iatom)
-      call base_geom_next(iter, iatom)
-      if(.not.associated(iatom))exit
-      call ssys_ionic__atom_interaction__(iatom, atom, frc)
-      force=force+frc
-    end do
-    call base_geom_end(iter)
-    nullify(sys, geom, iatom)
-
-    POP_SUB(ssys_ionic__interaction__force)
-  end subroutine ssys_ionic__interaction__force
-
-  ! ---------------------------------------------------------
   subroutine ssys_ionic__calc__(this)
     type(ssys_ionic_t), intent(inout) :: this
 
-    type(ssys_system_t), pointer :: sys
+    type(base_system_t), pointer :: sys
     type(base_geom_t),   pointer :: geom
     type(atom_t),        pointer :: iatom, jatom
     type(base_geom_iterator_t)   :: iiter, jiter
@@ -245,12 +174,12 @@ contains
 
     PUSH_SUB(ssys_ionic__calc__)
 
-    call base_term__reset__(this)
     energy=0.0_wp
     nullify(sys, geom, iatom, jatom)
-    call ssys_ionic_get(this, sys)
+    call base_term__reset__(this)
+    call base_term_get(this, sys)
     ASSERT(associated(sys))
-    call ssys_system_get(sys, geom)
+    call base_system_get(sys, geom)
     ASSERT(associated(geom))
     call base_geom_init(iiter, geom)
     do
@@ -276,7 +205,7 @@ contains
   end subroutine ssys_ionic__calc__
 
   ! ---------------------------------------------------------
-  recursive subroutine ssys_ionic_calc(this)
+  subroutine ssys_ionic_calc(this)
     type(ssys_ionic_t), intent(inout) :: this
 
     type(ssys_ionic_iterator_t) :: iter
@@ -291,7 +220,7 @@ contains
       nullify(subs)
       call ssys_ionic_next(iter, subs, ierr)
       if(ierr/=SSYS_IONIC_OK)exit
-      call ssys_ionic_calc(subs)
+      call ssys_ionic__calc__(subs)
     end do
     call ssys_ionic_end(iter)
     nullify(subs)
@@ -301,35 +230,41 @@ contains
   end subroutine ssys_ionic_calc
 
   ! ---------------------------------------------------------
-  subroutine ssys_ionic_interaction_energy(this, energy, except)
-    type(ssys_ionic_t),                       intent(in)  :: this
-    real(kind=wp),                            intent(out) :: energy
-    character(len=*), dimension(:), optional, intent(in)  :: except
+  subroutine ssys_ionic__interaction__(this, atom, force)
+    type(ssys_ionic_t),          intent(in)  :: this
+    type(atom_t),                intent(in)  :: atom
+    real(kind=wp), dimension(:), intent(out) :: force
 
-    type(ssys_ionic_t), pointer :: subs
-    real(kind=wp)               :: enrg
-    integer                     :: indx
+    type(base_system_t),          pointer :: sys
+    type(base_geom_t),            pointer :: geom
+    type(atom_t),                 pointer :: iatom
+    type(base_geom_iterator_t)            :: iter
+    real(kind=wp), dimension(size(force)) :: frc
 
-    PUSH_SUB(ssys_ionic_interaction_energy)
+    PUSH_SUB(ssys_ionic__interaction__)
 
-    nullify(subs)
-    call ssys_ionic_get(this, energy=energy)
-    if(present(except))then
-      do indx = 1, size(except)
-        nullify(subs)
-        call ssys_ionic_get(this, trim(adjustl(except(indx))), subs)
-        ASSERT(associated(subs))
-        call ssys_ionic_get(subs, energy=enrg)
-        energy=energy-enrg
-      end do
-      nullify(subs)
-    end if
+    force=0.0_wp
+    nullify(sys, geom, iatom)
+    call base_term_get(this, sys)
+    ASSERT(associated(sys))
+    call base_system_get(sys, geom)
+    ASSERT(associated(geom))
+    call base_geom_init(iter, geom)
+    do
+      nullify(iatom)
+      call base_geom_next(iter, iatom)
+      if(.not.associated(iatom))exit
+      call ssys_ionic__atom_interaction__(iatom, atom, frc)
+      force=force+frc
+    end do
+    call base_geom_end(iter)
+    nullify(sys, geom, iatom)
 
-    POP_SUB(ssys_ionic_interaction_energy)
-  end subroutine ssys_ionic_interaction_energy
+    POP_SUB(ssys_ionic__interaction__)
+  end subroutine ssys_ionic__interaction__
 
   ! ---------------------------------------------------------
-  subroutine ssys_ionic_interaction_force(this, atom, force, except)
+  subroutine ssys_ionic_interaction(this, atom, force, except)
     type(ssys_ionic_t),                       intent(in)  :: this
     type(atom_t),                             intent(in)  :: atom
     real(kind=wp),    dimension(:),           intent(out) :: force
@@ -341,7 +276,7 @@ contains
     real(kind=wp), dimension(size(force)) :: frce
     integer                               :: ierr
 
-    PUSH_SUB(ssys_ionic_interaction_force)
+    PUSH_SUB(ssys_ionic_interaction)
 
     force=0.0_wp
     nullify(subs)
@@ -357,8 +292,49 @@ contains
     call ssys_ionic_end(iter)
     nullify(subs)
 
-    POP_SUB(ssys_ionic_interaction_force)
-  end subroutine ssys_ionic_interaction_force
+    POP_SUB(ssys_ionic_interaction)
+  end subroutine ssys_ionic_interaction
+
+  ! ---------------------------------------------------------
+  subroutine ssys_ionic_get_term_by_name(this, name, that)
+    type(ssys_ionic_t),  intent(in) :: this
+    character(len=*),    intent(in) :: name
+    type(ssys_ionic_t), pointer     :: that
+
+    PUSH_SUB(ssys_ionic_get_term_by_name)
+
+    call base_term_get(this, name, that)
+
+    POP_SUB(ssys_ionic_get_term_by_name)
+  end subroutine ssys_ionic_get_term_by_name
+
+  ! ---------------------------------------------------------
+  subroutine ssys_ionic_get_info(this, energy, except)
+    type(ssys_ionic_t),                       intent(in)  :: this
+    real(kind=wp),                            intent(out) :: energy
+    character(len=*), dimension(:), optional, intent(in)  :: except
+
+    type(ssys_ionic_t), pointer :: subs
+    real(kind=wp)               :: enrg
+    integer                     :: indx
+    
+    PUSH_SUB(ssys_ionic_get_info)
+
+    nullify(subs)
+    call base_term_get(this, energy=energy)
+    if(present(except))then
+      do indx = 1, size(except)
+        nullify(subs)
+        call base_term_get(this, trim(adjustl(except(indx))), subs)
+        ASSERT(associated(subs))
+        call base_term_get(subs, energy=enrg)
+        energy=energy-enrg
+      end do
+      nullify(subs)
+    end if
+    
+    POP_SUB(ssys_ionic_get_info)
+  end subroutine ssys_ionic_get_info
 
 end module ssys_ionic_m
 
