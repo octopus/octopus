@@ -45,6 +45,8 @@ module v_ks_m
   use profiling_m
   use pcm_m 
   use simul_box_m
+  use ssys_hamiltonian_m
+  use ssys_tnadd_m
   use states_m
   use states_dim_m
   use unit_system_m
@@ -854,7 +856,8 @@ contains
     type(v_ks_t), target, intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
 
-    integer :: ip, ispin
+    type(ssys_tnadd_t), pointer :: subsys_tnadd
+    integer                     :: ip, ispin
 
     PUSH_SUB(v_ks_calc_finish)
 
@@ -954,6 +957,15 @@ contains
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       endif
       
+      ! Calculate subsystem kinetic non aditional term
+      nullify(subsys_tnadd)
+      if(associated(hm%subsys_hm))then
+        call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
+        ASSERT(associated(subsys_tnadd))
+        call ssys_tnadd_calc(subsys_tnadd)
+        nullify(subsys_tnadd)
+      end if
+
       if(hm%d%ispin > UNPOLARIZED) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
         if (hm%cmplxscl%space) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 2) = hm%Imvxc(ip, 2) + hm%Imvhartree(ip)
