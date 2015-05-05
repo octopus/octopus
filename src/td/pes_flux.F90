@@ -79,13 +79,15 @@ contains
 
     type(block_t)        :: blk
     FLOAT                :: border(MAX_DIM)       ! distance of surface from border
+    FLOAT                :: offset(MAX_DIM)       ! offset for border
     integer              :: id, ikp, isp, il, iph, ikk, dim, start, end, nn
     FLOAT                :: phi, kk, krr
     FLOAT                :: phimax, kmax
 
     PUSH_SUB(pes_flux_init)
 
-    dim = mesh%sb%dim
+    dim    = mesh%sb%dim
+    offset = M_ZERO
 
     call messages_experimental("PhotoElectronSpectrum with t-surff")
 
@@ -96,17 +98,21 @@ contains
       end if
     end do
 
-    if(dim > 1 .and. mesh%sb%box_shape /= PARALLELEPIPED) then
-      message(1) = 'Surff only works with BoxShape = parallelepiped in dim > 1.'
-      call messages_fatal(1)
-    end if
-
     message(1) = 'Info: Calculation PES using t-surff technique.'
     call messages_info(1)
 
     ! surface
     if(parse_block('PESSurface', blk) < 0) then
-      border(:) = hm%ab_width
+      select case(mesh%sb%box_shape)
+      case(PARALLELEPIPED)
+        border(1:dim) = mesh%sb%lsize(1:dim)
+      case(SPHERE)
+        border(1:dim) = mesh%sb%rsize/sqrt(M_TWO)
+      case default
+        message(1) = "PESSurface not specified. No default values available for &
+                      &this box shape. Specify a surface with block PESSurface."
+        call messages_fatal(1)
+      end select
       message(1) = "PESSurface not specified. Using default values."
       call messages_info(1)
     else
@@ -114,8 +120,16 @@ contains
       call parse_block_float(blk, 0, 0, border(1))
       call parse_block_float(blk, 0, 1, border(2))
       call parse_block_float(blk, 0, 2, border(3))
+      border(1:dim) = int(border(1:dim)/mesh%spacing(1:dim))*mesh%spacing(1:dim)
     end if
-    call pes_flux_getsrfc(this, mesh, border)
+
+    if(parse_block('PESSurfaceOffset', blk) == 0) then
+      call parse_block_float(blk, 0, 0, offset(1))
+      call parse_block_float(blk, 0, 1, offset(2))
+      call parse_block_float(blk, 0, 2, offset(3))
+    end if
+
+    call pes_flux_getsrfc(this, mesh, border, offset)
 
     ! k-mesh in 1D (2 points) & 2D (polar coordinates)
     call parse_variable('PESSurfaceKmax', M_ONE, kmax)
@@ -297,13 +311,14 @@ contains
   end subroutine pes_flux_calc
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getsrfc(this, mesh, border)
+  subroutine pes_flux_getsrfc(this, mesh, border, offset)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
+    FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 
     integer, allocatable  :: which_surface(:), aux(:)
-    FLOAT                 :: xx(MAX_DIM), rr, dd
+    FLOAT                 :: xx(MAX_DIM), rr, dd, dmin
     integer               :: ip, ierr, idim, isp, dir, start, dim
 
     PUSH_SUB(pes_flux_getsrfc)
@@ -323,10 +338,11 @@ contains
     do ip = 1, mesh%np
       isp = 0
       call mesh_r(mesh, ip, rr, coords=xx)
+      xx(1:dim) = xx(1:dim) + offset(1:dim)
       do idim = 1, dim
         ! distance to a border
-        dd = abs(xx(idim)) - (mesh%sb%lsize(idim) - border(idim))
-        if(abs(dd) < mesh%spacing(idim) .and. dd >= M_ZERO) then 
+        dd = abs(xx(idim)) - border(idim)
+        if(abs(dd) < mesh%spacing(idim)/M_TWO .and. dd <= M_ZERO) then 
           isp = isp + 1 
           which_surface(ip) = int(sign(M_ONE, xx(idim))) * idim     ! +-x=+-1, +-y=+-2
         end if
@@ -337,7 +353,7 @@ contains
       else if(isp == 1) then
         ! points in absorbing zone are not counted either
         do idim = 1, dim 
-          dd = abs(xx(idim)) - (mesh%sb%lsize(idim) - border(idim))
+          dd = abs(xx(idim)) - border(idim)
           if(dd >= mesh%spacing(idim)) then 
             which_surface(ip) = 0
           end if
