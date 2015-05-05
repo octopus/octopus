@@ -252,7 +252,7 @@ contains
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       call hamiltonian_end(hm)
       call system_end(sys)
-      call ssys_handle_end(subsys_handle)
+      !call ssys_handle_end(subsys_handle)
       call json_end(config)
       call fft_all_end()
     end if
