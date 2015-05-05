@@ -39,11 +39,12 @@ module ion_interaction_m
   implicit none
 
   private
-  public ::                        &
-    ion_interaction_t,             &
-    ion_interaction_init,          &
-    ion_interaction_end,           &
-    ion_interaction_calculate,     &
+  public ::                           &
+    ion_interaction_t,                &
+    ion_interaction_init,             &
+    ion_interaction_end,              &
+    ion_interaction_add_subsys_ionic, &
+    ion_interaction_calculate,        &
     ion_interaction_test
 
   type ion_interaction_t
@@ -96,10 +97,23 @@ contains
   end subroutine ion_interaction_end
   
   ! ---------------------------------------------------------
+  
+  subroutine ion_interaction_add_subsys_ionic(this, subsys_ionic)
+    type(ion_interaction_t),    intent(inout) :: this
+    type(ssys_ionic_t), target, intent(in)    :: subsys_ionic
+    
+    PUSH_SUB(ion_interaction_add_subsys_ionic)
+    
+    this%subsys_ionic => subsys_ionic
+    
+    POP_SUB(ion_interaction_add_subsys_ionic)
+  end subroutine ion_interaction_add_subsys_ionic
+  
+  ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
   subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
-    type(ion_interaction_t),  intent(in)    :: this
+    type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
     logical,                  intent(in)    :: ignore_external_ions
@@ -132,6 +146,11 @@ contains
     end if 
 
     energy = M_ZERO
+    if(associated(this%subsys_ionic))then
+      ! Get the subsystems interaction energy.
+      call ssys_ionic_calc(this%subsys_ionic)
+      call ssys_ionic_get(this%subsys_ionic, energy, except=(/"live"/))
+    end if
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
@@ -167,6 +186,12 @@ contains
           if(.not. in_box(iatom)) cycle
         end if
         
+        if(associated(this%subsys_ionic))then
+          ! Calculate the interaction forces.
+          call ssys_ionic_interaction(this%subsys_ionic, geo%atom(iatom), f, except=(/"live"/) )
+          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
+        end if
+
         spci => geo%atom(iatom)%species
         zi = species_zval(spci)
 
