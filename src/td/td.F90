@@ -304,6 +304,10 @@ contains
     if(ion_dynamics_ions_move(td%ions)) default = 1
     call parse_variable('TDEnergyUpdateIter', default, td%energy_update_iter)
 
+    if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
+      call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
+    end if
+    
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -450,7 +454,7 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, geo, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
           gauge_force = td%gauge_force, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)

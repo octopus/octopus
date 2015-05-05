@@ -498,6 +498,8 @@ contains
     call profiling_in(prof, "TD_PROPAGATOR")
     PUSH_SUB(propagator_dt)
 
+    update_energy_ = optional_default(update_energy, .true.)
+
     cmplxscl = hm%cmplxscl%space
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -527,11 +529,11 @@ contains
 
     select case(tr%method)
     case(PROP_ETRS)
-      call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+      call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
     case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
@@ -577,11 +579,11 @@ contains
 
           select case(tr%method)
           case(PROP_ETRS)
-            call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+            call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
           case(PROP_AETRS, PROP_CAETRS)
-            call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+            call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
           case(PROP_EXPONENTIAL_MIDPOINT)
-            call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+            call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
           case(PROP_CRANK_NICOLSON)
             call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
           case(PROP_RUNGE_KUTTA4)
@@ -619,7 +621,7 @@ contains
     end if
     
     generate = .false.
-    if(ion_dynamics_ions_move(ions)) then
+    if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
         generate = .true.
@@ -634,12 +636,11 @@ contains
       call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
     end if
 
-    update_energy_ = optional_default(update_energy, .false.)
     call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
     if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
-    if(ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
+    if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))

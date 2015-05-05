@@ -57,7 +57,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, gauge_force)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -68,6 +68,7 @@ contains
     FLOAT,                           intent(in)    :: ionic_scale
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
+    logical,                         intent(in)    :: move_ions
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
@@ -125,7 +126,7 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    if(ion_dynamics_ions_move(ions)) then
+    if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
@@ -162,7 +163,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, gauge_force)
+  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, gauge_force)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -173,6 +174,7 @@ contains
     FLOAT,                           intent(in)    :: ionic_scale
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
+    logical,                         intent(in)    :: move_ions
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
 
     integer :: ik, ispin, ip, ist, ib
@@ -235,7 +237,7 @@ contains
     call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
 
     ! move the ions to time t
-    if(ion_dynamics_ions_move(ions)) then
+    if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
