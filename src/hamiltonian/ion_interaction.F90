@@ -33,6 +33,7 @@ module ion_interaction_m
   use profiling_m
   use simul_box_m
   use species_m
+  use ssys_ionic_m
   use unit_system_m
 
   implicit none
@@ -46,7 +47,8 @@ module ion_interaction_m
     ion_interaction_test
 
   type ion_interaction_t
-    FLOAT :: alpha
+    type(ssys_ionic_t), pointer :: subsys_ionic !< Subsystems ionic term.
+    FLOAT                       :: alpha
   end type ion_interaction_t
 
   integer, parameter ::            &
@@ -74,6 +76,8 @@ contains
     !%End
     call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
     
+    nullify(this%subsys_ionic)
+
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
   
@@ -86,6 +90,8 @@ contains
 
     this%alpha = -CNST(1.0)
     
+    nullify(this%subsys_ionic)
+
     POP_SUB(ion_interaction_end)
   end subroutine ion_interaction_end
   
