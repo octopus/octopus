@@ -46,8 +46,9 @@ module pes_flux_m
 
   type pes_flux_t
     integer           :: nkpnts                !< total number of k-points
-    integer           :: nk, nphi
+    integer           :: nk, nphi, ntheta
     FLOAT             :: delk, phimin, delphi
+    FLOAT             :: thetamin, deltheta
     integer           :: srfcshape             !< shape of the surface (= cubic/spherical)
     integer           :: nsrfcpnts             !< total number of points contructing surface
     integer           :: tdsteps
@@ -60,7 +61,7 @@ module pes_flux_m
     FLOAT, pointer    :: srfcnrml(:,:)         !< (unit) vectors normal to the surface
     CMPLX, pointer    :: spctramp(:)           !< spectral amplitude
     CMPLX, pointer    :: conjgphase(:,:)       !< current Volkov phase for all k-points
-    CMPLX, pointer    :: phik(:,:)
+    CMPLX, pointer    :: conjgplanewf(:,:)
     CMPLX, pointer    ::  wf(:,:)
     CMPLX, pointer    :: gwf(:,:,:)
   end type pes_flux_t
@@ -82,9 +83,9 @@ contains
     type(block_t)        :: blk
     FLOAT                :: border(MAX_DIM)       ! distance of surface from border
     FLOAT                :: offset(MAX_DIM)       ! offset for border
-    integer              :: id, ikp, isp, il, iph, ikk, dim, start, end, nn
-    FLOAT                :: phi, kk, krr
-    FLOAT                :: phimax, kmax
+    integer              :: ikp, isp, il, ith, iph, ikk, dim
+    FLOAT                :: phi, theta, kk, krr
+    FLOAT                :: phimax, thetamax, kmax
 
     PUSH_SUB(pes_flux_init)
 
@@ -118,7 +119,6 @@ contains
       message(1) = "PESSurface not specified. Using default values."
       call messages_info(1)
     else
-      ASSERT(dim == 3)
       call parse_block_float(blk, 0, 0, border(1))
       call parse_block_float(blk, 0, 1, border(2))
       call parse_block_float(blk, 0, 2, border(3))
@@ -133,34 +133,51 @@ contains
 
     call pes_flux_getsrfc(this, mesh, border, offset)
 
-    ! k-mesh in 1D (2 points) & 2D (polar coordinates)
+    ! k-mesh in 1D (2 points), 2D (polar coordinates), & 3D (spherical
+    ! coordinates)
     call parse_variable('PESSurfaceKmax', M_ONE, kmax)
     call parse_variable('PESSurfaceDeltaK', CNST(0.002), this%delk)
     call parse_variable('PESSurfacePhiMin', M_ZERO, this%phimin)
     call parse_variable('PESSurfacePhiMax', M_TWO * M_PI, phimax)
     call parse_variable('PESSurfaceDelPhi', CNST((M_TWO * M_PI)/360), this%delphi)
+    call parse_variable('PESSurfaceThetaMin', M_ZERO, this%thetamin)
+    call parse_variable('PESSurfaceThetaMax', M_PI, thetamax)
+    call parse_variable('PESSurfaceDelTheta', CNST(M_PI/180), this%deltheta)
 
-    if(dim == 1) then
+    select case(dim)
+    case(1)
       phimax = M_PI
       this%phimin = M_ZERO
       this%delphi = M_PI
-    end if
+      this%thetamin = M_PI / M_TWO
+      thetamax = M_PI / M_TWO
+    case(2)
+      thetamax = M_PI / M_TWO
+      this%thetamin = M_PI / M_TWO
+      this%deltheta = M_ONE
+    end select
+
     this%nphi   = nint((phimax - this%phimin)/this%delphi)
+    this%ntheta = nint((thetamax - this%thetamin)/this%deltheta)
     this%nk     = nint(kmax/this%delk)
-    this%nkpnts = (this%nphi + 1) * this%nk 
+    this%nkpnts = (this%nphi + 1) * (this%ntheta + 1) * this%nk 
 
     ! k-points
     SAFE_ALLOCATE(this%kpnt(1:this%nkpnts, 1:dim))
     this%kpnt = M_ZERO
 
     ikp = 0
-    do iph = 0, this%nphi
-      phi = iph * this%delphi + this%phimin
-      do ikk = 1, this%nk
-        kk = ikk * this%delk
-        ikp = ikp + 1
-                             this%kpnt(ikp, 1) = kk * cos(phi)
-        if(dim == 2) this%kpnt(ikp, 2) = kk * sin(phi)
+    do ith = 0, this%ntheta
+      theta = ith * this%deltheta + this%thetamin
+      do iph = 0, this%nphi
+        phi = iph * this%delphi + this%phimin
+        do ikk = 1, this%nk
+          kk = ikk * this%delk
+          ikp = ikp + 1
+                       this%kpnt(ikp, 1) = kk * cos(phi) * sin(theta)
+          if(dim == 2) this%kpnt(ikp, 2) = kk * sin(phi) * sin(theta)
+          if(dim == 3) this%kpnt(ikp, 3) = kk * cos(theta)
+        end do
       end do
     end do
 
@@ -180,14 +197,14 @@ contains
     SAFE_ALLOCATE(this%conjgphase(1:this%nkpnts, 0:this%tdsteps))
     this%conjgphase(:,:) = M_z1
 
-    SAFE_ALLOCATE(this%phik(1:this%nkpnts, 1:this%nsrfcpnts))
-    this%phik = M_z0
+    SAFE_ALLOCATE(this%conjgplanewf(1:this%nkpnts, 1:this%nsrfcpnts))
+    this%conjgplanewf = M_z0
     
     do ikp = 1, this%nkpnts
       do isp = 1, this%nsrfcpnts
         ! the sign of the phase here should be -1 of the one for the Volkov phase.
         krr = dot_product(this%kpnt(ikp,1:dim), mesh%x(this%srfcpnt(isp),1:dim))
-        this%phik(ikp,isp) = exp(-M_zI * krr) / (M_TWO * M_PI)**(dim/M_TWO) 
+        this%conjgplanewf(ikp, isp) = exp(-M_zI * krr) / (M_TWO * M_PI)**(dim/M_TWO) 
       end do
     end do
 
@@ -203,6 +220,7 @@ contains
     SAFE_DEALLOCATE_P(this%kpnt)
     SAFE_DEALLOCATE_P(this%spctramp)
     SAFE_DEALLOCATE_P(this%conjgphase)
+    SAFE_DEALLOCATE_P(this%conjgplanewf)
     
     SAFE_DEALLOCATE_P(this%srfcpnt)
     SAFE_DEALLOCATE_P(this%srfcnrml)
@@ -322,7 +340,7 @@ contains
 !              do isp = start(dir), end(dir)
 !                this%Jk(1:this%nkpnts, idim, ist, ik, isp, dir) =    &
 !                  this%Jk(1:this%nkpnts, idim, ist, ik, isp, dir) +  &
-!                  conjg(this%phik(1:this%nkpnts, isp)) *             & 
+!                  conjg(this%conjgplanewf(1:this%nkpnts, isp)) *             & 
 !                  (    this%kpnt(1:this%nkpnts, dir) * wf(isp)       &
 !                                   - M_zI * gwf(isp, dir)  &
 !                  - M_TWO * vp(dir) / P_c *  wf(isp))
@@ -366,7 +384,7 @@ contains
           Jk(1:this%nkpnts) = Jk(1:this%nkpnts) + this%conjgphase(1:this%nkpnts, itstep) * &
             (this%gwf(isp, itstep, dir) - this%kpnt(1:this%nkpnts, dir) * this%wf(isp, itstep))
         end do
-        Jk(1:this%nkpnts) = Jk(1:this%nkpnts) * this%phik(1:this%nkpnts, isp)
+        Jk(1:this%nkpnts) = Jk(1:this%nkpnts) * this%conjgplanewf(1:this%nkpnts, isp)
         this%spctramp(1:this%nkpnts) = this%spctramp(1:this%nkpnts) + Jk(1:this%nkpnts) * this%srfcnrml(isp, dir)
       end do
     end do
@@ -486,34 +504,35 @@ contains
   end subroutine pes_flux_getsrfc
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_output(this, mesh, dt)
+  subroutine pes_flux_output(this, sb, dt)
     type(pes_flux_t), intent(inout)    :: this
-    type(mesh_t),        intent(in)    :: mesh
+    type(simul_box_t),   intent(in)    :: sb
     FLOAT,               intent(in)    :: dt
 
-
-    integer            :: dim, ikp, ikk, iph, iunit, isp
-    FLOAT              :: phi, kk
+    integer            :: dim, ikp, ikk, iph, iunit, isp, ith
+    FLOAT              :: phi, theta, kk
 
     PUSH_SUB(pes_flux_output)
 
-    dim = mesh%sb%dim
+    dim = sb%dim
 
     iunit = io_open('td.general/PESflux_map.z=0', action='write', position='rewind')
-
     ikp = 0
-    do iph = 0, this%nphi
-      phi = iph * this%delphi + this%phimin
-      do ikk = 1, this%nk
-        kk = ikk * this%delk
-        ikp = ikp + 1
-        write(iunit,'(2f18.10, 1e18.10)') kk, phi, &
-          (real(this%spctramp(ikp))**2 + aimag(this%spctramp(ikp))**2) * (dt * this%tdstepsinterval)**2
+    do ith = 0, this%ntheta
+      theta = ith * this%deltheta + this%thetamin
+      do iph = 0, this%nphi
+        phi = iph * this%delphi + this%phimin
+        do ikk = 1, this%nk
+          kk = ikk * this%delk
+          ikp = ikp + 1
+          write(iunit,'(3f18.10, 1e18.10)') kk, theta, phi, &
+            (real(this%spctramp(ikp))**2 + aimag(this%spctramp(ikp))**2) * (dt * this%tdstepsinterval)**2
+        end do
+        write(iunit,'(1x)')
+        if(dim == 1) write(iunit,'(1x)')
       end do
       write(iunit,'(1x)')
-      if(dim == 1) write(iunit,'(1x)')
     end do
-
     call io_close(iunit)
 
     POP_SUB(pes_flux_output)
