@@ -14,5 +14,5 @@ match ; OEP eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; 
 
 Input: 06-rdmft.02-gs.inp
 Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15657
-match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ; -1.85307
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15692
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15763

@@ -28,19 +28,20 @@ module rdmft_m
   use grid_m
   use hamiltonian_m
   use hamiltonian_base_m
-  use index_m 
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
   use loct_math_m 
-  use messages_m
+  use mesh_m
   use mesh_function_m
+  use messages_m
   use minimizer_m
   use output_m
   use parser_m
   use poisson_m
   use profiling_m
   use simul_box_m
+  use species_m
   use states_m
   use states_calc_m
   use unit_m
@@ -88,10 +89,13 @@ contains
     integer,               intent(in)    :: max_iter
     
     integer :: iter, icount, ip, ist, iatom
-    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg
+    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr
+    FLOAT, allocatable :: species_charge_center(:)
     logical :: conv
     
     PUSH_SUB(scf_rdmft)
+
+    SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
 
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
@@ -107,6 +111,19 @@ contains
       call messages_not_implemented("RDMFT parallel in states")
     endif
 
+    ! Find the charge center of they system  
+    call geometry_dipole(geo,species_charge_center)
+   
+    sum_charge = M_ZERO
+
+    do iatom = 1, geo%natoms
+      sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
+    end do
+   
+    
+    species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
+
+
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
@@ -114,16 +131,17 @@ contains
     conv = .false.
    
 
+    !Localize the starting orbitals so that they decay with the HOMO energy
+
     do ip = 1, gr%mesh%np
-      do ist = int((st%qtot)/2)+1, 5 ! we need to find a better criterion here, this is specific to the H_2 dissociation
-        do iatom = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.2*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
-        end do
-      end do
-      do ist = 6, st%nst
-        do iatom = 1, geo%natoms
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-0.15*sum((gr%mesh%x(ip, :)-geo%atom(iatom)%x(:))**2))
-        end do
+      call mesh_r(gr%mesh, ip, rr, species_charge_center)
+      do ist = 1, st%nst
+        if (st%eigenval(ist, 1) < M_ZERO) then
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp((-((-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))**M_HALF) 
+                              & + (-M_TWO*st%eigenval(ist,1))**M_HALF)*rr)
+        else
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-((-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))**M_HALF)*rr)
+        end if
       end do
     end do
 
@@ -175,7 +193,7 @@ contains
    
     if(conv) then 
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      write(message(2),'(a,es15.5)')  'The total energy is ', energy_occ
+      write(message(2),'(a,es15.5)')  'The total energy is ', energy_occ+hm%ep%eii
       call messages_info(2)
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
