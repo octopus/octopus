@@ -183,7 +183,7 @@ contains
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
-        if(abs(st%occ(ist, iqn)) < CNST(5e-7)) then ! the smallest number we print that is not zero
+        if(abs(st%occ(ist, iqn)) < CNST(0.1)) then
           homo_index = iflat - 1
           exit
         end if
