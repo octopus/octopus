@@ -24,7 +24,10 @@ module pes_flux_m
   use messages_m
   use mesh_m
   use profiling_m
+  use mpi_m
+  use loct_m
   use parser_m
+  use par_vec_m
   use states_m
   use grid_m
   use derivatives_m
@@ -45,7 +48,9 @@ module pes_flux_m
     pes_flux_output
 
   type pes_flux_t
-    integer           :: nkpnts                !< total number of k-points
+    integer           :: nkpnts_global         !< global number of k-points
+    integer           :: nkpnts_start          !< start of index for k-points on the current node
+    integer           :: nkpnts_end
     integer           :: nk, nphi, ntheta
     FLOAT             :: delk, phimin, delphi
     FLOAT             :: thetamin, deltheta
@@ -57,13 +62,14 @@ module pes_flux_m
     integer, pointer  :: nsrfcpnt_start(:)
     integer, pointer  :: nsrfcpnt_end(:)
     FLOAT, pointer    :: kpnt(:,:)             !< coordinates of all k-points
-    integer, pointer  :: srfcpnt(:)            !< returns the index of the points on the surface
+    integer, pointer  :: srfcpnt(:)            !< returns the (global) index of the points on the surface
     FLOAT, pointer    :: srfcnrml(:,:)         !< (unit) vectors normal to the surface
     CMPLX, pointer    :: spctramp(:)           !< spectral amplitude
     CMPLX, pointer    :: conjgphase(:,:)       !< current Volkov phase for all k-points
     CMPLX, pointer    :: conjgplanewf(:,:)
     CMPLX, pointer    ::  wf(:,:)
     CMPLX, pointer    :: gwf(:,:,:)
+    integer, pointer  :: mpirank_srfcpnt(:)    !< partition node of current surface point (for par_domains)
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -83,9 +89,14 @@ contains
     type(block_t)        :: blk
     FLOAT                :: border(MAX_DIM)       ! distance of surface from border
     FLOAT                :: offset(MAX_DIM)       ! offset for border
-    integer              :: ikp, isp, il, ith, iph, ikk, dim
+    integer              :: ikp, isp, il, ith, iph, ikk, dim, ii, irest
     FLOAT                :: phi, theta, kk, krr
     FLOAT                :: phimax, thetamax, kmax
+    FLOAT                :: xx(MAX_DIM)
+#if defined(HAVE_MPI)
+    integer, allocatable :: dimrank(:)
+    integer              :: mpisize, mpirank, ierr
+#endif
 
     PUSH_SUB(pes_flux_init)
 
@@ -93,6 +104,11 @@ contains
     offset = M_ZERO
 
     call messages_experimental("PhotoElectronSpectrum with t-surff")
+
+#if defined(HAVE_MPI)
+    call mpi_comm_size(mpi_comm_world, mpisize, ierr)
+    call mpi_comm_rank(mpi_comm_world, mpirank, ierr)
+#endif
 
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
@@ -160,10 +176,12 @@ contains
     this%nphi   = nint((phimax - this%phimin)/this%delphi)
     this%ntheta = nint((thetamax - this%thetamin)/this%deltheta)
     this%nk     = nint(kmax/this%delk)
-    this%nkpnts = (this%nphi + 1) * (this%ntheta + 1) * this%nk 
+    this%nkpnts_global = (this%nphi + 1) * (this%ntheta + 1) * this%nk 
 
-    ! k-points
-    SAFE_ALLOCATE(this%kpnt(1:this%nkpnts, 1:dim))
+    write(*,*) "Info: number of k-points:", this%nkpnts_global
+
+    ! k-points (global)
+    SAFE_ALLOCATE(this%kpnt(1:this%nkpnts_global, 1:dim))
     this%kpnt = M_ZERO
 
     ikp = 0
@@ -191,20 +209,46 @@ contains
     SAFE_ALLOCATE(this%gwf(1:this%nsrfcpnts, 1:this%tdsteps, 1:dim))
     this%gwf = M_z0
 
-    SAFE_ALLOCATE(this%spctramp(1:this%nkpnts))
+    SAFE_ALLOCATE(this%spctramp(1:this%nkpnts_global))
     this%spctramp = M_z0
 
-    SAFE_ALLOCATE(this%conjgphase(1:this%nkpnts, 0:this%tdsteps))
-    this%conjgphase(:,:) = M_z1
+    ! distribute the k-points on the nodes
+#if defined(HAVE_MPI)
+    SAFE_ALLOCATE(dimrank(0:mpisize-1))
+    irest = mod(this%nkpnts_global, mpisize)
+    do ii = 0, mpisize-1
+      if(irest > 0) then
+        dimrank(ii) = int(this%nkpnts_global / mpisize) + 1
+        irest = irest - 1
+      else
+        dimrank(ii) = int(this%nkpnts_global / mpisize)
+      end if
+    end do
 
-    SAFE_ALLOCATE(this%conjgplanewf(1:this%nkpnts, 1:this%nsrfcpnts))
-    this%conjgplanewf = M_z0
-    
-    do ikp = 1, this%nkpnts
+    this%nkpnts_end   = sum(dimrank(:mpirank))
+    this%nkpnts_start = this%nkpnts_end - dimrank(mpirank) + 1
+    SAFE_DEALLOCATE_A(dimrank)
+
+!    write(*,*) mpirank, st%d%kpt%start, st%d%kpt%end, st%st_start, st%st_end
+!    write(*,*) mpirank, this%nkpnts_start, this%nkpnts_end
+#else
+    this%nkpnts_end   = this%nkpnts_global
+    this%nkpnts_start = 1
+
+!    write(*,*) st%d%kpt%start, st%d%kpt%end, st%st_start, st%st_end
+#endif
+
+    SAFE_ALLOCATE(this%conjgphase(1:this%nkpnts_global, 0:this%tdsteps))
+    this%conjgphase(:,:) = M_z0
+    this%conjgphase(this%nkpnts_start:this%nkpnts_end, :) = M_z1
+
+    SAFE_ALLOCATE(this%conjgplanewf(this%nkpnts_start:this%nkpnts_end, 1:this%nsrfcpnts))
+    do ikp = this%nkpnts_start, this%nkpnts_end
       do isp = 1, this%nsrfcpnts
         ! the sign of the phase here should be -1 of the one for the Volkov phase.
-        krr = dot_product(this%kpnt(ikp,1:dim), mesh%x(this%srfcpnt(isp),1:dim))
-        this%conjgplanewf(ikp, isp) = exp(-M_zI * krr) / (M_TWO * M_PI)**(dim/M_TWO) 
+        xx = mesh_x_global(mesh, this%srfcpnt(isp))
+        krr = dot_product(this%kpnt(ikp, 1:dim), xx(1:dim))
+        this%conjgplanewf(ikp, isp) = exp(-M_zI * krr) / (M_TWO * M_PI)**(dim/M_TWO)
       end do
     end do
 
@@ -231,6 +275,8 @@ contains
     SAFE_DEALLOCATE_P(this%wf)
     SAFE_DEALLOCATE_P(this%gwf)
 
+    SAFE_DEALLOCATE_P(this%mpirank_srfcpnt)
+
     POP_SUB(pes_flux_end)
   end subroutine pes_flux_end
 
@@ -245,19 +291,17 @@ contains
     integer,             intent(in)    :: maxiter
     FLOAT,               intent(in)    :: dt
 
-    integer            :: dim, itstep, ik, ist, idim, isp, il, ikp, dir
-    FLOAT              :: dmin
+    integer            :: dim, itstep, ik, ist, idim, isp, il, ikp, dir, mpidim
     CMPLX, allocatable :: gpsi(:,:), psi(:)
     CMPLX, allocatable :: wfact(:), gwfact(:,:)
     FLOAT              :: vp(1:MAX_DIM)
-    integer            :: start(1:MAX_DIM), end(1:MAX_DIM)
+    integer            :: start(1:MAX_DIM), end(1:MAX_DIM), ierr
     FLOAT              :: vec
-    integer            :: ip
+    integer            :: mpirank, ip
 
     PUSH_SUB(pes_flux_save)
 
     if(iter > 0 .and. mod(iter, this%tdstepsinterval) == 0) then
-
       dim  = mesh%sb%dim
    
       SAFE_ALLOCATE(psi(1:mesh%np_part))
@@ -288,14 +332,15 @@ contains
       end do
    
       ! save Volkov phase using the previous time step
-      do ikp = 1, this%nkpnts
+      do ikp = this%nkpnts_start, this%nkpnts_end
         vec = sum((this%kpnt(ikp, 1:dim) - vp(1:dim) / P_c)**2)
         this%conjgphase(ikp, itstep) = this%conjgphase(ikp, itstep - 1) * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
       end do
       if(itstep == this%tdsteps) &
-        this%conjgphase(1:this%nkpnts, 0) = this%conjgphase(1:this%nkpnts, itstep)
+        this%conjgphase(this%nkpnts_start:this%nkpnts_end, 0) = this%conjgphase(this%nkpnts_start:this%nkpnts_end, itstep)
 
       ! save wavefunctions & gradients
+      mpirank = 0
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
@@ -303,16 +348,36 @@ contains
             call zderivatives_grad(gr%der, psi, gpsi)
             do isp = 1, this%nsrfcpnts
               ip = this%srfcpnt(isp)
-               wfact(isp)        =  wfact(isp)        + st%occ(ist, ik) * psi(ip)
-              gwfact(isp, 1:dim) = gwfact(isp, 1:dim) + st%occ(ist, ik) * &
-                (psi(ip) * M_TWO * vp(1:dim) / P_c + gpsi(ip, 1:dim) * M_zI) ! * mesh%spacing(1:dim))
+#if defined(HAVE_MPI)
+              if(mesh%parallel_in_domains) then
+                call mpi_comm_rank(mpi_comm_world, mpirank, ierr)
+                ip = vec_global2local(mesh%vp, this%srfcpnt(isp), mesh%vp%partno)
+              end if
+#endif              
+              if(mpirank == this%mpirank_srfcpnt(isp)) then
+                 wfact(isp)        =  wfact(isp)        + st%occ(ist, ik) * psi(ip)
+                gwfact(isp, 1:dim) = gwfact(isp, 1:dim) + st%occ(ist, ik) * &
+                  (psi(ip) * M_TWO * vp(1:dim) / P_c + gpsi(ip, 1:dim) * M_zI) ! * mesh%spacing(1:dim))
+              else
+                 wfact(isp) = M_z0
+                gwfact(isp, 1:dim) = M_z0
+              end if
             end do
           end do
         end do
       end do
    
+      ! communicate wf, gwf
+#if defined(HAVE_MPI)
+      mpidim = this%nsrfcpnts
+      call MPI_Allreduce( wfact(:),    this%wf(:,itstep),   mpidim,     MPI_CMPLX, mpi_sum, &
+        mpi_comm_world, mpi_err)
+      call MPI_Allreduce(gwfact(:,:), this%gwf(:,itstep,:), mpidim*dim, MPI_CMPLX, mpi_sum, &
+        mpi_comm_world, mpi_err)
+#else
       this%wf(1:this%nsrfcpnts,itstep)    =  wfact(1:this%nsrfcpnts)
       this%gwf(1:this%nsrfcpnts,itstep,1:dim) = gwfact(1:this%nsrfcpnts,1:dim)
+#endif
 
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
@@ -362,9 +427,10 @@ contains
     type(states_t),      intent(inout) :: st
 
     integer            :: dim, ik, ist, idim, itstep, ikp, dir, isp
-    integer            :: start(1:MAX_DIM), end(1:MAX_DIM)
+    integer            :: start(1:MAX_DIM), end(1:MAX_DIM), startk, endk
     FLOAT              :: krr
     CMPLX, allocatable :: Jk(:)
+    FLOAT              :: etime1, etime2
 
     PUSH_SUB(pes_flux_integrate)
 
@@ -374,18 +440,27 @@ contains
     start(1:dim) = this%nsrfcpnt_start(1:dim)
     end(1:dim)   = this%nsrfcpnt_end(1:dim)
 
-    SAFE_ALLOCATE(Jk(1:this%nkpnts))
+    startk = this%nkpnts_start
+    endk   = this%nkpnts_end
+     
+    SAFE_ALLOCATE(Jk(startk:endk))
 
     ! integrate over time & surface
     do dir = 1, dim
       do isp = start(dir), end(dir)
+        etime1 = loct_clock()
         Jk = M_z0
+        etime2 = loct_clock()
         do itstep = 1, this%tdsteps
-          Jk(1:this%nkpnts) = Jk(1:this%nkpnts) + this%conjgphase(1:this%nkpnts, itstep) * &
-            (this%gwf(isp, itstep, dir) - this%kpnt(1:this%nkpnts, dir) * this%wf(isp, itstep))
+          Jk(startk:endk) = Jk(startk:endk) + this%conjgphase(startk:endk, itstep) * &
+            (this%gwf(isp, itstep, dir) - this%kpnt(startk:endk, dir) * this%wf(isp, itstep))
         end do
-        Jk(1:this%nkpnts) = Jk(1:this%nkpnts) * this%conjgplanewf(1:this%nkpnts, isp)
-        this%spctramp(1:this%nkpnts) = this%spctramp(1:this%nkpnts) + Jk(1:this%nkpnts) * this%srfcnrml(isp, dir)
+!        write(*,*) 'time for t-loop:', loct_clock() - etime2
+        etime2 = loct_clock()
+        Jk(startk:endk) = Jk(startk:endk) * this%conjgplanewf(startk:endk, isp)
+        this%spctramp(startk:endk) = this%spctramp(startk:endk) + Jk(startk:endk) * this%srfcnrml(isp, dir)
+!        write(*,*) 'time for k-slice:', loct_clock() - etime2
+!        write(*,*) 'time for srfcpnt:', loct_clock() - etime1
       end do
     end do
 
@@ -403,7 +478,7 @@ contains
 
     integer, allocatable  :: which_surface(:), aux(:)
     FLOAT                 :: xx(MAX_DIM), rr, dd, dmin
-    integer               :: ip, ierr, idim, isp, dir, start, dim
+    integer               :: ip, ierr, idim, isp, dir, start, dim, irank
 
     PUSH_SUB(pes_flux_getsrfc)
 
@@ -412,16 +487,16 @@ contains
     SAFE_ALLOCATE(this%nsrfcpnt_start(1:dim))
     SAFE_ALLOCATE(this%nsrfcpnt_end(1:dim))
 
-    SAFE_ALLOCATE(which_surface(1:mesh%np))
+    SAFE_ALLOCATE(which_surface(1:mesh%np_global))
     which_surface = 0
 
     SAFE_ALLOCATE(aux(1:dim))
     aux = 0
 
     this%nsrfcpnts = 0 
-    do ip = 1, mesh%np
+    do ip = 1, mesh%np_global
       isp = 0
-      call mesh_r(mesh, ip, rr, coords=xx)
+      xx = mesh_x_global(mesh, ip)
       xx(1:dim) = xx(1:dim) + offset(1:dim)
       do idim = 1, dim
         ! distance to a border
@@ -457,7 +532,7 @@ contains
     this%srfcnrml = M_ZERO
 
     ! number of surface points with normal vector in +-x, +-y, and +-z direction separately
-    do ip = 1, mesh%np
+    do ip = 1, mesh%np_global
       if(which_surface(ip) /= 0) then
         dir = abs(which_surface(ip))
         aux(dir) = aux(dir) + 1
@@ -473,7 +548,7 @@ contains
 
     ! Fill up this%srfcpnt in correct ordering
     aux(1:dim) = this%nsrfcpnt_start(1:dim) - 1
-    do ip = 1, mesh%np
+    do ip = 1, mesh%np_global
       if(which_surface(ip) /= 0) then
         dir = abs(which_surface(ip))
         aux(dir) = aux(dir) + 1
@@ -485,12 +560,24 @@ contains
       end if
     end do
 
+!    call dio_function_output(C_OUTPUT_HOW_MESH_INDEX, ".", "surface", mesh, &
+!      dble(which_surface), unit_one, ierr)
+
+!    call dio_function_output(C_OUTPUT_HOW_PLANE_Z, ".", "surface", mesh, &
+!      dble(which_surface), unit_one, ierr)
+
+
     SAFE_DEALLOCATE_A(which_surface)
     SAFE_DEALLOCATE_A(aux)
 
     write(*,*) 'Info: number of surface points:', this%nsrfcpnts
+    write(*,*) 'Info: surface points divisions (start):', this%nsrfcpnt_start(1:dim)
+    write(*,*) 'Info: surface points divisions (end):  ', this%nsrfcpnt_end(1:dim)
+
+    SAFE_ALLOCATE(this%mpirank_srfcpnt(1:this%nsrfcpnts))
     do isp = 1, this%nsrfcpnts
-      write(*,*) isp, mesh%x(this%srfcpnt(isp),:)
+      xx = mesh_x_global(mesh, this%srfcpnt(isp))
+      ip = mesh_nearest_point(mesh, xx, dmin, this%mpirank_srfcpnt(isp))
     end do
 
 !    write out the field is_on_srfc on plot it!
@@ -511,29 +598,43 @@ contains
 
     integer            :: dim, ikp, ikk, iph, iunit, isp, ith
     FLOAT              :: phi, theta, kk
+    CMPLX, allocatable :: spctrout(:)
 
     PUSH_SUB(pes_flux_output)
 
     dim = sb%dim
+    SAFE_ALLOCATE(spctrout(1:this%nkpnts_global))
+    spctrout = M_z0
 
-    iunit = io_open('td.general/PESflux_map.z=0', action='write', position='rewind')
-    ikp = 0
-    do ith = 0, this%ntheta
-      theta = ith * this%deltheta + this%thetamin
-      do iph = 0, this%nphi
-        phi = iph * this%delphi + this%phimin
-        do ikk = 1, this%nk
-          kk = ikk * this%delk
-          ikp = ikp + 1
-          write(iunit,'(3f18.10, 1e18.10)') kk, theta, phi, &
-            (real(this%spctramp(ikp))**2 + aimag(this%spctramp(ikp))**2) * (dt * this%tdstepsinterval)**2
+#if defined(HAVE_MPI)
+    call MPI_Allreduce(this%spctramp(1:this%nkpnts_global), spctrout(1:this%nkpnts_global), &
+      this%nkpnts_global, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+#else
+    spctrout(1:this%nkpnts_global) = this%spctramp(1:this%nkpnts_global)
+#endif
+
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open('td.general/PESflux_map.z=0', action='write', position='rewind')
+      ikp = 0
+      do ith = 0, this%ntheta
+        theta = ith * this%deltheta + this%thetamin
+        do iph = 0, this%nphi
+          phi = iph * this%delphi + this%phimin
+          do ikk = 1, this%nk
+            kk = ikk * this%delk
+            ikp = ikp + 1
+            write(iunit,'(3f18.10, 1e18.10)') kk, theta, phi, &
+              (real(spctrout(ikp))**2 + aimag(spctrout(ikp))**2) * (dt * this%tdstepsinterval)**2
+          end do
+          write(iunit,'(1x)')
+          if(dim == 1) write(iunit,'(1x)')
         end do
         write(iunit,'(1x)')
-        if(dim == 1) write(iunit,'(1x)')
       end do
-      write(iunit,'(1x)')
-    end do
-    call io_close(iunit)
+      call io_close(iunit)
+    end if
+
+    SAFE_DEALLOCATE_A(spctrout)
 
     POP_SUB(pes_flux_output)
   end subroutine pes_flux_output
