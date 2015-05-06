@@ -208,7 +208,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, mesh, st, ii, dt, iter, gr, hm)
+  subroutine pes_calc(pes, mesh, st, ii, dt, iter, maxiter, gr, hm)
     type(pes_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
@@ -216,13 +216,14 @@ contains
     integer,             intent(in)    :: ii
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
+    integer,             intent(in)    :: maxiter
     type(hamiltonian_t), intent(in)    :: hm
 
     PUSH_SUB(pes_calc)
 
     if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt)
+    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc
@@ -247,7 +248,7 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, st)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, dt)
 
     POP_SUB(pes_output)
   end subroutine pes_output
