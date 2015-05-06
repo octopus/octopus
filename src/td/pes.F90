@@ -255,10 +255,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_dump(restart, pes, st, ierr)
+  subroutine pes_dump(restart, pes, st, mesh, ierr)
     type(restart_t), intent(in)  :: restart
     type(pes_t),     intent(in)  :: pes
     type(states_t),  intent(in)  :: st
+    type(mesh_t),    intent(in)  :: mesh
     integer,         intent(out) :: ierr
 
     PUSH_SUB(pes_dump)
@@ -279,6 +280,10 @@ contains
       call pes_mask_dump(restart, pes%mask, st, ierr)
     end if
 
+    if (pes%calc_flux) then
+      call pes_flux_dump(restart, pes%flux, mesh, ierr)
+    end if
+
     if (in_debug_mode) then
       message(1) = "Debug: Writing PES restart done."
       call messages_info(1)
@@ -289,10 +294,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_load(restart, pes, st, ierr)
+  subroutine pes_load(restart, pes, st, mesh, ierr)
     type(restart_t), intent(in)    :: restart
     type(pes_t),     intent(inout) :: pes
     type(states_t),  intent(inout) :: st
+    type(mesh_t),    intent(in)    :: mesh
     integer,         intent(out) :: ierr
 
     PUSH_SUB(pes_load)
@@ -312,6 +318,10 @@ contains
 
     if (pes%calc_mask) then
       call pes_mask_load(restart, pes%mask, st, ierr)
+    end if
+
+    if(pes%calc_flux) then
+      call pes_flux_load(restart, pes%flux, mesh, ierr)
     end if
 
     if (in_debug_mode) then

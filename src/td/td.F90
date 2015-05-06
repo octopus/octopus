@@ -869,7 +869,7 @@ contains
     call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
 
-    call pes_dump(restart, td%pesv, st, err)
+    call pes_dump(restart, td%pesv, st, gr%mesh, err)
     if (err /= 0) ierr = ierr + 4
 
     ! Gauge field restart
@@ -924,8 +924,8 @@ contains
     if (err2 /= 0) ierr = ierr + 2
 
     ! read PES restart
-    if (td%pesv%calc_rc .or. td%pesv%calc_mask) then
-      call pes_load(restart, td%pesv, st, err)
+    if (td%pesv%calc_rc .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
+      call pes_load(restart, td%pesv, st, gr%mesh, err)
       if (err /= 0) ierr = ierr + 4
     end if
 

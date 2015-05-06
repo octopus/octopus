@@ -33,6 +33,9 @@ module pes_flux_m
   use derivatives_m
   use hamiltonian_m
   use lasers_m
+  use io_function_m
+  use restart_m
+  use io_binary_m
   use io_m
   use simul_box_m
 
@@ -45,7 +48,9 @@ module pes_flux_m
     pes_flux_init,             &
     pes_flux_end,              &
     pes_flux_save,             &
-    pes_flux_output
+    pes_flux_output,           &
+    pes_flux_load,             &
+    pes_flux_dump
 
   type pes_flux_t
     integer           :: nkpnts_global         !< global number of k-points
@@ -566,7 +571,6 @@ contains
 !    call dio_function_output(C_OUTPUT_HOW_PLANE_Z, ".", "surface", mesh, &
 !      dble(which_surface), unit_one, ierr)
 
-
     SAFE_DEALLOCATE_A(which_surface)
     SAFE_DEALLOCATE_A(aux)
 
@@ -638,6 +642,115 @@ contains
 
     POP_SUB(pes_flux_output)
   end subroutine pes_flux_output
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_dump(restart, this, mesh, ierr)
+    type(restart_t),  intent(in)  :: restart
+    type(pes_flux_t), intent(in)  :: this
+    type(mesh_t),     intent(in)  :: mesh
+    integer,          intent(out) :: ierr
+
+    integer    :: err, dim, dumpdim
+    CMPLX, allocatable :: phasedump(:,:), spctrdump(:)
+
+    PUSH_SUB(pes_flux_dump)
+
+    dim = mesh%sb%dim
+    dumpdim = this%nkpnts_global * (this%tdsteps + 1)
+
+    if(restart_skip(restart)) then
+      POP_SUB(pes_flux_dump)
+      return
+    end if
+
+    SAFE_ALLOCATE(spctrdump(1:this%nkpnts_global))
+    SAFE_ALLOCATE(phasedump(1:this%nkpnts_global, 0:this%tdsteps))
+
+    if(in_debug_mode) then
+      message(1) = "Debug: Writing pes_flux restart."
+      call messages_info(1)
+    end if
+
+#if defined(HAVE_MPI)
+    call MPI_Allreduce(this%spctramp(1:this%nkpnts_global), spctrdump(1:this%nkpnts_global), &
+      this%nkpnts_global, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+    call MPI_Allreduce(this%conjgphase(1:this%nkpnts_global,0:this%tdsteps), phasedump(1:this%nkpnts_global,0:this%tdsteps), &
+      dumpdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+#else
+    spctrdump = this%spctramp
+    phasedump = this%conjgphase
+#endif
+
+    call zrestart_write_binary(restart, 'pesflux1', this%nkpnts_global, spctrdump, err)
+    call zrestart_write_binary(restart, 'pesflux2', dumpdim, phasedump, err)
+    call zrestart_write_binary(restart, 'pesflux3', this%nsrfcpnts*this%tdsteps, this%wf, err)
+    call zrestart_write_binary(restart, 'pesflux4', this%nsrfcpnts*this%tdsteps*dim, this%gwf, err)
+
+    if(err /= 0) ierr = ierr + 1
+
+    if(in_debug_mode) then
+      message(1) = "Debug: Writing pes_flux restart done."
+      call messages_info(1)
+    end if
+
+    SAFE_DEALLOCATE_A(phasedump)
+
+    POP_SUB(pes_flux_dump)
+  end subroutine pes_flux_dump
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_load(restart, this, mesh, ierr)
+    type(restart_t),     intent(in)    :: restart
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    integer,             intent(out)   :: ierr
+
+    integer   :: err, dim, loaddim
+    CMPLX, allocatable :: phaseload(:,:), spctrload(:)
+
+    PUSH_SUB(pes_flux_load)
+
+    dim = mesh%sb%dim
+    loaddim = this%nkpnts_global * (this%tdsteps + 1)
+    ierr = 0
+
+    if(restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(pes_flux_load)
+      return
+    end if
+
+    SAFE_ALLOCATE(spctrload(1:this%nkpnts_global))
+    SAFE_ALLOCATE(phaseload(1:this%nkpnts_global, 0:this%tdsteps))
+
+    if(in_debug_mode) then
+      message(1) = "Debug: Reading pes_flux restart."
+      call messages_info(1)
+    end if
+
+    call zrestart_read_binary(restart, 'pesflux1', this%nkpnts_global, spctrload, err)
+    call zrestart_read_binary(restart, 'pesflux2', loaddim, phaseload, err)
+    call zrestart_read_binary(restart, 'pesflux3', this%nsrfcpnts*this%tdsteps, this%wf, err)
+    call zrestart_read_binary(restart, 'pesflux4', this%nsrfcpnts*this%tdsteps*dim, this%gwf, err)
+
+    this%spctramp = M_z0
+    this%spctramp(this%nkpnts_start:this%nkpnts_end) = spctrload(this%nkpnts_start:this%nkpnts_end)
+
+    this%conjgphase = M_z0
+    this%conjgphase(this%nkpnts_start:this%nkpnts_end,:) = phaseload(this%nkpnts_start:this%nkpnts_end,:)
+
+    if(err /= 0) ierr = ierr + 1
+   
+    if(in_debug_mode) then
+      message(1) = "Debug: Reading pes_flux restart done."
+      call messages_info(1)
+    end if
+
+    SAFE_DEALLOCATE_A(spctrload)
+    SAFE_DEALLOCATE_A(phaseload)
+
+    POP_SUB(pes_flux_load)
+  end subroutine pes_flux_load
 
 end module pes_flux_m
 
