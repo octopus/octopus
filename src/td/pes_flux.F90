@@ -611,8 +611,8 @@ contains
     spctrout = M_z0
 
 #if defined(HAVE_MPI)
-    call MPI_Allreduce(this%spctramp(1:this%nkpnts_global), spctrout(1:this%nkpnts_global), &
-      this%nkpnts_global, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+    call MPI_Reduce(this%spctramp(1:this%nkpnts_global), spctrout(1:this%nkpnts_global), &
+      this%nkpnts_global, MPI_CMPLX, mpi_sum, 0, mpi_comm_world, mpi_err)
 #else
     spctrout(1:this%nkpnts_global) = this%spctramp(1:this%nkpnts_global)
 #endif
@@ -672,10 +672,10 @@ contains
     end if
 
 #if defined(HAVE_MPI)
-    call MPI_Allreduce(this%spctramp(1:this%nkpnts_global), spctrdump(1:this%nkpnts_global), &
-      this%nkpnts_global, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
-    call MPI_Allreduce(this%conjgphase(1:this%nkpnts_global,0:this%tdsteps), phasedump(1:this%nkpnts_global,0:this%tdsteps), &
-      dumpdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+    call MPI_Reduce(this%spctramp(1:this%nkpnts_global), spctrdump(1:this%nkpnts_global), &
+      this%nkpnts_global, MPI_CMPLX, mpi_sum, 0, mpi_comm_world, mpi_err)
+    call MPI_Reduce(this%conjgphase(1:this%nkpnts_global,0:this%tdsteps), phasedump(1:this%nkpnts_global,0:this%tdsteps), &
+      dumpdim, MPI_CMPLX, mpi_sum, 0, mpi_comm_world, mpi_err)
 #else
     spctrdump = this%spctramp
     phasedump = this%conjgphase
