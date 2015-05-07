@@ -137,8 +137,8 @@ contains
       call mesh_r(gr%mesh, ip, rr, species_charge_center)
       do ist = 1, st%nst
         if (st%eigenval(ist, 1) < M_ZERO) then
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp((-((-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))**M_HALF) 
-                              & + (-M_TWO*st%eigenval(ist,1))**M_HALF)*rr)
+          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp((-((-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))**M_HALF) & 
+                                + (-M_TWO*st%eigenval(ist,1))**M_HALF)*rr)
         else
           st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-((-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))**M_HALF)*rr)
         end if
