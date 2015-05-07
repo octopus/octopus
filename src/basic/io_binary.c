@@ -522,7 +522,9 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
   *np  = h->np;
   *type = (int) h->type;
 
-  stat(fname, &st);
+  char * filename;
+  TO_C_STR1(fname, filename);
+  stat(filename, &st);
   *file_size = (int) st.st_size;
 
   free(h);

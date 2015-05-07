@@ -255,13 +255,13 @@ contains
 #endif
 
     if (err /= 0) then
-      ierr = ierr + 4
+      ierr = ierr + 1
       POP_SUB(partition_load)
       return
     end if
     ! The size of the file  is not as big as np_global
     if ((file_size - 64) / FC_INTEGER_SIZE /= partition%np_global) then
-      ierr = ierr + 8
+      ierr = ierr + 2
       POP_SUB(partition_load)
       return
     end if
@@ -282,13 +282,13 @@ contains
     call io_binary_read_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
          partition%np_local, partition%part, err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
-    if (err /= 0) ierr = ierr + 1
+    if (err /= 0) ierr = ierr + 4
 #else
      ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
       SAFE_ALLOCATE(part_global(1:partition%np_global))
       call io_binary_read(filename, partition%np_global, part_global, err)
-      if (err /= 0) ierr = ierr + 2
+      if (err /= 0) ierr = ierr + 8
     else
       ! Create a dummy variable for the rest of the processes
       SAFE_ALLOCATE(part_global(1:1))
