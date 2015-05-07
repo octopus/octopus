@@ -1541,15 +1541,20 @@ contains
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
-    !cmplxscl
-    !NOTE: sometimes these objects are allocated outside this module
-    ! and therefore the correspondence with val => val%Re is broken.
-    ! In this case we check if the pointer val is associated with zval%Re.
-    if(associated(st%rho, target=st%zrho%Re)) then 
-      nullify(st%rho)
-      SAFE_DEALLOCATE_P(st%zrho%Re)       
+    if(associated(st%subsys_st))then
+      !subsystems
+      nullify(st%rho, st%zrho%Re)
     else
-      SAFE_DEALLOCATE_P(st%rho)
+      !cmplxscl
+      !NOTE: sometimes these objects are allocated outside this module
+      ! and therefore the correspondence with val => val%Re is broken.
+      ! In this case we check if the pointer val is associated with zval%Re.
+      if(associated(st%rho, target=st%zrho%Re)) then 
+        nullify(st%rho)
+        SAFE_DEALLOCATE_P(st%zrho%Re)       
+      else
+        SAFE_DEALLOCATE_P(st%rho)
+      end if
     end if
     if(associated(st%eigenval, target=st%zeigenval%Re)) then 
       nullify(st%eigenval)
