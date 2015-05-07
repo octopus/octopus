@@ -433,6 +433,8 @@ contains
     logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
 
+    PUSH_SUB(v_ks_calc)
+
     call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy)
     call v_ks_calc_finish(ks, hm)
 
@@ -440,6 +442,7 @@ contains
       call energy_calc_eigenvalues(hm, ks%gr%der, st)
     end if
 
+    POP_SUB(v_ks_calc)
   end subroutine v_ks_calc
 
   ! --------------------------------------------------------- 
