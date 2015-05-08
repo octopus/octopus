@@ -178,8 +178,6 @@ contains
     
       call sort(flat_eigenval, flat_indices(:, :))
 
-      SAFE_DEALLOCATE_A(flat_eigenval)
-     
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
@@ -306,6 +304,10 @@ contains
       
       SAFE_DEALLOCATE_A(flat_indices)
 
+      if(nst*st%d%nik > 1) call print_dos()
+
+      SAFE_DEALLOCATE_A(flat_eigenval)
+
     end if
 
     if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
@@ -315,6 +317,71 @@ contains
     endif
 
     POP_SUB(states_write_eigenvalues)
+    
+  contains
+
+    subroutine print_dos()
+
+      integer, parameter :: ndiv = 70, height = 10
+      integer :: histogram(1:ndiv), iev, ien, iline, maxhist, ife
+      character(len=ndiv) :: line
+      FLOAT :: emin, emax, de
+      
+      PUSH_SUB(states_write_eigenvalues.print_dos)
+
+      emin = flat_eigenval(1)
+      emax = flat_eigenval(st%d%nik*nst)
+      de = (emax - emin)/(ndiv - 1.0)
+
+      if(de < M_EPSILON) then
+        POP_SUB(states_write_eigenvalues.print_dos)
+        return
+      end if
+      
+      ife = nint((st%smear%e_fermi - emin)/de) + 1
+
+      histogram = 0
+      do iev = 1, st%d%nik*nst
+        ien = nint((flat_eigenval(iev) - emin)/de) + 1
+        ASSERT(ien >= 1)
+        ASSERT(ien <= ndiv)
+        histogram(ien) = histogram(ien) + 1
+      end do
+
+      !normalize
+      if(maxval(histogram) > height) then
+        maxhist = maxval(histogram)
+        do ien = 1, ndiv
+          histogram(ien) = (histogram(ien)*height)/maxhist
+        end do
+      end if
+
+      call messages_new_line()
+      call messages_write('Density of states:')
+      call messages_new_line()
+      call messages_info()
+      
+      !print histogram
+      do iline = height, 1, -1
+        do ien = 1, ndiv
+          if(histogram(ien) >= iline) then
+            call messages_write('%')
+          else
+            call messages_write('-')
+          end if
+        end do
+        call messages_info()
+      end do
+
+      line(1:ndiv) = ' '
+      line(ife:ife) = '^'
+      call messages_write(line)
+      call messages_new_line()
+      call messages_info()
+
+      POP_SUB(states_write_eigenvalues.print_dos)
+    end subroutine print_dos
+    
   end subroutine states_write_eigenvalues
 
 
