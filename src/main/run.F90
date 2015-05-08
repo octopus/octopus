@@ -154,9 +154,18 @@ contains
       call unit_system_init()
 
       nullify(subsys_model, subsys_hm)
-
-      call system_init(sys)
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+      if(ssys_config_parse_use())then
+        call system_init(sys, subsys_handle, config)
+        call ssys_handle_get(subsys_handle, subsys_model)
+        ASSERT(associated(subsys_model))
+        call ssys_model_get(subsys_model, subsys_hm)
+        ASSERT(associated(subsys_hm))
+        call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
+        nullify(subsys_model, subsys_hm)
+      else
+        call system_init(sys)
+        call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+      end if
       
       call messages_print_stress(stdout, 'Approximate memory requirements')
       call memory_run(sys)
