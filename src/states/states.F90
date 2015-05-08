@@ -1257,6 +1257,7 @@ contains
       call ssys_states_get(st%subsys_st, density)
       ASSERT(associated(density))
       call ssys_density_get(density, st%zrho%Re)
+      ASSERT(associated(st%zrho%Re))
     else
       SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
       st%zrho%Re = M_ZERO
@@ -1439,6 +1440,7 @@ contains
         call ssys_states_get(stout%subsys_st, density)
         ASSERT(associated(density))
         call ssys_density_get(density, stout%zrho%Re)
+        ASSERT(associated(stout%zrho%Re))
       else
         call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
       end if
