@@ -695,7 +695,8 @@ contains
         SAFE_DEALLOCATE_P(this%pgeo)
       end if
     end if
-    call geometry_end(this%igeo)
+    if(associated(this%config))&
+      call geometry_end(this%igeo)
     call base_geom__inull__(this)
     call base_geom__end__list(this%alst)
     call base_geom__end__dict(this%sdct)
