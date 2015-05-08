@@ -29,6 +29,7 @@ module system_m
   use grid_m
   use hamiltonian_m
   use io_function_m
+  use json_m
   use mesh_m
   use messages_m
   use modelmb_particles_m
@@ -45,7 +46,11 @@ module system_m
   use species_m
   use simul_box_m
   use sort_om
+  use ssys_config_m
+  use ssys_handle_m
   use ssys_model_m
+  use ssys_states_m
+  use ssys_system_m
   use states_m
   use states_dim_m
   use unit_m
@@ -75,8 +80,13 @@ module system_m
 contains
 
   !----------------------------------------------------------
-  subroutine system_init(sys)
-    type(system_t), intent(out) :: sys
+  subroutine system_init(sys, subsys_handle, config)
+    type(system_t),                intent(out)   :: sys
+    type(ssys_handle_t), optional, intent(inout) :: subsys_handle
+    type(json_object_t), optional, intent(inout) :: config
+
+    type(ssys_system_t), pointer :: subsys_system
+    type(ssys_states_t), pointer :: subsys_states
 
     type(profile_t), save :: prof
     PUSH_SUB(system_init)
@@ -110,6 +120,9 @@ contains
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call output_init(sys%outp, sys%gr%sb, sys%st%nst)
+
+    nullify(subsys_system, subsys_states)
+
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
     call elf_init()
