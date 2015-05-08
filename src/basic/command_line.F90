@@ -77,7 +77,6 @@ module command_line_m
             getopt_center_geom,          &
             getopt_dielectric_function,  &
             getopt_propagation_spectrum, &
-            getopt_rotatory_strength,    &
             getopt_vibrational,          &
             getopt_xyz_anim,             &
             getopt_oscillator_strength,  &
@@ -121,10 +120,6 @@ module command_line_m
       implicit none
       character(len=*), intent(inout) :: fname
     end subroutine getopt_propagation_spectrum
-
-    subroutine getopt_rotatory_strength
-      implicit none
-    end subroutine getopt_rotatory_strength
 
     subroutine getopt_vibrational(mode)
       implicit none
