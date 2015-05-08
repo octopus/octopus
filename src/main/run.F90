@@ -45,6 +45,8 @@ module run_m
   use restart_m
   use ssys_config_m
   use ssys_handle_m
+  use ssys_model_m
+  use ssys_hamiltonian_m
   use static_pol_m
   use system_m
   use td_m
@@ -130,6 +132,9 @@ contains
     type(ssys_handle_t) :: subsys_handle
     logical :: fromScratch
 
+    type(ssys_model_t),       pointer :: subsys_model
+    type(ssys_hamiltonian_t), pointer :: subsys_hm
+    
     PUSH_SUB(run)
 
     calc_mode_id = cm
@@ -147,6 +152,9 @@ contains
       call fft_all_init()
 
       call unit_system_init()
+
+      nullify(subsys_model, subsys_hm)
+
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       
@@ -252,7 +260,7 @@ contains
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       call hamiltonian_end(hm)
       call system_end(sys)
-      !call ssys_handle_end(subsys_handle)
+      call ssys_handle_end(subsys_handle)
       call json_end(config)
       call fft_all_end()
     end if
