@@ -81,9 +81,9 @@ contains
 
   !----------------------------------------------------------
   subroutine system_init(sys, subsys_handle, config)
-    type(system_t),                intent(out)   :: sys
-    type(ssys_handle_t), optional, intent(inout) :: subsys_handle
-    type(json_object_t), optional, intent(inout) :: config
+    type(system_t),                intent(out) :: sys
+    type(ssys_handle_t), optional, intent(out) :: subsys_handle
+    type(json_object_t), optional, intent(out) :: config
 
     type(ssys_system_t), pointer :: subsys_system
     type(ssys_states_t), pointer :: subsys_states
@@ -94,8 +94,6 @@ contains
     
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
-
-    nullify(sys%subsys_model)
 
     call opencl_init(mpi_world)
     call octcl_kernel_global_init()
@@ -121,7 +119,20 @@ contains
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call output_init(sys%outp, sys%gr%sb, sys%st%nst)
 
-    nullify(subsys_system, subsys_states)
+    nullify(sys%subsys_model, subsys_system, subsys_states)
+    if(present(subsys_handle).and.present(config))then
+      call ssys_config_parse(config, sys%geo, sys%space%dim, sys%st%d%nspin)
+      call ssys_handle_init(subsys_handle, config)
+      call ssys_handle_start(subsys_handle, sys%gr)
+      call ssys_handle_get(subsys_handle, sys%subsys_model)
+      ASSERT(associated(sys%subsys_model))
+      call ssys_model_get(sys%subsys_model, subsys_system)
+      ASSERT(associated(subsys_system))
+      call ssys_system_get(subsys_system, subsys_states)
+      ASSERT(associated(subsys_states))
+      call states_add_substates(sys%st, subsys_states)
+      nullify(subsys_system, subsys_states)
+    end if
 
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
