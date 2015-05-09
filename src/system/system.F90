@@ -81,9 +81,9 @@ contains
 
   !----------------------------------------------------------
   subroutine system_init(sys, subsys_handle, config)
-    type(system_t),                intent(out) :: sys
-    type(ssys_handle_t), optional, intent(out) :: subsys_handle
-    type(json_object_t), optional, intent(out) :: config
+    type(system_t),                intent(out)   :: sys
+    type(ssys_handle_t), optional, intent(inout) :: subsys_handle
+    type(json_object_t), optional, intent(inout) :: config
 
     type(ssys_system_t), pointer :: subsys_system
     type(ssys_states_t), pointer :: subsys_states
