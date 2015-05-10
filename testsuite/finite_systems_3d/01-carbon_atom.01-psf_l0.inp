@@ -44,3 +44,6 @@ ConvRelDens = 4e-6
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
+
+FilterPotentials = filter_none
+

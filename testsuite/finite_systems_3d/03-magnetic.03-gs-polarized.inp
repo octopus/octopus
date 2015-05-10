@@ -22,3 +22,6 @@ SpinComponents = spin_polarized
 FromScratch = yes
 
 LCAOStart = no
+
+FilterPotentials = filter_none
+

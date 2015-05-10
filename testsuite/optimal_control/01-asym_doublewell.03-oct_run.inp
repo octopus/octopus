@@ -77,3 +77,6 @@ freq = 0.157
 "envelope_function" | tdf_cw | ampl
 %
 
+
+FilterPotentials = filter_none
+

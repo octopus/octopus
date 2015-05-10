@@ -16,3 +16,6 @@ Radius = 6
 
 ParallelizationStrategy = par_kpoints
 #For future reference: PoissonSolverISFParallelData = no
+
+FilterPotentials = filter_none
+

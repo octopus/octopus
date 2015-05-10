@@ -9,3 +9,6 @@ PseudopotentialSet = sg15
 ExperimentalFeatures= yes
 
 FromScratch = yes
+
+FilterPotentials = filter_none
+

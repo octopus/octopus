@@ -76,3 +76,6 @@ PESMaskPlaneWaveProjection = fft_map
 PESMaskEnlargeFactor = 4.0
 
 
+
+FilterPotentials = filter_none
+

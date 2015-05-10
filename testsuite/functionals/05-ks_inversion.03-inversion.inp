@@ -33,3 +33,6 @@ InvertKSTargetDensity = "static/density.y=0,z=0"
 InvertKSConvAbsDens = 1e-3
 InvertKSstabilizer = 1.0d-20
 InvertKSVerbosity = 1
+
+FilterPotentials = filter_none
+

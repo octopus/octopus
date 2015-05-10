@@ -91,3 +91,6 @@ ParallelizationStrategy = par_states + par_domains
  fill | 2
 %
 
+
+FilterPotentials = filter_none
+

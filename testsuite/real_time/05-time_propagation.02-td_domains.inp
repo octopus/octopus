@@ -27,3 +27,6 @@ TDTimeStep = 0.1
 TDMaxSteps = 10
 
 TDEnergyUpdateIter = 5
+
+FilterPotentials = filter_none
+

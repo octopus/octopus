@@ -86,3 +86,6 @@ Output=  wfs + current
 OutputHow= axis_x
 
 
+
+FilterPotentials = filter_none
+

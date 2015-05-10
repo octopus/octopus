@@ -65,3 +65,6 @@ TheoryLevel = independent_particles
 "Box1D" | 0
 %
 
+
+FilterPotentials = filter_none
+

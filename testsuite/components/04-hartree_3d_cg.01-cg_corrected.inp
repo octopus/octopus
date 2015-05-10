@@ -12,3 +12,6 @@ PoissonSolver = cg_corrected
 
 PoissonSolverMaxMultipole = 8
 
+
+FilterPotentials = filter_none
+

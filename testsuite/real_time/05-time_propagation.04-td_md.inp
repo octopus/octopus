@@ -44,3 +44,6 @@ TDMaxSteps = 10
 %ParallelizationGroupRanks
 2 | 2
 %
+
+FilterPotentials = filter_none
+

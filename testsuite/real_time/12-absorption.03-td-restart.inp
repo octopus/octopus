@@ -26,3 +26,6 @@ TDDeltaStrength = 0.01
    
 TDPolarizationDirection = 1
 TDPolarizationEquivAxes = 3
+
+FilterPotentials = filter_none
+

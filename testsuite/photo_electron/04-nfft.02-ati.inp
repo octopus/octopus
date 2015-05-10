@@ -80,3 +80,6 @@ NFFTCutoff = 2
 NFFTOversampling = 1.1
 NFFTPrecompute = NFFT_PRE_PSI
 
+
+FilterPotentials = filter_none
+

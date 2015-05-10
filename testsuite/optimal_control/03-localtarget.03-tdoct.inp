@@ -81,3 +81,6 @@ electric_field | 1 | 0 | 0 | 0.0 | "envelope_function"
 "envelope_function" | tdf_from_expr | "0.1*sqrt(2/stime)*sin((2*pi/stime)*t)"
 %
 
+
+FilterPotentials = filter_none
+

@@ -14,3 +14,6 @@ StatesOrthogonalization = cholesky_serial
 
 TestType = complex
 
+
+FilterPotentials = filter_none
+

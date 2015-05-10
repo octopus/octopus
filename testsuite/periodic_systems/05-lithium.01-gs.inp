@@ -31,3 +31,6 @@ ParallelizationStrategy = par_kpoints
 
 Output = density
 OutputHow = xcrysden
+
+FilterPotentials = filter_none
+

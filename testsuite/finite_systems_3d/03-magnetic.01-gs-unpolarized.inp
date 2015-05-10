@@ -20,3 +20,6 @@ SmearingFunction = fermi_dirac
 FromScratch = yes
 
 LCAOStart = no
+
+FilterPotentials = filter_none
+

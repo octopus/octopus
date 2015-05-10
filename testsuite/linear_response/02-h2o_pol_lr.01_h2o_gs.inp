@@ -13,3 +13,6 @@ fromScratch = yes
 
 Spacing = 0.65
 ConvRelDens = 8.0e-8
+
+FilterPotentials = filter_none
+

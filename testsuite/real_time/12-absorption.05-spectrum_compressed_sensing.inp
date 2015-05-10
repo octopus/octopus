@@ -35,3 +35,6 @@ SpectrumMethod = compressed_sensing
 
 ExperimentalFeatures = yes
 
+
+FilterPotentials = filter_none
+

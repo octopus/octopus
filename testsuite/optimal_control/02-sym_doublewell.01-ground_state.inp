@@ -32,3 +32,6 @@ TheoryLevel = independent_particles
 
 Output = potential + wfs
 OutputHow = axis_x
+
+FilterPotentials = filter_none
+

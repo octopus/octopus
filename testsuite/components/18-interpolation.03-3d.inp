@@ -12,3 +12,6 @@ Radius = 10
  "H" | 0.45 | 0.2 | 0.4
 %
 
+
+FilterPotentials = filter_none
+

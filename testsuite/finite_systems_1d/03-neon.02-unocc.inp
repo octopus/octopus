@@ -20,3 +20,6 @@ ExtraStates = 6
 EigensolverMaxIter = 100
 Preconditioner = no
 #EigensolverTolerance = 1e-8
+
+FilterPotentials = filter_none
+

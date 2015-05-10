@@ -19,3 +19,6 @@ MaximumIter = 3
 %RestartOptions
  restart_gs | "restart" | restart_rho + restart_mix
 %
+
+FilterPotentials = filter_none
+

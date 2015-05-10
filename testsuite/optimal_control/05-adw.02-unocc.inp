@@ -32,3 +32,6 @@ TheoryLevel = independent_particles
 ConvRelDens = 1.0e-7
 
 ExtraStates = 1
+
+FilterPotentials = filter_none
+

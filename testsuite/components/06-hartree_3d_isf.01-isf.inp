@@ -11,3 +11,6 @@ Spacing = 0.3
 PoissonSolver = isf
 
 
+
+FilterPotentials = filter_none
+

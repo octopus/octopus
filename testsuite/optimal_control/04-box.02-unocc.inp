@@ -30,3 +30,6 @@ TheoryLevel = independent_particles
 
 EigenSolver = cg_new
 ExtraStates = 5
+
+FilterPotentials = filter_none
+

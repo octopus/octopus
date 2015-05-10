@@ -9,3 +9,6 @@ dist = 3.0
 
 FromScratch = yes
 
+
+FilterPotentials = filter_none
+

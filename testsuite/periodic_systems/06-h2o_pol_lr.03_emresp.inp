@@ -26,3 +26,6 @@ EMCalcBornCharges = yes
 %
 
 EMEta = 0.01
+
+FilterPotentials = filter_none
+

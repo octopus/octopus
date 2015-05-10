@@ -13,3 +13,6 @@ ExtraStates = 8
 StatesOrthogonalization = mgs
 
 TestType = real
+
+FilterPotentials = filter_none
+

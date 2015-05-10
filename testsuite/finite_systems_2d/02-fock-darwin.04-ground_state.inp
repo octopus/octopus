@@ -171,3 +171,6 @@ B = B/ sqrt(epsilon)
 %StaticMagneticField
 0 | 0 | B
 %
+
+FilterPotentials = filter_none
+

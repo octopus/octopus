@@ -16,3 +16,6 @@ Radius = 10
 Spacing = 0.4
 
 TheoryLevel = independent_particles
+
+FilterPotentials = filter_none
+

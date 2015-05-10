@@ -27,3 +27,6 @@ LinearSolverTol     = 1e-6
 #LinearSolverInitTol = 1e-6
 #HamiltonianVariation = no
 #This is now the default for a magnetic perturbation, via LRTolScheme
+
+FilterPotentials = filter_none
+

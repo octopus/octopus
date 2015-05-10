@@ -96,3 +96,6 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #Output = density + wfs
 #OutputHow = axis_x
 
+
+FilterPotentials = filter_none
+

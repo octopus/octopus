@@ -34,3 +34,6 @@ InvertKSstabilizer = 1.0d-20
 InvertKSVerbosity = 1
 Output = potential
 OutputHow = axis_x
+
+FilterPotentials = filter_none
+

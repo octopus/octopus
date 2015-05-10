@@ -37,3 +37,6 @@ GuessMagnetDensity = user_defined
 ParallelizationStrategy=par_domains
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

@@ -10,3 +10,6 @@ Spacing = 0.3
 
 PoissonSolver = fft
 
+
+FilterPotentials = filter_none
+

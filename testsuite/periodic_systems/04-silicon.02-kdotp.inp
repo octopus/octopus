@@ -34,3 +34,6 @@ SymmetrizeDensity = yes
 Preconditioner = no
 ExtraStates = 1
 KdotPCalcSecondOrder = yes
+
+FilterPotentials = filter_none
+

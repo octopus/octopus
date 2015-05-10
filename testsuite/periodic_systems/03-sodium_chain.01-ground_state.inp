@@ -40,3 +40,6 @@ BoxShape = parallelepiped
 SymmetrizeDensity = yes
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

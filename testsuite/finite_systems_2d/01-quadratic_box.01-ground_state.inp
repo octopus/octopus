@@ -35,3 +35,6 @@ TheoryLevel = independent_particles
 
 EigenSolverMaxIter = 250
 
+
+FilterPotentials = filter_none
+

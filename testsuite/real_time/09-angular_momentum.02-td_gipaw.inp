@@ -32,3 +32,6 @@ MagneticGaugeCorrection = gipaw
 TDMultipoleLmax = 2
 
 TDEnergyUpdateIter = 25
+
+FilterPotentials = filter_none
+

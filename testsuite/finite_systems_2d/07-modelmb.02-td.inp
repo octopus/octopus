@@ -53,3 +53,6 @@ TDPolarizationDirection = 1
  0         | 0         | 1
 %
 
+
+FilterPotentials = filter_none
+

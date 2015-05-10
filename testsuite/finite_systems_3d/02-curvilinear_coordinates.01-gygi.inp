@@ -28,3 +28,6 @@ PoissonSolver = cg_corrected
 
 #for the moment OpenCL is not supported
 DisableOpenCL = yes
+
+FilterPotentials = filter_none
+

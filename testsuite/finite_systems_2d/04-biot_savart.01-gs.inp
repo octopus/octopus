@@ -47,3 +47,6 @@ FlushMessages = yes
 CalculateSelfInducedMagneticField = yes
 
 LCAOStart = no
+
+FilterPotentials = filter_none
+

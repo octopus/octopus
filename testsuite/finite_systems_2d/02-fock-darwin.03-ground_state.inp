@@ -113,3 +113,6 @@ meff = 1.0
 lambda=mu*sqrt(omega/meff)
 RashbaSpinOrbitCoupling = lambda
 
+
+FilterPotentials = filter_none
+

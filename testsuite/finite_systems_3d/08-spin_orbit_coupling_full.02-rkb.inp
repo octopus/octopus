@@ -35,3 +35,6 @@ ConvAbsEv = 1e-6
 ConvAbsForces = 1e-6
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

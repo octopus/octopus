@@ -31,3 +31,6 @@ TDPolarizationEquivAxes = 3
 
 PropagationSpectrumMaxEnergy = 10.0
 PropagationSpectrumEnergyStep = 0.1
+
+FilterPotentials = filter_none
+

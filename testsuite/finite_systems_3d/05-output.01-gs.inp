@@ -19,3 +19,6 @@ OutputInterval = 4
 OutputDuringSCF = yes
 # for Bader parallel in domains
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

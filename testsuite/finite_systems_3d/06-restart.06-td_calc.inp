@@ -15,3 +15,6 @@ TDTimeStep = 0.07
 TDMaxSteps = 5
 TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
+
+FilterPotentials = filter_none
+

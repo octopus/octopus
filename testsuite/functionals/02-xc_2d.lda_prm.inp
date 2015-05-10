@@ -26,3 +26,6 @@ Spacing = 0.2
 DerivativesOrder = 4
 
 XCFunctional = lda_x_2d + lda_c_2d_prm
+
+FilterPotentials = filter_none
+

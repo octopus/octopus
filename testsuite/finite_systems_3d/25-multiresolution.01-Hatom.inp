@@ -24,3 +24,6 @@ EigenSolver = cg_new
 %
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

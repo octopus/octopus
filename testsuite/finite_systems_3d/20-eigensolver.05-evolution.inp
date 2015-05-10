@@ -28,3 +28,6 @@ ParallelizationStrategy = par_domains
 
 TDExponentialMethod = lanczos
 TDExpOrder = 100
+
+FilterPotentials = filter_none
+

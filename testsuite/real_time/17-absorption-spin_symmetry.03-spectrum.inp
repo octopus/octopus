@@ -31,3 +31,6 @@ PropagationSpectrumMaxEnergy = 10.0
 PropagationSpectrumEnergyStep = 0.1
 
 SpinComponents = spin_polarized
+
+FilterPotentials = filter_none
+

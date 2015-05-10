@@ -38,3 +38,6 @@ BoxShape = parallelepiped
 %
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

@@ -19,3 +19,6 @@ XCFunctional = hyb_mgga_xc_m05
 0.8
 0.2
 %
+
+FilterPotentials = filter_none
+

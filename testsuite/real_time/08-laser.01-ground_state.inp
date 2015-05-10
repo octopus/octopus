@@ -24,3 +24,6 @@ EigenSolverTolerance = 1e-7
 EigenSolverMaxIter = 200
 
 ParallelizationStrategy = par_domains
+
+FilterPotentials = filter_none
+

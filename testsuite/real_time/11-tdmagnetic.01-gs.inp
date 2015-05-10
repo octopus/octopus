@@ -35,3 +35,6 @@ P_c = 137.036
 0 | 0 | magfield*P_c
 %
 
+
+FilterPotentials = filter_none
+

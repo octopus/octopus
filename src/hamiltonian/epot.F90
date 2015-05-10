@@ -163,7 +163,7 @@ contains
 
     !%Variable FilterPotentials
     !%Type integer
-    !%Default filter_none
+    !%Default filter_ts
     !%Section Hamiltonian
     !%Description
     !% <tt>Octopus</tt> can filter the pseudopotentials so that they no
@@ -178,7 +178,7 @@ contains
     !%Option filter_BSB 3
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
-    call parse_variable('FilterPotentials', PS_FILTER_NONE, filter)
+    call parse_variable('FilterPotentials', PS_FILTER_TS, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 

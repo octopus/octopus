@@ -54,3 +54,6 @@ LinearSolver = cg
 MaximumIter = 4
 ParallelizationStrategy=par_domains
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

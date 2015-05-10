@@ -13,3 +13,6 @@ FromScratch = yes
 
 Spacing = 0.32
 Radius = 6.0
+
+FilterPotentials = filter_none
+

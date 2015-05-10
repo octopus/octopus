@@ -16,3 +16,6 @@ SpinComponents = spin_polarized
 ConvAbsDens = 1e-6
 
 MaximumIter = 3
+
+FilterPotentials = filter_none
+

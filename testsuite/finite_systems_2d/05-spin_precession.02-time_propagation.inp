@@ -54,3 +54,6 @@ OutputInterval = 25
 TDOutput = energy + multipoles + spin
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

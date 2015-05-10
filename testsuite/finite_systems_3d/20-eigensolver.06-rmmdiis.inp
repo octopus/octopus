@@ -23,3 +23,6 @@ EigenSolver = rmmdiis
 ParallelizationStrategy = par_domains + par_states
 
 ExtraStates = 2
+
+FilterPotentials = filter_none
+

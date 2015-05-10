@@ -39,3 +39,6 @@ OutputHow = xyz
 
 OutputBandsGnuplotMode = yes
 OutputBandsGraceMode = yes
+
+FilterPotentials = filter_none
+

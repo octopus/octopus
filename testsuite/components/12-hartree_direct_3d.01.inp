@@ -9,3 +9,6 @@ Radius  = 8.0
 Spacing = 0.3
 
 PoissonSolver = direct_sum
+
+FilterPotentials = filter_none
+

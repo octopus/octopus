@@ -73,3 +73,6 @@ TheoryLevel = independent_particles
 %
 
 
+
+FilterPotentials = filter_none
+

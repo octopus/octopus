@@ -17,3 +17,6 @@ ConvAbsDens = 1e-6
 
 MaximumIter = 3
 MixField = potential
+
+FilterPotentials = filter_none
+

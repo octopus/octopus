@@ -12,3 +12,6 @@ dist = 3.0
 FromScratch = yes
 GOCenter = yes
 GOMaxIter = 4
+
+FilterPotentials = filter_none
+

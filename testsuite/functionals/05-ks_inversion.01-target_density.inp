@@ -27,3 +27,6 @@ TypeOfMixing = linear
 
 Output = density
 OutputHow = Axis_X
+
+FilterPotentials = filter_none
+

@@ -22,3 +22,6 @@ EigenSolver = lobpcg
 ExperimentalFeatures = yes
 
 ParallelizationStrategy = par_domains
+
+FilterPotentials = filter_none
+

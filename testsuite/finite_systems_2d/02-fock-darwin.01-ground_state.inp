@@ -45,3 +45,6 @@ P_c = 137.036
 %StaticMagneticField
 0 | 0 | 0.02*P_c 
 %
+
+FilterPotentials = filter_none
+

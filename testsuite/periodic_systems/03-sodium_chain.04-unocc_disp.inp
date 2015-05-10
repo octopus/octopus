@@ -42,3 +42,6 @@ LCAOStart = lcao_none
 ExtraStates = 1
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

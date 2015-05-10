@@ -12,3 +12,6 @@ Radius  = 7.0
 Spacing = 0.24
 
 ParallelizationStrategy=par_domains
+
+FilterPotentials = filter_none
+

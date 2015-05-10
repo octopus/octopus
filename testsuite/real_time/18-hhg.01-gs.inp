@@ -55,3 +55,6 @@ TDOutput = laser + multipoles + dipole_acceleration
 
 PropagationSpectrumMaxEnergy = 50*omega
 PropagationSpectrumEnergyStep = omega/11
+
+FilterPotentials = filter_none
+

@@ -42,3 +42,6 @@ Output = matrix_elements + potential
 OutputHow = axis_y
 OutputMatrixElements = momentum + ang_momentum
 # + one_body + two_body + ks_multipoles
+
+FilterPotentials = filter_none
+

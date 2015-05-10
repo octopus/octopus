@@ -31,3 +31,6 @@ eith = exp(i * ComplexScalingTheta)
 %Coordinates
  'HARMONIC' | 0
 %
+
+FilterPotentials = filter_none
+

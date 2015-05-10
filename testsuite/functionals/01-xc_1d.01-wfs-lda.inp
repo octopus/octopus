@@ -23,3 +23,6 @@ SpinComponents = spin_polarized
 XCFunctional = lda_x_1d + lda_c_1d_csc
 
 ConvRelDens = 1e-4
+
+FilterPotentials = filter_none
+

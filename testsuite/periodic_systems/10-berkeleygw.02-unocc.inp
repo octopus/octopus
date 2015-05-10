@@ -31,3 +31,6 @@ Preconditioner = no
 ExperimentalFeatures = yes
 Output = BerkeleyGW
 BerkeleyGW_CalcExchange = yes
+
+FilterPotentials = filter_none
+

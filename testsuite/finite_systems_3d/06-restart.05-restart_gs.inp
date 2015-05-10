@@ -12,3 +12,6 @@ Spacing = 0.5
 %
 SpinComponents = spin_polarized
 
+
+FilterPotentials = filter_none
+

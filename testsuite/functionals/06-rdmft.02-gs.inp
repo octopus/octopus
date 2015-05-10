@@ -15,3 +15,6 @@ Extrastates = 4
 RDMConvEner=1e-2
 
 
+
+FilterPotentials = filter_none
+

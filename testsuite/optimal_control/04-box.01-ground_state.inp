@@ -29,3 +29,6 @@ TheoryLevel = independent_particles
 %
 
 EigenSolver = cg_new
+
+FilterPotentials = filter_none
+

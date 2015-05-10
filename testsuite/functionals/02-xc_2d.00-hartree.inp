@@ -36,3 +36,6 @@ TypeOfMixing = linear
 Mixing = 1.0
 
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

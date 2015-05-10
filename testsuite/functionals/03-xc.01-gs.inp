@@ -18,3 +18,6 @@ TheoryLevel = hartree_fock
 0.8
 0.2
 %
+
+FilterPotentials = filter_none
+

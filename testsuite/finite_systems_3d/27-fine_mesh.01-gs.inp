@@ -33,3 +33,6 @@ EigenSolver = rmmdiis
 ParallelizationStrategy = par_states
 
 ConvRelDens = 1e-6
+
+FilterPotentials = filter_none
+

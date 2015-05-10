@@ -71,3 +71,6 @@ electric_field | 1 | 0 | 0 | freq1 | "envelope_function"
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
 %
+
+FilterPotentials = filter_none
+

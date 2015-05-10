@@ -16,3 +16,6 @@ GuessMagnetDensity = user_defined
 %
 
 Eigensolver = rmmdiis
+
+FilterPotentials = filter_none
+

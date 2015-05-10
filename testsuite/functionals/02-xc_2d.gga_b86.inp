@@ -30,3 +30,6 @@ DerivativesOrder = 4
 SpinComponents = spin_polarized
 
 XCFunctional = gga_x_2d_b86
+
+FilterPotentials = filter_none
+

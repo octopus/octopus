@@ -29,3 +29,6 @@ ConvAbsDens = 1e-10
 %
 
 EigenSolverMaxIter = 250
+
+FilterPotentials = filter_none
+

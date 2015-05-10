@@ -30,3 +30,6 @@ TheoryLevel = independent_particles
 
 EigenSolverTolerance = 1.0e-6
 ConvRelDens = 1.0e-7
+
+FilterPotentials = filter_none
+

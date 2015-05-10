@@ -12,3 +12,6 @@ PoissonSolver = libisf
 ExperimentalFeatures = yes
 
 PoissonSolverISFParallelData = yes
+
+FilterPotentials = filter_none
+

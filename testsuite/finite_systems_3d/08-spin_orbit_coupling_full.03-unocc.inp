@@ -32,3 +32,6 @@ ParallelizationStrategy=par_domains
 ExperimentalFeatures = yes
 ExtraStates = 5
 LCAOStart = lcao_none
+
+FilterPotentials = filter_none
+

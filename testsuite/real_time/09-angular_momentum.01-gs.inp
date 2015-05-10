@@ -20,3 +20,6 @@ CalculationMode = gs
 
 Spacing = 0.6
 
+
+FilterPotentials = filter_none
+

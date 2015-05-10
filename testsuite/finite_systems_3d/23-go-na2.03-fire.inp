@@ -11,3 +11,6 @@ dist = 3.0
 
 FromScratch = yes
 GOCenter = yes
+
+FilterPotentials = filter_none
+

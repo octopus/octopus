@@ -19,3 +19,6 @@ Spacing = 0.5
 %
 
 XCFunctional = gga_c_pbe_jrgx
+
+FilterPotentials = filter_none
+

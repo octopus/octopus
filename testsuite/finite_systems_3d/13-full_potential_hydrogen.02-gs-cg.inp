@@ -20,3 +20,6 @@ EigenSolverMaxIter = 300
 
 PoissonSolver=cg_corrected
 
+
+FilterPotentials = filter_none
+

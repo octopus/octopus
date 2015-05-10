@@ -31,3 +31,6 @@ EigenSolverTolerance = 1e-5
 Preconditioner = no
 
 ParallelizationStrategy = par_domains
+
+FilterPotentials = filter_none
+

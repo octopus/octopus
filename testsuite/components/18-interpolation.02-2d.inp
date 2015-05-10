@@ -13,3 +13,6 @@ Radius = 10
 %Coordinates
 "Hydrogen1D" | 0 | 0
 %
+
+FilterPotentials = filter_none
+

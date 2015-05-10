@@ -25,3 +25,6 @@ OEPLevel = oep_full
 
 ExperimentalFeatures = yes
 OEPMixing = 0.001
+
+FilterPotentials = filter_none
+

@@ -34,3 +34,6 @@ LCAOAlternative = yes
 ForceComplex = yes
 LCAOComplexYlms = yes
 ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+

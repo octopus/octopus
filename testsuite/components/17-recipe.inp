@@ -2,3 +2,6 @@
 # $Id$
 
 CalculationMode = recipe
+
+FilterPotentials = filter_none
+

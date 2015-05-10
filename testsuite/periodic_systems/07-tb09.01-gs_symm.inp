@@ -40,3 +40,6 @@ ConvRelEv = 1e-8
 ParallelizationStrategy = par_kpoints
 
 XCUseGaugeIndependentKED = no
+
+FilterPotentials = filter_none
+

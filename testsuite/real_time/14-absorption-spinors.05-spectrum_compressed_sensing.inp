@@ -36,3 +36,6 @@ SpectrumMethod = compressed_sensing
 ExperimentalFeatures = yes
 
 SpinComponents = spinors
+
+FilterPotentials = filter_none
+

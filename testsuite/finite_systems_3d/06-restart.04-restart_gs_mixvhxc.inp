@@ -20,3 +20,6 @@ MixField = potential
 %RestartOptions
  restart_gs | "restart" | restart_vhxc + restart_mix
 %
+
+FilterPotentials = filter_none
+

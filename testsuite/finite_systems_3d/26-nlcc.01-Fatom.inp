@@ -19,3 +19,6 @@ SpinComponents = polarized
   1  |  1  |  1
  2/3 | 2/3 | 2/3
 %
+
+FilterPotentials = filter_none
+

@@ -19,3 +19,6 @@ Spacing = 0.5
 %
 
 XCFunctional = gga_xc_sb98_1c
+
+FilterPotentials = filter_none
+

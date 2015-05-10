@@ -91,3 +91,6 @@ freq = 0.157
 Output = wfs
 OutputHow = axis_x
 TDOutput = laser + td_occup 
+
+FilterPotentials = filter_none
+

@@ -23,3 +23,6 @@ ff = 20
 
 TheoryLevel = independent_particles
 ConvEigenError = yes
+
+FilterPotentials = filter_none
+

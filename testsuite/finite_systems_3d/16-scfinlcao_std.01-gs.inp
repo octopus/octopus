@@ -33,3 +33,6 @@ SCFinLCAO = yes
 ExperimentalFeatures = yes
 Output = geometry + density
 OutputHow = openscad
+
+FilterPotentials = filter_none
+

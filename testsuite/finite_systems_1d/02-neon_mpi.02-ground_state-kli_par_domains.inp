@@ -27,3 +27,6 @@ EigensolverMaxIter = 100
 ConvEigenError = true
 Preconditioner = no
 ConvRelDens = 1e-7
+
+FilterPotentials = filter_none
+

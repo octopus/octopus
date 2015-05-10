@@ -13,3 +13,6 @@ ExtraStates = 3
 
 Output = pol_density
 OutputHow = xcrysden
+
+FilterPotentials = filter_none
+

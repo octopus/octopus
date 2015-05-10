@@ -38,3 +38,5 @@ ExperimentalFeatures = yes
 ConvRelEv = 1e-8
 
 ParallelizationStrategy = par_kpoints
+FilterPotentials = filter_none
+

@@ -19,3 +19,6 @@ Spacing = 0.5
 %
 
 XCFunctional = gga_x_optx
+
+FilterPotentials = filter_none
+

@@ -56,3 +56,6 @@ T = nc*tc
 TDTimeStep = dt
 TDPropagationTime = T
 
+
+FilterPotentials = filter_none
+

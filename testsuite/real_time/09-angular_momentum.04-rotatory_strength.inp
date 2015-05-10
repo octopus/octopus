@@ -2,3 +2,6 @@
 # $Id$
 
 PropagationSpectrumType = RotatoryStrength
+
+FilterPotentials = filter_none
+

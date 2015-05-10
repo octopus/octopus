@@ -34,3 +34,6 @@ ExtraStates = 2
 
 ExperimentalFeatures = yes
 Output = BerkeleyGW
+
+FilterPotentials = filter_none
+

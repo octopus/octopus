@@ -50,3 +50,6 @@ PoissonFFTKernel = multipole_correction
 ExperimentalFeatures = yes
 ConvRelDens = 4e-6
 DoubleGrid=yes
+
+FilterPotentials = filter_none
+

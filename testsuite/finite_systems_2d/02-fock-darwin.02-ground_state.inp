@@ -30,3 +30,6 @@ RashbaSpinOrbitCoupling = 0.01
 
 TypeOfMixing = linear
 Mixing = 1.0
+
+FilterPotentials = filter_none
+

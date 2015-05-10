@@ -37,3 +37,6 @@ GuessMagnetDensity = user_defined
 EigenSolver = lobpcg
 # due to bugs in lobpcg, may fail without next line
 StatesBlockSize = 5
+
+FilterPotentials = filter_none
+

@@ -39,3 +39,6 @@ ExperimentalFeatures = yes
 ParallelizationStrategy = par_kpoints
 
 TDEnergyUpdateIter = 5
+
+FilterPotentials = filter_none
+

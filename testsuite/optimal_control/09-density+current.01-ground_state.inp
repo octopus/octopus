@@ -34,3 +34,6 @@ ExtraStates= 1
 # Output
 Output= density + wfs
 OutputHow= axis_x
+
+FilterPotentials = filter_none
+

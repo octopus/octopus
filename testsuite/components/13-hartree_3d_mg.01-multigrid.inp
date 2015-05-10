@@ -11,3 +11,6 @@ Spacing = 0.3
 PoissonSolver = multigrid
 
 PoissonSolverMaxMultipole = 8
+
+FilterPotentials = filter_none
+

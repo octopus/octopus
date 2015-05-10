@@ -30,3 +30,6 @@ TDPolarizationEquivAxes = 3
 
 SpinComponents = spin_polarized
 TDDeltaStrengthMode = kick_spin_and_density
+
+FilterPotentials = filter_none
+

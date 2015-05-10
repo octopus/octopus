@@ -24,3 +24,6 @@ FromScratch = yes
 LCAOStart = no
 
 
+
+FilterPotentials = filter_none
+

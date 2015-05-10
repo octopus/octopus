@@ -13,3 +13,6 @@ StatesBlockSize = 2
 TestRepetitions = 1
 
 TestMaxBlockSize = 32
+
+FilterPotentials = filter_none
+
