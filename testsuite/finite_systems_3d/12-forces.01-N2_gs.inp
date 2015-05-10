@@ -26,4 +26,3 @@ PoissonFFTKernel = multipole_correction
 
 ParallelizationStrategy=par_domains
 
-FilterPotentials=filter_TS

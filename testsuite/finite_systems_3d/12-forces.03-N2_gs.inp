@@ -24,4 +24,3 @@ EigenSolverMaxIter = 20
 
 ParallelizationStrategy=par_domains
 
-FilterPotentials=filter_TS

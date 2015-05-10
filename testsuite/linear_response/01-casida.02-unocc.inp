@@ -12,7 +12,6 @@ bond_length = 2.0744
 "N" |   bond_length/2 |  0.0 |  0.0 
 %
 
-FilterPotentials = filter_TS
 %Species
 "N" | species_pseudo | lmax | 2 | lloc | 0 | db_file | "PSF/N.psf"
 %

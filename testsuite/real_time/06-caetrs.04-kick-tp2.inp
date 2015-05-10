@@ -27,7 +27,6 @@ TDPropagator = caetrs
 
 FromScratch = yes
 
-FilterPotentials = filter_ts
 
 TDDeltaStrength = 0.2
 

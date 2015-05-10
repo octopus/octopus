@@ -24,4 +24,3 @@ TDMaxSteps = 8
 
 ParallelizationStrategy = par_domains
 
-FilterPotentials = filter_ts

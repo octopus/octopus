@@ -27,4 +27,3 @@ TDMaxSteps = 4
 ScaLAPACKCompatible = yes
 ParallelizationStrategy = par_states
 
-FilterPotentials = filter_ts

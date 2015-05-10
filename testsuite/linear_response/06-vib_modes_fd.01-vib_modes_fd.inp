@@ -5,7 +5,6 @@ CalculationMode = vib_modes
 fromScratch = yes
 ResponseMethod = finite_differences
 
-FilterPotentials = filter_TS
 BoxShape = minimum
 Spacing = 0.4
 Radius = 6

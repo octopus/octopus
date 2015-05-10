@@ -4,7 +4,6 @@
 CalculationMode = vib_modes
 FromScratch = no
 
-FilterPotentials = filter_TS
 BoxShape = minimum
 Spacing = 0.4
 Radius = 6

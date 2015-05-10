@@ -32,7 +32,6 @@ ParallelizationStrategy = par_states + par_domains
 
 FromScratch = yes
 
-FilterPotentials = filter_ts
 
 TDDeltaStrength = 0.2
 

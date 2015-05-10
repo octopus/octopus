@@ -5,7 +5,6 @@ CalculationMode = gs
 fromScratch = yes
 ConvRelDens = 1e-6
 
-FilterPotentials = filter_TS
 BoxShape = minimum
 Spacing = 0.4
 Radius = 6
