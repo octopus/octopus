@@ -171,7 +171,7 @@ module base_geom_m
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
     type(base_geom_t),   pointer :: prnt   =>null()
-    type(geometry_t),    pointer :: pgeo
+    type(geometry_t),    pointer :: pgeo   =>null()
     type(geometry_t)             :: igeo
     type(atom_list_t)            :: alst
     type(species_dict_t)         :: sdct
@@ -695,7 +695,7 @@ contains
         SAFE_DEALLOCATE_P(this%pgeo)
       end if
     end if
-    if(associated(this%config))&
+    if(associated(this%config).and.associated(this%space))&
       call geometry_end(this%igeo)
     call base_geom__inull__(this)
     call base_geom__end__list(this%alst)
