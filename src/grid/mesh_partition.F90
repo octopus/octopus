@@ -487,7 +487,7 @@ contains
     !Count how many points have already been assigned to each partition in all processes
     SAFE_ALLOCATE(bps_total(1:vsize))
 #ifdef HAVE_MPI 
-    call MPI_Allreduce(bps(1), bps_total(1), npart, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, mpi_err)
+    call MPI_Allreduce(bps(1), bps_total(1), vsize, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, mpi_err)
 #endif
 
     !Second round of voting
@@ -622,7 +622,9 @@ contains
       !Read inner partition
       call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
       if (err /= 0) ierr = ierr + 8
+    endif
 
+    if (ierr == 0) then
       !Read boundary partition
       call partition_load(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
       if (err /= 0) ierr = ierr + 16
