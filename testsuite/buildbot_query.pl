@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Copyright (C) 2013 D. Strubbe
+# Copyright (C) 2013-2015 D. Strubbe
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,23 +24,28 @@
 # Parses the HTML status pages.
 # Tested with BuildBot 0.7.12, 0.8.5, 0.8.8
 
-# TODO: be able to specify branch, or at least identify branch of the builds
-
 if(@ARGV < 2) {
-  print "Usage: buildbot_query.pl <inputfile> <match> [localfiles]\n";
+  print "Usage: buildbot_query.pl <inputfile> <match> [<branch> [localfiles]]\n";
   exit(1);
 }
 
 $inputfile = shift @ARGV;
 $match = shift @ARGV;
+$branch = shift @ARGV;
+if(length($branch) == 0) {
+    $branch = "trunk";
+}
 
 # options specifying setup for Octopus
 $bbpath = "http://www.tddft.org/programs/octopus/buildbot";
 $shell_num = 3;
 
 print "URL: $bbpath\n";
+print "Branch: $branch\n";
 print "Input file: $inputfile\n";
 print "Match: $match\n\n";
+
+$branch = "?branch=$branch";
 
 if($inputfile =~ ".test") {
     print STDERR "Pass the input file, not the .test file.\n";
@@ -49,7 +54,7 @@ if($inputfile =~ ".test") {
 
 # get list of latest builds
 if(-e "one_box_per_builder") { system ("rm one_box_per_builder"); }
-system ("wget -nv $bbpath/one_box_per_builder");
+system("wget -nv $bbpath/builders$branch -O one_box_per_builder");
 
 if(@ARGV > 0) {
     open(ONEBOX, ">>one_box_per_builder") or die "Cannot open one_box_per_builder.\n";
