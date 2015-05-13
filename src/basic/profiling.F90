@@ -24,6 +24,7 @@
   !!can use the method profile_init (the second argument is the label
   !!of the profile) or use implicit initialization, by passing the
   !!optional label argument to profiling_in.
+  !!If not "save", when the object goes out of scope, it breaks the linked list prof_vars%profile_list. 
   !!
   !!To profile, call profiling_in and profiling_out around the regions
   !!you want to profile. The objects need not be destroyed as this is
@@ -103,7 +104,7 @@ module profiling_m
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
-    logical                  :: active
+    logical                  :: active = .false.
     logical                  :: exclude
   end type profile_t
 
@@ -138,8 +139,8 @@ module profiling_m
   type profile_vars_t
     integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
 
-    type(profile_pointer_t)  :: current !<the currently active profile
-    type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !<the list of all profilers
+    type(profile_pointer_t)  :: current !< the currently active profile
+    type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !< the list of all profiles
     integer                  :: last_profile
 
     integer(8)               :: alloc_count
@@ -513,10 +514,11 @@ contains
 #ifdef HAVE_PAPI
     real(8) :: ops
 #endif
-    
+
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
+    ASSERT(this%initialized)
     ASSERT(this%active)
     this%active = .false.
 #if defined(HAVE_MPI)
@@ -524,6 +526,7 @@ contains
 #else
     now = loct_clock()
 #endif
+
     time_spent = now - this%entry_time
     this%total_time = this%total_time + time_spent
     this%self_time  = this%self_time + time_spent
@@ -796,6 +799,7 @@ contains
     integer          :: iunit
     real(8)          :: total_time
     type(profile_t), pointer :: prof
+    character(len=256) :: filename
 
     if(.not.in_profiling_mode) return
     PUSH_SUB(profiling_output)
@@ -809,9 +813,10 @@ contains
       return
     end if
 
-    iunit = io_open(trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number, action='write')
+    filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number
+    iunit = io_open(trim(filename), action='write')
     if(iunit < 0) then
-      message(1) = 'Could not write profiling results.'
+      message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
       call messages_warning(1)
       POP_SUB(profiling_output)
       return
