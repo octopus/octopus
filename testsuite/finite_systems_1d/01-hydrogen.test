@@ -18,6 +18,7 @@ Enabled    : Yes
 
 Input: 01-hydrogen.01-ground_state.inp
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.66978603
+match ; CALC_MODE calls ; GREPFIELD(profiling.*/time.*, 'CALC_MODE', 1); 1
 
 Input: 01-hydrogen.02-excited_state.inp
 match ; 10th state   ; GREPFIELD(static/eigenvalues, '10   --', 3) ; -0.017727
