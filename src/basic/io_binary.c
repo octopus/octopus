@@ -528,4 +528,5 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
   *file_size = (int) st.st_size;
 
   free(h);
+  free(filename);
 }
