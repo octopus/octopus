@@ -127,7 +127,7 @@ contains
 
     type(system_t)      :: sys
     type(hamiltonian_t) :: hm
-    type(profile_t)     :: calc_mode_prof
+    type(profile_t), save :: calc_mode_prof
     type(json_object_t) :: config
     type(ssys_handle_t) :: subsys_handle
     logical :: fromScratch
