@@ -176,9 +176,11 @@ contains
     !% <br>&nbsp;&nbsp; "function-name" | tdf_trapezoidal | amplitude | tau0 | t0 | tau1
     !% <br>%</tt>
     !%
-    !% The function ramps linearly for <tt>tau1</tt> time units, stays constant for
-    !% <tt>tau0</tt> time units, and then decays to zero linearly again for <tt>tau1</tt>
-    !% time units.
+    !% This function is a trapezoidal centered around <tt>t0</tt>. The
+    !% shape is determined by <tt>tau0</tt> and <tt>tau1</tt>. The
+    !% function ramps linearly for <tt>tau1</tt> time units, stays
+    !% constant for <tt>tau0</tt> time units, and then decays to zero
+    !% linearly again for <tt>tau1</tt> time units.
     !%
     !%Option tdf_from_file 10006
     !%
