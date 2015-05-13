@@ -62,6 +62,7 @@ module epot_m
   use states_m
   use states_dim_m
   use submesh_m
+  use tdfunction_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -75,8 +76,8 @@ module epot_m
     epot_end,                      &
     epot_generate,                 &
     epot_local_potential,          &
-    epot_precalc_local_potential
-
+    epot_precalc_local_potential,  &
+    epot_global_force
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -138,6 +139,10 @@ module epot_m
     logical :: force_total_enforce
 
     type(ion_interaction_t) :: ion_interaction
+
+    !> variables for external forces over the ions
+    logical     :: global_force
+    type(tdf_t) :: global_force_function
   end type epot_t
 
 contains
@@ -154,10 +159,11 @@ contains
 
 
     type(ssys_ionic_t), pointer :: subsys_ionic
-    integer :: ispec, ip, idir, ia, gauge_2d
+    integer :: ispec, ip, idir, ia, gauge_2d, ierr
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
     integer :: filter
+    character(len=100)  :: function_name
 
     PUSH_SUB(epot_init)
 
@@ -534,6 +540,33 @@ contains
       call ion_interaction_add_subsys_ionic(ep%ion_interaction, subsys_ionic)
       nullify(subsys_ionic)
     end if
+
+    !%Variable TDGlobalForce
+    !%Type string
+    !%Section Hamiltonian
+    !%Description
+    !% If this variable is set, a global time-dependent force will be
+    !% applied to the ions in the x direction during a time-dependent
+    !% run. This variable defines the base name of the force, that
+    !% should be defined in the <tt>TDFunctions</tt> block. This force
+    !% does not affect the electrons directly.
+    !%End
+
+    if(parse_is_defined('TDGlobalForce')) then
+
+      ep%global_force = .true.
+
+      call parse_variable('TDGlobalForce', 'none', function_name)
+      call tdf_read(ep%global_force_function, trim(function_name), ierr)
+
+      if(ierr /= 0) then
+        call messages_write("You have enabled the GlobalForce option but Octopus could not find")
+        call messages_write("the '"//trim(function_name)//"' function in the TDFunctions block.")
+        call messages_fatal()
+      end if
+
+    end if
+    
 
     POP_SUB(epot_init)
   end subroutine epot_init
@@ -986,6 +1019,24 @@ contains
     SAFE_DEALLOCATE_A(Imtmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
+
+  ! ---------------------------------------------------------
+  
+  subroutine epot_global_force(ep, geo, time, force)
+    type(epot_t),         intent(inout) :: ep
+    type(geometry_t),     intent(in)    :: geo
+    FLOAT,                intent(in)    :: time
+    FLOAT,                intent(out)   :: force(:)
+
+    integer :: idir
+
+    force(1:geo%space%dim) = CNST(0.0)
+
+    if(ep%global_force) then
+      force(1) = units_to_atomic(units_inp%force, tdf(ep%global_force_function, time))
+    end if
+
+  end subroutine epot_global_force
 
 end module epot_m
 

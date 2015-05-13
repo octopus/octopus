@@ -112,6 +112,7 @@ contains
     call profiling_out(forces_prof)
   end subroutine total_force_calculate
 
+  ! -------------------------------------------------------
 
   subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
     type(grid_t), target, intent(inout) :: gr
@@ -261,7 +262,7 @@ contains
     FLOAT,     optional, intent(in)    :: dt
 
     integer :: i, j, iatom, idir
-    FLOAT :: x(MAX_DIM), time
+    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :)
     type(profile_t), save :: forces_prof
 
@@ -276,6 +277,15 @@ contains
     do i = 1, geo%natoms
       geo%atom(i)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, i)
     end do
+
+    if(present(t)) then
+      call epot_global_force(hm%ep, geo, time, global_force)
+
+      ! the ion-ion term is already calculated
+      do i = 1, geo%natoms
+        geo%atom(i)%f(1:gr%sb%dim) = geo%atom(i)%f(1:gr%sb%dim) + global_force(1:gr%sb%dim)
+      end do
+    end if
 
     SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
     
