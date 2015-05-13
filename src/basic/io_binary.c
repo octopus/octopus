@@ -229,10 +229,7 @@ void io_write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname
 void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 { 
   unsigned long fname_len;
-  char * filename;
   fname_len = l1;
-  TO_C_STR1(fname, filename);
-  free(filename);
   io_write_header(np, type, ierr, fname, fname_len);
 }
 
@@ -326,10 +323,7 @@ void io_read_header(header_t * h, int * correct_endianness, fint * ierr, STR_F_T
 void FC_FUNC_(read_header,READ_HEADER)(header_t * h, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
 { 
   unsigned long fname_len;
-  char * filename;
   fname_len = l1;
-  TO_C_STR1(fname, filename);
-  free(filename);
   io_read_header(h, correct_endianness, ierr, fname, fname_len);
 }
 
