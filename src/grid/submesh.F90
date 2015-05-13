@@ -61,7 +61,7 @@ module submesh_m
   type submesh_t
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
-    integer               :: np = -1        !< number of points inside the submesh
+    integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
     integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)
