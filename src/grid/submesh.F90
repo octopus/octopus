@@ -26,6 +26,7 @@ module submesh_m
   use global_m
   use lalg_basic_m
   use messages_m
+  use sort_om
   use mesh_m
   use mpi_m
   use par_vec_m
@@ -103,13 +104,15 @@ contains
     FLOAT,                intent(in)     :: rc
     
     FLOAT :: r2, xx(1:MAX_DIM)
-    FLOAT, allocatable :: center_copies(:, :)
+    FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
     integer, allocatable :: map_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
+    integer, allocatable :: order(:)
 
+    
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
@@ -167,7 +170,7 @@ contains
       this%np_part = is + isb
       
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
@@ -186,8 +189,8 @@ contains
               map_inv(ip) = is
             end if
             this%map(is) = ip
-            this%x(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
-            this%x(is, 0) = sqrt(sum(this%x(is, 1:sb%dim)**2))
+            xtmp(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
+            xtmp(is, 0) = sqrt(sum(xtmp(is, 1:sb%dim)**2))
           end do
         end do
       end do
@@ -231,7 +234,7 @@ contains
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
             
       !iterate again to fill the tables
       is = 0
@@ -242,8 +245,8 @@ contains
           if(r2 > rc**2 ) cycle
           is = is + 1
           this%map(is) = ip
-          this%x(is, 0) = sqrt(r2)
-          this%x(is, 1:sb%dim) = xx(1:sb%dim)
+          xtmp(is, 0) = sqrt(r2)
+          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
          end do
       end do
 
@@ -254,6 +257,20 @@ contains
     end if
 
     this%has_points = (this%np > 0)
+    
+    ! now order points for better locality
+    
+    SAFE_ALLOCATE(order(1:this%np_part))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+
+    forall(ip = 1:this%np_part) order(ip) = ip
+
+    call sort(this%map, order)
+
+    forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+    
+    SAFE_DEALLOCATE_A(order)
+    SAFE_DEALLOCATE_A(xtmp)
 
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init)
