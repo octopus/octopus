@@ -209,13 +209,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine io_end()
-    PUSH_SUB(io_end)
+    
+    ! no PUSH/POP, because the POP would write to stderr after it was closed.
 
     if(stderr /= 0) call io_close(stderr)
     if(stdin  /= 5) call io_close(stdin)
     if(stdout /= 6) call io_close(stdout)
 
-    POP_SUB(io_end)
   end subroutine io_end
 
 
@@ -538,7 +538,7 @@ contains
 
       ! create empty status file 
       iunit = io_open('exec/oct-status-'//trim(status), &
-        action='write', status='unknown')
+        action='write', status='new')
       call io_close(iunit)
     end if
 
