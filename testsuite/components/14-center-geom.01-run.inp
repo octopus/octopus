@@ -17,5 +17,5 @@ Units = eV_Angstrom
 "H"  |    0.18346   |    -0.49284  |      0.42038
 %
 
-FilterPotentials = filter_none
+
 

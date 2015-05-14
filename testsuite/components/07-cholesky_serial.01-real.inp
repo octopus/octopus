@@ -15,5 +15,5 @@ StatesOrthogonalization = cholesky_serial
 TestType = real
 
 
-FilterPotentials = filter_none
+
 

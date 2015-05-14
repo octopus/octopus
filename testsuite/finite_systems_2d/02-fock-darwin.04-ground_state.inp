@@ -172,5 +172,5 @@ B = B/ sqrt(epsilon)
 0 | 0 | B
 %
 
-FilterPotentials = filter_none
+
 

@@ -31,5 +31,5 @@ SpinComponents = spin_polarized
 
 XCFunctional = gga_x_2d_b86_mgc
 
-FilterPotentials = filter_none
+
 

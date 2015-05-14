@@ -12,5 +12,5 @@ PoissonSolver = multigrid
 
 PoissonSolverMaxMultipole = 8
 
-FilterPotentials = filter_none
+
 

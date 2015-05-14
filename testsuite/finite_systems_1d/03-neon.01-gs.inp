@@ -23,5 +23,5 @@ Radius = 50.0
 Preconditioner = no
 ConvRelDens = 1e-7
 
-FilterPotentials = filter_none
+
 

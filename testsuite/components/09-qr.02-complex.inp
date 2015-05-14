@@ -16,5 +16,5 @@ TestType = complex
 
 ExperimentalFeatures = yes
 
-FilterPotentials = filter_none
+
 

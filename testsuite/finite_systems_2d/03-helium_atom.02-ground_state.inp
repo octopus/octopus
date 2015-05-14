@@ -26,5 +26,5 @@ TheoryLevel = independent_particles
 EigenSolverTolerance = 1.0e-4
 
 
-FilterPotentials = filter_none
+
 

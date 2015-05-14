@@ -40,5 +40,5 @@ P_c = 137.036
 Output = wfs
 OutputHow = axis_x
 
-FilterPotentials = filter_none
+
 

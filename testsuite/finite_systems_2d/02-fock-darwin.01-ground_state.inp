@@ -46,5 +46,5 @@ P_c = 137.036
 0 | 0 | 0.02*P_c 
 %
 
-FilterPotentials = filter_none
+
 

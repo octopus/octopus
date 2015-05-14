@@ -251,5 +251,5 @@ electric_field | 1 | 1 | 0 | 0.0 | "envelope_function"
 #OutputHow = plane_z + axis_x
 #TDOutput = laser + spin
 
-FilterPotentials = filter_none
+
 

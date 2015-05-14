@@ -36,5 +36,5 @@ LCAOStart = lcao_none
 TypeOfMixing = linear
 Mixing = 1.0
 
-FilterPotentials = filter_none
+
 

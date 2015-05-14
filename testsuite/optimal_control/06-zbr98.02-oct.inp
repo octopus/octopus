@@ -103,5 +103,5 @@ OCTTargetOperator = oct_tg_gstransformation
 OCTScheme  = oct_algorithm_zbr98
 OCTDoubleCheck = no
 
-FilterPotentials = filter_none
+
 

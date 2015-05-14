@@ -33,5 +33,5 @@ TheoryLevel = independent_particles
 ExtraStates = 9
 EigenSolverTolerance = 1e-5
 
-FilterPotentials = filter_none
+
 

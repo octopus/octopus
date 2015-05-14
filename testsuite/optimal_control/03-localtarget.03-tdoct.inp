@@ -82,5 +82,5 @@ electric_field | 1 | 0 | 0 | 0.0 | "envelope_function"
 %
 
 
-FilterPotentials = filter_none
+
 

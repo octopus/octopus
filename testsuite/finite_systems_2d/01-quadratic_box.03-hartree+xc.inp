@@ -40,5 +40,5 @@ EigenSolverMaxIter = 50
 PoissonSolver = fft
 
 
-FilterPotentials = filter_none
+
 

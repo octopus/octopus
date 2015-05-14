@@ -10,5 +10,5 @@ Spacing = 0.3
 
 PoissonSolver = direct_sum
 
-FilterPotentials = filter_none
+
 

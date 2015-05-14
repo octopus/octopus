@@ -15,5 +15,5 @@ FFTLibrary = pfft
 
 PoissonSolverMaxMultipole = 5
 
-FilterPotentials = filter_none
+
 

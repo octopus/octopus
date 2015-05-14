@@ -38,5 +38,5 @@ e0 = 6.0
 Output = wfs + density + potential
 OutputHow = axis_x
 
-FilterPotentials = filter_none
+
 

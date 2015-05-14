@@ -25,5 +25,5 @@ OEPLevel = oep_kli
 
 TDMaxSteps = 10
 
-FilterPotentials = filter_none
+
 

@@ -60,5 +60,5 @@ OutputInterval = 200
 AbsorbingBoundaries = no
 
 
-FilterPotentials = filter_none
+
 

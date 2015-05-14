@@ -26,5 +26,5 @@ Mixing = 0.5
 EigenSolverTolerance = 1.0e-8
 ConvRelDens = 1e-10
 
-FilterPotentials = filter_none
+
 

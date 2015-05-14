@@ -62,5 +62,5 @@ ConvAbsDens = 1e-12
 
 EigenSolver = cg_new
 
-FilterPotentials = filter_none
+
 

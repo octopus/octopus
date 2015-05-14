@@ -13,5 +13,5 @@ ExperimentalFeatures = yes
 
 PoissonSolverISFParallelData = no
 
-FilterPotentials = filter_none
+
 

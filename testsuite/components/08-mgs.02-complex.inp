@@ -15,5 +15,5 @@ StatesOrthogonalization = mgs
 TestType = complex
 
 
-FilterPotentials = filter_none
+
 

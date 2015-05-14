@@ -13,5 +13,5 @@ FFTLibrary = clfft
 
 TestRepetitions = 2
 
-FilterPotentials = filter_none
+
 

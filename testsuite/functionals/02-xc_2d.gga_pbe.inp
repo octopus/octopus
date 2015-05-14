@@ -31,5 +31,5 @@ SpinComponents = spin_polarized
 
 XCFunctional = gga_x_2d_pbe
 
-FilterPotentials = filter_none
+
 

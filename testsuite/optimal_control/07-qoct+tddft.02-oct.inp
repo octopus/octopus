@@ -79,5 +79,5 @@ OCTControlFunctionRepresentation = control_fourier_series
 
 OCTDoubleCheck = no
 
-FilterPotentials = filter_none
+
 

@@ -39,5 +39,5 @@ BoxShape = parallelepiped
 0.1 | 0.157080
 %
 
-FilterPotentials = filter_none
+
 

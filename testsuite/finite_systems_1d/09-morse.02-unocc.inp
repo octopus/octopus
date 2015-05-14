@@ -62,5 +62,5 @@ TheoryLevel = independent_particles
 
 ConvAbsDens = 1e-12
 
-FilterPotentials = filter_none
+
 

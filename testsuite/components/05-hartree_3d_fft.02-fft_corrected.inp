@@ -13,5 +13,5 @@ PoissonFFTKernel = multipole_correction
 
 PoissonSolverMaxMultipole = 5
 
-FilterPotentials = filter_none
+
 
