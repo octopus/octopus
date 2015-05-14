@@ -733,8 +733,8 @@ contains
 
   subroutine spectrum_read_dipole(in_file, dipole, Imdipole)
     integer,           intent(in)    :: in_file
-    FLOAT,             intent(out)   :: dipole(0:, 1:, 1:)
-    FLOAT, optional,   intent(out)   :: Imdipole(0:, 1:, 1:)
+    FLOAT,             intent(out)   :: dipole(0:, :, :)
+    FLOAT, optional,   intent(out)   :: Imdipole(0:, :, :)
 
     integer :: nspin, lmax, time_steps, trash, it, idir
     FLOAT   :: dt,  dump
@@ -744,8 +744,7 @@ contains
 
     PUSH_SUB(spectrum_read_dipole)
 
-    cmplxscl = .false.
-    if(present(Imdipole)) cmplxscl = .true.
+    cmplxscl = present(Imdipole)
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -758,44 +757,24 @@ contains
       select case(nspin)
       case(1)
         if (cmplxscl) then
-          read(in_file, *) trash, dump, dump, &
-            dipole(it, 1, 1), Imdipole(it, 1, 1), &
-            dipole(it, 2, 1), Imdipole(it, 2, 1), &
-            dipole(it, 3, 1), Imdipole(it, 3, 1)
+          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3)
         else 
           read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3)
         end if
       case(2)
         if(cmplxscl) then
-          read(in_file, *) trash, dump, dump,&
-            dipole(it, 1, 1), Imdipole(it, 1, 1), &
-            dipole(it, 2, 1), Imdipole(it, 2, 1), &
-            dipole(it, 3, 1), Imdipole(it, 3, 1), &
-            dump,& 
-            dipole(it, 1, 2), Imdipole(it, 1, 2), &
-            dipole(it, 2, 2), Imdipole(it, 2, 2), &
-            dipole(it, 3, 2), Imdipole(it, 3, 2)
+          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3), &
+            dump, (dipole(it, idir, 2), Imdipole(it, idir, 1), idir = 1, 3)
         else
           read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3)
         end if
       case(4)
         if(cmplxscl) then
-          read(in_file, *) trash, dump, dump,&
-            dipole(it, 1, 1), Imdipole(it, 1, 1), &
-            dipole(it, 2, 1), Imdipole(it, 2, 1), &
-            dipole(it, 3, 1), Imdipole(it, 3, 1), &
-            dump,& 
-            dipole(it, 1, 2), Imdipole(it, 1, 2), &
-            dipole(it, 2, 2), Imdipole(it, 2, 2), &
-            dipole(it, 3, 2), Imdipole(it, 3, 2), &
-            dump,& 
-            dipole(it, 1, 3), Imdipole(it, 1, 3), &
-            dipole(it, 2, 3), Imdipole(it, 2, 3), &
-            dipole(it, 3, 3), Imdipole(it, 3, 3), &
-            dump,& 
-            dipole(it, 1, 4), Imdipole(it, 1, 4), &
-            dipole(it, 2, 4), Imdipole(it, 2, 4), &
-            dipole(it, 3, 4), Imdipole(it, 3, 4) 
+          read(in_file, *) &
+            trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3), &
+            dump, (dipole(it, idir, 2), Imdipole(it, idir, 2), idir = 1, 3), &
+            dump, (dipole(it, idir, 3), Imdipole(it, idir, 3), idir = 1, 3), &
+            dump, (dipole(it, idir, 4), Imdipole(it, idir, 4), idir = 1, 3)
         else
           read(in_file, *) &
             trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3), &
