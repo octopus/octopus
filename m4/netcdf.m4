@@ -5,7 +5,7 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(netcdf-prefix, [AS_HELP_STRING([--with-netcdf-prefix=DIR], [Directory where netcdf was installed.])])
 case $with_netcdf_prefix in
   no ) acx_netcdf_ok=disabled ;;
-  "") if test x$FCFLAGS_NETCDF == x; then
+  "") if test "x$FCFLAGS_NETCDF" == x; then
     FCFLAGS_NETCDF="$ax_cv_f90_modflag/usr/include"
   fi;;
   *) LIBS_NETCDF="-L$with_netcdf_prefix/lib"; FCFLAGS_NETCDF="$ax_cv_f90_modflag$with_netcdf_prefix/include" ;;
@@ -35,7 +35,7 @@ if test "$acx_netcdf_ok" != disabled; then
       integer :: status
       status = nf90_close(ncid)
     ]), [acx_netcdf_ok=yes; FCFLAGS_NETCDF="$netcdf_fcflags"; LIBS_NETCDF="$netcdf_libs"], [])
-    if test $acx_netcdf_ok == yes; then 
+    if test "$acx_netcdf_ok" == yes; then 
       LIBS_NETCDF=$netcdf_libs
       break
     fi
