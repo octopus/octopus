@@ -896,6 +896,9 @@ contains
     SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
 
+    if(sb%box_shape == BOX_IMAGE) &
+      call loct_gdImageDestroy(sb%image)
+
     POP_SUB(simul_box_end)
   end subroutine simul_box_end
 

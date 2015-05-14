@@ -55,7 +55,8 @@ module loct_m
     loct_gdimage_create_from,  &
     loct_gdimage_sx,           &
     loct_gdimage_sy,           &
-    loct_gdimage_get_pixel_rgb
+    loct_gdimage_get_pixel_rgb, &
+    loct_gdimagedestroy
 #endif
 
   ! ---------------------------------------------------------
@@ -257,6 +258,14 @@ module loct_m
       integer,     intent(out) :: r, g, b
     end subroutine oct_gdimage_get_pixel_rgb
   end interface loct_gdimage_get_pixel_rgb
+
+  interface loct_gdimagedestroy
+    subroutine oct_gdimagedestroy(im)
+      use iso_c_binding
+      implicit none
+      type(c_ptr) :: im
+    end subroutine oct_gdimagedestroy
+  end interface loct_gdimagedestroy
 #endif
 
  interface loct_get_memory_usage
