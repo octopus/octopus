@@ -565,6 +565,10 @@ contains
         call messages_fatal()
       end if
 
+    else
+
+      ep%global_force = .false.
+
     end if
     
 
