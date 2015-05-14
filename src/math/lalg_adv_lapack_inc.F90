@@ -1052,7 +1052,7 @@ subroutine zsym_inverter(uplo, n, a)
 
   call ZLAPACK(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(zsytri)), ' returned info = ', info
+    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytri)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
@@ -1242,7 +1242,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
     'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, rwork(1), info )
 
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(LAPACK(gesvd)), ' returned info = ', info
+    write(message(1), '(3a, i3)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(ZLAPACK(gesvd)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
