@@ -46,21 +46,15 @@ subroutine dcholesky(n, a, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer :: info
-  logical :: bof_
 
   call profiling_in(cholesky_prof, "CHOLESKY")
   PUSH_SUB(dcholesky)
 
   ASSERT(n > 0)
 
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
-
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -93,21 +87,16 @@ subroutine zcholesky(n, a, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer :: info
-  logical :: bof_
+
   call profiling_in(cholesky_prof, "CHOLESKY")
   PUSH_SUB(zcholesky)
 
   ASSERT(n > 0)
 
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
-
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1), '(3a,i5)') 'In zcholesky, LAPACK ', TOSTRING(ZLAPACK(potrf)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -143,18 +132,12 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork, ii, jj
-  logical :: bof_
   FLOAT, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
   PUSH_SUB(dgeneigensolve)
 
   ASSERT(n > 0)
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   SAFE_ALLOCATE(diag(1:n))
 
@@ -177,7 +160,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   SAFE_DEALLOCATE_A(diag)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In dgeneigensolve, LAPACK ', TOSTRING(DLAPACK(sygv)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -212,7 +195,6 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer            :: info, lwork, ii, jj
-  logical            :: bof_
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: work(:), diag(:)
 
@@ -220,11 +202,6 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   PUSH_SUB(zgeneigensolve)
 
   ASSERT(n > 0)
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   SAFE_ALLOCATE(diag(1:n))
   
@@ -249,7 +226,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   SAFE_DEALLOCATE_A(diag)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In zgeneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegv)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -469,18 +446,12 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   end interface
   
   integer            :: m, iwork(5*n), ifail(n), info, lwork
-  logical            :: bof_
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
   
   PUSH_SUB(dlowest_geneigensolve)
 
   ASSERT(n > 0)
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   abstol = 2*sfmin()
 
@@ -499,7 +470,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', TOSTRING(DLAPACK(sygvx)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -548,7 +519,6 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   end interface
 
   integer            :: m, iwork(5*n), ifail(n), info, lwork
-  logical            :: bof_
   FLOAT              :: abstol
   FLOAT              :: rwork(7*n)
   CMPLX, allocatable :: work(:)
@@ -556,11 +526,6 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   PUSH_SUB(zlowest_geneigensolve)
 
   ASSERT(n > 0)
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   abstol = 2*sfmin()
 
@@ -577,7 +542,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegvx)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -607,17 +572,11 @@ subroutine deigensolve(n, a, e, bof, err_code)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  logical            :: bof_
   integer            :: info, lwork
   FLOAT, allocatable :: work(:)
 
   PUSH_SUB(deigensolve)
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   ASSERT(n > 0)
 
@@ -627,7 +586,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -658,7 +617,6 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer            :: info, lwork
-  logical            :: bof_
   CMPLX, allocatable :: work(:)
   FLOAT, allocatable :: rwork(:)
 
@@ -666,11 +624,6 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
   ASSERT(n > 0)
-
-  bof_ = .true.
-  if(present(bof)) then
-    bof_ = bof
-  end if
 
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
@@ -680,7 +633,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   SAFE_DEALLOCATE_A(rwork)
 
   if(info /= 0) then
-    if(bof_) then
+    if(optional_default(bof, .true.)) then
       write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(ZLAPACK(heev)), ' returned error message ', info
       call messages_fatal(1)
     else
@@ -842,7 +795,6 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   integer :: info, i
   integer, allocatable :: ipiv(:)
   FLOAT, allocatable :: work(:)
-  logical :: invert_
 
   ! No PUSH_SUB, called too often
 
@@ -866,8 +818,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
     end if
   end do
 
-  invert_ = .true.; if(present(invert)) invert_ = invert
-  if(invert_) then
+  if(optional_default(invert, .true.)) then
     call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
       write(message(1), '(3a, i3)') 'In ddeterminant, LAPACK ', TOSTRING(DLAPACK(getri)), ' returned info = ', info
@@ -910,7 +861,6 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   integer :: info, i
   integer, allocatable :: ipiv(:)
   CMPLX, allocatable :: work(:)
-  logical :: invert_
 
   PUSH_SUB(zdeterminant)
 
@@ -934,8 +884,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
     end if
   end do
 
-  invert_ = .true.; if(present(invert)) invert_ = invert
-  if(invert_) then
+  if(optional_default(invert, .true.)) then
     call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
       write(message(1), '(3a, i3)') 'In zdeterminant, LAPACK ', TOSTRING(ZLAPACK(getri)), ' returned info = ', info
@@ -966,7 +915,7 @@ subroutine dsym_inverter(uplo, n, a)
       integer,      intent(out)   :: info
     end subroutine DLAPACK(sytrf)
 
-    subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
+    subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info)
       implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
@@ -1275,7 +1224,7 @@ subroutine zsvd_inverse(n, a, threshold)
 
   call zsingular_value_decomp(n, a, u, vt, sg_values)
 
-  threshold_ = CNST(1e-10); 
+  threshold_ = CNST(1e-10)
   if(present(threshold)) threshold_ = threshold
 
   ! build inverse
