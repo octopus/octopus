@@ -262,6 +262,7 @@ while ($_ = <TESTSUITE>) {
         }
 
 	$options_available = `$octopus_exe -c`;
+	chomp($options_available);
 	if($is_parallel && $options_available !~ "mpi") {
 	    print "Running in serial since executable was not compiled with MPI.\n";
 	    $is_parallel = 0;
