@@ -736,7 +736,7 @@ contains
     FLOAT,             intent(out)   :: dipole(0:, :, :)
     FLOAT, optional,   intent(out)   :: Imdipole(0:, :, :)
 
-    integer :: nspin, lmax, time_steps, trash, it, idir
+    integer :: nspin, lmax, time_steps, trash, it, idir, ispin
     FLOAT   :: dt,  dump
     type(kick_t) :: kick
     type(unit_system_t) :: file_units
@@ -754,39 +754,15 @@ contains
     call io_skip_header(in_file)
 
     do it = 0, time_steps
-      select case(nspin)
-      case(1)
-        if (cmplxscl) then
-          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3)
-        else 
-          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3)
-        end if
-      case(2)
-        if(cmplxscl) then
-          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3), &
-            dump, (dipole(it, idir, 2), Imdipole(it, idir, 1), idir = 1, 3)
-        else
-          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3)
-        end if
-      case(4)
-        if(cmplxscl) then
-          read(in_file, *) &
-            trash, dump, dump, (dipole(it, idir, 1), Imdipole(it, idir, 1), idir = 1, 3), &
-            dump, (dipole(it, idir, 2), Imdipole(it, idir, 2), idir = 1, 3), &
-            dump, (dipole(it, idir, 3), Imdipole(it, idir, 3), idir = 1, 3), &
-            dump, (dipole(it, idir, 4), Imdipole(it, idir, 4), idir = 1, 3)
-        else
-          read(in_file, *) &
-            trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3), &
-            dump, (dipole(it, idir, 3), idir = 1, 3), dump, (dipole(it, idir, 4), idir = 1, 3)
-        end if
-      end select
-
-      dipole(it, 1:3, 1:nspin) = units_to_atomic(file_units%length, dipole(it, 1:3, 1:nspin))
-      if (cmplxscl) Imdipole(it, 1:3, 1:nspin) = units_to_atomic(file_units%length, Imdipole(it, 1:3, 1:nspin))
-
+      if (cmplxscl) then
+        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), Imdipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
+      else 
+        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
+      end if
     end do
-
+    dipole(:,:,:) = units_to_atomic(file_units%length, dipole(:,:,:))
+    if (cmplxscl) Imdipole(:,:,:) = units_to_atomic(file_units%length, Imdipole(:,:,:))
+    
     POP_SUB(spectrum_read_dipole)
 
   end subroutine spectrum_read_dipole
