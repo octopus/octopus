@@ -543,7 +543,7 @@ contains
 
     !%Variable TDGlobalForce
     !%Type string
-    !%Section Hamiltonian
+    !%Section Time-Dependent
     !%Description
     !% If this variable is set, a global time-dependent force will be
     !% applied to the ions in the x direction during a time-dependent
@@ -1030,12 +1030,15 @@ contains
 
     integer :: idir
 
+    PUSH_SUB(epot_global_force)
+
     force(1:geo%space%dim) = CNST(0.0)
 
     if(ep%global_force) then
       force(1) = units_to_atomic(units_inp%force, tdf(ep%global_force_function, time))
     end if
 
+    POP_SUB(epot_global_force)
   end subroutine epot_global_force
 
 end module epot_m
