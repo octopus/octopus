@@ -68,6 +68,7 @@ module submesh_m
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
     logical               :: has_points
+    logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
   end type submesh_t
   
   interface submesh_add_to_mesh
@@ -260,6 +261,16 @@ contains
     call sort(this%map, order)
 
     forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+
+    !check whether points overlap
+    
+    this%overlap = .false.
+    do ip = 1, this%np_part - 1
+      if(this%map(ip) == this%map(ip + 1)) then
+        this%overlap = .true.
+        exit
+      end if
+    end do
     
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(xtmp)
