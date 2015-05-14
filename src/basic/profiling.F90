@@ -839,7 +839,16 @@ contains
 
     do ii = 1, prof_vars%last_profile
       prof =>  prof_vars%profile_list(ii)%p
-
+      if(.not. prof%initialized) then
+        write(message(1),'(a,i6,a)') "Internal error: Profile number ", ii, " is not initialized."
+        call messages_fatal(1)
+      endif
+      if(prof%active) then
+        write(message(1),'(a)') "Internal error: Profile '" // trim(profile_label(prof)) // &
+          "' is active, i.e. profiling_out was not called."
+        call messages_warning(1)
+      endif
+      
       if(profile_num_calls(prof) == 0) cycle
 
       write(iunit, '(a,i20,3f17.7,f10.1,f10.1,f8.1,a,2f17.7,f8.1)')     &
