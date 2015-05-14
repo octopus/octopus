@@ -614,10 +614,12 @@ contains
       dipole = dipole - ref_dipole
       if(cmplxscl) Imdipole = Imdipole - Imref_dipole 
     else
-      do it = time_steps, 0, -1
+      do it = 1, time_steps
         dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
         if(cmplxscl) Imdipole(it, :, :) = Imdipole(it, :, :) - Imdipole(0, :, :)
       end do
+      dipole(0, :, :) = M_ZERO
+      if(cmplxscl) Imdipole(0, :, :) = M_ZERO
     end if
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -843,9 +845,10 @@ contains
     call spectrum_read_dipole(in_file, dipole)
 
     ! Now subtract the initial dipole.
-    do it = time_steps, 0, -1
+    do it = 1, time_steps
       dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
     end do
+    dipole(0, :, :) = M_ZERO
 
     if (spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -990,9 +993,10 @@ contains
     end do
 
     ! Now subtract the initial value.
-    do it = time_steps, 0, -1
+    do it = 1, time_steps
       ftchd(it) = ftchd(it) - ftchd(0)
     end do
+    ftchd(0) = M_ZERO
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
