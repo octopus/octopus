@@ -692,7 +692,7 @@ contains
     else
       call messages_write(']')
     end if           
-    call messages_info()
+    call messages_info(iunit = iunit)
 
   end subroutine messages_print_var_valuear
   ! ---------------------------------------------------------
