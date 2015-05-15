@@ -90,7 +90,7 @@ contains
       posfinalt(:, :), velfinalt(:, :), &
       coforce(:, :)
 
-    PUSH_SUB(propagator_dt.td_explicit_runge_kutta4)
+    PUSH_SUB(td_explicit_runge_kutta4)
 
     propagate_chi = present(qcchi)
     if(propagate_chi) then
@@ -309,7 +309,7 @@ contains
         SAFE_DEALLOCATE_A(coforce)
       end if
     end if
-    POP_SUB(propagator_dt.td_explicit_runge_kutta4)
+    POP_SUB(td_explicit_runge_kutta4)
 
   contains
 
@@ -458,7 +458,7 @@ contains
     CMPLX, allocatable :: inhpsi(:)
     type(ion_state_t) :: ions_state
 
-    PUSH_SUB(propagator_dt.td_runge_kutta2)
+    PUSH_SUB(td_runge_kutta2)
 
     st1 = st%st_start
     st2 = st%st_end
@@ -596,6 +596,8 @@ contains
       t_op  = time - dt
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk2op, td_rk2opt, zpsi, rhs)
+#else
+      ASSERT(.false.)
 #endif
       
       k2 = M_z0
@@ -643,7 +645,7 @@ contains
     SAFE_DEALLOCATE_A(vhxc1_op)
     SAFE_DEALLOCATE_A(vpsl1_op)
 
-    POP_SUB(propagator_dt.td_runge_kutta2)
+    POP_SUB(td_runge_kutta2)
   end subroutine td_runge_kutta2
 
 
@@ -670,8 +672,8 @@ contains
       oldk2(:, :, :, :), yn1(:, :, :, :), yn2(:, :, :, :), &
       rhs1(:, :, :, :), rhs2(:, :, :, :)
 
-    PUSH_SUB(propagator_dt.td_runge_kutta4)
-
+    PUSH_SUB(td_runge_kutta4)
+    
     c(1) = M_HALF - sqrt(M_THREE)/M_SIX
     c(2) = M_HALF + sqrt(M_THREE)/M_SIX
     b(1) = M_HALF
@@ -849,6 +851,8 @@ contains
       t_op  = time - dt
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk4op, td_rk4opt, zpsi, rhs)
+#else
+      ASSERT(.false.)
 #endif
       
       k1 = M_z0
@@ -915,7 +919,7 @@ contains
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
 
-    POP_SUB(propagator_dt.td_runge_kutta4)
+    POP_SUB(td_runge_kutta4)
   end subroutine td_runge_kutta4
 
   ! ---------------------------------------------------------
