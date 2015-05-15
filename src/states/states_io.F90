@@ -178,6 +178,7 @@ contains
     
       call sort(flat_eigenval, flat_indices(:, :))
 
+      homo_index = st%d%nik*nst
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
