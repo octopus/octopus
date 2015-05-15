@@ -1032,8 +1032,6 @@ contains
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(out)   :: force(:)
 
-    integer :: idir
-
     PUSH_SUB(epot_global_force)
 
     force(1:geo%space%dim) = CNST(0.0)
