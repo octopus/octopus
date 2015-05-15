@@ -22,12 +22,12 @@
 module lalg_adv_m
   use global_m
   use lapack_m
-  use sort_om
   use messages_m
   use mpi_m
   use profiling_m
   use blacs_proc_grid_m
   use scalapack_m
+  use sort_om
   use utils_m
   
   implicit none
@@ -534,9 +534,7 @@ contains
                   conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
   end function lalg_zd2ni
 
-#ifdef HAVE_LAPACK
 #include "lalg_adv_lapack_inc.F90"
-#endif
 
 #ifdef HAVE_SCALAPACK
 #include "undef.F90"
