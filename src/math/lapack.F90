@@ -148,24 +148,24 @@ module lapack_m
   !!
   !!  The computed eigenvectors are normalized to have Euclidean norm
   !!  equal to 1 and largest component real.
-  interface lapack_geev
-    subroutine sgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+  interface
+    subroutine sgeev(jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       real(4),      intent(inout) :: a !< a(lda,n)
-      real(4),      intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(4),      intent(out)   :: wr, wi, vl, vr !< wr(n), wi(n), vl(ldvl,n), vl(ldvr,n)
       real(4),      intent(out)   :: rwork !< rwork(max(1,2n))
       real(4),      intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine sgeev
 
-    subroutine dgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+    subroutine dgeev(jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
       real(8),      intent(inout) :: a !< a(lda,n)
-      real(8),      intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(8),      intent(out)   :: wr, wi, vl, vr !< wr(n), wi(n), vl(ldvl,n), vl(ldvr,n)
       real(8),      intent(out)   :: rwork !< rwork(max(1,2n))
       real(8),      intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
@@ -186,13 +186,45 @@ module lapack_m
       implicit none
       character(1), intent(in)    :: jobvl, jobvr
       integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      complex(8),        intent(inout) :: a !< a(lda,n)
-      complex(8),        intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
-      real(8),        intent(out)   :: rwork !< rwork(max(1,2n))
-      complex(8),        intent(out)   :: work  !< work(lwork)
+      complex(8),   intent(inout) :: a !< a(lda,n)
+      complex(8),   intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
+      real(8),      intent(out)   :: rwork !< rwork(max(1,2n))
+      complex(8),   intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zgeev
-  end interface lapack_geev
+  end interface
+
+  interface lapack_gesvx
+    subroutine dgesvx(fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
+      c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
+      implicit none
+      character(1), intent(in)    :: fact, trans
+      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
+      FLOAT,        intent(inout) :: a, af, r, c, b      !< a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nrhs)
+      integer,      intent(inout) :: ipiv                !< ipiv(n)
+      FLOAT,        intent(out)   :: x, ferr, berr, work !< x(ldx,nrhs), ferr(nrhs), berr(nrhs), work(4*n)
+      FLOAT,        intent(out)   :: rcond
+      character(1), intent(inout) :: equed
+      integer,      intent(out)   :: iwork               !< iwork(n)
+      integer,      intent(out)   :: info
+    end subroutine dgesvx
+
+    subroutine zgesvx (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
+      c, b, ldb, x, ldx, rcond, ferr, berr, work, rwork, info)
+      implicit none
+      character(1), intent(in)    :: fact, trans
+      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
+      CMPLX,        intent(inout) :: a, af, b            !< a(lda, n), af(ldaf, n), b(ldb, nrhs)
+      FLOAT,        intent(inout) :: r, c                !< r(n), c(n)
+      integer,      intent(inout) :: ipiv                !< ipiv(n)
+      FLOAT,        intent(out)   :: ferr, berr          !< ferr(nrhs), berr(nrhs)
+      FLOAT,        intent(out)   :: rcond
+      CMPLX,        intent(out)   :: x, work             !< x(ldx, nrhs), work(2*n)
+      character(1), intent(inout) :: equed
+      FLOAT,        intent(out)   :: rwork               !< rwork(2*n)
+      integer,      intent(out)   :: info
+    end subroutine zgesvx
+  end interface lapack_gesvx
 
   !>  Computes all eigenvalues and, optionally, eigenvectors of a
   !!  real symmetric matrix A.
@@ -239,6 +271,31 @@ module lapack_m
       integer,      intent(out)   :: info
     end subroutine zheev
   end interface lapack_heev
+
+  interface
+    subroutine dsyevx(jobz, range, uplo, n, a, lda, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
+      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)  :: jobz, range, uplo
+      integer,      intent(out) :: m, iwork, ifail, info
+      FLOAT,        intent(in)  :: vl, vu, abstol
+      FLOAT,        intent(in)  :: a
+      FLOAT,        intent(out) :: w, z, work
+    end subroutine dsyevx
+
+    subroutine zheevx(jobz, range, uplo, n, a, lda, &
+      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
+      implicit none
+      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)  :: jobz, range, uplo
+      integer,      intent(out) :: m, iwork, ifail, info
+      FLOAT,        intent(in)  :: vl, vu, abstol
+      FLOAT,        intent(out) :: w
+      CMPLX,        intent(in)  :: a
+      CMPLX,        intent(out) :: z, work
+    end subroutine zheevx
+  end interface
 
   !>  Computes a QR factorization of a real \f$m \times n\f$ matrix A:
   !! \f[

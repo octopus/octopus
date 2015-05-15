@@ -45,7 +45,6 @@ module lalg_adv_m
     lalg_singular_value_decomp,   &
     lalg_svd_inverse,             &
     lalg_invert_upper_triangular, &
-    lalg_invert_lower_triangular, &
     lalg_lowest_geneigensolve,    &
     lalg_lowest_eigensolve,       &
     zlalg_exp,                    &
@@ -108,10 +107,6 @@ module lalg_adv_m
     module procedure dinvert_upper_triangular, zinvert_upper_triangular
   end interface lalg_invert_upper_triangular
   
-  interface lalg_invert_lower_triangular
-    module procedure dinvert_lower_triangular, zinvert_lower_triangular
-  end interface lalg_invert_lower_triangular
-  
   interface lalg_lowest_geneigensolve
     module procedure dlowest_geneigensolve, zlowest_geneigensolve
   end interface lalg_lowest_geneigensolve
@@ -120,9 +115,70 @@ module lalg_adv_m
     module procedure dlowest_eigensolve, zlowest_eigensolve
   end interface lalg_lowest_eigensolve
 
+  interface lapack_geev
+    module procedure lalg_dgeev, lalg_zgeev
+  end interface lapack_geev
+
 contains
 
-  !>-------------------------------------------------
+  ! ---------------------------------------------------------
+  !> Auxiliary function
+  FLOAT function sfmin()
+    interface
+      FLOAT function dlamch(cmach)
+        implicit none
+        character(1), intent(in) :: cmach
+      end function dlamch
+    end interface
+    
+    sfmin = dlamch('S')
+  end function sfmin
+
+  subroutine lalg_dgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+    character(1), intent(in)    :: jobvl, jobvr
+    integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
+    real(8),      intent(inout) :: a(:,:) !< a(lda,n)
+    complex(8),   intent(out)   :: w(:) !< w(n)
+    real(8),      intent(out)   :: vl(:,:), vr(:,:) !< vl(ldvl,n), vl(ldvr,n)
+    real(8),      intent(out)   :: rwork(:) !< rwork(max(1,2n))
+    real(8),      intent(out)   :: work(:)  !< work(lwork)
+    integer,      intent(out)   :: info
+
+    FLOAT, allocatable :: wr(:), wi(:)
+
+    PUSH_SUB(lalg_dgeev)
+
+    SAFE_ALLOCATE(wr(1:n))
+    SAFE_ALLOCATE(wi(1:n))
+
+    call dgeev(jobvl, jobvr, n, a(1, 1), lda, wr(1), wi(1), vl(1, 1), ldvl, vr(1, 1), ldvr, work(1), lwork, rwork(1), info)
+
+    w(1:n) = cmplx(wr(1:n), wi(1:n), REAL_PRECISION)
+    
+    SAFE_DEALLOCATE_A(wr)
+    SAFE_DEALLOCATE_A(wi)
+    
+    POP_SUB(lalg_dgeev)
+  end subroutine lalg_dgeev
+
+  subroutine lalg_zgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+    character(1), intent(in)    :: jobvl, jobvr
+    integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
+    complex(8),   intent(inout) :: a(:,:) !< a(lda,n)
+    complex(8),   intent(out)   :: w(:) !< w(n)
+    complex(8),   intent(out)   :: vl(:,:), vr(:,:) !< vl(ldvl,n), vl(ldvr,n)
+    real(8),      intent(out)   :: rwork(:) !< rwork(max(1,2n))
+    complex(8),   intent(out)   :: work(:)  !< work(lwork)
+    integer,      intent(out)   :: info
+
+    PUSH_SUB(lalg_zgeev)
+
+    call zgeev(jobvl, jobvr, n, a(1, 1), lda, w(1), vl(1, 1), ldvl, vr(1, 1), ldvr, work(1), lwork, rwork(1), info)
+
+    POP_SUB(lalg_zgeev)
+  end subroutine lalg_zgeev
+
+!>-------------------------------------------------
   !!
   !! This routine calculates the exponential of a matrix by using an
   !! eigenvalue decomposition.
@@ -534,15 +590,17 @@ contains
                   conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
   end function lalg_zd2ni
 
-#include "lalg_adv_lapack_inc.F90"
-
-#ifdef HAVE_SCALAPACK
 #include "undef.F90"
 #include "complex.F90"
+#include "lalg_adv_lapack_inc.F90"
+#ifdef HAVE_SCALAPACK
 #include "lalg_adv_scalapack_inc.F90"
-
+#endif
+  
 #include "undef.F90"
 #include "real.F90"
+#include "lalg_adv_lapack_inc.F90"
+#ifdef HAVE_SCALAPACK
 #include "lalg_adv_scalapack_inc.F90"
 #endif
 

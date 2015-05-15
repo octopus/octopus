@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -18,44 +17,26 @@
 !!
 !! $Id$
 
-#  define DLAPACK(x) d ## x
-#  define ZLAPACK(x) z ## x
-
 ! ---------------------------------------------------------
-!> Auxiliary functions.
-FLOAT function sfmin()
-  interface
-    FLOAT function DLAPACK(lamch)(cmach)
-      implicit none
-      character(1), intent(in) :: cmach
-    end function DLAPACK(lamch)
-  end interface
-  
-  sfmin = DLAPACK(lamch)('S')
-end function sfmin
-
-  
-! ---------------------------------------------------------
-!> Compute the Cholesky decomposition of real symmetric positive definite
-!! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular
-!! matrix.
-subroutine dcholesky(n, a, bof, err_code)
+!> Compute the Cholesky decomposition of real symmetric or complex Hermitian positive definite
+!! matrix a, dim(a) = n x n. On return a = u^T u with u upper triangular matrix.
+subroutine X(cholesky)(n, a, bof, err_code)
   integer,           intent(in)    :: n
-  FLOAT,             intent(inout) :: a(:,:)   !< (n,n)
+  R_TYPE,            intent(inout) :: a(:,:)   !< (n,n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info
 
   call profiling_in(cholesky_prof, "CHOLESKY")
-  PUSH_SUB(dcholesky)
+  PUSH_SUB(X(cholesky))
 
   ASSERT(n > 0)
 
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
+      write(message(1), '(5a,i5)') 'In ', TOSTRING(X(cholesky)), ' LAPACK ', TOSTRING(X(potrf)), ' returned error message ', info
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -72,70 +53,27 @@ subroutine dcholesky(n, a, bof, err_code)
   end if
 
   call profiling_out(cholesky_prof)
-  POP_SUB(dcholesky)
-end subroutine dcholesky
+  POP_SUB(X(cholesky))
+end subroutine X(cholesky)
 
 
 ! ---------------------------------------------------------
-!> Compute the Cholesky decomposition of a complex Hermitian positive definite
-!! matrix a, dim(a) = n x n. On return a = u^+ u with u upper triangular
-!! matrix.
-subroutine zcholesky(n, a, bof, err_code)
+!> Computes all the eigenvalues and the eigenvectors of a real symmetric or complex Hermitian
+!! generalized definite eigenproblem, of the form \f$ Ax=\lambda Bx \f$. B is also positive definite.
+subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:,:)  !< (n,n)
-  logical, optional, intent(inout) :: bof     !< Bomb on failure.
-  integer, optional, intent(out)   :: err_code
-
-  integer :: info
-
-  call profiling_in(cholesky_prof, "CHOLESKY")
-  PUSH_SUB(zcholesky)
-
-  ASSERT(n > 0)
-
-  call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
-
-  if(info /= 0) then
-    if(optional_default(bof, .true.)) then
-      write(message(1), '(3a,i5)') 'In zcholesky, LAPACK ', TOSTRING(ZLAPACK(potrf)), ' returned error message ', info
-      call messages_fatal(1)
-    else
-      if(present(bof)) then
-        bof = .true.
-      end if
-    end if
-  else
-    if(present(bof)) then
-      bof = .false.
-    end if
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-
-  call profiling_out(cholesky_prof)
-  POP_SUB(zcholesky)
-end subroutine zcholesky
-
-
-! ---------------------------------------------------------
-!> Computes all the eigenvalues and the eigenvectors of a real
-!! generalized symmetric-definite eigenproblem, of the form  
-!! \f$ Ax=\lambda Bx \f$.
-!! Here A and B are assumed to be symmetric and B is also positive definite.
-subroutine dgeneigensolve(n, a, b, e, bof, err_code)
-  integer,           intent(in)    :: n
-  FLOAT,             intent(inout) :: a(:,:)   !< (n,n)
-  FLOAT,             intent(inout) :: b(:,:)   !< (n,n)
+  R_TYPE,            intent(inout) :: a(:,:)   !< (n,n)
+  R_TYPE,            intent(inout) :: b(:,:)   !< (n,n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork, ii, jj
-  FLOAT, allocatable :: work(:), diag(:)
+  FLOAT, allocatable :: rwork(:)
+  R_TYPE, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
-  PUSH_SUB(dgeneigensolve)
+  PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
 
@@ -146,74 +84,14 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
-  call lapack_sygv(1, 'V', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), e(1), work(1), lwork, info)
-  SAFE_DEALLOCATE_A(work)
-
-  ! b was destroyed, so we rebuild it
-  do ii = 1, n
-    do jj = 1, ii - 1
-      b(jj, ii) = b(ii, jj)
-    end do
-    b(ii, ii) = diag(ii)
-  end do
-
-  SAFE_DEALLOCATE_A(diag)
-
-  if(info /= 0) then
-    if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In dgeneigensolve, LAPACK ', TOSTRING(DLAPACK(sygv)), ' returned error message ', info
-      call messages_fatal(1)
-    else
-      if(present(bof)) then
-        bof = .true.
-      end if
-    end if
-  else
-    if(present(bof)) then
-      bof = .false.
-    end if
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-  
-  call profiling_out(eigensolver_prof)
-  POP_SUB(dgeneigensolve)
-end subroutine dgeneigensolve
-
-
-! ---------------------------------------------------------
-!> Computes all the eigenvalues and the eigenvectors of a complex
-!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
-!! Here A and B are assumed to be Hermitian and B is also positive definite.
-subroutine zgeneigensolve(n, a, b, e, bof, err_code)
-  integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
-  CMPLX,             intent(inout) :: b(:,:)   !< (n,n)
-  FLOAT,             intent(out)   :: e(:)     !< (n)
-  logical, optional, intent(inout) :: bof      !< Bomb on failure.
-  integer, optional, intent(out)   :: err_code
-
-  integer            :: info, lwork, ii, jj
-  FLOAT, allocatable :: rwork(:)
-  CMPLX, allocatable :: work(:), diag(:)
-
-  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
-  PUSH_SUB(zgeneigensolve)
-
-  ASSERT(n > 0)
-
-  SAFE_ALLOCATE(diag(1:n))
-  
-  ! store the diagonal of b
-  forall(ii = 1:n) diag(ii) = b(ii, ii)
-
-  lwork = 5*n
-  SAFE_ALLOCATE(work(1:lwork))
+#ifdef R_TCOMPLEX
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
   call lapack_hegv(1, 'V', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), e(1), work(1), lwork, rwork(1), info)
-  SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
+#else
+  call lapack_sygv(1, 'V', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), e(1), work(1), lwork, info)
+#endif
+  SAFE_DEALLOCATE_A(work)
 
   ! b was destroyed, so we rebuild it
   do ii = 1, n
@@ -227,7 +105,12 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In zgeneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegv)), ' returned error message ', info
+      write(message(1),'(3a)') 'In ', TOSTRING(X(geneigensolve)), ' LAPACK '
+#ifdef R_TCOMPLEX
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(X(hegv)), ' returned error message ', info
+#else
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(X(sygv)), ' returned error message ', info
+#endif
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -242,30 +125,31 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
-
+  
   call profiling_out(eigensolver_prof)
-  POP_SUB(zgeneigensolve)
-end subroutine zgeneigensolve
+  POP_SUB(X(geneigensolve))
+end subroutine X(geneigensolve)
 
 
 ! ---------------------------------------------------------
-!> Computes all the eigenvalues and the right (left) eigenvectors of a complex
-!! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
-subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
-  integer,           intent(in)      :: n
-  CMPLX,             intent(inout)   :: a(:, :)   !< (n,n)
-  CMPLX,             intent(out)     :: e(:)     !< (n)
-  integer, optional, intent(out)     :: err_code
-  character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
-  logical, optional, intent(in)      :: sort_eigenvectors
+!> Computes all the eigenvalues and the right (left) eigenvectors of a real or complex
+!! (non-Hermitian) eigenproblem, of the form A*x=(lambda)*x
+subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
+  integer,                intent(in)    :: n
+  R_TYPE,                 intent(inout) :: a(:, :)   !< (n,n)
+  CMPLX,                  intent(out)   :: e(:)      !< (n)
+  integer,      optional, intent(out)   :: err_code
+  character(1), optional, intent(in)    :: side      !< which eigenvectors ('L' or 'R')
+  logical,      optional, intent(in)    :: sort_eigenvectors !< only applies to complex version, sorts by real part
 
-  integer            :: info, lwork, i
-  FLOAT, allocatable :: rwork(:), re(:)
-  CMPLX, allocatable :: work(:), vl(:, :), vr(:, :), e_copy(:), a_copy(:, :)
-  character(1)       :: side_
+  integer              :: info, lwork, ii
+  FLOAT, allocatable   :: rwork(:), re(:)
+  R_TYPE, allocatable  :: work(:), vl(:, :), vr(:, :), a_copy(:, :)
+  CMPLX, allocatable   :: e_copy(:)
+  character(1)         :: side_
   integer, allocatable :: ind(:)
 
-  PUSH_SUB(zeigensolve_nonh)
+  PUSH_SUB(X(eigensolve_nonh))
 
   ASSERT(n > 0)
 
@@ -284,8 +168,8 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   SAFE_ALLOCATE(vl(1:1, 1:1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1:1))
-  call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
-    work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a, lead_dim(a), e, vl, lead_dim(vl), vr, lead_dim(vr), &
+    work, lwork, rwork, info)
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -295,18 +179,18 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
-  if (side_ == 'L'.or.side_ == 'l') then
-      SAFE_ALLOCATE(vl(1:n, 1:n))
-      SAFE_ALLOCATE(vr(1:1, 1:1))
-      call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
-        work(1), lwork, rwork(1), info)
-      a(1:n, 1:n) = vl(1:n, 1:n)
+  if(side_ == 'L'.or.side_ == 'l') then
+    SAFE_ALLOCATE(vl(1:n, 1:n))
+    SAFE_ALLOCATE(vr(1:1, 1:1))
+    call lapack_geev('V', 'N', n, a, lead_dim(a), e, vl, lead_dim(vl), vr, lead_dim(vr), &
+      work, lwork, rwork, info) ! check info status
+    a(1:n, 1:n) = vl(1:n, 1:n)
   else
-      SAFE_ALLOCATE(vl(1:1, 1:1))
-      SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
-        work(1), lwork, rwork(1), info)
-      a(1:n, 1:n) = vr(1:n, 1:n)
+    SAFE_ALLOCATE(vl(1:1, 1:1))
+    SAFE_ALLOCATE(vr(1:n, 1:n))
+    call lapack_geev('N', 'V', n, a, lead_dim(a), e, vl, lead_dim(vl), vr, lead_dim(vr), &
+      work, lwork, rwork, info)
+    a(1:n, 1:n) = vr(1:n, 1:n)
   end if
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -314,115 +198,41 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   SAFE_DEALLOCATE_A(vl)
 
   if(info /= 0) then
-    write(message(1),'(3a,i5)') 'In zeigensolve_nonh, LAPACK ', TOSTRING(ZLAPACK(geev)), ' returned error message ', info
+    write(message(1),'(5a,i5)') 'In ', TOSTRING(X(eigensolve_nonh)), &
+      ' LAPACK ', TOSTRING(X(geev)), ' returned error message ', info
     call messages_fatal(1)
   end if
   if(present(err_code)) then
     err_code = info
   end if
 
-  if(present(sort_eigenvectors)) then
-    if(sort_eigenvectors) then
-      SAFE_ALLOCATE(re(1:n))
-      SAFE_ALLOCATE(ind(1:n))
-      SAFE_ALLOCATE(e_copy(1:n))
-      SAFE_ALLOCATE(a_copy(1:n, 1:n))
-      re = real(e, REAL_PRECISION)
-      e_copy = e
-      a_copy = a
-      call sort(re, ind)
-      forall(i = 1:n)
-        e(i) = e_copy(ind(i))
-        a(1:n, i) = a_copy(1:n, ind(i))
-      end forall
-      SAFE_DEALLOCATE_A(e_copy)
-      SAFE_DEALLOCATE_A(a_copy)
-      SAFE_DEALLOCATE_A(re)
-      SAFE_DEALLOCATE_A(ind)
-    end if
+  if(optional_default(sort_eigenvectors, .false.)) then
+    SAFE_ALLOCATE(re(1:n))
+    SAFE_ALLOCATE(ind(1:n))
+    SAFE_ALLOCATE(e_copy(1:n))
+    SAFE_ALLOCATE(a_copy(1:n, 1:n))
+    re = real(e, REAL_PRECISION)
+    e_copy = e
+    a_copy = a
+    call sort(re, ind)
+    forall(ii = 1:n)
+      e(ii) = e_copy(ind(ii))
+      a(1:n, ii) = a_copy(1:n, ind(ii))
+    end forall
+    SAFE_DEALLOCATE_A(e_copy)
+    SAFE_DEALLOCATE_A(a_copy)
+    SAFE_DEALLOCATE_A(re)
+    SAFE_DEALLOCATE_A(ind)
   end if
 
-  POP_SUB(zeigensolve_nonh)
-end subroutine zeigensolve_nonh
+  POP_SUB(X(eigensolve_nonh))
+end subroutine X(eigensolve_nonh)
 
 
+#ifdef R_TREAL
 ! ---------------------------------------------------------
-!> Computes all the eigenvalues and the right (left) eigenvectors of a real
-!! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
-subroutine deigensolve_nonh(n, a, e, err_code, side)
-  integer,           intent(in)      :: n
-  FLOAT,             intent(inout)   :: a(:,:)   !< (n,n)
-  FLOAT,             intent(out)     :: e(:)     !< (n)
-  integer, optional, intent(out)     :: err_code
-  character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
-
-  integer            :: info, lwork
-  FLOAT, allocatable :: rwork(:), work(:), vl(:, :), vr(:, :)
-  character(1)       :: side_
-
-  PUSH_SUB(deigensolve_nonh)
-
-  ASSERT(n > 0)
-
-  if (present(side)) then
-    side_ = side
-  else
-    side_ = 'R'
-  end if
-
-  lwork = -1
-  ! A bug in the query mode of dgeev demands that the working array has to be larger than 1
-  ! problem here is that a value is written somewhere into the array whether it is
-  ! allocated or not. I noticed that it happens (hopefully) always at an index which
-  ! is below the matrix dimension.
-  SAFE_ALLOCATE(work(1:n))
-  SAFE_ALLOCATE(vl(1:1, 1:1))
-  SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
-  SAFE_ALLOCATE(rwork(1:1))
-  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
-     work(1), lwork, rwork(1), info)
-
-  lwork = int(work(1))
-  SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(vl)
-  SAFE_DEALLOCATE_A(vr)
-  SAFE_DEALLOCATE_A(rwork)
-
-  SAFE_ALLOCATE(work(1:lwork))
-  SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
-  if (side_ == 'L'.or.side_ == 'l') then
-      SAFE_ALLOCATE(vl(1:n, 1:n))
-      SAFE_ALLOCATE(vr(1:1, 1:1))
-      call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
-        work(1), lwork, rwork(1), info)
-      a(1:n, 1:n) = vl(1:n, 1:n)
-  else
-      SAFE_ALLOCATE(vl(1:1, 1:1))
-      SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
-        work(1), lwork, rwork(1), info)
-      a(1:n, 1:n) = vr(1:n, 1:n)
-  end if
-  SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(rwork)
-  SAFE_DEALLOCATE_A(vr)
-  SAFE_DEALLOCATE_A(vl)
-
-  if(info /= 0) then
-    write(message(1),'(3a,i5)') 'In deigensolve_nonh, LAPACK ', TOSTRING(DLAPACK(geev)), ' returned error message ', info
-    call messages_fatal(1)
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-
-  POP_SUB(deigensolve_nonh)
-end subroutine deigensolve_nonh
-
-! ---------------------------------------------------------
-!> Computes the k lowest eigenvalues and the eigenvectors of a real
-!! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x.
-!! Here A and B are assumed to be symmetric and B is also positive definite.
+!> Computes the k lowest eigenvalues and the eigenvectors of a real symmetric or complex Hermitian
+!! generalized definite eigenproblem, of the form  A*x=(lambda)*B*x. B is also positive definite.
 subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
   FLOAT,             intent(inout) :: a(:,:)   !< (n, n)
@@ -432,19 +242,6 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine DLAPACK(sygvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
-      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
-      implicit none
-      integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
-      character(1), intent(in)    :: jobz, range, uplo
-      integer,      intent(out)   :: m, iwork, ifail, info
-      FLOAT,        intent(in)    :: vl, vu, abstol
-      FLOAT,        intent(inout) :: a, b
-      FLOAT,        intent(out)   :: w, z, work
-    end subroutine DLAPACK(sygvx)
-  end interface
-  
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
@@ -457,21 +254,21 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info)
+  call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info) ! check info
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
 
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, iwork(1), ifail(1), info)
 
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', TOSTRING(DLAPACK(sygvx)), ' returned error message ', info
+      write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', TOSTRING(X(sygvx)), ' returned error message ', info
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -490,6 +287,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   POP_SUB(dlowest_geneigensolve)
 end subroutine dlowest_geneigensolve
 
+#else
 
 ! ---------------------------------------------------------
 !> Computes the k lowest eigenvalues and the eigenvectors of a complex
@@ -504,20 +302,6 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine ZLAPACK(hegvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
-      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
-      implicit none
-      integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
-      character(1), intent(in)    :: jobz, range, uplo
-      integer,      intent(out)   :: m, iwork, ifail, info
-      FLOAT,        intent(in)    :: vl, vu, abstol
-      FLOAT,        intent(out)   :: w, rwork
-      CMPLX,        intent(inout) :: a, b
-      CMPLX,        intent(out)   :: z, work
-    end subroutine ZLAPACK(hegvx)
-  end interface
-
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   FLOAT              :: rwork(7*n)
@@ -531,19 +315,19 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegvx)), ' returned error message ', info
+      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', TOSTRING(X(hegvx)), ' returned error message ', info
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -561,8 +345,9 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   POP_SUB(zlowest_geneigensolve)
 end subroutine zlowest_geneigensolve
+#endif
 
-
+#ifdef R_TREAL
 ! ---------------------------------------------------------
 !> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, e, bof, err_code)
@@ -587,7 +372,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
+      write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(X(syev)), ' returned error message ', info
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -606,6 +391,8 @@ subroutine deigensolve(n, a, e, bof, err_code)
   call profiling_out(eigensolver_prof)
   POP_SUB(deigensolve)
 end subroutine deigensolve
+
+#else
 
 ! ---------------------------------------------------------
 !> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
@@ -634,7 +421,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(ZLAPACK(heev)), ' returned error message ', info
+      write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(X(heev)), ' returned error message ', info
       call messages_fatal(1)
     else
       if(present(bof)) then
@@ -653,8 +440,9 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   call profiling_out(eigensolver_prof)
   POP_SUB(zeigensolve)
 end subroutine zeigensolve
+#endif
 
-
+#ifdef R_TREAL
 ! ---------------------------------------------------------
 !> Computes the k lowest eigenvalues and the eigenvectors of a real
 !! standard symmetric-definite eigenproblem, of the form  A*x=(lambda)*x.
@@ -665,19 +453,6 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   FLOAT,   intent(out) :: e(:)   !< (n)
   FLOAT,   intent(out) :: v(:,:) !< (n, k)
 
-  interface
-    subroutine DLAPACK(syevx)(jobz, range, uplo, n, a, lda, &
-      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
-      implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(in)  :: a
-      FLOAT,        intent(out) :: w, z, work
-    end subroutine DLAPACK(syevx)
-  end interface
-  
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
@@ -690,25 +465,26 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
-  call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info) ! check info
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     write(message(1),'(3a,i5)') &
-      'In dlowest_eigensolve, LAPACK ', TOSTRING(DLAPACK(syevx)), ' returned error message ', info
+      'In dlowest_eigensolve, LAPACK ', TOSTRING(X(syevx)), ' returned error message ', info
     call messages_fatal(1)
   end if
 
   POP_SUB(dlowest_eigensolve)
 end subroutine dlowest_eigensolve
 
+#else
 
 ! ---------------------------------------------------------
 !> Computes the k lowest eigenvalues and the eigenvectors of a complex
@@ -720,20 +496,6 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   FLOAT,   intent(out) :: e(:)   !< (n)
   CMPLX,   intent(out) :: v(:,:) !< (n, k)
 
-  interface
-    subroutine ZLAPACK(heevx)(jobz, range, uplo, n, a, lda, &
-      vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
-      implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(out) :: w
-      CMPLX,        intent(in)  :: a
-      CMPLX,        intent(out) :: z, work
-    end subroutine ZLAPACK(heevx)
-  end interface
-  
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   CMPLX, allocatable :: work(:)
@@ -746,55 +508,55 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
-  call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     write(message(1),'(3a,i5)') &
-      'In zlowest_eigensolve, LAPACK ', TOSTRING(ZLAPACK(heevx)), ' returned error message ', info
+      'In zlowest_eigensolve, LAPACK ', TOSTRING(X(heevx)), ' returned error message ', info
     call messages_fatal(1)
   end if
 
   POP_SUB(zlowest_eigensolve)
 end subroutine zlowest_eigensolve
-
+#endif
 
 ! ---------------------------------------------------------
-!> Invert a real symmetric square matrix a
-FLOAT function ddeterminant(n, a, invert) result(d)
+!> Invert a real symmetric or complex Hermitian square matrix a
+R_TYPE function X(determinant)(n, a, invert) result(d)
   integer, intent(in)           :: n
-  FLOAT,   intent(inout)        :: a(:,:) !< (n,n)
+  R_TYPE,   intent(inout)       :: a(:,:) !< (n,n)
   logical, intent(in), optional :: invert
 
   interface
-    subroutine DLAPACK(getrf) (m, n, a, lda, ipiv, info)
+    subroutine X(getrf) (m, n, a, lda, ipiv, info)
       implicit none
       integer,      intent(in)    :: m, n, lda
-      FLOAT,        intent(inout) :: a          ! a(lda, n)
-      integer,      intent(out)   :: ipiv       ! ipiv(min(m,n)
+      R_TYPE,        intent(inout) :: a         !< a(lda, n)
+      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
       integer,      intent(out)   :: info
-    end subroutine DLAPACK(getrf)
+    end subroutine X(getrf)
 
-    subroutine DLAPACK(getri) (n, a, lda, ipiv, work, lwork, info )
+    subroutine X(getri) (n, a, lda, ipiv, work, lwork, info )
       implicit none
       integer,      intent(in)    :: n, lda, lwork
-      FLOAT,        intent(inout) :: a       ! a(lda, n)
-      integer,      intent(in)    :: ipiv    ! ipiv(n)
-      FLOAT,        intent(inout) :: work    ! work(lwork)
+      R_TYPE,       intent(inout) :: a       !< a(lda, n)
+      integer,      intent(in)    :: ipiv    !< ipiv(n)
+      R_TYPE,       intent(inout) :: work    !< work(lwork)
       integer,      intent(out)   :: info
-    end subroutine DLAPACK(getri)
+    end subroutine X(getri)
   end interface
 
   integer :: info, i
   integer, allocatable :: ipiv(:)
-  FLOAT, allocatable :: work(:)
+  R_TYPE, allocatable :: work(:)
 
   ! No PUSH_SUB, called too often
 
@@ -803,9 +565,9 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
+  call X(getrf)(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1), '(3a, i3)') 'In ddeterminant, LAPACK ', TOSTRING(DLAPACK(getrf)), ' returned info = ', info
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
@@ -819,9 +581,9 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   end do
 
   if(optional_default(invert, .true.)) then
-    call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
+    call X(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(3a, i3)') 'In ddeterminant, LAPACK ', TOSTRING(DLAPACK(getri)), ' returned info = ', info
+      write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
       call messages_fatal(1)
     end if
   end if
@@ -829,187 +591,67 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
 
-end function ddeterminant
+end function X(determinant)
 
 
 ! ---------------------------------------------------------
-!> Invert a complex Hermitian square matrix a
-CMPLX function zdeterminant(n, a, invert) result(d)
-  integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(:,:) !< (n,n)
-  logical, intent(in), optional :: invert
-
-  interface
-    subroutine ZLAPACK(getrf) (m, n, a, lda, ipiv, info)
-      implicit none
-      integer,      intent(in)    :: m, n, lda
-      CMPLX,        intent(inout) :: a          ! a(lda, n)
-      integer,      intent(out)   :: ipiv       ! ipiv(min(m,n)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(getrf)
-
-    subroutine ZLAPACK(getri) (n, a, lda, ipiv, work, lwork, info )
-      implicit none
-      integer,      intent(in)    :: n, lda, lwork
-      CMPLX,        intent(inout) :: a       ! a(lda, n)
-      integer,      intent(in)    :: ipiv    ! ipiv(n)
-      CMPLX,        intent(inout) :: work    ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(getri)
-  end interface
-
-  integer :: info, i
-  integer, allocatable :: ipiv(:)
-  CMPLX, allocatable :: work(:)
-
-  PUSH_SUB(zdeterminant)
-
-  ASSERT(n > 0)
-
-  SAFE_ALLOCATE(work(1:n))
-  SAFE_ALLOCATE(ipiv(1:n))
-
-  call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
-  if(info < 0) then
-    write(message(1), '(3a, i3)') 'In zdeterminant, LAPACK ', TOSTRING(ZLAPACK(getrf)), ' returned info = ', info
-    call messages_fatal(1)
-  end if
-
-  d = M_ONE
-  do i = 1, n
-    if(ipiv(i) /= i) then
-      d = - d*a(i, i)
-    else
-      d = d*a(i, i)
-    end if
-  end do
-
-  if(optional_default(invert, .true.)) then
-    call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
-    if(info /= 0) then
-      write(message(1), '(3a, i3)') 'In zdeterminant, LAPACK ', TOSTRING(ZLAPACK(getri)), ' returned info = ', info
-      call messages_fatal(1)
-    end if
-  end if
-
-  SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(ipiv)
-  POP_SUB(zdeterminant)
-end function zdeterminant
-
-! ---------------------------------------------------------
-!> Invert a real symmetric square matrix a
-subroutine dsym_inverter(uplo, n, a)
+!> Invert a real/complex symmetric square matrix a
+subroutine X(sym_inverter)(uplo, n, a)
   character(1), intent(in)      :: uplo
   integer, intent(in)           :: n
-  FLOAT,   intent(inout)        :: a(:,:) !< (n,n)
+  R_TYPE,  intent(inout)        :: a(:,:) !< (n,n)
 
   interface
-    subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
+    subroutine X(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
       implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda, lwork
-      FLOAT,        intent(inout) :: a
+      R_TYPE,       intent(inout) :: a
       integer,      intent(out)   :: ipiv
-      FLOAT,        intent(inout) :: work
+      R_TYPE,       intent(inout) :: work
       integer,      intent(out)   :: info
-    end subroutine DLAPACK(sytrf)
+    end subroutine X(sytrf)
 
-    subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info)
+    subroutine X(sytri) (uplo, n, a, lda, ipiv, work, info)
       implicit none
       character(1), intent(in)    :: uplo
       integer,      intent(in)    :: n, lda
-      FLOAT,        intent(inout) :: a
+      R_TYPE,       intent(inout) :: a
       integer,      intent(in)    :: ipiv
-      FLOAT,        intent(inout) :: work
+      R_TYPE,       intent(inout) :: work
       integer,      intent(out)   :: info
-    end subroutine DLAPACK(sytri)
+    end subroutine X(sytri)
   end interface
 
   integer :: info
   integer, allocatable :: ipiv(:)
-  FLOAT, allocatable :: work(:)
+  R_TYPE, allocatable :: work(:)
 
-  PUSH_SUB(dsym_inverter)
-
-  ASSERT(n > 0)
-
-  SAFE_ALLOCATE(work(1:n))
-  SAFE_ALLOCATE(ipiv(1:n))
-
-  call DLAPACK(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
-  if(info < 0) then
-    write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytrf)), ' returned info = ', info
-    call messages_fatal(1)
-  end if
-
-  call DLAPACK(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
-  if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytri)), ' returned info = ', info
-    call messages_fatal(1)
-  end if
-
-  SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(ipiv)
-  POP_SUB(dsym_inverter)
-end subroutine dsym_inverter
-
-! ---------------------------------------------------------
-!> Invert a complex symmetric square matrix a
-subroutine zsym_inverter(uplo, n, a)
-  character(1), intent(in)      :: uplo
-  integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(:,:) !< (n,n)
-
-  interface
-    subroutine ZLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda, lwork
-      CMPLX,        intent(inout) :: a 
-      integer,      intent(out)   :: ipiv
-      CMPLX,        intent(inout) :: work
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(sytrf)
-
-    subroutine ZLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info )
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda
-      CMPLX,        intent(inout) :: a
-      integer,      intent(in)    :: ipiv
-      CMPLX,        intent(inout) :: work
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(sytri)
-  end interface
-
-  integer :: info
-  integer, allocatable :: ipiv(:)
-  CMPLX, allocatable :: work(:)
-
-  PUSH_SUB(zsym_inverter)
+  PUSH_SUB(X(sym_inverter))
 
   ASSERT(n > 0)
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
-  call ZLAPACK(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
+
+  call X(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
   if(info < 0) then
-    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytrf)), ' returned info = ', info
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(sym_inverter)), ', LAPACK ', TOSTRING(X(sytrf)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
-  call ZLAPACK(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
+  call X(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytri)), ' returned info = ', info
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(sym_inverter)), ', LAPACK ', TOSTRING(X(sytri)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  POP_SUB(zsym_inverter)
-end subroutine zsym_inverter
+  POP_SUB(X(sym_inverter))
+end subroutine X(sym_inverter)
 
+#ifdef R_TREAL
 ! ---------------------------------------------------------
 !> compute the solution to a real system of linear equations A*X = B,
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
@@ -1018,22 +660,6 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   FLOAT,   intent(inout) :: a(:,:) !< (n, n)
   FLOAT,   intent(inout) :: b(:,:) !< (n, nrhs)
   FLOAT,   intent(out)   :: x(:,:) !< (n, nrhs)
-
-  interface
-    subroutine DLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
-      c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
-      implicit none
-      character(1), intent(in)    :: fact, trans
-      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
-      FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nrhs)
-      integer,      intent(inout) :: ipiv                ! ipiv(n)
-      FLOAT,        intent(out)   :: x, ferr, berr, work ! x(ldx,nrhs), ferr(nrhs), berr(nrhs), work(4*n)
-      FLOAT,        intent(out)   :: rcond
-      character(1), intent(inout) :: equed
-      integer,      intent(out)   :: iwork               ! iwork(n)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(gesvx)
-  end interface
 
   integer :: info
   integer, allocatable :: ipiv(:), iwork(:)
@@ -1054,11 +680,11 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   SAFE_ALLOCATE(c(1:n))
   SAFE_ALLOCATE(af(1:n, 1:n))
 
-  call DLAPACK(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In dlinsyssolve, LAPACK ', TOSTRING(DLAPACK(gesvx)), ' returned info = ', info
+    write(message(1), '(3a, i5)') 'In dlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
     if(info == n+1) then
       message(2) = '(reciprocal of the condition number is less than machine precision)'
       call messages_warning(2)
@@ -1078,6 +704,8 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
 
 end subroutine dlinsyssolve
 
+#else
+
 ! ---------------------------------------------------------
 !> compute the solution to a complex system of linear equations A*X = B,
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
@@ -1086,24 +714,6 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
   CMPLX,   intent(inout) :: a(:,:) !< (n, n)
   CMPLX,   intent(inout) :: b(:,:) !< (n, nrhs)
   CMPLX,   intent(out)   :: x(:,:) !< (n, nrhs)
-
-  interface
-    subroutine ZLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
-      c, b, ldb, x, ldx, rcond, ferr, berr, work, rwork, info)
-      implicit none
-      character(1), intent(in)    :: fact, trans
-      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
-      CMPLX,        intent(inout) :: a, af, b            ! a(lda, n), af(ldaf, n), b(ldb, nrhs)
-      FLOAT,        intent(inout) :: r, c                ! r(n), c(n)
-      integer,      intent(inout) :: ipiv                ! ipiv(n)
-      FLOAT,        intent(out)   :: ferr, berr          ! ferr(nrhs), berr(nrhs)
-      FLOAT,        intent(out)   :: rcond
-      CMPLX,        intent(out)   :: x, work             ! x(ldx, nrhs), work(2*n)
-      character(1), intent(inout) :: equed
-      FLOAT,        intent(out)   :: rwork               ! rwork(2*n)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(gesvx)
-  end interface
 
   integer              :: info
   integer, allocatable :: ipiv(:)
@@ -1127,10 +737,10 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 
   equed = 'N'
 
-  call ZLAPACK(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), rwork(1), info)
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In zlinsyssolve, LAPACK ', TOSTRING(ZLAPACK(gesvx)), ' returned info = ', info
+    write(message(1), '(3a, i5)') 'In zlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
@@ -1145,8 +755,9 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 
   POP_SUB(zlinsyssolve)
 end subroutine zlinsyssolve
+#endif
 
-
+#ifdef R_TCOMPLEX
 ! ---------------------------------------------------------
 !> computes the singular value decomposition of a complex NxN matrix a(:,:)
 subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
@@ -1156,7 +767,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   FLOAT,   intent(out)   :: sg_values(:)    !< (n)
 
   interface
-    subroutine ZLAPACK(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
+    subroutine X(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
       vt, ldvt, work, lwork, rwork, info )
       implicit none
       character(1), intent(in)    :: jobu, jobvt
@@ -1167,7 +778,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
       integer,      intent(out)   :: info
       FLOAT,        intent(out)   :: s        ! s(min(m,n))
       FLOAT,        intent(inout) :: rwork    ! rwork(5*min(m,n))
-    end subroutine ZLAPACK(gesvd)
+    end subroutine X(gesvd)
   end interface
 
   integer :: m, info, lwork
@@ -1187,11 +798,11 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:5*min(m, n)))
 
-  call ZLAPACK(gesvd)( &
+  call X(gesvd)( &
     'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, rwork(1), info )
 
   if(info /= 0) then
-    write(message(1), '(3a, i3)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(ZLAPACK(gesvd)), ' returned info = ', info
+    write(message(1), '(3a, i5)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(X(gesvd)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
@@ -1250,153 +861,43 @@ subroutine zsvd_inverse(n, a, threshold)
   SAFE_DEALLOCATE_A(u)
   POP_SUB(zsvd_inverse)
 end subroutine zsvd_inverse
-
+#endif
 
 ! ---------------------------------------------------------
-!> Calculate the inverse of a real upper triangular matrix (in
-!! unpacked storage).
-subroutine dinvert_upper_triangular(n, a)
+!> Calculate the inverse of a real/complex upper triangular matrix (in
+!! unpacked storage). (lower triangular would be a trivial variant of this)
+subroutine X(invert_upper_triangular)(n, a)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(:,:) !< (n,n)
+  R_TYPE,  intent(inout) :: a(:,:) !< (n,n)
 
   integer :: info
 
   interface
-    subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
+    subroutine X(trtri)(uplo, diag, n, a, lda, info)
       implicit none
       character(1), intent(in)    :: uplo
       character(1), intent(in)    :: diag
       integer,      intent(in)    :: n
-      FLOAT,        intent(inout) :: a
+      R_TYPE,       intent(inout) :: a
       integer,      intent(in)    :: lda
       integer,      intent(out)   :: info
-    end subroutine DLAPACK(trtri)
+    end subroutine X(trtri)
   end interface
   
-  PUSH_SUB(dinvert_upper_triangular)
+  PUSH_SUB(X(invert_upper_triangular))
 
   ASSERT(n > 0)
 
-  call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
+  call X(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info /= 0) then
-    write(message(1), '(3a,i5)') &
-      'In dinvert_upper_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
+    write(message(1), '(5a,i5)') &
+      'In ', TOSTRING(Xinvert_upper_triangular), ' LAPACK ', TOSTRING(X(trtri)), ' returned error message ', info
     call messages_fatal(1)
   end if
 
-  POP_SUB(dinvert_upper_triangular)
-end subroutine dinvert_upper_triangular
-
-
-! ---------------------------------------------------------
-!> Calculate the inverse of a complex upper triangular matrix (in
-!! unpacked storage).
-subroutine zinvert_upper_triangular(n, a)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(:,:) !< (n,n)
-
-  integer :: info
-
-  interface
-    subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      character(1), intent(in)    :: diag
-      integer,      intent(in)    :: n
-      CMPLX,        intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(trtri)
-  end interface
-  
-  PUSH_SUB(zinvert_upper_triangular)
-
-  ASSERT(n > 0)
-
-  call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
-
-  if(info /= 0) then
-    write(message(1), '(3a,i5)') &
-      'In zinvert_upper_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
-    call messages_fatal(1)
-  end if
-
-  POP_SUB(zinvert_upper_triangular)
-end subroutine zinvert_upper_triangular
-
-! ---------------------------------------------------------
-!> Calculate the inverse of a real lower triangular matrix (in
-!! unpacked storage).
-subroutine dinvert_lower_triangular(n, a)
-  integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(:,:) !< (n,n)
-
-  integer :: info
-
-  interface
-    subroutine DLAPACK(trtri)(uplo, diag, n, a, lda, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      character(1), intent(in)    :: diag
-      integer,      intent(in)    :: n
-      FLOAT,        intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(trtri)
-  end interface
-  
-  PUSH_SUB(dinvert_lower_triangular)
-
-  ASSERT(n > 0)
-
-  call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
-
-  if(info /= 0) then
-    write(message(1), '(3a,i5)') &
-      'In dinvert_lower_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
-    call messages_fatal(1)
-  end if
-
-  POP_SUB(dinvert_lower_triangular)
-end subroutine dinvert_lower_triangular
-
-! ---------------------------------------------------------
-!> Calculate the inverse of a complex lower triangular matrix (in
-!! unpacked storage).
-subroutine zinvert_lower_triangular(n, a)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(:,:) !< (n,n)
-
-  integer :: info
-
-  interface
-    subroutine ZLAPACK(trtri)(uplo, diag, n, a, lda, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      character(1), intent(in)    :: diag
-      integer,      intent(in)    :: n
-      CMPLX,        intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(trtri)
-  end interface
-  
-  PUSH_SUB(zinvert_lower_triangular)
-
-  ASSERT(n > 0)
-
-  call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
-
-  if(info /= 0) then
-    write(message(1), '(3a,i5)') &
-      'In zinvert_lower_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
-    call messages_fatal(1)
-  end if
-
-  POP_SUB(zinvert_lower_triangular)
-end subroutine zinvert_lower_triangular
-
+  POP_SUB(X(invert_upper_triangular))
+end subroutine X(invert_upper_triangular)
 
 !! Local Variables:
 !! mode: f90
