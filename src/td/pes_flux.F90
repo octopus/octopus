@@ -133,8 +133,8 @@ contains
       case(SPHERE)
         border(1:dim) = mesh%sb%rsize/sqrt(M_TWO)
       case default
-        message(1) = "PESSurface not specified. No default values available for &
-                      &this box shape. Specify a surface with block PESSurface."
+        message(1) = &
+          "PESSurface not specified. No default values available for this box shape. Specify a surface with block PESSurface."
         call messages_fatal(1)
       end select
       message(1) = "PESSurface not specified. Using default values."
@@ -694,6 +694,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(phasedump)
+    SAFE_DEALLOCATE_A(spctrdump)
 
     POP_SUB(pes_flux_dump)
   end subroutine pes_flux_dump

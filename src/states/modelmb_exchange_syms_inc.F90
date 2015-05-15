@@ -19,7 +19,7 @@
 
 !> project out states with proper symmetry for cases which are of symmetry = unknown
 subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, young_used, &
-&   wf, symmetries_satisfied, tproj_1yd, nspindown_out, iyoung_out, norm)
+  wf, symmetries_satisfied, tproj_1yd, nspindown_out, iyoung_out, norm)
   FLOAT,                    intent(in)    :: eigenval
   type(grid_t),             intent(in)    :: gr
   integer,                  intent(in)    :: mm
