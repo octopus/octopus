@@ -76,6 +76,7 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
+    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
     call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
