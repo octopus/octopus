@@ -97,6 +97,7 @@ contains
     
     PUSH_SUB(modelmb_particles_nullify)
     
+    this%nparticle = 0
     nullify(this%labels_particles)
     nullify(this%particletype)
     nullify(this%nparticles_per_type)
