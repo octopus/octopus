@@ -897,7 +897,7 @@ contains
       end if
     end do
 
-    ! Add subsystem kinetic non aditional term
+    ! Add subsystem kinetic non-additive term
     nullify(subsys_tnadd, potential)
     if(associated(this%subsys_hm))then
       call ssys_hamiltonian_get(this%subsys_hm, subsys_tnadd)
