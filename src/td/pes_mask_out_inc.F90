@@ -1442,7 +1442,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
     call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
-                                      mask%energyMax, mask%energyStep, .FALSE.)
+                                      mask%energyMax, mask%energyStep, .false.)
 
   end if
 

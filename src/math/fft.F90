@@ -757,8 +757,8 @@ contains
     type(fft_t),       intent(inout) :: this     !< FFT data type
     !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
     !! and z-axis XX(:,3) 
-    FLOAT,   optional,   intent(in)    :: XX(:,:)  
-    integer, optional,   intent(in)    :: nn(:)  
+    FLOAT,             intent(in)    :: XX(:,:)  
+    integer, optional, intent(in)    :: nn(:)  
  
     integer :: slot
 
@@ -772,6 +772,7 @@ contains
     !Do nothing 
     case (FFTLIB_NFFT)
 #ifdef HAVE_NFFT
+      ASSERT(present(nn))
       call nfft_precompute(fft_array(slot)%nfft, &
           XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
 #endif
