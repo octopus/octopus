@@ -227,7 +227,6 @@ while ($_ = <TESTSUITE>) {
 
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
-	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  skip_exit();
       } elsif ( $enabled ne "Yes") {
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
@@ -251,14 +250,8 @@ while ($_ = <TESTSUITE>) {
 	# FIXME: should we do this for a dry-run?
 	
 	if( ! -x $octopus_exe) {
-	  print "\nSkipping test: executable $octopus_exe not available.\n\n";
-	  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
-	  if($failures == 0) {
-	      skip_exit();
-	  } else {
-	      exit $failures;
-	      # if a previous step has failed, mark as failed not skipped
-	  }
+	  print STDERR "\nWARNING: Skipping test: executable '$octopus_exe' not available.\n\n";
+	  skip_exit();
         }
 
 	$options_available = `$octopus_exe -c`;
@@ -284,17 +277,11 @@ while ($_ = <TESTSUITE>) {
 		    print ".\n";
 		    print "Executable: $octopus_exe\n";
 		    print "Available options: $options_available\n\n";
-		    if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
-		    if($failures == 0) {
-			skip_exit();
-		    } else {
-			exit $failures;
-			# if a previous step has failed, mark as failed not skipped
-		    }
+		    skip_exit();
 		}
 	    }
 	}
-	# FIXME: make common skip proc; import Options to BGW version
+	# FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:/) {
         # handled by oct-run_testsuite.sh
     } else {
@@ -310,9 +297,8 @@ while ($_ = <TESTSUITE>) {
 	}
 
 	if( ! -x "$command") {
-	  print "\nCannot find utility : $1 . Skipping utilities test \n";
-	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit $failures;
+	  print STDERR "\nWARNING: Skipping test. Cannot find utility '$1'.\n\n";
+	  skip_exit();
 	}
       }
 
@@ -350,27 +336,20 @@ while ($_ = <TESTSUITE>) {
             if("$global_np" ne "") {
 		$np = $global_np;
             }
-	    # we do not need to care if mpiexec works if we are just doing a dry run
-	    if( -x "$mpiexec_raw" || $opt_n) {
-	      if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
-		  $specify_np = "";
-		  $my_nslots = "MY_NSLOTS=$np";
-	      } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
-		  $specify_np = "--np $np --exe";
-		  $my_nslots = "";
-	      } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
-                  $specify_np = ""; 
-                  $my_nslots = "MP_PROCS=$np"; 
-	      } else { # for mpirun and Cray's aprun
-		  $specify_np = "-n $np";
-		  $my_nslots = "";
-	      }
-	      $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command_suffix > out";
-	    } else {
-	      print "No mpiexec found: Skipping parallel test \n";
-	      if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	      skip_exit();
+	    if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
+		$specify_np = "";
+		$my_nslots = "MY_NSLOTS=$np";
+	    } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
+		$specify_np = "--np $np --exe";
+		$my_nslots = "";
+	    } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
+		$specify_np = ""; 
+		$my_nslots = "MP_PROCS=$np"; 
+	    } else { # for mpirun and Cray's aprun
+		$specify_np = "-n $np";
+		$my_nslots = "";
 	    }
+	    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command_suffix > out";
 	  } else {
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
 	  }
@@ -619,6 +598,13 @@ sub die255 {
 }
 
 sub skip_exit {
-    print "Status: skipped\n";
-    exit 254  
+    if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
+    if($failures == 0) {
+	print "Status: skipped\n";
+	exit 254
+    } else {
+	print "Status: ".$failures." failures\n";
+	exit $failures;
+	# if a previous step has failed, mark as failed not skipped
+    }
 }
