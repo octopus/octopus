@@ -548,10 +548,10 @@ contains
     !% The grid is mapped using small parallelepipedic grids. The size
     !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
     !%Option hilbert 2
-    !% (experimental) A Hilbert space filling curve is used to map the
+    !% (experimental) A Hilbert space-filling curve is used to map the
     !% grid.
     !%Option hilbert_2d 3
-    !% (experimental) A Hilbert space filling curve is used to map the
+    !% (experimental) A Hilbert space-filling curve is used to map the
     !% grid in two of the dimensions.
     !%End
 

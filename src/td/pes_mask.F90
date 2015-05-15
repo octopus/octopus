@@ -110,7 +110,7 @@ module pes_mask_m
     FLOAT, pointer :: ufn(:) => NULL()         !< user-defined mask function
     logical        :: user_def
     
-    FLOAT, pointer :: Lk(:,:) => NULL()        !< associate a k value to an cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
+    FLOAT, pointer :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
     
     FLOAT            :: enlarge(3)             !< Fourier space enlargement
     FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
