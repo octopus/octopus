@@ -747,7 +747,7 @@ contains
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
-          message(2) = "Probably this indicates an inconsistency in occupations between gs and unocc calculations."
+          message(2) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
           call messages_fatal(2, only_root_writes = .true.)
         endif
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
