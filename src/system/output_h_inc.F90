@@ -230,12 +230,12 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output_kick(outp, gr, geo, hm, dir)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(output_t),       intent(in)    :: outp
-    character(len=*),     intent(in)    :: dir
+  subroutine output_kick(outp, mesh, geo, kick, dir)
+    type(mesh_t),     intent(in) :: mesh
+    type(geometry_t), intent(in) :: geo
+    type(kick_t),     intent(in) :: kick
+    type(output_t),   intent(in) :: outp
+    character(len=*), intent(in) :: dir
 
     integer :: err
     CMPLX, allocatable :: kick_function(:)
@@ -243,9 +243,9 @@
     PUSH_SUB(output_kick)
 
     if(iand(outp%what, OPTION_DELTA_PERTURBATION) /= 0) then
-      SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-      call kick_function_get(gr, hm%ep%kick, kick_function)
-      call zio_function_output(outp%how, dir, "kick_function", gr%mesh, kick_function(:), &
+      SAFE_ALLOCATE(kick_function(1:mesh%np))
+      call kick_function_get(mesh, kick, kick_function)
+      call zio_function_output(outp%how, dir, "kick_function", mesh, kick_function(:), &
         units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(kick_function)
     end if

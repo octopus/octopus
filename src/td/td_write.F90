@@ -114,18 +114,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick(gr, hm, outp, geo, iter)
-    type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(output_t),       intent(in)    :: outp
-    type(geometry_t),     intent(in)    :: geo
-    integer,              intent(in)    :: iter
+  subroutine td_write_kick(mesh, kick, outp, geo, iter)
+    type(mesh_t),     intent(in) :: mesh
+    type(kick_t),     intent(in) :: kick
+    type(output_t),   intent(in) :: outp
+    type(geometry_t), intent(in) :: geo
+    integer,          intent(in) :: iter
 
     character(len=256) :: filename
     PUSH_SUB(td_write_kick)
 
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call output_kick(outp, gr, geo, hm, filename)
+    call output_kick(outp, mesh, geo, kick, filename)
 
     POP_SUB(td_write_kick)
   end subroutine td_write_kick

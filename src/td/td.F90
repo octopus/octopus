@@ -437,11 +437,11 @@ contains
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
           if(.not. cmplxscl) then
-            call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           else
-            call kick_apply(gr, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
           end if
-          call td_write_kick(gr, hm, sys%outp, geo, iter)
+          call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
       end if
 
@@ -776,11 +776,11 @@ contains
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time  ==  M_ZERO) then
         if(.not. cmplxscl) then
-          call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
         else
-          call kick_apply(gr, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
         end if
-        call td_write_kick(gr, hm, sys%outp, geo, 0)
+        call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then

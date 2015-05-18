@@ -585,11 +585,11 @@ contains
 
   ! ---------------------------------------------------------
   ! 
-  subroutine kick_function_get(gr, kick, kick_function, theta)
-    type(grid_t),         intent(in)    :: gr
+  subroutine kick_function_get(mesh, kick, kick_function, theta)
+    type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
-    FLOAT, optional,      intent(in)    :: theta
+    FLOAT,      optional, intent(in)    :: theta
 
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
@@ -621,8 +621,8 @@ contains
       call messages_info(1)
 
       kick_function = M_z0
-      do ip = 1, gr%mesh%np
-        call mesh_r(gr%mesh, ip, rr, coords = xx)
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, coords = xx)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
             kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
@@ -633,7 +633,7 @@ contains
           case (QKICKMODE_EXP)
             kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
           case (QKICKMODE_BESSEL)
-            call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
+            call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
               kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
         end select
       end do
@@ -642,10 +642,10 @@ contains
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
 
         kick_function = M_z0
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, rr, coords = xx)
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, coords = xx)
             rkick = M_ZERO; ikick = M_ZERO
-          call parse_expression(rkick, ikick, gr%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
+          call parse_expression(rkick, ikick, mesh%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
             kick_function(ip) = rkick
         end do
 
@@ -653,16 +653,16 @@ contains
 
         kick_function = M_z0
         do im = 1, kick%n_multipoles
-          do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, rr, coords = xx)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords = xx)
             call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
               kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
           end do
         end do
       else
-        forall(ip = 1:gr%mesh%np)
-          kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
-            kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
+        forall(ip = 1:mesh%np)
+          kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
+            kick%pol(1:mesh%sb%dim, kick%pol_dir))
         end forall
         if(cmplxscl) then
           kick_function(:) = kick_function(:) * exp(M_zI * theta)
@@ -677,8 +677,8 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(gr, st, ions, geo, kick, theta)
-    type(grid_t),         intent(in)    :: gr
+  subroutine kick_apply(mesh, st, ions, geo, kick, theta)
+    type(mesh_t),         intent(in)    :: mesh
     type(states_t),       intent(inout) :: st
     type(ion_dynamics_t), intent(in)    :: ions
     type(geometry_t),     intent(inout) :: geo
@@ -699,12 +699,12 @@ contains
     ! psi(delta t) = psi(t) exp(i k x)
     delta_strength: if(kick%delta_strength /= M_ZERO) then
 
-        SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
+        SAFE_ALLOCATE(kick_function(1:mesh%np))
         
         if(.not. cmplxscl) then
-          call kick_function_get(gr, kick, kick_function)
+          call kick_function_get(mesh, kick, kick_function)
         else
-          call kick_function_get(gr, kick, kick_function, theta)          
+          call kick_function_get(mesh, kick, kick_function, theta)          
         end if
 
         write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
@@ -726,22 +726,22 @@ contains
         end select
         call messages_info(3)
 
-        SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+        SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
 
-            call states_get_state(st, gr%mesh, ist, iqn, psi)
+            call states_get_state(st, mesh, ist, iqn, psi)
 
             select case (kick%delta_strength_mode)
             case (KICK_DENSITY_MODE)
-              forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
                 psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
               end forall
 
             case (KICK_SPIN_MODE)
               ispin = states_dim_get_spin_index(st%d, iqn)
-              do ip = 1, gr%mesh%np
+              do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
 
                 cc(1) = exp(kick_value)
@@ -757,7 +757,7 @@ contains
               end do
 
             case (KICK_SPIN_DENSITY_MODE)
-              do ip = 1, gr%mesh%np
+              do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
                 cc(1) = exp(M_TWO*kick_value)
 
@@ -772,7 +772,7 @@ contains
               end do
             end select
 
-            call states_set_state(st, gr%mesh, ist, iqn, psi)
+            call states_set_state(st, mesh, ist, iqn, psi)
 
           end do
         end do
@@ -784,8 +784,8 @@ contains
         ! where M and Z are the ionic mass and charge, respectively.
         if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
           do iatom = 1, geo%natoms
-            geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
-              kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &
+            geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
+              kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
               P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
               species_mass(geo%atom(iatom)%species)
           end do
