@@ -117,6 +117,14 @@ void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
   }
 }
 
+void FC_FUNC_(oct_gdimagedestroy, OCT_GDIMAGEDESTROY)
+  (const gdImagePtr *im)
+{
+  assert(*im != NULL);
+
+  gdImageDestroy(*im);
+}
+
 #else
 /* this is to avoid an empty source file (not allowed by ANSI C)*/
 void useless(){}
