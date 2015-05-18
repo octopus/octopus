@@ -255,7 +255,7 @@ contains
       return
     end if
     ! The size of the file  is not as big as np_global
-    if ((file_size - 64) / FC_INTEGER_SIZE /= partition%np_global) then
+    if (file_size - 64 /= partition%np_global * FC_INTEGER_SIZE) then
       ierr = ierr + 2
       POP_SUB(partition_load)
       return
