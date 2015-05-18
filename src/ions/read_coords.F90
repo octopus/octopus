@@ -469,6 +469,9 @@ contains
         do jdir = 1, space%dim
           call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
         end do
+        do jdir = space%dim + 1, MAX_DIM
+          gf%atom(ia)%x(jdir) = M_ZERO
+        end do
         if(ncol == space%dim + 2) then
           call parse_block_logical(blk, ia - 1, space%dim + 1, gf%atom(ia)%move)
         else
