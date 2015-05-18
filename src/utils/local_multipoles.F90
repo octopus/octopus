@@ -141,13 +141,13 @@ contains
       write(folder,'(a,a1)') trim(folder), '/'
     end if
 
-      default_dt = M_ZERO
-      call parse_variable('TDTimeStep', default_dt, dt, unit = units_inp%time)
-      if (dt <= M_ZERO) then
-        write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
-        write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
-        call messages_info(2)
-      end if
+    default_dt = M_ZERO
+    call parse_variable('TDTimeStep', default_dt, dt, unit = units_inp%time)
+    if (dt <= M_ZERO) then
+      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+      write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
+      call messages_info(2)
+    end if
 
     !%Variable LDFilename
     !%Type string
@@ -349,12 +349,15 @@ contains
                               sys%gr, sys%st, hm, sys%ks, sys%mc, sys%geo, kick, iter, dt, l_start, l_end, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
-    call restart_end(restart) 
 
+    call restart_end(restart)
+    call kick_end(kick)
     call local_end(local)
+
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
     call messages_info(2)
+
     POP_SUB(local_domains)
   end subroutine local_domains
 

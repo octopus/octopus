@@ -610,6 +610,9 @@ contains
       SAFE_DEALLOCATE_P(ep%Vclassical)         ! and clean up
     end if
 
+
+    call kick_end(ep%kick)
+
     ! the external laser
     call laser_end(ep%no_lasers, ep%lasers)
 
