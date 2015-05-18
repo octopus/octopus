@@ -110,7 +110,7 @@ module pes_mask_m
     FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
     
-    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
+    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to a cube index
     !< we implicitly assume k to be the same for all directions
     
     FLOAT            :: enlarge                !< Fourier space enlargement
