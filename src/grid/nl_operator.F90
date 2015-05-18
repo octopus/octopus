@@ -193,7 +193,11 @@ contains
     !% This version is optimized using vector primitives (if available).
     !%End
 
+#ifdef HAVE_VEC
     default = OP_VEC
+#else
+    default = OP_FORTRAN
+#endif
 
     call parse_variable('OperateDouble', default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
