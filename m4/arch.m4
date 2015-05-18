@@ -147,7 +147,6 @@ AC_DEFUN([ACX_ARCH],
 [
 AC_REQUIRE([AC_CANONICAL_HOST])
 
-assembler=no
 blue_gene=no
 vector_type=""
 
@@ -164,40 +163,32 @@ fi
 case "${host}" in
 ##########################################
 x86_64*|*apple-darwin*) #workaround for a bug in autoconf/OS X
-
 oct_arch=x86_64
-assembler=no
-AC_DEFINE(OCT_ARCH_X86_64, 1, [This is an x86_64 system])
 ;;
 ##########################################
 i?86*)
 oct_arch=x86
-AC_DEFINE(OCT_ARCH_X86, 1, [This is an x86 system])
 ;;	
 ##########################################
 ia64*)
 oct_arch=ia64
-AC_DEFINE(OCT_ARCH_IA64, 1, [This is an Itanium system])
+# Itanium
 ;;
 ##########################################
 sparc*)
 oct_arch=sparc
-AC_DEFINE(OCT_ARCH_SPARC, 1, [This is a Sparc system])
 ;;
 ##########################################
 alphaev*)
 oct_arch=alpha
-AC_DEFINE(OCT_ARCH_ALPHA, 1, [This is an Alpha system])
 ;;
 ##########################################
 mips*)
 oct_arch=mips
-AC_DEFINE(OCT_ARCH_MIPS, 1, [This is a MIPS system])
 ;;
 ##########################################
 powerpc*)
 oct_arch=powerpc
-AC_DEFINE(OCT_ARCH_POWERPC, 1, [This is a PowerPC system])
 ;;
 ##########################################
 *)
@@ -212,8 +203,10 @@ x86_64)
 
 #SSE2
 ACX_M128D
-vector=$acx_m128d
-vector_type="(sse2)"
+if test x"$acx_m128d" = x"yes"; then
+  vector=$acx_m128d
+  vector_type="(sse2)"
+fi
 
 #FMA3
 #AC_ARG_ENABLE(fma3, AS_HELP_STRING([--enable-fma3], [Enable the use of FMA3 vectorial instructions (x86_64)]), 
@@ -280,8 +273,10 @@ fi
 ##########################################
 x86)
 ACX_M128D
-vector=$acx_m128d
-vector_type="(sse2)"
+if test x"$acx_m128d" = x"yes"; then
+  vector=$acx_m128d
+  vector_type="(sse2)"
+fi
 ;;
 ##########################################
 powerpc)
