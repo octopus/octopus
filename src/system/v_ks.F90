@@ -285,6 +285,8 @@ contains
         call xc_oep_end(ks%oep)
       endif
       call xc_end(ks%xc)
+    case(HARTREE_FOCK)      
+      call xc_end(ks%xc)
     end select
 
     if(ks%new_hartree) then
