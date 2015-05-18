@@ -280,7 +280,10 @@ foreach my $octopus_exe (@executables){
 	} else {
           if( -f $input_file ) {
             print "\nUsing input file : $input_file\n";
-            system("cp $input_file $workdir/inp");
+            $cp_return = system("cp $input_file $workdir/inp");
+	    if($cp_return != 0) {
+		die255("Copy failed (cp $input_file $workdir/inp)\n");
+	    }
             # Ensure that the input file is writable so that it can
             # be overwritten by the next test.
             $mode = (stat "$workdir/inp")[2];
@@ -364,7 +367,10 @@ foreach my $octopus_exe (@executables){
 	  @wfiles = `ls -d $workdir/* | grep -v inp`;
 	  $workfiles = join("",@wfiles);
 	  $workfiles =~ s/\n/ /g;
-	  system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+	  $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+	  if($cp_return != 0) {
+	      die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+	  }
 	}
       }
 
