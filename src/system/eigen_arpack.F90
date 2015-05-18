@@ -109,18 +109,17 @@ contains
     use_parpack = .false.
 #if defined(HAVE_PARPACK)    
     use_parpack = gr%mesh%parallel_in_domains
-    this%use_parpack = use_parpack
     
     !%Variable EigensolverParpack 
     !%Type logical 
     !%Section SCF::Eigensolver::ARPACK
     !%Description
     !% Use Parallel ARPACK. Default is true if parallel in domains. Code must have been built with
-    !% PARPACK support. Only relevant if <tt>Eigensolver = arpack</tt>.
+    !% PARPACK support. Only relevant if <tt>Eigensolver = arpack</tt>. Even more experimental than ARPACK.
     !%End 
     call parse_logical(datasets_check('EigensolverParpack'), use_parpack, this%use_parpack)
     call messages_print_var_value(stdout, "EigensolverParpack", this%use_parpack)
-    
+    if(this%use_parpack) call messages_experimental("PARPACK")
 #endif
     
     !%Variable EigensolverArnoldiVectors 

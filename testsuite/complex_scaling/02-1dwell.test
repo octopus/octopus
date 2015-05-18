@@ -6,6 +6,7 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
+# often fails with PARPACK
 Processors: 1
 
 # Calculate a resonance where electrons tunnel out of a well
