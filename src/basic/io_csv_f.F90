@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-#include "io_csv.h"
+#include "io_binary.h"
 
 module io_csv_m
   use global_m

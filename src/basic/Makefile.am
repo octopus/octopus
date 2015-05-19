@@ -86,7 +86,6 @@ noinst_HEADERS =               \
 	loct_pointer_inc.F90   \
 	varia.h                \
 	io_binary.h            \
-	io_csv.h               \
 	comm_inc.F90           \
 	opencl_inc.F90         \
         io_binary_f_inc.F90
@@ -126,7 +125,7 @@ io.o : io.F90 mpi.o messages.o parser.o loct.o global.o
 unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o   varinfo.o
 write_iter.o : write_iter.F90
 io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
-io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
+io_csv_f.o : io_csv_f.F90 io_binary.h messages.o
 kinds.o : kinds.F90
 path.o : path.F90 loct.o messages.o profiling.o global.o
 json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
