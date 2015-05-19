@@ -322,13 +322,6 @@ void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_
   close(fd);
 }
 
-void FC_FUNC_(read_header,READ_HEADER)(header_t * hp, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
-{ 
-  unsigned long fname_len;
-  fname_len = l1;
-  io_read_header(hp, correct_endianness, ierr, fname, fname_len);
-}
-
 void FC_FUNC_(read_binary,READ_BINARY)
      (const fint * np, const fint * offset, byte * ff, fint * output_type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
