@@ -664,18 +664,20 @@ contains
       sigma(ie, 1:3, 1:nspin) = -sigma(ie, 1:3, 1:nspin)*(M_FOUR*M_PI*energy/P_c)/kick%delta_strength
     end do
     
-    ewsum = sum(sf(0, 1:nspin))
-    polsum = M_ZERO
+    ! The formulae below are only correct in this particular case.
+    if(kick%delta_strength_mode == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
+      ewsum = sum(sf(0, 1:nspin))
+      polsum = M_ZERO
 
-    ! FIXME: wrong unless kick_density and sin transform
-    do ie = 1, no_e
-      energy = ie * spectrum%energy_step
-      ewsum = ewsum + sum(sf(ie, 1:nspin))
-      polsum = polsum + sum(sf(ie, 1:nspin)) / energy**2
-    end do
+      do ie = 1, no_e
+        energy = ie * spectrum%energy_step
+        ewsum = ewsum + sum(sf(ie, 1:nspin))
+        polsum = polsum + sum(sf(ie, 1:nspin)) / energy**2
+      end do
 
-    ewsum = ewsum * spectrum%energy_step
-    polsum = polsum * spectrum%energy_step
+      ewsum = ewsum * spectrum%energy_step
+      polsum = polsum * spectrum%energy_step
+    endif
 
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, out_file)
@@ -689,9 +691,12 @@ contains
     write(out_file, '(a,f10.4)') '# PropagationSpectrumMaxEnergy  = ', units_from_atomic(units_out%energy, spectrum%max_energy)
     write(out_file, '(a,f10.4)') '# PropagationSpectrumEnergyStep = ', units_from_atomic(units_out%energy, spectrum%energy_step)
     write(out_file, '(a)') '#%'
-    write(out_file, '(a,f16.6)') '# Electronic sum rule       = ', ewsum
-    write(out_file, '(a,f16.6)') '# Polarizability (sum rule) = ', units_from_atomic(units_out%length**3, polsum)
-    write(out_file, '(a)') '#%'
+    if(kick%delta_strength_mode == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
+      write(out_file, '(a,f16.6)') '# Electronic sum rule       = ', ewsum
+      write(out_file, '(a,f16.6,1x,a)') '# Static polarizability (from sum rule) = ', &
+        units_from_atomic(units_out%length**3, polsum), trim(units_abbrev(units_out%length))
+      write(out_file, '(a)') '#%'
+    endif
     
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
     do isp = 1, nspin
