@@ -95,7 +95,7 @@ module spectrum_m
     integer :: transform           !< sine, cosine, or exponential transform
     FLOAT   :: damp_factor         !< factor used in damping
     integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
-    integer :: method              !< fourier transform or compressed sensing 
+    integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
     type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
   end type spectrum_t
@@ -152,7 +152,7 @@ contains
     !%Description
     !% Decides which method is used to obtain the spectrum.
     !%Option fourier 1
-    !% The standard fourier transform.
+    !% The standard Fourier transform. Further specified by <tt>PropagationSpectrumTransform</tt>.
     !%Option compressed_sensing 2
     !% (Experimental) Uses the compressed sensing technique.
     !%End
@@ -182,8 +182,8 @@ contains
     !%Description
     !% Decides which damping/filtering is to be applied in order to
     !% calculate spectra by calculating a Fourier transform. The
-    !% default is polynomial damping, except when compressed sensing
-    !% is used. In that case the default is none.
+    !% default is polynomial damping, except when <tt>SpectrumMethod = compressed_sensing</tt>.
+    !% In that case the default is none.
     !%Option none 0
     !% No filtering at all.
     !%Option exponential 1
@@ -213,13 +213,14 @@ contains
     !%Default sine
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% Decides which transform to perform.
+    !% Decides which transform to perform, if <tt>SpectrumMethod = fourier</tt>.
     !%Option sine 2
-    !% Sine transform <math>\int dt \sin(wt) f(t)</math>
+    !% Sine transform: <math>\int dt \sin(wt) f(t)</math>. Produces the imaginary part of the polarizability.
     !%Option cosine 3
-    !% Cosine transform <math>\int dt \cos(wt) f(t)</math>
+    !% Cosine transform: <math>\int dt \cos(wt) f(t)</math>. Produces the real part of the polarizability.
     !%Option exponential 1
-    !% Exponential transform <math>\int dt e^{-wt} f(t)</math>
+    !% Real exponential transform: <math>\int dt e^{-wt} f(t)</math>. Produces the real part of the polarizability at imaginary
+    !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
     !%End
     call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
