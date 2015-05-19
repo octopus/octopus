@@ -6,9 +6,6 @@ Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes
 
-#This test checks the time propagation
-
-# ground state
 Processors : 1
 Input      : 14-absorption-spinors.01-gs.inp
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -6.13619673
@@ -76,12 +73,12 @@ match ; Energy     10 ; LINEFIELD(cross_section_tensor, -1, 1) ; 10.0
 match ; Sigma      10 ; LINEFIELD(cross_section_tensor, -1, 2) ; 0.18987382E-01
 match ; Anisotropy 10 ; LINEFIELD(cross_section_tensor, -1, 3) ; 0.19635516E-01
 
-
-
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.05-spectrum_compressed_sensing.inp
-match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.996748
-match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polarizability (from sum rule)', 8) ; 11.646664
+Precision : 1e-4
+match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.996707
+Precision : 0.02
+match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polarizability (from sum rule)', 8) ; 11.6526365
 
 #Precision : 1e-7
 
