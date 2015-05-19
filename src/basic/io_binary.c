@@ -287,6 +287,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   return;
 }
 
+/* this function neither allocates nor deallocates 'hp' */
 void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
@@ -309,13 +310,11 @@ void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_
   if ( moved != sizeof(header_t) ) { 
     /* we couldn't read the complete header */
     *ierr = 3;
-    free(hp);
     return;
   }
 
   *ierr = check_header(hp, correct_endianness);
   if( *ierr != 0 ){
-    free(hp);
     return;
   }
 
@@ -340,7 +339,10 @@ void FC_FUNC_(read_binary,READ_BINARY)
   hp = (header_t *) malloc(sizeof(header_t));
   assert(hp != NULL);
   io_read_header(hp, &correct_endianness, ierr, fname, fname_len);
-  if (*ierr != 0) return;
+  if (*ierr != 0) {
+     free(hp);
+     return;
+  }
   
   /* check whether the sizes match */ 
   if( hp->np < *np + *offset ){ 
@@ -382,7 +384,9 @@ void FC_FUNC_(read_binary,READ_BINARY)
     /* we couldn't read the whole dataset */
     *ierr = 3;
     free(hp);
-    free(read_f);
+    if(hp->type != *output_type) {
+       free(read_f);
+    }
     return;
   }
     
@@ -404,7 +408,6 @@ void FC_FUNC_(read_binary,READ_BINARY)
 	convert( (multi *) (read_f + ii*size_of[hp->type]), 
 		 (multi *) (ff + ii*size_of[*output_type]), 
 		 hp->type, *output_type);
-      free(read_f);
 
       /* set the error code according to the conversion done (see src/basic/io_binary.h) */
       if ( hp->type == TYPE_FLOAT )          *ierr = -1;
@@ -412,6 +415,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
       if ( hp->type == TYPE_DOUBLE )         *ierr = -3;
       if ( hp->type == TYPE_DOUBLE_COMPLEX ) *ierr = -4;
     }
+    free(read_f);
   }
   
   free(hp);
@@ -511,11 +515,10 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
 
   *np  = hp->np;
   *type = (int) hp->type;
+  free(hp);
 
   TO_C_STR1(fname, filename);
   stat(filename, &st);
   *file_size = (int) st.st_size;
-
-  free(hp);
   free(filename);
 }
