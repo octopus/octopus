@@ -962,7 +962,7 @@ contains
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       endif
       
-      ! Calculate subsystem kinetic non aditional term
+      ! Calculate subsystem kinetic non-additive term
       nullify(subsys_tnadd)
       if(associated(hm%subsys_hm))then
         call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
