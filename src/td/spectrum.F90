@@ -123,6 +123,8 @@ contains
     
     call cmplxscl_init(spectrum%cmplxscl)
 
+    call messages_print_stress(stdout, "Spectrum Options")
+
     !%Variable PropagationSpectrumType
     !%Type integer
     !%Default AbsorptionSpectrum
@@ -144,6 +146,7 @@ contains
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) then
       call messages_input_error('PropagationSpectrumType')
     end if
+    call messages_print_var_option(stdout, 'PropagationSpectrumType', spectrum%spectype)
       
     !%Variable SpectrumMethod
     !%Type integer
@@ -160,21 +163,24 @@ contains
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call messages_input_error('SpectrumMethod')
     endif
-
-    !%Variable SpectrumSignalNoise
-    !%Type float
-    !%Default 0.0
-    !%Section Utilities::oct-propagation_spectrum
-    !%Description
-    !% For compressed sensing, the signal to process, the
-    !% time-dependent dipole in this case, is assumed to have some
-    !% noise that is given by this dimensionless quantity.
-    !%End
-    call parse_variable('SpectrumSignalNoise', CNST(0.0), spectrum%noise)
+    call messages_print_var_option(stdout, 'SpectrumMethod', spectrum%method)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
       call messages_experimental('compressed sensing')
+
+      !%Variable SpectrumSignalNoise
+      !%Type float
+      !%Default 0.0
+      !%Section Utilities::oct-propagation_spectrum
+      !%Description
+      !% For compressed sensing, the signal to process, the
+      !% time-dependent dipole in this case, is assumed to have some
+      !% noise that is given by this dimensionless quantity.
+      !%End
+      call parse_variable('SpectrumSignalNoise', CNST(0.0), spectrum%noise)
+      call messages_print_var_value(stdout, 'SpectrumSignalNoise', spectrum%noise)
     end if
+ 
 
     !%Variable PropagationSpectrumDampMode
     !%Type integer
@@ -201,6 +207,7 @@ contains
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) then
       call messages_input_error('PropagationSpectrumDampMode')
     end if
+    call messages_print_var_option(stdout, 'PropagationSpectrumDampMode', spectrum%damp)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
       message(1) = 'Using damping with compressed sensing, this is not required'
@@ -230,6 +237,7 @@ contains
       if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
         call messages_input_error('PropagationSpectrumTransform')
       endif
+    call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
     endif
 
     !%Variable PropagationSpectrumStartTime
@@ -241,6 +249,7 @@ contains
     !% value of this variable.
     !%End
     call parse_variable('PropagationSpectrumStartTime',  M_ZERO, spectrum%start_time, units_inp%time)
+    call messages_print_var_value(stdout, 'PropagationSpectrumStartTime', spectrum%start_time, unit = units_out%time)
 
     !%Variable PropagationSpectrumEndTime
     !%Type float
@@ -252,6 +261,7 @@ contains
     !% the corresponding multipole file will used.
     !%End
     call parse_variable('PropagationSpectrumEndTime', -M_ONE, spectrum%end_time, units_inp%time)
+    call messages_print_var_value(stdout, 'PropagationSpectrumEndTime', spectrum%end_time, unit = units_out%time)
 
     !%Variable PropagationSpectrumEnergyStep
     !%Type float
@@ -264,6 +274,7 @@ contains
     fdefault = CNST(0.01)/(M_TWO*P_Ry)
     if(present(default_energy_step)) fdefault = default_energy_step
     call parse_variable('PropagationSpectrumEnergyStep', fdefault, spectrum%energy_step, units_inp%energy)
+    call messages_print_var_value(stdout, 'PropagationSpectrumEnergyStep', spectrum%energy_step, unit = units_out%energy)
     
     !%Variable PropagationSpectrumMaxEnergy
     !%Type float
@@ -275,6 +286,7 @@ contains
     fdefault = CNST(20.0)/(M_TWO*P_Ry)
     if(present(default_max_energy)) fdefault = default_max_energy
     call parse_variable('PropagationSpectrumMaxEnergy', fdefault, spectrum%max_energy, units_inp%energy)
+    call messages_print_var_value(stdout, 'PropagationSpectrumMaxEnergy', spectrum%max_energy, unit = units_out%energy)
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
@@ -285,6 +297,9 @@ contains
     !% is fixed through this variable.
     !%End
     call parse_variable('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
+    call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
+
+    call messages_print_stress(stdout)
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init
