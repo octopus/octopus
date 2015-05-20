@@ -85,26 +85,11 @@ contains
       do ifreq = 1, this%nfreq
         freq = (ifreq - 1)*this%dfreq + this%sfreq
         
-        select case(transform_type)
-        case(SPECTRUM_TRANSFORM_EXP)
-          do itime = 1, this%ntime
-            time = (itime - 1)*this%dtime + this%stime
-            this%fourier_matrix%matrix(itime, ifreq) = exp(-freq*time)
-          end do
+        do itime = 1, this%ntime
+          time = (itime - 1)*this%dtime + this%stime
+          this%fourier_matrix%matrix(itime, ifreq) = exp(-freq*time)
+        end do
           
-        case(SPECTRUM_TRANSFORM_SIN)
-          do itime = 1, this%ntime
-            time = (itime - 1)*this%dtime + this%stime
-            this%fourier_matrix%matrix(itime, ifreq) = sin(freq*time)
-          end do
-          
-        case(SPECTRUM_TRANSFORM_COS)
-          do itime = 1, this%ntime
-            time = (itime - 1)*this%dtime + this%stime
-            this%fourier_matrix%matrix(itime, ifreq) = cos(freq*time)
-          end do
-        end select
-        
       end do
 
     else
