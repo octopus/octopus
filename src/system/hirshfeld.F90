@@ -43,6 +43,7 @@ module hirshfeld_m
     type(geometry_t), pointer     :: geo
     type(states_t),   pointer     :: st
     FLOAT,            pointer     :: total_density(:)
+    FLOAT,            pointer     :: free_charge(:)
   end type hirshfeld_t
     
 contains
@@ -53,7 +54,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(states_t),    target, intent(in)    :: st
     
-    integer :: iatom, ip
+    integer :: iatom, ip, ispin
     FLOAT, allocatable :: atom_density(:, :)
     
     PUSH_SUB(hirshfeld_init)
@@ -63,12 +64,17 @@ contains
     this%st   => st
 
     SAFE_ALLOCATE(this%total_density(1:this%mesh%np))
+    SAFE_ALLOCATE(this%free_charge(1:geo%natoms))
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
 
     this%total_density = CNST(0.0)
     
     do iatom = 1, geo%natoms
       call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+      this%free_charge(iatom) = CNST(0.0)
+      do ispin = 1, st%d%nspin
+        this%free_charge(iatom) = this%free_charge(iatom) + dmf_integrate(this%mesh, atom_density(:, ispin))
+      end do
       forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
     end do
 
@@ -85,7 +91,8 @@ contains
     PUSH_SUB(hirshfeld_end)
 
     SAFE_DEALLOCATE_P(this%total_density)
-    
+    SAFE_DEALLOCATE_P(this%free_charge)
+
     nullify(this%mesh)
     nullify(this%geo)
     nullify(this%st)
@@ -95,11 +102,12 @@ contains
 
   ! -----------------------------------------------
 
-  subroutine hirshfeld_partition(this, iatom, density, hirshfeld_charge)
+  subroutine hirshfeld_partition(this, iatom, density, hirshfeld_charge, hirshfeld_volume)
     type(hirshfeld_t),         intent(out)   :: this
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: hirshfeld_charge
+    FLOAT, optional,           intent(out)   :: hirshfeld_volume
 
     integer :: ip
     FLOAT :: dens_ip
@@ -124,7 +132,11 @@ contains
     end do
 
     hirshfeld_charge = dmf_integrate(this%mesh, hirshfeld_density)
-    
+
+    if(present(hirshfeld_volume)) then
+      hirshfeld_volume = hirshfeld_charge/this%free_charge(iatom)
+    end if
+
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
     
