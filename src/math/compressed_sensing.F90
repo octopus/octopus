@@ -30,9 +30,9 @@ module compressed_sensing_m
   
   ! these values are copied from td/spectrum.f90
   integer, parameter ::            &
-    SPECTRUM_TRANSFORM_EXP   = 1,  &
-    SPECTRUM_TRANSFORM_SIN   = 2,  &
-    SPECTRUM_TRANSFORM_COS   = 3
+    SPECTRUM_TRANSFORM_LAPLACE = 1,  &
+    SPECTRUM_TRANSFORM_SIN     = 2,  &
+    SPECTRUM_TRANSFORM_COS     = 3
   
   public ::                                        &
     compressed_sensing_t,                          &
@@ -78,7 +78,7 @@ contains
     this%dfreq = dfreq
     this%sfreq = sfreq
     
-    if(transform_type == SPECTRUM_TRANSFORM_EXP) then
+    if(transform_type == SPECTRUM_TRANSFORM_LAPLACE) then
       
       call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, EXPLICIT_MATRIX)
       

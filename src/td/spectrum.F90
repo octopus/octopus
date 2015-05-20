@@ -72,9 +72,9 @@ module spectrum_m
     SPECTRUM_DAMP_GAUSSIAN   = 3
 
   integer, public, parameter ::    &
-    SPECTRUM_TRANSFORM_EXP   = 1,  &
-    SPECTRUM_TRANSFORM_SIN   = 2,  &
-    SPECTRUM_TRANSFORM_COS   = 3
+    SPECTRUM_TRANSFORM_LAPLACE = 1,  &
+    SPECTRUM_TRANSFORM_SIN     = 2,  &
+    SPECTRUM_TRANSFORM_COS     = 3
 
   integer, public, parameter :: &
     SPECTRUM_ABSORPTION    = 1, &
@@ -225,13 +225,13 @@ contains
     !% Sine transform: <math>\int dt \sin(wt) f(t)</math>. Produces the imaginary part of the polarizability.
     !%Option cosine 3
     !% Cosine transform: <math>\int dt \cos(wt) f(t)</math>. Produces the real part of the polarizability.
-    !%Option exponential 1
+    !%Option laplace 1
     !% Real exponential transform: <math>\int dt e^{-wt} f(t)</math>. Produces the real part of the polarizability at imaginary
     !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
     !% This is the only allowed choice for complex scaling.
     !%End
     if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) then
-      spectrum%transform = SPECTRUM_TRANSFORM_EXP
+      spectrum%transform = SPECTRUM_TRANSFORM_LAPLACE
     else
       call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
       if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
@@ -2234,7 +2234,7 @@ contains
             ez = ez * eidt
           end do
 
-        case(SPECTRUM_TRANSFORM_EXP)
+        case(SPECTRUM_TRANSFORM_LAPLACE)
         
           if(cmplxft) then
             eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
