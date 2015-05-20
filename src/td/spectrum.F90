@@ -211,7 +211,7 @@ contains
     !%Option cosine 3
     !% Cosine transform <math>\int dt \cos(wt) f(t)</math>
     !%Option exponential 1
-    !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
+    !% Exponential transform <math>\int dt e^{-wt} f(t)</math>
     !%End
     call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
@@ -2259,7 +2259,6 @@ contains
         case(SPECTRUM_TRANSFORM_EXP)
         
           if(cmplxft) then
-
             eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
             ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end
@@ -2270,9 +2269,7 @@ contains
               end do
               ez = ez * eidt
             end do
-            print *,energy, energy_function%states_linear(1)%dpsi(ienergy)
           else
-
             eidt = exp( -energy * time_step)
             ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
             do itime = time_start, time_end

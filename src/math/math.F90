@@ -1271,10 +1271,8 @@ contains
       vec(i)     = temp(table(dim - i + 1))
       Imvec(i)   = tempI(dim - i + 1)
       reorder(i) = table(dim - i + 1)
-      print *, "---", i ,vec(i), Imvec(i), reorder(i)
     end do
     n2 = dim - n0 - n1 
-    print *,n1, n0, n2 
 
     temp = vec
     tempI = Imvec
@@ -1290,7 +1288,6 @@ contains
       vec  (i) = temp (n2 + i)
       Imvec  (i) = tempI(n2 + idx0(i))
       reorder(i) = table(n2 + idx0(i))
-      print *, i , n0 , n2 ,idx0(i), Imvec(i),reorder(i)
     end do
     SAFE_DEALLOCATE_A(idx0)
 
@@ -1307,12 +1304,6 @@ contains
       Imvec  (n0 + n1 + i) = tempI(n2 + 1 -i)
       reorder(n0 + n1 + i) = table(n2 + 1 -i)
     end do
-
-
-    do i = 1, dim
-      print *, "--->", i ,vec(i), Imvec(i), reorder(i)
-    end do
-
 
     SAFE_DEALLOCATE_A(tempI)  
     SAFE_DEALLOCATE_A(temp)
