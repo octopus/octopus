@@ -213,10 +213,15 @@ contains
     !%Option exponential 1
     !% Real exponential transform: <math>\int dt e^{-wt} f(t)</math>. Produces the real part of the polarizability at imaginary
     !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
+    !% This is the only allowed choice for complex scaling.
     !%End
-    call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, spectrum%transform)
-    if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
-      call input_error('PropagationSpectrumTransform')
+    if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) then
+      spectrum%transform = SPECTRUM_TRANSFORM_EXP
+    else
+      call parse_integer  (datasets_check('PropagationSpectrumTransform'), SPECTRUM_TRANSFORM_SIN, spectrum%transform)
+      if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
+        call input_error('PropagationSpectrumTransform')
+      endif
     endif
 
     !%Variable PropagationSpectrumStartTime
@@ -631,13 +636,8 @@ contains
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
     call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
-    if(cmplxscl) then
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_EXP, spectrum%noise, &
-        istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
-    else
-      call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-        istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
-    end if
+    call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
+      istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
     
     call batch_end(dipoleb)
     call batch_end(sigmab)
@@ -660,7 +660,7 @@ contains
     ewsum = sum(sf(0, 1:nspin))
     polsum = M_ZERO
 
-    ! FIXME: wrong unless kick_density
+    ! FIXME: wrong unless kick_density and sin transform
     do ie = 1, no_e
       energy = ie * spectrum%energy_step
       ewsum = ewsum + sum(sf(ie, 1:nspin))
@@ -888,7 +888,7 @@ contains
     write(out_file, '(a,f10.4)') '# PropagationSpectrumEnergyStep = ', units_from_atomic(units_out%energy, spectrum%energy_step)
     write(out_file, '(a)') '#%'
     
-    write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
+    write(out_file, '(a1,a20,1x)', advance = 'no') '#', str_center("Energy", 20)
     do isp = 1, nspin
       do idir = 1, 3
         write(header_string,'(a6,i1,a8,i1,a1)') 'power(', idir, ', nspin=', isp, ')'
