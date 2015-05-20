@@ -186,7 +186,7 @@ contains
     !% This version is optimized using vector primitives (if available).
     !%End
 
-#ifndef SINGLE_PRECISION
+#if defined(HAVE_VEC) && !defined(SINGLE_PRECISION)
     default = OP_VEC
 #else
     default = OP_FORTRAN

@@ -147,9 +147,19 @@ AC_DEFUN([ACX_ARCH],
 [
 AC_REQUIRE([AC_CANONICAL_HOST])
 
-vector=no
 assembler=no
 blue_gene=no
+vector_type=""
+
+ac_enable_vectors=yes
+AC_ARG_ENABLE(vectors, AS_HELP_STRING([--enable-vectors], [Enable the use of vectorial instructions]),
+	[ac_enable_vectors=${enableval}])
+
+if test x"${ac_enable_vectors}" = x"no"; then
+  vector=disabled
+else
+  vector=yes
+fi
 
 case "${host}" in
 ##########################################
@@ -158,6 +168,47 @@ x86_64*|*apple-darwin*) #workaround for a bug in autoconf/OS X
 oct_arch=x86_64
 assembler=no
 AC_DEFINE(OCT_ARCH_X86_64, 1, [This is an x86_64 system])
+;;
+##########################################
+i?86*)
+oct_arch=x86
+AC_DEFINE(OCT_ARCH_X86, 1, [This is an x86 system])
+;;	
+##########################################
+ia64*)
+oct_arch=ia64
+AC_DEFINE(OCT_ARCH_IA64, 1, [This is an Itanium system])
+;;
+##########################################
+sparc*)
+oct_arch=sparc
+AC_DEFINE(OCT_ARCH_SPARC, 1, [This is a Sparc system])
+;;
+##########################################
+alphaev*)
+oct_arch=alpha
+AC_DEFINE(OCT_ARCH_ALPHA, 1, [This is an Alpha system])
+;;
+##########################################
+mips*)
+oct_arch=mips
+AC_DEFINE(OCT_ARCH_MIPS, 1, [This is a MIPS system])
+;;
+##########################################
+powerpc*)
+oct_arch=powerpc
+AC_DEFINE(OCT_ARCH_POWERPC, 1, [This is a PowerPC system])
+;;
+##########################################
+*)
+oct_arch=unknown
+;;
+esac
+
+if test x"${vector}" != x"disabled"; then
+case "${oct_arch}" in
+##########################################
+x86_64)
 
 #SSE2
 ACX_M128D
@@ -227,47 +278,13 @@ if test "x$acx_m256d" = "xyes" ; then
 fi
 ;;
 ##########################################
-i?86*)
+x86)
 ACX_M128D
 vector=$acx_m128d
-oct_arch=x86
 vector_type="(sse2)"
-if test "x$vector" = "xyes" ; then
-# We allow explicit disabling of SSE2
-ac_enable_vectors=no
-AC_ARG_ENABLE(vectors, AS_HELP_STRING([--enable-vectors], [Enable the use of vectorial instructions (x86)]), 
-	[ac_enable_vectors=${enableval}])
-
-if test x"${ac_enable_vectors}" = x"no"; then
-vector=disabled
-fi
-fi
-AC_DEFINE(OCT_ARCH_X86, 1, [This is an x86 system])
-;;	
-##########################################
-ia64*)
-oct_arch=ia64
-AC_DEFINE(OCT_ARCH_IA64, 1, [This is an Itanium system])
 ;;
 ##########################################
-sparc*)
-oct_arch=sparc
-AC_DEFINE(OCT_ARCH_SPARC, 1, [This is a Sparc system])
-;;
-##########################################
-alphaev*)
-oct_arch=alpha
-AC_DEFINE(OCT_ARCH_ALPHA, 1, [This is an Alpha system])
-;;
-##########################################
-mips*)
-oct_arch=mips
-AC_DEFINE(OCT_ARCH_MIPS, 1, [This is a MIPS system])
-;;
-##########################################
-powerpc*)
-oct_arch=powerpc
-AC_DEFINE(OCT_ARCH_POWERPC, 1, [This is a PowerPC system])
+powerpc)
 ACX_BLUE_GENE
 ACX_BLUE_GENE_Q
 if test x$acx_blue_gene_q = x"yes"; then
@@ -280,25 +297,12 @@ else
   vector_type="(blue gene/p)"
 fi
 ;;
-##########################################
-*)
-oct_arch=unknown
-;;
 esac
-
-ac_enable_vectors=yes
-AC_ARG_ENABLE(vectors, AS_HELP_STRING([--disable-vectors], [Disable the use of vectorial instructions (x86_64 and Blue Gene)]), 
-	[ac_enable_vectors=${enableval}])
-
-if test x"${ac_enable_vectors}" = x"no"; then
-vector=disabled
 fi
 
 AC_DEFINE_UNQUOTED(OCT_ARCH, $oct_arch, [The architecture of this system])
 
-AM_CONDITIONAL(COMPILE_VEC, test "x$vector" = "xyes")
-
-if test "x$vector = xyes" ; then
+if test "x$vector" = "xyes" ; then
 AC_DEFINE(HAVE_VEC, 1, [Define to 1 if vectorial routines are to be compiled])
 fi
 
