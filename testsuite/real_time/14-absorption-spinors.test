@@ -32,7 +32,7 @@ match ; Energy [step 200] ; LINE(td.general/energy,   -1, 30) ; -6.135815588126e
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.04-spectrum.inp
 match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.960585
-match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 15.572831
+match ; Static polarizability ; GREP(cross_section_vector.1, 'Static polarizability (from sum rule)', 42) ; 15.572831
 
 Precision : 1e-6
 
@@ -81,7 +81,7 @@ match ; Anisotropy 10 ; LINE(cross_section_tensor,   -1, 41) ; 0.19635516E-01
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.05-spectrum_compressed_sensing.inp
 #match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.984228
-#match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 11.666044
+#match ; Static polarizability ; GREP(cross_section_vector.1, 'Static polarizability (from sum rule)', 42) ; 11.666044
 
 #Precision : 1e-7
 
