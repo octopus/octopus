@@ -51,6 +51,7 @@ module v_ks_m
   use states_dim_m
   use unit_system_m
   use varinfo_m
+  use vdw_ts_m
   use xc_m
   use XC_F90(lib_m)
   use xc_functl_m
@@ -122,6 +123,8 @@ module v_ks_m
     type(v_ks_calc_t)        :: calc
     logical                  :: calculate_current
     type(current_t)          :: current_calculator
+    logical                  :: vdw_correction
+    type(vdw_ts_t)           :: vdw_ts
   end type v_ks_t
 
 contains
@@ -346,7 +349,21 @@ contains
 
     ks%calculate_current = .false.
     call current_init(ks%current_calculator)
-
+    
+    !%Variable VDWCorrection
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::XC
+    !%Description
+    !% (Experimental) This variable enables the van der Waals
+    !% corrections to the correlation functional following the scheme
+    !% of Tkatchenko and Scheffler, Phys. Rev. Lett. 102 073005
+    !% (2009).
+    !%End
+    call parse_variable('VDWCorrection', .false., ks%vdw_correction)
+    
+    if(ks%vdw_correction) call vdw_ts_init(ks%vdw_ts, geo, gr%der, st)
+    
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
   ! ---------------------------------------------------------
@@ -357,6 +374,8 @@ contains
     type(v_ks_t),     intent(inout) :: ks
 
     PUSH_SUB(v_ks_end)
+
+    if(ks%vdw_correction) call vdw_ts_end(ks%vdw_ts)
 
     call current_end(ks%current_calculator)
 

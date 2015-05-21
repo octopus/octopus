@@ -41,6 +41,7 @@ module energy_m
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
     FLOAT :: exchange
     FLOAT :: correlation
+    FLOAT :: vdw
     FLOAT :: xc_j
     FLOAT :: intnvxc     !< Int[n vxc]
     FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
