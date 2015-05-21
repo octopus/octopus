@@ -103,7 +103,7 @@ contains
   ! -----------------------------------------------
 
   subroutine hirshfeld_partition(this, iatom, density, hirshfeld_charge, hirshfeld_volume)
-    type(hirshfeld_t),         intent(out)   :: this
+    type(hirshfeld_t),         intent(in)    :: this
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: hirshfeld_charge
