@@ -100,13 +100,13 @@ contains
 
     !%Variable ABType
     !%Type flag
-    !%Default mask
+    !%Default ab_mask
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !%Sets the type of the absorbing boundaries. Default mask.
-    !%Option mask 0
+    !%Option ab_mask 0
     !% Absorbing boundaries with mask function.
-    !%Option cap 2
+    !%Option ab_cap 2
     !% Absorbing boundaries with complex absorbing potential.
     !%End
     call parse_variable('ABType', AB_MASK, ab_flags)
