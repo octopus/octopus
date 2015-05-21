@@ -39,6 +39,7 @@ module hirshfeld_m
     hirshfeld_partition
 
   type hirshfeld_t
+    private
     type(mesh_t),     pointer     :: mesh
     type(geometry_t), pointer     :: geo
     type(states_t),   pointer     :: st
