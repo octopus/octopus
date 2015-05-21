@@ -66,7 +66,8 @@ libgrid_a_SOURCES =       \
 	symmetrizer.F90         \
 	transfer_table.F90      \
 	hilbert.c               \
-	mesh_interpolation.F90
+	mesh_interpolation.F90  \
+	hirshfeld.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \
@@ -136,5 +137,6 @@ submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
 mesh_interpolation.o : mesh_interpolation.F90 mesh_interpolation_inc.F90 mesh.o
+hirshfeld.o : hirshfeld.F90
 
 
