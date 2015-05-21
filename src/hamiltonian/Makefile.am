@@ -45,6 +45,9 @@ libhamiltonian_a_SOURCES =         \
 	ion_interaction.F90        \
 	hirshfeld.F90              \
 	vdw_ts.F90
+#       boundaries.F90             \
+#       boundaries_abs.F90         \
+#       boundaries_ecs.F90
 
 noinst_HEADERS =                      \
 	lasers_inc.F90                \
@@ -88,7 +91,6 @@ xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o
 ion_interaction.o : ion_interaction.F90
 hirshfeld.o : hirshfeld.F90 species_pot.o
 vdw_ts.o : vdw_ts.F90 hirshfeld.o
-
 #boundaries_abs.o : boundaries_abs.F90 
 #boundaries_ecs.o : boundaries_ecs.F90 
 #boundaries.o : boundaries.F90 boundaries_ecs.o boundaries_abs.o

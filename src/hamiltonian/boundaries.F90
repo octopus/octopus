@@ -24,6 +24,7 @@ module boundaries_m
   use io_function_m
   use io_m
   use cube_function_m
+  use geometry_m
   use global_m
   use mesh_function_m
   use mesh_m
@@ -44,23 +45,63 @@ module boundaries_m
     bc_t
 
   type bc_t
-    type(ab_t)      :: ab    !< Absorbing boundaries
+    logical         :: use_ab
+    type(ab_t)      :: ab    !< Absorbing boundaries (mask & cap)
+    logical         :: use_ecs
     type(ecs_t)     :: ecs   !< Exterior complex scaling 
   end type bc_t    
 
+  integer, parameter :: &
+    BC_NONE = 0, &
+    BC_AB   = 2, &
+    BC_ECS  = 4
+
 contains
 
-  subroutine bc_init(this, mesh, sb)
+  ! ---------------------------------------------------------
+  subroutine bc_init(this, mesh, sb, geo)
     type(bc_t),               intent(out) :: this
     type(mesh_t),             intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
+    type(geometry_t),         intent(in)  :: geo
+
+    integer :: bc_flags
     
     PUSH_SUB(bc_init)
 
+    !%Variable Boundaries
+    !%Type flag
+    !%Default none
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% To improve the quality of the spectra by avoiding the formation of
+    !% standing density waves, one can make the boundaries of the simulation
+    !% box absorbing and use exterior complex scaling.
+    !%Option none 0
+    !% Reflecting boundaries.
+    !%Option absorbing 2
+    !% Absorbing boundaries with a mask function or a complex absorbing potential.
+    !%Option exterior 4
+    !% Exterior complex scaling.
+    !%End
+    call parse_variable('Boundaries', BC_NONE, bc_flags)
+    if(.not.varinfo_valid_option('Boundaries', bc_flags, is_flag = .true.)) then
+      call messages_input_error('Boundaries')
+    end if
+
+    this%use_ab  = iand(bc_flags, BC_AB)  /= 0
+    this%use_ecs = iand(bc_flags, BC_ECS) /= 0
+
+    if(this%use_ab) call ab_init(this%ab, mesh, sb, geo)
+    if(this%use_ecs) then
+      message(1) = 'Exterior complex scaling not yet implemented.'
+      call messages_fatal(1)
+    end if
 
     POP_SUB(bc_init)
   end subroutine bc_init
 
+  ! ---------------------------------------------------------
   subroutine bc_end(this)
     type(bc_t),   intent(inout) :: this
     PUSH_SUB(bc_end)
@@ -69,6 +110,7 @@ contains
     POP_SUB(bc_end)
   end subroutine bc_end
 
+  ! ---------------------------------------------------------
   subroutine bc_write_info(this)
     type(bc_t),   intent(in) :: this
     PUSH_SUB(bc_write_info)

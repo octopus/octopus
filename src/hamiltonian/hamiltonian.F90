@@ -30,6 +30,7 @@ module hamiltonian_m
   use cmplxscl_m
   use derivatives_m
   use energy_m
+!  use boundaries_m
   use hamiltonian_base_m
   use epot_m
   use gauge_field_m
@@ -128,6 +129,7 @@ module hamiltonian_m
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
     type(base_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
+!    type(bc_t)               :: bc      !< boundaries
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
@@ -424,6 +426,9 @@ contains
     nullify(hm%ab_pot)
 
     if(hm%ab /= NOT_ABSORBING) call init_abs_boundaries()
+
+!    ! boundaries
+!    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
