@@ -121,6 +121,8 @@ module ps_m
 
     type(spline_t) :: vion        !< the potential that other ions see
     type(spline_t) :: dvion       !< the potential that other ions see
+
+    type(spline_t) :: density     !< the atomic density
     
     logical :: is_separated
     logical :: local
@@ -304,7 +306,8 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
-
+    call spline_init(ps%density)
+    
     ! Now we load the necessary information.
     select case(ps%flavour)
     case(PS_TYPE_PSF)
@@ -642,6 +645,8 @@ contains
     call spline_end(ps%vl)
     call spline_end(ps%core)
 
+    call spline_end(ps%density)
+
     call logrid_end(ps%g)
 
     SAFE_DEALLOCATE_P(ps%kb)
@@ -695,12 +700,13 @@ contains
 
     ! ---------------------------------------------------------
     subroutine get_splines()
-      integer :: l, is, nrc, j
-      FLOAT, allocatable :: hato(:)
+      integer :: l, is, nrc, j, ip
+      FLOAT, allocatable :: hato(:), dens(:)
 
       PUSH_SUB(hgh_load.get_splines)
 
       SAFE_ALLOCATE(hato(1:psp%g%nrval))
+      SAFE_ALLOCATE(dens(1:psp%g%nrval))
 
       ! Interpolate the KB-projection functions
       do l = 0, psp%l_max
@@ -718,16 +724,23 @@ contains
 
       ! Define the table for the pseudo-wavefunction components (using splines)
       ! with a correct normalization function
+      dens = CNST(0.0)
       do is = 1, ps%ispin
         do l = 1, ps%conf%p
           hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
           hato(1) = hato(2)
+
+          forall(ip = 1:psp%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2
+          
           call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%ur(l, is))
           call spline_fit(psp%g%nrval, psp%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
       end do
+
+      call spline_fit(psp%g%nrval, psp%g%rofi, dens, ps%density)
       
       SAFE_DEALLOCATE_A(hato)
+      SAFE_DEALLOCATE_A(dens)
 
       POP_SUB(hgh_load.get_splines)
     end subroutine get_splines
@@ -765,13 +778,16 @@ contains
     subroutine get_splines(g)
       type(logrid_t), intent(in) :: g
 
-      FLOAT, allocatable :: hato(:)
-      integer :: is, l, ir, nrc
+      FLOAT, allocatable :: hato(:), dens(:)
+      integer :: is, l, ir, nrc, ip
 
       PUSH_SUB(ps_grid_load.get_splines)
 
       SAFE_ALLOCATE(hato(1:g%nrval))
+      SAFE_ALLOCATE(dens(1:g%nrval))
 
+      dens = CNST(0.0)
+      
       ! the wavefunctions
       do is = 1, ps%ispin
         do l = 1, ps_grid%no_l_channels
@@ -779,11 +795,15 @@ contains
           hato(1)  = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
             hato(2), hato(3))
 
+          forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2
+          
           call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
           call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
 
         end do
       end do
+
+      call spline_fit(g%nrval, g%rofi, dens, ps%density)
 
       ! the Kleinman-Bylander projectors
       do l = 1, ps%l_max+1
@@ -818,6 +838,8 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(hato)
+      SAFE_DEALLOCATE_A(dens)
+      
       POP_SUB(ps_grid_load.get_splines)
     end subroutine get_splines
   end subroutine ps_grid_load
@@ -951,7 +973,13 @@ contains
         call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do
     end do
+    
+    hato(2:nrc) = ps_upf%rho(2:nrc)/ps%g%rofi(2:nrc)
+    hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
+    hato(nrc+1:ps%g%nrval) = M_ZERO
 
+    call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%density)
+    
     SAFE_DEALLOCATE_A(hato)
 
     POP_SUB(ps_upf_load)
