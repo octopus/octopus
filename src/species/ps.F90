@@ -55,8 +55,10 @@ module ps_m
     ps_debug,                   &
     ps_niwfs,                   &
     ps_end,                     &
-    ps_type
-
+    ps_type,                    &
+    ps_has_density,             &
+    ps_density_volume
+  
   integer, parameter, public :: &
     PS_TYPE_PSF = 100,          &
     PS_TYPE_HGH = 101,          &
@@ -730,7 +732,7 @@ contains
           hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
           hato(1) = hato(2)
 
-          forall(ip = 1:psp%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2
+          forall(ip = 1:psp%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
           
           call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%ur(l, is))
           call spline_fit(psp%g%nrval, psp%g%r2ofi, hato, ps%ur_sq(l, is))
@@ -795,7 +797,7 @@ contains
           hato(1)  = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
             hato(2), hato(3))
 
-          forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2
+          forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
           
           call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
           call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
@@ -1115,11 +1117,56 @@ contains
     POP_SUB(ps_get_type)    
   end function ps_get_type
 
+  !---------------------------------------
+  
   pure integer function ps_type(ps)
     type(ps_t), intent(in) :: ps
 
     ps_type = ps%flavour
   end function ps_type
+
+  !---------------------------------------
+
+  pure logical function ps_has_density(ps) result(has_density)
+    type(ps_t), intent(in) :: ps
+
+    select case(ps%flavour)
+    case(PS_TYPE_PSF, PS_TYPE_HGH, PS_TYPE_UPF)
+      has_density = .true.
+    case(PS_TYPE_CPI, PS_TYPE_FHI, PS_TYPE_QSO)
+      has_density = .false.
+    end select
+
+  end function ps_has_density
+
+  !---------------------------------------
+  
+  FLOAT function ps_density_volume(ps) result(volume)
+    type(ps_t), intent(in) :: ps
+
+    integer :: ip
+    FLOAT :: rr
+    FLOAT, allocatable ::vol(:)
+    type(spline_t) :: volspl
+    
+    PUSH_SUB(ps_density_volume)
+
+    SAFE_ALLOCATE(vol(1:ps%g%nrval))
+    
+    do ip = 1, ps%g%nrval
+      rr = ps%g%rofi(ip)
+      vol(ip) = spline_eval(ps%density, rr)*rr**3
+    end do
+
+    call spline_init(volspl)
+    call spline_fit(ps%g%nrval, ps%g%rofi, vol, volspl)
+    volume = spline_integral(volspl)
+    call spline_end(volspl)
+
+    SAFE_DEALLOCATE_A(vol)
+    
+    POP_SUB(ps_density_volume)
+  end function ps_density_volume
   
 #include "ps_pspio_inc.F90"
  
