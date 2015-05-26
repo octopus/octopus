@@ -168,7 +168,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   SAFE_ALLOCATE(beta(1:iter_used, 1:iter_used))
   SAFE_ALLOCATE(work(1:iter_used))
   
-  ! compute matrix beta
+  ! compute matrix beta, Johnson eq. 13a
   beta = M_ZERO
   do i = 1, iter_used
     do j = i + 1, iter_used
@@ -178,7 +178,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
           beta(i, j) = beta(i, j) + ww * ww * dotp(df(:, k, l, j), df(:, k, l, i))
         end do
       end do
-      beta(j, i) = beta(i, j)
+      beta(j, i) = R_CONJ(beta(i, j))
     end do
     beta(i, i) = w0**2 + ww**2
   end do

@@ -124,6 +124,8 @@ contains
     !%Option broyden 2
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
+    !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
+    !% with a complex dot product.
     !%End
     call parse_variable(trim(prefix)//'TypeOfMixing', def, smix%scheme)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%scheme)) call messages_input_error('TypeOfMixing')
