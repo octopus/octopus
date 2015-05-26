@@ -160,7 +160,7 @@ while ($_ = <ONEBOX>) {
     }
     close(TESTLOG);
     if($file_found == 0) {
-	print STDERR "File not found.\n";
+	print STDERR "Input file not found in test log.\n";
     } elsif($match_found == 0) {
 	print STDERR "Match not found.\n";
     }
