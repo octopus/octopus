@@ -58,7 +58,11 @@ contains
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
-    
+
+    PUSH_SUB(vdw_ts_init)
+
+    call messages_experimental("Tkatchenko-Scheffler Van der Waals correction")
+
     SAFE_ALLOCATE(this%c6aafree(1:geo%nspecies))
     SAFE_ALLOCATE(this%dpfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
@@ -79,7 +83,8 @@ contains
     end do
 
     call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
-    
+
+    POP_SUB(vdw_ts_init)    
   end subroutine vdw_ts_init
 
   !------------------------------------------
@@ -87,13 +92,16 @@ contains
   subroutine vdw_ts_end(this)
     type(vdw_ts_t), intent(inout) :: this
 
+    PUSH_SUB(vdw_ts_end)
+
     call hirshfeld_end(this%hirshfeld)
     
     SAFE_DEALLOCATE_A(this%c6aafree)
     SAFE_DEALLOCATE_A(this%dpfree)
     SAFE_DEALLOCATE_A(this%r0free)
     SAFE_DEALLOCATE_A(this%c6abfree)
-    
+
+    POP_SUB(vdw_ts_end)
   end subroutine vdw_ts_end
 
   !------------------------------------------
@@ -105,8 +113,11 @@ contains
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
 
+    PUSH_SUB(vdw_ts_calculate)
+
     energy = CNST(0.0)
-    
+
+    POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
   
   !------------------------------------------
@@ -116,6 +127,8 @@ contains
     FLOAT,            intent(out) :: c6
     FLOAT,            intent(out) :: alpha
     FLOAT,            intent(out) :: r0
+
+    PUSH_SUB(get_vdw_param)
 
     select case(trim(atom))
 
@@ -386,6 +399,7 @@ contains
       
     end select
 
+    POP_SUB(get_vdw_param)
   end subroutine get_vdw_param
   
 end module vdw_ts_m
