@@ -94,8 +94,7 @@ contains
 
     if(this%use_ab) call ab_init(this%ab, mesh, sb, geo)
     if(this%use_ecs) then
-      message(1) = 'Exterior complex scaling not yet implemented.'
-      call messages_fatal(1)
+      call messages_not_implemented('Exterior complex scaling')
     end if
 
     POP_SUB(bc_init)
@@ -119,10 +118,9 @@ contains
     POP_SUB(bc_write_info)
   end subroutine bc_write_info
 
-
-
-
 end module boundaries_m
 
-
-
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
