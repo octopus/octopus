@@ -17,9 +17,9 @@
 
 #include "global.h"
 
-! This module should implement absorbing boundaries under the form of 
-! mask-function, suitable only for the TD Schroedinger equation, and
-! complex absorbing potential (CAPs), suitable also for the static case
+!> This module should implement absorbing boundaries under the form of 
+!! mask-function, suitable only for the TD Schroedinger equation, and
+!! complex absorbing potential (CAPs), suitable also for the static case
 
 module boundaries_abs_m
   use io_function_m
@@ -103,7 +103,7 @@ contains
     !%Default ab_mask
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !%Sets the type of the absorbing boundaries. Default mask.
+    !%Sets the type of the absorbing boundaries.
     !%Option ab_mask 0
     !% Absorbing boundaries with mask function.
     !%Option ab_cap 2
@@ -119,16 +119,16 @@ contains
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Set the shape of the absorbing boundaries. Here you can set the inner 
-    !% (val1) and outer (val2) bounds by setting the block as follows:
+    !% and outer bounds by setting the block as follows:
     !%
     !% <tt>%ABShape
-    !% <br>&nbsp;&nbsp; val1 | val2 | "user defined"
+    !% <br>&nbsp;&nbsp; inner | outer | "user-defined"
     !% <br>%</tt>
     !%
-    !% The optional 3rd column is a user defined expression for the absorbing 
-    !% boundaries. For example, "r" creates a spherical absorbing zone for 
-    !% coordinates with val1 < r < val2, and "z" creates an absorbing plane. 
-    !% Note, values val2 larger than the box size may lead in these cases to 
+    !% The optional 3rd column is a user-defined expression for the absorbing 
+    !% boundaries. For example, <math>r</math> creates a spherical absorbing zone for 
+    !% coordinates with <math>{\tt inner} < r < {\tt outer}</math>, and <math>z</math> creates an absorbing plane. 
+    !% Note, values <tt>outer</tt> larger than the box size may lead in these cases to 
     !% unexpected reflection behaviours.
     !% If no expression is given, the absorbing zone follows the edges of the 
     !% box (not valid for user-defined box).
@@ -189,7 +189,7 @@ contains
         call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, user_def_expr)
         this%ab_ufn(ip) = ufn_re
       end do
-      message(1) = "Input: using user defined function from expression:"
+      message(1) = "Input: using user-defined function from expression:"
       write(message(2),'(a,a)') '   F(x,y,z) = ', trim(user_def_expr) 
       call messages_info(2)
     end select
@@ -227,8 +227,7 @@ contains
       SAFE_ALLOCATE(this%cap%mf(1:mesh%np))   
       this%cap%mf(:) = this%cap%height * mf(:)
 
-      message(1) = 'Complex absorbing potential not yet implemented.'
-      call messages_fatal(1)
+      call messages_not_implemented('Complex absorbing potential')
     end if
 
     SAFE_DEALLOCATE_A(mf)
@@ -354,10 +353,9 @@ contains
     POP_SUB(ab_write_info)
   end subroutine ab_write_info
 
-
-
-
 end module boundaries_abs_m
 
-
-
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
