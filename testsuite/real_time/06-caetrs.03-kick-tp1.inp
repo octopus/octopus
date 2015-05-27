@@ -45,3 +45,4 @@ ParallelizationNumberSlaves = 1
 %
 
 ExperimentalFeatures = yes
+ProfilingMode = prof_memory_full
