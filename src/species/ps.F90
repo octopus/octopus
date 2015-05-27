@@ -255,7 +255,8 @@ contains
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+    nullify(ps%k)
+
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
@@ -273,6 +274,7 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PS_TYPE_HGH)
+      SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, psp)
       call hgh_end(psp)
     case(PS_TYPE_UPF)
