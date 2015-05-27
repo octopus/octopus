@@ -99,7 +99,7 @@ module mpi_debug_m
     /)
 
   integer, public :: call_counter(C_NUM_MPI_ROUTINES) = 0
-  real(8), public :: sec_accum(C_NUM_MPI_ROUTINES)    = 0
+  real(8), public :: sec_accum(C_NUM_MPI_ROUTINES)    = M_ZERO
 
   real(8) :: sec_in
 #endif
@@ -119,7 +119,7 @@ contains
     message(3) = ''
     write(message(4), '(23x,a,4x,a,8x,a)') 'total time', 'calls', 'usec/call'
     do j = 1, C_NUM_MPI_ROUTINES
-      if (sec_accum(j) == 0) then
+      if (call_counter(j) <= 0) then
         usec_call(j) = 0
       else
         usec_call(j) = (sec_accum(j)*1000000)/call_counter(j)
