@@ -182,91 +182,88 @@ contains
 
 
 #ifdef HAVE_MPI2
-    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) then
-        call poisson_async_init(sys%ks%hartree_solver, sys%mc)
-        ! slave nodes do not call the calculation routine
-        if(multicomm_is_slave(sys%mc))then
-          !for the moment we only have one type of slave
-          call poisson_slave_work(sys%ks%hartree_solver)
-        end if
+    if(calc_mode_id /= CM_PULPO_A_FEIRA .and. &
+      sys%ks%theory_level/=INDEPENDENT_PARTICLES) then
+      call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+      ! slave nodes do not call the calculation routine
+      if(multicomm_is_slave(sys%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(sys%ks%hartree_solver)
       end if
     endif
 #endif
 
     if(.not. multicomm_is_slave(sys%mc)) then
-    call messages_write('Info: Octopus initialization completed.', new_line = .true.)
-    call messages_write('Info: Starting calculation mode.')
-    call messages_info()
+      call messages_write('Info: Octopus initialization completed.', new_line = .true.)
+      call messages_write('Info: Starting calculation mode.')
+      call messages_info()
 
-    !%Variable FromScratch
-    !%Type logical
-    !%Default false
-    !%Section Execution
-    !%Description
-    !% When this variable is set to true, <tt>Octopus</tt> will perform a
-    !% calculation from the beginning, without looking for restart
-    !% information.
-    !%End
+      !%Variable FromScratch
+      !%Type logical
+      !%Default false
+      !%Section Execution
+      !%Description
+      !% When this variable is set to true, <tt>Octopus</tt> will perform a
+      !% calculation from the beginning, without looking for restart
+      !% information.
+      !%End
 
-    call parse_variable('FromScratch', .false., fromScratch)
+      call parse_variable('FromScratch', .false., fromScratch)
 
-    call profiling_in(calc_mode_prof, "CALC_MODE")
+      call profiling_in(calc_mode_prof, "CALC_MODE")
 
-    select case(calc_mode_id)
-    case(CM_GS)
-      call ground_state_run(sys, hm, fromScratch)
-    case(CM_UNOCC)
-      call unocc_run(sys, hm, fromScratch)
-    case(CM_TD)
-      call td_run(sys, hm, fromScratch)
-    case(CM_LR_POL)
-      select case(get_resp_method())
-      case(FD)
-        call static_pol_run(sys, hm, fromScratch)
-      case(LR)
-        call em_resp_run(sys, hm, fromScratch)
+      select case(calc_mode_id)
+      case(CM_GS)
+        call ground_state_run(sys, hm, fromScratch)
+      case(CM_UNOCC)
+        call unocc_run(sys, hm, fromScratch)
+      case(CM_TD)
+        call td_run(sys, hm, fromScratch)
+      case(CM_LR_POL)
+        select case(get_resp_method())
+        case(FD)
+          call static_pol_run(sys, hm, fromScratch)
+        case(LR)
+          call em_resp_run(sys, hm, fromScratch)
+        end select
+      case(CM_VDW)
+        call vdW_run(sys, hm, fromScratch)
+      case(CM_GEOM_OPT)
+        call geom_opt_run(sys, hm, fromScratch)
+      case(CM_PHONONS_LR)
+        select case(get_resp_method())
+        case(FD)
+          call phonons_run(sys, hm)
+        case(LR)
+          call phonons_lr_run(sys, hm, fromscratch)
+        end select
+      case(CM_OPT_CONTROL)
+        call opt_control_run(sys, hm)
+      case(CM_CASIDA)
+        call casida_run(sys, hm, fromScratch)
+      case(CM_ONE_SHOT)
+        message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
+        call messages_fatal(1)
+      case(CM_KDOTP)
+        call kdotp_lr_run(sys, hm, fromScratch)
+      case(CM_DUMMY)
+      case(CM_GCM)
+        call gcm_run(sys, hm)
+      case(CM_INVERTKDS)
+        call invert_ks_run(sys, hm)
+      case(CM_PULPO_A_FEIRA)
+        call pulpo_print()
       end select
-    case(CM_VDW)
-      call vdW_run(sys, hm, fromScratch)
-    case(CM_GEOM_OPT)
-      call geom_opt_run(sys, hm, fromScratch)
-    case(CM_PHONONS_LR)
-      select case(get_resp_method())
-      case(FD)
-        call phonons_run(sys, hm)
-      case(LR)
-        call phonons_lr_run(sys, hm, fromscratch)
-      end select
-    case(CM_OPT_CONTROL)
-      call opt_control_run(sys, hm)
-    case(CM_CASIDA)
-      call casida_run(sys, hm, fromScratch)
-    case(CM_ONE_SHOT)
-      message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
-      call messages_fatal(1)
-    case(CM_KDOTP)
-      call kdotp_lr_run(sys, hm, fromScratch)
-    case(CM_DUMMY)
-    case(CM_GCM)
-      call gcm_run(sys, hm)
-    case(CM_INVERTKDS)
-      call invert_ks_run(sys, hm)
-    case(CM_PULPO_A_FEIRA)
-      call pulpo_print()
-    end select
 
-    call profiling_out(calc_mode_prof)
+      call profiling_out(calc_mode_prof)
     endif
     
-#ifdef HAVE_MPI2
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
+#ifdef HAVE_MPI2
       if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
         call poisson_async_end(sys%ks%hartree_solver, sys%mc)
-    endif
 #endif
 
-    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       call hamiltonian_end(hm)
       call system_end(sys)
       if(ssys_config_parse_use()) then
