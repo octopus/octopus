@@ -103,12 +103,12 @@ contains
 
   ! -----------------------------------------------
 
-  subroutine hirshfeld_partition(this, iatom, density, hirshfeld_charge, hirshfeld_volume)
+  subroutine hirshfeld_partition(this, iatom, density, charge, volume_ratio)
     type(hirshfeld_t),         intent(in)    :: this
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
-    FLOAT,                     intent(out)   :: hirshfeld_charge
-    FLOAT, optional,           intent(out)   :: hirshfeld_volume
+    FLOAT,                     intent(out)   :: charge
+    FLOAT, optional,           intent(out)   :: volume_ratio
 
     integer :: ip
     FLOAT :: dens_ip, rr, free_volume
@@ -132,19 +132,19 @@ contains
       end if
     end do
 
-    hirshfeld_charge = dmf_integrate(this%mesh, hirshfeld_density)
+    charge = dmf_integrate(this%mesh, hirshfeld_density)
 
-    if(present(hirshfeld_volume)) then
+    if(present(volume_ratio)) then
       do ip = 1, this%mesh%np
         rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
         hirshfeld_density(ip) = hirshfeld_density(ip)*rr**3
         atom_density(ip, 1) = sum(atom_density(ip, 1:this%st%d%nspin))*rr**3
       end do
       
-      hirshfeld_volume = dmf_integrate(this%mesh, hirshfeld_density)
+      volume_ratio = dmf_integrate(this%mesh, hirshfeld_density)
       free_volume = dmf_integrate(this%mesh, atom_density(:, 1))
       
-      hirshfeld_volume = hirshfeld_volume/free_volume
+      volume_ratio = volume_ratio/free_volume
       
     end if
     

@@ -585,7 +585,11 @@ contains
       call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
     end if
 
-    if(ks%vdw_correction) call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, energy%vdw)
+    if(ks%vdw_correction) then
+      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, energy%vdw)
+    else
+      energy%vdw = CNST(0.0)
+    end if
     
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)

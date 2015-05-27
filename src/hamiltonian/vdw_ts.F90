@@ -118,31 +118,63 @@ contains
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
 
-    integer :: iatom, ispecies
-    FLOAT :: charge, volume_ratio
-    FLOAT, allocatable :: c6(:), r0(:)
+    integer :: iatom, jatom, ispecies
+    FLOAT :: charge, rr, c6ab
+    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:)
 
     PUSH_SUB(vdw_ts_calculate)
 
     SAFE_ALLOCATE(c6(1:geo%natoms))
     SAFE_ALLOCATE(r0(1:geo%natoms))
+    SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
     
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      call hirshfeld_partition(this%hirshfeld, iatom, density, charge, volume_ratio)
-      c6(iatom) = volume_ratio**2*this%c6free(iatom)
-      r0(iatom) = volume_ratio**(CNST(1.0)/CNST(3.0))*this%r0free(iatom)
+      call hirshfeld_partition(this%hirshfeld, iatom, density, charge, volume_ratio(iatom))
+      c6(iatom) = volume_ratio(iatom)**2*this%c6free(iatom)
+      r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(iatom)
+      print*, species_label(geo%atom(iatom)%species), volume_ratio(iatom)
       print*, species_label(geo%atom(iatom)%species), c6(iatom), this%c6free(ispecies)
       print*, species_label(geo%atom(iatom)%species), r0(iatom), this%r0free(ispecies)
     end do
-    
-    energy = CNST(0.0)
 
+    energy = CNST(0.0)
+    
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        if(iatom == jatom) cycle
+
+        c6ab = volume_ratio(iatom)*volume_ratio(jatom)*&
+          this%c6abfree(species_index(geo%atom(iatom)%species), species_index(geo%atom(jatom)%species))
+        
+        rr = sqrt(sum((geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))**2))
+
+        energy = energy - CNST(0.5)*fdamp(rr, r0(iatom) + r0(jatom))*c6ab/rr**6
+
+        print*, iatom, jatom, fdamp(rr, r0(iatom) + r0(jatom)), c6ab
+        
+      end do
+    end do
+    
     SAFE_DEALLOCATE_A(c6)
     SAFE_DEALLOCATE_A(r0)
+    SAFE_DEALLOCATE_A(volume_ratio)
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
+
+  !------------------------------------------
+
+  FLOAT pure function fdamp(rab, r0ab)
+    FLOAT, intent(in) :: rab
+    FLOAT, intent(in) :: r0ab
+
+    FLOAT, parameter :: dd = CNST(2.0)
+    FLOAT, parameter :: sr = CNST(0.94) ! value for PBE, should be 0.96 for PBE0
+    
+    fdamp = CNST(1.0)/(CNST(1.0) + exp(-dd*(rab/(sr*r0ab) - CNST(1.0))))
+    
+  end function fdamp
   
   !------------------------------------------
   
