@@ -323,7 +323,7 @@ contains
     SAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
     pcm%ind_vh = INT(M_ZERO)
     
-    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:MAX_DIM))
+    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:grid%mesh%sb%dim))
     pcm%arg_li = M_ZERO
 
 !    vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')

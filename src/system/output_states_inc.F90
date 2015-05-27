@@ -289,7 +289,7 @@ subroutine output_current_flow(gr, st, dir, outp)
   end if
 
   if(states_are_complex(st)) then
-    SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 1:st%d%nspin))
+    SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     call states_calc_quantities(gr%der, st, paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim

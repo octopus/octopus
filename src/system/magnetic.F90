@@ -86,7 +86,7 @@ contains
 
     PUSH_SUB(states_magnetic_moment)
 
-    SAFE_ALLOCATE(md(1:mesh%np, 1:MAX_DIM))
+    SAFE_ALLOCATE(md(1:mesh%np, 1:3))
     call magnetic_density(mesh, st, rho, md)
 
     mm(1) = dmf_integrate(mesh, md(:, 1))
