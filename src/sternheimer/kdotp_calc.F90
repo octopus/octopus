@@ -58,8 +58,8 @@ contains
 
     PUSH_SUB(kdotp_wfs_tag)
 
-    write(str, '(2a)') "wfs_", index2axis(dir)
-    if(present(dir2)) write(str, '(3a)') trim(str), "_", index2axis(dir2)
+    str = "wfs_" // index2axis(dir)
+    if(present(dir2)) str = trim(str) // "_" // index2axis(dir2)
 
     POP_SUB(kdotp_wfs_tag)
 
