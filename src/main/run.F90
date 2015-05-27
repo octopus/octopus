@@ -180,8 +180,6 @@ contains
       end if
     end if
 
-
-#ifdef HAVE_MPI2
     if(calc_mode_id /= CM_PULPO_A_FEIRA .and. &
       sys%ks%theory_level/=INDEPENDENT_PARTICLES) then
       call poisson_async_init(sys%ks%hartree_solver, sys%mc)
@@ -191,7 +189,6 @@ contains
         call poisson_slave_work(sys%ks%hartree_solver)
       end if
     endif
-#endif
 
     if(.not. multicomm_is_slave(sys%mc)) then
       call messages_write('Info: Octopus initialization completed.', new_line = .true.)
@@ -259,10 +256,8 @@ contains
     endif
     
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-#ifdef HAVE_MPI2
       if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
         call poisson_async_end(sys%ks%hartree_solver, sys%mc)
-#endif
 
       call hamiltonian_end(hm)
       call system_end(sys)
