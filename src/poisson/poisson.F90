@@ -1122,6 +1122,9 @@ contains
 
     end do
 
+    SAFE_DEALLOCATE_A(pot)
+    SAFE_DEALLOCATE_A(rho)
+
     call profiling_out(prof)
     POP_SUB(poisson_slave_work)
 #endif
