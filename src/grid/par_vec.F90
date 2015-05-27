@@ -580,7 +580,7 @@ contains
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
-        write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
+        write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, dim)
       end do
 
       call io_close(iunit)
