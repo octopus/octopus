@@ -611,6 +611,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
     SAFE_ALLOCATE(send_disp_nstl(1:npart))
     SAFE_ALLOCATE(recv_disp_nstl(1:npart))
     SAFE_ALLOCATE(send_buffer(1:nstl, mesh%np))
+    SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
     if(present(forward_map)) then
 
@@ -699,7 +700,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_DEALLOCATE_A(partno_bndry)
       SAFE_DEALLOCATE_A(partno_inner)
-      SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
       send_count_nstl = send_count * nstl
       send_disp_nstl = send_disp * nstl
@@ -709,8 +709,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
-
-      SAFE_DEALLOCATE_A(send_buffer)
 
       recv_count = 0
       do ipg = 1, mesh%np_global
@@ -747,8 +745,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
       end do
       
-      SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
-
       send_count_nstl = send_count * nstl
       send_disp_nstl = mesh%vp%send_disp * nstl
       recv_count_nstl = recv_count * nstl
@@ -757,8 +753,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
-
-      SAFE_DEALLOCATE_A(send_buffer)
 
       ! Unpack on receiving
       recv_count = 0
@@ -774,6 +768,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
     SAFE_DEALLOCATE_A(send_count)
     SAFE_DEALLOCATE_A(recv_count)
+    SAFE_DEALLOCATE_A(send_buffer)
+    SAFE_DEALLOCATE_A(recv_buffer)
     SAFE_DEALLOCATE_A(send_count_nstl)
     SAFE_DEALLOCATE_A(recv_count_nstl)
     SAFE_DEALLOCATE_A(send_disp_nstl)
