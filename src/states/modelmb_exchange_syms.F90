@@ -48,9 +48,12 @@ module modelmb_exchange_syms_m
 
   private
 
-  public :: modelmb_sym_all_states
-  public :: dmodelmb_sym_state, zmodelmb_sym_state
-  public :: dmodelmb_sym_all_states, zmodelmb_sym_all_states
+  public :: &
+    modelmb_sym_all_states, &
+    dmodelmb_sym_state, &
+    zmodelmb_sym_state, &
+    dmodelmb_sym_all_states, &
+    zmodelmb_sym_all_states
 
 contains
 
@@ -67,16 +70,18 @@ subroutine modelmb_sym_all_states (gr, st, geo)
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
 
+  PUSH_SUB(modelmb_sym_all_states)
+
   if (states_are_complex(st)) then
     call zmodelmb_sym_all_states (gr, st, geo)
   else
     call dmodelmb_sym_all_states (gr, st, geo)
   end if
-  
+
+  POP_SUB(modelmb_sym_all_states)
 end subroutine modelmb_sym_all_states
 
 end module modelmb_exchange_syms_m
-
 
 !! Local Variables:
 !! mode: f90

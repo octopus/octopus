@@ -162,6 +162,8 @@ contains
 
       PUSH_SUB(invert_ks_run.read_target_rho)
 
+      ! FIXME: just use restart/gs/density*.obf file rather than needing to set this and use a different format.
+      
       !%Variable InvertKSTargetDensity
       !%Type string
       !%Default <tt>target_density.dat</tt>
