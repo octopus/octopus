@@ -103,13 +103,12 @@ contains
         if(multicomm_is_slave(sys%mc))then
           !for the moment we only have one type of slave
           call poisson_slave_work(sys%ks%hartree_solver)
-          POP_SUB(run)
-          return
         end if
       end if
     endif
 #endif
 
+    if(.not. multicomm_is_slave(sys%mc)) then
     call messages_write('Info: Octopus initialization completed.', new_line = .true.)
     call messages_write('Info: Starting calculation mode.')
     call messages_info()
@@ -172,7 +171,8 @@ contains
     end select
 
     call profiling_out(calc_mode_prof)
-
+    endif
+    
 #ifdef HAVE_MPI2
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
