@@ -977,11 +977,10 @@ contains
         call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do
     end do
-    
-    hato(2:nrc) = ps_upf%rho(2:nrc)/ps%g%rofi(2:nrc)
-    hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
-    hato(nrc+1:ps%g%nrval) = M_ZERO
 
+    ! the atomic density
+    hato(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)
+    hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
     call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%density)
     
     SAFE_DEALLOCATE_A(hato)
