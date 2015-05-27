@@ -238,7 +238,6 @@ contains
     type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
-    type(states_dim_t), pointer :: states_dim
     integer :: ncols
     type(block_t) :: blk
     type(profile_t), save :: prof
@@ -246,12 +245,10 @@ contains
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
     
-    states_dim => st%d
-
     ! make a couple of local copies
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
-    call states_dim_copy(hm%d, states_dim)
+    call states_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
     !%Type float
@@ -528,7 +525,7 @@ contains
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))
         forall (ip = 1:gr%mesh%np_part)
           hm%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
