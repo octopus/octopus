@@ -236,17 +236,15 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   end if
   ASSERT(std%ispin == SPINORS)
 
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
     psi  => psib%states(ist)%X(psi)
     vpsi => vpsib%states(ist)%X(psi)
 
-    grad = M_ZERO
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
-    grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
  
     if(associated(this%vector_potential)) then
       forall(ip = 1:der%mesh%np)
@@ -292,7 +290,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   call profiling_in(prof_magnetic, "MAGNETIC")
   PUSH_SUB(X(hamiltonian_base_magnetic))
 
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
     psi  => psib%states(ist)%X(psi)
@@ -301,12 +299,11 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
-    grad(:, der%mesh%sb%dim + 1:MAX_DIM, :) = M_ZERO
  
     if(associated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
-        vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * sum(this%vector_potential(1:MAX_DIM, ip)**2)*psi(ip, idim) &
-          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:MAX_DIM, ip), grad(ip, 1:MAX_DIM, idim))
+        vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * sum(this%vector_potential(:, ip)**2)*psi(ip, idim) &
+          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(:, ip), grad(ip, :, idim))
       end forall
     end if
 
