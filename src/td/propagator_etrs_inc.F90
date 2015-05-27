@@ -149,8 +149,8 @@ subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, mu, ions, geo, gauge_force)
 
   if(tr%method == PROP_CAETRS) then
     SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-    if(hm%cmplxscl%space) SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
     if(hm%cmplxscl%space) then
+      SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
       call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
     else
       call vksinterp_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
