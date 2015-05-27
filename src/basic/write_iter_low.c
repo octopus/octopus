@@ -69,7 +69,7 @@ static char* _str_center(const char *s1, int l2)
 	int i, j, l1;
 	l1 = strlen(s1);
 
-	s2 = malloc(l2+1);
+	s2 = malloc(l2 + 8); 	/* we add 8 instead of 1 to avoid problems with sse/avx optimizations and valgrind*/
 	for(i=0; i<(l2-l1)/2; i++) s2[i] = ' ';
 	for(j=0; j<l1 && i<l2; j++, i++) s2[i] = s1[j];
 	for(; i<l2; i++) s2[i] = ' ';
