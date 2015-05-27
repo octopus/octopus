@@ -131,11 +131,11 @@ contains
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       call hirshfeld_partition(this%hirshfeld, iatom, density, charge, volume_ratio(iatom))
-      c6(iatom) = volume_ratio(iatom)**2*this%c6free(iatom)
-      r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(iatom)
-      print*, species_label(geo%atom(iatom)%species), volume_ratio(iatom)
-      print*, species_label(geo%atom(iatom)%species), c6(iatom), this%c6free(ispecies)
-      print*, species_label(geo%atom(iatom)%species), r0(iatom), this%r0free(ispecies)
+      c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
+      r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
+      print*, species_label(geo%atom(iatom)%species), "vol", volume_ratio(iatom)
+      print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
+      print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
     end do
 
     energy = CNST(0.0)
@@ -151,8 +151,6 @@ contains
 
         energy = energy - CNST(0.5)*fdamp(rr, r0(iatom) + r0(jatom))*c6ab/rr**6
 
-        print*, iatom, jatom, fdamp(rr, r0(iatom) + r0(jatom)), c6ab
-        
       end do
     end do
     
