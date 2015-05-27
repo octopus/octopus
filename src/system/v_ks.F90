@@ -362,7 +362,10 @@ contains
     !%End
     call parse_variable('VDWCorrection', .false., ks%vdw_correction)
     
-    if(ks%vdw_correction) call vdw_ts_init(ks%vdw_ts, geo, gr%der, st)
+    if(ks%vdw_correction) then
+      call messages_experimental('VDWCorrection')
+      call vdw_ts_init(ks%vdw_ts, geo, gr%der, st)
+    end if
     
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
@@ -582,6 +585,8 @@ contains
       call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
     end if
 
+    if(ks%vdw_correction) call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, energy%vdw)
+    
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
 

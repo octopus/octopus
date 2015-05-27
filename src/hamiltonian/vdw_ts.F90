@@ -28,6 +28,7 @@ module vdw_ts_m
   use hirshfeld_m
   use messages_m
   use profiling_m
+  use ps_m
   use species_m
   use states_m
   
@@ -38,13 +39,16 @@ module vdw_ts_m
   public ::                               &
     vdw_ts_t,                             &
     vdw_ts_init,                          &
-    vdw_ts_end
+    vdw_ts_end,                           &
+    vdw_ts_calculate
   
   type vdw_ts_t
-    FLOAT, allocatable :: c6aafree(:)    !> Free atomic volumes for each atomic species.
+    private
+    FLOAT, allocatable :: c6free(:)    !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)      !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
+    FLOAT, allocatable :: volfree(:)
     type(hirshfeld_t) :: hirshfeld
   end type vdw_ts_t
 
@@ -60,31 +64,31 @@ contains
     FLOAT :: num, den
 
     PUSH_SUB(vdw_ts_init)
-
-    call messages_experimental("Tkatchenko-Scheffler Van der Waals correction")
-
-    SAFE_ALLOCATE(this%c6aafree(1:geo%nspecies))
+    
+    SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
     SAFE_ALLOCATE(this%dpfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
+    SAFE_ALLOCATE(this%volfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
 
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
-        this%c6aafree(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
+        this%c6free(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
+      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)))
     end do
 
     do ispecies = 1, geo%nspecies
       do jspecies = 1, geo%nspecies
-        num = CNST(2.0)*this%c6aafree(ispecies)*this%c6aafree(jspecies)
-        den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6aafree(ispecies) &
-          + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6aafree(jspecies)
+        num = CNST(2.0)*this%c6free(ispecies)*this%c6free(jspecies)
+        den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
+          + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
         this%c6abfree(ispecies, jspecies) = num/den
       end do
     end do
 
     call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
 
-    POP_SUB(vdw_ts_init)    
+    POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
   !------------------------------------------
@@ -93,12 +97,13 @@ contains
     type(vdw_ts_t), intent(inout) :: this
 
     PUSH_SUB(vdw_ts_end)
-
+    
     call hirshfeld_end(this%hirshfeld)
     
-    SAFE_DEALLOCATE_A(this%c6aafree)
+    SAFE_DEALLOCATE_A(this%c6free)
     SAFE_DEALLOCATE_A(this%dpfree)
     SAFE_DEALLOCATE_A(this%r0free)
+    SAFE_DEALLOCATE_A(this%volfree)
     SAFE_DEALLOCATE_A(this%c6abfree)
 
     POP_SUB(vdw_ts_end)
@@ -107,15 +112,34 @@ contains
   !------------------------------------------
 
   subroutine vdw_ts_calculate(this, geo, der, density, energy)
-    type(vdw_ts_t),      intent(out)   :: this
+    type(vdw_ts_t),      intent(in)    :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
 
+    integer :: iatom, ispecies
+    FLOAT :: charge, volume_ratio
+    FLOAT, allocatable :: c6(:), r0(:)
+
     PUSH_SUB(vdw_ts_calculate)
 
+    SAFE_ALLOCATE(c6(1:geo%natoms))
+    SAFE_ALLOCATE(r0(1:geo%natoms))
+    
+    do iatom = 1, geo%natoms
+      ispecies = species_index(geo%atom(iatom)%species)
+      call hirshfeld_partition(this%hirshfeld, iatom, density, charge, volume_ratio)
+      c6(iatom) = volume_ratio**2*this%c6free(iatom)
+      r0(iatom) = volume_ratio**(CNST(1.0)/CNST(3.0))*this%r0free(iatom)
+      print*, species_label(geo%atom(iatom)%species), c6(iatom), this%c6free(ispecies)
+      print*, species_label(geo%atom(iatom)%species), r0(iatom), this%r0free(ispecies)
+    end do
+    
     energy = CNST(0.0)
+
+    SAFE_DEALLOCATE_A(c6)
+    SAFE_DEALLOCATE_A(r0)
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
@@ -123,13 +147,13 @@ contains
   !------------------------------------------
   
   subroutine get_vdw_param(atom, c6, alpha, r0)
-    character(len=*), intent(in) :: atom
+    character(len=*), intent(in)  :: atom
     FLOAT,            intent(out) :: c6
     FLOAT,            intent(out) :: alpha
     FLOAT,            intent(out) :: r0
 
     PUSH_SUB(get_vdw_param)
-
+    
     select case(trim(atom))
 
     case('H')

@@ -1157,7 +1157,7 @@ contains
     
     do ip = 1, ps%g%nrval
       rr = ps%g%rofi(ip)
-      vol(ip) = spline_eval(ps%density, rr)*rr**3
+      vol(ip) = spline_eval(ps%density, rr)*CNST(4.0)*M_PI*rr**5
     end do
 
     call spline_init(volspl)

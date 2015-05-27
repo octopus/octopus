@@ -111,7 +111,7 @@ contains
     FLOAT, optional,           intent(out)   :: hirshfeld_volume
 
     integer :: ip
-    FLOAT :: dens_ip
+    FLOAT :: dens_ip, rr, free_volume
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
     
     PUSH_SUB(hirshfeld_partition)
@@ -135,9 +135,19 @@ contains
     hirshfeld_charge = dmf_integrate(this%mesh, hirshfeld_density)
 
     if(present(hirshfeld_volume)) then
-      hirshfeld_volume = hirshfeld_charge/this%free_charge(iatom)
+      do ip = 1, this%mesh%np
+        rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+        hirshfeld_density(ip) = hirshfeld_density(ip)*rr**3
+        atom_density(ip, 1) = sum(atom_density(ip, 1:this%st%d%nspin))*rr**3
+      end do
+      
+      hirshfeld_volume = dmf_integrate(this%mesh, hirshfeld_density)
+      free_volume = dmf_integrate(this%mesh, atom_density(:, 1))
+      
+      hirshfeld_volume = hirshfeld_volume/free_volume
+      
     end if
-
+    
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
     
