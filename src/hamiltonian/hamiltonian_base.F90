@@ -245,21 +245,21 @@ contains
 
     if(iand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
       if(.not. associated(this%uniform_vector_potential)) then
-        SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
+        SAFE_ALLOCATE(this%uniform_vector_potential(1:max(mesh%sb%dim, 3)))
         this%uniform_vector_potential = M_ZERO
       end if
     end if
 
     if(iand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
       if(.not. associated(this%vector_potential)) then
-        SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
+        SAFE_ALLOCATE(this%vector_potential(1:max(mesh%sb%dim, 3), 1:mesh%np))
         this%vector_potential = M_ZERO
       end if
     end if
 
     if(iand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
       if(.not. associated(this%uniform_magnetic_field)) then
-        SAFE_ALLOCATE(this%uniform_magnetic_field(1:mesh%sb%dim))
+        SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
         this%uniform_magnetic_field = M_ZERO
       end if
     end if

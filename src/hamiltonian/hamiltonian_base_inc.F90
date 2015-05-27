@@ -303,14 +303,14 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
     if(associated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
         vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * sum(this%vector_potential(:, ip)**2)*psi(ip, idim) &
-          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(:, ip), grad(ip, :, idim))
+          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:der%mesh%sb%dim, ip), grad(ip, 1:der%mesh%sb%dim, idim))
       end forall
     end if
 
     if(associated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
       ! Zeeman term
       cc = M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
-      bb = this%uniform_magnetic_field
+      bb(1:max(der%mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(der%mesh%sb%dim, 3))
       b2 = sqrt(sum(this%uniform_magnetic_field**2))
       b12 = bb(1) - M_ZI*bb(2)
 
