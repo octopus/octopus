@@ -71,14 +71,14 @@ contains
   subroutine ialist_drop(l)
     type(ialist_t), target, intent(inout) :: l
 
-    type(iacons_t), pointer :: old_head
+    type(iacons_t), pointer :: ptr ! old head
 
     ! no push_sub, called too frequently
 
     if(l%length > 0) then
-      old_head => l%head
+      ptr => l%head
       l%head => l%head%next
-      SAFE_DEALLOCATE_P(old_head)
+      SAFE_DEALLOCATE_P(ptr)
       l%length = l%length - 1
     end if
 
