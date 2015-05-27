@@ -666,6 +666,8 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(zpsiL)
+    SAFE_DEALLOCATE_A(restart_file)
+    SAFE_DEALLOCATE_A(restart_file_present)
 
     if(mpi_grp_is_root(mpi_world) .and. verbose_) then
       call messages_new_line()
