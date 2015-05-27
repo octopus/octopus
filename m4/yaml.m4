@@ -42,8 +42,6 @@ AC_DEFUN([ACX_YAML], [
      dnl tar -xzf ${srcdir}/external_libs/PyYAML-3.10.tar.gz
   fi
   AC_DEFINE([HAVE_YAML], [], [If set, we can call yaml.h])
-  AM_CONDITIONAL(BUILD_LIBYAML, test x"$ac_build_libyaml" = x"yes")
-  AM_CONDITIONAL(HAVE_LIB_YAML, test x"$ac_use_libyaml" = x"yes")
   AC_SUBST(LIB_YAML_CFLAGS)
   AC_SUBST(LIB_YAML_LIBS)
   # Define the package version numbers and the bug reporting link of yaml.
