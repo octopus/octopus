@@ -153,7 +153,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
-  R_TYPE    :: gamma, x
+  R_TYPE    :: gamma, determinant
   R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
@@ -184,7 +184,7 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   end do
   
   ! invert matrix beta
-  x = lalg_inverter(iter_used, beta)
+  determinant = lalg_inverter(iter_used, beta)
   
   do i = 1, iter_used
     work(i) = M_ZERO
@@ -194,17 +194,13 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
       end do
     end do
   end do
-  
+
   ! linear mixing term
   vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
   
   ! other terms
   do i = 1, iter_used
-    gamma = M_ZERO
-    do j = 1, iter_used
-      gamma = gamma + beta(j, i)*ww*work(j)
-    end do
-
+    gamma = ww * sum(beta(:, i) * work(:))
     vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
         dv(1:d1, 1:d2, 1:d3, i))
   end do
@@ -303,7 +299,7 @@ subroutine X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, df, dv,
   end interface
   
   integer :: i, j, k, l
-  R_TYPE :: alpha
+  R_TYPE :: alpha, determinant
   R_TYPE, allocatable :: a(:, :)
   
   PUSH_SUB(X(pulay_extrapolation))
@@ -313,36 +309,30 @@ subroutine X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, df, dv,
   ! set matrix A
   a = M_ZERO
   do i = 1, iter_used
-    do j = i + 1, iter_used
+    do j = i, iter_used
       a(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
           a(i, j) = a(i, j) + dotp(df(:, k, l, j), df(:, k, l, i))
         end do
       end do
-      a(j, i) = a(i, j)
-    end do
-    a(i, i) = M_ZERO
-    do k = 1, d2
-      do l = 1, d3
-        a(i, i) = a(i, i) + dotp(df(:, k, l, i), df(:, k, l, i))
-      end do
+      if(j > i) a(j, i) = a(i, j)
     end do
   end do
   if (all(abs(a) < 1.0E-8)) then
-      ! residuals are too small. Do not mix.
+    ! residuals are too small. Do not mix.
     vnew = vout
     POP_SUB(X(pulay_extrapolation))
     return
   end if
   
-  alpha = lalg_inverter(iter_used, a)
+  determinant = lalg_inverter(iter_used, a)
   
   ! compute new vector
   vnew = vin
-  do i = 1,iter_used
+  do i = 1, iter_used
     alpha = M_ZERO
-    do j = 1,iter_used
+    do j = 1, iter_used
       do k = 1, d2
         do l = 1, d3
           alpha = alpha - a(i, j) * dotp(df(:, k, l, j), f(:, k, l))
@@ -351,7 +341,7 @@ subroutine X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, df, dv,
     end do
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
-  
+
   SAFE_DEALLOCATE_A(a)
   
   POP_SUB(X(pulay_extrapolation))
