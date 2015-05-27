@@ -43,7 +43,7 @@ program photoelectron_spectrum
 
   integer              :: ierr, mode, interp, integrate
 
-  integer              :: dim, ll(MAX_DIM), ii, dir, how
+  integer              :: dim, ll(MAX_DIM), dir, how
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2), pvec(3)
   FLOAT                :: center(3)
@@ -105,10 +105,6 @@ program photoelectron_spectrum
   write(message(1), '(a)') 'Read PES info file.'
   call messages_info(1)
 
-!   do ii=2, dim
-!     ll(ii) = ll(1)
-!   end do
-  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
 
   filename=io_workpath('td.general/PESM_map.obf')
