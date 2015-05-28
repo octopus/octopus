@@ -75,8 +75,8 @@ match ; Anisotropy 10 ; LINEFIELD(cross_section_tensor, -1, 3) ; 0.19635516E-01
 
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.05-spectrum_compressed_sensing.inp
-Precision : 1e-4
-match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.996707
+Precision : 2e-4
+match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.996753
 Precision : 0.02
 match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polarizability (from sum rule)', 8) ; 11.6526365
 
