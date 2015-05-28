@@ -134,8 +134,8 @@ contains
       c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
       r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
       print*, species_label(geo%atom(iatom)%species), "vol", volume_ratio(iatom)
-      print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
-      print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+      !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
+      !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
     end do
 
     energy = CNST(0.0)
@@ -149,6 +149,11 @@ contains
         
         rr = sqrt(sum((geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))**2))
 
+!        print*, species_label(geo%atom(iatom)%species), species_label(geo%atom(jatom)%species), c6ab
+!        print*, '    ', r0(iatom) + r0(jatom)
+!        print*, '    ', rr
+!        print*, '    ', fdamp(rr, r0(iatom) + r0(jatom))
+!        print*, '    ', CNST(0.5)*fdamp(rr, r0(iatom) + r0(jatom))*c6ab/rr**6
         energy = energy - CNST(0.5)*fdamp(rr, r0(iatom) + r0(jatom))*c6ab/rr**6
 
       end do
@@ -167,7 +172,7 @@ contains
     FLOAT, intent(in) :: rab
     FLOAT, intent(in) :: r0ab
 
-    FLOAT, parameter :: dd = CNST(2.0)
+    FLOAT, parameter :: dd = CNST(20.0)
     FLOAT, parameter :: sr = CNST(0.94) ! value for PBE, should be 0.96 for PBE0
     
     fdamp = CNST(1.0)/(CNST(1.0) + exp(-dd*(rab/(sr*r0ab) - CNST(1.0))))
