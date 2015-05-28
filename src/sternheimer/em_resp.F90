@@ -913,8 +913,8 @@ contains
     ! ---------------------------------------------------------
     !> epsilon = 1 + 4 * pi * alpha/volume
     subroutine out_dielectric_constant()
-      CMPLX epsilon(MAX_DIM, MAX_DIM) 
-      integer idir
+      CMPLX :: epsilon(MAX_DIM, MAX_DIM) 
+      integer :: idir
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
   
