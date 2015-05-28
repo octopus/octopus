@@ -179,24 +179,16 @@ contains
     end if
 
 
-    if(target_type(tg)  ==  oct_tg_velocity) then
-       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
+    if(target_type(tg) == oct_tg_hhgnew) &
+      call target_init_propagation(tg)
+    
+    if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
+       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:gr%mesh%sb%dim))
        vel_target_ = .true.
        do iatom=1, sys%geo%natoms
           sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
           sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-          x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
-       end do
-    end if
-
-    if(target_type(tg)  ==  oct_tg_hhgnew) then
-       call target_init_propagation(tg)
-       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
-       vel_target_ = .true.
-       do iatom=1, sys%geo%natoms
-          sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-          sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-          x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
+          x_initial(iatom, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim)
        end do
     end if
 
@@ -259,7 +251,7 @@ contains
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
-          sys%geo%atom(iatom)%x(1:MAX_DIM) = x_initial(iatom, 1:MAX_DIM)
+          sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim) = x_initial(iatom, 1:gr%mesh%sb%dim)
        end do
        SAFE_DEALLOCATE_A(x_initial)
     end if

@@ -253,8 +253,7 @@ contains
     integer           :: il, ip, jj, ierr
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression
-    FLOAT :: omega0, rr, pot_re, pot_im
-    FLOAT, allocatable :: xx(:)
+    FLOAT :: omega0, rr, pot_re, pot_im, xx(MAX_DIM)
 
     PUSH_SUB(laser_init)
 
@@ -402,20 +401,17 @@ contains
         case(E_FIELD_SCALAR_POTENTIAL)
           SAFE_ALLOCATE(lasers(il)%v(1:mesh%np_part))
           lasers(il)%v = M_ZERO
-          SAFE_ALLOCATE(xx(1:MAX_DIM))
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, coords = xx)
             call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, rr, M_ZERO, trim(scalar_pot_expression))
             lasers(il)%v(ip) = pot_re
           end do
-          SAFE_DEALLOCATE_A(xx)
 
         case(E_FIELD_MAGNETIC)
           ! \warning: note that for the moment we are ignoring the possibility of a complex
           ! polarizability vector for the td magnetic-field case.
           SAFE_ALLOCATE(lasers(il)%a(1:mesh%np_part, 1:mesh%sb%dim))
           lasers(il)%a = M_ZERO
-          SAFE_ALLOCATE(xx(1:mesh%sb%dim))
           do ip = 1, mesh%np
             xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
             select case(mesh%sb%dim)
@@ -428,7 +424,6 @@ contains
             end select
           enddo
           lasers(il)%a = -M_HALF * lasers(il)%a 
-          SAFE_DEALLOCATE_A(xx)
 
         end select
 
