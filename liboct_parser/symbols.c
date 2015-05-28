@@ -165,7 +165,7 @@ static struct init_fntc arith_fncts[] = {
 
   {"erf",    1, (gsl_complex (*)()) &gsl_complex_erf}, 
 
-  {0, 0}
+  {0, 0, 0}
 };
 
 struct init_cnst{
