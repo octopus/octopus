@@ -941,7 +941,8 @@ contains
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
           call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time)
-          this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential - aa/P_C
+          this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
+            - aa(1:mesh%sb%dim)/P_C
         end select
       end do
 
@@ -950,8 +951,8 @@ contains
     ! the gauge field
     if(gauge_field_is_applied(this%ep%gfield)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
-      this%hm_base%uniform_vector_potential = &
-        this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
+      call gauge_field_get_vec_pot(this%ep%gfield, this%hm_base%uniform_vector_potential)
+      this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)/P_c
     end if
     
     ! the electric field for a periodic system through the gauge field

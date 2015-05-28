@@ -206,39 +206,39 @@ contains
 
 
   ! ---------------------------------------------------------
-  function gauge_field_get_vec_pot(this) result(vec_pot)
-    type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vec_pot(1:MAX_DIM)
+  subroutine gauge_field_get_vec_pot(this, vec_pot)
+    type(gauge_field_t),  intent(in)  :: this
+    FLOAT,                intent(out) :: vec_pot(:) !< (sb%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot)
-    vec_pot = this%vecpot
+    vec_pot(1:ubound(vec_pot, 1)) = this%vecpot(1:ubound(vec_pot, 1))
 
     POP_SUB(gauge_field_get_vec_pot)
-  end function gauge_field_get_vec_pot
+  end subroutine gauge_field_get_vec_pot
 
 
   ! ---------------------------------------------------------
-  function gauge_field_get_vec_pot_vel(this) result(vec_pot_vel)
-    type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vec_pot_vel(1:MAX_DIM)
+  subroutine gauge_field_get_vec_pot_vel(this, vec_pot_vel)
+    type(gauge_field_t),  intent(in)  :: this
+    FLOAT,                intent(out) :: vec_pot_vel(:) !< (sb%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot_vel)
-    vec_pot_vel = this%vecpot_vel
+    vec_pot_vel(1:ubound(vec_pot_vel, 1)) = this%vecpot_vel(1:ubound(vec_pot_vel, 1))
 
     POP_SUB(gauge_field_get_vec_pot_vel)
-  end function gauge_field_get_vec_pot_vel
+  end subroutine gauge_field_get_vec_pot_vel
 
 
   ! ---------------------------------------------------------
-  function gauge_field_get_vec_pot_acc(this) result(vec_pot_acc)
-    type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vec_pot_acc(1:MAX_DIM)
+  subroutine gauge_field_get_vec_pot_acc(this, vec_pot_acc)
+    type(gauge_field_t),  intent(in)  :: this
+    FLOAT,                intent(out) :: vec_pot_acc(:) !< (sb%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot_acc)
-    vec_pot_acc = this%vecpot_acc
+    vec_pot_acc(1:ubound(vec_pot_acc, 1)) = this%vecpot_acc(1:ubound(vec_pot_acc, 1))
 
     POP_SUB(gauge_field_get_vec_pot_acc)
-  end function gauge_field_get_vec_pot_acc
+  end subroutine gauge_field_get_vec_pot_acc
 
 
   ! ---------------------------------------------------------
@@ -323,8 +323,8 @@ contains
     end if
 
     vecpot = M_ZERO
-    vecpot(:,1) = gauge_field_get_vec_pot(gfield)
-    vecpot(:,2) = gauge_field_get_vec_pot_vel(gfield)
+    call gauge_field_get_vec_pot(gfield, vecpot(:, 1))
+    call gauge_field_get_vec_pot_vel(gfield, vecpot(:, 2))
 
     call drestart_write_binary(restart, "gauge_field", 2*MAX_DIM, vecpot, err)
     if (err /= 0) ierr = ierr + 1
