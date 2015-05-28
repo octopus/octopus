@@ -688,9 +688,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       ! set the eigenvalues
       st%eigenval(1:nev, ik) = eval(1:nev)
-      st%eigenval(this%norbs + 1:st%nst, ik) = HUGE(M_ONE)
-      ! FIXME: we should calculate expectation values of the Hamiltonian here.
-      ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
+      ! FIXME: we should calculate expectation values of the Hamiltonian instead of setting the eigenvalues to zero.
+      st%eigenval(this%norbs + 1:st%nst, ik) = M_ZERO
 
       SAFE_DEALLOCATE_A(eval)
       
