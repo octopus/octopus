@@ -65,6 +65,9 @@ contains
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
 
+    vecpot(:)     = M_ZERO
+    vecpot_vel(:) = M_ZERO
+    
     if(hm%cmplxscl%time) then
       zt =  TOCMPLX(time, M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
       zdt = TOCMPLX(dt,   M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
@@ -89,8 +92,8 @@ contains
 
       !FIXME: not implemented yet      
       if(gauge_field_is_applied(hm%ep%gfield)) then
-        vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
-        vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+        call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
+        call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
@@ -124,8 +127,8 @@ contains
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
-        vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
-        vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+        call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
+        call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
