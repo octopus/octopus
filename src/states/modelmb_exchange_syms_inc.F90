@@ -292,8 +292,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
   FLOAT, intent(in) :: normalizer
   R_TYPE, intent(inout) :: antisymwf(:,:,:)
 
-  integer :: idown, ipart1, ipart2, ip, ipp
-  integer, allocatable :: ix(:), ixp(:)
+  integer :: idown, ipart1, ipart2, ip, ipp, ix(MAX_DIM), ixp(MAX_DIM)
   integer, allocatable :: forward_map_exchange(:)
   FLOAT :: norm
   R_TYPE :: wfdotp(1,1)
@@ -304,8 +303,6 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
   PUSH_SUB(X(modelmb_sym_updown))
 
   SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
-  SAFE_ALLOCATE(ix(1:MAX_DIM))
-  SAFE_ALLOCATE(ixp(1:MAX_DIM))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
 
   ! first symmetrize over pairs of particles associated in the present
@@ -362,8 +359,6 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     call messages_info(1)
   end if
   SAFE_DEALLOCATE_A(forward_map_exchange)
-  SAFE_DEALLOCATE_A(ix)
-  SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(antisymwf_swap)
 
   POP_SUB(X(modelmb_sym_updown))
@@ -383,11 +378,10 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   R_TYPE, intent(inout) :: antisymwf(:,:,:)
 
   integer :: iperm_1spin, i1spin
-  integer :: ipart1, ipart2, ip
+  integer :: ipart1, ipart2, ip, ix(MAX_DIM), ixp(MAX_DIM)
   R_TYPE :: wfdotp(1,1)
   FLOAT :: norm
   integer, allocatable :: forward_map_exchange(:)
-  integer, allocatable :: ix(:), ixp(:)
   R_TYPE, allocatable  :: antisymwf_swap(:,:,:) ! single wf term, with correct permutation of particles
   R_TYPE, allocatable  :: antisymwf_acc(:,:,:)
   type(batch_t) :: antisymwfbatch
@@ -396,8 +390,6 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   PUSH_SUB(X(modelmb_antisym_1spin))
 
   SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
-  SAFE_ALLOCATE(ix(1:MAX_DIM))
-  SAFE_ALLOCATE(ixp(1:MAX_DIM))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
   SAFE_ALLOCATE(antisymwf_acc(1:gr%mesh%np, 1, 1))
   ! for each permutation of particles of this type
@@ -454,8 +446,6 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   SAFE_DEALLOCATE_A(forward_map_exchange)
   SAFE_DEALLOCATE_A(antisymwf_swap)
   SAFE_DEALLOCATE_A(antisymwf_acc)
-  SAFE_DEALLOCATE_A(ix)
-  SAFE_DEALLOCATE_A(ixp)
 
   POP_SUB(X(modelmb_antisym_1spin))
 

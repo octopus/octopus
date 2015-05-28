@@ -32,8 +32,8 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   R_TYPE,                intent(out) :: gamma(:, :)
 
   integer :: icoord, icoordp, icoord_diff
-  integer :: jdim, ip_global, ip, ipp_global
-  integer, allocatable :: ix(:), ix_1part(:), ixp(:)
+  integer :: jdim, ip_global, ip, ipp_global, ix(MAX_DIM), ixp(MAX_DIM)
+  integer, allocatable :: ix_1part(:)
   integer, allocatable :: forward_map_gamma(:)
   integer, allocatable :: icoord_map(:)
   FLOAT :: volume_element
@@ -42,14 +42,12 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
 
   PUSH_SUB(X(mf_calculate_gamma))
 
-  SAFE_ALLOCATE(ix(1:MAX_DIM))
-  SAFE_ALLOCATE(ixp(1:MAX_DIM))
   SAFE_ALLOCATE(psi_p(1:mesh%np,1,1))
   SAFE_ALLOCATE(forward_map_gamma(1:mesh%np_global))
   SAFE_ALLOCATE(icoord_map(1:mesh%np))
 
   volume_element = 1.0d0
-  do jdim = 1, MAX_DIM
+  do jdim = 1, mesh%sb%dim
     if (mesh%spacing(jdim) > 1.e-10) volume_element=volume_element*mesh%spacing(jdim)
   end do
   do jdim = (ikeeppart - 1)*mb_1part%ndim1part + 1, ikeeppart*mb_1part%ndim1part
@@ -142,8 +140,6 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   SAFE_DEALLOCATE_A(forward_map_gamma)
   SAFE_DEALLOCATE_A(icoord_map)
   SAFE_DEALLOCATE_A(psi_p)
-  SAFE_DEALLOCATE_A(ix)
-  SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
 
   POP_SUB(X(mf_calculate_gamma))
