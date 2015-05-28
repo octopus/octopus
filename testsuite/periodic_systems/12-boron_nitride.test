@@ -15,17 +15,17 @@ match ; Reduced k-points   ; GREPFIELD(static/info, 'Number of symmetry-reduced 
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 187
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  713.85768244 
-match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  713.85768244
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  713.85748322
+match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  713.85748322
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  326.74770817
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67043598
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27950994
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.81774990
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -24.25113394
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48050371
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97786850
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67062408
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27947261
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.81774097
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -24.25113377
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48040933
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97791645
 match ; Entropy            ; GREPFIELD(static/info, 'Entropy     =', 3) ;    0.0
-match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -1.383530
+match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -1.383534
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ;   0.000000
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ;   0.000000

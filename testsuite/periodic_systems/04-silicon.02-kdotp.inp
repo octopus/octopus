@@ -31,7 +31,7 @@ Spacing = Lsize/7
 KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
 
-Preconditioner = no
+
 ExtraStates = 1
 KdotPCalcSecondOrder = yes
 

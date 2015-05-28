@@ -26,7 +26,7 @@ Lsize = a/2
 %
 
 ExtraStates = 10
-Preconditioner = no
+
 
 ExperimentalFeatures = yes
 Output = BerkeleyGW

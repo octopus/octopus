@@ -83,11 +83,12 @@ contains
 
     !%Variable Preconditioner
     !%Type integer
-    !%Default pre_filter
     !%Section SCF::Eigensolver
     !%Description
-    !% Which preconditioner to use in order to solve the Kohn-Sham equations or
-    !% the linear-response equations.
+    !% Which preconditioner to use in order to solve the Kohn-Sham
+    !% equations or the linear-response equations. The default is
+    !% pre_filter, except for periodic systems or curvilinear
+    !% coordinates, where no preconditioner is applied by default.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -102,7 +103,7 @@ contains
     !% Multigrid preconditioner.
     !%End
 
-    if(gr%mesh%use_curvilinear) then
+    if(gr%mesh%use_curvilinear .or. simul_box_is_periodic(gr%sb)) then
       default = PRE_NONE
     else
       default = PRE_FILTER
