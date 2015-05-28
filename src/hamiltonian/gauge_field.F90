@@ -82,6 +82,7 @@ module gauge_field_m
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
     FLOAT   :: wp2
+    integer :: ndim
     logical :: with_gauge_field
   end type gauge_field_t
 
@@ -110,7 +111,8 @@ contains
     this%vecpot = M_ZERO
     this%vecpot_vel = M_ZERO
     this%vecpot_acc = M_ZERO
-
+    this%ndim = sb%dim
+    
     !%Variable GaugeVectorField
     !%Type block
     !%Section Hamiltonian
@@ -133,7 +135,7 @@ contains
       
       this%with_gauge_field = .true.
       
-      do ii = 1, sb%dim
+      do ii = 1, this%ndim
         call parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
       end do
       
@@ -184,10 +186,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_set_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vec_pot(1:MAX_DIM)
+    FLOAT,                intent(in)    :: vec_pot(:) !< (this%ndim)
 
     PUSH_SUB(gauge_field_set_vec_pot)
-    this%vecpot = vec_pot
+    this%vecpot(1:this%ndim) = vec_pot(1:this%ndim)
 
     POP_SUB(gauge_field_set_vec_pot)
   end subroutine gauge_field_set_vec_pot
@@ -196,10 +198,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_set_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vec_pot_vel(1:MAX_DIM)
+    FLOAT,                intent(in)    :: vec_pot_vel(:) !< (this%ndim)
 
     PUSH_SUB(gauge_field_set_vec_pot_vel)
-    this%vecpot_vel = vec_pot_vel
+    this%vecpot_vel(1:this%ndim) = vec_pot_vel(1:this%ndim)
 
     POP_SUB(gauge_field_set_vec_pot_vel)
   end subroutine gauge_field_set_vec_pot_vel
@@ -208,10 +210,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot(:) !< (sb%dim)
+    FLOAT,                intent(out) :: vec_pot(:) !< (this%ndim)
 
     PUSH_SUB(gauge_field_get_vec_pot)
-    vec_pot(1:ubound(vec_pot, 1)) = this%vecpot(1:ubound(vec_pot, 1))
+    vec_pot(1:this%ndim) = this%vecpot(1:this%ndim)
 
     POP_SUB(gauge_field_get_vec_pot)
   end subroutine gauge_field_get_vec_pot
@@ -220,10 +222,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot_vel(:) !< (sb%dim)
+    FLOAT,                intent(out) :: vec_pot_vel(:) !< (this%ndim)
 
     PUSH_SUB(gauge_field_get_vec_pot_vel)
-    vec_pot_vel(1:ubound(vec_pot_vel, 1)) = this%vecpot_vel(1:ubound(vec_pot_vel, 1))
+    vec_pot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim)
 
     POP_SUB(gauge_field_get_vec_pot_vel)
   end subroutine gauge_field_get_vec_pot_vel
@@ -232,10 +234,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot_acc(this, vec_pot_acc)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot_acc(:) !< (sb%dim)
+    FLOAT,                intent(out) :: vec_pot_acc(:) !< (this%ndim)
 
     PUSH_SUB(gauge_field_get_vec_pot_acc)
-    vec_pot_acc(1:ubound(vec_pot_acc, 1)) = this%vecpot_acc(1:ubound(vec_pot_acc, 1))
+    vec_pot_acc(1:this%ndim) = this%vecpot_acc(1:this%ndim)
 
     POP_SUB(gauge_field_get_vec_pot_acc)
   end subroutine gauge_field_get_vec_pot_acc
@@ -249,9 +251,10 @@ contains
 
     PUSH_SUB(gauge_field_propagate)
 
-    this%vecpot_acc(1:MAX_DIM) = force%vecpot(1:MAX_DIM)
+    this%vecpot_acc(1:this%ndim) = force%vecpot(1:this%ndim)
 
-    this%vecpot = this%vecpot + dt * this%vecpot_vel + M_HALF * dt**2 * force%vecpot
+    this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
+      M_HALF * dt**2 * force%vecpot(1:this%ndim)
 
     POP_SUB(gauge_field_propagate)
   end subroutine gauge_field_propagate
@@ -264,7 +267,8 @@ contains
     FLOAT,                intent(in)    :: dt
 
     PUSH_SUB(gauge_field_propagate_vel)
-    this%vecpot_vel = this%vecpot_vel + M_HALF * dt * (this%vecpot_acc + force%vecpot)
+    this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
+      M_HALF * dt * (this%vecpot_acc(1:this%ndim) + force%vecpot(1:this%ndim))
 
     POP_SUB(gauge_field_propagate_vel)
   end subroutine gauge_field_propagate_vel
@@ -293,7 +297,7 @@ contains
     type(simul_box_t),    intent(in)    :: sb
 
     PUSH_SUB(gauge_field_get_energy)
-    energy = sb%rcell_volume / (M_EIGHT * M_PI * P_c**2) * sum(this%vecpot_vel(1:MAX_DIM)**2)
+    energy = sb%rcell_volume / (M_EIGHT * M_PI * P_c**2) * sum(this%vecpot_vel(1:this%ndim)**2)
 
     POP_SUB(gauge_field_get_energy)
   end function gauge_field_get_energy
@@ -306,7 +310,7 @@ contains
     integer,              intent(out) :: ierr
 
     integer :: err
-    FLOAT :: vecpot(MAX_DIM, 2)
+    FLOAT, allocatable :: vecpot(:,:)
     
     PUSH_SUB(gauge_field_dump)
 
@@ -322,11 +326,13 @@ contains
       call messages_info(1)
     end if
 
+    SAFE_ALLOCATE(vecpot(1:gfield%ndim, 1:2))
     vecpot = M_ZERO
     call gauge_field_get_vec_pot(gfield, vecpot(:, 1))
     call gauge_field_get_vec_pot_vel(gfield, vecpot(:, 2))
 
-    call drestart_write_binary(restart, "gauge_field", 2*MAX_DIM, vecpot, err)
+    call drestart_write_binary(restart, "gauge_field", 2*gfield%ndim, vecpot, err)
+    SAFE_DEALLOCATE_A(vecpot)
     if (err /= 0) ierr = ierr + 1
 
     if (in_debug_mode) then
@@ -345,7 +351,7 @@ contains
     integer,              intent(out)   :: ierr
 
     integer :: err
-    FLOAT :: vecpot(MAX_DIM, 2)
+    FLOAT, allocatable :: vecpot(:,:)
     
     PUSH_SUB(gauge_field_load)
 
@@ -362,12 +368,14 @@ contains
       call messages_info(1)
     end if
 
-    call drestart_read_binary(restart, "gauge_field", 2*MAX_DIM, vecpot, err)
+    SAFE_ALLOCATE(vecpot(1:gfield%ndim, 1:2))
+    call drestart_read_binary(restart, "gauge_field", 2*gfield%ndim, vecpot, err)
     if (err /= 0) ierr = ierr + 1
 
     call gauge_field_set_vec_pot(gfield, vecpot(:,1))
     call gauge_field_set_vec_pot_vel(gfield, vecpot(:,2))
-
+    SAFE_DEALLOCATE_A(vecpot)
+    
     if (in_debug_mode) then
       message(1) = "Debug: Reading gauge field restart done."
       call messages_info(1)
