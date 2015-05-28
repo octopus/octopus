@@ -256,7 +256,7 @@ contains
 
     do is = 1, this%corrector%stencil%size
 
-      select case(sum(abs(this%corrector%stencil%points(1:MAX_DIM, is))))
+      select case(sum(abs(this%corrector%stencil%points(1:der%mesh%sb%dim, is))))
       case(0)
         this%corrector%w_re(is, 1) = CNST(27.0)/CNST(32.0) + &
           (M_ONE - this%alpha_fmm)*M_TWO*M_PI*(CNST(3.0)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0))
@@ -351,7 +351,7 @@ contains
     ! invert the indices
     index = 0
     do ii = this%sp, this%ep
-      do jj = 1, MAX_DIM
+      do jj = 1, der%mesh%sb%dim
          index = index + 1 
          xyz(index) = mesh%x(ii, jj)
       end do
