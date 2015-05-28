@@ -456,9 +456,11 @@ contains
   
       do ik = 1, nik
         do ist = 1, nst
-          xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
-          entropy = entropy - kweights(ik) * this%el_per_state *  &
-            smear_entropy_function(this, xx)
+          if (eigenvalues(ist, ik) < HUGE(M_ONE)) then
+            xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
+            entropy = entropy - kweights(ik) * this%el_per_state *  &
+                 smear_entropy_function(this, xx)
+          end if
         end do
       end do
     endif
