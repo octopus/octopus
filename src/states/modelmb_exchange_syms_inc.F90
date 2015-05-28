@@ -461,7 +461,6 @@ subroutine X(modelmb_sym_all_states) (gr, st, geo)
   type(geometry_t),       intent(in)    :: geo
 
   integer :: mm, itype
-  integer :: ierr
   integer :: tdrun
   integer :: ncombo
   integer, allocatable :: ndiagrams(:)

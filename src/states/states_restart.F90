@@ -156,7 +156,7 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states, root, chunk, iwt, ii
+    integer :: iunit_wfns, iunit_occs, iunit_states, root, chunk, iwt
     integer :: err, err2(2), ik, idir, ist, idim, itot
     character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
     character(len=300) :: lines(3)
