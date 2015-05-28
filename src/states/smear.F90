@@ -435,11 +435,10 @@ contains
 
     entropy = M_ZERO
 
-    if(this%method  ==  SMEAR_FIXED_OCC) then
+    if(this%method == SMEAR_FIXED_OCC .or. this%method == SMEAR_SEMICONDUCTOR) then
     ! Fermi-Dirac entropy, not quite the same as will be obtained with true smearing
     ! RM Wentzcovitch, JL Martins, and PB Allen, Phys. Rev. B 45, 11372 (1992) eqn (5)
     ! also N Marzari PhD thesis p 117, http://quasiamore.mit.edu/phd/Marzari_PhD.pdf
-
       do ik = 1, nik
         do ist = 1, nst
           ff = occ(ist, ik) / this%el_per_state
@@ -459,7 +458,7 @@ contains
           if (eigenvalues(ist, ik) < HUGE(M_ONE)) then
             xx = (this%e_fermi - eigenvalues(ist, ik)) / dsmear
             entropy = entropy - kweights(ik) * this%el_per_state *  &
-                 smear_entropy_function(this, xx)
+              smear_entropy_function(this, xx)
           end if
         end do
       end do
