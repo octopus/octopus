@@ -24,6 +24,9 @@ module global_m
   use loct_m
   use mpi_m
   use varinfo_m
+#ifdef HAVE_OPENMP
+  use omp_lib
+#endif
 
   implicit none
 
@@ -36,8 +39,9 @@ module global_m
     global_init,      &
     global_end,       & 
     optional_default, &
-    assert_die
-
+    assert_die,       &
+    not_in_openmp
+  
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
@@ -231,6 +235,22 @@ FCFLAGS
     val = def
     if(present(opt)) val = opt
   end function soptional_default
+
+  !-----------------------------------------------------------
+
+  logical &
+#ifndef HAVE_OPENMP
+    pure & 
+#endif
+    function not_in_openmp()
+    
+#ifdef HAVE_OPENMP
+    not_in_openmp = .not. omp_in_parallel()
+#else
+    not_in_openmp = .true.;
+#endif
+
+  end function not_in_openmp
 
 end module global_m
 

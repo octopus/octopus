@@ -476,6 +476,8 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
+    if(.not. not_in_openmp()) return
+
     ! no PUSH_SUB, called too often
 
     if(.not. this%initialized) then 
@@ -526,6 +528,8 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
+    if(.not. not_in_openmp()) return
+
     ! no PUSH_SUB, called too often
 
     ASSERT(this%initialized)

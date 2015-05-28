@@ -80,7 +80,7 @@
 #else
 #  define SAFE_ALLOCATE(x)			\
   allocate(x, stat=global_alloc_err); _newline_ \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
   global_sizeof = SIZEOF(x); _newline_	\
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_allocate(_anl_ TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
@@ -91,7 +91,7 @@
 #  define MY_DEALLOCATE(x) \
   global_sizeof = SIZEOF(x); _newline_ \
   deallocate(x, stat=global_alloc_err); _newline_ \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_deallocate(TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
     call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
@@ -174,11 +174,15 @@
 ! in the messages_m module.
 #define PUSH_SUB(routine) \
   if(in_debug_mode) then; _newline_ \
-    call push_sub(__FILE__//"." _anl_ //TOSTRING(routine)); _newline_ \
+    if(not_in_openmp()) then; _newline_ \
+      call push_sub(__FILE__//"." _anl_ //TOSTRING(routine)); _newline_ \
+    endif; _newline_ \
   endif
 #define POP_SUB(routine) \
   if(in_debug_mode) then; _newline_ \
-    call pop_sub(__FILE__//"." _anl_ //TOSTRING(routine)); _newline_ \
+    if(not_in_openmp()) then; _newline_ \
+      call pop_sub(__FILE__//"." _anl_ //TOSTRING(routine)); _newline_ \
+    endif; _newline_ \
   endif
 
 ! the leading dimension of the array
