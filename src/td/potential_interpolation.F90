@@ -286,7 +286,7 @@ contains
     PUSH_SUB(potential_interpolation_dump)
 
     if (cmplxscl) then
-      SAFE_ALLOCATE(zv_old(gr%mesh%np))
+      SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
     end if
 
     err2 = 0

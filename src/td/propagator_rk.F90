@@ -494,8 +494,8 @@ contains
     SAFE_ALLOCATE(rhs1(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
     SAFE_ALLOCATE(rhs(1:tr%tdsk_size))
     SAFE_ALLOCATE(zpsi(1:tr%tdsk_size))
-    SAFE_ALLOCATE(vhxc1_op(np, nspin))
-    SAFE_ALLOCATE(vpsl1_op(np))
+    SAFE_ALLOCATE(vhxc1_op(1:np, 1:nspin))
+    SAFE_ALLOCATE(vpsl1_op(1:np))
 
     ! First, we get the state that we want to propagate. For the moment being, only one state.
     do ik = kp1, kp2
@@ -710,10 +710,10 @@ contains
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
 
-    SAFE_ALLOCATE(vhxc1_op(np, nspin))
-    SAFE_ALLOCATE(vhxc2_op(np, nspin))
-    SAFE_ALLOCATE(vpsl1_op(np))
-    SAFE_ALLOCATE(vpsl2_op(np))
+    SAFE_ALLOCATE(vhxc1_op(1:np, 1:nspin))
+    SAFE_ALLOCATE(vhxc2_op(1:np, 1:nspin))
+    SAFE_ALLOCATE(vpsl1_op(1:np))
+    SAFE_ALLOCATE(vpsl2_op(1:np))
     SAFE_ALLOCATE(k1(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
     SAFE_ALLOCATE(k2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
     SAFE_ALLOCATE(oldk1(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))

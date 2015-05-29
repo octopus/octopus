@@ -139,7 +139,7 @@ contains
 
     if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error('LDOutput')
 
-    SAFE_ALLOCATE(writ%out(LOCAL_OUT_MAX, nd))
+    SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX, 1:nd))
     do iout = 1, LOCAL_OUT_MAX
       writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do

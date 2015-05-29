@@ -711,7 +711,7 @@ contains
     call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
                   ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
-    SAFE_ALLOCATE(lines(lcl%nd+2))
+    SAFE_ALLOCATE(lines(1:lcl%nd+2))
     write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd
     write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)')'#id','label','shape','Atom list','center of mass'
     do id = 1, lcl%nd
@@ -774,7 +774,7 @@ contains
       else
       ! Assign basins%map to ions
         if (lduseatomicradii .and. (id == 1)) then
-          SAFE_ALLOCATE(ion_map(sys%geo%natoms))
+          SAFE_ALLOCATE(ion_map(1:sys%geo%natoms))
           do ia = 1, sys%geo%natoms
             ion_map(ia) = basins%map(mesh_nearest_point(sys%gr%mesh, sys%geo%atom(ia)%x, dmin, rankmin)) 
           end do
@@ -793,7 +793,7 @@ contains
         end if
         nb = box_union_get_nboxes(dom(id))
         max_check = nb
-        SAFE_ALLOCATE(domain_map(nd,max_check))
+        SAFE_ALLOCATE(domain_map(1:nd,1:max_check))
         do ib = 1, nb
           xi = box_union_get_center(dom(id), ib)
           ix = mesh_nearest_point(sys%gr%mesh, xi, dmin, rankmin)
@@ -821,8 +821,8 @@ contains
       if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
         call messages_input_error('LDOutputHow')
       end if
-      SAFE_ALLOCATE(dble_domain_map(nd, sys%gr%mesh%np))
-      SAFE_ALLOCATE(domain_mesh(sys%gr%mesh%np))
+      SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
+      SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
       dble_domain_map = M_ZERO
       domain_mesh = M_ZERO
       do ip = 1, sys%gr%mesh%np
