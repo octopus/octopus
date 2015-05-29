@@ -76,9 +76,8 @@ contains
 
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy, id, xy(2)
-    logical :: periods(1:2)
+    integer :: periods(1:2), reorder
     integer :: comm
-    logical :: reorder
     integer, allocatable :: procmap(:)
 
     PUSH_SUB(blacs_proc_grid_init)
@@ -89,8 +88,8 @@ contains
       ! We create a new communicator with Cartesian topology
       dims(1) = mpi_grp%size
       dims(2) = 1
-      periods = .false.
-      reorder = .false.
+      periods = 0
+      reorder = 0
       call MPI_Cart_create(mpi_grp%comm, 2, dims, periods, reorder, comm, mpi_err)
     else
       comm = mpi_grp%comm
