@@ -300,7 +300,7 @@ contains
     integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM)
+    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
     CMPLX, allocatable :: phase(:)
     type(profile_t), save :: prof_short, prof_long
 
@@ -418,10 +418,12 @@ contains
           if(factor < epsilon(factor)) cycle
 
           sumatoms = M_Z0
+          !$omp parallel do private(iatom, gx, aa) reduction(+:sumatoms)
           do iatom = 1, geo%natoms
             gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
-            phase(iatom) = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
-            sumatoms = sumatoms + phase(iatom)
+            aa = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
+            phase(iatom) = aa 
+            sumatoms = sumatoms + aa
           end do
           
           efourier = efourier + TOFLOAT(factor*sumatoms*conjg(sumatoms))
