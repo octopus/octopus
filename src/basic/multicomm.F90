@@ -551,8 +551,10 @@ contains
 
         ! The domain and states dimensions have to be periodic (2D torus)
         ! in order to circulate matrix blocks.
-        periodic_mask(P_STRATEGY_DOMAINS) = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
-        periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
+        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) &
+          periodic_mask(P_STRATEGY_DOMAINS) = 1
+        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) &
+          periodic_mask(P_STRATEGY_STATES) = 1
 
         periodic_mask_tmp(1:mc%n_index) = periodic_mask(1:mc%n_index)
         ! We allow reordering of ranks. 
