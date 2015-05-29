@@ -579,8 +579,8 @@ subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik)
 
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:MAX_DIM))
-  SAFE_ALLOCATE(cgrad(1:der%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+  SAFE_ALLOCATE(cgrad(1:der%mesh%np_part, 1:der%mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:der%mesh%np))
 
   call X(derivatives_grad)(der, psi, grad, ghost_update = .false., set_bc = .false.)
