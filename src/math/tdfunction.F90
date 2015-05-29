@@ -849,8 +849,8 @@ contains
 
       il = int(t/f%dt)+1; iu = il+1
 
-      SAFE_ALLOCATE(timearray(4))
-      SAFE_ALLOCATE(valarray(4))
+      SAFE_ALLOCATE(timearray(1:4))
+      SAFE_ALLOCATE(valarray(1:4))
 
       if(il <= 1) then
         timearray = (/ M_ZERO, f%dt, M_TWO*f%dt, M_THREE*f%dt  /)

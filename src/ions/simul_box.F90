@@ -1263,7 +1263,7 @@ contains
       call iopar_find_line(mpi_grp, iunit, dump_tag, err)
       if (err /= 0) ierr = ierr + 2
 
-      SAFE_ALLOCATE(lines(4))
+      SAFE_ALLOCATE(lines(1:4))
       if (ierr == 0) then
         call iopar_read(mpi_grp, iunit, lines, 4, err)
         if (err == 0) then
@@ -1322,7 +1322,7 @@ contains
         SAFE_DEALLOCATE_A(lines)
 
         if (sb%mr_flag) then
-          SAFE_ALLOCATE(lines(2))
+          SAFE_ALLOCATE(lines(1:2))
           call iopar_read(mpi_grp, iunit, lines, 2, err)
           if (err /= 0) then
             ierr = ierr + 2**8
@@ -1358,7 +1358,7 @@ contains
         end if
 
 
-        SAFE_ALLOCATE(lines(sb%dim))
+        SAFE_ALLOCATE(lines(1:sb%dim))
         call iopar_read(mpi_grp, iunit, lines, sb%dim, err)
         if (err /= 0) then
           ierr = ierr + 2**11

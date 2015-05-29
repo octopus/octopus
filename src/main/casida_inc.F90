@@ -1012,7 +1012,7 @@ subroutine X(casida_solve)(cas, st)
   if (mpi_grp_is_root(cas%mpi_grp)) then
 
     if(cas%type /= CASIDA_CASIDA) then
-      SAFE_ALLOCATE(occ_diffs(cas%n_pairs))
+      SAFE_ALLOCATE(occ_diffs(1:cas%n_pairs))
       do ia = 1, cas%n_pairs
         occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
           / cas%el_per_state

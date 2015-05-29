@@ -4452,7 +4452,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   SAFE_ALLOCATE(zmpi2(1:2,1:n1,1:nd2/nproc,1:nd3))
   SAFE_ALLOCATE(cosinarr(1:2,1:n3/2))
   if (nproc > 1) then
-    SAFE_ALLOCATE(zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc))
+    SAFE_ALLOCATE(zmpi1(1:2,1:n1,1:nd2/nproc,1:nd3/nproc,1:nproc))
   endif
   
   !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
