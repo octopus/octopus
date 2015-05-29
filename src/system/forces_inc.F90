@@ -691,7 +691,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
 
   PUSH_SUB(X(forces_born_charges))
 
-  SAFE_ALLOCATE(force_deriv(gr%mesh%sb%dim, geo%natoms))
+  SAFE_ALLOCATE(force_deriv(1:gr%mesh%sb%dim, 1:geo%natoms))
 
   do idir = 1, gr%mesh%sb%dim
     call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv)
