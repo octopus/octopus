@@ -244,7 +244,7 @@ contains
       call sternheimer_init(sh_kdotp, sys, hm, complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
-      SAFE_ALLOCATE(dl_eig(sys%st%nst, sys%st%d%nik, sys%gr%sb%periodic_dim))
+      SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
 
       call lr_init(kdotp_lr2)
       call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh)

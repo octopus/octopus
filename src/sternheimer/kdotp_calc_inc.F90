@@ -149,7 +149,7 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
     call messages_not_implemented("kdotp_add_occ parallel in states")
   endif
 
-  SAFE_ALLOCATE(pertpsi(sys%gr%mesh%np, sys%st%d%dim))
+  SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = 1, sys%st%nst

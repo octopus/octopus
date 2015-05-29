@@ -1853,7 +1853,7 @@ contains
     end do
 
     !this will be the array of the kernel in the real space
-    SAFE_ALLOCATE(karray(nker1,nfft3,nker2/nproc))
+    SAFE_ALLOCATE(karray(1:nker1,1:nfft3,1:nker2/nproc))
 
     !defining proper extremes for the calculation of the
     !local part of the kernel
