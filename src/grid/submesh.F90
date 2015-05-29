@@ -290,9 +290,11 @@ contains
     type(mpi_grp_t),      intent(in)     :: mpi_grp
 
     integer :: nparray(1:2)
+    type(profile_t), save :: prof
 
     PUSH_SUB(submesh_broadcast)
-
+    call profiling_in(prof, 'SUBMESH_BCAST')
+    
     if(root /= mpi_grp%rank) then    
       this%mesh => mesh
       this%center(1:mesh%sb%dim) = center(1:mesh%sb%dim)
@@ -326,6 +328,7 @@ contains
 
     end if
 
+    call profiling_out(prof)
     POP_SUB(submesh_broadcast)
   end subroutine submesh_broadcast
    
