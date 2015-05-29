@@ -687,7 +687,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
   integer :: ip, ii
   type(batch_t), pointer :: src_
   type(profile_t), save :: phase_prof
-  R_TYPE :: phase
+  CMPLX :: phase
 #ifdef HAVE_OPENCL
   integer :: wgsize
   type(octcl_kernel_t), save :: ker_phase

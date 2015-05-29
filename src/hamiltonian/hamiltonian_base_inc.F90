@@ -354,7 +354,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
   R_TYPE, allocatable :: psi(:, :)
-  R_TYPE :: phase
+  CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
@@ -532,7 +532,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
   integer :: ist, ip, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
-  R_TYPE  :: phase
+  CMPLX  :: phase
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_MPI
