@@ -530,7 +530,7 @@ end function X(mf_surface_integral_scalar)
 !! function on a given plane.
 R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
   type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:, :)  !< (mesh%np, MAX_DIM)
+  R_TYPE,       intent(in)       :: ff(:, :)  !< (mesh%np, mesh%sb%dim)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: fn(:)
@@ -540,7 +540,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
 
   SAFE_ALLOCATE(fn(1:mesh%np))
   do ip = 1, mesh%np
-    fn(ip) = sum(ff(ip, :) * plane%n(:))
+    fn(ip) = sum(ff(ip, 1:mesh%sb%dim) * plane%n(1:mesh%sb%dim))
   end do
 
   dd =  X(mf_surface_integral_scalar)(mesh, fn, plane)
@@ -583,7 +583,7 @@ end function X(mf_line_integral_scalar)
 !! function on a given line.
 R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   type(mesh_t),      intent(in) :: mesh
-  R_TYPE,            intent(in) :: ff(:, :)  !< (mesh%np, MAX_DIM)
+  R_TYPE,            intent(in) :: ff(:, :)  !< (mesh%np, mesh%sb%dim)
   type(mesh_line_t), intent(in) :: line
 
   R_TYPE, allocatable :: fn(:)

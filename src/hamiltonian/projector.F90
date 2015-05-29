@@ -203,8 +203,8 @@ contains
     type(projector_t),  intent(inout) :: this
     type(simul_box_t),  intent(in)    :: sb
     type(states_dim_t), intent(in)    :: std
-    FLOAT, optional,    pointer       :: vec_pot(:)
-    FLOAT, optional,    pointer       :: vec_pot_var(:, :)
+    FLOAT, optional,    pointer       :: vec_pot(:) !< (sb%dim)
+    FLOAT, optional,    pointer       :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)

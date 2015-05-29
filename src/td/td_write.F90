@@ -1834,19 +1834,19 @@ contains
     call write_iter_start(out_gauge)
 
     ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
-    temp = gauge_field_get_vec_pot(hm%ep%gfield)
+    call gauge_field_get_vec_pot(hm%ep%gfield, temp)
     forall(idir = 1:gr%mesh%sb%dim)
       temp(idir) = units_from_atomic(units_out%energy, temp(idir))
     end forall
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
-    temp = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+    call gauge_field_get_vec_pot_vel(hm%ep%gfield, temp)
     forall(idir = 1:gr%mesh%sb%dim)
       temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
     end forall
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
-    temp = gauge_field_get_vec_pot_acc(hm%ep%gfield)
+    call gauge_field_get_vec_pot_acc(hm%ep%gfield, temp)
     forall(idir = 1:gr%mesh%sb%dim)
       temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
     end forall
