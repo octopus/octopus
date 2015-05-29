@@ -199,6 +199,8 @@ contains
 
     PUSH_SUB(profiling_init)
 
+    ! FIXME: nothing is thread-safe here!
+    
     !%Variable ProfilingMode
     !%Default no
     !%Type integer
@@ -211,7 +213,7 @@ contains
     !% node number (<tt>000</tt> in serial) and <tt>NNN</tt> the number of processors.
     !% This is mainly for development purposes. Note, however, that
     !% <tt>Octopus</tt> should be compiled with <tt>--disable-debug</tt> to do proper
-    !% profiling.
+    !% profiling. Warning: you may encounter strange results with OpenMP.
     !%Option no 0
     !% No profiling information is generated.
     !%Option prof_time 1
@@ -288,6 +290,8 @@ contains
 #endif
       
       prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
+      write(prof_vars%mem_iunit, '(5a16,a70)') 'Elapsed Time', 'Alloc/Dealloc', 'Size (words)', 'Prof Mem', &
+        'Sys Mem', 'Variable Name(Filename:Line)'
     end if
 
     ! initialize time profiling
@@ -389,8 +393,14 @@ contains
       call messages_print_stress(stdout)
 
       if(prof_vars%alloc_count /= prof_vars%dealloc_count) then
-        message(1) = "Not all memory was deallocated!";
-        call messages_warning(1)
+        write(message(1),'(a,i10,a,i10,a)') "Not all memory was deallocated: ", prof_vars%alloc_count, &
+          ' allocations and ', prof_vars%dealloc_count, ' deallocations'
+        call messages_warning(1, all_nodes = .true.)
+      end if
+      if(prof_vars%total_memory > 0) then
+        write(message(1),'(a,f18.3,a,f18.3,a)') "Remaining allocated memory: ", prof_vars%total_memory/megabyte, &
+          ' Mbytes (out of maximum ', prof_vars%max_memory/megabyte, ' Mbytes)'
+        call messages_warning(1, all_nodes = .true.)
       end if
     end if
 
@@ -897,7 +907,7 @@ contains
     ! get number of pages
     mem = get_memory_usage()
 
-    write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
+    write(prof_vars%mem_iunit, '(f16.6,a16,3i16,a70)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)
 
   end subroutine profiling_memory_log
@@ -918,12 +928,12 @@ contains
 
     size = size_ ! make a copy that we can change
 
+    prof_vars%alloc_count  = prof_vars%alloc_count + 1
+    prof_vars%total_memory = prof_vars%total_memory + size
+
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
       call profiling_memory_log('A ', var, file, line, size)
     end if
-
-    prof_vars%alloc_count  = prof_vars%alloc_count + 1
-    prof_vars%total_memory = prof_vars%total_memory + size
 
     if(prof_vars%memory_limit > 0) then
       if(prof_vars%total_memory > prof_vars%memory_limit) then
@@ -991,10 +1001,8 @@ contains
     end if
 
   end subroutine profiling_memory_deallocate
- 
 
 end module profiling_m
-
 
 !! Local Variables:
 !! mode: f90

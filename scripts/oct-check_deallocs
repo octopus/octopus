@@ -6,6 +6,11 @@
 
 %alloc   = {};
 %dealloc = {};
+$alloc_count = 0;
+$dealloc_count = 0;
+
+# skip header line
+$_=<>;
 
 while($_=<>){
     $_=~s/^\s*//;
@@ -16,17 +21,21 @@ while($_=<>){
     $varname =~ s/\([^(]*\.F90\:[0-9]+\)//g;
 
     if($type eq 'A'){
+	$alloc_count++;
 	$alloc{$varname}++;
 	if($dealloc{$varname} eq "") {
 	    $dealloc{$varname} = 0;
 	}
     }elsif($type eq 'D'){
+	$dealloc_count++;
 	$dealloc{$varname}++;
 	if($alloc{$varname} eq "") {
 	    $alloc{$varname} = 0;
 	}
     }
 }
+
+print " $alloc_count allocations, $dealloc_count deallocations\n";
 
 print "\n Allocs not deallocated\n"; 
 foreach $key (keys %alloc) {
