@@ -485,7 +485,6 @@ contains
     logical,                 optional, intent(in)    :: calc_energy
 
     type(profile_t), save :: prof
-    type(energy_t), pointer :: energy
     logical  :: cmplxscl
 
     PUSH_SUB(v_ks_calc_start)
@@ -528,12 +527,11 @@ contains
     end if
 
     SAFE_ALLOCATE(ks%calc%energy)
-    energy => ks%calc%energy
 
     call energy_copy(hm%energy, ks%calc%energy)
 
-    energy%intnvxc = M_ZERO
-    energy%Imintnvxc = M_ZERO !cmplxscl
+    ks%calc%energy%intnvxc = M_ZERO
+    ks%calc%energy%Imintnvxc = M_ZERO !cmplxscl
 
     ! check whether we should introduce the Amaldi SIC correction
     ks%calc%amaldi_factor = M_ONE
@@ -586,9 +584,9 @@ contains
     end if
 
     if(ks%vdw_correction) then
-      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, energy%vdw)
+      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw)
     else
-      energy%vdw = CNST(0.0)
+      ks%calc%energy%vdw = CNST(0.0)
     end if
     
     call profiling_out(prof)
@@ -768,13 +766,13 @@ contains
 
       cmplxscl = hm%cmplxscl%space
 
-      energy%exchange = M_ZERO
-      energy%correlation = M_ZERO
-      energy%xc_j = M_ZERO
+      ks%calc%energy%exchange = M_ZERO
+      ks%calc%energy%correlation = M_ZERO
+      ks%calc%energy%xc_j = M_ZERO
       !cmplxscl
-      energy%Imexchange = M_ZERO
-      energy%Imcorrelation = M_ZERO
-      energy%Imxc_j = M_ZERO
+      ks%calc%energy%Imexchange = M_ZERO
+      ks%calc%energy%Imcorrelation = M_ZERO
+      ks%calc%energy%Imxc_j = M_ZERO
 
 
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
@@ -800,16 +798,16 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vtau = ks%calc%vtau)
+            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-              ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc)
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%ispin, ks%calc%density, ks%calc%Imdensity, &
-              ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta, ex = energy%exchange, ec = energy%correlation, &
-              Imex = energy%Imexchange, Imec = energy%Imcorrelation)
+              ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, &
+              Imex = ks%calc%energy%Imexchange, Imec = ks%calc%energy%Imcorrelation)
           end if
         end if
       else
@@ -840,10 +838,10 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+                  ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           else
             call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-                  ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+                  ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
         endif
 
@@ -856,8 +854,8 @@ contains
 
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
-        energy%intnvxc = M_ZERO
-        energy%Imintnvxc = M_ZERO !cmplxscl
+        ks%calc%energy%intnvxc = M_ZERO
+        ks%calc%energy%Imintnvxc = M_ZERO !cmplxscl
 
         if(hm%d%ispin == SPINORS .and. cmplxscl) &
           call messages_not_implemented('Complex Scaling with SPINORS')
@@ -868,12 +866,13 @@ contains
             factor = M_TWO
           endif
           if (.not. cmplxscl) then
-            energy%intnvxc = energy%intnvxc + factor * dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
+              factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
           else
             ctmp = factor * zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, ispin) + M_zI * st%zrho%Im(:, ispin), &
               ks%calc%vxc(:, ispin) + M_zI * ks%calc%Imvxc(:, ispin), dotu = .true.)
-            energy%intnvxc = energy%intnvxc + real(ctmp)
-            energy%Imintnvxc = energy%Imintnvxc + aimag(ctmp)          
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + real(ctmp)
+            ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         enddo
       end if
