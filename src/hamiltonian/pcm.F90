@@ -345,7 +345,7 @@ contains
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
-    SAFE_ALLOCATE(sr_dist(pcm%n_tesserae,grid%mesh%np)) 
+    SAFE_ALLOCATE(sr_dist(1:pcm%n_tesserae, 1:grid%mesh%np)) 
     sr_dist = M_ZERO
     do ia = 1, pcm%n_tesserae
       call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices)

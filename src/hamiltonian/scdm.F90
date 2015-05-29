@@ -347,7 +347,7 @@ contains
 
     PUSH_SUB(dRRQR)
     ! dummy call to obtain dimension of work
-    SAFE_ALLOCATE(work(1))
+    SAFE_ALLOCATE(work(1:1))
     call DGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, info )
     if (info /= 0) then
       write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
@@ -357,7 +357,7 @@ contains
 
     lwork = work(1)
     SAFE_DEALLOCATE_A(work)
-    SAFE_ALLOCATE(work(lwork))
+    SAFE_ALLOCATE(work(1:lwork))
 
     jpvt(:) = 0
     tau(:) = 0.
@@ -386,7 +386,7 @@ contains
 
     PUSH_SUB(zRRQR)
     ! dummy call to obtain dimension of work
-    SAFE_ALLOCATE(work(1))
+    SAFE_ALLOCATE(work(1:1))
     call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, rwork, info)
     if (info /= 0) then
       write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
@@ -396,7 +396,7 @@ contains
 
     lwork = work(1)
     SAFE_DEALLOCATE_A(work)
-    SAFE_ALLOCATE(work(lwork))
+    SAFE_ALLOCATE(work(1:lwork))
 
     jpvt(:) = 0
     tau(:) = 0.

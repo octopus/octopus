@@ -57,9 +57,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   ! build transpose of KS set on which RRQR is performed
   if (scdm%root) then
-    SAFE_ALLOCATE(KSt(nval,mesh%np_global))
+    SAFE_ALLOCATE(KSt(1:nval,1:mesh%np_global))
     ! keep a copy of this NOTE: maybe too expensive in memory?
-    SAFE_ALLOCATE(KSt_original(nval,mesh%np_global))
+    SAFE_ALLOCATE(KSt_original(1:nval,1:mesh%np_global))
   endif
 
   !NOTE: not sure how to proceed if dim!=1 or nik!=1
@@ -105,7 +105,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
     ! form SCDM, Note: This could be done in one step together with the orhtogonalization
     !                  to save this allocation
-    SAFE_ALLOCATE(SCDM_temp(mesh%np_global,nval))
+    SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
     SCDM_temp(:,:) = M_ZERO
     do ii = 1, nval
       do vv = 1, nval
@@ -117,8 +117,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     if (scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul1:',t1-t2)
 
     ! --- Orthogoalization ----
-    ! form lower trinagle of Pcc
-    SAFE_ALLOCATE(Pcc(nval,nval))
+    ! form lower triangle of Pcc
+    SAFE_ALLOCATE(Pcc(1:nval,1:nval))
     Pcc(:,:) = M_ZERO
     do ii = 1, nval
       do jj = 1, ii
