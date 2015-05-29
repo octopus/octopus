@@ -32,7 +32,6 @@ SymmetrizeDensity = yes
 
 ExtraStates = 1
 ConvRelDens = 1e-7
-ne
 
 Output = geometry + dos
 OutputHow = xyz
