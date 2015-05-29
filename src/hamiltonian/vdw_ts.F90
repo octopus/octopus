@@ -112,7 +112,7 @@ contains
   !------------------------------------------
 
   subroutine vdw_ts_calculate(this, geo, der, density, energy)
-    type(vdw_ts_t),      intent(in)    :: this
+    type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     FLOAT,               intent(in)    :: density(:, :)
