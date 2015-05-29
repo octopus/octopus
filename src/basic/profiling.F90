@@ -219,13 +219,14 @@ contains
     !%Option prof_time 1
     !% Profile the time spent in defined profiling regions.
     !%Option prof_memory 2
-    !% As well as the time, memory usage is reported.
+    !% As well as the time, summary information on memory usage and the largest arrays are reported.
     !%Option prof_memory_full 4
-    !% As well as the time, full memory usage is reported.
+    !% As well as the time and summary memory information, a
+    !% log is reported of every allocation and deallocation.
     !%End
 
     call parse_integer('ProfilingMode', 0, prof_vars%mode)
-    if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode, is_flag=.true.)) then
+    if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode)) then
       call input_error('ProfilingMode')
     end if
 
