@@ -353,6 +353,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
   SAFE_DEALLOCATE_A(nrmsq)
+  SAFE_DEALLOCATE_A(eigen)
 
   POP_SUB(X(eigensolver_rmmdiis))
 
