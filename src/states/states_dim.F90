@@ -127,7 +127,8 @@ contains
     dout%pack_states    = din%pack_states
     dout%cl_states_mem  = din%cl_states_mem
 
-    call loct_pointer_copy(dout%kweights, din%kweights)
+    SAFE_ALLOCATE(dout%kweights(1:din%nik))
+    dout%kweights(:) = din%kweights(:)
 
     call distributed_copy(din%kpt, dout%kpt)
 
