@@ -134,6 +134,8 @@ dist_share_DATA =                                  \
         06-rdmft.02-gs.inp                         \
         06-rdmft.test                              \
 	07-sic.01-gs.inp                           \
-	07-sic.test
+	07-sic.test                                \
+	08-vdw_ts.test                             \
+	08-vdw_ts.01-gs.inp
 
 CLEANFILES = *~ *.bak
