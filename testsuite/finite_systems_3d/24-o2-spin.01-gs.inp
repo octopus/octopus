@@ -19,3 +19,6 @@ ParallelizationStrategy = par_kpoints
 
 FilterPotentials = filter_none
 
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes

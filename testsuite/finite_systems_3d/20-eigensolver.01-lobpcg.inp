@@ -25,3 +25,6 @@ ParallelizationStrategy = par_domains
 
 FilterPotentials = filter_none
 
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes

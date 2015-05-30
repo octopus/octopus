@@ -31,3 +31,6 @@ TDExpOrder = 100
 
 FilterPotentials = filter_none
 
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes

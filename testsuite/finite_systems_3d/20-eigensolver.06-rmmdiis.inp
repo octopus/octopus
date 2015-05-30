@@ -26,3 +26,6 @@ ExtraStates = 2
 
 FilterPotentials = filter_none
 
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes

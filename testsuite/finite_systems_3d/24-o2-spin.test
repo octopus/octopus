@@ -29,3 +29,5 @@ match ; Eigenvalue 6 dn    ; GREPFIELD(static/info, ' 6   dn', 3) ; -0.152778
 match ; Eigenvalue 7 up    ; GREPFIELD(static/info, ' 7   up', 3) ; -0.231622
 match ; Eigenvalue 7 dn    ; GREPFIELD(static/info, ' 7   dn', 3) ; -0.152778
 match ; Force              ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.094124
+match ; Partial charge 1   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 6.000
+match ; Partial charge 2   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 6.000

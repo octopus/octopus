@@ -36,3 +36,6 @@ OutputHow = openscad
 
 FilterPotentials = filter_none
 
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes

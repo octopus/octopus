@@ -52,3 +52,9 @@ match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14546817087529512
 #match ; Polyhedron point 1; LINEFIELD(static/density.scad, 319, 2); -3.469457
 #match ; Polyhedron point 2; LINEFIELD(static/density.scad, 320, 3); -2.951370
 #match ; Polyhedron face   ; LINEFIELD(static/density.scad, 323, 2);  2
+
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.983
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.946
+match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.023
+match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.024
+match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.024
