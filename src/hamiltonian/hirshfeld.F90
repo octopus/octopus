@@ -20,25 +20,30 @@
 #include "global.h"
 
 module hirshfeld_m
+  use derivatives_m
   use messages_m
   use geometry_m
   use global_m
   use mesh_m
   use mesh_function_m
   use profiling_m
+  use ps_m
   use species_pot_m
   use states_m
+  use species_m
   
   implicit none
 
   private
-  public ::                 &
-    hirshfeld_t,            &
-    hirshfeld_init,         &
-    hirshfeld_end,          &
-    hirshfeld_charge,       &
-    hirshfeld_volume_ratio
-
+  public ::                       &
+    hirshfeld_t,                  &
+    hirshfeld_init,               &
+    hirshfeld_end,                &
+    hirshfeld_charge,             &
+    hirshfeld_volume_ratio,       &
+    hirshfeld_density_derivative, &
+    hirshfeld_position_derivative
+  
   type hirshfeld_t
     private
     type(mesh_t),     pointer     :: mesh
@@ -116,7 +121,7 @@ contains
     FLOAT,                     intent(out)   :: charge
 
     integer :: ip
-    FLOAT :: dens_ip, rr
+    FLOAT :: dens_ip
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
     
     PUSH_SUB(hirshfeld_partition)
@@ -184,6 +189,93 @@ contains
     
     POP_SUB(hirshfeld_partition)
   end subroutine hirshfeld_volume_ratio
+  
+  ! -----------------------------------------------
+
+  subroutine hirshfeld_density_derivative(this, iatom, ddensity)
+    type(hirshfeld_t),         intent(in)    :: this
+    integer,                   intent(in)    :: iatom
+    FLOAT,                     intent(out)   :: ddensity(:)
+
+    integer :: ip
+    FLOAT :: dens_ip, rr
+    FLOAT, allocatable :: atom_density(:, :)
+    
+    PUSH_SUB(hirshfeld_density_derivative)
+
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+
+    do ip = 1, this%mesh%np
+      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+      dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
+
+      if(abs(dens_ip) > CNST(1e-12)) then
+        ddensity(ip) = rr**3*dens_ip/(this%total_density(ip)*this%free_volume(iatom))
+      else
+        ddensity(ip) = CNST(0.0)
+      end if
+
+    end do
+
+    SAFE_DEALLOCATE_A(atom_density)
+    
+    POP_SUB(hirshfeld_density_derivative)
+  end subroutine hirshfeld_density_derivative
+
+  ! -----------------------------------------------
+
+  subroutine hirshfeld_position_derivative(this, der, iatom, density, dposition)
+    type(hirshfeld_t),         intent(in)    :: this
+    type(derivatives_t),       intent(in)    :: der
+    integer,                   intent(in)    :: iatom
+    FLOAT,                     intent(in)    :: density(:, :)
+    FLOAT,                     intent(out)   :: dposition(:)
+
+    integer :: ip, idir
+    FLOAT :: dens_ip, rr
+    FLOAT, allocatable :: tdensity(:), grad(:, :), atom_density(:, :)
+    
+    PUSH_SUB(hirshfeld_density_derivative)
+
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+    SAFE_ALLOCATE(tdensity(1:this%mesh%np_part))
+    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
+    
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+
+    ! we use the same trick as for the forces:
+    !  df(r-R)/dR = f(r-R)*d/dr
+    
+    do ip = 1, this%mesh%np
+      tdensity(ip) = sum(density(ip, 1:this%st%d%nspin))
+    end do
+
+    call dderivatives_grad(der, tdensity, grad)
+    
+    do ip = 1, this%mesh%np
+      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+      dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
+
+      do idir = 1, this%mesh%sb%dim
+        if(abs(dens_ip) > CNST(1e-12)) then
+          grad(ip, idir) = grad(ip, idir)*rr**3*dens_ip/this%total_density(ip)
+        else
+          grad(ip, idir) = CNST(0.0)
+        end if
+      end do
+      
+    end do
+
+    do idir = 1, this%mesh%sb%dim
+      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
+    end do
+    
+    SAFE_DEALLOCATE_A(atom_density)
+    
+    POP_SUB(hirshfeld_density_derivative)
+  end subroutine hirshfeld_position_derivative
   
 end module hirshfeld_m
 
