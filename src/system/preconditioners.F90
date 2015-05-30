@@ -86,12 +86,15 @@ contains
 
     !%Variable Preconditioner
     !%Type integer
-    !%Default pre_filter
     !%Section SCF::Eigensolver
     !%Description
-    !% Which preconditioner to use in order to solve the Kohn-Sham equations or
-    !% the linear-response equations. May apply prefix of linear-response (<i>e.g.</i>
-    !% <tt>EM</tt>, <tt>KdotP</tt>, <tt>VM</tt>) to differentiate from choice for ground state.
+    !% Which preconditioner to use in order to solve the Kohn-Sham
+    !% equations or the linear-response equations. May apply prefix of
+    !% linear-response (<i>e.g.</i> <tt>EM</tt>, <tt>KdotP</tt>,
+    !% <tt>VM</tt>) to differentiate from choice for ground state. The
+    !% default is pre_filter, except for periodic systems or
+    !% curvilinear coordinates, where no preconditioner is applied by
+    !% default.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -108,7 +111,7 @@ contains
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
 
-    if(gr%mesh%use_curvilinear) then
+    if(gr%mesh%use_curvilinear .or. simul_box_is_periodic(gr%sb)) then
       default = PRE_NONE
     else
       default = PRE_FILTER

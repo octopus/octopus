@@ -34,3 +34,5 @@ SymmetrizeDensity = yes
 ExtraStates = 1
 ConvRelDens = 1e-7
 MaximumIter = 1
+
+Preconditioner = pre_filter

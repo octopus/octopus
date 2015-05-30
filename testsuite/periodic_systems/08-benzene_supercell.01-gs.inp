@@ -29,3 +29,5 @@ FromScratch = yes
 
 ProfilingMode = yes
 SCFCalculateDipole = yes
+
+Preconditioner = pre_filter

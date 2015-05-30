@@ -45,3 +45,5 @@ ParallelizationStrategy = par_kpoints
 # LCAO is actually metallic
 SmearingFunction = fermi_dirac
 Smearing = 0.01
+
+Preconditioner = pre_filter
