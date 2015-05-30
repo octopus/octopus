@@ -36,7 +36,8 @@ module hirshfeld_m
     hirshfeld_t,            &
     hirshfeld_init,         &
     hirshfeld_end,          &
-    hirshfeld_partition
+    hirshfeld_charge,       &
+    hirshfeld_volume_ratio
 
   type hirshfeld_t
     private
@@ -107,13 +108,12 @@ contains
   end subroutine hirshfeld_end
 
   ! -----------------------------------------------
-
-  subroutine hirshfeld_partition(this, iatom, density, charge, volume_ratio)
+  
+  subroutine hirshfeld_charge(this, iatom, density, charge)
     type(hirshfeld_t),         intent(in)    :: this
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
-    FLOAT, optional,           intent(out)   :: volume_ratio
 
     integer :: ip
     FLOAT :: dens_ip, rr
@@ -138,23 +138,52 @@ contains
     end do
 
     charge = dmf_integrate(this%mesh, hirshfeld_density)
-
-    if(present(volume_ratio)) then
-      
-      do ip = 1, this%mesh%np
-        rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
-        hirshfeld_density(ip) = hirshfeld_density(ip)*rr**3
-      end do
-      
-      volume_ratio = dmf_integrate(this%mesh, hirshfeld_density)/this%free_volume(iatom)
-      
-    end if
     
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
     
     POP_SUB(hirshfeld_partition)
-  end subroutine hirshfeld_partition
+  end subroutine hirshfeld_charge
+
+  ! -----------------------------------------------    
+
+  subroutine hirshfeld_volume_ratio(this, iatom, density, volume_ratio)
+    type(hirshfeld_t),         intent(in)    :: this
+    integer,                   intent(in)    :: iatom
+    FLOAT,                     intent(in)    :: density(:, :)
+    FLOAT,                     intent(out)   :: volume_ratio
+
+    integer :: ip
+    FLOAT :: dens_ip, rr
+    FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
+    
+    PUSH_SUB(hirshfeld_partition)
+
+    ASSERT(associated(this%total_density))
+    
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
+    
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+
+    do ip = 1, this%mesh%np
+      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+            
+      dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
+      if(abs(dens_ip) > CNST(1e-12)) then
+        hirshfeld_density(ip) = rr**3*sum(density(ip, 1:this%st%d%nspin))*dens_ip/this%total_density(ip)
+      else
+        hirshfeld_density(ip) = CNST(0.0)
+      end if
+    end do
+    
+    volume_ratio = dmf_integrate(this%mesh, hirshfeld_density)/this%free_volume(iatom)
+    
+    SAFE_DEALLOCATE_A(atom_density)
+    SAFE_DEALLOCATE_A(hirshfeld_density)
+    
+    POP_SUB(hirshfeld_partition)
+  end subroutine hirshfeld_volume_ratio
   
 end module hirshfeld_m
 

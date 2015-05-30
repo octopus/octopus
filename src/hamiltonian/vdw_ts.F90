@@ -130,7 +130,7 @@ contains
     
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      call hirshfeld_partition(this%hirshfeld, iatom, density, charge, volume_ratio(iatom))
+      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
       c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
       r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
       print*, species_label(geo%atom(iatom)%species), "vol", volume_ratio(iatom)

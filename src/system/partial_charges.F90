@@ -107,7 +107,7 @@ contains
       call hirshfeld_init(hirshfeld, mesh, geo, st)
       
       do iatom = 1, geo%natoms
-        call hirshfeld_partition(hirshfeld, iatom, st%rho, hirshfeld_charges(iatom))
+        call hirshfeld_charge(hirshfeld, iatom, st%rho, hirshfeld_charges(iatom))
       end do
       
       call hirshfeld_end(hirshfeld)
