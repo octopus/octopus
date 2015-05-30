@@ -44,7 +44,7 @@ module hirshfeld_m
     type(geometry_t), pointer     :: geo
     type(states_t),   pointer     :: st
     FLOAT,            pointer     :: total_density(:)
-    FLOAT,            pointer     :: free_charge(:)
+    FLOAT,            pointer     :: free_volume(:)
   end type hirshfeld_t
     
 contains
@@ -55,7 +55,8 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(states_t),    target, intent(in)    :: st
     
-    integer :: iatom, ip, ispin
+    integer :: iatom, ip
+    FLOAT :: rr
     FLOAT, allocatable :: atom_density(:, :)
     
     PUSH_SUB(hirshfeld_init)
@@ -65,18 +66,22 @@ contains
     this%st   => st
 
     SAFE_ALLOCATE(this%total_density(1:this%mesh%np))
-    SAFE_ALLOCATE(this%free_charge(1:geo%natoms))
+    SAFE_ALLOCATE(this%free_volume(1:geo%natoms))
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
 
     this%total_density = CNST(0.0)
     
     do iatom = 1, geo%natoms
       call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
-      this%free_charge(iatom) = CNST(0.0)
-      do ispin = 1, st%d%nspin
-        this%free_charge(iatom) = this%free_charge(iatom) + dmf_integrate(this%mesh, atom_density(:, ispin))
-      end do
+
       forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
+      
+      do ip = 1, this%mesh%np
+        rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+        atom_density(ip, 1) = sum(atom_density(ip, 1:this%st%d%nspin))*rr**3
+      end do
+
+      this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density(:, 1))
     end do
 
     SAFE_DEALLOCATE_A(atom_density)
@@ -92,7 +97,7 @@ contains
     PUSH_SUB(hirshfeld_end)
 
     SAFE_DEALLOCATE_P(this%total_density)
-    SAFE_DEALLOCATE_P(this%free_charge)
+    SAFE_DEALLOCATE_P(this%free_volume)
 
     nullify(this%mesh)
     nullify(this%geo)
@@ -111,7 +116,7 @@ contains
     FLOAT, optional,           intent(out)   :: volume_ratio
 
     integer :: ip
-    FLOAT :: dens_ip, rr, free_volume
+    FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
     
     PUSH_SUB(hirshfeld_partition)
@@ -135,16 +140,13 @@ contains
     charge = dmf_integrate(this%mesh, hirshfeld_density)
 
     if(present(volume_ratio)) then
+      
       do ip = 1, this%mesh%np
         rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
         hirshfeld_density(ip) = hirshfeld_density(ip)*rr**3
-        atom_density(ip, 1) = sum(atom_density(ip, 1:this%st%d%nspin))*rr**3
       end do
       
-      volume_ratio = dmf_integrate(this%mesh, hirshfeld_density)
-      free_volume = dmf_integrate(this%mesh, atom_density(:, 1))
-      
-      volume_ratio = volume_ratio/free_volume
+      volume_ratio = dmf_integrate(this%mesh, hirshfeld_density)/this%free_volume(iatom)
       
     end if
     
