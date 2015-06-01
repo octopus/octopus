@@ -161,10 +161,6 @@ contains
       end do
     end if
 
-    write(message(1), '(a,i2)') '      l max = ', ps_upf%l_max
-    write(message(2), '(a,i2)') '      l loc = ', ps_upf%l_local
-    call messages_info(2)
-
     SAFE_ALLOCATE(ps_upf%nchannels(0:ps_upf%l_max))
     
     do ll = 0, ps_upf%l_max
