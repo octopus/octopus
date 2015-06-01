@@ -37,7 +37,7 @@ static int  disable_write;
 
 #define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
 
-static char *str_trim(char *in)
+void str_trim(char *in)
 {
   char *c, *s = in;
 
@@ -45,8 +45,6 @@ static char *str_trim(char *in)
   for(; *c != '\0'; *s++=*c++);
   for(s--; s>=in && isspace(*s); s--);
   *(s+1) = '\0';
-
-  return in;
 }
 
 static int parse_get_line(FILE *f, char **s, int *length)

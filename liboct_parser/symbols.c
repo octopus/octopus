@@ -35,12 +35,10 @@
 /* The symbol table: a chain of `struct symrec'.  */
 symrec *sym_table = (symrec *)0;
 
-char *str_tolower(char *in)
+void str_tolower(char *in)
 {
-  char *s;
-  for(s=in; *s; s++)
-    *s = (char)tolower(*s);
-  return in;
+  for(; *in; in++)
+    *in = (char)tolower(*in);
 }
 
 symrec *putsym (char *sym_name, symrec_type sym_type)

@@ -62,6 +62,6 @@ void sym_init_table(void);
 void sym_clear_reserved(void);
 void sym_end_table(void);
 void sym_output_table(int only_unused);
-char *str_tolower(char *in);
+void str_tolower(char *in);
 
 #endif
