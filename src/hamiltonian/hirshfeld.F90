@@ -124,7 +124,7 @@ contains
     FLOAT :: dens_ip
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
     
-    PUSH_SUB(hirshfeld_partition)
+    PUSH_SUB(hirshfeld_charge)
 
     ASSERT(associated(this%total_density))
     
@@ -147,7 +147,7 @@ contains
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
     
-    POP_SUB(hirshfeld_partition)
+    POP_SUB(hirshfeld_charge)
   end subroutine hirshfeld_charge
 
   ! -----------------------------------------------    
@@ -162,7 +162,7 @@ contains
     FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
     
-    PUSH_SUB(hirshfeld_partition)
+    PUSH_SUB(hirshfeld_volume_ratio)
 
     ASSERT(associated(this%total_density))
     
@@ -187,7 +187,7 @@ contains
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
     
-    POP_SUB(hirshfeld_partition)
+    POP_SUB(hirshfeld_volume_ratio)
   end subroutine hirshfeld_volume_ratio
   
   ! -----------------------------------------------
@@ -237,7 +237,7 @@ contains
     FLOAT :: dens_ip, rr
     FLOAT, allocatable :: tdensity(:), grad(:, :), atom_density(:, :)
     
-    PUSH_SUB(hirshfeld_density_derivative)
+    PUSH_SUB(hirshfeld_position_derivative)
 
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(tdensity(1:this%mesh%np_part))
@@ -274,7 +274,7 @@ contains
     
     SAFE_DEALLOCATE_A(atom_density)
     
-    POP_SUB(hirshfeld_density_derivative)
+    POP_SUB(hirshfeld_position_derivative)
   end subroutine hirshfeld_position_derivative
   
 end module hirshfeld_m
