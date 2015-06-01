@@ -553,9 +553,13 @@ contains
 
     call modelmb_particles_init (st%modelmbparticles,gr)
     if (st%modelmbparticles%nparticle > 0) then
+      ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
+      st%mmb_nspindown(:,:) = 0
       SAFE_ALLOCATE(st%mmb_iyoung(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
+      st%mmb_iyoung(:,:) = 0
       SAFE_ALLOCATE(st%mmb_proj(1:st%nst))
+      st%mmb_proj(:) = M_ZERO
     end if
 
     !%Variable SymmetrizeDensity
