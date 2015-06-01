@@ -64,7 +64,7 @@ contains
     type(filter_t), intent(inout) :: filter
 
     type(block_t) :: blk
-    integer :: no_c, i, no_f
+    integer :: i, no_f
 
     PUSH_SUB(filter_init)
 
@@ -122,7 +122,6 @@ contains
       SAFE_ALLOCATE(filter%domain(1:no_f))
 
       do i=1, no_f
-        no_c = parse_block_cols(blk, i-1)       
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
@@ -243,7 +242,6 @@ contains
     type(filter_t), intent(in) :: filter
 
     integer :: kk, iunit, i, max_iter
-    FLOAT :: dt
     character(len=80) :: filename
     FLOAT, allocatable :: wgrid(:)
 
@@ -257,7 +255,6 @@ contains
     do kk = 1, filter%no_filters
       write(filename,'(a,i2.2)') OCT_DIR//'filter', kk
       max_iter = tdf_niter(filter%f(kk))
-      dt = tdf_dt(filter%f(kk))
       iunit = io_open(filename, action='write')
       SAFE_ALLOCATE(wgrid(1:max_iter/2+1))
       call tdf_fourier_grid(filter%f(kk), wgrid)
