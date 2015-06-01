@@ -897,16 +897,16 @@ contains
     !% (<tt>SpinComponents = spinors</tt>).
     !%
     !% The structure of the block is very simple: each column contains the desired
-    !% &lt;<i>S_x</i>&gt;, &lt;<i>S_y</i>&gt;, &lt;<i>S_z</i>&gt; for each spinor.
+    !% <math>\left< S_x \right>, \left< S_y \right>, \left< S_z \right> </math> for each spinor.
     !% If the calculation is for a periodic system
     !% and there is more than one <i>k</i>-point, the spins of all the <i>k</i>-points are
     !% the same.
     !%
-    !% For example, if we have two spinors, and we want one in the <i>Sx</i> "down" state,
-    !% and another one in the <i>Sx</i> "up" state:
+    !% For example, if we have two spinors, and we want one in the <math>S_x</math> "down" state,
+    !% and another one in the <math>S_x</math> "up" state:
     !%
     !% <tt>%InitialSpins
-    !% <br>&nbsp;&nbsp;  0.5 | 0.0 | 0.0
+    !% <br>&nbsp;&nbsp;&nbsp; 0.5 | 0.0 | 0.0
     !% <br>&nbsp;&nbsp; -0.5 | 0.0 | 0.0
     !% <br>%</tt>
     !%
@@ -915,11 +915,8 @@ contains
     !% meaningless since the random spinors are overwritten by the atomic orbitals.
     !%
     !% There are a couple of physical constraints that have to be fulfilled:
-    !%
-    !% (A) | &lt;<i>S_i</i>&gt; | &lt;= 1/2
-    !%
-    !% (B) &lt;<i>S_x</i>&gt;^2 + &lt;<i>S_y</i>&gt;^2 + &lt;<i>S_z</i>&gt;^2 = 1/4
-    !%
+    !% <br>(A) <math> \left| \left< S_i \right> \right| \le \frac{1}{2} </math>
+    !% <br>(B) <math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
     !%End
     spin_fix: if(parse_block('InitialSpins', blk)==0) then
       do i = 1, st%nst
