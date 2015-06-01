@@ -18,4 +18,4 @@ Input: 06-vib_modes_fd.01-vib_modes_fd.inp
 Precision : 0.002
 match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_fd, 1, 2) ; 1421.73038033
 Precision : 1.5e-6
-match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5)  ; -0.01820330275545
+match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5)  ; -0.01820233141745
