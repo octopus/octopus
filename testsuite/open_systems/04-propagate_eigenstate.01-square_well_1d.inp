@@ -41,6 +41,7 @@ WW = 10
 
 # The lead.
 lead_PeriodicDimensions = 1
+lead_Preconditioner = pre_filter
 %lead_Coordinates
  "flat" | 0
 %
