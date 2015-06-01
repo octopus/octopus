@@ -651,8 +651,7 @@ contains
         !%End
         if(parse_is_defined('TransformStates')) then
           if(parse_block('TransformStates', blk) == 0) then
-            call states_copy(stin, st)
-            SAFE_DEALLOCATE_P(stin%zpsi)
+            call states_copy(stin, st, exclude_wfns = .true.)
             call states_look_and_load(restart, stin, gr)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
@@ -662,6 +661,7 @@ contains
                 call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
+            call parse_block_end(blk)
             if(states_are_real(st)) then
               call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
             else
