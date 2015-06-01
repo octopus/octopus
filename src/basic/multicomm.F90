@@ -180,11 +180,6 @@ contains
 
     call strategy()
 
-    if (mc%nthreads > 1) then
-      write(message(1),'(a, i3)') 'Info: Number of threads ', mc%nthreads
-      call messages_info(1)
-    end if
-
     nullify(mc%group_sizes)
     mc%have_slaves = .false.
 
@@ -331,11 +326,16 @@ contains
 #endif
 
       if(mc%par_strategy == P_STRATEGY_SERIAL .and. mc%nthreads == 1) then
-        message(1) = "Octopus will run in *serial*"
+        message(1) = "Info: Octopus will run in *serial*"
+        call messages_info(1)
       else
-        message(1) = "Octopus will run in *parallel*"
+        write(message(1),'(a)')     'Info: Octopus will run in *parallel*'
+        write(message(2),'(a)')     ''
+        write(message(3),'(a, i8)') '      Number of processes           :', base_grp%size
+        write(message(4),'(a, i8)') '      Number of threads per process :', mc%nthreads
+        write(message(5),'(a)')     ''
+        call messages_info(5)
       end if
-      call messages_info(1)
       
       POP_SUB(multicomm_init.strategy)
     end subroutine strategy
