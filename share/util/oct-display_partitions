@@ -2,28 +2,22 @@
 #
 # $Id$
 #
-# Script to use gnuplot to plot the partitioning of
-# the mesh.
-# The files mesh_partition.XXX as produced in debug/mesh_partition by
+# Script to use gnuplot to plot the partitioning of the mesh.
+# The files mesh_partition.XXXXXX as produced in debug/mesh_partition by
 # the octopus debug mode have to be present in the current working
 # directory when this script is invoked.
-# The plot can be found in the file mesh_partitions.png.
 # This script generates a gnuplot-script called mesh_partitions_index.gp
 # which is stored in the current working directory and can be loaded into
 # gnuplot manually.
 # With
 #
-#   gnuplot> load mesh_partitions_index.gp
-#   gnuplot> set term x11
-#   gnuplot> replot
+#   gnuplot> load 'mesh_partitions_index.gp'
 #
 # the plot can be reproduced and shown on the screen so that
 # rotating and zooming is possible.
-#
 
 # Output files.
 GP_IN=mesh_partitions_index.gp
-PNG_OUT=mesh_partitions.png
 
 # Plot each partition with different linetype.
 function plot_partition () {
@@ -40,18 +34,13 @@ function plot_partition () {
 }
 
 # Global settings for gnuplot file.
-# Due to some strange circumstances, replotting does
-# not work correctly with png terminal. We first plot
-# everything to dumb going to /dev/null and
-# switch terminal to png in the end and replot (s. b.).
 {
   cat <<EOF
     
 unset key
 unset label
     
-set term dumb
-set out '/dev/null'
+set term x11
 
 set xlabel "x"
 set ylabel "y"
@@ -70,14 +59,12 @@ EOF
 # awk '{print "set label \"" $1"\" at "$2+0.17","$3","$4}' >> $GP_IN
 
 # Loop over partitions.
-for f in mesh_partition.???; do
+FILES=`ls mesh_partition.*`
+if [ x"$FILES" == x ]; then
+    echo "No mesh_partition files found. Run from debug/mesh_partition directory."
+    exit 1;
+fi
+for f in mesh_partition.*; do
   echo processing: $f
   plot_partition $f
 done
-
-# Write plot to png file.
-echo set term png color >> $GP_IN
-echo set out "'$PNG_OUT'" >> $GP_IN
-echo replot >> $GP_IN
-
-gnuplot $GP_IN
