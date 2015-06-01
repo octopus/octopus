@@ -914,23 +914,17 @@ contains
     !% opposed to user-defined potentials or model systems), this option is
     !% meaningless since the random spinors are overwritten by the atomic orbitals.
     !%
-    !% There are a couple of physical constraints that have to be fulfilled:
-    !% <br>(A) <math> \left| \left< S_i \right> \right| \le \frac{1}{2} </math>
-    !% <br>(B) <math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
+    !% This constraint must be fulfilled:
+    !% <br><math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
     !%End
     spin_fix: if(parse_block('InitialSpins', blk)==0) then
       do i = 1, st%nst
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
-        ! This checks (B).
         if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
       end do
       call parse_block_end(blk)
-      ! This checks (A). In fact (A) follows from (B), so maybe this is not necessary...
-      if(any(abs(st%spin(:, :, :)) > M_HALF)) then
-        call messages_input_error('InitialSpins')
-      end if
       st%fixed_spins = .true.
       do i = 2, st%d%nik
         st%spin(:, :, i) = st%spin(:, :, 1)
@@ -980,7 +974,6 @@ contains
     !%
     !% Warning: This variable is designed for testing and
     !% benchmarking and normal users need not use it.
-    !%
     !%End
     call parse_variable('ForceComplex', .false., force)
 
