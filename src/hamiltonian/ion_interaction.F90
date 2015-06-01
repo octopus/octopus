@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -351,7 +350,7 @@ contains
             zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
             (erfc/rr + M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*rr)**2))/rr**2
         end do
-        
+
       end do
       
       call periodic_copy_end(pc)
