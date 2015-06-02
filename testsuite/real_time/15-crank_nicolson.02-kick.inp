@@ -38,3 +38,10 @@ TDDeltaStrength = 0.2
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 5
+
+%TransformStates
+ 1/sqrt(2) | i/sqrt(2) | 0 | 0
+-1/sqrt(2) | i/sqrt(2) | 0 | 0
+ 0         | 0         | 0 | 1
+ 0         | 0         | 1 | 0
+%
