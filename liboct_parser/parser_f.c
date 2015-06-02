@@ -185,32 +185,22 @@ void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 
 
 /* --------------------------------------------------------- */
-static void parse_block_error(char *type, char *name, int l, int c){
+static void parse_block_error(const char *type, const char *name, int l, int c){
   fprintf(stderr, "Parser error: block \"%s\" does not contain a %s in line %d and col %d.\n",
 					name, type, l, c);
   exit(1);
 }
-static char *block_name = NULL;
-
 
 /* --------------------------------------------------------- */
 int FC_FUNC_(oct_parse_block, OCT_PARSE_BLOCK)
 	(STR_F_TYPE name, sym_block **blk STR_ARG1)
 {
   int r;
-
-  if(block_name != NULL){
-    free(block_name);
-    block_name = NULL;
-  }
+  char *block_name;
 
   TO_C_STR1(name, block_name);
   r = parse_block(block_name, blk);
-
-  if(r != 0){
-    free(block_name);
-    block_name = NULL;
-  }
+  free(block_name);
   return r;
 }
 
@@ -219,11 +209,7 @@ int FC_FUNC_(oct_parse_block, OCT_PARSE_BLOCK)
 void FC_FUNC_(oct_parse_block_end, OCT_PARSE_BLOCK_END)
 	(sym_block **blk)
 {
-  assert(block_name!=NULL);
-
   parse_block_end(blk);
-  free(block_name);
-  block_name = NULL;
 }
 
 
@@ -248,7 +234,7 @@ void FC_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 	(sym_block **blk, int *l, int *c, int *res)
 {
   if(parse_block_int(*blk, *l, *c, res) != 0)
-    parse_block_error("int", block_name, *l, *c);
+    parse_block_error("int", (*blk)->name, *l, *c);
 }
 
 
@@ -257,7 +243,7 @@ void FC_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 	(sym_block **blk, int *l, int *c, double *res)
 {
   if(parse_block_double(*blk, *l, *c, res) != 0)
-    parse_block_error("double", block_name, *l, *c);
+    parse_block_error("double", (*blk)->name, *l, *c);
 }
 
 
@@ -266,7 +252,7 @@ void FC_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
 	(sym_block **blk, int *l, int *c, gsl_complex *res)
 {
   if(parse_block_complex(*blk, *l, *c, res) != 0)
-    parse_block_error("complex", block_name, *l, *c);
+    parse_block_error("complex", (*blk)->name, *l, *c);
 }
 
 
@@ -277,7 +263,7 @@ void FC_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
   char *s;
   
   if(parse_block_string(*blk, *l, *c, &s) != 0)
-    parse_block_error("string", block_name, *l, *c);
+    parse_block_error("string", (*blk)->name, *l, *c);
   else{
     TO_F_STR1(s, res);
     free(s);
