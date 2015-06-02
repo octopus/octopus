@@ -259,7 +259,7 @@ contains
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
 
-    der%zero_bc = (sb%periodic_dim < 3)
+    der%zero_bc = (sb%periodic_dim < der%dim)
     der%periodic_bc = (sb%periodic_dim > 0)
 
     ! find out how many ghost points we need in each dimension
@@ -607,6 +607,7 @@ contains
     message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
     call messages_info(1)
 
+    ! FIXME: only ok when running in 3D!
     non_orthogonal_axes = abs(mesh%sb%rlattice_primitive(1,2))+&
                           abs(mesh%sb%rlattice_primitive(1,3))+&
                           abs(mesh%sb%rlattice_primitive(2,3))+&
