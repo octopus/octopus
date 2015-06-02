@@ -3616,9 +3616,9 @@ contains
   !! SOURCE
   !!
   subroutine convolxc_off(n1,n2,n3,nd1,nd2,nd3,md1,md2,md3, &
-    nproc,iproc,pot,zf,scal,hgrid,comm)
+    nproc,iproc,pot,zf,scal,comm)
     integer, intent(in) :: n1,n2,n3,nd1,nd2,nd3,md1,md2,md3,nproc,iproc
-    real(8), intent(in) :: scal,hgrid
+    real(8), intent(in) :: scal
     real(8), dimension(nd1,nd2,nd3/nproc), intent(in) :: pot
     real(8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
     integer, intent(in) :: comm
@@ -4663,3 +4663,8 @@ end subroutine kernelfft
   end subroutine inserthalf
 
 end module sgfft_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

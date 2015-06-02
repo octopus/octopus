@@ -64,7 +64,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
     i101 = 6,            &
     i011 = 7,            &
     i111 = 8
-  integer :: pt(1:8), npt, ipt, ipart
+  integer :: pt(1:8), npt, ipt
 #ifdef HAVE_MPI
   logical :: inner_point, boundary_point
 #endif
@@ -165,9 +165,8 @@ end subroutine X(mesh_interpolation_evaluate_vec)
 
 ! --------------------------------------------------------------
 
-subroutine X(mesh_interpolation_test)(mesh, geo)
+subroutine X(mesh_interpolation_test)(mesh)
   type(mesh_t),     intent(in) :: mesh
-  type(geometry_t), intent(in) :: geo
 
   integer, parameter :: ntest_points = 20
   integer :: ip, idir, itest

@@ -1669,7 +1669,7 @@ contains
     call enterdensity(rhopot(1,1,1), m1, m2, m3, md1, md2, md3, iproc, nproc, zf(1,1,1))
 
     !this routine builds the values for each process of the potential (zf), multiplying by the factor
-    call convolxc_off(n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, nproc, iproc, kernelloc, zf, scal, hgrid, comm)
+    call convolxc_off(n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, nproc, iproc, kernelloc, zf, scal, comm)
 
     !building the array of the data to be sent from each process
     !and the array of the displacement

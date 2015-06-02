@@ -274,7 +274,7 @@ program oct_test
       call messages_new_line()
       call messages_info()
 
-      call dmesh_interpolation_test(sys%gr%mesh, sys%geo)
+      call dmesh_interpolation_test(sys%gr%mesh)
     endif
 
     if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
@@ -284,7 +284,7 @@ program oct_test
       call messages_new_line()
       call messages_info()
 
-      call zmesh_interpolation_test(sys%gr%mesh, sys%geo)
+      call zmesh_interpolation_test(sys%gr%mesh)
     endif
 
     call system_end(sys)
@@ -298,7 +298,7 @@ program oct_test
   subroutine test_ion_interaction()
     type(system_t) :: sys
 
-    PUSH_SUB(test_interpolation)
+    PUSH_SUB(test_ion_interaction)
 
     call system_init(sys)
 
@@ -306,7 +306,7 @@ program oct_test
 
     call system_end(sys)
 
-    POP_SUB(test_interpolation)
+    POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
   
 
