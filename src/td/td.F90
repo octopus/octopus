@@ -634,14 +634,9 @@ contains
         !% read from the <tt>restart/gs</tt> directory, which should have been
         !% generated in a previous ground-state calculation) can be "transformed"
         !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
-        !% to be used. The number of rows of the matrix should equal the number
+        !% to be used. The number of rows and columns of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
-        !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
-        !% columns should be equal to the number of states present in the
-        !% <tt>restart/gs</tt> directory. This number may be different: for example,
-        !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
-        !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
-        !% These states can be used in the transformation.
+        !% spin and <i>k</i>-point subspaces are all transformed equally).
         !%
         !% Note that the code will not check the orthonormality of the new states!
         !%
@@ -654,12 +649,20 @@ contains
           if(parse_block('TransformStates', blk) == 0) then
             if(st%parallel_in_states) &
               call messages_not_implemented("TransformStates parallel in states")
+            if(parse_block_n(blk) /= st%nst) then
+              message(1) = "Number of rows in block TransformStates must equal number of states in this calculation."
+              call messages_fatal(1)
+            endif
             call states_copy(stin, st)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst
-              do jst = 1, parse_block_cols(blk, ist-1)
+              if(parse_block_cols(blk, ist-1) /= st%nst) then
+                message(1) = "Number of columns in block TransformStates must equal number of states in this calculation."
+                call messages_fatal(1)
+              endif
+              do jst = 1, st%nst
                 call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
