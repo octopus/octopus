@@ -148,10 +148,6 @@ contains
       end do
     end if
 
-    write(message(1), '(a,i2)') '      l max = ', ps_upf%l_max
-    write(message(2), '(a,i2)') '      l loc = ', ps_upf%l_local
-    call messages_info(2)
-
     ! Define the KB-projector cut-off radii
     call ps_upf_cutoff_radii(ps_upf)
 

@@ -161,7 +161,7 @@ contains
         call messages_fatal(1)
       end if
 
-      message(1) = "Info: Vanderbilt function local potential."
+      message(1) = "Info: The local potential is a Vanderbilt function."
       call messages_info(1)
 
       a = CNST(1.82) / rcore
