@@ -344,7 +344,10 @@ int parse_block_n(const sym_block *blk)
 int parse_block_cols(const sym_block *blk, int l)
 {
   assert(blk!=NULL);
-  assert(l>=0 && l<blk->n);
+  if(l < 0 || l >= blk->n){
+     fprintf(stderr, "Parser error: row %i out of range [0,%i] when parsing block '%s'.\n", l, blk->n-1, blk->name);
+    exit(1);
+  }
   
   return blk->lines[l].n;
 }
@@ -353,10 +356,9 @@ static int parse_block_work(const sym_block *blk, int l, int col, parse_result *
 {
   assert(blk!=NULL);
   assert(l>=0 && l<blk->n);
-  assert(col>=0);
 
-  if(col >= blk->lines[l].n){
-     fprintf(stderr, "Parser error: not enough columns found when parsing block '%s'.\n", blk->name);
+  if(col < 0 || col >= blk->lines[l].n){
+     fprintf(stderr, "Parser error: column %i out of range [0,%i] when parsing block '%s'.\n", col, blk->lines[l].n-1, blk->name);
     exit(1);
   }
   
