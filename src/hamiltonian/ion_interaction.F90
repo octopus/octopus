@@ -289,12 +289,12 @@ contains
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :) !< sb%dim, geo%natoms
+    FLOAT,                     intent(out)   :: force(:, :) !< (sb%dim, geo%natoms)
     FLOAT, optional,           intent(out)   :: energy_components(:)
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
-    integer :: iatom, jatom, icopy, atom_start, atom_end
+    integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
@@ -304,9 +304,6 @@ contains
     type(profile_t), save :: prof_short, prof_long
 
     PUSH_SUB(ion_interaction_periodic)
-
-    ! Check http://www.duke.edu/~kz10/file/ewald.pdf for the equations
-    ! implemented here.
 
     if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
       message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
