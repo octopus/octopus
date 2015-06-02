@@ -34,6 +34,10 @@ subroutine X(states_rotate)(mesh, st, stin, uu)
   
   PUSH_SUB(X(states_rotate))
 
+  if(st%parallel_in_states) &
+    call messages_not_implemented("states_rotate parallel in states")
+  ! FIXME: use pblas_gemm for parallel in states, like in subspace_inc.F90
+
   ASSERT(associated(st%X(psi)))
   ASSERT(associated(stin%X(psi)))
   

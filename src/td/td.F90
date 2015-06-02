@@ -648,11 +648,13 @@ contains
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones. The coefficients are complex, but the imaginary part will be
         !% ignored for real wavefunctions.
+        !% Note: This variable cannot be used when parallel in states.
         !%End
         if(parse_is_defined('TransformStates')) then
           if(parse_block('TransformStates', blk) == 0) then
-            call states_copy(stin, st, exclude_wfns = .true.)
-            call states_look_and_load(restart, stin, gr)
+            if(st%parallel_in_states) &
+              call messages_not_implemented("TransformStates parallel in states")
+            call states_copy(stin, st)
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
