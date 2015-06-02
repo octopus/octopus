@@ -41,7 +41,7 @@ void str_tolower(char *in)
     *in = (char)tolower(*in);
 }
 
-symrec *putsym (char *sym_name, symrec_type sym_type)
+symrec *putsym (const char *sym_name, symrec_type sym_type)
 {
   symrec *ptr;
   ptr = (symrec *)malloc(sizeof(symrec));
@@ -59,7 +59,7 @@ symrec *putsym (char *sym_name, symrec_type sym_type)
   return ptr;
 }
 
-symrec *getsym (char *sym_name)
+symrec *getsym (const char *sym_name)
 {
   symrec *ptr;
   for (ptr = sym_table; ptr != (symrec *) 0;
@@ -71,7 +71,7 @@ symrec *getsym (char *sym_name)
   return (symrec *) 0;
 }
 
-int rmsym (char *sym_name)
+int rmsym (const char *sym_name)
 {
   symrec *ptr, *prev;
   for (prev = (symrec *) 0, ptr = sym_table; ptr != (symrec *) 0;

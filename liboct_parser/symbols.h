@@ -52,9 +52,9 @@ typedef struct symrec{
 extern symrec *sym_table;
 extern char *reserved_symbols[];
 
-symrec *putsym (char *sym_name, symrec_type sym_type);
-symrec *getsym (char *sym_name);
-int      rmsym (char *sym_name);
+symrec *putsym (const char *sym_name, symrec_type sym_type);
+symrec *getsym (const char *sym_name);
+int      rmsym (const char *sym_name);
 
 void sym_notdef(symrec *sym);
 void sym_wrong_arg(symrec *sym);

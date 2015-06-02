@@ -70,7 +70,7 @@ static int parse_get_line(FILE *f, char **s, int *length)
   return c;
 }
 
-int parse_init(char *file_out, int *mpiv_node)
+int parse_init(const char *file_out, const int *mpiv_node)
 {
   sym_init_table();
 
@@ -92,7 +92,7 @@ int parse_init(char *file_out, int *mpiv_node)
   return 0;
 }
 
-int parse_input(char *file_in)
+int parse_input(const char *file_in)
 {
   FILE *f;
   char *s;
@@ -201,7 +201,7 @@ void parse_end()
   }
 }
 
-int parse_isdef(char *name)
+int parse_isdef(const char *name)
 {
   if(getsym(name) == NULL)
     return 0;
@@ -217,7 +217,7 @@ static void check_is_numerical(const char * name, const symrec * ptr){
 }
 
 
-int parse_int(char *name, int def)
+int parse_int(const char *name, int def)
 {
   symrec *ptr;
   int ret;
@@ -238,7 +238,7 @@ int parse_int(char *name, int def)
   return ret;
 }
 
-double parse_double(char *name, double def)
+double parse_double(const char *name, double def)
 {
   symrec *ptr;
   double ret;
@@ -259,7 +259,7 @@ double parse_double(char *name, double def)
   return ret;
 }
 
-gsl_complex parse_complex(char *name, gsl_complex def)
+gsl_complex parse_complex(const char *name, gsl_complex def)
 {
   symrec *ptr;
   gsl_complex ret;
@@ -280,7 +280,8 @@ gsl_complex parse_complex(char *name, gsl_complex def)
   return ret;
 }
 
-char *parse_string(char *name, char *def)
+/* FIXME: this function should use strcpy rather than assigning char* */
+char *parse_string(const char *name, char *def)
 {
   symrec *ptr;
   char *ret;
@@ -291,7 +292,7 @@ char *parse_string(char *name, char *def)
       fprintf(stderr, "Parser error: expecting a string for variable '%s'.\n", name);
       exit(1);
     }
-    ret = ptr->value.str;
+    ret = ptr->value.str; /* this should use strcpy instead */
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\n", name, ret);
     }
@@ -304,7 +305,7 @@ char *parse_string(char *name, char *def)
   return ret;
 }
 
-int parse_block (char *name, sym_block **blk)
+int parse_block (const char *name, sym_block **blk)
 {
   symrec *ptr;
 
@@ -330,14 +331,14 @@ int parse_block_end (sym_block **blk)
   return 0;
 }
 
-int parse_block_n(sym_block *blk)
+int parse_block_n(const sym_block *blk)
 {
   assert(blk != NULL);
 
   return blk->n;
 }
 
-int parse_block_cols(sym_block *blk, int l)
+int parse_block_cols(const sym_block *blk, int l)
 {
   assert(blk!=NULL);
   assert(l>=0 && l<blk->n);
@@ -345,7 +346,7 @@ int parse_block_cols(sym_block *blk, int l)
   return blk->lines[l].n;
 }
 
-static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
+static int parse_block_work(const sym_block *blk, int l, int col, parse_result *r)
 {
   assert(blk!=NULL);
   assert(l>=0 && l<blk->n);
@@ -360,7 +361,7 @@ static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
 }
 
 
-int parse_block_int(sym_block *blk, int l, int col, int *r)
+int parse_block_int(const sym_block *blk, int l, int col, int *r)
 {
   int o;
   parse_result pr;
@@ -378,7 +379,7 @@ int parse_block_int(sym_block *blk, int l, int col, int *r)
   return o;
 }
 
-int parse_block_double(sym_block *blk, int l, int col, double *r)
+int parse_block_double(const sym_block *blk, int l, int col, double *r)
 {
   int o;
   parse_result pr;
@@ -396,7 +397,7 @@ int parse_block_double(sym_block *blk, int l, int col, double *r)
   return o;
 }
 
-int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
+int parse_block_complex(const sym_block *blk, int l, int col, gsl_complex *r)
 {
   int o;
   parse_result pr;
@@ -414,7 +415,7 @@ int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
   return o;
 }
 
-int parse_block_string(sym_block *blk, int l, int col, char **r)
+int parse_block_string(const sym_block *blk, int l, int col, char **r)
 {
   int o;
   parse_result pr;
@@ -441,7 +442,7 @@ void parse_result_free(parse_result *t)
 }
 
 
-void parse_putsym_int(char *s, int i)
+void parse_putsym_int(const char *s, int i)
 {
   symrec *rec = putsym(s, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, (double)i, 0);
@@ -449,7 +450,7 @@ void parse_putsym_int(char *s, int i)
   rec->used = 1;
 }
 
-void parse_putsym_double(char *s, double d)
+void parse_putsym_double(const char *s, double d)
 {
   symrec *rec =  putsym(s, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, d, 0);
@@ -457,7 +458,7 @@ void parse_putsym_double(char *s, double d)
   rec->used = 1;
 }
 
-void parse_putsym_complex(char *s, gsl_complex c)
+void parse_putsym_complex(const char *s, gsl_complex c)
 {
   symrec *rec =  putsym(s, S_CMPLX);
   rec->value.c = c;
