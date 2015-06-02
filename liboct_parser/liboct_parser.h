@@ -43,6 +43,7 @@ typedef struct sym_block_line{
 typedef struct sym_block{
   int n;
   sym_block_line *lines;
+  char* name;
 } sym_block;
 
 int parse_block        (const char *name, sym_block **blk);

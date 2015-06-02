@@ -312,6 +312,8 @@ int parse_block (const char *name, sym_block **blk)
   ptr = getsym(name);
   if(ptr && ptr->type == S_BLOCK){
     *blk = ptr->value.block;
+    (*blk)->name = (char *)malloc(strlen(name));
+    strcpy((*blk)->name, name);
     if(!disable_write) {
       fprintf(fout, "Opened block '%s'\n", name);
     }
@@ -324,10 +326,11 @@ int parse_block (const char *name, sym_block **blk)
 
 int parse_block_end (sym_block **blk)
 {
-  *blk = NULL;
   if(!disable_write) {
-    fprintf(fout, "Closed block\n");
+     fprintf(fout, "Closed block '%s'\n", (*blk)->name);
   }
+  free((*blk)->name);
+  *blk = NULL;
   return 0;
 }
 
@@ -353,7 +356,7 @@ static int parse_block_work(const sym_block *blk, int l, int col, parse_result *
   assert(col>=0);
 
   if(col >= blk->lines[l].n){
-    fprintf(stderr, "%s\n", "Parser error: not enough columns found when parsing block.");
+     fprintf(stderr, "Parser error: not enough columns found when parsing block '%s'.\n", blk->name);
     exit(1);
   }
   
@@ -371,7 +374,7 @@ int parse_block_int(const sym_block *blk, int l, int col, int *r)
   if(o == 0 && pr.type == PR_CMPLX){
     *r = ROUND(GSL_REAL(pr.value.c));
     if(!disable_write) {
-      fprintf(fout, "  (%d, %d) = %d\n", l, col, *r);
+      fprintf(fout, "  %s (%d, %d) = %d\n", blk->name, l, col, *r);
     }
   }
 
@@ -389,7 +392,7 @@ int parse_block_double(const sym_block *blk, int l, int col, double *r)
   if(o == 0 && pr.type == PR_CMPLX){
     *r = GSL_REAL(pr.value.c);
     if(!disable_write) {
-      fprintf(fout, "  (%d, %d) = %g\n", l, col, *r);
+      fprintf(fout, "  %s (%d, %d) = %g\n", blk->name, l, col, *r);
     }
   }
   
@@ -407,7 +410,7 @@ int parse_block_complex(const sym_block *blk, int l, int col, gsl_complex *r)
   if(o == 0 && pr.type == PR_CMPLX){
     *r = pr.value.c;
     if(!disable_write) {
-      fprintf(fout, "  (%d, %d) = (%g,%g)\n", l, col, GSL_REAL(*r), GSL_IMAG(*r));
+      fprintf(fout, "  %s (%d, %d) = (%g,%g)\n", blk->name, l, col, GSL_REAL(*r), GSL_IMAG(*r));
     }
   }
 
@@ -425,7 +428,7 @@ int parse_block_string(const sym_block *blk, int l, int col, char **r)
   if(o == 0 && pr.type == PR_STR){
     *r = strdup(pr.value.s);
     if(!disable_write) {
-      fprintf(fout, "  (%d, %d) = \"%s\"\n", l, col, *r);
+      fprintf(fout, "  %s (%d, %d) = \"%s\"\n", blk->name, l, col, *r);
     }
   }
 
