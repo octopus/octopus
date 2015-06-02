@@ -312,7 +312,7 @@ int parse_block (const char *name, sym_block **blk)
   ptr = getsym(name);
   if(ptr && ptr->type == S_BLOCK){
     *blk = ptr->value.block;
-    (*blk)->name = (char *)malloc(strlen(name));
+    (*blk)->name = (char *)malloc(strlen(name) + 1);
     strcpy((*blk)->name, name);
     if(!disable_write) {
       fprintf(fout, "Opened block '%s'\n", name);
