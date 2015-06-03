@@ -1,0 +1,18 @@
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+BoxShape = sphere
+Spacing = 0.7
+Radius = 80.0
+
+ExperimentalFeatures = yes
+
+TheoryLevel = independent_particles
+
+%Species
+"Na_2D" |  species_user_defined | potential_formula | "-1/sqrt(7.45+(r)^2)" | valence | 1
+%
+
+%Coordinates
+"Na_2D" | 0 | 0 
+%

@@ -35,6 +35,9 @@ dist_share_DATA =                        \
           05-pfft.test                   \
           05-pfft.01-gs.inp              \
           05-pfft.02-mask.inp            \
-          05-pfft.03-ba.inp
+          05-pfft.03-ba.inp              \
+          06-2D.test                     \
+          06-2D.01-Na_gs.inp             \
+          06-2D.02-Na_few_cy.inp         
 
 CLEANFILES = *~ *.bak
