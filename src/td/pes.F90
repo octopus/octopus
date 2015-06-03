@@ -94,7 +94,7 @@ contains
     PUSH_SUB(pes_mask_nullify)
     this%k=>null()
     this%mesh=>null()
-    this%ext_pot=>null()
+    this%vec_pot=>null()
     this%Mk=>null()
     this%mask_R=>null()
     this%Lk=>null()

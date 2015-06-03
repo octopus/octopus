@@ -91,7 +91,7 @@ module pes_mask_m
     ! mesh- and cube-related stuff      
     integer          :: np                     !< number of mesh points associated with the mesh
     !< (either mesh%np or mesh%np_global)
-    integer          :: ll(3)                  !< the size of the parallelepipedic mesh
+    integer          :: ll(3)                  !< the size of the parallelepiped mesh
     integer          :: fs_n_global(1:3)       !< the dimensions of the cube in fourier space
     integer          :: fs_n(1:3)              !< the dimensions of the local portion of the cube in fourier space
     integer          :: fs_istart(1:3)         !< where does the local portion of the cube start in fourier space
@@ -101,7 +101,7 @@ module pes_mask_m
     type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
     type(cube_t)     :: cube                   !< the cubic mesh
     
-    FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, pointer :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
     
     FLOAT, pointer :: Mk(:,:,:) => NULL()      !< the momentum space filter
     type(cube_function_t) :: cM                !< the mask cube function
@@ -195,7 +195,7 @@ contains
         
     mask%mesh => mesh  
     
-    if(mesh%sb%periodic_dim > 0) &
+    if(simul_box_is_periodic(sb)) &
       call messages_experimental("PES_mask with periodic dimensions")
     
     
@@ -203,7 +203,7 @@ contains
     call messages_info(1)
     
     
-    if(sb%box_shape /= SPHERE) then
+    if(sb%box_shape /= SPHERE .and. .not. simul_box_is_periodic(sb)) then
       message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
       message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
       call messages_warning(2)
@@ -396,21 +396,7 @@ contains
       else
         call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
       end if
-
-                  
-!       call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
-!       if(sb%periodic_dim > 0) then
-!         call messages_write("Info: Enlarge non-periodic dimensions only:")
-!         call messages_new_line()
-!         call messages_write("      Enlarge = ( ")
-!         do idim = 1, sb%dim
-!           call messages_write(mask%enlarge_2p(idim))
-!           if(idim < sb%dim) call messages_write(", ")
-!         end do
-!         call messages_write(" )")
-!         call messages_info()
-!       end if
-        
+                          
       if (mask%pw_map_how /=  PW_MAP_NFFT .and. mask%pw_map_how /=  PW_MAP_PNFFT) then
         message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
         message(2) = "or pnfft_map in order to run properly." 
@@ -474,7 +460,6 @@ contains
 
             
     case(PW_MAP_NFFT)
-      !FIXME: this part is a bit messy and should be integrated into cube_init
       
       !NFFT initialization
       ! we just add 2 points for the enlarged region
@@ -744,8 +729,8 @@ contains
 
 !!  Set external fields 
 
-    SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:3))
-    mask%ext_pot=M_ZERO
+    SAFE_ALLOCATE(mask%vec_pot(0:max_iter,1:3))
+    mask%vec_pot=M_ZERO
 
     do il = 1, hm%ep%no_lasers
       select case(laser_kind(hm%ep%lasers(il)))
@@ -753,7 +738,9 @@ contains
         do it = 1, max_iter
           field=M_ZERO
           call laser_field(hm%ep%lasers(il), field, it*dt)
-          mask%ext_pot(it,:)= mask%ext_pot(it,:)+field(:) 
+          ! We must sum with a -1 sign to account for the 
+          ! electron charge.
+          mask%vec_pot(it,:)= mask%vec_pot(it,:) - field(:)           
         end do
         
       case default 
@@ -765,21 +752,13 @@ contains
     end do
 
     
-! NOTE ON FOURIER TRANSFORM CONVENTIONS:
-! In octopus we use FFT forward to map real space (rs) wavefunctions to fourier space (fs).
-! The forward discrete FT (DFT) transform is defined as:
-! 
-!  X_k = \sum_{n=0}^{N-1} x_n * exp(-i 2\pi k n / N)  
-! 
-! Here, we want to use the DFT to expand on planewaves exp(i k r) which are are the eigenstates of the 
-! momentum operator p = -i Nabla. 
-! Due to the inconsistency between the forward DFT and the eigenstates of p in the sign at the exponent
-! we decide to stick with the convention and flip the sign of the momentum.
 
-    
-    if(mask%pw_map_how /= PW_MAP_PNFFT .and. &
-       mask%pw_map_how /= PW_MAP_NFFT) mask%Lk = - mask%Lk ! to make up with octopus rs -> fs convention 
-
+    ! Compensate the sign for the forward <-> backward FT inversion 
+    ! used with NFFT. See pes_mask_X_to_K comment for more info
+    if(mask%pw_map_how == PW_MAP_PNFFT .or. &
+       mask%pw_map_how == PW_MAP_NFFT) mask%Lk = - mask%Lk
+        
+        
     POP_SUB(pes_mask_init)
   end subroutine pes_mask_init
 
@@ -792,7 +771,7 @@ contains
     
     SAFE_DEALLOCATE_P(mask%k)
     
-    SAFE_DEALLOCATE_P(mask%ext_pot)
+    SAFE_DEALLOCATE_P(mask%vec_pot)
     SAFE_DEALLOCATE_P(mask%mask_R)
     SAFE_DEALLOCATE_P(mask%Lk)
     
@@ -826,6 +805,7 @@ contains
     PUSH_SUB(pes_mask_generate_Lk)
     
     mask%Lk(:,1:mask%mesh%sb%dim)= mask%cube%Lfs(:,1:mask%mesh%sb%dim)
+
 !     do ii=1, maxval(mask%ll(:))
 !        print *,ii, mask%Lk(ii,1), mask%Lk(ii,2)
 !     end do
@@ -922,7 +902,7 @@ contains
     FLOAT,            intent(in)    :: R(2)
     FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-    integer :: ip, dir
+    integer :: ip, dir, ierr
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
     CMPLX,allocatable :: mask_fn(:)
@@ -1080,14 +1060,15 @@ contains
   ! ---------------------------------------------------------
   !>  Propagate in time a wavefunction in momentum space with 
   !!  the Volkov Hamiltonian 
+  !!\f[
+  !!     Hv=(p - A/c)^2/2
+  !!\f]
+  !! the time evolution becomes
   !!\f[     
-  !!     wf(p,t+dt)=exp(-i*Hv*dt)*wf(p,t)
+  !!     \psi(p,t+dt)=<p|Uv(dt)|\psi(t)> = exp(-i(p-A/c)^2/2 dt) \psi(p,t)
   !!\f]
   !!  with 
-  !!\f[
-  !!     Hv=(p^2-A)^2/2
-  !!\f]
-  !! \note velocity gauge is implied 
+  !!
   ! ---------------------------------------------------------
   subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf, ikpoint)
     type(pes_mask_t), intent(in)    :: mask
@@ -1102,8 +1083,6 @@ contains
     FLOAT :: KK(1:3), kpoint(1:3)
 
     PUSH_SUB(pes_mask_Volkov_time_evolution_wf)
-    ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)      
-
 
     kpoint = M_ZERO
     if(mesh%sb%periodic_dim > 0) then
@@ -1116,13 +1095,16 @@ contains
         KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1, 2)
         do iz = 1, mask%ll(3)
           KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1, 3)
+          ! The k-points have the same sign as the vector potential consistently 
+          ! with what is done to generate the phase (hm%phase) in hamiltonian_update()
           vec = sum(( KK(1:mesh%sb%dim) &
-                + kpoint(1:mesh%sb%dim) &
-                - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+                - kpoint(1:mesh%sb%dim) &
+                - mask%vec_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
           wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
         end do
       end do
     end do
+
 
 !     do ix = 1, mask%ll(1)
 !       KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
@@ -1130,7 +1112,7 @@ contains
 !         KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
 !         do iz = 1, mask%ll(3)
 !           KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
-!           vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+!           vec = sum(( KK(1:mesh%sb%dim) - mask%vec_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
 !           wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
 !         end do
 !       end do
@@ -1167,9 +1149,16 @@ contains
       call zfft_forward(mask%cube%fft, wfin, wfout)
             
     case(PW_MAP_NFFT)
+    ! By definition NFFT forward transform generates a function defined on an 
+    ! unstructured grid from its Fourier components (defined on a cubic equispaced grid).
+    ! This is not what we want since for us it is the real-space grid the one that can be 
+    ! unstructured. 
+    ! In order to preserve the possibility to have an unstructured rs-grid we use the  
+    ! backward transform and flip the sign of all the momenta (Lk = -Lk).
+    
       call zfft_backward(mask%cube%fft, wfin, wfout, norm)
-
       wfout = wfout * norm
+      
 !       call zfft_forward(mask%cube%fft, wfin, wfout)
       
     case(PW_MAP_PFFT)
@@ -1372,7 +1361,7 @@ contains
               !----------------------------------------
             case(PES_MASK_MODE_MASK)
               
-              cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
+              cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*\Psi_A(x,t2)
               call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs)                          ! cf2 = \tilde{\Psi}_A(k,t2)
 
 
