@@ -455,6 +455,7 @@ contains
         call messages_not_implemented("CurrentThroughPlane for 4D or higher")
 
       end select
+      call parse_block_end(blk)
     end if
 
     if(iand(outp%what, OPTION_MATRIX_ELEMENTS) /= 0) then
