@@ -2201,7 +2201,7 @@ contains
         case(SPECTRUM_TRANSFORM_SIN)
           if(cmplxft) then
             write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = exponential'
+            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
             call messages_fatal(2)            
           end if
 
@@ -2219,7 +2219,7 @@ contains
         case(SPECTRUM_TRANSFORM_COS)
           if(cmplxft) then
             write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = exponential'
+            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
             call messages_fatal(2)            
           end if
 
