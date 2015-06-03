@@ -165,15 +165,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, nn, dim, mm, is_real, optimize)
+  subroutine nfft_init(nfft, N, dim, M, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
-    integer,           intent(inout) :: nn(3) !> nfft bandwidths
-    integer,           intent(inout) :: mm(3) !> nfft nodes
+    integer,           intent(inout) :: N(3) !> nfft bandwidths
+    integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
     logical, optional, intent(in)    :: optimize
 
-    integer :: ii, jj, idir, my_nn(3), idim
+    integer :: ii, jj, idir, my_N(3), idim
     logical :: optimize_
     integer :: nfft_flags
 
@@ -183,8 +183,8 @@ contains
     optimize_ = optional_default(optimize, .true.)
 
     nfft%dim = dim
-    nfft%M = mm
-    nfft%N = nn
+    nfft%M(:) = M(:)
+    nfft%N(:) = N(:)
 
     if(.not. nfft%set_defaults) then
       !Set defaults
@@ -194,20 +194,19 @@ contains
       nfft%precompute = NFFT_PRE_PSI
     end if
     
-    ! set not used dimensions to 1
-    do idim=1,3
-      if(idim > dim) nfft%M(idim) = 1
-    end do
+    ! set unused dimensions to 1
+    nfft%M(dim+1:3) = 1
+    
 
     call nfft_guru_options(nfft)
 
-    my_nn = 0
+    my_N = 0
     do ii = 1, dim
-      my_nn(ii) = nn(ii)*nfft%sigma
-      if(optimize_ .or. (.not. nfft%guru)) call loct_fft_optimize(my_nn(ii), 1) ! ask for an odd number
+      my_N(ii) = N(ii)*nfft%sigma
+      if(optimize_ .or. (.not. nfft%guru)) call loct_fft_optimize(my_N(ii), 1) ! ask for an odd number
     end do
 
-    nfft%fftN(1:dim) = my_nn(1:dim)
+    nfft%fftN(1:dim) = my_N(1:dim)
 
     if(nfft%guru) then ! Guru interface
       nfft_flags =  nfft_PRE_PHI_HUT  + nfft_MALLOC_X +nfft_MALLOC_F_HAT +&
@@ -215,18 +214,18 @@ contains
 
       nfft_flags = nfft_flags + nfft%precompute
 
-      call  oct_nfft_init_guru(nfft%plan, dim, nn, mm(1)*mm(2)*mm(3), my_nn, nfft%mm, &
+      call  oct_nfft_init_guru(nfft%plan, dim, N, M(1)*M(2)*M(3), my_N, nfft%mm, &
                     nfft_flags, FFTW_MEASURE + FFTW_DESTROY_INPUT)
 
     else ! Default interfaces
 
       select case(dim)
       case(3)
-        call oct_nfft_init_3d(nfft%plan, nn(1), nn(2),nn(3), mm(1)*mm(2)*mm(3))
+        call oct_nfft_init_3d(nfft%plan, N(1), N(2),N(3), M(1)*M(2)*M(3))
       case(2)
-        call oct_nfft_init_2d(nfft%plan, nn(1), nn(2), mm(1)*mm(2))
+        call oct_nfft_init_2d(nfft%plan, N(1), N(2), M(1)*M(2))
       case(1)
-        call oct_nfft_init_1d(nfft%plan,nn(1),mm(1))
+        call oct_nfft_init_1d(nfft%plan,N(1),M(1))
       end select
 
     end if
@@ -255,10 +254,16 @@ contains
 
     call messages_write("      Spatial nodes             M = ")
 
-    mm = nfft%M(1)*nfft%M(2)*nfft%M(3)
- 
-    call messages_write(mm)
+!     mm = nfft%M(1)*nfft%M(2)*nfft%M(3)
+!
+!     call messages_write(mm)
+!     call messages_new_line()
+    do idir = 1,  nfft%dim
+      call messages_write(nfft%M(idir))
+      if(idir < nfft%dim) call messages_write(" x ")
+    end do
     call messages_new_line()
+
 
     call messages_write("      Oversampling factor   sigma = ")
     call messages_write(nfft%sigma)
@@ -356,7 +361,8 @@ contains
 
     PUSH_SUB(nfft_precompute)
 
-    eps = 1.000001 ! the sample nodes must be in [0.5,0.5)
+!     eps = 1.000001 ! the sample nodes must be in [0.5,0.5)
+    eps = M_ONE+M_EPSILON ! the sample nodes must be in [0.5,0.5)
 
     select case(nfft%dim)
       case(3)

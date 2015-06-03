@@ -22,41 +22,23 @@ subroutine X(nfft_forward1)(nfft, in, out)
   R_TYPE,        intent(in)  :: in(:,:,:)
   CMPLX,        intent(out) :: out(:,:,:)
 
-  integer :: ix, iy, iz, MM(3)
+  integer :: ix, iy, iz
 
   PUSH_SUB(X(nfft_forward1))
-    
-  select case(nfft%dim)
-    case (1)
-      MM(1) = nfft%M(1)
-      MM(2) = 1
-      MM(3) = 1
-
-    case (2)
-      MM(1) = nfft%M(1)
-      MM(2) = nfft%M(2)
-      MM(3) = 1
-
-    case (3)
-      MM(1) = nfft%M(1)
-      MM(2) = nfft%M(2)
-      MM(3) = nfft%M(3)
-
-  end select 
-
+        
   do ix = 1, nfft%N(1)
     do iy = 1, nfft%N(2)
       do iz = 1, nfft%N(3)
-        call X(oct_set_f_hat)(nfft%plan, nfft%N(1), nfft%dim, in(ix,iy,iz), ix, iy, iz)
+        call X(oct_set_f_hat)(nfft%plan, nfft%dim, in(ix,iy,iz), ix, iy, iz)
       end do
     end do
   end do
 
   call oct_nfft_trafo(nfft%plan)
 
-  do ix = 1, MM(1)
-    do iy = 1, MM(2)
-      do iz = 1, MM(3)
+  do ix = 1, nfft%M(1)
+    do iy = 1, nfft%M(2)
+      do iz = 1, nfft%M(3)
         call X(oct_get_f)(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
       end do
     end do
@@ -73,40 +55,24 @@ subroutine X(nfft_backward1)(nfft, in, out)
   CMPLX,        intent(in)  :: in (:,:,:)
   R_TYPE,        intent(out) :: out(:,:,:)
 
-  integer :: ix, iy, iz, MM(3)
+  integer :: ix, iy, iz
 
   PUSH_SUB(X(nfft_backward1))
 
-  select case(nfft%dim)
-    case (1)
-      MM(1) = nfft%M(1)
-      MM(2) = 1
-      MM(3) = 1
-
-    case (2)
-      MM(1) = nfft%M(1)
-      MM(2) = nfft%M(2)
-      MM(3) = 1
-
-    case (3)
-      MM(1) = nfft%M(1)
-      MM(2) = nfft%M(2)
-      MM(3) = nfft%M(3)
-
-  end select
-
-  do ix = 1, MM(1)
-    do iy = 1, MM(2)
-      do iz = 1, MM(3)
+  do ix = 1, nfft%M(1)
+    do iy = 1, nfft%M(2)
+      do iz = 1, nfft%M(3)
         call X(oct_set_f)(nfft%plan, nfft%M, nfft%dim, in(ix,iy,iz), ix, iy, iz)
       end do
     end do
   end do
+  
   call oct_nfft_adjoint(nfft%plan)
+
   do ix = 1,nfft%N(1)
     do iy = 1, nfft%N(2)
       do iz = 1, nfft%N(3)
-        call X(oct_get_f_hat)(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
+        call X(oct_get_f_hat)(nfft%plan, nfft%dim, out(ix,iy,iz), ix, iy, iz)
       end do
     end do
   end do
