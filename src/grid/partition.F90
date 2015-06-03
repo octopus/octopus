@@ -27,7 +27,6 @@ module partition_m
   use mpi_debug_m
   use profiling_m
 
-
   implicit none
 
   private
@@ -231,7 +230,7 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, err, np, type, file_size
+    integer :: ipart, err, np, file_size
     integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
 
@@ -245,7 +244,7 @@ contains
     
     ! Check if the file exists and has the proper size (only world root)
     if (mpi_world%rank == 0) then
-      call get_info_binary(np, type, file_size, err, filename)
+      call io_binary_get_info(filename, np, file_size, err)
     end if
 
 #ifdef HAVE_MPI
