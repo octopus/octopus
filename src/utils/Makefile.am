@@ -35,7 +35,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-dielectric-function \
                  oct-photoelectron_spectrum \
                  oct-convert \
-                 oct-local_multipoles
+                 oct-local_multipoles \
+                 oct-conductivity
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -165,6 +166,18 @@ oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
+                                   $(top_builddir)/src/grid/libgrid.a \
+                                   $(top_builddir)/src/ions/libions.a \
+                                   $(top_builddir)/src/species/libspecies.a \
+                                   $(top_builddir)/src/math/libmath.a \
+                                   $(top_builddir)/src/basic/libbasic.a \
+                                   $(other_LIBS)
+
+oct_conductivity_SOURCES = conductivity.F90
+oct_conductivity_LDADD  = $(top_builddir)/src/td/libtd.a \
+                                   $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/states/libstates.a \
+                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
