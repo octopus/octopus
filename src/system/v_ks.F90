@@ -91,6 +91,7 @@ module v_ks_m
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
+    FLOAT,                pointer :: vvdw(:)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
     FLOAT,                pointer :: vberry(:, :)
@@ -485,7 +486,8 @@ contains
     logical,                 optional, intent(in)    :: calc_energy
 
     type(profile_t), save :: prof
-    logical  :: cmplxscl
+    logical :: cmplxscl
+    FLOAT, allocatable :: vdw_force(:, :)
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
@@ -584,11 +586,15 @@ contains
     end if
 
     if(ks%vdw_correction) then
-      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw)
+      SAFE_ALLOCATE(ks%calc%vvdw(1:ks%gr%mesh%np))
+      SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
+      ks%calc%vvdw = CNST(0.0)
+      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, ks%calc%vvdw, vdw_force)
     else
+      nullify(ks%calc%vvdw)
       ks%calc%energy%vdw = CNST(0.0)
     end if
-    
+   
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
 
@@ -988,7 +994,11 @@ contains
       if(associated(hm%vberry)) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       endif
-      
+
+      if(associated(ks%calc%vvdw)) then
+        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + ks%calc%vvdw(ip)
+      end if
+     
       ! Calculate subsystem kinetic non-additive term
       nullify(subsys_tnadd)
       if(associated(hm%subsys_hm))then
@@ -1033,6 +1043,7 @@ contains
 
     call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
 
+    SAFE_DEALLOCATE_P(ks%calc%vvdw)    
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
     if(ks%calc%total_density_alloc) then
