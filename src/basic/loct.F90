@@ -263,7 +263,7 @@ module loct_m
     subroutine oct_gdimagedestroy(im)
       use iso_c_binding
       implicit none
-      type(c_ptr) :: im
+      type(c_ptr), intent(inout) :: im
     end subroutine oct_gdimagedestroy
   end interface loct_gdimagedestroy
 #endif
