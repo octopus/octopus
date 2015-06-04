@@ -579,7 +579,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: ierr, ist, jst, freeze_orbitals
+      integer :: ierr, ist, jst, ncols, freeze_orbitals
       FLOAT :: x
       type(block_t) :: blk
       type(states_t) :: stin
@@ -634,9 +634,14 @@ contains
         !% read from the <tt>restart/gs</tt> directory, which should have been
         !% generated in a previous ground-state calculation) can be "transformed"
         !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
-        !% to be used. The number of rows and columns of the matrix should equal the number
+        !% to be used. The number of rows of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
-        !% spin and <i>k</i>-point subspaces are all transformed equally).
+        !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
+        !% columns should be equal to the number of states present in the
+        !% <tt>restart/gs</tt> directory. This number may be different: for example,
+        !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
+        !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
+        !% These states can be used in the transformation. 
         !%
         !% Note that the code will not check the orthonormality of the new states!
         !%
@@ -653,16 +658,19 @@ contains
               message(1) = "Number of rows in block TransformStates must equal number of states in this calculation."
               call messages_fatal(1)
             endif
-            call states_copy(stin, st)
+            call states_copy(stin, st, exclude_wfns = .true.)
+            call states_look_and_load(restart, stin, gr) ! does not work parallel in states
             ! FIXME: rotation matrix should be R_TYPE
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst
-              if(parse_block_cols(blk, ist-1) /= st%nst) then
-                message(1) = "Number of columns in block TransformStates must equal number of states in this calculation."
+              ncols = parse_block_cols(blk, ist-1)
+              if(ncols /= stin%nst) then
+                write(message(1),'(a,i6,a,i6,a,i6,a)') "Number of columns (", ncols, ") in row ", ist, &
+                  " of block TransformStates must equal number of states (", stin%nst, ") read from gs restart."
                 call messages_fatal(1)
               endif
-              do jst = 1, st%nst
+              do jst = 1, stin%nst
                 call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
