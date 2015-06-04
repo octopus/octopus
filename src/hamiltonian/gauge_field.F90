@@ -45,6 +45,7 @@ module gauge_field_m
   use symmetries_m
   use symmetrizer_m
   use symm_op_m
+  use tdfunction_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -84,6 +85,7 @@ module gauge_field_m
     FLOAT   :: wp2
     integer :: ndim
     logical :: with_gauge_field
+    integer :: dynamics
   end type gauge_field_t
 
 contains
@@ -102,7 +104,7 @@ contains
     type(gauge_field_t),     intent(out)   :: this
     type(simul_box_t),       intent(in)    :: sb
 
-    integer :: ii, iop, iop2, ik
+    integer :: ii, iop, iop2, ik, default
     type(block_t) :: blk
 
     PUSH_SUB(gauge_field_init)
@@ -158,7 +160,29 @@ contains
           enddo
         enddo
       endif
+
     end if
+
+    !%Variable GaugeFieldDynamics
+    !%Type integer
+    !%Section Hamiltonian
+    !%Description
+    !% This variable select the dynamics of the gauge field used to
+    !% apply a finite electric field to periodic systems in
+    !% time-dependent runs. The default is <tt>none</tt>, unless the
+    !% block <tt>GaugeVectorField</tt> is defined, in which case is
+    !% <tt>polarization</tt>.
+    !%Option none 0
+    !% The gauge field does not have dynamics. The induced polarization field is zero.
+    !%Option polarization 1
+    !% The gauge field follows the dynamic described in
+    !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
+    !%End
+    default = OPTION_NONE
+    if(this%with_gauge_field) default = OPTION_POLARIZATION
+    call parse_variable('GaugeFieldDynamics', default, this%dynamics)
+
+    if(this%dynamics /= OPTION_NONE) this%with_gauge_field = .true.
 
     POP_SUB(gauge_field_init)
   end subroutine gauge_field_init
@@ -169,6 +193,7 @@ contains
     type(gauge_field_t),     intent(inout) :: this
 
     PUSH_SUB(gauge_field_end)
+
     this%with_gauge_field = .false.
 
     POP_SUB(gauge_field_end)
@@ -267,6 +292,7 @@ contains
     FLOAT,                intent(in)    :: dt
 
     PUSH_SUB(gauge_field_propagate_vel)
+
     this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt * (this%vecpot_acc(1:this%ndim) + force%vecpot(1:this%ndim))
 
@@ -386,7 +412,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine gauge_field_get_force(gr, st, force)
+  subroutine gauge_field_get_force(this, gr, st, force)
+    type(gauge_field_t),  intent(in)    :: this
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(in)    :: st
     type(gauge_force_t),  intent(out)   :: force
@@ -397,9 +424,18 @@ contains
 
     ASSERT(st%d%nspin == 1)
 
-    do idir = 1, gr%sb%dim
-      force%vecpot(idir) = CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, 1))
-    end do
+    select case(this%dynamics)
+    case(OPTION_NONE)
+      force%vecpot(1:gr%sb%dim) = CNST(0.0)
+
+    case(OPTION_POLARIZATION)
+      do idir = 1, gr%sb%dim
+        force%vecpot(idir) = CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, 1))
+      end do
+
+    case default
+      ASSERT(.false.)
+    end select
 
     POP_SUB(gauge_field_get_force)
   end subroutine gauge_field_get_force
