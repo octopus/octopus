@@ -35,6 +35,7 @@ module initst_m
   use states_restart_m
   use string_m
   use system_m
+  use td_m
   use v_ks_m
   use varinfo_m
   use types_m
@@ -63,9 +64,7 @@ contains
     integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals, ncols
     type(block_t)     :: blk
-    type(states_t)    :: tmp_st 
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
-    CMPLX, allocatable :: rotation_matrix(:, :)
     type(restart_t) :: restart
 
     type(states_t), pointer :: psi
@@ -132,52 +131,22 @@ contains
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_is_defined('OCTInitialTransformStates')) then
-        if(parse_block('OCTInitialTransformStates', blk) == 0) then
-          call states_copy(tmp_st, psi)
-          call states_deallocate_wfns(tmp_st)
-          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tmp_st%dom_st_kpt_mpi_grp, &
-                            ierr, mesh=sys%gr%mesh, exact=.true.)
-          if(ierr == 0) then
-            call states_look_and_load(restart, tmp_st, sys%gr)
-          else
-            message(1) = "Could not read states for OCTInitialTransformStates."
-            call messages_fatal(1)
-          endif          
-          call restart_end(restart)
 
-          SAFE_ALLOCATE(rotation_matrix(1:psi%nst, 1:tmp_st%nst))
-          rotation_matrix = M_z0
-          do ist = 1, psi%nst
-            ncols = parse_block_cols(blk, ist - 1)
-            if(ncols /= tmp_st%nst) then
-              write(message(1),'(a,i6)') "Wrong number of columns in OCTInitialTransformStates block, row ", ist
-              call messages_fatal(1)
-            endif
-            do jst = 1, ncols
-              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
-            end do
-          end do
-          ! FIXME: rotation matrix should be R_TYPE
-          if(states_are_real(psi)) then
-            call dstates_rotate(sys%gr%mesh, psi, tmp_st, real(rotation_matrix, REAL_PRECISION))
-          else
-            call zstates_rotate(sys%gr%mesh, psi, tmp_st, rotation_matrix)
-          endif
-          SAFE_DEALLOCATE_A(rotation_matrix)
-          call states_end(tmp_st)
-        else
-          message(1) = '"OCTInitialTransformStates" has to be specified as block.'
-          call messages_info(1)
-          call messages_input_error('OCTInitialTransformStates')
-        end if
-      else
-        message(1) = 'Error: if "OCTInitialState = oct_is_gstransformation", then you must'
+      if(.not. parse_is_defined("OCTInitialTransformStates")) then
+        message(1) = 'If "OCTInitialState = oct_is_gstransformation", then you must'
         message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
-        call messages_info(2)
-        call messages_input_error('OCTInitialTransformStates')
+        call messages_fatal(2)
       end if
 
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
+        ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr /= 0) then
+        message(1) = "Could not read states for OCTInitialTransformStates."
+        call messages_fatal(1)
+      endif
+      
+      call transform_states(psi, restart, sys%gr, prefix = "OCTInitial")
+      call restart_end(restart)
 
     case(oct_is_userdefined) 
       message(1) =  'Info: Building user-defined initial state.'

@@ -66,7 +66,8 @@ module td_m
     td_run,               &
     td_run_init,          &
     td_init,              &
-    td_end
+    td_end,               &
+    transform_states
 
   !> Parameters.
   integer, parameter :: &
@@ -579,11 +580,8 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: ierr, ist, jst, ncols, freeze_orbitals
+      integer :: ierr, freeze_orbitals
       FLOAT :: x
-      type(block_t) :: blk
-      type(states_t) :: stin
-      CMPLX, allocatable :: rotation_matrix(:, :)
       logical :: freeze_hxc
       type(restart_t) :: restart
 
@@ -625,70 +623,7 @@ contains
         ! overwrites orbitals that were read from restart/gs
         if(parse_is_defined('UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
 
-        !%Variable TransformStates
-        !%Type block
-        !%Default no
-        !%Section States
-        !%Description
-        !% Before starting the <tt>td</tt> calculation, the initial states (that are
-        !% read from the <tt>restart/gs</tt> directory, which should have been
-        !% generated in a previous ground-state calculation) can be "transformed"
-        !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
-        !% to be used. The number of rows of the matrix should equal the number
-        !% of the states present in the time-dependent calculation (the independent
-        !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
-        !% columns should be equal to the number of states present in the
-        !% <tt>restart/gs</tt> directory. This number may be different: for example,
-        !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
-        !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
-        !% These states can be used in the transformation. 
-        !%
-        !% Note that the code will not check the orthonormality of the new states!
-        !%
-        !% Each line provides the coefficients of the new states, in terms of
-        !% the old ones. The coefficients are complex, but the imaginary part will be
-        !% ignored for real wavefunctions.
-        !% Note: This variable cannot be used when parallel in states.
-        !%End
-        if(parse_is_defined('TransformStates')) then
-          if(parse_block('TransformStates', blk) == 0) then
-            if(st%parallel_in_states) &
-              call messages_not_implemented("TransformStates parallel in states")
-            if(parse_block_n(blk) /= st%nst) then
-              message(1) = "Number of rows in block TransformStates must equal number of states in this calculation."
-              call messages_fatal(1)
-            endif
-            call states_copy(stin, st, exclude_wfns = .true.)
-            call states_look_and_load(restart, stin, gr) ! does not work parallel in states
-            ! FIXME: rotation matrix should be R_TYPE
-            SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
-            rotation_matrix = M_z0
-            do ist = 1, st%nst
-              ncols = parse_block_cols(blk, ist-1)
-              if(ncols /= stin%nst) then
-                write(message(1),'(a,i6,a,i6,a,i6,a)') "Number of columns (", ncols, ") in row ", ist, &
-                  " of block TransformStates must equal number of states (", stin%nst, ") read from gs restart."
-                call messages_fatal(1)
-              endif
-              do jst = 1, stin%nst
-                call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
-              end do
-            end do
-            call parse_block_end(blk)
-            if(states_are_real(st)) then
-              call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
-            else
-              call zstates_rotate(gr%mesh, st, stin, rotation_matrix)
-            endif
-            SAFE_DEALLOCATE_A(rotation_matrix)
-            call states_end(stin)
-          else
-            message(1) = '"TransformStates" has to be specified as block.'
-            call messages_info(1)
-            call messages_input_error('TransformStates')
-          end if
-        end if
-
+        call transform_states(st, restart, gr)
         call restart_end(restart)
       end if
 
@@ -843,6 +778,90 @@ contains
 
   end subroutine td_run
 
+
+  ! ---------------------------------------------------------
+  subroutine transform_states(st, restart, gr, prefix)
+    type(states_t),             intent(inout) :: st
+    type(restart_t),            intent(inout) :: restart
+    type(grid_t),               intent(in)    :: gr
+    character(len=*), optional, intent(in)    :: prefix
+
+    type(states_t) :: stin
+    type(block_t) :: blk
+    CMPLX, allocatable :: rotation_matrix(:,:)
+    integer :: ist, jst, ncols
+    character(len=256) :: block_name
+    
+    PUSH_SUB(transform_states)
+
+    block_name = trim(optional_default(prefix, "")) // "TransformStates"
+    
+    !%Variable TransformStates
+    !%Type block
+    !%Default no
+    !%Section States
+    !%Description
+    !% Before starting the <tt>td</tt> calculation, the initial states (that are
+    !% read from the <tt>restart/gs</tt> directory, which should have been
+    !% generated in a previous ground-state calculation) can be "transformed"
+    !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
+    !% to be used. The number of rows and columns of the matrix should equal the number
+    !% of the states present in the time-dependent calculation (the independent
+    !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
+    !% columns should be equal to the number of states present in the
+    !% <tt>restart/gs</tt> directory. This number may be different: for example,
+    !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
+    !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
+    !% These states can be used in the transformation. 
+    !%
+    !% Note that the code will not check the orthonormality of the new states!
+    !%
+    !% Each line provides the coefficients of the new states, in terms of
+    !% the old ones. The coefficients are complex, but the imaginary part will be
+    !% ignored for real wavefunctions.
+    !% Note: This variable cannot be used when parallel in states.
+    !%End
+    if(parse_is_defined(trim(block_name))) then
+      if(parse_block(trim(block_name), blk) == 0) then
+        if(st%parallel_in_states) &
+          call messages_not_implemented(trim(block_name) // " parallel in states")
+        if(parse_block_n(blk) /= st%nst) then
+          message(1) = "Number of rows in block " // trim(block_name) // " must equal number of states in this calculation."
+          call messages_fatal(1)
+        endif
+        call states_copy(stin, st, exclude_wfns = .true.)
+        call states_look_and_load(restart, stin, gr)
+        ! FIXME: rotation matrix should be R_TYPE
+        SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
+        rotation_matrix = M_z0
+        do ist = 1, st%nst
+          ncols = parse_block_cols(blk, ist-1)
+          if(ncols /= stin%nst) then            
+            write(message(1),'(a,i6,a,i6,3a,i6,a)') "Number of columns (", ncols, ") in row ", ist, " of block ", &
+              trim(block_name), " must equal number of states (", stin%nst, ") read from gs restart."
+            call messages_fatal(1)
+          endif
+          do jst = 1, stin%nst
+            call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+          end do
+        end do
+        call parse_block_end(blk)
+        if(states_are_real(st)) then
+          call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
+        else
+          call zstates_rotate(gr%mesh, st, stin, rotation_matrix)
+        endif
+        SAFE_DEALLOCATE_A(rotation_matrix)
+        call states_end(stin)
+      else
+        message(1) = '"' // trim(block_name) // '" has to be specified as block.'
+        call messages_info(1)
+        call messages_input_error(trim(block_name))
+      end if
+    end if
+
+    POP_SUB(transform_states)
+  end subroutine transform_states
 
   ! ---------------------------------------------------------
   subroutine td_dump(restart, gr, st, hm, td, iter, ierr)
