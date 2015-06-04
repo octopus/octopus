@@ -365,9 +365,6 @@ contains
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
     end if
 
-    ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, gr%sb)
-
     if (gauge_field_is_applied(hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(sys%ks, .true.)
