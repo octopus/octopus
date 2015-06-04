@@ -29,7 +29,4 @@ TheoryLevel = independent_particles
 %
 
 EigenSolver = cg_new
-ExtraStates = 5
-
-
-
+ExtraStates = 1
