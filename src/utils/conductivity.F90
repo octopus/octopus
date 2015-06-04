@@ -42,7 +42,7 @@
     implicit none
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvel, ivel
-    FLOAT, allocatable :: time(:), velocities(:, :), total_current(:, :), ftcurr(:, :)
+    FLOAT, allocatable :: time(:), velocities(:, :), total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
@@ -50,7 +50,7 @@
     type(grid_t)     :: gr
     type(states_t)    :: st
     type(batch_t) :: currb, ftcurrb
-    FLOAT :: ww, curtime, currtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2)
+    FLOAT :: ww, curtime, currtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
     integer :: ifreq, max_freq
     integer :: skip, idir
     FLOAT, parameter :: inv_ohm_meter = 4599848.1
@@ -69,9 +69,7 @@
 
     call unit_system_init()
 
-    call spectrum_init(spectrum, &
-      default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
-      default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
+    call spectrum_init(spectrum, default_energy_step = CNST(0.001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
     !%Type integer
@@ -207,6 +205,7 @@
 
     call io_close(iunit)
 
+    SAFE_ALLOCATE(curr(ntime, 1:3, 1:2))
 
     integral = CNST(0.0)
 
@@ -243,30 +242,26 @@
       write(iunit,*) iter, iter*deltat, vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim), &
         vel0(1:space%dim)*st%qtot/sb%rcell_volume - total_current(1:space%dim, iter)/sb%rcell_volume
       
-      total_current(1:space%dim, iter) = &
-        vel0(1:space%dim)*st%qtot/sb%rcell_volume - total_current(1:space%dim, iter)/sb%rcell_volume
+      curr(iter, 1:space%dim, 1) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
+      curr(iter, 1:space%dim, 2) = vel0(1:space%dim)*st%qtot/sb%rcell_volume - total_current(1:space%dim, iter)/sb%rcell_volume
 
     end do
 
-    print*, integral(1)*inv_ohm_meter, integral(2)*inv_ohm_meter
+    print*, integral(1), integral(2)
 
     call io_close(iunit)
     
-    SAFE_ALLOCATE(ftcurr(1:max_freq, 1:3))
+    SAFE_ALLOCATE(ftcurr(1:max_freq, 1:3, 1:2))
 
     ftcurr = M_ONE
 
-    call batch_init(currb, 3)
-    call batch_init(ftcurrb, 3)
-    do idir = 1, 3
-      call batch_add_state(currb, total_current(idir, :))
-      call batch_add_state(ftcurrb, ftcurr(:, idir))
-    end do
+    call batch_init(currb, 3, 1, 2, curr)
+    call batch_init(ftcurrb, 3, 1, 2, ftcurr)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, M_ZERO, deltat, currb)
 
     do iter = 1, ntime
-      write(12,*) iter, total_current(1, iter)
+      write(12,*) iter, curr(iter, 1, 1), curr(iter, 1, 2)
     end do
   
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
@@ -283,9 +278,12 @@
 !    write(unit = iunit, iostat = ierr, fmt = '(a17,6x,a15)') '#   Energy [1/cm]', 'Spectrum [a.u.]'
 !    write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
+    v0 = sqrt(sum(vel0(1:space%dim)**2))
+
     do ifreq = 1, max_freq
       ww = spectrum%energy_step*(ifreq - 1)
-      write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(units_out%energy, ww), ftcurr(ifreq, 1)*inv_ohm_meter
+      write(unit = iunit, iostat = ierr, fmt = '(3e20.10)') &
+        units_from_atomic(units_out%energy, ww), ftcurr(ifreq, 1, 1)/v0, ftcurr(ifreq, 1, 2)/v0
     end do
 
     call io_close(iunit)
