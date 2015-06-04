@@ -643,6 +643,8 @@ contains
       call messages_info(2)
     end select
 
+    call parse_block_end(blk)
+
     write(message(1),'(a,es10.3,3a)') & 
       "  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) ),&
       ' [', trim(units_abbrev(units_inp%length)), ']'

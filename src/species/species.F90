@@ -462,6 +462,11 @@ contains
       return
     end if
 
+    ! We get here if there is a Species block but it does not contain
+    ! the species we are looking for.
+    if(n_spec_block > 0) &
+      call parse_block_end(blk)
+
     ! Find out if the species is in the pseudopotential set
     select case(pseudo_set)
     case(OPTION_STANDARD)
