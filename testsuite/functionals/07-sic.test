@@ -21,6 +21,6 @@ Enabled    : Yes
 # use a LDA pseudopotential, whereas the results in the paper are all-electron.
 
 # this calculation seems numerically unstable!
-Precision : 0.0015
+Precision : 0.002
 Input     : 07-sic.01-gs.inp
-match ; Ionization Potential ; GREPFIELD(static/info, '4   --', 3) ; -0.542700
+match ; Ionization Potential ; GREPFIELD(static/info, '4   --', 3) ; -0.5412385
