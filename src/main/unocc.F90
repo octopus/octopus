@@ -115,7 +115,7 @@ contains
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         call restart_end(restart_load_unocc)
-      endif
+      end if
       
       ! If successfully read states from unocc, do not read from gs.
       ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
@@ -136,7 +136,7 @@ contains
       call restart_end(restart_load_gs)
     else
       write_density = .true.
-    endif
+    end if
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
@@ -146,7 +146,7 @@ contains
       message(2) = "Otherwise, the occupied states may change in CalculationMode = unocc, and your"
       message(3) = "unoccupied states will not be consistent with the gs run."
       call messages_warning(3)
-    endif
+    end if
 
     if(ierr_rho /= 0 .or. is_orbital_dependent) then
       occ_missing = .false.
@@ -161,12 +161,12 @@ contains
           message(1) = "For an orbital-dependent functional, all occupied orbitals must be provided."
         else if(ierr_rho /= 0) then
           message(1) = "Since density could not be read, all occupied orbitals must be provided."
-        endif
+        end if
 
         message(2) = "Not all the occupied orbitals could be read."
         message(3) = "Please run a ground-state calculation first!"
         call messages_fatal(3, only_root_writes = .true.)
-      endif
+      end if
 
       message(1) = "Unable to read density: Building density from wavefunctions."
       call messages_info(1)
@@ -175,7 +175,7 @@ contains
         call density_calc(sys%st, sys%gr, sys%st%rho)
       else
         call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-      endif
+      end if
     end if
 
     if (states_are_real(sys%st)) then
@@ -276,14 +276,14 @@ contains
     if(any(eigens%converged(:) < occ_states(:))) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
       call messages_warning(1)
-    endif
+    end if
 
     SAFE_DEALLOCATE_A(occ_states)
 
     if(.not. converged) then
       write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
       call messages_warning(1)
-    endif
+    end if
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) &
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
@@ -313,7 +313,7 @@ contains
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
         message(2) = "by hand, since the highest states will probably never converge."
         call messages_warning(2)
-      endif
+      end if
       
       POP_SUB(unocc_run.init_)
     end subroutine init_

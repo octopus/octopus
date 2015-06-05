@@ -42,7 +42,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
     sigma = '+'
   else
     sigma = '-'
-  endif
+  end if
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
@@ -53,7 +53,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
           write(fname, '(2a)') 'lr_density-', index2axis(idir)
         else
           write(fname, '(a,i1,2a)') 'lr_density-sp', is, '-', index2axis(idir)
-        endif
+        end if
         call X(io_function_output)(outp%how, dir, fname, gr%mesh, lr%X(dl_rho)(:, is), &
           fn_unit / pert_unit, ierr, geo = geo)
       end do
@@ -69,7 +69,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
             write(fname, '(4a)') 'alpha_density-', index2axis(idir2), '-', index2axis(idir)
           else
             write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(idir2), '-', index2axis(idir)
-          endif
+          end if
           call X(io_function_output)(outp%how, dir, fname, gr%mesh, tmp, fn_unit / pert_unit, ierr, geo = geo)
         end do
       end do
@@ -85,7 +85,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
               write(fname, '(4a)') 'lr_current-', index2axis(idir2), '-',  index2axis(idir)
             else
               write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
-            endif
+            end if
             call zio_function_output(outp%how, dir, fname, gr%mesh, lr%dl_j(:, idir2, is), &
               fn_unit / pert_unit, ierr, geo = geo)
           end do
@@ -93,7 +93,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
-      endif
+      end if
     end if
 
     if(gr%mesh%sb%dim==3) then
@@ -116,7 +116,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
               else
                 write(fname, '(a,i3.3,a,i3.3,3a)') &
                   'lr_wf-k', ik, '-st', ist, '-', index2axis(idir), sigma
-              endif
+              end if
             else
               if(st%d%dim > 1) then
                 write(fname, '(a,i3.3,a,i1,3a)') &
@@ -124,8 +124,8 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
               else
                 write(fname, '(a,i3.3,3a)') &
                   'lr_wf-st', ist, '-', index2axis(idir), sigma
-              endif
-            endif
+              end if
+            end if
             call X(io_function_output) (outp%how, dir, fname, gr%mesh, &
               lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, geo = geo)
           end do
@@ -148,7 +148,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
               else
                 write(fname, '(a,i3.3,a,i3.3,3a)') &
                   'sqm_lr_wf-k', ik, '-st', ist, '-', index2axis(idir), sigma
-              endif
+              end if
             else
               if(st%d%dim > 1) then
                 write(fname, '(a,i3.3,a,i1,3a)') &
@@ -156,8 +156,8 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
               else
                 write(fname, '(a,i3.3,3a)') &
                   'sqm_lr_wf-st', ist, '-', index2axis(idir), sigma
-              endif
-            endif
+              end if
+            end if
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
             call dio_function_output (outp%how, dir, fname, gr%mesh, dtmp, fn_unit / pert_unit, ierr, geo = geo)
@@ -187,7 +187,7 @@ contains
         write(fname, '(3a)') trim(filename1), '-', index2axis(idir)
       else
         write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
-      endif
+      end if
       call X(io_function_output)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_de)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do
@@ -197,7 +197,7 @@ contains
         write(fname, '(3a)') trim(filename2), '-', index2axis(idir)
       else
         write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
-      endif
+      end if
       call X(io_function_output)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_elf)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do

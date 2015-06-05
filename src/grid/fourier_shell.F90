@@ -65,7 +65,7 @@ contains
       fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2-2))**2/M_TWO
     else
       fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2))**2/M_TWO
-    endif
+    end if
 
     POP_SUB(fourier_shell_cutoff)
   end function fourier_shell_cutoff
@@ -107,7 +107,7 @@ contains
             gvec(1:3) = dg(1:3)*(ixx(1:3) + kk(1:3))
           else
             gvec(1:3) = dg(1:3)*ixx(1:3)
-          endif
+          end if
 
           if(sum(gvec(1:3)**2)/M_TWO <= this%ekin_cutoff + CNST(1e-10)) then
             INCR(ig, 1)

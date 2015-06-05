@@ -629,7 +629,7 @@ contains
     if(nfiles == 0) then
       write(message(1),'(a)') 'No multipoles.x file was found'
       call messages_fatal(1)
-    endif
+    end if
     if(order > nfiles) then
       write(message(1),'(a)') 'The order that you ask for is higher than the number'
       write(message(2),'(a)') 'of multipoles.x file that you supply.'

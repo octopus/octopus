@@ -34,7 +34,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     end if
   else
     res = M_ZERO
-  endif
+  end if
 
   if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
 

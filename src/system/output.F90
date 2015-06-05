@@ -289,11 +289,11 @@ contains
 
     if(iand(outp%what, OPTION_ELF_FS) /= 0) then
       call messages_experimental("ELF in Fourier space")
-    endif
+    end if
 
     if(iand(outp%what, OPTION_WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
-    endif
+    end if
 
     ! cannot calculate the ELF in 1D
     if(iand(outp%what, OPTION_ELF) /= 0 .or. iand(outp%what, OPTION_ELF_BASINS) /= 0 &
@@ -302,8 +302,8 @@ contains
          outp%what = iand(outp%what, not(OPTION_ELF + OPTION_ELF_BASINS + OPTION_ELF_FS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
-       endif
-    endif
+       end if
+    end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
       call messages_input_error('Output')
@@ -412,14 +412,14 @@ contains
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
-        endif
+        end if
         outp%plane%u(1:3) = outp%plane%u(1:3) / norm
 
         norm = sqrt(sum(outp%plane%v(1:3)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
-        endif
+        end if
         outp%plane%v(1:3) = outp%plane%v(1:3) / norm
 
         outp%plane%n(1) = outp%plane%u(2)*outp%plane%v(3) - outp%plane%u(3)*outp%plane%v(2)
@@ -440,7 +440,7 @@ contains
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
           call messages_fatal(1)
-        endif
+        end if
         outp%line%u(1:2) = outp%line%u(1:2) / norm
 
         outp%line%n(1) = -outp%line%u(2)
@@ -485,7 +485,7 @@ contains
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1)
-    endif
+    end if
 
     !%Variable OutputDuringSCF
     !%Type logical
@@ -511,7 +511,7 @@ contains
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
-    endif
+    end if
     call add_last_slash(outp%iter_dir)
 
     !%Variable RestartWriteInterval
@@ -526,7 +526,7 @@ contains
     if(outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
       call messages_fatal(1)
-    endif
+    end if
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION_MATRIX_ELEMENTS + OPTION_BERKELEYGW + OPTION_DOS + &
@@ -537,14 +537,14 @@ contains
       call io_function_read_how(sb, outp%how)
     else
       outp%how = 0
-    endif
+    end if
 
     if(iand(outp%what, OPTION_FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
       outp%what = ior(outp%what, OPTION_POTENTIAL)
       outp%what = ior(outp%what, OPTION_DENSITY)
       outp%how  = ior(outp%how,  C_OUTPUT_HOW_BINARY)
-    endif
+    end if
 
     if(iand(outp%what, OPTION_CURRENT) /= 0) then
       call current_init(outp%current_calculator)
@@ -587,7 +587,7 @@ contains
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)
-    endif
+    end if
 
     if(iand(outp%what, OPTION_MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
@@ -605,19 +605,19 @@ contains
     if(iand(outp%what, OPTION_GEOMETRY) /= 0) then
       if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
-      endif
+      end if
       if(iand(outp%how, C_OUTPUT_HOW_XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
-      endif
+      end if
       if(iand(outp%how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
-      endif
+      end if
     end if
 
     if(iand(outp%what, OPTION_FORCES) /= 0) then
       call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
-    endif
+    end if
 
     if(iand(outp%what, OPTION_MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
@@ -839,7 +839,7 @@ contains
     if(bgw%nbands > nst) then
       message(1) = "BerkeleyGW_NumberBands must be <= number of states."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
 
     !%Variable BerkeleyGW_Vxc_diag_nmin
     !%Type integer
@@ -854,7 +854,7 @@ contains
     if(bgw%vxc_diag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
     
     !%Variable BerkeleyGW_Vxc_diag_nmax
     !%Type integer
@@ -869,12 +869,12 @@ contains
     if(bgw%vxc_diag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmax must be <= number of states."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
 
     if(bgw%vxc_diag_nmin <= 0 .or. bgw%vxc_diag_nmax <= 0) then
       bgw%vxc_diag_nmin = 0
       bgw%vxc_diag_nmax = 0
-    endif
+    end if
 
     !%Variable BerkeleyGW_Vxc_offdiag_nmin
     !%Type integer
@@ -889,7 +889,7 @@ contains
     if(bgw%vxc_offdiag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
 
     !%Variable BerkeleyGW_Vxc_offdiag_nmax
     !%Type integer
@@ -904,12 +904,12 @@ contains
     if(bgw%vxc_offdiag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmax must be <= number of states."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
 
     if(bgw%vxc_offdiag_nmin <= 0 .or. bgw%vxc_offdiag_nmax <= 0) then
       bgw%vxc_offdiag_nmin = 0
       bgw%vxc_offdiag_nmax = 0
-    endif
+    end if
 
     !!%Variable BerkeleyGW_Complex
     !!%Type logical
@@ -979,16 +979,16 @@ contains
         if(idir <= periodic_dim .and. abs(bgw%vmtxel_polarization(idir)) > M_EPSILON) then
           message(1) = "You cannot calculate vmtxel with polarization in a periodic direction. Use WFNq_fi instead."
           call messages_fatal(1, only_root_writes = .true.)
-        endif
+        end if
       end do
       call parse_block_end(blk)
       norm = sum(abs(bgw%vmtxel_polarization(1:3))**2)
       if(norm < M_EPSILON) then
         message(1) = "A non-zero value must be set for BerkeleyGW_VmtxelPolarization when BerkeleyGW_CalcDipoleMtxels = yes."
         call messages_fatal(1)
-      endif
+      end if
       bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / sqrt(norm)
-    endif
+    end if
 
     !%Variable BerkeleyGW_VmtxelNumCondBands
     !%Type integer
@@ -1045,7 +1045,7 @@ contains
     if(gr%mesh%sb%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1)
-    endif
+    end if
 
     if(st%d%ispin == SPINORS) &
       call messages_not_implemented("BerkeleyGW output for spinors")
@@ -1077,13 +1077,13 @@ contains
       call dbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
     else
       call zbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
-    endif
+    end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1)
-    endif
+    end if
     call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
     call cube_function_alloc_fs(cube, cf)
@@ -1104,8 +1104,8 @@ contains
         call dbgw_vmtxel(bgw, dir, st, gr, ifmax)
       else
         call zbgw_vmtxel(bgw, dir, st, gr, ifmax)
-      endif
-    endif
+      end if
+    end if
 
     message(1) = "BerkeleyGW output: VXC"
     call messages_info(1)
@@ -1114,7 +1114,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
-    endif
+    end if
     ! convert from Ha to Ry, make usable with same processing as RHO
     vxc(:,:) = vxc(:,:) * M_TWO / (product(cube%rs_n_global(1:3)) * gr%mesh%volume_element)
     call dbgw_write_FS(iunit, vxc, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
@@ -1129,7 +1129,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
-    endif
+    end if
     call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
@@ -1142,13 +1142,13 @@ contains
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%nspin))
     else
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%nspin))
-    endif
+    end if
 
     sheader = 'WFN'
     if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
-    endif
+    end if
 
     call fourier_shell_end(shell_density)
 
@@ -1165,13 +1165,13 @@ contains
             call states_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
           else
             call states_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
-          endif
+          end if
         end do
         if(states_are_real(st)) then
           call dbgw_write_FS(iunit, dpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         else
           call zbgw_write_FS(iunit, zpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
-        endif
+        end if
       end do
       call fourier_shell_end(shell_wfn)
     end do
@@ -1187,7 +1187,7 @@ contains
       SAFE_DEALLOCATE_P(dpsi)
     else
       SAFE_DEALLOCATE_P(zpsi)
-    endif
+    end if
     SAFE_DEALLOCATE_P(vxc)
     SAFE_DEALLOCATE_P(field_g)
     SAFE_DEALLOCATE_P(ifmin)
@@ -1231,7 +1231,7 @@ contains
 !     This is how semiconducting smearing "should" work, but not in our implementation.
 !      if(smear_is_semiconducting(st%smear)) then
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
-!      endif
+!      end if
       do ik = 1, st%d%nik
         is = states_dim_get_spin_index(st%d, ik)
         ikk = states_dim_get_kpoint_index(st%d, ik)
@@ -1243,7 +1243,7 @@ contains
             ifmax(ikk, is) = ist
           else
             exit
-          endif
+          end if
         end do
       end do
 
@@ -1267,7 +1267,7 @@ contains
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"
         message(2) = "or this WFN will only be usable in BerkeleyGW's inteqp."
         call messages_warning(1)
-      endif
+      end if
 
       POP_SUB(output_berkeleygw.bgw_setup_header)
     end subroutine bgw_setup_header

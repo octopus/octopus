@@ -102,7 +102,7 @@ contains
       call io_mkdir(VIB_MODES_DIR)
       call loct_rm(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
-    endif
+    end if
 
     POP_SUB(vibrations_init)
   end subroutine vibrations_init
@@ -272,19 +272,19 @@ contains
     if(any(this%freq(1:this%num_modes) < -M_EPSILON)) then
       message(1) = "There are imaginary vibrational frequencies (represented as negative)."
       call messages_warning(1)
-    endif
+    end if
 
     do imode = 1, this%num_modes
       if(this%freq(imode) > M_EPSILON) then
         this%freq(imode) =  sqrt(abs(this%freq(imode)))
       else
         this%freq(imode) = -sqrt(abs(this%freq(imode)))
-      endif
+      end if
 
       ! make the largest component positive, to specify the phase
       if( maxval(this%normal_mode(:, imode)) - abs(minval(this%normal_mode(:, imode))) < -M_EPSILON) then
         this%normal_mode(:, imode) = -this%normal_mode(:, imode)
-      endif
+      end if
     end do
 
     POP_SUB(vibrations_diag_dyn_matrix)

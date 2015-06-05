@@ -438,7 +438,7 @@ contains
     if(.not. in_profiling_mode) then
       POP_SUB(profile_init)
       return
-    endif
+    end if
 
     prof_vars%last_profile = prof_vars%last_profile + 1
 
@@ -857,12 +857,12 @@ contains
       if(.not. prof%initialized) then
         write(message(1),'(a,i6,a)') "Internal error: Profile number ", ii, " is not initialized."
         call messages_fatal(1)
-      endif
+      end if
       if(prof%active) then
         write(message(1),'(a)') "Internal error: Profile '" // trim(profile_label(prof)) // &
           "' is active, i.e. profiling_out was not called."
         call messages_warning(1)
-      endif
+      end if
       
       if(profile_num_calls(prof) == 0) cycle
 

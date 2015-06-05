@@ -175,10 +175,10 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
           do ip = 1, min(np, ubound(map, dim = 1))
             if(map(ip) > 0) ff(map(ip)) = read_ff(ip)
           end do
-        endif
+        end if
 
         SAFE_DEALLOCATE_P(read_ff)
-      endif
+      end if
 
     else
       call io_binary_read(filename, mesh%np_global, ff, ierr)
@@ -480,7 +480,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global))
       else
         SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      endif
+      end if
 
       !note: here we are gathering data that we won`t write if grp is
       !present, but to avoid it we will have to find out all if the
@@ -556,7 +556,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   if(how <= 0) then
     message(1) = "Internal error: cannot call io_function with outp%how <= 0."
     call messages_fatal(1)
-  endif
+  end if
 
   ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
   np_max = mesh%np_global
@@ -578,7 +578,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 #ifdef R_TCOMPLEX
     call out_xcrysden(.false.)
 #endif
-  endif
+  end if
   if(iand(how, C_OUTPUT_HOW_CUBE)       /= 0) call out_cube()
 
   if(iand(how, C_OUTPUT_HOW_MATLAB) /= 0) then
@@ -993,7 +993,7 @@ contains
       fname_ext = trim(fname) // '.real'
     else
       fname_ext = trim(fname) // '.imag'
-    endif
+    end if
 #else
     fname_ext = trim(fname)
 #endif
@@ -1002,7 +1002,7 @@ contains
       write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 2D or 3D.'
       call messages_warning(1)
       return
-    endif
+    end if
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -1050,26 +1050,26 @@ contains
             ix2 = 1
           else
             ix2 = ix
-          endif
+          end if
 
           if (iy == mesh%idx%ll(2) + 1) then
             iy2 = 1
           else
             iy2 = iy
-          endif
+          end if
 
           if (iz == mesh%idx%ll(3) + 1) then
             iz2 = 1
           else
             iz2 = iz
-          endif
+          end if
 
 #ifdef R_TCOMPLEX
           if(.not. write_real) then
             write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           else
             write(iunit,'(2f25.15)') real(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)), REAL_PRECISION)
-          endif
+          end if
 #else
           write(iunit,'(2f25.15)') units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2))
 #endif
@@ -1189,13 +1189,13 @@ contains
         message(1) = "OpenSCADIsovalue is smaller than the minimum for the field. No polyhedra will be output."
         ! You might expect the surface to be that of the simulation box in this case.
         ! It is not, since we discard polyhedra on the edge.
-      endif
+      end if
 
       call messages_warning(1)
       call openscad_file_end(cad_file)
       POP_SUB(X(io_function_output_global).out_openscad)
       return
-    endif
+    end if
 
     npoly = 0
     do ip = 1, np_max
@@ -1292,7 +1292,7 @@ contains
     if(npoly == 0) then
       message(1) = "There were no points inside the isosurface for OpenSCAD output."
       call messages_warning(1)
-    endif
+    end if
 
     POP_SUB(X(io_function_output_global).out_openscad)
   end subroutine out_openscad

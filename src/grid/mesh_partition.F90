@@ -622,7 +622,7 @@ contains
       !Read inner partition
       call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
       if (err /= 0) ierr = ierr + 8
-    endif
+    end if
 
     if (ierr == 0) then
       !Read boundary partition

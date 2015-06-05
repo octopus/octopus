@@ -383,7 +383,7 @@ contains
 
     if(.not. present(root) .or. partition%mpi_grp%rank == 0) then
       ASSERT(all(part_global(:) > 0))
-    endif
+    end if
 
     SAFE_DEALLOCATE_A(rdispls)
     SAFE_DEALLOCATE_A(rcounts)

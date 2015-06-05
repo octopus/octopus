@@ -624,7 +624,7 @@ contains
 
       ! Output in Ha and not in stupid Rydbergs.
       psp%eigen = psp%eigen / M_TWO
-    endif
+    end if
 
     ! Deallocations.
     SAFE_DEALLOCATE_A(s)

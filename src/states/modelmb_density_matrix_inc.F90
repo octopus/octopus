@@ -296,7 +296,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
           *TOFLOAT(densmatr(jj,jj))&
           *st%modelmbparticles%charge_particle(ikeeppart)
       end do
-    endif
+    end if
 
     ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
     write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm

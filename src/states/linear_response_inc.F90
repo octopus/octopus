@@ -71,7 +71,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
           beta_ij(jst) = M_ZERO
         end if
       end do
-    endif
+    end if
   else
     SAFE_ALLOCATE(theta_Fi(1:st%nst))
     theta_Fi(1:st%nst) = st%occ(1:st%nst, ik) / st%smear%el_per_state
@@ -85,12 +85,12 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
           ! avoid dividing by zero
           theta_ij = M_ZERO
           theta_ji = M_ZERO
-        endif
+        end if
       else
         xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
         theta_ij = smear_step_function(st%smear,  xx)
         theta_ji = smear_step_function(st%smear, -xx)
-      endif
+      end if
       
       beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
           
@@ -109,7 +109,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
           ! average for better numerics, as in ABINIT
           delta = M_HALF * (smear_delta_function(st%smear, xx) + smear_delta_function(st%smear, yy))
           beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(delta/dsmear)
-        endif
+        end if
       end if
 
     end do
@@ -185,7 +185,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       if(is_ef_shift) then
         xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
         dos_ef = dos_ef + weight * smear_delta_function(st%smear, dsmear)
-      endif
+      end if
 
     end do
   end do
@@ -215,7 +215,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
         end do
       end do
     end do
-  endif
+  end if
       
   POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)

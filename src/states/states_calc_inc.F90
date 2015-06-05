@@ -637,7 +637,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     if(abs(nrm2) == M_ZERO) then
       message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
       call messages_fatal(1)
-    endif
+    end if
     do idim = 1, st%d%dim
       call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
     end do
@@ -1017,7 +1017,7 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
         if(gr%mesh%sb%dim == 3) then
           ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2)))
           ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3)))
-        endif
+        end if
 #endif
         if(present(l2)) then
           call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))

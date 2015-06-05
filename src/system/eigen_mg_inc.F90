@@ -114,7 +114,7 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
         vv = sqrt(der%mesh%vol_pp(ip))
       else
         vv = sqrt(der%mesh%volume_element)
-      endif
+      end if
 
       dh = real(hdiag(ip, 1), REAL_PRECISION)
       pot = hm%vhxc(ip, 1) + hm%ep%vpsl(ip)

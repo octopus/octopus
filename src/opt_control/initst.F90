@@ -143,7 +143,7 @@ contains
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)
-      endif
+      end if
       
       call transform_states(psi, restart, sys%gr, prefix = "OCTInitial")
       call restart_end(restart)

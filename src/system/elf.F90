@@ -146,7 +146,7 @@ contains
           elf(ip, 1) = D0 * D0 / (D0 * D0 + kappa(ip, 1)**2)
         else
           elf(ip, 1) = M_ZERO
-        endif
+        end if
       end do
 
     case(SPIN_POLARIZED, SPINORS)
@@ -161,7 +161,7 @@ contains
             elf(ip, 3) = D0 * D0 / (D0 * D0 + (kappa(ip, 1) * rho(ip, 2) + kappa(ip,2) * rho(ip, 1))**2)
           else
             elf(ip, 3) = M_ZERO
-          endif
+          end if
         end do
       end if
       do ip = 1, gr%mesh%np
@@ -174,7 +174,7 @@ contains
             elf(ip, is) = D0 * D0 / (D0 * D0 + kappa(ip,is)**2)
           else
             elf(ip, is) = M_ZERO
-          endif
+          end if
         end do
       end do
     end select

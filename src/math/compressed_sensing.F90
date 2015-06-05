@@ -104,7 +104,7 @@ contains
       call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, type)
       call bpdn_matrix_set_delta(this%fourier_matrix, this%dtime, this%dfreq)
       
-    endif
+    end if
     
     POP_SUB(compressed_sensing_init)
   end subroutine compressed_sensing_init

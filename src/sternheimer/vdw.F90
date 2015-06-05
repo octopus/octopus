@@ -83,7 +83,7 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb)) then
       call messages_not_implemented('Van der Waals calculation for periodic system')
-    endif
+    end if
 
     call input()
     call init_()
@@ -228,7 +228,7 @@ contains
       else
         message(1) = "Previous gs calculation required."
         call messages_fatal(1)
-      endif
+      end if
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -261,7 +261,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir(VDW_DIR)               ! output data
-      endif
+      end if
 
       call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                         ierr, mesh=sys%gr%mesh)

@@ -314,7 +314,7 @@ contains
                             kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
     else !non periodic case
       call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
-    endif
+    end if
 
     ! create poisson object
     SAFE_ALLOCATE(scdm%poisson%der)

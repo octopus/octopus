@@ -99,12 +99,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     POP_SUB(xc_get_vxc)
     call profiling_out(prof)
     return
-  endif
+  end if
 
   do ixc = 1, 2
     if(functl(ixc)%family /= XC_FAMILY_NONE .and. iand(functl(ixc)%family, XC_FAMILY_OEP) == 0) then
       ASSERT(iand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
-    endif
+    end if
   end do
   
   ! initialize a couple of handy variables

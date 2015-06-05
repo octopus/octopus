@@ -42,7 +42,7 @@ subroutine X(forces_gather)(geo, force)
   
   if(geo%atoms_dist%nlocal > 0) then
     force_local(1:geo%space%dim, 1:geo%atoms_dist%nlocal) = force(1:geo%space%dim, geo%atoms_dist%start:geo%atoms_dist%end)
-  endif
+  end if
 
 #ifdef HAVE_MPI  
   call MPI_Allgatherv(&
@@ -247,7 +247,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                   write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
                   write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
                   call messages_fatal(2)
-                endif
+                end if
 
                 do idir = 1, gr%mesh%sb%dim
                   force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
@@ -498,7 +498,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
           end do
-        endif
+        end if
 
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
 
@@ -615,7 +615,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
             dl_psi(ip, idim) = phase*dl_psi(ip, idim)
             dl_psi2(ip, idim) = phase*dl_psi2(ip, idim)
           end do
-        endif
+        end if
        
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
         call X(derivatives_grad)(gr%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)

@@ -160,7 +160,7 @@ contains
       ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
       ASSERT(this%method == POISSON_FFT)
       this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
-    endif
+    end if
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationPoissonAllNodes
@@ -366,7 +366,7 @@ contains
         if(this%method /= POISSON_FFT) then
           message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
           call messages_fatal(1)
-        endif
+        end if
       end select
 
       if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
@@ -835,7 +835,7 @@ contains
 
     if(mesh%sb%dim == 1) then
       call messages_not_implemented('Poisson test for 1D case')
-    endif
+    end if
 
     n_gaussians = 1 
 

@@ -264,7 +264,7 @@ contains
     else
     !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
     !  call messages_fatal(1)
-    endif
+    end if
     
     POP_SUB(mix_set_mixing)
   end subroutine mix_set_mixing

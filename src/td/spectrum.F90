@@ -162,7 +162,7 @@ contains
     call parse_variable('SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call messages_input_error('SpectrumMethod')
-    endif
+    end if
     call messages_print_var_option(stdout, 'SpectrumMethod', spectrum%method)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
@@ -236,9 +236,9 @@ contains
       call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
       if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
         call messages_input_error('PropagationSpectrumTransform')
-      endif
+      end if
     call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
-    endif
+    end if
 
     !%Variable PropagationSpectrumStartTime
     !%Type float
@@ -484,7 +484,7 @@ contains
       spins_subtract = (kick%delta_strength_mode == KICK_SPIN_MODE)
     else
       spins_subtract = .false.
-    endif
+    end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
@@ -602,12 +602,12 @@ contains
     if(kick%function_mode /= KICK_FUNCTION_DIPOLE) then
       message(1) = "Kick function must have been dipole to run this utility."
       call messages_fatal(1)
-    endif
+    end if
 
     if(kick%pol_dir < 1) then
       message(1) = "Kick polarization direction is not set. Probably no kick was used."
       call messages_fatal(1)
-    endif
+    end if
 
     ! Find out the iteration numbers corresponding to the time limits.
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
@@ -692,7 +692,7 @@ contains
 
       ewsum = ewsum * spectrum%energy_step
       polsum = polsum * spectrum%energy_step
-    endif
+    end if
 
     write(out_file, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, out_file)
@@ -711,7 +711,7 @@ contains
       write(out_file, '(a,f16.6,1x,a)') '# Static polarizability (from sum rule) = ', &
         units_from_atomic(units_out%length**3, polsum), trim(units_abbrev(units_out%length))
       write(out_file, '(a)') '#%'
-    endif
+    end if
     
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)
     do isp = 1, nspin
@@ -2098,20 +2098,20 @@ contains
           weight = M_ONE
         else
           weight = exp(-(time - t0)*damp_factor)
-        endif
+        end if
       case(SPECTRUM_DAMP_POLYNOMIAL)
         if (time < t0) then
           weight = M_ONE
         else
           weight = M_ONE - M_THREE*( (time - t0)/(time_step*(time_end - 1) - t0) )**2 + &
                M_TWO*( (time - t0)/(time_step*(time_end - 1) - t0) )**3
-        endif
+        end if
       case(SPECTRUM_DAMP_GAUSSIAN)
         if (time < t0) then
           weight = M_ONE
         else
           weight = exp(-(time - t0)**2*damp_factor**2)
-        endif
+        end if
       end select
             
       if(batch_type(time_function) == TYPE_CMPLX) then

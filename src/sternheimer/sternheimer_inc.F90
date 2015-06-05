@@ -71,7 +71,7 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_ALLOCATE(rhs(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
   if(this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
     SAFE_ALLOCATE(rhs_full(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
-  endif
+  end if
   SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
   SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
@@ -101,7 +101,7 @@ subroutine X(sternheimer_solve)(                           &
       end if
       call X(lr_orth_response)(mesh, st, lr(sigma), omega_sigma)
     end do
-  endif
+  end if
 
   !this call is required to reset the scf_tol object, whether we want its result or not
   tol = scf_tol_step(this%scf_tol, 0, M_ONE)
@@ -109,15 +109,15 @@ subroutine X(sternheimer_solve)(                           &
     if(have_exact_freq) then
       tol = scf_tol_final(this%scf_tol) * M_TEN
       ! if rho is converged already, then we should try to solve fully for the wavefunctions
-    endif
-  endif
+    end if
+  end if
 
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scf_tol%max_iter
     if (this%add_fxc .or. this%add_hartree) then
       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
       call messages_info(1)
-    endif
+    end if
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
       "Frequency: ", units_from_atomic(units_out%energy,  R_REAL(omega)), &
@@ -180,7 +180,7 @@ subroutine X(sternheimer_solve)(                           &
               forall(idim = 1:st%d%dim, ip = 1:mesh%np)
                 rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik, sigma)
               end forall
-            endif
+            end if
 
             if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) &
               rhs_full(:, :, ii) = rhs(:, :, ii)
@@ -216,7 +216,7 @@ subroutine X(sternheimer_solve)(                           &
                 end do
               else
                 call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
-              endif
+              end if
             end if
 
             dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
@@ -225,7 +225,7 @@ subroutine X(sternheimer_solve)(                           &
 
           if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
             call X(sternheimer_add_occ)(sys, lr(sigma), rhs_full, sst, est, omega_sigma, CNST(1e-5))
-          endif
+          end if
 
         end do !sigma
 
@@ -256,7 +256,7 @@ subroutine X(sternheimer_solve)(                           &
         sigma_alt = 1
       else
         sigma_alt = 2
-      endif
+      end if
       call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write response density '"//trim(rho_tag)//"'."
@@ -281,7 +281,7 @@ subroutine X(sternheimer_solve)(                           &
     if (.not. states_conv) then
       message(1) = "Linear solver failed to converge all states."
       call messages_warning(1)
-    endif
+    end if
 
     if (.not.(this%add_fxc .or. this%add_hartree)) then
       ! no need to deal with mixing, SCF iterations, etc.
@@ -294,7 +294,7 @@ subroutine X(sternheimer_solve)(                           &
         'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call messages_info(2)
       exit
-    endif
+    end if
 
     ! all the rest is the mixing and checking for convergence
 
@@ -348,7 +348,7 @@ subroutine X(sternheimer_solve)(                           &
       if(clean_stop(sys%mc%master_comm)) then
         message(1) = "Exiting cleanly."
         call messages_fatal(1, only_root_writes = .true.)
-      endif
+      end if
 
       do ispin = 1, st%d%nspin
         call lalg_copy(mesh%np, dl_rhonew(:, ispin, 1), lr(1)%X(dl_rho)(:, ispin))
@@ -374,7 +374,7 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_DEALLOCATE_A(rhs)
   if(this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
     SAFE_DEALLOCATE_A(rhs_full)
-  endif
+  end if
   SAFE_DEALLOCATE_A(hvar)
   SAFE_DEALLOCATE_A(dl_rhoin)
   SAFE_DEALLOCATE_A(dl_rhonew)
@@ -406,7 +406,7 @@ subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thr
 
   if(sys%st%parallel_in_states) then
     call messages_not_implemented("sternheimer_add_occ parallel in states")
-  endif
+  end if
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
@@ -457,7 +457,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
     call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
   else
     call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar)
-  endif
+  end if
 
   POP_SUB(X(sternheimer_calc_hvar))
 
@@ -623,7 +623,7 @@ subroutine X(sternheimer_solve_order2)( &
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
           call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
-        endif
+        end if
         call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues:
@@ -632,7 +632,7 @@ subroutine X(sternheimer_solve_order2)( &
           dl_eig1 = R_TOTYPE(give_dl_eig1(ist, ik))
         else
           dl_eig1 = X(mf_dotp)(mesh, st%d%dim, psi, pert1psi)
-        endif
+        end if
         dl_eig2 = X(mf_dotp)(mesh, st%d%dim, psi, pert2psi)
 
         ! Hxc perturbation

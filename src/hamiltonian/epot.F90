@@ -245,7 +245,7 @@ contains
         call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
         ! i.e. telling the user what widths are used and letting them be set somehow.
-      endif
+      end if
 
       if(ep%classical_pot > 0) then
         message(1) = 'Info: generating classical external potential.'
@@ -289,8 +289,8 @@ contains
           else
             message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
             call messages_warning(2)
-          endif
-        endif
+          end if
+        end if
       end do
       call parse_block_end(blk)
 
@@ -305,8 +305,8 @@ contains
         forall(ip = 1:gr%mesh%np)
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
-      endif
-    endif
+      end if
+    end if
 
 
     !%Variable StaticMagneticField
@@ -361,7 +361,7 @@ contains
         if(gr%sb%periodic_dim == 2) then
           message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
           call messages_fatal(1)
-        endif
+        end if
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
       case(3)
         ! Consider cross-product below: if grx(1:sb%periodic_dim) is used, it is not ok.
@@ -373,7 +373,7 @@ contains
         else if(gr%sb%periodic_dim == 1 .and. any(abs(ep%B_field(2:3)) > M_ZERO)) then
           message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the y- and z-directions."
           call messages_fatal(1)
-        endif
+        end if
       end select
       call parse_block_end(blk)
 
@@ -391,7 +391,7 @@ contains
             message(1) = "For 2D system, 1D-periodic, StaticMagneticField can only be "
             message(2) = "applied for StaticMagneticField2DGauge = linear_y."
             call messages_fatal(2)
-          endif
+          end if
           do ip = 1, gr%mesh%np
             grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
             ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)

@@ -362,8 +362,8 @@ contains
       ! and we are not setting a gauge field
       if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
         SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      endif
-    endif
+      end if
+    end if
 
     !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
@@ -466,7 +466,7 @@ contains
       call states_null(hm%hf_st)
     else
       nullify(hm%hf_st)
-    endif
+    end if
 
     hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
@@ -507,10 +507,10 @@ contains
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
         call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
-      endif
+      end if
        message(1) = "Info: Using SCDM for exact exchange"
        call messages_info(1)
-    endif
+    end if
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
@@ -632,7 +632,7 @@ contains
     if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
       call states_end(hm%hf_st)
       SAFE_DEALLOCATE_P(hm%hf_st)
-    endif
+    end if
 
     SAFE_DEALLOCATE_P(hm%energy)
      
@@ -833,7 +833,7 @@ contains
       if(hm%ab  ==  IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
-    endif
+    end if
 
     POP_SUB(hamiltonian_adjoint)
   end subroutine hamiltonian_adjoint
@@ -850,7 +850,7 @@ contains
       if(hm%ab  ==  IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
-    endif
+    end if
 
     POP_SUB(hamiltonian_not_adjoint)
   end subroutine hamiltonian_not_adjoint
@@ -892,7 +892,7 @@ contains
             this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                  this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
           end forall
-        endif
+        end if
 
         if(this%cmplxscl%space) then
           forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
@@ -1098,7 +1098,7 @@ contains
      call v_nuclei_cav(this%pcm%v_n, geo, this%pcm%tess, this%pcm%n_tesserae)
      call pcm_charges(this%pcm%q_n, this%pcm%qtot_n, this%pcm%v_n, this%pcm%matrix, this%pcm%n_tesserae)
      call pcm_pot_rs( this%pcm%v_n_rs, this%pcm%q_n, this%pcm%tess, this%pcm%n_tesserae, gr%mesh, this%pcm%gaussian_width )
-    endif
+    end if
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
@@ -1294,7 +1294,7 @@ contains
           write(filename, fmt='(a)') 'vtau'
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
-        endif
+        end if
         write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
         call restart_write(restart, iunit, lines, 1, err)
         if (err /= 0) err2(1) = err2(1) + 16
@@ -1384,7 +1384,7 @@ contains
           write(filename, fmt='(a)') 'vtau'
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
-        endif
+        end if
 
         if (hm%cmplxscl%space) then
           call zrestart_read_mesh_function(restart, filename, mesh, zv, err)

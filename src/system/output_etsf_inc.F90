@@ -75,7 +75,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data)
-    endif
+    end if
   end if
 
   ! density
@@ -94,7 +94,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data)
-    endif
+    end if
 
     call dcube_function_free_rs(dcube, cf)
   end if
@@ -120,13 +120,13 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       call output_etsf_electrons_write(st, ncid)
       call output_etsf_geometry_write(geo, gr%sb, ncid)
       call output_etsf_kpoints_write(gr%sb, ncid)
-    endif
+    end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data)
-    endif
+    end if
     
     call dcube_function_free_rs(dcube, cf)
   end if
@@ -156,13 +156,13 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       call output_etsf_geometry_write(geo, gr%sb, ncid)
       call output_etsf_kpoints_write(gr%sb, ncid)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid)
-    endif
+    end if
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data)
-    endif
+    end if
 
     call fourier_shell_end(shell)
     call cube_function_free_fs(zcube, cf)
@@ -510,7 +510,7 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
   if(mpi_grp_is_root(mpi_world)) then
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-  endif
+  end if
 
   SAFE_DEALLOCATE_P(main%density%data4D)
 
@@ -613,7 +613,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
   if(mpi_grp_is_root(mpi_world)) then
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-  endif
+  end if
     
   SAFE_DEALLOCATE_A(local_wfs)
 
@@ -765,7 +765,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
     call etsf_io_tools_set_time_reversal_symmetry(ncid, .false., lstat, error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(local_wfs)
 

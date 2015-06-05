@@ -325,7 +325,7 @@ contains
         call messages_write('Invalid grid size for clAmdFft. FFTW will be used instead.')
         call messages_warning()
         library_ = FFTLIB_FFTW
-      endif
+      end if
       
     case (FFTLIB_NFFT)
             
@@ -355,7 +355,7 @@ contains
       if(any(optimize_parity(1:fft_dim) > 1)) then
         message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
         call messages_fatal(1)
-      endif
+      end if
       
       do ii = 1, fft_dim
         call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))

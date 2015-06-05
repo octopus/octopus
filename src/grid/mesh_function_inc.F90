@@ -145,7 +145,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
       do ip = 1, mesh%np
         dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
-    endif
+    end if
 #endif
     call profiling_count_operations(mesh%np*(2*R_ADD + R_MUL))
   else
@@ -156,7 +156,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #ifdef R_TCOMPLEX
     else
       dotp = blas_dotu(mesh%np, f1(1), 1, f2(1), 1)
-    endif
+    end if
 #endif
     call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
 

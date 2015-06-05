@@ -444,7 +444,7 @@ contains
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
       call messages_fatal(1)
-    endif
+    end if
 
     !%Variable StatesBlockSize
     !%Type integer
@@ -507,8 +507,8 @@ contains
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
         st%priv%wfs_type = TYPE_CMPLX
-      endif
-    endif
+      end if
+    end if
 
     !%Variable OnlyUserDefinedInitialStates
     !%Type logical
@@ -745,7 +745,7 @@ contains
           message(1) = "All rows in block Occupations must have the same number of columns."
           call messages_warning(1)
           call messages_input_error("Occupations")
-        endif
+        end if
       end do
 
       ! Now we fill all the "missing" states with the maximum occupation.
@@ -753,7 +753,7 @@ contains
         el_per_state = 2
       else
         el_per_state = 1
-      endif
+      end if
 
       SAFE_ALLOCATE(read_occs(1:ncols, 1:st%d%nik))
 
@@ -840,7 +840,7 @@ contains
       call parse_variable('RestartReorderOccs', .false., st%restart_reorder_occs)
     else
       st%restart_reorder_occs = .false.
-    endif
+    end if
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
@@ -849,8 +849,8 @@ contains
         (st%d%ispin == SPINORS .and. st%nst  <=  st%qtot)) then
         call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
         call messages_warning()
-      endif
-    endif
+      end if
+    end if
 
     ! sanity check
     charge = M_ZERO
@@ -1144,7 +1144,7 @@ contains
           call messages_write(st%group%block_range(ib, 1), fmt = 'i8')
           call messages_write(' - ')
           call messages_write(st%group%block_range(ib, 2), fmt = 'i8')
-        endif
+        end if
         call messages_info()
       end do
     end if
@@ -1445,17 +1445,17 @@ contains
       end if
 
       call loct_pointer_copy(stout%node, stin%node)
-    endif
+    end if
 
     if(.not. optional_default(exclude_eigenval, .false.)) then
       call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
       stout%eigenval => stout%zeigenval%Re
       if(stin%cmplxscl%space) then
         call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im)
-      endif
+      end if
       call loct_pointer_copy(stout%occ, stin%occ)
       call loct_pointer_copy(stout%spin, stin%spin)
-    endif
+    end if
 
     stout%have_left_states = stin%have_left_states
 
@@ -1473,7 +1473,7 @@ contains
     if(stin%cmplxscl%space) then
       call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
       call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
-    endif
+    end if
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1509,7 +1509,7 @@ contains
       if(stin%group%block_initialized) then
         call states_init_block(stout, verbose = .false.)
       end if
-    endif
+    end if
 
     stout%packed = stin%packed
 
@@ -1734,7 +1734,7 @@ contains
       if(charge < M_EPSILON) then
         message(1) = "There don't seem to be any electrons at all!"
         call messages_fatal(1)
-      endif
+      end if
     end if
 
     if(st%d%ispin == SPINORS) then
@@ -1915,7 +1915,7 @@ contains
        if(st%st_num(inode) > 0) then
          write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', &
            st%st_range(1, inode), " - ", st%st_range(2, inode)
-       endif
+       end if
        call messages_info(1)
 
        do ist = st%st_range(1, inode), st%st_range(2, inode)
@@ -1926,7 +1926,7 @@ contains
      if(any(st%st_num(:) == 0)) then
        message(1) = "Cannot run with empty states-groups. Select a smaller number of processors so none are idle."
        call messages_fatal(1, only_root_writes = .true.)
-     endif
+     end if
 
      st%st_start = st%st_range(1, st%mpi_grp%rank)
      st%st_end   = st%st_range(2, st%mpi_grp%rank)
@@ -1999,7 +1999,7 @@ contains
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
     if(present(density_laplacian)) then
       SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
-    endif
+    end if
 
     nullify(tau)
     if(present(kinetic_energy_density)) tau => kinetic_energy_density
@@ -2281,7 +2281,7 @@ contains
       message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
       message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
       call messages_fatal(2, only_root_writes = .true.)
-    endif
+    end if
     
     if (mesh%parallel_in_domains) then
       blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &
@@ -2588,12 +2588,12 @@ contains
             if(st%eigenval(ast, ik) - st%eigenval(ist, ik) < energy_window) then
               n_pairs = n_pairs + 1
               is_included(ist, ast, ik) = .true.
-            endif
+            end if
           end do
         end do
       end do
 
-    endif
+    end if
 
     POP_SUB(states_count_pairs)
   end subroutine states_count_pairs

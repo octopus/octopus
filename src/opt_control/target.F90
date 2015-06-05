@@ -270,7 +270,7 @@ contains
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
       call messages_fatal(1)
-    endif
+    end if
 
     select case(tg%type)
     case(oct_tg_groundstate)

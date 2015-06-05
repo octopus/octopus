@@ -305,7 +305,7 @@ contains
         if(ncols /= dim) then
           write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
           call messages_fatal(1)
-        endif
+        end if
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
@@ -320,7 +320,7 @@ contains
           if(ncols /= dim) then
             write(message(1),'(a,i3,a,i3)') 'KPointsGrid second row has ', ncols, ' columns but must have ', dim
             call messages_fatal(1)
-          endif
+          end if
           do ii = 1, dim
             call parse_block_float(blk, 1, ii - 1, this%shifts(ii))
           end do
@@ -482,13 +482,13 @@ contains
       if(any(this%full%weight(:) < -M_ZERO)) then
         message(1) = "k-point weights must be non-negative."
         call messages_fatal(1)
-      endif
+      end if
       ! renormalize weights
       weight_sum = sum(this%full%weight(1:this%full%npoints))
       if(weight_sum < M_EPSILON) then
         message(1) = "k-point weights must sum to a positive number."
         call messages_fatal(1)
-      endif
+      end if
       this%full%weight = this%full%weight / weight_sum
 
       ! for the moment we do not apply symmetries to user kpoints
@@ -843,7 +843,7 @@ contains
       call messages_new_line()
       call messages_info(iunit = iunit)
 
-    endif
+    end if
 
     call messages_new_line()
     call messages_write('List of k-points:')
@@ -932,9 +932,9 @@ contains
         if(all(abs(int(this%full%weight(:) * denom) - this%full%weight(:) * denom) < CNST(10)*M_EPSILON)) then
           kpoints_kweight_denominator = denom
           exit
-        endif
+        end if
       end do
-    endif
+    end if
 
     POP_SUB(kpoints_kweight_denominator)
   end function kpoints_kweight_denominator

@@ -340,7 +340,7 @@ contains
             ixx(3)=iz
           else
             ixx(3) = nrs(3) - nrs_s(3)+iz
-          endif
+          end if
           fft_Coulb_small_RS(ix,iy,iz) = fft_Coulb_RS(ixx(1),ixx(2),ixx(3))
         end do
       end do
@@ -586,7 +586,7 @@ contains
           if(cube%fft%library.eq.FFTLIB_NFFT) then
              modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
              r_c = default_r_c*M_TWO
-          endif
+          end if
 #endif
 
           if(abs(modg2) > M_EPSILON) then

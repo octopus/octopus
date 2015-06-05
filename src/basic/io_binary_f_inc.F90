@@ -134,7 +134,7 @@
         call messages_warning(2)
         ierr = 999
       end if
-    endif
+    end if
  
     call io_binary_parallel_end(file_handle)
  
@@ -204,8 +204,8 @@
           call messages_warning(2)
           ierr = 999
         end if
-      endif
-    endif
+      end if
+    end if
     
     call io_binary_parallel_end(file_handle)
 

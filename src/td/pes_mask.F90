@@ -317,21 +317,21 @@ contains
     if (mask%pw_map_how ==  PW_MAP_NFFT) then
       message(1) = "PESMaskPlaneWaveProjection = nfft_map requires NFFT but that library was not linked."
       call messages_fatal(1) 
-    endif
+    end if
 #endif
     
 #if !defined(HAVE_PFFT) 
     if (mask%pw_map_how ==  PW_MAP_PFFT) then
       message(1) = "PESMaskPlaneWaveProjection = pfft_map requires PFFT but that library was not linked."
       call messages_fatal(1) 
-    endif
+    end if
 #endif
 
 #if !defined(HAVE_PNFFT) 
     if (mask%pw_map_how ==  PW_MAP_PNFFT) then
       message(1) = "PESMaskPlaneWaveProjection = pnfft_map requires PNFFT but that library was not linked."
       call messages_fatal(1) 
-    endif
+    end if
 #endif
     
     
@@ -401,7 +401,7 @@ contains
         message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
         message(2) = "or pnfft_map in order to run properly." 
         call messages_warning(2) 
-      endif        
+      end if        
     end if
     
     if( mask%enlarge_2p(1) < M_ONE ) then
@@ -678,7 +678,7 @@ contains
       SAFE_ALLOCATE(mask%Mk(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
       
       call pes_mask_generate_filter(mask,pCutOff)
-    endif
+    end if
     
 !!  Output
 

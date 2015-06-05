@@ -115,14 +115,14 @@ contains
       this%conv_threshold_use = this%conv_abs_dens
     else
       this%conv_threshold_use = min(this%conv_abs_dens, this%conv_rel_dens * qtot)
-    endif
+    end if
 
     if(this%conv_abs_dens <= M_ZERO .and. this%conv_rel_dens <= M_ZERO) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following to a nonzero value:"
       message(3) = "LRConvAbsDens | LRConvRelDens"
       call messages_fatal(3)
-    endif
+    end if
 
     !%Variable LRTolScheme
     !%Type integer

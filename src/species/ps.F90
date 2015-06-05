@@ -184,7 +184,7 @@ contains
       if(lmax /= ps%l_max) then
         message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
         call messages_fatal(1)
-      endif
+      end if
 
       call ps_psf_process(ps_psf, lmax, ps%l_loc)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
@@ -198,7 +198,7 @@ contains
       else
         call ps_fhi_init(ps_fhi, trim(filename))
         ps%conf%p      = ps_fhi%ps_grid%no_l_channels
-      endif
+      end if
 
       ps%conf%z      = nint(z)
       ps%conf%symbol = label(1:2)
@@ -217,7 +217,7 @@ contains
       if(lmax /= ps%l_max) then
         message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
         call messages_fatal(1)
-      endif
+      end if
 
       if(ps%flavour == PS_TYPE_CPI) then
         call ps_cpi_process(ps_cpi, ps%l_loc)
@@ -225,7 +225,7 @@ contains
       else
         call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
-      endif
+      end if
 
     case(PS_TYPE_HGH)
       call hgh_init(psp, trim(filename))
@@ -565,7 +565,7 @@ contains
           write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
         end do
       end do
-    endif
+    end if
     call io_close(iunit)
 
     ! Local part of the pseudopotential
@@ -885,7 +885,7 @@ contains
     if(any(abs(ps%g%rofi(2:ps%g%nrval)) < M_EPSILON)) then
       message(1) = "Illegal zero values in UPF radial grid ps%g%rofi(2:ps%g%nrval)"
       call messages_fatal(1)
-    endif
+    end if
 
     !Non-linear core-corrections
     if(ps_upf%nlcc) then
@@ -969,7 +969,7 @@ contains
           hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
         else
           hato(1) = M_ZERO
-        endif
+        end if
         ! rofi /= 0 except rofi(1) possibly
         hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
 

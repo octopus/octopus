@@ -193,7 +193,7 @@ contains
       sk%size = 2*n
     else
       sk%size = n
-    endif
+    end if
 
     ! initialize workspace size
     workspace_size = 0 

@@ -48,7 +48,7 @@ subroutine X(cholesky)(n, a, bof, err_code)
         write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
       else
         write(message(2), '(a,i5,a)') 'The leading minor of order ', info, ' is not positive definite.'
-      endif
+      end if
       call messages_fatal(2)
     else
       if(present(bof)) then
@@ -140,7 +140,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
         write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
       else
         write(message(2), '(a,i5,a)') 'The leading minor of order ', info - n, ' of B is not positive definite.'
-      endif
+      end if
       call messages_fatal(2)
     else
       if(present(bof)) then
@@ -204,7 +204,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
     write(message(1),'(5a,i5)') 'In ', TOSTRING(X(eigensolve_nonh)), &
       ', LAPACK ', TOSTRING(X(geev)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  endif
+  end if
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -246,7 +246,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), '(a,i5,a,i5,a)') 'Only eigenvalues ', info + 1, ' to ', n, ' could be computed.'
-    endif
+    end if
     call messages_fatal(2)
   end if
   if(present(err_code)) then
@@ -307,7 +307,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', &
       TOSTRING(X(sygvx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  endif  
+  end if  
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
@@ -339,7 +339,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
         write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
       else
         write(message(2), '(a,i5,a)') 'The leading minor of order ', info - n, ' of B is not positive definite.'
-      endif
+      end if
       call messages_fatal(2)
     else
       if(present(bof)) then
@@ -392,7 +392,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
       TOSTRING(X(hegvx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  endif  
+  end if  
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
 
@@ -422,7 +422,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
         write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
       else
         write(message(2), '(a,i5,a)') 'The leading minor of order ', info - n, ' of B is not positive definite.'
-      endif
+      end if
       call messages_fatal(2)      
     else
       if(present(bof)) then
@@ -478,7 +478,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
         write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
       else
         write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
-      endif
+      end if
       call messages_fatal(2)
     else
       if(present(bof)) then
@@ -538,7 +538,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
         write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
       else
         write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
-      endif
+      end if
       call messages_fatal(2)
     else
       if(present(bof)) then
@@ -588,7 +588,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
     write(message(1),'(3a,i5)') 'In dlowest_eigensolve, LAPACK ', &
       TOSTRING(X(syevx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  endif
+  end if
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
@@ -610,7 +610,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
-    endif
+    end if
     call messages_fatal(2)
   end if
 
@@ -647,7 +647,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
     write(message(1),'(3a,i5)') 'In zlowest_eigensolve, LAPACK ', &
       TOSTRING(X(heevx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  endif  
+  end if  
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
@@ -669,7 +669,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
-    endif
+    end if
     call messages_fatal(2)
   end if
 
@@ -743,7 +743,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
-    endif
+    end if
     call messages_fatal(2)
     end if
   end if
@@ -813,7 +813,7 @@ subroutine X(sym_inverter)(uplo, n, a)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of D is 0; matrix is singular.'
-    endif
+    end if
     call messages_fatal(2)
   end if
 
@@ -880,7 +880,7 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
     else
       write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
       call messages_fatal(2)
-    endif
+    end if
   end if
 
   SAFE_DEALLOCATE_A(ipiv)
@@ -956,7 +956,7 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
     else
       write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
       call messages_fatal(2)
-    endif
+    end if
   end if
 
   SAFE_DEALLOCATE_A(ipiv)
@@ -1030,7 +1030,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), '(i5,a)') info, ' superdiagonal elements of an intermediate bidiagonal did not converge to zero.'
-    endif
+    end if
     call messages_fatal(2)
   end if
 
@@ -1131,7 +1131,7 @@ subroutine X(invert_upper_triangular)(n, a)
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
     else
       write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' is 0; matrix is singular.'
-    endif
+    end if
     call messages_fatal(2)
   end if
 

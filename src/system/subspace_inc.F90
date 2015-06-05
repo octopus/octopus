@@ -158,7 +158,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1), '(a,i6)') "subspace diagonalization descinit for psi failed with error code ", info
     call messages_fatal(1)
-  endif
+  end if
 
   ! select the blocksize, we use the division used for state
   ! parallelization but with a maximum of 64
@@ -175,7 +175,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1), '(a,i6)') "subspace diagonalization descinit for Hamiltonian failed with error code ", info
     call messages_fatal(1)
-  endif
+  end if
 
   ! calculate |hpsi> = H |psi>
   do ist = st%st_start, st%st_end, st%d%block_size
@@ -217,7 +217,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev workspace query failure, error code = ", info
     call messages_fatal(1)
-  endif
+  end if
 
   lwork = nint(abs(rttmp))
   lrwork = nint(real(ftmp, 8))
@@ -232,7 +232,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev call failure, error code = ", info
     call messages_fatal(1)
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -245,7 +245,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
     call messages_fatal(1)
-  endif
+  end if
 
   lwork = nint(abs(rttmp))
   SAFE_ALLOCATE(work(1:lwork))
@@ -256,7 +256,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev call failure, error code = ", info
     call messages_fatal(1)
-  endif
+  end if
   
   SAFE_DEALLOCATE_A(work)
 

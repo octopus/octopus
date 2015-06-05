@@ -104,11 +104,11 @@ contains
 
     if(simul_box_is_periodic(gr%sb)) then
       call messages_not_implemented('linear-response vib_modes for periodic systems')
-    endif
+    end if
 
     if(geo%nlcc) then
       call messages_not_implemented('linear-response vib_modes with non-linear core corrections')
-    endif
+    end if
 
     !%Variable CalcNormalModeWfs
     !%Type logical
@@ -155,7 +155,7 @@ contains
     else
       message(1) = "Previous gs calculation is required."
       call messages_fatal(1)
-    endif
+    end if
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
@@ -186,7 +186,7 @@ contains
         end if
       end do
       call restart_end(kdotp_restart)
-    endif
+    end if
 
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
@@ -199,7 +199,7 @@ contains
 
     if(do_infrared) then
       call Born_charges_init(born, geo, st, ndim)
-    endif
+    end if
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
     !CALCULATE
@@ -212,7 +212,7 @@ contains
       call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
     else
       call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%zpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
-    endif
+    end if
 
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
 
@@ -267,19 +267,19 @@ contains
       else
         call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
-      endif
+      end if
       
       if(states_are_real(st)) then
         call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
       else
         call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
-      endif
+      end if
 
       do jmat = 1, vib%num_modes
         if(.not. symmetrize .and. jmat < imat) then
           vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
           cycle
-        endif
+        end if
 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
@@ -294,8 +294,8 @@ contains
           call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         else
           call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
-        endif
-      endif
+        end if
+      end if
 
       iunit_restart = restart_open(restart_dump, 'restart', position='append')
       ! open and close makes sure output is not buffered
@@ -334,10 +334,10 @@ contains
         call born_from_infrared(vib, born)
         call out_Born_charges(born, geo, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
-      endif
+      end if
 
       call Born_charges_end(born)
-    endif
+    end if
 
     if(normal_mode_wfs) then
       message(1) = "Calculating response wavefunctions for normal modes."
@@ -346,8 +346,8 @@ contains
         call dphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
       else
         call zphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
-      endif
-    endif
+      end if
+    end if
 
     !DESTRUCT
 
@@ -360,7 +360,7 @@ contains
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
       end do
-    endif
+    end if
     call restart_end(restart_load)
     call restart_end(restart_dump)
 
@@ -563,11 +563,11 @@ contains
           if(imode_read /= imode) then
             write(message(1),'(a,i9,a,i9)') "Corruption of restart data: row ", imode, " is labeled as ", imode_read
             call messages_fatal(1)
-          endif
+          end if
           if(jmode_read /= jmode) then
             write(message(1),'(a,i9,a,i9)') "Corruption of restart data: column ", jmode, " is labeled as ", jmode_read
             call messages_fatal(1)
-          endif
+          end if
         end do
 
         call restart_read(restart, iunit, line, 1, ierr)
@@ -579,7 +579,7 @@ contains
         if(imode_read /= imode) then
           write(message(1),'(a,i9,a,i9)') "Corruption of restart data: infrared row ", imode, " is labeled as ", imode_read
           call messages_fatal(1)
-        endif
+        end if
       end do imode_loop
         
       write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
@@ -592,7 +592,7 @@ contains
 
       message(1) = "Could not open restart file 'restart'. Starting from scratch."
       call messages_warning(1)
-    endif
+    end if
 
     POP_SUB(phonons_load)
   end subroutine phonons_load

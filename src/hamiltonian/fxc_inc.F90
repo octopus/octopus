@@ -62,7 +62,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
     if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_FXC) == 0) then
       message(1) = "Cannot calculate kernel. This functional does not have fxc available."
       call messages_fatal(1)
-    endif
+    end if
   end do
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.

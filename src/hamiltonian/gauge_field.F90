@@ -146,7 +146,7 @@ contains
       if(.not. simul_box_is_periodic(sb)) then
         message(1) = "GaugeVectorField is intended for periodic systems."
         call messages_warning(1)
-      endif
+      end if
 
       if(sb%kpoints%use_symmetries) then
         do ik = 1, sb%kpoints%reduced%npoints
@@ -156,10 +156,10 @@ contains
               message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
               message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
               call messages_fatal(2)
-            endif
+            end if
           end do
         end do
-      endif
+      end if
 
       !%Variable GaugeFieldDynamics
       !%Type integer

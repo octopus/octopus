@@ -286,7 +286,7 @@ contains
         write(message(1),'(2a)') "Failed to read from ref-file ", trim(ref_name)
         write(message(2), '(2a)') "from folder ", trim(ref_folder)
         call messages_fatal(2)
-      endif
+      end if
     end if
 
     ! Initialize the restart directory from <tt>ConvertFolder</tt> value.
@@ -329,7 +329,7 @@ contains
       ! Read the obf file
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, read_ff, ierr)
-      endif
+      end if
 
       if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
@@ -489,7 +489,7 @@ contains
         write(message(1),'(2a)') "Failed to read from ref-file ", trim(ref_name)
         write(message(2), '(2a)') "from folder ", trim(ref_folder)
         call messages_fatal(2)
-      endif
+      end if
     end if
     
     call io_mkdir('wd.general')

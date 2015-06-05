@@ -249,7 +249,7 @@ contains
 
       SAFE_DEALLOCATE_A(ind)
       SAFE_DEALLOCATE_A(copy_occ)
-    endif
+    end if
 
     call states_fermi(sys%st, sys%gr%mesh) ! occupations
     call energy_calc_total(hm, sys%gr, sys%st)

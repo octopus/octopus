@@ -339,21 +339,21 @@ contains
           grylm(1) = c(1)*Rx*Ry/rsize
           grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
           grylm(3) = c(1)*Rz*Ry/rsize
-        endif
+        end if
       case(0)
         ylm = c(2)*Rz
         if(present(grylm)) then
           grylm(1) = (-c(2))*Rx*Rz/rsize
           grylm(2) = (-c(2))*Ry*Rz/rsize
           grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
-        endif
+        end if
       case(1)
         ylm = (-c(3))*Rx
         if(present(grylm)) then
           grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
           grylm(2) = c(3)*Ry*Rx/rsize
           grylm(3) = c(3)*Rz*Rx/rsize
-        endif
+        end if
       end select
       return
     end if
@@ -366,35 +366,35 @@ contains
           grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
           grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
           grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
-        endif
+        end if
       case(-1)
         ylm = (-c(5))*M_THREE*Ry*Rz
         if(present(grylm)) then
           grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
           grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
           grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
-        endif
+        end if
       case(0)
         ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
         if(present(grylm)) then
           grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
           grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
           grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
-        endif
+        end if
       case(1)
         ylm = (-c(7))*M_THREE*Rx*Rz
         if(present(grylm)) then
           grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
           grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
           grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
-        endif
+        end if
       case(2)
         ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
         if(present(grylm)) then
           grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
           grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
           grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
-        endif
+        end if
       end select
       return
     end if
@@ -460,7 +460,7 @@ contains
       grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
         +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
       grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
-    endif
+    end if
 
     return
   end subroutine grylmr
@@ -918,7 +918,7 @@ contains
     if (n == 1) then
       is_prime = .false.
       POP_SUB(is_prime); return 
-    endif
+    end if
 
     root = nint(sqrt(real(n)))
     do i = 2, root
@@ -1063,7 +1063,7 @@ contains
         R(i,i) = M_ONE 
       end do
 
-    endif
+    end if
 
 
     SAFE_DEALLOCATE_A(u)
@@ -1127,7 +1127,7 @@ contains
         if (errt .le. err) then
           err = errt
           res = a(j,i)
-        endif
+        end if
       end do
       if ( abs(a(i,i)-a(i-1,i-1) ) .ge. safe*err)return
     end do

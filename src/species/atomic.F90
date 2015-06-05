@@ -720,8 +720,8 @@ contains
         if(abs(de) < tol) then
           ierr = 0
           exit
-        endif
-      endif
+        end if
+      end if
       call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 
 
@@ -749,7 +749,7 @@ contains
         del=del*M_TWO
         e2=e1+del
         cycle
-      endif
+      end if
 
       !  too many nodes; set e2 and n2
       e2=e
@@ -787,7 +787,7 @@ contains
         g(i)=y(i)/(M_ONE-t/CNST(12.))
       end do
       call nrmlzg(g,s,n)
-    endif
+    end if
     
     POP_SUB(egofv)
   end subroutine egofv
@@ -836,7 +836,7 @@ contains
       if( h(n)-e*s(n)  <  M_ONE ) then
         knk = n
         exit
-      endif
+      end if
       y(n)=M_ZERO
     end do
     
@@ -865,7 +865,7 @@ contains
     yn = M_ZERO
     if(.not. (n < nmax .or. abs(dr) > CNST(1.e3))) then
       call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
-    endif
+    end if
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -943,7 +943,7 @@ contains
     if (mod(n,2) /= 1) then
       write(message(1),'(a,i6)') ' nrmlzg: n should be odd. n =', n
       call messages_warning(1)
-    endif
+    end if
 
     norm = M_ZERO
     nm1 = n - 1
@@ -1007,13 +1007,13 @@ contains
       else
         c0=M_ONE/CNST(12.)
         c0=(-c0)*M_EIGHT/M_THREE
-      endif
+      end if
 
       c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
       t3=h(3)-e*s(3)
       c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
       d2=(d2-c1)/(M_ONE-c2)
-    endif
+    end if
     y2=(-M_ONE)/d2
     
     if(l  <  2) then
@@ -1023,12 +1023,12 @@ contains
       else
         c0=M_ONE/CNST(12.)
         c0=(-c0)*M_EIGHT/M_THREE
-      endif
+      end if
       c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
       t3=h(3)-e*s(3)
       c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
       d2=(d2-c1)/(M_ONE-c2)
-    endif
+    end if
     y2=(-M_ONE)/d2
     
   end subroutine bcorgn
@@ -1167,7 +1167,7 @@ contains
       if(.not. (nnode < ncor .or. xl*x > M_ZERO)) then
         knk = i
         exit
-      endif
+      end if
     end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

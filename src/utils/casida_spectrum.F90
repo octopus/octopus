@@ -142,7 +142,7 @@ program casida_spectrum
       write(message(1),'(a,es12.6)') "Rotation matrix is not orthogonal. max discrepancy in product = ", &
         maxval(abs(rot2(:,:) - identity(:,:)))
       call messages_warning(1)
-    endif
+    end if
 
     ! apply rotation to geometry
     call geometry_init(geo, cs%space)
@@ -202,7 +202,7 @@ contains
     ncols = 1
     if(extracols) then
       ncols = ncols + cs%ispin
-    endif
+    end if
 
     read(iunit, *) ! skip header
     
@@ -219,7 +219,7 @@ contains
         im_tm(1:cs%space%dim) = units_to_atomic(units_out%length, im_tm(1:cs%space%dim))
       else
         read(iunit, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir),              idir = 1, cs%space%dim), ff(cs%space%dim+1)
-      endif
+      end if
       re_tm(1:cs%space%dim) = units_to_atomic(units_out%length, re_tm(1:cs%space%dim))
       ! ff, the last column, is a dimensionless number
 
@@ -228,7 +228,7 @@ contains
       else if(ios > 0) then
         message(1) = "Error parsing file " // trim(fname)
         call messages_fatal(1)
-      endif
+      end if
 
       energy = units_to_atomic(units_out%energy, energy)
       ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces

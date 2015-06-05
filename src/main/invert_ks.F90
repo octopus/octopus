@@ -107,7 +107,7 @@ contains
       if (sys%ks%ks_inversion%method == XC_INV_METHOD_VS_ITER) then ! iterative procedure for v_s 
         call invertks_iter(target_rho, nspin, hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
-      endif
+      end if
     end if
 
     ! output quality of KS inversion
@@ -124,7 +124,7 @@ contains
       do ii = 1, np
         if (abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
           diffdensity = abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj))
-        endif
+        end if
       end do
     end do
     write (message(1),'(a,F16.6)') 'Achieved difference in densities wrt target:', &

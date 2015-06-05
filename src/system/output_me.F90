@@ -275,7 +275,7 @@ contains
             message(1) = trim(message(1)) // ")"
           else
             message(1) = trim(message(1)) // ","
-          endif
+          end if
         end do
         call messages_info(1, iunit)
       end if
@@ -395,7 +395,7 @@ contains
 
    if(st%parallel_in_states) then
       SAFE_ALLOCATE(lang(1:st%lnst, 1))
-    endif
+    end if
 #endif
 
     do ik = 1, st%d%nik, ns
@@ -412,7 +412,7 @@ contains
             message(1) = trim(message(1)) // ")"
           else
             message(1) = trim(message(1)) // ","
-          endif
+          end if
         end do
         call messages_info(1, iunit)
       end if
@@ -466,7 +466,7 @@ contains
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_A(lang)
-    endif
+    end if
 #endif
     
     SAFE_DEALLOCATE_A(ang)

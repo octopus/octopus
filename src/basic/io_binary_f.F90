@@ -111,13 +111,13 @@ contains
       amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
     else
       amode = MPI_MODE_RDONLY
-    endif
+    end if
     call MPI_File_open(comm, fname, amode, MPI_INFO_NULL, file_handle, mpi_err)
 
     if(mpi_err == 0) then
       call MPI_File_set_atomicity(file_handle, .true., mpi_err)
       call MPI_File_seek(file_handle, offset, MPI_SEEK_SET, mpi_err)
-    endif
+    end if
     ierr = mpi_err
 #else
     ierr = -1
@@ -180,7 +180,7 @@ contains
       SAFE_DEALLOCATE_A(read_ff)
     else
       ierr = -1
-    endif
+    end if
     ! ierr will be 0 if dread_binary succeeded
 
     POP_SUB(try_dread_binary)
@@ -214,7 +214,7 @@ contains
       SAFE_DEALLOCATE_A(read_ff)
     else
       ierr = -1
-    endif
+    end if
     ! ierr will be 0 if dread_parallel succeeded
 
     POP_SUB(try_dread_parallel)

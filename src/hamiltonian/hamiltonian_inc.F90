@@ -52,7 +52,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
       write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
       write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
       call messages_fatal(2)
-    endif
+    end if
   end if
 
   if(present(Imtime)) then
@@ -300,7 +300,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 2) = vpsl(1:mesh%np)
     vpsl_spin(1:mesh%np, 3) = M_ZERO
     vpsl_spin(1:mesh%np, 4) = M_ZERO
-  endif
+  end if
 
   if(this%cmplxscl%space) then
     SAFE_ALLOCATE(Imvpsl_spin(1:mesh%np, 1:this%d%nspin))
@@ -309,8 +309,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
       Imvpsl_spin(1:mesh%np, 2) = this%ep%Imvpsl(1:mesh%np)
       Imvpsl_spin(1:mesh%np, 3) = M_ZERO
       Imvpsl_spin(1:mesh%np, 4) = M_ZERO
-    endif
-  endif
+    end if
+  end if
 
   if(batch_status(psib) == BATCH_CL_PACKED) then
 #ifdef HAVE_OPENCL
@@ -335,13 +335,13 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
         psib, vpsib, Impotential = Imvpsl_spin)
     else
       call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, psib, vpsib)
-    endif
-  endif
+    end if
+  end if
 
   SAFE_DEALLOCATE_A(vpsl_spin)
   if(this%cmplxscl%space) then
     SAFE_DEALLOCATE_A(Imvpsl_spin)
-  endif
+  end if
 
   POP_SUB(X(hamiltonian_external))
 end subroutine X(hamiltonian_external)

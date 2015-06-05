@@ -168,7 +168,7 @@ contains
       !%End
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
-    endif
+    end if
 
     POP_SUB(pert_init)
   end subroutine pert_init
@@ -200,8 +200,8 @@ contains
       if (.not. this%use_nonlocalpps) then
         write(message(1), '(a)') 'Ignoring non-local pseudopotential term.'
         call messages_info(1)
-      endif
-    endif
+      end if
+    end if
    
     POP_SUB(pert_info)
   end subroutine pert_info

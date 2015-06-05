@@ -188,7 +188,7 @@ contains
         !for the moment we only have one type of slave
         call poisson_slave_work(sys%ks%hartree_solver)
       end if
-    endif
+    end if
 
     if(.not. multicomm_is_slave(sys%mc)) then
       call messages_write('Info: Octopus initialization completed.', new_line = .true.)
@@ -253,7 +253,7 @@ contains
       end select
 
       call profiling_out(calc_mode_prof)
-    endif
+    end if
     
     if(calc_mode_id /= CM_PULPO_A_FEIRA) then
       if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
@@ -264,7 +264,7 @@ contains
       if(ssys_config_parse_use()) then
         call ssys_handle_end(subsys_handle)
         call json_end(config)
-      endif
+      end if
       call fft_all_end()
     end if
 

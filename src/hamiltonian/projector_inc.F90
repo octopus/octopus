@@ -283,7 +283,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
       apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
     else
       apb = apb + X(sm_integrate)(mesh, pj%sphere)
-    endif
+    end if
   end do
 
   SAFE_DEALLOCATE_A(lpsi)

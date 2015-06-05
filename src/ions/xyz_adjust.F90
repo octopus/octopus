@@ -110,13 +110,13 @@ contains
         default = INERTIA
       else
         default = NONE
-      endif
+      end if
       call parse_variable('AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then
         call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions")
-      endif
+      end if
 
       select case(axis_type)
       case(NONE, INERTIA, PSEUDO)
@@ -281,7 +281,7 @@ contains
       write(message(1),'(a)') 'Moment of pseudo-inertia tensor [' // trim(units_abbrev(unit)) // ']'
     else
       write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
-    endif
+    end if
     call messages_info(1)
     call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
 

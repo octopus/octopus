@@ -138,13 +138,13 @@ logical function X(approximately_equal_1)(a, b) result(app)
   if(size(a) /= size(b)) then
     POP_SUB(X(approximately_equal_1))
     return
-  endif
+  end if
   do i = 1, size(a)
     app = X(approximately_equal)(a(i), b(i))
     if(.not.app) then
       POP_SUB(X(approximately_equal_1))
       return
-    endif
+    end if
   end do
 
   POP_SUB(X(approximately_equal_1))
@@ -163,13 +163,13 @@ logical function X(approximately_equal_2)(a, b) result(app)
   if(any(shape(a) /= shape(b))) then
     POP_SUB(X(approximately_equal_2))
     return
-  endif
+  end if
   do i = 1, size(a, 1)
     app = X(approximately_equal_1)(a(i, :), b(i, :))
     if(.not.app) then
       POP_SUB(X(approximately_equal_2))
       return
-    endif
+    end if
   end do
 
   POP_SUB(X(approximately_equal_2))
@@ -188,13 +188,13 @@ logical function X(approximately_equal_3)(a, b) result(app)
   if(any(shape(a) /= shape(b))) then
     POP_SUB(X(approximately_equal_3))
     return
-  endif
+  end if
   do i = 1, size(a, 1)
     app = X(approximately_equal_2)(a(i, :, :), b(i, :, :))
     if(.not.app) then
       POP_SUB(X(approximately_equal_3))
       return
-    endif
+    end if
   end do
 
   POP_SUB(X(approximately_equal_3))

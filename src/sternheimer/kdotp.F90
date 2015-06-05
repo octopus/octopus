@@ -110,14 +110,14 @@ contains
 
     if(hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
-    endif
+    end if
 
     pdim = sys%gr%sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then
        message(1) = "k.p perturbation cannot be used for a finite system."
        call messages_fatal(1)
-    endif
+    end if
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
@@ -134,7 +134,7 @@ contains
       call pert_init(pert2, PERTURBATION_KDOTP, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
-    endif
+    end if
 
     !Read ground-state wavefunctions
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
@@ -146,7 +146,7 @@ contains
     else
       message(1) = "A previous gs calculation is required."
       call messages_fatal(1)
-    endif
+    end if
 
     ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
     ! Otherwise, this line is a tautology.
@@ -178,12 +178,12 @@ contains
       kdotp_vars%velocity(:,:,:) = M_ZERO
     else
       call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
-    endif
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(KDOTP_DIR) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
-    endif
+    end if
 
     call sternheimer_obsolete_variables('KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
@@ -193,7 +193,7 @@ contains
     if(calc_2nd_order) then
       call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, &
         set_occ_response = .false., set_last_occ_response = .false.)
-    endif
+    end if
 
     do idir = 1, pdim
       call lr_init(kdotp_vars%lr(1, idir))
@@ -204,7 +204,7 @@ contains
           call lr_init(kdotp_vars%lr2(1, idir, idir2))
           call lr_allocate(kdotp_vars%lr2(1, idir, idir2), sys%st, sys%gr%mesh)
         end do
-      endif
+      end if
 
       ! load wavefunctions
       if(.not. fromScratch) then
@@ -230,7 +230,7 @@ contains
               call messages_warning(1)
             end if
           end do
-        endif
+        end if
       end if
     end do
 
@@ -258,7 +258,7 @@ contains
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
           call zkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
-      endif
+      end if
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
 
@@ -275,7 +275,7 @@ contains
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin)), 8))
         end do
-      endif
+      end if
 
       write(message(1),'(a,g12.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
@@ -299,12 +299,12 @@ contains
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
-          endif
+          end if
 
         end do
         message(1) = ""
         call messages_info(1)
-      endif
+      end if
     end do ! idir
 
     ! calculate effective masses
@@ -318,11 +318,11 @@ contains
       else
         call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
-      endif
+      end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
       call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars)
-    endif
+    end if
 
     ! clean up some things
     do idir = 1, pdim
@@ -332,7 +332,7 @@ contains
         do idir2 = idir, pdim
           call lr_dealloc(kdotp_vars%lr2(1, idir, idir2))
         end do
-      endif
+      end if
     end do
 
     call restart_end(restart_load)
@@ -345,7 +345,7 @@ contains
       call sternheimer_end(sh2)
       call pert_end(kdotp_vars%perturbation2)
       SAFE_DEALLOCATE_P(kdotp_vars%lr2)
-    endif
+    end if
 
     call states_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
@@ -382,7 +382,7 @@ contains
       call parse_variable('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
-      endif
+      end if
 
       call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
@@ -440,7 +440,7 @@ contains
         message(1) = 'Occupied solution method: Sternheimer equation.'
       else
         message(1) = 'Occupied solution method: sum over states.'
-      endif
+      end if
 
       call messages_info(1)
 

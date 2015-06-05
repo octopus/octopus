@@ -60,7 +60,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     else
       field_global => field
     end if
-  endif
+  end if
 
   if(present(field_vector)) then
     if(this%mesh%parallel_in_domains) then
@@ -73,7 +73,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     else
       field_global_vector => field_vector
     end if
-  endif
+  end if
 
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
@@ -124,10 +124,10 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
       if(present(field)) then
         acc = acc + field_global(ipsrc)
-      endif
+      end if
       if(present(field_vector)) then
         acc_vector(1:3) = acc_vector(1:3) + symm_op_apply(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
-      endif
+      end if
     end do
     if(present(field)) &
       symmfield(ip) = weight * acc
@@ -143,8 +143,8 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
         call messages_warning(1)
-      endif
-    endif
+      end if
+    end if
     
     if(present(field_vector)) then
       maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
@@ -152,17 +152,17 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
         call messages_warning(1)
-      endif
-    endif
-  endif
+      end if
+    end if
+  end if
 
   if(this%mesh%parallel_in_domains) then
     if(present(field)) then
       SAFE_DEALLOCATE_P(field_global)
-    endif
+    end if
     if(present(field_vector)) then
       SAFE_DEALLOCATE_P(field_global_vector)
-    endif
+    end if
   end if
 
   POP_SUB(X(symmetrizer_apply))

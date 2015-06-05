@@ -235,7 +235,7 @@ contains
     else
       dsmear = max(CNST(1e-14), st%smear%dsmear)
       lr_alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
-    endif
+    end if
 
     POP_SUB(lr_alpha_j)
   end function lr_alpha_j

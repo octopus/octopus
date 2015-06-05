@@ -556,7 +556,7 @@ contains
         call ps_pspio_init(spec%ps, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
       else
         call ps_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
-      endif
+      end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
@@ -641,7 +641,7 @@ contains
     if(.not. species_is_ps(spec)) then
       ! since there is no real cap, make sure there are at least a few available
       spec%niwfs = max(5, spec%niwfs)
-    endif
+    end if
 
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
@@ -654,7 +654,7 @@ contains
     else
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
       nullify(spec%ps)
-    endif
+    end if
     if(print_info_) call messages_info(1)
 
     POP_SUB(species_build)
@@ -1147,7 +1147,7 @@ contains
         call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
         uv(ip) = uv(ip) * ylm
       end do
-    endif
+    end if
 
     POP_SUB(species_nl_projector)
   end subroutine species_nl_projector

@@ -169,7 +169,7 @@ contains
       if(file_exists) then
         call loct_rm('stop')
         clean_stop = .true.
-      endif
+      end if
     end if
 
 #ifdef HAVE_MPI
@@ -180,7 +180,7 @@ contains
     if(clean_stop) then
       message(1) = 'Clean STOP'
       call messages_warning(1)
-    endif
+    end if
 
     POP_SUB(clean_stop)
   end function clean_stop

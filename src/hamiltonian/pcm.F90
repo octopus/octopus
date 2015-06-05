@@ -156,11 +156,11 @@ contains
         call messages_fatal(1)
       else 
         call messages_experimental("polarizable continuum model")
-      endif
+      end if
     else
       POP_SUB(pcm_init)
       return
-    endif
+    end if
 
     rcav_C  = CNST(2.4)*P_Ang    ! 
     rcav_O  = CNST(1.8)*P_Ang    !    
@@ -196,7 +196,7 @@ contains
     else
       message(1) = "Info: PCM potential is regularized to avoid Coulomb singularity"
       call messages_info(1)        
-    endif
+    end if
     
     pcm%n_spheres = 0
     do ia = 1, geo%natoms
@@ -270,7 +270,7 @@ contains
     if (pcm%n_tesserae.gt.mxts) then
       write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
       call messages_warning(1)     
-    endif
+    end if
     
     SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
     
@@ -713,7 +713,7 @@ contains
         end do
       end do
 
-    endif
+    end if
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
 

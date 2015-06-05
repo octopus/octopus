@@ -175,7 +175,7 @@ contains
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
       call messages_fatal(1)
-    endif
+    end if
 
     ! copy information from xyz to geo
     geo%natoms = xyz%n
@@ -264,7 +264,7 @@ contains
       if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
         call messages_fatal(1)
-      endif
+      end if
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
@@ -740,7 +740,7 @@ contains
       write(iunit, '(1x,a)') comment
     else
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
-    endif
+    end if
     do iatom = 1, geo%natoms
       call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit)
     end do

@@ -298,7 +298,7 @@ contains
         default_toldr = CNST(0.001)
       else
         default_toldr = -M_ONE
-      endif
+      end if
       call parse_variable('GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
@@ -318,7 +318,7 @@ contains
       else
         default_step = CNST(50.0)
         call parse_variable('GOStep', default_step, g_opt%step, unit = units_inp%time)
-      endif
+      end if
 
       !%Variable GOLineTol
       !%Type float
@@ -382,7 +382,7 @@ contains
           iter = iter + 1
         else
           exit
-        endif
+        end if
       end do
 
       call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &

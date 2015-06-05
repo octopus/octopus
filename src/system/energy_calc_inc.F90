@@ -142,7 +142,7 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
 #endif
   else
     energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

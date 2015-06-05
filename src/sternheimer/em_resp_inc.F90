@@ -39,7 +39,7 @@ subroutine X(run_sternheimer)()
             do idir2 = 1, gr%sb%periodic_dim
               kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
             end do
-          endif
+          end if
         else
           sigma_alt = sigma
           if(frequency < -M_EPSILON .and. em_vars%nsigma == 2) &
@@ -70,16 +70,16 @@ subroutine X(run_sternheimer)()
                 call messages_warning(1)
               end if
             end do
-          endif
-        endif
+          end if
+        end if
       end do
-    endif
+    end if
     
     ! if opposite sign from last frequency, swap signs to get a closer frequency
     if(iomega > 1 .and. em_vars%nsigma == 2) then
       if(em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
         call X(lr_swap_sigma)(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-      endif
+      end if
     end if
     
     !search for the density of the closest frequency, including negative
@@ -106,7 +106,7 @@ subroutine X(run_sternheimer)()
         abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
         ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
         exact_freq = .true.
-      endif
+      end if
     end if
     
     if (ierr == 0 .and. em_vars%nsigma == 2) then 
@@ -130,7 +130,7 @@ subroutine X(run_sternheimer)()
     nsigma_eff = 1
   else
     nsigma_eff = em_vars%nsigma
-  endif
+  end if
   
   call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
     R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
@@ -140,7 +140,7 @@ subroutine X(run_sternheimer)()
   if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
     em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
     em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
-  endif
+  end if
   
   if(use_kdotp) then
     call sternheimer_unset_rhs(sh)
@@ -184,7 +184,7 @@ subroutine X(run_sternheimer)()
       ! if the frequency is zero, we do not need to calculate both responses
       if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
         kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
-      endif
+      end if
       
       em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
     end do
@@ -213,7 +213,7 @@ subroutine X(calc_properties_linear)()
     if(use_kdotp) then
       call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
         em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-    endif
+    end if
 
     call X(calc_polarizability_finite)(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
       em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
@@ -226,7 +226,7 @@ subroutine X(calc_properties_linear)()
       call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
         lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
         Born_charges = em_vars%Born_charges(ifactor))
-    endif
+    end if
     
   else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
     message(1) = "Info: Calculating magnetic susceptibilities."
@@ -258,7 +258,7 @@ subroutine X(calc_properties_nonlinear)()
         kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, dl_eig = dl_eig, occ_response = .false.)
     else
       call X(lr_calc_beta)(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-    endif
+    end if
     
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
     write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)

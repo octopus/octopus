@@ -60,7 +60,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     SAFE_ALLOCATE(KSt(1:nval,1:mesh%np_global))
     ! keep a copy of this NOTE: maybe too expensive in memory?
     SAFE_ALLOCATE(KSt_original(1:nval,1:mesh%np_global))
-  endif
+  end if
 
   !NOTE: not sure how to proceed if dim!=1 or nik!=1
   if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
@@ -85,7 +85,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
     end do
     SAFE_DEALLOCATE_A(temp_state)
-  endif
+  end if
 
   ! possibly redundant copy
   if(scdm%root) KSt_original(:,:) = KSt(:,:)
@@ -139,9 +139,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       else
         message(1) = 'Fail of Cholesky, not pos-semi-def '
         call messages_fatal(1)
-      endif
+      end if
       stop
-    endif
+    end if
 
     call cpu_time(t1)
     if(scdm%verbose) call messages_print_var_value(stdout, 'time: cholesky:',t1-t2)
@@ -331,7 +331,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
             !  print *, 'fail'
             !  print *, nr
             ! print *, ix
-            !endif
+            !end if
             
           end do!i3
         end do!i2
@@ -384,7 +384,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !          end do
     !       end do
     !    end do
-    ! endif
+    ! end if
     
   end do
 
@@ -452,7 +452,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !   end do
   !end do
   !print *, '======================================================'
-  !endif
+  !end if
   !
 
   ! check span
@@ -505,8 +505,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !               exx = exx - 0.5*dot_product(pot(:),rho2(:))*mesh%volume_element
   !            else
   !               exx = exx - 0.25*dot_product(pot(:),rho2(:))*mesh%volume_element
-  !            endif
-  !!          endif
+  !            end if
+  !!          end if
   !         !
   !      end do
   !   end do

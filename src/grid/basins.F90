@@ -245,7 +245,7 @@ contains
           else
             this%volume(ii) = this%volume(ii) + mesh%volume_element
             this%population(ii) = this%population(ii) + mesh%volume_element*sum(rho(jj, :))
-          endif
+          end if
         end do
         
         this%position(ii) = ii_max

@@ -274,7 +274,7 @@ contains
         v = qs2val ( p(1), p(2), interp%npoints, interp%x, interp%y, &
                      f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
                      interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a) 
-      endif
+      end if
     case(3)
       if(present(gf)) then
         call qs3grd( p(1), p(2), p(3), interp%npoints, interp%x, interp%y, interp%z, &

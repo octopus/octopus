@@ -111,12 +111,12 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
     call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, pdim**2 * sys%st%nst * sys%st%d%nik, &
       MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
     eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
-  endif
+  end if
   if(sys%st%d%kpt%parallel) then
     call MPI_Allreduce(eff_mass_inv, eff_mass_inv_temp, pdim**2 * sys%st%nst * sys%st%d%nik, &
       MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
     eff_mass_inv(:,:,:,:) = eff_mass_inv_temp(:,:,:,:)
-  endif
+  end if
   SAFE_DEALLOCATE_A(eff_mass_inv_temp)
 #endif
 
@@ -147,7 +147,7 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
 
   if(sys%st%parallel_in_states) then
     call messages_not_implemented("kdotp_add_occ parallel in states")
-  endif
+  end if
 
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 

@@ -120,7 +120,7 @@ contains
       .or. ks_inv%method > XC_INV_METHOD_TWO_PARTICLE) then
       call messages_input_error('InvertKSmethod')
       call messages_fatal(1)
-    endif
+    end if
 
     !%Variable KSInversionLevel
     !%Type integer
@@ -227,7 +227,7 @@ contains
     if(any(target_rho(:,:) < -M_EPSILON)) then
       write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
       call messages_warning(1)
-    endif
+    end if
     
     do jj = 1, nspin
       do ii = 1, gr%der%mesh%np
@@ -248,11 +248,11 @@ contains
         if(target_rho(jj,ii) < smalldensity) then
           vks(jj, ii) = aux_hm%ep%vpsl(jj) + aux_hm%vhartree(jj)
           asym1 = jj
-        endif
+        end if
         if(target_rho(np-jj+1, ii) < smalldensity) then
           vks(np-jj+1, ii) = aux_hm%ep%vpsl(np-jj+1) + aux_hm%vhartree(np-jj+1)
           asym2 = np - jj + 1
-        endif
+        end if
       end do
       do jj = asym1+1, asym2-1
         vks(jj, ii) = laplace(jj, ii)/(M_TWO*sqrtrho(jj, ii))
@@ -286,7 +286,7 @@ contains
           aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
         end do
       end do 
-    endif !apply asymptotic correction
+    end if !apply asymptotic correction
     
     if(asymptotics == XC_ASYMPTOTICS_NONE) then
       do ii = 1, nspin
@@ -302,7 +302,7 @@ contains
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
         end do
       end do 
-    endif  
+    end if  
 
     do ii = 1, nspin
       aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
@@ -373,7 +373,7 @@ contains
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
       call messages_fatal(1)
-    endif
+    end if
 
     !%Variable InvertKSMaxIter
     !%Type integer
@@ -390,7 +390,7 @@ contains
          
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
-    endif
+    end if
     
     diffdensity = M_ONE
     counter = 0
@@ -407,7 +407,7 @@ contains
              ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
         call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
-      endif
+      end if
 
       call hamiltonian_update(aux_hm, gr%mesh)
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
@@ -426,7 +426,7 @@ contains
         do ii = 1, np
           if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
             diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
-          endif
+          end if
         end do
       end do
             
@@ -436,7 +436,7 @@ contains
 #ifdef HAVE_FLUSH
         call flush(iunit)
 #endif
-      endif
+      end if
 
       aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
@@ -454,10 +454,10 @@ contains
             call mesh_r(gr%mesh, jj, rr)
             vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
             asym1 = jj
-          endif
+          end if
           if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
             asym2 = np - jj + 1
-          endif
+          end if
         end do
      
         ! calculate constant shift for correct asymptotics and shift accordingly
@@ -477,7 +477,7 @@ contains
           vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
         end do
       end do
-    endif
+    end if
 
     aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       

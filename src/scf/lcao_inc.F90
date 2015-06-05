@@ -71,7 +71,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
     call X(species_get_orbital)(spec, mesh, ii, ll, mm, &
       ispin, geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
 #ifdef R_TCOMPLEX
-  endif
+  end if
 #endif
 
   POP_SUB(X(lcao_atomic_orbital))
@@ -143,7 +143,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-  endif
+  end if
 #endif
 
   ! FIXME: these loops should not be over st%d%spin_channels but rather 1 unless spin-polarized in which case 2.
@@ -157,7 +157,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
         call X(io_function_output)(C_OUTPUT_HOW_XCRYSDEN, "./static", filename, gr%mesh, lcaopsi(:, 1, ispin), &
           sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
-      endif
+      end if
 #endif
     end do
 
@@ -202,7 +202,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     call io_close(iunit_h)
     call io_close(iunit_s)
-  endif
+  end if
 #endif
 
   SAFE_DEALLOCATE_A(hpsi)
@@ -244,7 +244,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       end do
     end do
     call io_close(iunit_e)
-  endif
+  end if
 #endif
 
 #ifdef HAVE_MPI
@@ -491,7 +491,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-  endif
+  end if
 #endif
 
 
@@ -557,7 +557,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
         else
           call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
-        endif
+        end if
 
         psii = M_ZERO
 
@@ -581,7 +581,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
             call zlcao_alt_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
           else
             call dlcao_alt_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
-          endif
+          end if
 
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
@@ -608,7 +608,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
                   call X(io_function_output)(C_OUTPUT_HOW_XCRYSDEN, "./static", filename, gr%mesh, psii(:, 1, iorb), &
                     sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
-                endif
+                end if
 #endif
 
                 do jorb = 1, this%norb_atom(jatom)
@@ -622,7 +622,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
                   if(this%debug) then
                     write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
                     write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
-                  endif
+                  end if
 #endif
 
                 end do
@@ -656,7 +656,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_h)
         call io_close(iunit_s)
-      endif
+      end if
 #endif
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
@@ -725,7 +725,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
               call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
             else
               call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
-            endif
+            end if
 
             ! FIXME: this call handles spinors incorrectly.
             call X(submesh_batch_add_matrix)(this%sphere(iatom), block_evec(ibasis:, :), &
@@ -763,7 +763,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
             call zlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
           else
             call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
-          endif
+          end if
 
           do ib = st%group%block_start, st%group%block_end
             ! FIXME: this call handles spinors incorrectly.
@@ -1088,7 +1088,7 @@ contains
         end do
       end do
       call io_close(iunit_e)
-    endif
+    end if
 #endif
 
     call profiling_out(prof)
@@ -1132,7 +1132,7 @@ end subroutine X(lcao_alt_wf)
         else
           call species_iwf_ilm(geo%atom(iatom)%species, iorb, ispin, ii, ll, mm)
           derivative = .false.
-        endif
+        end if
 
         call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
           ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)

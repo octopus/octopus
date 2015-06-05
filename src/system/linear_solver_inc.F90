@@ -211,7 +211,7 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
   if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
     call messages_warning(1)
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(p)
@@ -272,7 +272,7 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
   else
     ! project RHS onto the unoccupied states
     call X(lr_orth_vector)(gr%mesh, st, r, ist, ik, shift + st%eigenval(ist, ik))
-  endif
+  end if
           
   do idim = 1, st%d%dim
     call lalg_copy(gr%mesh%np, r(:, idim), rs(:, idim))
@@ -343,7 +343,7 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
   if(.not. conv) then 
     write(message(1), '(a)') "BiCGSTAB solver not converged!"
     call messages_warning(1)
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(p)
@@ -410,7 +410,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
   if(residue > tol) then 
     write(message(1), '(a)') "Multigrid solver not converged!"
     call messages_warning(1)
-  endif
+  end if
 
   POP_SUB(X(linear_solver_multigrid))
 

@@ -84,7 +84,7 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
           pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp)
         else
           pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
-        endif
+        end if
       end do
     end do
     if(.not. this%der%mesh%use_curvilinear) pot(:) = pot(:) * this%der%mesh%volume_element

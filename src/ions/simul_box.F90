@@ -197,7 +197,7 @@ contains
         call parse_variable('PeriodicDimensions', 0, sb%periodic_dim)
       else
         sb%periodic_dim = geo%periodic_dim
-      endif
+      end if
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
         call messages_input_error('PeriodicDimensions')
 
@@ -333,7 +333,7 @@ contains
         default_boxshape = PARALLELEPIPED
       else
         default_boxshape = MINIMUM
-      endif
+      end if
       call parse_variable('BoxShape', default_boxshape, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
@@ -343,7 +343,7 @@ contains
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
           call messages_fatal(1)
-        endif
+        end if
         if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
       end select
 
@@ -404,7 +404,7 @@ contains
           default = sb%rsize
         else
           default = def_rsize
-        endif
+        end if
 
         call parse_variable('Xlength', default, sb%xsize, units_inp%length)
         sb%lsize(1) = sb%xsize
@@ -465,7 +465,7 @@ contains
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           message(1) = "Ignoring lattice vectors from XSF file."
           call messages_warning(1)
-        endif
+        end if
       end if
 
       ! read in image for box_image
@@ -484,7 +484,7 @@ contains
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1)
-        endif
+        end if
 
         ! Find out the file and read it.
         inquire(file=trim(sb%filename), exist=found)
@@ -512,7 +512,7 @@ contains
              (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
             box_npts = box_npts + 1
             sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
-          endif
+          end if
         end do
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
@@ -939,7 +939,7 @@ contains
       write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%rsize)
       call messages_info(1, iunit)
-    endif
+    end if
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
       do ispec = 1, geo%nspecies     
@@ -1045,7 +1045,7 @@ contains
       xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     else
       call lalg_gemm(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, -M_ONE, xx)
-    endif
+    end if
 
     select case(sb%box_shape)
     case(SPHERE)
@@ -1071,7 +1071,7 @@ contains
               trim(species_label(geo%atom(iatom)%species)), ' is negative or undefined.'
             message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
             call messages_fatal(2)
-          endif
+          end if
           radius = max(radius, species_def_rsize(geo%atom(iatom)%species))
         end do
       end if
@@ -1435,7 +1435,7 @@ contains
     if(geo%natoms == 1) then
       POP_SUB(simul_box_check_atoms_are_too_close)
       return
-    endif
+    end if
 
     mindist = simul_box_min_distance(geo, sb, real_atoms_only = .false.)
     if(mindist < threshold) then
@@ -1448,12 +1448,12 @@ contains
       ! then write out the geometry, whether asked for or not in Output variable
       call io_mkdir(STATIC_DIR)
       call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
-    endif
+    end if
 
     if(simul_box_min_distance(geo, sb, real_atoms_only = .true.) < threshold) then
       message(1) = "It cannot be correct to run with physical atoms so close."
       call messages_fatal(1)
-    endif
+    end if
 
     POP_SUB(simul_box_check_atoms_are_too_close)
   end subroutine simul_box_check_atoms_are_too_close
@@ -1493,7 +1493,7 @@ contains
       do idir = 1, sb%periodic_dim
         rmin = min(rmin, abs(sb%lsize(idir)))
       end do
-    endif
+    end if
 
     POP_SUB(simul_box_min_distance)
   end function simul_box_min_distance

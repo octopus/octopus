@@ -308,11 +308,11 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   if(sys%st%parallel_in_states) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
     zpol(1:mesh%sb%periodic_dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%periodic_dim, 1:mesh%sb%dim)
-  endif
+  end if
   if(sys%st%d%kpt%parallel) then
     call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
     zpol(1:mesh%sb%periodic_dim, 1:mesh%sb%dim) = zpol_temp(1:mesh%sb%periodic_dim, 1:mesh%sb%dim)
-  endif
+  end if
 #endif
 
   call zsymmetrize_tensor(mesh%sb%symm, zpol)
@@ -345,7 +345,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   startdir = sys%gr%sb%periodic_dim + 1
   if(present(doalldirs)) then
     if(doalldirs) startdir = 1
-  endif
+  end if
 
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -486,7 +486,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
     SAFE_DEALLOCATE_A(rho)
     SAFE_ALLOCATE(hpol_density(1:np))
-  endif
+  end if
 
   SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
@@ -536,7 +536,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
                       (dipole, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
-                  endif
+                  end if
 
                   do ip = 1, np
                     tmp(ip, idim) = tmp(ip, idim) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
@@ -603,7 +603,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   if(sternheimer_add_fxc(sh)) then
     SAFE_DEALLOCATE_A(hpol_density)
     SAFE_DEALLOCATE_A(kxc)
-  endif
+  end if
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(ppsi)
   SAFE_DEALLOCATE_A(me010)
@@ -658,10 +658,10 @@ contains
                   ppsi = M_ZERO ! will put in eigenvalue directly later
                 else
                   forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
-                endif
+                end if
               else
                 call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), ppsi)
-              endif
+              end if
 
               isigma = 1
               forall (idim = 1:st%d%dim, ip = 1:np)
@@ -672,7 +672,7 @@ contains
 
               if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist == ist2) then
                 me010(ist, ist, ii, ifreq, ik) = me010(ist, ist, ii, ifreq, ik) + dl_eig(ist, ik, ii)
-              endif
+              end if
 
             end do
 !            if(mpi_grp_is_root(mpi_world)) write(10,'(4i3,f10.6)') ist2, ist, ii, ik, me010(ist2, ist, ii, 1, ik)
@@ -702,7 +702,7 @@ contains
                     em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
                     em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
                     me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
-                endif
+                end if
 
 !                if(ifreq == 1 .and. jfreq == 1 .and. mpi_grp_is_root(mpi_world)) then
 !                  do ist = 1, st%nst
@@ -710,7 +710,7 @@ contains
 !                      write(11,'(6i3,f10.6)') ii, jj, isigma, ik, ist, ist2, me11(ii, jj, 1, 1, isigma, ik)%X(matrix)(ist, ist2)
 !                    end do
 !                  end do
-!                endif
+!                end if
               end do
             end do
           end do
@@ -743,7 +743,7 @@ subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, eta, 
   if(abs(eta) > M_EPSILON) then
     message(1) = "Internal error: dpost_orthogonalize cannot be called with argument eta != 0"
     call messages_fatal(1)
-  endif
+  end if
 #endif
 
   do ifactor = 1, nfactor
@@ -816,7 +816,7 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
     dl_eig(:,:,:) = dl_eig_temp(:,:,:)
     SAFE_DEALLOCATE_A(dl_eig_temp)
-  endif
+  end if
 #endif
 
   POP_SUB(X(em_resp_calc_eigenvalues))

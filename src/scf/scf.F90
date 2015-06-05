@@ -340,7 +340,7 @@ contains
       if(scf%conv_eigen_error) then
         message(1) = "ConvEigenError cannot be used with SCFinLCAO, since error is unknown."
         call messages_fatal(1)
-      endif
+      end if
     end if
 
 
@@ -464,7 +464,7 @@ contains
     if(scf%forced_finish) then
       message(1) = "Previous clean stop, not doing SCF and quitting."
       call messages_fatal(1, only_root_writes = .true.)
-    endif
+    end if
 
     cmplxscl = st%cmplxscl%space
 
@@ -585,7 +585,7 @@ contains
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
-    endif
+    end if
 
     if ( verbosity_ /= VERB_NO ) then
       if(scf%max_iter > 0) then
@@ -594,7 +594,7 @@ contains
         write(message(1),'(a)') 'Info: No SCF iterations will be done.'
         ! we cannot tell whether it is converged.
         finish = .false.
-      endif
+      end if
       call messages_info(1)
     end if
 
@@ -705,14 +705,14 @@ contains
         scf%rel_dens = M_HUGE
       else
         scf%rel_dens = scf%abs_dens / st%qtot
-      endif
+      end if
 
       scf%abs_ev = abs(evsum_out - evsum_in)
       if(abs(evsum_out) == M_ZERO) then
         scf%rel_ev = M_HUGE
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)
-      endif
+      end if
 
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
@@ -742,7 +742,7 @@ contains
             write(message(1),*) 'Negative density after mixing. Minimum value = ', &
               minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels))
             call messages_warning(1)
-          endif
+          end if
           st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         else
           call zmixing(scf%smix, zrhoin, zrhoout, zrhonew, zmf_dotp_aux)
@@ -860,7 +860,7 @@ contains
 
     if(scf%max_iter > 0 .and. scf%mix_field == MIXPOT) then
       call v_ks_calc(ks, hm, st, geo)
-    endif
+    end if
 
     select case(scf%mix_field)
     case(MIXPOT)
@@ -883,7 +883,7 @@ contains
     if(scf%max_iter > 0 .and. any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
       write(message(1),'(a)') 'Some of the states are not fully converged!'
       call messages_warning(1)
-    endif
+    end if
 
     if(.not.finish) then
       write(message(1), '(a,i4,a)') 'SCF *not* converged after ', iter - 1, ' iterations.'
@@ -897,7 +897,7 @@ contains
       call energy_calc_eigenvalues(hm, gr%der, st)
       call states_fermi(st, gr%mesh)
       call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
-    endif
+    end if
 
     if(gs_run_) then 
       ! output final information
@@ -959,7 +959,7 @@ contains
         if(associated(hm%vberry)) then
           call calc_dipole(dipole)
           call write_dipole(stdout, dipole)
-        endif
+        end if
 
         if(st%d%ispin > UNPOLARIZED) then
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
@@ -1040,7 +1040,7 @@ contains
 
         if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
           write(iunit,'(a)') 'Some of the states are not fully converged!'
-        endif
+        end if
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
         write(iunit, '(1x)')
@@ -1082,7 +1082,7 @@ contains
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
             ' (', scf%conv_rel_ev, ')'
           write(iunit,'(1x)')
-        endif
+        end if
         ! otherwise, these values are uninitialized, and unknown.
 
         if(scf%calc_force) then
@@ -1180,7 +1180,7 @@ contains
         else
           e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
           dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
-        endif
+        end if
       end do
 
       POP_SUB(scf_run.calc_dipole)
@@ -1206,15 +1206,15 @@ contains
               "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
             write(iunit, '(a)') &
               "Instead, finite differences on k-points (not yet implemented) are needed."
-          endif
+          end if
 
           if(.not. smear_is_semiconducting(st%smear)) then
             write(iunit, '(a)') "Single-point Berry's phase dipole calculation not correct without integer occupations."
-          endif
-        endif
+          end if
+        end if
 
         write(iunit, *)
-      endif
+      end if
 
       POP_SUB(scf_run.write_dipole)
     end subroutine write_dipole

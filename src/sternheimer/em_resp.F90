@@ -130,14 +130,14 @@ contains
 
     if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
       call messages_experimental('em_resp with reduced k-grid')
-    endif
+    end if
 
     call parse_input()
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
       any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
       call messages_not_implemented('Dynamical magnetic response')
-    endif
+    end if
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
@@ -148,7 +148,7 @@ contains
     else
       message(1) = "Previous gs calculation is required."
       call messages_fatal(1)
-    endif
+    end if
 
     ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
     ! Otherwise, this line is a tautology.
@@ -172,11 +172,11 @@ contains
       ! there needs to be a gap.
       message(1) = "em_resp with kdotp can only be used with semiconducting smearing"
       call messages_fatal(1)
-    endif
+    end if
 
     if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call messages_not_implemented('Magnetic perturbation in periodic system')
-    endif
+    end if
 
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
@@ -210,7 +210,7 @@ contains
       end do
 
       call restart_end(kdotp_restart)
-    endif
+    end if
 
     em_vars%nfactor = 1
     if(em_vars%calc_hyperpol) em_vars%nfactor = 3
@@ -222,7 +222,7 @@ contains
     else
       em_vars%nsigma = 1
       ! only considering positive values
-    endif
+    end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
       call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
@@ -249,7 +249,7 @@ contains
       call lr_init(kdotp_lr2)
       call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh)
 
-    endif
+    end if
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
@@ -264,12 +264,12 @@ contains
     else
       call sternheimer_init(sh, sys, hm, complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
-    endif
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       call info()
       call io_mkdir(EM_RESP_DIR) ! output
-    endif
+    end if
 
     do ifactor = 1, em_vars%nfactor
       do idir = 1, sys%gr%sb%dim
@@ -316,7 +316,7 @@ contains
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 2, ifactor))
                 end do
-              endif
+              end if
 
               have_to_calculate = .false.
 
@@ -336,7 +336,7 @@ contains
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 1, ifactor))
                 end do
-              endif
+              end if
 
               have_to_calculate = .false.
 
@@ -359,7 +359,7 @@ contains
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 2, 1))
                 end do
-              endif
+              end if
 
               have_to_calculate = .false.
 
@@ -378,7 +378,7 @@ contains
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 1, 1))
                 end do
-              endif
+              end if
 
               have_to_calculate = .false.
 
@@ -399,7 +399,7 @@ contains
               call drun_sternheimer()
             else
               call zrun_sternheimer()
-            endif
+            end if
 
           end if ! have_to_calculate
 
@@ -411,7 +411,7 @@ contains
           call dcalc_properties_linear()
         else
           call zcalc_properties_linear()
-        endif
+        end if
 
       end do ! ifactor
 
@@ -419,7 +419,7 @@ contains
         call dcalc_properties_nonlinear()
       else
         call zcalc_properties_nonlinear()
-      endif
+      end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
 
@@ -440,7 +440,7 @@ contains
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir, 1))
       end do
-    endif
+    end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
       call sternheimer_end(sh_kdotp)
@@ -459,7 +459,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(kdotp_em_lr2)
       SAFE_DEALLOCATE_A(dl_eig)
-    endif
+    end if
 
     SAFE_DEALLOCATE_P(em_vars%omega)
     SAFE_DEALLOCATE_P(em_vars%lr)
@@ -581,7 +581,7 @@ contains
       if(em_vars%eta < -M_EPSILON) then
         message(1) = "EMEta cannot be negative."
         call messages_fatal(1)
-      endif
+      end if
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
@@ -628,7 +628,7 @@ contains
           if(abs(sum(em_vars%freq_factor(1:3))) > M_EPSILON) then
             message(1) = "Frequency factors specified by EMHyperpol must sum to zero."
             call messages_fatal(1)
-          endif
+          end if
 
           em_vars%calc_hyperpol = .true.
         end if
@@ -685,7 +685,7 @@ contains
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call messages_fatal(1)
-      endif
+      end if
 
       !%Variable EMWavefunctionsFromScratch
       !%Type logical
@@ -778,7 +778,7 @@ contains
       if(em_vars%calc_Born) then
         call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
           write_real = em_vars%eta < M_EPSILON)
-      endif
+      end if
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
     end if
@@ -790,11 +790,11 @@ contains
 
     if(gr%sb%periodic_dim  ==  gr%sb%dim) then
       call out_dielectric_constant()
-    endif
+    end if
 
     if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
       call out_circular_dichroism()
-    endif
+    end if
 
     POP_SUB(em_resp_output)
 
@@ -1062,7 +1062,7 @@ contains
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-            endif
+            end if
           end if
           do isigma = 1, em_vars%nsigma
             call zoutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
@@ -1074,7 +1074,7 @@ contains
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-            endif
+            end if
           end if
 
           do isigma = 1, em_vars%nsigma
@@ -1230,7 +1230,7 @@ contains
       write(iunit, '(a, 2e20.8)') 'HV polarization ', &
          units_from_atomic(units_out%hyperpolarizability, real(sqrt(HRS_HV))), &
          units_from_atomic(units_out%hyperpolarizability, aimag(sqrt(HRS_HV)))
-    endif
+    end if
 
     call io_close(iunit)
     POP_SUB(out_hyperpolarizability)
@@ -1266,7 +1266,7 @@ contains
             if (ii /= jj) then
               HRS_B = HRS_B + beta(ii,ii,ii) * (beta(ii,jj,jj) + beta(jj,ii,jj) + beta(jj,jj,ii))
               HRS_C = HRS_C + (beta(ii,ii,jj) + beta(ii,jj,ii) + beta(jj,ii,ii))**2
-            endif
+            end if
           end do
         end do
 
@@ -1296,7 +1296,7 @@ contains
               HRS_C1 = HRS_C1 + (beta(ii,ii,jj) + beta(ii,jj,ii))**2
               HRS_C2 = HRS_C2 + beta(jj,ii,ii) * (beta(ii,ii,jj) + beta(ii,jj,ii))
               HRS_C3 = HRS_C3 + beta(jj,ii,ii)**2
-            endif
+            end if
           end do
         end do
   

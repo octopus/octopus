@@ -123,7 +123,7 @@ contains
         this%charge(1:dim, 1:dim, iatom) = &
           this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim)
       end do
-    endif
+    end if
 
     POP_SUB(correct_Born_charges)
   end subroutine correct_Born_charges
@@ -157,7 +157,7 @@ contains
       if(.not. write_real) then
         write(iunit,'(a)') 'Imaginary:'
         call output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, unit_one)
-      endif
+      end if
 
       write(iunit,'(a)')
     end do
@@ -176,7 +176,7 @@ contains
         call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
         write(iunit,'(a)')
       end do
-    endif
+    end if
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction, per atom'
     if(.not. write_real) write(iunit,'(a)') 'Real:'
@@ -184,7 +184,7 @@ contains
     if(.not. write_real) then
       write(iunit,'(a)') 'Imaginary:'
       call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
-    endif
+    end if
 
     call io_close(iunit)
     POP_SUB(out_Born_charges)

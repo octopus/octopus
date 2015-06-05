@@ -85,7 +85,7 @@ contains
     if(st%parallel_in_states) then
       message(1) = "Internal error: cannot use states_look_and_load when parallel in states."
       call messages_fatal(1)
-    endif
+    end if
 
     ! Resize st%occ, retaining information there
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
@@ -126,7 +126,7 @@ contains
     else
       ! allow states_allocate_wfns to decide for itself whether complex or real needed
       call states_allocate_wfns(st, gr%mesh)
-    endif
+    end if
 
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
@@ -457,19 +457,19 @@ contains
       st%eigenval(:, :) = M_ZERO
       if (cmplxscl) st%zeigenval%Im(:, :) = M_ZERO
       ! to be filled in from reading afterward
-    endif
+    end if
 
     if (.not. present(lr) .and. read_occ) then
       st%occ(:, :) = M_ZERO
       ! to be filled in from reading afterward
-    endif
+    end if
 
     ! sanity check
     if (present(lr)) then
       lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
         (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
-    endif
+    end if
 
     states_file  = restart_open(restart, 'states')
     ! sanity check on spin/k-points. Example file 'states':
@@ -486,17 +486,17 @@ contains
         write(message(1),'(a)') 'Incompatible restart information: saved calculation is spinors, this one is not.'
         call messages_warning(1)
         ierr = ierr - 2**2
-      endif
+      end if
       if(idim == 1 .and. st%d%dim == 2) then
         write(message(1),'(a)') 'Incompatible restart information: this calculation is spinors, saved one is not.'
         call messages_warning(1)
         ierr = ierr - 2**3
-      endif
+      end if
       if(ik < st%d%nik) then
         write(message(1),'(a)') 'Incompatible restart information: not enough k-points.'
         write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, ' > Read ', ik
         call messages_warning(2)
-      endif
+      end if
       ! We will check that they are the right k-points later, so we do not need to put a specific error here.
     end if
     call restart_close(restart, states_file)
@@ -628,7 +628,7 @@ contains
     if (st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
       call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
-    endif
+    end if
 
 
     ! Now we read the wavefunctions. At this point we need to have all the information from the
@@ -655,7 +655,7 @@ contains
             if (present(lowest_missing)) &
               lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
             cycle
-          endif
+          end if
 
           if (states_are_real(st)) then
             call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
@@ -716,7 +716,7 @@ contains
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       iread_tmp = iread
       call MPI_Allreduce(iread_tmp, iread, 1, MPI_INTEGER, MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
-    endif
+    end if
 
     if(st%d%kpt%parallel) then
       ! make sure all tasks know lowest_missing over all k-points
@@ -726,7 +726,7 @@ contains
         call MPI_Allreduce(lowest_missing_tmp, lowest_missing, st%d%dim*st%d%nik, &
           MPI_INTEGER, MPI_MIN, st%d%kpt%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(lowest_missing_tmp)
-      endif
+      end if
     end if
 #endif
 
@@ -740,7 +740,7 @@ contains
         ierr = iread
       else
         ierr = -1
-      endif
+      end if
       ! otherwise ierr = 0 would mean either all was read correctly, or nothing at all was read!
 
       if(.not. present(lr)) then
@@ -881,7 +881,7 @@ contains
       if(st%cmplxscl%space) then
         SAFE_DEALLOCATE_P(zrho)
         SAFE_DEALLOCATE_P(zrho_fine)
-      endif
+      end if
     end if
 
     lines(1) = '%'
@@ -952,7 +952,7 @@ contains
         write(filename, fmt='(a)') 'density'
       else
         write(filename, fmt='(a,i1)') 'density-sp', isp
-      endif
+      end if
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
 !      end if
@@ -985,11 +985,11 @@ contains
          SAFE_DEALLOCATE_A(zrho_coarse)
       else
         SAFE_DEALLOCATE_A(rho_coarse)
-      endif
+      end if
     end if
     if(st%cmplxscl%space) then
       SAFE_DEALLOCATE_A(zrho)
-    endif
+    end if
 
     if (in_debug_mode) then
       message(1) = "Debug: Reading density restart done."

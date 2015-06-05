@@ -132,25 +132,25 @@ contains
 
     if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
-    endif
+    end if
     if(sys%st%smear%method  ==  SMEAR_SEMICONDUCTOR .and. &
       (abs(sys%st%smear%ef_occ) > M_EPSILON) .and. abs(sys%st%smear%ef_occ - M_ONE) > M_EPSILON) then
       write(message(1),'(a,f12.6)') 'Partial occupation at the Fermi level: ', sys%st%smear%ef_occ
       message(2) = 'Semiconducting smearing cannot be used for Sternheimer in this situation.'
       call messages_fatal(2)
-    endif
+    end if
 
     if(wfs_are_cplx) then
       call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
     else
       call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
-    endif
+    end if
 
     if(present(set_occ_response)) then
        this%occ_response = set_occ_response
     else
        this%occ_response = .false.
-    endif
+    end if
 
     this%occ_response_by_sternheimer = optional_default(occ_response_by_sternheimer, .false.)
 
@@ -212,7 +212,7 @@ contains
        this%last_occ_response = set_last_occ_response
     else
        this%last_occ_response = .false.
-    endif
+    end if
 
     message(1) = "Variation of the Hamiltonian in Sternheimer equation: V_ext"
     if(this%add_hartree) write(message(1), '(2a)') trim(message(1)), ' + hartree'
@@ -223,14 +223,14 @@ contains
        write(message(2), '(2a)') trim(message(2)), ' full linear response.'
     else
        write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only.'
-    endif
+    end if
 
     message(3) = "Sternheimer preorthogonalization:"
     if (this%preorthogonalization) then
        write(message(3), '(2a)') trim(message(3)), ' yes'
     else
        write(message(3), '(2a)') trim(message(3)), ' no'
-    endif
+    end if
     call messages_info(3) 
 
     call linear_solver_init(this%solver, sys%gr, states_are_real(sys%st), set_default_solver)
@@ -357,7 +357,7 @@ contains
       swap_sigma = 2
     else
       swap_sigma = 1
-    endif
+    end if
 
   end function swap_sigma
 

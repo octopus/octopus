@@ -67,7 +67,7 @@ contains
       message(1) = "Cannot compute vibrational modes by finite differences when symmetry is being used."
       message(2) = "Set KPointsUseSymmetries = no and SymmetrizeDensity = no, for gs run and this run."
       call messages_fatal(2)
-    endif
+    end if
     
     call init_()
 

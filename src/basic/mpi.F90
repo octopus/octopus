@@ -64,7 +64,7 @@ contains
     if(is_serial) then
       call mpi_grp_init(mpi_world, -1)
       return
-    endif
+    end if
 
     ! initialize MPI
 #if defined(HAVE_OPENMP) && defined(HAVE_MPI2)

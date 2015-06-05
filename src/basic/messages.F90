@@ -248,7 +248,7 @@ contains
     else
       should_write = .true.
       only_root_writes_ = .false.
-    endif
+    end if
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
@@ -272,7 +272,7 @@ contains
       call flush_msg(stderr, shyphens)
       write(msg, '(a,i4)') "* From node = ", mpi_world%rank
       call flush_msg(stderr, msg)
-    endif
+    end if
 #endif
     call flush_msg(stderr, shyphens)
     do ii = 1, no_lines_
@@ -297,7 +297,7 @@ contains
 
     if(should_write) then
       call messages_print_stress(stderr)
-    endif
+    end if
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       close(iunit_err)
@@ -1094,7 +1094,7 @@ contains
     else
       is_bad = var < def
       op_str = ' < '
-    endif
+    end if
 
     if(is_bad) then
       write(message(1), '(3a)') "The value for '", name, "' is inconsistent with the recommended value."
@@ -1103,7 +1103,7 @@ contains
           op_str, 'recommended ', units_from_atomic(unit, def), ' ', trim(units_abbrev(unit))
       else
         write(message(2), '(a,f8.3,2a,f8.3)') 'given ', var, op_str, 'recommended ', def
-      endif
+      end if
       call messages_warning(2)
     end if
 
@@ -1239,7 +1239,7 @@ contains
     else
       fmt_ = optional_default(fmt, '(a)')
       write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), trim(val)
-    endif
+    end if
 
     if(present(new_line)) then
       if(new_line) call messages_new_line()
@@ -1264,7 +1264,7 @@ contains
     if(len(trim(message(current_line))) + len(trim(text)) > len(message(current_line))) then
       write(message(current_line + 1), '(3a)') "Exceeded message line length limit, to write logical value '", trim(text), "'"
       call messages_fatal(current_line + 1)
-    endif
+    end if
 
     write(message(current_line), '(a,1x,a)') trim(message(current_line)), trim(text)
 
@@ -1288,7 +1288,7 @@ contains
     else
        ! remove 'src/'
        start = pos + 4
-    endif
+    end if
     clean_path = filename(start:)
   end function messages_clean_path
 

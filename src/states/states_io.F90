@@ -315,7 +315,7 @@ contains
       write(message(1), '(a,f12.6,1x,a)') "Fermi energy = ", &
         units_from_atomic(units_out%energy, st%smear%e_fermi), units_abbrev(units_out%energy)
       call messages_info(1, iunit)
-    endif
+    end if
 
     POP_SUB(states_write_eigenvalues)
     
@@ -700,7 +700,7 @@ contains
                                                    units_from_atomic(unit_one/units_out%energy, dsf)
           else
             write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
-          endif
+          end if
 
           call messages_info(1,iunit)
 

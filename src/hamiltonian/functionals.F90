@@ -170,13 +170,13 @@ contains
         message(1) = 'Specified functional does not have total energy available.'
         message(2) = 'Corresponding component of energy will just be left as zero.'
         call messages_warning(2)
-      endif
+      end if
 
       if(iand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
         message(1) = 'Specified functional does not have XC potential available.'
         message(2) = 'Cannot run calculations. Choose another XCFunctional.'
         call messages_fatal(2)
-      endif
+      end if
 
       ok = iand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
@@ -281,7 +281,7 @@ contains
         functl%LB94_modified = 1
       else
         functl%LB94_modified = 0
-      endif
+      end if
 
       ! FIXME: libxc seems to have 1e-32 as a threshold, should we not use that?
       !%Variable LB94_threshold

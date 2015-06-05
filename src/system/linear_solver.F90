@@ -151,9 +151,9 @@ contains
           ! in this case, it is equivalent to LS_QMR_DOTP
         else
           defsolver_ = LS_QMR_SYMMETRIZED
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
 
     call parse_variable("LinearSolver", defsolver_, fsolver)
 

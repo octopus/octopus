@@ -341,7 +341,7 @@ contains
       do ist=1, nstates_within_contour
         print *, ist, eigenval(ist),max(resl(ist),resr(ist))
       end do
-    endif
+    end if
 
     st%eigenval(:, :) = M_ZERO
 

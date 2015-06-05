@@ -119,7 +119,7 @@ contains
           buf = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
         else
           buf = 0
-        endif
+        end if
         call mpi_allreduce(buf, pesrc%points_global(ip), 1, MPI_INTEGER, mpi_sum, mpi_comm_world, mpi_err)
 #endif
       else
@@ -286,7 +286,7 @@ contains
 
         call io_close(iunit)
       end do
-    endif
+    end if
 
     POP_SUB(PES_rc_init_write)
   end subroutine PES_rc_init_write

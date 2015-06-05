@@ -116,7 +116,7 @@ contains
         call messages_fatal()
       else
         call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-      endif
+      end if
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
@@ -147,7 +147,7 @@ contains
       else
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
       end if
-    endif
+    end if
 
     call scf_end(scfv)
     call restart_end(restart_dump)

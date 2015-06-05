@@ -186,7 +186,7 @@ contains
     if(trim(what) == "Classical") then
       POP_SUB(read_coords_read)
       return
-    endif
+    end if
 
     !%Variable XYZCoordinates
     !%Type string
@@ -217,7 +217,7 @@ contains
       if(gf%n <= 0) then
         write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
         call messages_fatal(1)
-      endif
+      end if
 
       read(iunit, *) ! skip comment line
 
@@ -275,13 +275,13 @@ contains
         else if(step_to_use > nsteps) then
           write(message(1),'(a,i9)') "XSFCoordinatesAnimStep must be <= available number of steps ", nsteps
           call messages_fatal(1)
-        endif
+        end if
         write(message(1),'(a,i9,a,i9)') 'Using animation step ', step_to_use, ' out of ', nsteps
         call messages_info(1)
       else
         nsteps = 0
         step_to_use = 1
-      endif
+      end if
 
       ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'
       select case(trim(str))
@@ -316,14 +316,14 @@ contains
       if(str(1:7) /= 'PRIMVEC') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
         call messages_warning(1)
-      endif
+      end if
       if(nsteps > 0) then
         read(str(8:), *) istep
         if(istep /= step_to_use) then
           write(message(1), '(a,i9,a,i9)') 'Found PRIMVEC index ', istep, ' instead of ', step_to_use
           call messages_fatal(1)
-        endif
-      endif
+        end if
+      end if
 
       latvec(:,:) = M_ZERO
       do jdir = 1, space%dim
@@ -334,34 +334,34 @@ contains
       if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
         message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
         call messages_fatal(1)
-      endif
+      end if
       if(any(gf%lsize(1:space%dim) < M_EPSILON)) then
         message(1) = "XSF file must have positive lattice vectors."
         call messages_fatal(1)
-      endif
+      end if
 
       read(iunit, '(a256)') str
       if(str(1:9) /= 'PRIMCOORD') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
         call messages_warning(1)
-      endif
+      end if
       if(nsteps > 0) then
         read(str(10:), *) istep
         if(istep /= step_to_use) then
           write(message(1), '(a,i9,a,i9)') 'Found PRIMCOORD index ', istep, ' instead of ', step_to_use
           call messages_fatal(1)
-        endif
-      endif
+        end if
+      end if
 
       read(iunit, *) gf%n, int_one
       if(gf%n <= 0) then
         write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
         call messages_fatal(1)
-      endif
+      end if
       if(int_one /= 1) then
         write(message(1),'(a,i6,a)') 'Number in file was ', int_one, ' instead of 1.'
         call messages_warning(1)
-      endif
+      end if
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
       ! TODO: add support for velocities as vectors here?
@@ -489,7 +489,7 @@ contains
         end do
         gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
       end do
-    endif
+    end if
 
     POP_SUB(read_coords_read)
 
@@ -556,7 +556,7 @@ contains
           read(record, '(30x,3f8.3,6x,f5.2)') gf%atom(na)%x(1:3), gf%atom(na)%charge
         else
           read(record, '(30x,3f8.3)') gf%atom(na)%x(1:3)
-        endif
+        end if
 
         na = na + 1
       end if

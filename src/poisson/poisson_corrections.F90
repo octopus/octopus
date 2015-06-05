@@ -332,7 +332,7 @@ contains
     bp_lower = mesh%np + 1
     if(mesh%parallel_in_domains) then
       bp_lower = bp_lower + mesh%vp%np_ghost
-    endif
+    end if
 
     pot(bp_lower:mesh%np_part) = M_ZERO
     do ip = bp_lower, mesh%np_part ! boundary conditions

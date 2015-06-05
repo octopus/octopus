@@ -154,7 +154,7 @@ contains
     if(conf%debug_level >= 99) then
       !wipe out debug trace files from previous runs to start fresh rather than appending
       call delete_debug_trace()
-    endif
+    end if
 
     ! create static directory
     call io_mkdir(STATIC_DIR)
@@ -367,7 +367,7 @@ contains
       else
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
           action=trim(action), position=trim(position_), iostat=iostat)
-      endif
+      end if
       
       if(iostat /= 0) then
         call io_free(iunit)
@@ -485,7 +485,7 @@ contains
         write(ounit, '(a)') trim(line)
         if(flush_messages) then
           write(iunit_out, '(a)') trim(line)
-        endif
+        end if
       end if
     end do
     

@@ -64,10 +64,10 @@
       if(species_is_ps(species)) then
         ps => species_ps(species)
         ASSERT(ii <= ps%conf%p)
-      endif
+      end if
       SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
       SAFE_ALLOCATE(ylm(1:mesh%np))
-    endif
+    end if
 
     do icell = 1, periodic_copy_num(pc)
 
@@ -89,7 +89,7 @@
             lorb(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
               exp(-species_zval(species) * sqrt(r2) / ii) * (2*species_zval(species)*sqrt(r2)/ii)**ll * &
               loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*species_zval(species)*sqrt(r2)/ii)
-          endif
+          end if
         end do
 
 #ifdef R_TCOMPLEX
@@ -131,7 +131,7 @@
       SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
       nullify(ps)
-    endif
+    end if
 
     call periodic_copy_end(pc)
 
@@ -187,7 +187,7 @@
           phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
             exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
         end do
-      endif
+      end if
 
       SAFE_ALLOCATE(ylm(1:submesh%np))
 

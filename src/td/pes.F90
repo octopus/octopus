@@ -244,7 +244,7 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       if(pes%calc_rc) call pes_rc_output(pes%rc, st, iter, outp%restart_write_interval, dt)
-    endif
+    end if
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
@@ -346,7 +346,7 @@ contains
 
       if(pes%calc_rc)   call pes_rc_init_write (pes%rc, mesh, st)
 
-    endif
+    end if
 
     POP_SUB(pes_init_write)
   end subroutine pes_init_write

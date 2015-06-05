@@ -380,7 +380,7 @@ contains
       call end_()
       POP_SUB(td_run)
       return
-    endif
+    end if
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
@@ -825,7 +825,7 @@ contains
         if(parse_block_n(blk) /= st%nst) then
           message(1) = "Number of rows in block " // trim(block_name) // " must equal number of states in this calculation."
           call messages_fatal(1)
-        endif
+        end if
         call states_copy(stin, st, exclude_wfns = .true.)
         call states_look_and_load(restart, stin, gr)
         ! FIXME: rotation matrix should be R_TYPE
@@ -837,7 +837,7 @@ contains
             write(message(1),'(a,i6,a,i6,3a,i6,a)') "Number of columns (", ncols, ") in row ", ist, " of block ", &
               trim(block_name), " must equal number of states (", stin%nst, ") read from gs restart."
             call messages_fatal(1)
-          endif
+          end if
           do jst = 1, stin%nst
             call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
           end do
@@ -847,7 +847,7 @@ contains
           call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
         else
           call zstates_rotate(gr%mesh, st, stin, rotation_matrix)
-        endif
+        end if
         SAFE_DEALLOCATE_A(rotation_matrix)
         call states_end(stin)
       else

@@ -214,7 +214,7 @@ contains
 
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
-      endif
+      end if
 
       if(present(tp_enlarge)) call cube_tp_fft_defaults(cube, fft_library_)
 

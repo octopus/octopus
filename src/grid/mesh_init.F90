@@ -117,7 +117,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       ! this happens if Spacing > box size
       mesh%idx%nr(2, idir) =  1
       mesh%idx%nr(1, idir) = -1
-    endif
+    end if
 
     ! We have to adjust the spacing to be commensurate with the box,
     ! for this we scan the possible values of the grid size around the
@@ -153,7 +153,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     if(mesh%idx%nr(2, idir) == 0) then
       write(message(1),'(a,i2)') 'Spacing > box size in direction ', idir
       call messages_fatal(1)
-    endif
+    end if
   end do
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
@@ -302,7 +302,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   if(all(mesh%idx%lxyz_inv(:,:,:) == 0)) then
     message(1) = "Failure of MPI_Allreduce in place for lxyz_inv. MPI2 is not working correctly."
     call messages_fatal(1)
-  endif
+  end if
 
   call profiling_out(prof_reduce)
 #endif
@@ -788,7 +788,7 @@ contains
         write(message(1), '(a,i9,a,i9)') 'Assertion failure from create_x_lxyz: ien = ', ien, ' /= ', mesh%np_part_global
         write(message(2), '(a)') 'Probably MPI2 is not working correctly.'
         call messages_fatal(2)
-      endif
+      end if
 
       POP_SUB(mesh_init_stage_3.create_x_lxyz)
     end subroutine create_x_lxyz

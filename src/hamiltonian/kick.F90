@@ -351,7 +351,7 @@ contains
       if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
         message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
         call messages_fatal(1)
-      endif
+      end if
 
       !%Variable TDPolarizationWprime
       !%Type block
@@ -383,7 +383,7 @@ contains
     if(periodic_dim > 0) then
       message(1) = "Kicks cannot be applied correctly in periodic directions."
       call messages_warning(1)
-    endif
+    end if
 
     !%Variable TDMomentumTransfer
     !%Type block
@@ -559,7 +559,7 @@ contains
     if(kick%function_mode < 0) then
       message(1) = "No kick could be read from file."
       call messages_fatal(1)
-    endif
+    end if
 
     POP_SUB(kick_read)
   end subroutine kick_read

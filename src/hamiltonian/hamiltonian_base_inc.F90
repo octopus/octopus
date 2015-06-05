@@ -38,8 +38,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         psib, vpsib, Impotential = this%Impotential)
     else
       call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, psib, vpsib)
-    endif
-  endif
+    end if
+  end if
 
   POP_SUB(X(hamiltonian_base_local))
 end subroutine X(hamiltonian_base_local)

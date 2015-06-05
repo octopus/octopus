@@ -112,7 +112,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
       call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
       call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
     end do
-  endif
+  end if
   ! no derivatives in electric, so ghost points not needed
 
   apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
@@ -122,7 +122,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
       f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
     end forall
-  endif
+  end if
 
   select case(this%pert_type)
     case(PERTURBATION_ELECTRIC)
@@ -146,11 +146,11 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
       f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
     end forall
-  endif
+  end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_DEALLOCATE_A(f_in_copy)
-  endif
+  end if
 
   call profiling_out(prof)
   POP_SUB(X(pert_apply))
@@ -206,7 +206,7 @@ contains
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, f_out)
         end if
       end do
-    endif
+    end if
     
     SAFE_DEALLOCATE_A(grad)
     POP_SUB(X(pert_apply).kdotp)
@@ -374,7 +374,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
       call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
       call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
     end do
-  endif
+  end if
   ! no derivatives in electric, so ghost points not needed
 
   apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
@@ -386,7 +386,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
       f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
     end forall
-  endif
+  end if
 
   select case(this%pert_type)
 
@@ -406,11 +406,11 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
       f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
     end forall
-  endif
+  end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_DEALLOCATE_A(f_in_copy)
-  endif
+  end if
 
   POP_SUB(X(pert_apply_order_2))
 
@@ -568,20 +568,20 @@ contains
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%species)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
-        endif
+        end if
       end do
 
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
         f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
       end forall
-    endif
+    end if
 
     if(this%dir == this%dir2) then
       ! add delta_ij
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in_copy(ip, idim)
     else
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = M_HALF * f_out(ip, idim)
-    endif
+    end if
 
     SAFE_DEALLOCATE_A(cpsi)
     POP_SUB(X(pert_apply_order_2).kdotp)

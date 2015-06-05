@@ -1531,7 +1531,7 @@ contains
 151 if (nproc*(md2/nproc) < n2/2) then
       md2=md2+1
       goto 151
-    endif
+    end if
 
 
     !dimensions of the kernel, 1/8 of the total volume,
@@ -1542,7 +1542,7 @@ contains
 250 if (modulo(nd3,nproc) /= 0) then
       nd3=nd3+1
       goto 250
-    endif
+    end if
 
     POP_SUB(par_calculate_dimensions)
   end subroutine par_calculate_dimensions

@@ -348,7 +348,7 @@ contains
           err2 = err2 + 1
           message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
           call messages_warning(1)
-        endif
+        end if
       end do
     end do
 

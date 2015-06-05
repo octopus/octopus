@@ -275,7 +275,7 @@ program oct_test
       call messages_info()
 
       call dmesh_interpolation_test(sys%gr%mesh)
-    endif
+    end if
 
     if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
       call messages_new_line()
@@ -285,7 +285,7 @@ program oct_test
       call messages_info()
 
       call zmesh_interpolation_test(sys%gr%mesh)
-    endif
+    end if
 
     call system_end(sys)
 

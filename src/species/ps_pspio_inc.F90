@@ -143,7 +143,7 @@
       ! only the first point is allowed to be zero
       message(1) = "Illegal zero values in PSPIO radial grid"
       call messages_fatal(1)
-    endif
+    end if
     if (r_tmp(1) == M_ZERO) then
       ip = 1
     else

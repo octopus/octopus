@@ -318,7 +318,7 @@ contains
       default_es = RS_LOBPCG
     else
       default_es = RS_CG
-    endif
+    end if
 
     call parse_variable('Eigensolver', default_es, eigens%es_type)
 
@@ -671,7 +671,7 @@ contains
           eigens%converged(ik) = ist
         else
           exit
-        endif
+        end if
       end do
 
       eigens%matvec = eigens%matvec + maxiter

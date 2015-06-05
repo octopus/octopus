@@ -333,7 +333,7 @@ contains
           call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
             trig,after(i),now(i),before(i),isign)
         end do
-      endif
+      end if
 
       inzet=3-inzet
 
@@ -387,7 +387,7 @@ contains
           call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
             trig,after(i),now(i),before(i),isign)
         end do
-      endif
+      end if
       inzet=3-inzet
 
       !$omp barrier
@@ -439,7 +439,7 @@ contains
           call fftrot(nn,nfft,n,mm,m,zw(1,1,inzeep),z(1,jj,3-inzet), &
             trig,after(i),now(i),before(i),isign)
         end do
-      endif
+      end if
       inzet=3-inzet
 
       SAFE_DEALLOCATE_A(zw)
@@ -450,7 +450,7 @@ contains
       if (iam == 0) inzee=inzet
       !$omp end parallel  
 
-    endif
+    end if
     
     call profiling_out(prof)
 
@@ -565,7 +565,7 @@ contains
             now(j)=idata(1+j,i)
           else
             goto 1000
-          endif
+          end if
         end do
         goto 1000
       end if
@@ -708,7 +708,7 @@ contains
                 zout(2,j,nout2)= s2 + s1
               end do
             end do
-          endif
+          end if
         else if (4*ias == after) then
           if (isign == 1) then
             nin1=ia-after
@@ -752,7 +752,7 @@ contains
                 zout(2,j,nout2)= s1 - s2
               end do
             end do
-          endif
+          end if
         else if (4*ias == 3*after) then
           if (isign == 1) then
             nin1=ia-after
@@ -796,7 +796,7 @@ contains
                 zout(2,j,nout2)= s2 + s1
               end do
             end do
-          endif
+          end if
         else
           itrig=ias*before+1
           cr2=trig(1,itrig)
@@ -821,7 +821,7 @@ contains
               zout(2,j,nout2)= s1 - s2
             end do
           end do
-        endif
+        end if
       end do
     else if (now == 4) then
       if (isign == 1) then 
@@ -964,7 +964,7 @@ contains
                 zout(2,j,nout4) = r - s
               end do
             end do
-          endif
+          end if
         end do
       else
         ia=1
@@ -1106,9 +1106,9 @@ contains
                 zout(2,j,nout4) = r + s
               end do
             end do
-          endif
+          end if
         end do
-      endif
+      end if
     else if (now == 8) then
       if (isign == -1) then 
         ia=1
@@ -1654,7 +1654,7 @@ contains
                 zout(2,j,nout3) = s1 - r2
               end do
             end do
-          endif
+          end if
         else if (8*ias == 3*after) then
           if (isign == 1) then
             nin1=ia-after
@@ -1722,7 +1722,7 @@ contains
                 zout(2,j,nout3) = s1 - r2
               end do
             end do
-          endif
+          end if
         else
           itt=ias*before
           itrig=itt+1
@@ -1946,7 +1946,7 @@ contains
                 zout(2,j,nout4) = r - s
               end do
             end do
-          endif
+          end if
         else
           ias=ia-1
           itt=ias*before
@@ -2022,7 +2022,7 @@ contains
               zout(2,j,nout4) = r - s
             end do
           end do
-        endif
+        end if
       end do
     else if (now == 6) then
       !         .5d0*sqrt(3.d0)
@@ -2099,7 +2099,7 @@ contains
       end do
     else 
       stop 'error fftstp'
-    endif
+    end if
 
   end subroutine fftstp
 
@@ -2190,7 +2190,7 @@ contains
                         zout(1,nout2,j)= r1 - r2
                         zout(2,nout2,j)= s2 + s1
 2020                        continue
-                endif
+                end if
         else if (4*ias == after) then
                 if (isign == 1) then
                         nin1=ia-after
@@ -2232,7 +2232,7 @@ contains
                         zout(1,nout2,j)= r1 - r2
                         zout(2,nout2,j)= s1 - s2
 2040                        continue
-                endif
+                end if
         else if (4*ias == 3*after) then
                 if (isign == 1) then
                         nin1=ia-after
@@ -2274,7 +2274,7 @@ contains
                         zout(1,nout2,j)= r1 - r2
                         zout(2,nout2,j)= s2 + s1
 2060                        continue
-                endif
+                end if
         else
                 itrig=ias*before+1
                 cr2=trig(1,itrig)
@@ -2298,7 +2298,7 @@ contains
                 zout(1,nout2,j)= r1 - r2
                 zout(2,nout2,j)= s1 - s2
 2090                continue
-        endif
+        end if
 2000        continue
         else if (now == 4) then
         if (isign == 1) then 
@@ -2438,7 +2438,7 @@ contains
                         zout(2,nout2,j) = r + s 
                         zout(2,nout4,j) = r - s
 4020                        continue
-                endif
+                end if
 4000                continue
         else
                 ia=1
@@ -2577,9 +2577,9 @@ contains
                         zout(2,nout2,j) = r - s
                         zout(2,nout4,j) = r + s
 4120                        continue
-                endif
+                end if
 4100                continue
-        endif
+        end if
         else if (now == 8) then
         if (isign == -1) then 
                 ia=1
@@ -3023,7 +3023,7 @@ contains
 8021                        continue
 8001                continue
 
-        endif
+        end if
         else if (now == 3) then 
 !         .5d0*sqrt(3.d0)
         bb=isign*0.8660254037844387d0
@@ -3120,7 +3120,7 @@ contains
                 zout(1,nout3,j) = r1 - s2 
                 zout(2,nout3,j) = s1 - r2
 3020                continue
-        endif
+        end if
         else if (8*ias == 3*after) then
         if (isign == 1) then
                 nin1=ia-after
@@ -3186,7 +3186,7 @@ contains
                 zout(1,nout3,j) = r1 + s2 
                 zout(2,nout3,j) = s1 - r2
 3040                continue
-        endif
+        end if
         else
         itt=ias*before
         itrig=itt+1
@@ -3228,7 +3228,7 @@ contains
         zout(1,nout3,j) = r1 + s2 
         zout(2,nout3,j) = s1 - r2
 3090        continue
-        endif
+        end if
 3000        continue
         else if (now == 5) then
 !         cos(2.d0*pi/5.d0)
@@ -3406,7 +3406,7 @@ contains
                         zout(2,nout3,j) = r + s
                         zout(2,nout4,j) = r - s
 5020                        continue
-                endif
+                end if
         else
                 ias=ia-1
                 itt=ias*before
@@ -3481,7 +3481,7 @@ contains
                 zout(2,nout3,j) = r + s
                 zout(2,nout4,j) = r - s
 5100                continue
-        endif
+        end if
 5000        continue
        else if (now == 6) then
 !         .5d0*sqrt(3.d0)
@@ -3558,7 +3558,7 @@ contains
 
        else
         stop 'error fftrot'
-       endif
+       end if
 
   end subroutine
 
@@ -3722,7 +3722,7 @@ contains
         'least one 1-d FFT of this size even though this will' // & 
         'reduce the performance for shorter transform lengths'
       stop
-    endif
+    end if
 
     do j2=1,md2/nproc
       !this condition ensures that we manage only the interesting part for the FFT
@@ -3751,7 +3751,7 @@ contains
           call scramble_unpack(i1,j2,lot,nfft,n1/2,n3,md2,nproc,nd3,zw(1,1,inzee),zmpi2,cosinarr)
           !output: I1,J2,i3,(Jp2)
         end do
-      endif
+      end if
     end do
 
     !Interprocessor data transposition
@@ -3784,7 +3784,7 @@ contains
             'least one 1-d FFT of this size even though this will' // & 
             'reduce the performance for shorter transform lengths'
           stop
-        endif
+        end if
 
         do j=1,n2/2,lot
           ma=j
@@ -3797,7 +3797,7 @@ contains
             call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi2,zw(1,1,1))
           else
             call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw(1,1,1))
-          endif
+          end if
           !output: J2,Jp2,I1,j3,(jp3)
 
           !performing FFT
@@ -3824,7 +3824,7 @@ contains
             'least one 1-d FFT of this size even though this will' // & 
             'reduce the performance for shorter transform lengths'
           stop
-        endif
+        end if
 
         do j=1,n1,lot
           ma=j
@@ -3892,10 +3892,10 @@ contains
             call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi2)
           else
             call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi1)
-          endif
+          end if
           ! output: I1,J2,j3,Jp2,(jp3)
         end do
-      endif
+      end if
     end do
 
 
@@ -3910,7 +3910,7 @@ contains
         MPI_DOUBLE_PRECISION, comm, ierr)
       !output: I1,J2,j3,jp3,(Jp2)
       call profiling_out(prof_comm)
-    endif
+    end if
 
     !transform along z axis
     !input: I1,J2,i3,(Jp2)
@@ -3942,7 +3942,7 @@ contains
           call unfill_downcorn(md1, md3, lot, nfft, n3, zw(1,1,inzee), zf(i1,1,j2), scal)
 
         end do
-      endif
+      end if
     end do
 
     SAFE_DEALLOCATE_A(zmpi2)
@@ -4289,7 +4289,7 @@ contains
           Jp2stf=Jp2
           J2stf=J2
           return
-        endif
+        end if
         do I1 = 1, n1/2
           zmpi1(1,I1,J2,j3,Jp2)=zw(1,mfft,I1)
           zmpi1(2,I1,J2,j3,Jp2)=zw(2,mfft,I1)
@@ -4453,7 +4453,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   SAFE_ALLOCATE(cosinarr(1:2,1:n3/2))
   if (nproc > 1) then
     SAFE_ALLOCATE(zmpi1(1:2,1:n1,1:nd2/nproc,1:nd3/nproc,1:nproc))
-  endif
+  end if
   
   !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
   call ctrig(n3/2,trig3,after3,before3,now3,1,ic3)
@@ -4499,7 +4499,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
         call scramble_unpack(i1,j2,lot,nfft,n1,n3,nd2,nproc,nd3,zw(1,1,inzee),zmpi2,cosinarr)
         !output: I1,J2,i3,(Jp2)
      end do
-!        endif
+!        end if
   end do
 
   !Interprocessor data transposition
@@ -4511,7 +4511,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
           zmpi1(:, 1, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_double_precision,comm,ierr)
      ! output: I1,J2,j3,Jp2,(jp3)
-  endif
+  end if
 
 
   do j3=1,nd3/nproc
@@ -4535,7 +4535,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
               call mpiswitch(j3,nfft,Jp2st,J2st,lot,n1,nd2,nd3,nproc,zmpi2,zw(1,1,1))
            else
               call mpiswitch(j3,nfft,Jp2st,J2st,lot,n1,nd2,nd3,nproc,zmpi1,zw(1,1,1))
-           endif
+           end if
            !output: J2,Jp2,I1,j3,(jp3)
 
            !performing FFT
@@ -4582,7 +4582,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
            
         end do
         !output: i1,i2,j3,(jp3)
-     endif
+     end if
   end do
 
   !De-allocations
@@ -4604,7 +4604,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   SAFE_DEALLOCATE_A(cosinarr)
   if (nproc > 1) then
     SAFE_DEALLOCATE_A(zmpi1)
-  endif
+  end if
 #endif
 end subroutine kernelfft
 
@@ -4637,7 +4637,7 @@ end subroutine kernelfft
           Jp2st = Jp2
           J2st = J2
           return
-        endif
+        end if
         do I1 = 1, n1
           zw(1,mfft,I1) = zmpi1(1, I1, J2, j3, Jp2)
           zw(2,mfft,I1) = zmpi1(2, I1, J2, j3, Jp2)

@@ -46,18 +46,18 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     ndiag = 0
   else
     ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
-  endif
+  end if
 
   if(bgw%vxc_offdiag_nmin < 1 .or. bgw%vxc_offdiag_nmax < 1) then
     noffdiag = 0
   else
     noffdiag = (bgw%vxc_offdiag_nmax - bgw%vxc_offdiag_nmin + 1)**2
-  endif
+  end if
   if(noffdiag > 0) then
     SAFE_ALLOCATE(psi2(1:gr%mesh%np))
     SAFE_ALLOCATE(off1(1:noffdiag))
     SAFE_ALLOCATE(off2(1:noffdiag))
-  endif
+  end if
   SAFE_ALLOCATE(mtxel(1:ndiag + noffdiag, 1:st%d%nspin))
 
   if(bgw%calc_exchange) then
@@ -65,7 +65,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
     if(.not. associated(hm%hf_st)) hm%hf_st => st
     SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
-  endif
+  end if
 
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
@@ -86,7 +86,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         ioff = ioff + 1
       end do
     end do
-  endif
+  end if
 
   ! in case of hybrids, we should apply exchange operator too here
   ! in that case, we can write x.dat file as well
@@ -104,7 +104,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
           xpsi(:,:) = M_ZERO
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
-        endif
+        end if
       end do
 
       ! could do only upper or lower triangle here
@@ -117,7 +117,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
           xpsi(:,:) = M_ZERO
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
-        endif
+        end if
       end do
     end do
 
@@ -130,7 +130,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
       mtxel_x(:,:) = M_TWO * P_Ry * mtxel_x(:,:)
       if(mpi_grp_is_root(mpi_world)) &
         call write_matrix_elements(iunit_x, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel_x)
-    endif
+    end if
   end do
 
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
@@ -140,14 +140,14 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     SAFE_DEALLOCATE_A(off1)
     SAFE_DEALLOCATE_A(off2)
     SAFE_DEALLOCATE_A(psi2)
-  endif
+  end if
   SAFE_DEALLOCATE_A(mtxel)
 
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit_x)
     SAFE_DEALLOCATE_A(xpsi)
     SAFE_DEALLOCATE_A(mtxel_x)
-  endif
+  end if
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
@@ -206,14 +206,14 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
     write(iunit,*) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit,*) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)
-  endif
+  end if
 
   if(mpi_grp_is_root(mpi_world)) then
     iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
     write(iunit) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)
-  endif
+  end if
 
   SAFE_DEALLOCATE_A(vmtxel)
   SAFE_DEALLOCATE_A(rpsi)
@@ -279,7 +279,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 !        end do
 !      end do
 !      norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
-!    endif
+!    end if
 !    
     field_g(:,:) = M_ZERO
     norm = M_ZERO
@@ -293,7 +293,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
         norm = norm + abs(field_g(ig,is))**2
       else
         field_g(ig, is) = cf%fs(ix, iy, iz) * gr%mesh%volume_element
-      endif
+      end if
     end do
 
     ! renormalize
@@ -302,8 +302,8 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       if(abs(norm - M_ONE) > 0.01) then
         write(message(1), '(a,f12.6)') 'Wavefunction norm within G-sphere (before renormalization) is only ', norm
         call messages_warning(1)
-      endif
-    endif
+      end if
+    end if
 
   end do
 
@@ -317,7 +317,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 
   if(mpi_grp_is_root(mpi_world)) then
     call write_binary_complex_data(iunit, shell%ngvectors, ubound(field_g, 1), nspin, field_g)
-  endif
+  end if
 
   POP_SUB(X(bgw_write_fs))
 end subroutine X(bgw_write_fs)

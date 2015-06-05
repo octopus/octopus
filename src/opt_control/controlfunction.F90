@@ -936,7 +936,7 @@ contains
       do ipar = 1, cp%no_controlfunctions
         call tdf_end(cp%f(ipar))
       end do
-    endif
+    end if
     SAFE_DEALLOCATE_P(cp%f)
     SAFE_DEALLOCATE_P(cp%alpha)
     SAFE_DEALLOCATE_P(cp%u)
@@ -1420,7 +1420,7 @@ contains
     if(.not. cf_common_initialized) then
       message(1) = "Internal error: Cannot call controlfunction_mod_close when not initialized."
       call messages_fatal(1)
-      endif
+      end if
 
     cf_common_initialized=.false.
     SAFE_DEALLOCATE_P(cf_common%alpha)

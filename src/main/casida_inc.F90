@@ -202,7 +202,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * cas%X(mat)(jb, ia)
       end do
-    endif
+    end if
     zz = sqrt(TOFLOAT(cas%el_per_state)) * zz
   end if
 
@@ -365,7 +365,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
       if(.not. is_saved(ist, jst, ik)) then
         lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
         if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
-      endif
+      end if
     end do
   end do
 
@@ -395,13 +395,13 @@ subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
       if(cas%pair(ia)%i == cas%pair(jb)%i) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) + lr_hmat1(cas%pair(ia)%a, cas%pair(jb)%a, ik)
         if(ia /= jb) cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) + lr_hmat1(cas%pair(jb)%a, cas%pair(ia)%a, ik)
-      endif
+      end if
 
       ! if unocc states the same, apply occ matrix elements
       if(cas%pair(ia)%a == cas%pair(jb)%a) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) - lr_hmat1(cas%pair(ia)%i, cas%pair(jb)%i, ik)
         if(ia /= jb) cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) - lr_hmat1(cas%pair(jb)%i, cas%pair(ia)%i, ik)
-      endif
+      end if
     end do
   end do
 
@@ -450,16 +450,16 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           matrix(jb, ia) = M_ZERO
           is_calcd(ia, jb) = .false.
           is_calcd(jb, ia) = .false.
-        endif
+        end if
       end do
     end do
-  endif
+  end if
 
   if(cas%type == CASIDA_PETERSILKA) then
     maxcount = cas%n_pairs
   else
     maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
-  endif
+  end if
   counter = 0
   actual = 0
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
@@ -484,9 +484,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         jb_tmp = cas%n_pairs - jb + 1
       else
         jb_tmp = jb
-      endif
+      end if
       ia_length = ia_length + mod(jb_tmp, 2)
-    endif
+    end if
 
     do ia_iter = jb, jb + ia_length
 
@@ -499,7 +499,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         if(isnt_degenerate(cas, st, ia, jb)) cycle
       else
         counter = counter + 1
-      endif
+      end if
 
       ! if not loaded, then calculate matrix element
       if(.not. is_saved(ia, jb)) then
@@ -507,7 +507,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_xc = mtxel_xc)
         else
           call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
-        endif
+        end if
         matrix(ia, jb) = mtxel_vh + mtxel_xc
       end if
       if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
@@ -521,7 +521,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     call loct_progress_bar(maxcount, maxcount)
     ! complete progress bar
     write(stdout, '(1x)')
-  endif
+  end if
 
   ! sum all matrix elements
   if(cas%parallel_in_eh_pairs) then
@@ -578,7 +578,7 @@ contains
       qi = qq%i
       qa = qq%a
       qk = qq%kk
-    endif
+    end if
 
     SAFE_ALLOCATE(rho_i(1:mesh%np))
     SAFE_ALLOCATE(rho_j(1:mesh%np))
@@ -599,24 +599,24 @@ contains
           saved%qi = qi
           saved%qa = qa
           saved%qk = qk
-        endif
+        end if
         ! value of pot is retained between calls
         mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
 
       else
         mtxel_vh = M_ZERO
-      endif
+      end if
     end if
 
     if(present(mtxel_xc)) then
       integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
       mtxel_xc = X(mf_integrate)(mesh, integrand)
-    endif
+    end if
 
     if(cas%herm_conj) then
       if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
       if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
-    endif
+    end if
 
     SAFE_DEALLOCATE_A(rho_i)
     SAFE_DEALLOCATE_A(rho_j)
@@ -657,7 +657,7 @@ contains
             ! if file is corrupt, do not trust anything that was read
             is_saved = .false.
             exit
-          endif
+          end if
 
           ia = cas%index(ii, aa, ik)
           jb = cas%index(jj, bb, jk)
@@ -668,15 +668,15 @@ contains
             matrix(jb, ia) = R_CONJ(val)
             is_saved(jb, ia) = .true.
             num_saved = num_saved + 1
-          endif
+          end if
         end do
 
         write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_file)
       else if(.not. cas%fromScratch) then
         message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
         call messages_warning(1)
-      endif
-    endif
+      end if
+    end if
     if (iunit > 0) call restart_close(cas%restart_load, iunit)
 
     ! if no file found, root has no new information to offer the others
@@ -732,14 +732,14 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
     call messages_warning(1)
     POP_SUB(X(casida_forces))
     return
-  endif
+  end if
   
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
     kxc = M_ZERO
     ! not spin polarized so far
     call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
-  endif
+  end if
   
   message(1) = "Reading vib_modes density for calculating excited-state forces."
   call messages_info(1)
@@ -753,14 +753,14 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
 
   if (cas%type /= CASIDA_EPS_DIFF) then
     SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-  endif
+  end if
   
   if(cas%type == CASIDA_EPS_DIFF) then
     cas%X(mat_save) = M_ZERO
     do ia = 1, cas%n_pairs
       cas%X(mat_save)(ia, ia) = cas%w(ia)
     end do
-  endif
+  end if
   
   SAFE_ALLOCATE(lr_hmat1(1:cas%nst, 1:cas%nst, 1:cas%nik))
   SAFE_ALLOCATE(cas%X(lr_hmat2)(1:cas%n_pairs, 1:cas%n_pairs))
@@ -783,9 +783,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         if(any(abs(aimag(zdl_rho)) > M_EPSILON)) then
           message(1) = "Vib_modes density has an imaginary part."
           call messages_warning(1)
-        endif
+        end if
         ddl_rho = TOFLOAT(zdl_rho)
-      endif
+      end if
       call X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, ddl_rho, lr_hmat1)
       
       cas%X(lr_hmat2) = M_ZERO
@@ -806,7 +806,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else
         cas%X(mat2) = M_ZERO
-      endif
+      end if
       
       cas%X(mat2) = cas%X(mat_save) * factor + cas%X(lr_hmat2) + cas%X(mat2)
       call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
@@ -821,7 +821,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_DEALLOCATE_A(kxc)
     SAFE_DEALLOCATE_A(lr_fxc)
-  endif
+  end if
   SAFE_DEALLOCATE_A(ddl_rho)
   SAFE_DEALLOCATE_A(zdl_rho)
 
@@ -839,7 +839,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         end do
       end do
     end do
-  endif
+  end if
   
   POP_SUB(X(casida_forces))
 
@@ -887,7 +887,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
           ! if file is corrupt, do not trust anything that was read
           is_saved = .false.
           exit
-        endif
+        end if
 
         ! FIXME: what about elements which are always zero?
         if(ii <= cas%nst .and. aa <= cas%nst .and. ik <= cas%nik) then
@@ -896,15 +896,15 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
           lr_hmat1(aa, ii, ik) = R_CONJ(val)
           is_saved(aa, ii, ik) = .true.
           num_saved = num_saved + 1
-        endif
+        end if
       end do
       write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_filename)
 
     else if(.not. cas%fromScratch) then
       message(1) = "Could not find restart file '" // trim(restart_filename) // "'. Starting from scratch."
       call messages_warning(1)
-    endif
-  endif
+    end if
+  end if
   if (iunit > 0) call restart_close(cas%restart_load, iunit)
 
 #ifdef HAVE_MPI
@@ -921,7 +921,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     SAFE_DEALLOCATE_A(is_saved)
     POP_SUB(X(casida_get_lr_hmat1))
     return
-  endif
+  end if
 
   call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
@@ -998,7 +998,7 @@ subroutine X(casida_solve)(cas, st)
     message(1) = "Variational and full Casida theory levels cannot be used with complex wavefunctions."
     call messages_fatal(1, only_root_writes = .true.)
     ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
-  endif
+  end if
 
   if(cas%type == CASIDA_CASIDA) then
     do ia = 1, cas%n_pairs
@@ -1006,7 +1006,7 @@ subroutine X(casida_solve)(cas, st)
         ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) ) &
         * ( st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
     end do
-  endif
+  end if
       
   ! all processors with the exception of the first are done
   if (mpi_grp_is_root(cas%mpi_grp)) then
@@ -1017,7 +1017,7 @@ subroutine X(casida_solve)(cas, st)
         occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
           / cas%el_per_state
       end do
-    endif
+    end if
 
     ! complete the matrix
     do ia = 1, cas%n_pairs
@@ -1031,19 +1031,19 @@ subroutine X(casida_solve)(cas, st)
             / sqrt(cas%s(ia) * cas%s(jb))
         else
           cas%X(mat)(ia, jb) = cas%X(mat(ia, jb)) * sqrt(occ_diffs(ia) * occ_diffs(jb))
-        endif
+        end if
         if(jb /= ia) cas%X(mat)(jb, ia) = R_CONJ(cas%X(mat)(ia, jb)) ! the matrix is Hermitian
       end do
       if(cas%type == CASIDA_CASIDA) then
         cas%X(mat)(ia, ia) = eig_diff**2 + cas%X(mat)(ia, ia)
       else
         cas%X(mat)(ia, ia) = eig_diff + cas%X(mat)(ia, ia)
-      endif
+      end if
     end do
 
     if(cas%type /= CASIDA_CASIDA) then
       SAFE_DEALLOCATE_A(occ_diffs)
-    endif
+    end if
     
     message(1) = "Info: Diagonalizing matrix for resonance energies."
     call messages_info(1)
@@ -1063,14 +1063,14 @@ subroutine X(casida_solve)(cas, st)
           cas%w(ia) = -sqrt(-cas%w(ia))
         else
           cas%w(ia) = sqrt(cas%w(ia))
-        endif
+        end if
       else
         if(cas%w(ia) < -M_EPSILON) then
           write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
           write(message(2),'(a)')      'This should not happen.'
           call messages_warning(2)
-        endif
-      endif
+        end if
+      end if
       
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
@@ -1101,10 +1101,10 @@ subroutine X(casida_write)(cas, sys)
       write(iunit, '(2a4)', advance='no') 'From', '  To'
       if(cas%nik > 1) then
         write(iunit, '(a7)', advance='no') 'Spin/k'
-      endif
+      end if
     else
       write(iunit, '(6x)', advance='no')
-    endif
+    end if
     
     write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
     do idim = 1, cas%sb_dim
@@ -1120,7 +1120,7 @@ subroutine X(casida_write)(cas, sys)
         write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
         if(cas%nik > 1) then
           write(iunit, '(i7)', advance='no') cas%pair(cas%ind(ia))%kk
-        endif
+        end if
       else
         write(iunit, '(i6)', advance='no') cas%ind(ia)
       end if
@@ -1134,7 +1134,7 @@ subroutine X(casida_write)(cas, sys)
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
       call io_mkdir(trim(dir_name))
-    endif
+    end if
     
     do ia = 1, cas%n_pairs
       
@@ -1162,15 +1162,15 @@ subroutine X(casida_write)(cas, sys)
         
         if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
           call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
-        endif
+        end if
         call io_close(iunit)
-      endif
+      end if
       
       if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
         iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
         call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
         call io_close(iunit)
-      endif
+      end if
     end do
   
   end if

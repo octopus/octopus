@@ -156,7 +156,7 @@ contains
                                                                   hm%energy%int_ne_pcm ), &
                                (hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_e, &
                                (hm%pcm%epsilon_0/(hm%pcm%epsilon_0-M_ONE))*hm%pcm%qtot_n
-    endif
+    end if
 
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -202,7 +202,7 @@ contains
       hm%energy%TS = M_ZERO
     else
       hm%energy%TS = st%smear%dsmear * hm%energy%entropy
-    endif
+    end if
     hm%energy%ImTS = M_ZERO
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -215,7 +215,7 @@ contains
       hm%energy%total = hm%energy%total + hm%energy%berry
     else
       hm%energy%berry = M_ZERO
-    endif
+    end if
 
     if (optional_default(iunit, -1) > 0) then
       if(cmplxscl) then 
@@ -257,7 +257,7 @@ contains
                                                                              hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
                                                                              hm%energy%int_nn_pcm + hm%energy%int_ne_pcm   )
           call messages_info(3, iunit)
-      endif
+      end if
 
       if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
@@ -272,7 +272,7 @@ contains
       if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
-      endif  
+      end if  
     end if
 
     POP_SUB(energy_calc_total)

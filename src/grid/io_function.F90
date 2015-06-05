@@ -211,46 +211,46 @@ contains
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
       write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
       call messages_fatal(1, only_root_writes = .true.)
-     endif
+     end if
 
     ! some modes are not available in some circumstances
     if(sb%dim == 1) then
       if(iand(how, C_OUTPUT_HOW_AXIS_Y) /= 0) then
         message(1) = "OutputHow = axis_y not available with Dimensions = 1."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_PLANE_Z) /= 0) then
         message(1) = "OutputHow = plane_z not available with Dimensions = 1."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then
         message(1) = "OutputHow = xcrysden not available with Dimensions = 1."
         call messages_fatal(1)
-      endif
-    endif
+      end if
+    end if
 
     if(sb%dim <= 2) then
       if(iand(how, C_OUTPUT_HOW_AXIS_Z) /= 0) then
         message(1) = "OutputHow = axis_z not available with Dimensions <= 2."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_PLANE_X) /= 0) then
         message(1) = "OutputHow = plane_x not available with Dimensions <= 2."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_PLANE_Y) /= 0) then
         message(1) = "OutputHow = plane_y not available with Dimensions <= 2."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_DX) /= 0) then
         message(1) = "OutputHow = dx not available with Dimensions <= 2."
         call messages_fatal(1)
-      endif
+      end if
       if(iand(how, C_OUTPUT_HOW_CUBE) /= 0) then
         message(1) = "OutputHow = cube not available with Dimensions <= 2."
         call messages_fatal(1)
-      endif
-    endif
+      end if
+    end if
 
 #if !defined(HAVE_NETCDF)
     if (iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
@@ -324,7 +324,7 @@ contains
       write_forces_ = .false.
     else
       write_forces_ = write_forces
-    endif
+    end if
 
     if(write_forces_) then
       SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
@@ -335,7 +335,7 @@ contains
       SAFE_DEALLOCATE_A(forces)
     else
       call write_xsf_geometry(iunit, geo, mesh)
-    endif
+    end if
 
     call io_close(iunit)
 
@@ -364,7 +364,7 @@ contains
     else
       write(index_str, '(a)') ''
       index_ = 1
-    endif
+    end if
 
     offset = M_ZERO
     ! The corner of the cell is always (0,0,0) to XCrySDen
@@ -386,7 +386,7 @@ contains
           case(1)
             write(iunit, '(a)') 'POLYMER'
         end select
-      endif
+      end if
 
       write(iunit, '(a)') 'PRIMVEC'//trim(index_str)
 
@@ -399,7 +399,7 @@ contains
       write(iunit, '(i10, a)') geo%natoms, ' 1'
     else
       write(iunit, '(a)') 'ATOMS'//trim(index_str)
-    endif
+    end if
 
     ! BoxOffset should be considered here
     do iatom = 1, geo%natoms
@@ -407,7 +407,7 @@ contains
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, mesh%sb%dim)
       if(present(forces)) then
         write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, mesh%sb%dim)
-      endif
+      end if
       write(iunit, '()')
     end do
 
@@ -428,7 +428,7 @@ contains
     if(status  ==  NF90_NOERR) then
     POP_SUB(ncdf_error)
       return
-    endif
+    end if
 
     write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
     write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"

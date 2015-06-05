@@ -186,7 +186,7 @@ contains
       call parse_variable('DerivativesStencil', DER_STARPLUS, der%stencil_type)
     else
       call parse_variable('DerivativesStencil', DER_STAR, der%stencil_type)
-    endif
+    end if
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 

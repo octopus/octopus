@@ -114,7 +114,7 @@ contains
       if(this%theta < M_ZERO .or. this%theta > M_PI/CNST(4.0)) call messages_input_error('ComplexScalingTheta')
     else
       this%theta = M_ZERO
-    endif
+    end if
 
     !%Variable ComplexScalingRotateSpectrum
     !%Type float

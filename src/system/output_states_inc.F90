@@ -46,7 +46,7 @@ subroutine output_states(st, gr, geo, dir, outp)
         write(fname, '(a)') 'density'
       else
         write(fname, '(a,i1)') 'density-sp', is
-      endif
+      end if
       if(associated(st%zrho%Im)) then !cmplxscl
         SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
         forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
@@ -96,7 +96,7 @@ subroutine output_states(st, gr, geo, dir, outp)
           write(fname, '(2a)') 'dipole_density-', index2axis(idir)
         else
           write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
-        endif
+        end if
         call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
           dtmp(:), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
@@ -122,14 +122,14 @@ subroutine output_states(st, gr, geo, dir, outp)
                 write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-k', ik, '-st', ist, '-sp', idim
               else
                 write(fname, '(a,i3.3,a,i4.4)')      'wf-k', ik, '-st', ist
-              endif
+              end if
             else
               if(st%d%dim > 1) then
                 write(fname, '(a,i4.4,a,i1)')        'wf-st', ist, '-sp', idim
               else
                 write(fname, '(a,i4.4)')             'wf-st', ist
-              endif
-            endif
+              end if
+            end if
 
             if (states_are_real(st)) then
               call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
@@ -170,14 +170,14 @@ subroutine output_states(st, gr, geo, dir, outp)
                 write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-k', ik, '-st', ist, '-sp', idim
               else
                 write(fname, '(a,i3.3,a,i4.4)')      'sqm-wf-k', ik, '-st', ist
-              endif
+              end if
             else
               if(st%d%dim > 1) then
                 write(fname, '(a,i4.4,a,i1)')        'sqm-wf-st', ist, '-sp', idim
               else
                 write(fname, '(a,i4.4)')             'sqm-wf-st', ist
-              endif
-            endif
+              end if
+            end if
 
             if (states_are_real(st)) then
               call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)

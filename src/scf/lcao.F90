@@ -244,11 +244,11 @@ contains
     if(st%d%ispin == SPINORS .and. this%alternative) then
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
-    endif
+    end if
     if(simul_box_is_periodic(gr%mesh%sb) .and. this%alternative) then
       call messages_experimental("LCAOAlternative in periodic systems")
       ! specifically, if you get the message about submesh radius > box size, results will probably be totally wrong.
-    endif
+    end if
 
     !%Variable LCAOComplexYlms
     !%Type logical
@@ -266,7 +266,7 @@ contains
       call parse_variable('LCAOComplexYlms', .false., this%complex_ylms)
     else
       this%complex_ylms = .false.
-    endif
+    end if
 
     !!%Variable LCAODebug
     !!%Type logical
@@ -285,7 +285,7 @@ contains
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
       iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
-    endif
+    end if
 #endif
 
     if(.not. this%alternative) then
@@ -377,7 +377,7 @@ contains
 #ifdef LCAO_DEBUG
             if(this%debug .and. mpi_grp_is_root(mpi_world)) then
               write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
-            endif
+            end if
 #endif
 
             iorb = iorb + 1
@@ -532,8 +532,8 @@ contains
         if(st%nst * st%smear%el_per_state > st%qtot) then
           message(1) = "Lower-lying empty states may be missed with LCAOExtraOrbitals."
           call messages_warning(1)
-        endif
-      endif
+        end if
+      end if
 
       !%Variable LCAODiagTol
       !%Type float
@@ -588,7 +588,7 @@ contains
           if(this%debug .and. mpi_grp_is_root(mpi_world)) then
             call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
-          endif
+          end if
 #endif
         end do
       end do
@@ -648,7 +648,7 @@ contains
         if(info /= 0) then
           write(message(1), '(a,i6)') 'descinit for BLACS failed with error code ', info
           call messages_fatal(1)
-        endif
+        end if
 
         this%calc_atom = .false.
         do iatom = 1, geo%natoms
@@ -708,8 +708,8 @@ contains
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
-      endif
-    endif
+      end if
+    end if
 
     call profiling_in(prof, 'LCAO_RUN')
 
@@ -724,7 +724,7 @@ contains
       if(sys%st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
         call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
-      endif
+      end if
 
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)
@@ -747,7 +747,7 @@ contains
       if(present(st_start)) then
         write(message(1),'(a,i8,a)') 'Performing LCAO for states ', st_start, ' and above'
         call messages_info(1)
-      endif
+      end if
 
       call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
 
@@ -761,9 +761,9 @@ contains
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
-          endif
-        endif
-      endif
+          end if
+        end if
+      end if
     end if
 
     if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
@@ -772,13 +772,13 @@ contains
         st_start_random = lcao%norbs + 1
       else
         st_start_random = 1
-      endif
+      end if
       if(present(st_start)) st_start_random = max(st_start, st_start_random)
 
       if(st_start_random > 1) then
         write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
         call messages_info(1)
-      endif
+      end if
 
       ! Randomly generate the initial wavefunctions.
       call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random)
@@ -800,7 +800,7 @@ contains
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
         call states_orthogonalize(sys%st, sys%gr%mesh)
-      endif
+      end if
 
     end if
 

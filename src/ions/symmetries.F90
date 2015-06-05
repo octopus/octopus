@@ -125,7 +125,7 @@ contains
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1)
       call messages_print_stress(stdout)
-    endif
+    end if
 
     !%Variable SymmetriesCompute
     !%Type logical
@@ -140,14 +140,14 @@ contains
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1)
       call messages_print_stress(stdout)
-    endif
+    end if
 
     if(any_non_spherical .or. .not. symmetries_compute) then
       call init_identity()
 
       POP_SUB(symmetries_init)
       return
-    endif
+    end if
 
     dim4syms = min(3,dim)
     ! In all cases, we must check that the grid respects the symmetries. --DAS
@@ -226,7 +226,7 @@ contains
         SAFE_DEALLOCATE_A(translation)
         POP_SUB(symmetries_init)
         return
-      endif
+      end if
 
       write(message(1),'(a, i4)') 'Space group No. ', this%space_group
       write(message(2),'(2a)') 'International: ', symbol
@@ -256,18 +256,18 @@ contains
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
-          endif
-        endif
+          end if
+        end if
       end do
       if(.not. found_identity) then
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
         call messages_fatal(1)
-      endif
+      end if
     
       if(is_supercell) then
         message(1) = "Disabling fractional translations. System appears to be a supercell."
         call messages_info(1)
-      endif
+      end if
       ! actually, we do not use fractional translations regardless currently
 
       ! this is a hack to get things working, this variable should be

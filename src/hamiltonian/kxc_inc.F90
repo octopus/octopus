@@ -36,7 +36,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   if(xcs%kernel_family == XC_FAMILY_NONE) then
     POP_SUB(xc_get_kxc)
     return
-  endif
+  end if
 
   if(iand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
     message(1) = "Only LDA functionals are authorized for now in XCKernel."
@@ -53,7 +53,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
     if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_KXC) == 0) then
       message(1) = "Cannot calculate kernel derivative. This functional does not have Kxc available."
       call messages_fatal(1)
-    endif
+    end if
   end do
 
   ! really start

@@ -92,7 +92,7 @@
               write(fname, '(a)') 'tnadd'
             else
               write(fname, '(a,i1)') 'tnadd-sp', is
-            endif
+            end if
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               tpot(:,is), units_out%energy, err, geo = geo, grp = grp)
           end do
@@ -104,7 +104,7 @@
             write(fname, '(a)') 'vxc'
           else
             write(fname, '(a,i1)') 'vxc-sp', is
-          endif
+          end if
           if(.not. hm%cmplxscl%space) then
             call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           else
@@ -117,7 +117,7 @@
             write(fname, '(a)') 'vks'
           else
             write(fname, '(a,i1)') 'vks-sp', is
-          endif
+          end if
           if (hm%ep%classical_pot > 0) then
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo, grp = grp)
@@ -157,7 +157,7 @@
           write(fname, '(a)') 'nxc'
         else
           write(fname, '(a,i1)') 'nxc-sp', is
-        endif
+        end if
                 
         v0(1:der%mesh%np, 1) = hm%vxc(1:der%mesh%np, is)
 
@@ -182,7 +182,7 @@
               write(fname, '(2a)') 'current-', index2axis(idir)
             else
               write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
-            endif
+            end if
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               current(:, idir, is), (unit_one / units_out%time) * units_out%length**(1-der%mesh%sb%dim), err, &
               geo = geo, grp = st%dom_st_kpt_mpi_grp)
@@ -192,7 +192,7 @@
       else
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
-      endif
+      end if
     end if
     
     POP_SUB(output_hamiltonian)

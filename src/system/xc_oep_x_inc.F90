@@ -182,7 +182,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
           if (present(F_out)) then
             F_out(:, ist, jst) = F_ij(:)
             cycle
-          endif
+          end if
 
           ! this quantity has to be added to lxc(1:der%mesh%np, ist)
           call states_get_state(st, der%mesh, idm, jst, isp, psi)

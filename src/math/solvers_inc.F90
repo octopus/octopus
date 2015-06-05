@@ -505,7 +505,7 @@ end subroutine X(bi_conjugate_gradients)
           res = M_HUGE
         else
           res = nrm2(r)/norm_b
-        endif
+        end if
 
         if(showprogress_) then
           ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
@@ -734,7 +734,7 @@ end subroutine X(bi_conjugate_gradients)
           res = M_HUGE
         else
           res = nrm2(r)/norm_b
-        endif
+        end if
 
         if(showprogress_) then
           ilog_res = max(M_ZERO, -CNST(100.0)*log(res))

@@ -115,7 +115,7 @@ contains
       call parse_variable('SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call messages_input_error('SmearingFunction')
       call messages_print_var_option(stdout, 'SmearingFunction', this%method)
-    endif
+    end if
 
     !%Variable Smearing
     !%Type float
@@ -141,7 +141,7 @@ contains
       this%nspins = 2
     else
       this%nspins = 1
-    endif
+    end if
 
     if(this%method == SMEAR_SEMICONDUCTOR) then
       this%nik_factor = kpoints_kweight_denominator(kpoints)
@@ -149,8 +149,8 @@ contains
       if(this%nik_factor == 0) then
         message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers for semiconducting smearing."
         call messages_fatal(1)
-      endif
-    endif
+      end if
+    end if
 
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then
@@ -446,7 +446,7 @@ contains
             term = ff * log(ff) + (1 - ff) * log (1 - ff)
           else ! we have semiconducting smearing, or perverse occupations as in Methfessel-Paxton
             term = M_ZERO      
-          endif
+          end if
           entropy = entropy - kweights(ik) * this%el_per_state * term
         end do
       end do
@@ -462,7 +462,7 @@ contains
           end if
         end do
       end do
-    endif
+    end if
 
     POP_SUB(smear_calc_entropy)
   end function smear_calc_entropy

@@ -110,7 +110,7 @@ contains
       det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
     else
       det = M_ONE
-    endif
+    end if
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
@@ -141,7 +141,7 @@ contains
 
     if(st%parallel_in_states) then
       call messages_not_implemented("Berry phase parallel in states")
-    endif
+    end if
 
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
@@ -214,10 +214,10 @@ contains
             ! if things are working properly.
             write(message(1),*) "Divide by zero: dir = ", idir, " Berry-phase determinant = ", det
             call messages_fatal(1)
-          endif
+          end if
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
             aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
-        endif
+        end if
       end do
     end do
 

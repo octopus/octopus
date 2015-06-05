@@ -78,7 +78,7 @@ contains
     if(use_sparskit) then
       message(1) = "Cannot use SPARSKIT in Crank-Nicolson propagator: not compiled with SPARSKIT support."
       call messages_fatal(1)
-    endif
+    end if
 #endif
 
     np_part = gr%mesh%np_part
@@ -158,7 +158,7 @@ contains
             call messages_warning(2)
           end if
 
-        endif
+        end if
 
         do idim = 1, st%d%dim
           call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
@@ -216,7 +216,7 @@ contains
               call messages_warning(2)
             end if
 
-          endif
+          end if
 
           do idim = 1, st%d%dim
             call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)

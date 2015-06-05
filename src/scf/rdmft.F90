@@ -104,12 +104,12 @@ contains
     ! problem is about k-points for exchange
     if (simul_box_is_periodic(gr%sb)) then
       call messages_not_implemented("Periodic system calculations for RDMFT")
-    endif
+    end if
 
     ! exchange routine needs all states on each processor currently
     if(st%parallel_in_states) then
       call messages_not_implemented("RDMFT parallel in states")
-    endif
+    end if
 
     ! Find the charge center of they system  
     call geometry_dipole(geo,species_charge_center)
@@ -176,7 +176,7 @@ contains
           rdm%scale_f = rdm%scale_f
         else
           rdm%scale_f = CNST(0.95)* rdm%scale_f 
-        endif
+        end if
         xneg = M_ZERO
         xpos = M_ZERO
         rdm%iter = rdm%iter + 1
@@ -187,7 +187,7 @@ contains
       if ((abs(energy_occ-energy)/abs(energy) < rdm%conv_ener).and.rdm%maxFO < 1.d3*rdm%conv_ener) then
         conv = .TRUE.
         exit
-      endif
+      end if
       if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1
     end do
    
@@ -218,11 +218,11 @@ contains
         message(1) = "Too few states to run RDMFT calculation"
         message(2) = "Number of states should be at least the number of electrons plus one"
         call messages_fatal(2)
-      endif
+      end if
    
       if (states_are_complex(st)) then
         call messages_not_implemented("Complex states for RDMFT")
-      endif
+      end if
 
       ! shortcuts
       rdm%gr   => gr
@@ -391,7 +391,7 @@ contains
     if (icycle >= 50) then
       write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
-    endif
+    end if
 
     do ist = 1, st%nst
       st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
@@ -527,11 +527,11 @@ contains
         do jst = 1, ist-1
           if(abs(FO(jst, ist)) > rdm%scale_f) then
             FO(jst, ist) = rdm%scale_f*FO(jst,ist)/abs(FO(jst, ist))
-          endif
+          end if
           FO(ist, jst) = FO(jst, ist)
         end do
       end do
-    endif
+    end if
 
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
@@ -675,7 +675,7 @@ contains
       call dstates_rotate(gr%mesh, st, psi2, transpose(lambda))
     else
       call zstates_rotate(gr%mesh, st, psi2, M_z0 * transpose(lambda))
-    endif
+    end if
  
    ! reordering occupation numbers if needed
     occ = st%occ

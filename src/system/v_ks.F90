@@ -322,10 +322,10 @@ contains
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
-      endif
+      end if
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
-      endif
+      end if
     end select
 
     ks%frozen_hxc = .false.
@@ -387,10 +387,10 @@ contains
     case(KOHN_SHAM_DFT)
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_end(ks%ks_inversion)
-      endif
+      end if
       if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
-      endif
+      end if
       call xc_end(ks%xc)
     case(HARTREE_FOCK)      
       call xc_end(ks%xc)
@@ -505,7 +505,7 @@ contains
       ks%calc%time = time
     else
       ks%calc%time = M_ZERO
-    endif
+    end if
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     nullify(ks%calc%vberry)
@@ -519,8 +519,8 @@ contains
         ! before wfns are initialized, cannot calculate this term
         ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
         ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO !cmplxscl
-      endif
-    endif
+      end if
+    end if
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then
@@ -626,7 +626,7 @@ contains
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
         if(cmplxscl) then
           SAFE_ALLOCATE(ks%calc%Imtotal_density(1:ks%gr%fine%mesh%np))
-        endif
+        end if
 
         forall(ip = 1:ks%gr%fine%mesh%np)
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
@@ -849,13 +849,13 @@ contains
             call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
                   ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
-        endif
+        end if
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
           ! Also treat KS inversion separately (not part of libxc)
           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
-        endif
+        end if
       end if
 
       if(ks%calc%calc_energy) then
@@ -870,7 +870,7 @@ contains
             factor = M_ONE
           else
             factor = M_TWO
-          endif
+          end if
           if (.not. cmplxscl) then
             ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
               factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
@@ -914,7 +914,7 @@ contains
     if(associated(hm%vberry)) then
       hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
       SAFE_DEALLOCATE_P(ks%calc%vberry)
-    endif
+    end if
 
     if(hm%self_induced_magnetic) then
       hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
@@ -993,7 +993,7 @@ contains
       if (hm%cmplxscl%space) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 1) = hm%Imvxc(ip, 1) + hm%Imvhartree(ip)
       if(associated(hm%vberry)) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
-      endif
+      end if
 
       if(associated(ks%calc%vvdw)) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + ks%calc%vvdw(ip)
@@ -1013,7 +1013,7 @@ contains
         if (hm%cmplxscl%space) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 2) = hm%Imvxc(ip, 2) + hm%Imvhartree(ip)
         if(associated(hm%vberry)) then
           forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
-        endif
+        end if
       end if
       
       if(hm%d%ispin == SPINORS) then
@@ -1122,7 +1122,7 @@ contains
 
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
-    endif
+    end if
 
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy

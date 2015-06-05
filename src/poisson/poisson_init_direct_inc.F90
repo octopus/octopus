@@ -114,7 +114,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     call parse_variable('Poisson1DSoftCoulombParam', M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
   else
     this%poisson_soft_coulomb_param = M_ZERO
-  endif
+  end if
 
   select case(this%method)
   case(POISSON_FMM)
@@ -193,7 +193,7 @@ subroutine poisson_kernel_reinit(this, qq)
       call poisson_fft_end(this%fft_solver)
       call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
         soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
-    endif
+    end if
   case default
     call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
   end select
@@ -236,7 +236,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   if(.not. this%der%mesh%use_curvilinear) then
     prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
-  endif
+  end if
 
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
@@ -268,9 +268,9 @@ subroutine poisson_solve_direct(this, pot, rho)
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
-          endif
+          end if
         end do
-      endif
+      end if
       tmp = dmf_integrate(this%der%mesh, pvec)
 
       if (part_v(ip) == this%der%mesh%vp%partno) then

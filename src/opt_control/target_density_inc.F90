@@ -92,7 +92,7 @@
             call dstates_rotate(gr%mesh, tg%st, tmp_st, real(rotation_matrix, REAL_PRECISION))
           else
             call zstates_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
-          endif
+          end if
           SAFE_DEALLOCATE_A(rotation_matrix)
           call density_calc(tg%st, gr, tg%st%rho)
           do ip = 1, gr%mesh%np

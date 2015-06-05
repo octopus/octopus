@@ -186,7 +186,7 @@ contains
     if(kpoints_number(sys%gr%sb%kpoints) > 1) then
       ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
-    endif
+    end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
@@ -199,7 +199,7 @@ contains
     else
       message(1) = "Previous gs calculation is required."
       call messages_fatal(1)
-    endif
+    end if
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
@@ -212,7 +212,7 @@ contains
     if(is_frac_occ) then
       call messages_not_implemented("Casida with partial occupations")
       ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
-    endif
+    end if
 
     select case(sys%st%d%ispin)
     case(UNPOLARIZED, SPINORS)
@@ -275,7 +275,7 @@ contains
         message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
         call messages_fatal(1, only_root_writes = .true.)
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
-      endif
+      end if
     end if
 
     !%Variable CasidaTransitionDensities
@@ -346,13 +346,13 @@ contains
       call parse_variable('CasidaCalcTriplet', .false., cas%triplet)
     else
       cas%triplet = .false.
-    endif
+    end if
 
     if(cas%triplet) then
       call messages_experimental("Casida triplet calculation")
       message(1) = "Info: Using triplet kernel. Oscillator strengths will be for spin magnetic-dipole field."
       call messages_info(1)
-    endif
+    end if
 
     !%Variable CasidaHermitianConjugate
     !%Type logical
@@ -394,7 +394,7 @@ contains
       !% If false, the excited-state forces that are produced are only the gradients of the excitation energy.
       !%End
       call parse_variable('CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
-    endif
+    end if
 
     ! Initialize structure
     call casida_type_init(cas, sys)
@@ -406,7 +406,7 @@ contains
         call restart_rm(cas%restart_dump, 'kernel_triplet')
       else
         call restart_rm(cas%restart_dump, 'kernel')
-      endif
+      end if
 
       if(cas%calc_forces) then
         do iatom = 1, sys%geo%natoms
@@ -419,8 +419,8 @@ contains
             call restart_rm(cas%restart_dump, restart_filename)
           end do
         end do
-      endif
-    endif
+      end if
+    end if
 
     ! First, print the differences between KS eigenvalues (first approximation to the excitation energies).
     if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
@@ -428,7 +428,7 @@ contains
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
       call casida_work(sys, hm, cas)
-    endif
+    end if
 
     if (sys%st%d%ispin /= SPINORS) then
 
@@ -438,7 +438,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
         call casida_work(sys, hm, cas)
-      endif
+      end if
 
       if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
         call messages_experimental("CV(2)-DFT calculation")
@@ -446,14 +446,14 @@ contains
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
         call casida_work(sys, hm, cas)
-      endif
+      end if
 
       if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
         call casida_work(sys, hm, cas)
-      endif
+      end if
 
       ! Doing this first, if doing the others later, takes longer, because we would use
       ! each Poisson solution for only one matrix element instead of a whole column.
@@ -462,7 +462,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
         call casida_work(sys, hm, cas)
-      endif
+      end if
 
     end if
 
@@ -503,7 +503,7 @@ contains
     else
       SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
       SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
-    endif
+    end if
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
@@ -515,9 +515,9 @@ contains
         SAFE_ALLOCATE(cas%dmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       else
         SAFE_ALLOCATE(cas%zmat_save(1:cas%n_pairs, 1:cas%n_pairs))
-      endif
+      end if
       SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%sb_dim, 1:cas%n_pairs))
-    endif
+    end if
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -574,7 +574,7 @@ contains
     else
       SAFE_DEALLOCATE_P(cas%zmat)
       SAFE_DEALLOCATE_P(cas%ztm)
-    endif
+    end if
     SAFE_DEALLOCATE_P(cas%s)
     SAFE_DEALLOCATE_P(cas%f)
     SAFE_DEALLOCATE_P(cas%w)
@@ -593,9 +593,9 @@ contains
         SAFE_DEALLOCATE_P(cas%dmat_save)
       else
         SAFE_DEALLOCATE_P(cas%zmat_save)
-      endif
+      end if
       SAFE_DEALLOCATE_P(cas%forces)
-    endif
+    end if
 
     call restart_end(cas%restart_dump)
     call restart_end(cas%restart_load)
@@ -635,7 +635,7 @@ contains
     else
       cas%zmat = M_ZERO
       cas%ztm  = M_ZERO
-    endif
+    end if
     cas%f   = M_ZERO
     cas%w   = M_ZERO
     cas%s   = M_ZERO
@@ -666,7 +666,7 @@ contains
         SAFE_DEALLOCATE_A(fxc_spin)
       else
         call xc_get_fxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, cas%fxc)
-      endif
+      end if
 
       if (sys%ks%sic_type == SIC_ADSIC) then
         call fxc_add_adsic(sys%ks, st, mesh, cas)
@@ -689,7 +689,7 @@ contains
         call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
         call zcasida_solve(cas, st)
-      endif
+      end if
     end select
 
     if (mpi_grp_is_root(cas%mpi_grp)) then
@@ -697,28 +697,28 @@ contains
         call doscillator_strengths(cas, mesh, st)
       else
         call zoscillator_strengths(cas, mesh, st)
-      endif
-    endif
+      end if
+    end if
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
         call dcasida_forces(cas, sys, mesh, st, hm)
       else
         call zcasida_forces(cas, sys, mesh, st, hm)
-      endif
-    endif
+      end if
+    end if
 
     if(cas%states_are_real) then
       call dcasida_write(cas, sys)
     else
       call zcasida_write(cas, sys)
-    endif
+    end if
 
     ! clean up
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       SAFE_DEALLOCATE_P(cas%fxc)
       SAFE_DEALLOCATE_P(cas%rho)
-    endif
+    end if
 
     POP_SUB(casida_work)
 
@@ -742,7 +742,7 @@ contains
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
           message(2) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
           call messages_fatal(2, only_root_writes = .true.)
-        endif
+        end if
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
 
@@ -806,11 +806,11 @@ contains
     
     if(cas%type == CASIDA_VARIATIONAL) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
-    endif
+    end if
     
     if(sys%st%d%ispin == UNPOLARIZED) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
-    endif
+    end if
     
     POP_SUB(casida_matrix_factor)
     

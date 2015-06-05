@@ -902,7 +902,7 @@ contains
     do i = npoints, 1, -1
       if(x(i)<cutoff) then
         exit
-      endif
+      end if
       y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
     end do
     call spline_fit(npoints, x, y, spl)
@@ -1101,7 +1101,7 @@ contains
     if(n<=0) then
       POP_SUB(spline_print_1)
       return
-    endif
+    end if
 
     write(fm,'(i4)') n + 1; fm = adjustl(fm)
     np = oct_spline_npoints(spl(1)%spl)
@@ -1136,7 +1136,7 @@ contains
     if(n1*n2<=0) then
       POP_SUB(spline_print_2)
       return
-    endif
+    end if
 
     write(fm,'(i4)') n1*n2 + 1; fm = adjustl(fm)
     np = oct_spline_npoints(spl(1, 1)%spl)

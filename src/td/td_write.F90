@@ -1548,7 +1548,7 @@ contains
       if (hm%pcm%run_pcm) then 
           call write_iter_header(out_energy, 'E_M-solvent')
           n_columns = n_columns + 1    
-      endif   
+      end if   
 
       call write_iter_nl(out_energy)
 

@@ -145,7 +145,7 @@ contains
       if(tempcoord(ii) < border(ii)) then
         boxnumb = ii + 1
         exit 
-      endif 
+      end if 
     end do
 
     !transform coordinates
@@ -161,7 +161,7 @@ contains
       if(icoord > this%boxdim(1) .or. icoord < 1) then
         message(1) = "hypercube box point outside box"
         call messages_fatal(1)
-      endif
+      end if
     else
       do jj = 1, boxnumb - 2
         npoints(jj) = npoints(jj) - 2*enlarge
@@ -180,8 +180,8 @@ contains
         do jj = 1, boxnumb - 1
           icoord = icoord + this%boxdim(jj)
         end do
-      endif
-    endif
+      end if
+    end if
 
   end subroutine hypercube_x_to_i
 
@@ -207,7 +207,7 @@ contains
       jj = jj + this%boxdim(ii)  
       if(icoord > jj) then
         boxnumb = ii + 1
-      endif
+      end if
     end do
 
     do ii = 1, ndim
@@ -242,7 +242,7 @@ contains
         tempcoord = tempcoord/npoints(ii)
         coord(ii) = coord(ii) + lowerb(ii)
       end do
-    endif
+    end if
 
     do ii = 1, ndim
       npoints(ii) = nr(2,ii) - nr(1,ii) + 1
@@ -254,7 +254,7 @@ contains
       coord(ii) = coord(ii) - nr(1,ii) - enlarge
       if(coord(ii) < 0) then
         coord(ii) = coord(ii) + npoints(ii)
-      endif
+      end if
       coord(ii) = coord(ii) + nr(1,ii)
     end do
 

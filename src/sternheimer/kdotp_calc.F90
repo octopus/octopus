@@ -112,7 +112,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 
     velocity(:,:,:) = vel_temp(:,:,:)
     SAFE_DEALLOCATE_A(vel_temp)
-  endif
+  end if
 #endif
 
   POP_SUB(zkdotp_calc_band_velocity)

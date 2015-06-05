@@ -78,7 +78,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(op%cmplx_op) then
     message(1) = "dnl_operator_operate_batch: cannot apply complex operator with real output."
     call messages_fatal(1)
-  endif
+  end if
 #endif
 
   if(op%const_w) then

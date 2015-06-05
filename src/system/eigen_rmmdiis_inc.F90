@@ -184,7 +184,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
             ! in parallel this was already reduced, so we set it to zero in non-root ranks
             if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
             cycle
-          endif
+          end if
 
           call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
           call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
@@ -392,7 +392,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   if(in_debug_mode) then
     SAFE_ALLOCATE(diff(1:st%d%block_size))
-  endif
+  end if
 
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
@@ -467,7 +467,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   if(in_debug_mode) then
     SAFE_DEALLOCATE_A(diff)
-  endif
+  end if
 
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
 

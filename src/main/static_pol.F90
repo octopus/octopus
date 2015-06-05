@@ -93,7 +93,7 @@ contains
     if(simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
       call messages_fatal(1)
-    endif
+    end if
 
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
@@ -119,7 +119,7 @@ contains
         iunit = restart_open(restart_load, RESTART_FILE)
       else
         iunit = 0
-      endif
+      end if
 
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.
@@ -150,7 +150,7 @@ contains
         center_written = .false.
         diagonal_done = .false.
         i_start = 1
-      endif
+      end if
 
       read_count = (i_start - 1) * 2
       if(center_written) read_count = read_count + 1
@@ -165,8 +165,8 @@ contains
           i_start = 2
           diagonal_done = .false.
           !FIXME: take derivatives between yz and z (not y) so can restart from only last (z) calc
-       endif
-    endif
+       end if
+    end if
 
     if(i_start  ==  1) then
       ! open new file, erase old data, write e_field
@@ -233,7 +233,7 @@ contains
       call geometry_dipole(sys%geo, ionic_dipole)
       print_dipole(1:sys%gr%mesh%sb%dim) = center_dipole(1:sys%gr%mesh%sb%dim) + ionic_dipole(1:sys%gr%mesh%sb%dim)
       call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
-    endif
+    end if
 
     do ii = i_start, sys%gr%mesh%sb%dim
       do isign = 1, 2
@@ -252,7 +252,7 @@ contains
           sign_char = '+'
         else
           sign_char = '-'
-        endif
+        end if
 
         write(dir_name,'(a)') "field_"//index2axis(ii)//sign_char
         fromScratch_local = fromScratch
@@ -263,7 +263,7 @@ contains
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
-        endif
+        end if
 
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
@@ -271,8 +271,8 @@ contains
             call system_h_setup(sys, hm)
           else
             call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-          endif
-        endif
+          end if
+        end if
 
         call scf_mix_clear(scfv)
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
@@ -290,7 +290,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) then
           print_dipole(1:sys%gr%mesh%sb%dim) = dipole(ii, 1:sys%gr%mesh%sb%dim, isign) + ionic_dipole(1:sys%gr%mesh%sb%dim)
           call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
-        endif
+        end if
 
         call output_cycle_()
 
@@ -302,7 +302,7 @@ contains
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
-        endif
+        end if
       end do
 
       ! Writes the dipole to file
@@ -333,7 +333,7 @@ contains
         sign_char = '+'
       else
         sign_char = '-'
-      endif
+      end if
 
       fromScratch_local = fromScratch
 
@@ -343,7 +343,7 @@ contains
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
-      endif
+      end if
 
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
@@ -351,8 +351,8 @@ contains
           call system_h_setup(sys, hm)
         else
           call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-        endif
-      endif
+        end if
+      end if
 
       call scf_mix_clear(scfv)
       call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
@@ -370,7 +370,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         print_dipole(1:sys%gr%mesh%sb%dim) = diag_dipole(1:sys%gr%mesh%sb%dim) + ionic_dipole(1:sys%gr%mesh%sb%dim)
         call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
-      endif
+      end if
   
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
@@ -390,9 +390,9 @@ contains
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
         end if
-      endif
+      end if
 
-    endif
+    end if
 
     if(.not. fromScratch) call restart_end(restart_load)
     call scf_end(scfv)
@@ -483,7 +483,7 @@ contains
         verbosity = VERB_FULL
       else
         verbosity = VERB_COMPACT
-      endif
+      end if
 
       POP_SUB(static_pol_run.init_)
     end subroutine init_
@@ -542,9 +542,9 @@ contains
             ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,
             ! the ionic force due to the efield is not included in the forces returned by the SCF run, and so the ionic
             ! contribution to the Born charge must be added by hand here
-          endif
+          end if
         end do
-      endif
+      end if
 
       !DENSITY AND POLARIZABILITY DENSITY   
       if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
@@ -553,7 +553,7 @@ contains
         if(isign == 1 .and. ii == 2) then
           tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
           ! for use in off-diagonal non-linear densities
-        endif
+        end if
 
         if(isign == 1) then 
           ! temporary assignment for use in next cycle when isign == 2
@@ -581,7 +581,7 @@ contains
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               end do
-            endif
+            end if
 
             if(iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
               do jj = ii, sys%gr%mesh%sb%dim
@@ -596,7 +596,7 @@ contains
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
                   sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               end do
-            endif
+            end if
           end do
 
         end if
@@ -657,16 +657,16 @@ contains
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
-          endif
+          end if
   
           if(iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
-          endif
+          end if
         end do
-      endif
+      end if
 
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
         iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
@@ -689,7 +689,7 @@ contains
           beta(1, 2, 3) = -(diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
         else
           beta(1, 2, 3) = M_ZERO
-        endif
+        end if
 
         beta(2, 3, 1) = beta(1, 2, 3)
         beta(3, 1, 2) = beta(1, 2, 3)
@@ -706,7 +706,7 @@ contains
         if(calc_Born) then
           call out_Born_charges(Born_charges, sys%geo, sys%gr%mesh%sb%dim, EM_RESP_FD_DIR, &
             states_are_real(sys%st))
-        endif
+        end if
       end if
 
       if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &

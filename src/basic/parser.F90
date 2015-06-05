@@ -276,7 +276,7 @@ contains
       if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
-    endif
+    end if
 
     inquire(file='inp', exist=file_exists)
     if(.not. file_exists) then
@@ -288,7 +288,7 @@ contains
       if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
-    endif
+    end if
 
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')

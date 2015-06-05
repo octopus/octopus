@@ -295,7 +295,7 @@ contains
         if(mc%par_strategy /= iand(mc%par_strategy, parallel_mask)) then
           message(1) = "Parallelization strategies unavailable for this run mode are being discarded."
           call messages_warning(1)
-        endif
+        end if
         mc%par_strategy = iand(mc%par_strategy, parallel_mask)
         
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
@@ -404,7 +404,7 @@ contains
           call messages_write(n_group_max(kk), new_line = .true.)
         end do
         call messages_info()
-      endif
+      end if
 
       ! for each index
       do kk = 1, mc%n_index
@@ -635,16 +635,16 @@ contains
           node_type = "slave"
         else
           node_type = "master"
-        endif
+        end if
         do irank = 0, mpi_world%size - 1
           if(mpi_world%rank == irank) then
             write(message(1),'(5i10,5x,a)') mpi_world%rank, mc%who_am_i(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_STATES), &
             mc%who_am_i(P_STRATEGY_KPOINTS), mc%who_am_i(P_STRATEGY_OTHER), trim(node_type)
             call messages_info(1, all_nodes = .true.)
-          endif
+          end if
           call MPI_Barrier(mpi_world%comm, mpi_err)
         end do
-      endif
+      end if
 
 #else
       mc%group_comm = -1
@@ -878,7 +878,7 @@ contains
         else
           istart(rank) = 1
           ifinal(rank) = 0
-        endif
+        end if
       end do
 #endif
     else
