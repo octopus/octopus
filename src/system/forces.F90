@@ -23,6 +23,7 @@ module forces_m
   use batch_m
   use batch_ops_m
   use born_charges_m
+  use boundaries_m
 #ifdef HAVE_OPENCL
   use cl
 #endif

@@ -124,8 +124,6 @@ contains
     this%stencil_type=0
     this%masses=M_ZERO
     this%np_zero_bc=0
-    this%zero_bc=.false.
-    this%periodic_bc=.false.
     this%lapl_cutoff=M_ZERO
     this%n_ghost=0
 #if defined(HAVE_MPI)

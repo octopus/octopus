@@ -326,7 +326,7 @@ contains
 
       do istep = 1, steps
 
-        call dderivatives_set_bc(der%boundaries, pot)
+        call boundaries_set(der%boundaries, pot)
 
 #ifdef HAVE_MPI
         if(mesh%parallel_in_domains) call dvec_ghost_update(mesh%vp, pot)

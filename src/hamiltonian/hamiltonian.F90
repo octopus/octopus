@@ -24,13 +24,13 @@ module hamiltonian_m
   use batch_m
   use batch_ops_m
   use blas_m
+  use boundaries_m
 #ifdef HAVE_OPENCL
   use cl
 #endif  
   use cmplxscl_m
   use derivatives_m
   use energy_m
-!  use boundaries_m
   use hamiltonian_base_m
   use epot_m
   use gauge_field_m

@@ -21,6 +21,7 @@
 
 module pert_m
   use batch_m
+  use boundaries_m
   use comm_m
   use derivatives_m
   use epot_m

@@ -79,7 +79,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call batch_pack(hpsib, copy = .false.)
   end if
 
-  if(optional_default(set_bc, .true.)) call X(derivatives_batch_set_bc)(der%boundaries, psib)
+  if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
 
   if(apply_phase) then
     SAFE_ALLOCATE(epsib)

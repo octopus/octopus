@@ -60,14 +60,9 @@ module boundaries_m
   public ::                        &
     boundaries_t,                  &
     boundaries_init,               &
-    boundaries_end
+    boundaries_end,                &
+    boundaries_set
 
-
-  integer, parameter, public ::    &
-    POINT_BOUNDARY = 1,            &
-    POINT_INNER    = 2
-
-#if defined(HAVE_MPI)
   public ::                        &
     pv_handle_batch_t,             &
     dvec_ghost_update,             &
@@ -82,6 +77,10 @@ module boundaries_m
     zghost_update_batch_finish,    &
     sghost_update_batch_finish,    &
     cghost_update_batch_finish
+
+  integer, parameter, public ::    &
+    POINT_BOUNDARY = 1,            &
+    POINT_INNER    = 2
 
   type pv_handle_batch_t
     private
@@ -100,8 +99,19 @@ module boundaries_m
   type(profile_t), save :: prof_start
   type(profile_t), save :: prof_wait
   type(profile_t), save :: prof_update
-  
-#endif
+  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_precomm_prof
+  type(profile_t), save :: set_bc_postcomm_prof
+    
+  interface boundaries_set
+    module procedure boundaries_set_batch
+    module procedure dboundaries_set_single
+    module procedure zboundaries_set_single
+    module procedure sboundaries_set_single
+    module procedure cboundaries_set_single
+  end interface boundaries_set
+
 contains
   
   ! ---------------------------------------------------------
@@ -349,7 +359,28 @@ contains
     POP_SUB(boundaries_end)
   end subroutine boundaries_end
 
-#if defined(HAVE_MPI)
+  ! -------------------------------------------------------
+
+  subroutine boundaries_set_batch(this, ffb)
+    type(boundaries_t), intent(in)    :: this
+    type(batch_t),      intent(inout) :: ffb
+
+    PUSH_SUB(boundaries_set_batch)
+    
+    if(batch_type(ffb) == TYPE_FLOAT) then 
+      call dboundaries_set_batch(this, ffb)
+    else if(batch_type(ffb) == TYPE_CMPLX) then 
+      call zboundaries_set_batch(this, ffb)
+    else if(batch_type(ffb) == TYPE_FLOAT_SINGLE) then 
+      call sboundaries_set_batch(this, ffb)
+    else if(batch_type(ffb) == TYPE_CMPLX_SINGLE) then 
+      call cboundaries_set_batch(this, ffb)
+    else
+      ASSERT(.false.)
+     end if
+     
+     POP_SUB(boundaries_set_batch)
+   end subroutine boundaries_set_batch
 
 #include "undef.F90"
 #include "complex.F90"
@@ -367,7 +398,6 @@ contains
 #include "real_single.F90"
 #include "boundaries_inc.F90"
 
-#endif
 end module boundaries_m
 
 !! Local Variables:

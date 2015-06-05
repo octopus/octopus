@@ -66,10 +66,6 @@ module derivatives_m
     zderivatives_test,                  &
     sderivatives_test,                  &
     cderivatives_test,                  &
-    dderivatives_set_bc,                &
-    zderivatives_set_bc,                &
-    dderivatives_batch_set_bc,          &
-    zderivatives_batch_set_bc,          &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -114,8 +110,6 @@ module derivatives_m
     FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
 
     integer               :: np_zero_bc
-    logical               :: zero_bc
-    logical               :: periodic_bc
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
@@ -151,10 +145,6 @@ module derivatives_m
   end type derivatives_handle_batch_t
 
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
-  type(profile_t), save :: set_bc_prof
-#ifdef HAVE_MPI
-  type(profile_t), save :: set_bc_comm_prof, set_bc_precomm_prof, set_bc_postcomm_prof
-#endif
 
 contains
 
@@ -258,9 +248,6 @@ contains
 
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
-
-    der%zero_bc = (sb%periodic_dim < der%dim)
-    der%periodic_bc = (sb%periodic_dim > 0)
 
     ! find out how many ghost points we need in each dimension
     der%n_ghost(:) = 0
