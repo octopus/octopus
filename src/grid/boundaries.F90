@@ -25,10 +25,12 @@ module boundaries_m
   use cl
 #endif
   use global_m
+  use math_m
   use messages_m
   use mesh_m
   use mpi_m
   use mpi_debug_m
+  use octcl_kernel_m
   use opencl_m
   use par_vec_m
   use profiling_m
@@ -92,6 +94,10 @@ module boundaries_m
     CMPLX, pointer       :: zrecv_buffer(:)
     FLOAT, pointer       :: dsend_buffer(:)
     CMPLX, pointer       :: zsend_buffer(:)
+    FLOAT, pointer       :: srecv_buffer(:)
+    CMPLX, pointer       :: crecv_buffer(:)
+    FLOAT, pointer       :: ssend_buffer(:)
+    CMPLX, pointer       :: csend_buffer(:)
     type(batch_t),   pointer :: v_local
     type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
