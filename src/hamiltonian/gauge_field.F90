@@ -161,28 +161,24 @@ contains
         enddo
       endif
 
+      !%Variable GaugeFieldDynamics
+      !%Type integer
+      !%Default polarization
+      !%Section Hamiltonian
+      !%Description
+      !% This variable select the dynamics of the gauge field used to
+      !% apply a finite electric field to periodic systems in
+      !% time-dependent runs.
+      !%Option none 0
+      !% The gauge field does not have dynamics. The induced polarization field is zero.
+      !%Option polarization 1
+      !% The gauge field follows the dynamic described in
+      !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
+      !%End
+
+      call parse_variable('GaugeFieldDynamics', OPTION_POLARIZATION, this%dynamics)
+
     end if
-
-    !%Variable GaugeFieldDynamics
-    !%Type integer
-    !%Section Hamiltonian
-    !%Description
-    !% This variable select the dynamics of the gauge field used to
-    !% apply a finite electric field to periodic systems in
-    !% time-dependent runs. The default is <tt>none</tt>, unless the
-    !% block <tt>GaugeVectorField</tt> is defined, in which case is
-    !% <tt>polarization</tt>.
-    !%Option none 0
-    !% The gauge field does not have dynamics. The induced polarization field is zero.
-    !%Option polarization 1
-    !% The gauge field follows the dynamic described in
-    !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
-    !%End
-    default = OPTION_NONE
-    if(this%with_gauge_field) default = OPTION_POLARIZATION
-    call parse_variable('GaugeFieldDynamics', default, this%dynamics)
-
-    if(this%dynamics /= OPTION_NONE) this%with_gauge_field = .true.
 
     POP_SUB(gauge_field_init)
   end subroutine gauge_field_init
