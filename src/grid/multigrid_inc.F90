@@ -49,7 +49,7 @@
 
     factor = factor/coarse_der%mesh%sb%dim
 
-    call X(derivatives_set_bc)(coarse_der, f_coarse)
+    call X(derivatives_set_bc)(coarse_der%boundaries, f_coarse)
 
 #ifdef HAVE_MPI
     if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
@@ -166,7 +166,7 @@
       end do
     end do
 
-    call X(derivatives_set_bc)(fine_der, f_fine)
+    call X(derivatives_set_bc)(fine_der%boundaries, f_fine)
 
 #ifdef HAVE_MPI
     if(fine_der%mesh%parallel_in_domains) call X(vec_ghost_update)(fine_der%mesh%vp, f_fine)

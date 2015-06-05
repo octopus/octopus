@@ -175,7 +175,7 @@ contains
           call batch_copy(st%group%psib(ib, ik), rpsib, reference = .false.)
           call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
 
-          call zderivatives_batch_set_bc(der, st%group%psib(ib, ik))
+          call zderivatives_batch_set_bc(der%boundaries, st%group%psib(ib, ik))
           call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
@@ -227,7 +227,7 @@ contains
           call states_get_state(st, der%mesh, ist, ik, psi)
           
           do idim = 1, st%d%dim
-            call zderivatives_set_bc(der, psi(:, idim))
+            call zderivatives_set_bc(der%boundaries, psi(:, idim))
           end do
 
           if(associated(hm%phase)) then 
@@ -401,7 +401,7 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
           call batch_copy(st%group%psib(ib, ik), vpsib, reference = .false.)
 
-          call zderivatives_batch_set_bc(der, st%group%psib(ib, ik))
+          call zderivatives_batch_set_bc(der%boundaries, st%group%psib(ib, ik))
 
           call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false., &
             terms = TERM_KINETIC)

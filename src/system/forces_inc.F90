@@ -179,7 +179,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       call batch_copy_data(gr%mesh%np, st%group%psib(ib, iq), psib)
 
       ! set the boundary conditions
-      call X(derivatives_batch_set_bc)(gr%der, psib)
+      call X(derivatives_batch_set_bc)(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
       if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
@@ -486,7 +486,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
       call states_get_state(st, gr%mesh, ist, iq, psi)
 
       do idim = 1, st%d%dim
-        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+        call X(derivatives_set_bc)(gr%der%boundaries, psi(:, idim))
 
         ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
@@ -597,11 +597,11 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
       do idim = 1, st%d%dim
 
         call states_get_state(st, gr%mesh, idim, ist, iq, psi(:, idim))
-        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+        call X(derivatives_set_bc)(gr%der%boundaries, psi(:, idim))
         call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, iq), dl_psi(:, idim))
-        call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
+        call X(derivatives_set_bc)(gr%der%boundaries, dl_psi(:, idim))
         call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, iq), dl_psi2(:, idim))
-        call X(derivatives_set_bc)(gr%der, dl_psi2(:, idim))
+        call X(derivatives_set_bc)(gr%der%boundaries, dl_psi2(:, idim))
 
         ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then

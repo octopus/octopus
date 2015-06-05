@@ -28,8 +28,8 @@
 !> Set all boundary points in ffb to zero to implement zero
 !! boundary conditions for the derivatives, in finite system;
 !! or set according to periodic boundary conditions.
-subroutine X(derivatives_batch_set_bc)(der, ffb)
-  type(derivatives_t),   intent(in)    :: der
+subroutine X(derivatives_batch_set_bc)(boundaries, ffb)
+  type(boundaries_t),    intent(in)    :: boundaries
   type(batch_t), target, intent(inout) :: ffb
 
   integer :: bndry_start, bndry_end
@@ -41,19 +41,17 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
 
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
-  if(der%mesh%parallel_in_domains) then
-    bndry_start = der%mesh%vp%np_local + der%mesh%vp%np_ghost + 1
-    bndry_end   = der%mesh%vp%np_local + der%mesh%vp%np_ghost + der%mesh%vp%np_bndry
+  if(boundaries%mesh%parallel_in_domains) then
+    bndry_start = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + 1
+    bndry_end   = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + boundaries%mesh%vp%np_bndry
   else
-    bndry_start = der%mesh%np + 1
-    bndry_end   = der%np_zero_bc
+    bndry_start = boundaries%mesh%np + 1
+    bndry_end   = boundaries%mesh%np_part
   end if
-
-  if(der%zero_bc)         call zero_boundaries()
-
-  if(der%mesh%sb%mr_flag) call multiresolution()
-  if(der%periodic_bc)     call periodic()
-  
+    
+  if(boundaries%mesh%sb%periodic_dim < boundaries%mesh%sb%dim) call zero_boundaries()
+  if(boundaries%mesh%sb%mr_flag) call multiresolution()
+  if(boundaries%mesh%sb%periodic_dim > 0)     call periodic()
 
   call profiling_out(set_bc_prof)
   POP_SUB(X(derivatives_batch_set_bc))
@@ -109,29 +107,29 @@ contains
       ff => ffb%states_linear(ist)%X(psi)
 
       do ip = bndry_start, bndry_end
-        ix = der%mesh%idx%lxyz(ip, 1)
-        iy = der%mesh%idx%lxyz(ip, 2)
-        iz = der%mesh%idx%lxyz(ip, 3)
+        ix = boundaries%mesh%idx%lxyz(ip, 1)
+        iy = boundaries%mesh%idx%lxyz(ip, 2)
+        iz = boundaries%mesh%idx%lxyz(ip, 3)
 
-        i_lev = der%mesh%resolution(ix,iy,iz)
+        i_lev = boundaries%mesh%resolution(ix,iy,iz)
 
         ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-        if(i_lev /= 2**der%mesh%sb%hr_area%num_radii) then
+        if(i_lev /= 2**boundaries%mesh%sb%hr_area%num_radii) then
           dx = abs(mod(ix, 2**(i_lev)))
           dy = abs(mod(iy, 2**(i_lev)))
           dz = abs(mod(iz, 2**(i_lev)))
 
-          do ii = 1, der%mesh%sb%hr_area%interp%nn
-            do jj = 1, der%mesh%sb%hr_area%interp%nn
-              do kk = 1, der%mesh%sb%hr_area%interp%nn
-                weight = der%mesh%sb%hr_area%interp%ww(ii) * &
-                  der%mesh%sb%hr_area%interp%ww(jj) *        &
-                  der%mesh%sb%hr_area%interp%ww(kk)
+          do ii = 1, boundaries%mesh%sb%hr_area%interp%nn
+            do jj = 1, boundaries%mesh%sb%hr_area%interp%nn
+              do kk = 1, boundaries%mesh%sb%hr_area%interp%nn
+                weight = boundaries%mesh%sb%hr_area%interp%ww(ii) * &
+                  boundaries%mesh%sb%hr_area%interp%ww(jj) *        &
+                  boundaries%mesh%sb%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(der%mesh%idx%lxyz_inv(   &
-                  ix + der%mesh%sb%hr_area%interp%posi(ii) * dx,       &
-                  iy + der%mesh%sb%hr_area%interp%posi(jj) * dy,       &
-                  iz + der%mesh%sb%hr_area%interp%posi(kk) * dz))
+                ff(ip) = ff(ip) + weight * ff(boundaries%mesh%idx%lxyz_inv(   &
+                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,       &
+                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,       &
+                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz))
               end do
             end do
           end do
@@ -167,13 +165,13 @@ contains
     PUSH_SUB(X(derivatives_batch_set_bc).periodic)
 
 #ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains) then
+    if(boundaries%mesh%parallel_in_domains) then
 
       call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
 
-      npart = der%mesh%vp%npart
-      maxsend = maxval(der%boundaries%nsend(1:npart))
-      maxrecv = maxval(der%boundaries%nrecv(1:npart))
+      npart = boundaries%mesh%vp%npart
+      maxsend = maxval(boundaries%nsend(1:npart))
+      maxrecv = maxval(boundaries%nrecv(1:npart))
 
       ldbuffer = ffb%nst_linear
       if(batch_status(ffb) == BATCH_CL_PACKED) ldbuffer = ffb%pack%size(1)
@@ -184,8 +182,8 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nsend(ipart)
-            ip2 = der%boundaries%per_send(ip, ipart)
+          do ip = 1, boundaries%nsend(ipart)
+            ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
               sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(ip2)
             end do
@@ -195,8 +193,8 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nsend(ipart)
-            ip2 = der%boundaries%per_send(ip, ipart)
+          do ip = 1, boundaries%nsend(ipart)
+            ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
               sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, ip2)
             end do
@@ -211,8 +209,8 @@ contains
         kernel_ref = octcl_kernel_get_ref(kernel_send)
 
         call opencl_set_kernel_arg(kernel_ref, 0, maxsend)
-        call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_nsend)
-        call opencl_set_kernel_arg(kernel_ref, 2, der%boundaries%buff_per_send)
+        call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nsend)
+        call opencl_set_kernel_arg(kernel_ref, 2, boundaries%buff_per_send)
         call opencl_set_kernel_arg(kernel_ref, 3, ffb%pack%buffer)
         call opencl_set_kernel_arg(kernel_ref, 4, log2(ffb%pack%size_real(1)))
         call opencl_set_kernel_arg(kernel_ref, 5, buff_send)
@@ -236,14 +234,14 @@ contains
       SAFE_ALLOCATE(recv_disp(1:npart))
 
       do ipart = 1, npart
-        send_count(ipart) = ldbuffer*der%boundaries%nsend(ipart)
+        send_count(ipart) = ldbuffer*boundaries%nsend(ipart)
         send_disp(ipart)  = ldbuffer*maxsend*(ipart - 1)
-        recv_count(ipart) = ldbuffer*der%boundaries%nrecv(ipart)
+        recv_count(ipart) = ldbuffer*boundaries%nrecv(ipart)
         recv_disp(ipart)  = ldbuffer*maxrecv*(ipart - 1)
       end do
 
-      ASSERT(send_count(der%mesh%vp%partno) == 0)
-      ASSERT(recv_count(der%mesh%vp%partno) == 0)
+      ASSERT(send_count(boundaries%mesh%vp%partno) == 0)
+      ASSERT(recv_count(boundaries%mesh%vp%partno) == 0)
 
       SAFE_ALLOCATE(recvbuffer(1:ldbuffer, 1:maxrecv, 1:npart))
 
@@ -251,12 +249,12 @@ contains
 
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
 
-      call mpi_debug_in(der%mesh%vp%comm, C_MPI_ALLTOALLV)
+      call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
-        recvbuffer, recv_count, recv_disp, R_MPITYPE, der%mesh%vp%comm, mpi_err)
-      call mpi_debug_out(der%mesh%vp%comm, C_MPI_ALLTOALLV)
+        recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%vp%comm, mpi_err)
+      call mpi_debug_out(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
 
-      call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
+      call profiling_count_transfers(sum(boundaries%nsend(1:npart) + boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
 
       call profiling_out(set_bc_comm_prof)
@@ -274,8 +272,8 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nrecv(ipart)
-            ip2 = der%boundaries%per_recv(ip, ipart)
+          do ip = 1, boundaries%nrecv(ipart)
+            ip2 = boundaries%per_recv(ip, ipart)
             do ist = 1, ffb%nst_linear
               ffb%states_linear(ist)%X(psi)(ip2) = recvbuffer(ist, ip, ipart)
             end do
@@ -285,8 +283,8 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nrecv(ipart)
-            ip2 = der%boundaries%per_recv(ip, ipart)
+          do ip = 1, boundaries%nrecv(ipart)
+            ip2 = boundaries%per_recv(ip, ipart)
             do ist = 1, ffb%nst_linear
               ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart)
             end do
@@ -302,9 +300,9 @@ contains
         kernel_ref = octcl_kernel_get_ref(kernel_recv)
 
         call opencl_set_kernel_arg(kernel_ref, 0, maxrecv)
-        call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_nrecv)
-        call opencl_set_kernel_arg(kernel_ref, 2, der%boundaries%buff_per_recv)
-        call opencl_set_kernel_arg(kernel_ref, 3, ubound(der%boundaries%per_recv, dim = 1))
+        call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nrecv)
+        call opencl_set_kernel_arg(kernel_ref, 2, boundaries%buff_per_recv)
+        call opencl_set_kernel_arg(kernel_ref, 3, ubound(boundaries%per_recv, dim = 1))
         call opencl_set_kernel_arg(kernel_ref, 4, buff_recv)
         call opencl_set_kernel_arg(kernel_ref, 5, ffb%pack%buffer)
         call opencl_set_kernel_arg(kernel_ref, 6, log2(ffb%pack%size_real(1)))
@@ -333,17 +331,17 @@ contains
 
       do ist = 1, ffb%nst_linear
         ff => ffb%states_linear(ist)%X(psi)
-        forall (ip = 1:der%boundaries%nper)
-          ff(der%boundaries%per_points(POINT_BOUNDARY, ip)) = ff(der%boundaries%per_points(POINT_INNER, ip))
+        forall (ip = 1:boundaries%nper)
+          ff(boundaries%per_points(POINT_BOUNDARY, ip)) = ff(boundaries%per_points(POINT_INNER, ip))
         end forall
       end do
 
     case(BATCH_PACKED)
 
       !$omp parallel do private(ip, ip_bnd, ip_inn, ist)
-      do ip = 1, der%boundaries%nper
-        ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
-        ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+      do ip = 1, boundaries%nper
+        ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
+        ip_inn = boundaries%per_points(POINT_INNER, ip)
         forall(ist = 1:ffb%nst_linear) ffb%pack%X(psi)(ist, ip_bnd) = ffb%pack%X(psi)(ist, ip_inn)
       end do
 
@@ -353,14 +351,14 @@ contains
       call octcl_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
       kernel_ref = octcl_kernel_get_ref(kernel)
 
-      call opencl_set_kernel_arg(kernel_ref, 0, der%boundaries%nper)
-      call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_per_points)
+      call opencl_set_kernel_arg(kernel_ref, 0, boundaries%nper)
+      call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_per_points)
       call opencl_set_kernel_arg(kernel_ref, 2, ffb%pack%buffer)
       call opencl_set_kernel_arg(kernel_ref, 3, log2(ffb%pack%size_real(1)))
 
       wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
 
-      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(der%boundaries%nper, wgsize)/), &
+      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(boundaries%nper, wgsize)/), &
         (/ffb%pack%size_real(1), wgsize/))
 
       call opencl_finish()
@@ -376,8 +374,8 @@ end subroutine X(derivatives_batch_set_bc)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_set_bc)(der, ff)
-  type(derivatives_t), intent(in)    :: der
+subroutine X(derivatives_set_bc)(boundaries, ff)
+  type(boundaries_t),  intent(in)    :: boundaries
   R_TYPE, target,      intent(inout) :: ff(:) !< target for batch_add_state
 
   type(batch_t) :: batch_ff
@@ -389,7 +387,7 @@ subroutine X(derivatives_set_bc)(der, ff)
 
   ASSERT(batch_is_ok(batch_ff))
 
-  call X(derivatives_batch_set_bc)(der, batch_ff)
+  call X(derivatives_batch_set_bc)(boundaries, batch_ff)
 
   call batch_end(batch_ff)
   POP_SUB(X(derivatives_set_bc))
@@ -426,7 +424,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 
   ASSERT(handle%ff%nst_linear == handle%opff%nst_linear)
 
-  if(optional_default(set_bc, .true.)) call X(derivatives_batch_set_bc)(der, ff)
+  if(optional_default(set_bc, .true.)) call X(derivatives_batch_set_bc)(der%boundaries, ff)
 
 #ifdef HAVE_MPI
 
