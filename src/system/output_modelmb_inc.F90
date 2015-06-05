@@ -81,7 +81,7 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
   end if
 
   do mm = 1, st%nst
-!TODO : check if therer is another interface for get_states to avoid trivial slice of wf
+!TODO : check if there is another interface for get_states to avoid trivial slice of wf
     call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
     youngstring = ""

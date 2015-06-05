@@ -509,16 +509,11 @@ subroutine X(modelmb_sym_all_states) (gr, st, geo)
       call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
         st%modelmbparticles, ncombo, young_used_save, wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
-! print this to log file 
-      write (message(1), '(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
-      call messages_info(1)
 
       young_used = 0
       call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
         st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
-      write (message(1), '(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
-      call messages_info(1)
     end if
 
     ! push back the projected state - this may overwrite with a bunch of 0s if we found a bosonic state...
