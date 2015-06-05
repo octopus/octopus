@@ -121,7 +121,7 @@ contains
             write(tmp_str(1), '(f10.6)') kpoint(idir)
             message(1) = trim(message(1))//trim(tmp_str(1))
             if(idir < sb%dim) message(1) = trim(message(1))//','
-          enddo
+          end do
           message(1) = trim(message(1))//')'
           call messages_info(1, iunit)
         end if
@@ -443,11 +443,11 @@ contains
         write(iunit(is),'(a)',advance='no') '# '
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        enddo
+        end do
         write(iunit(is),'(a)',advance='no') '(unscaled), '
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        enddo
+        end do
         write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
       end do
 
@@ -462,10 +462,10 @@ contains
             write(iunit(is),'(1x)',advance='no')
             do idir = 1, sb%dim
               write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
-            enddo
+            end do
             do idir = 1, sb%dim
               write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
-            enddo
+            end do
             write(iunit(is),'(3x,f14.8)') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           end do
         end do
@@ -491,11 +491,11 @@ contains
         write(iunit(is),'(a)',advance='no') '# '
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        enddo
+        end do
         write(iunit(is),'(a)',advance='no') '(unscaled), '
         do idir = 1, sb%dim
           write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        enddo
+        end do
         write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
       end do
 
@@ -510,14 +510,14 @@ contains
           write(iunit(is),'(1x)',advance='no')
           do idir = 1, sb%dim
             write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
-          enddo
+          end do
           do idir = 1, sb%dim
             write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
-          enddo
+          end do
           write(iunit(is),'(3x)',advance='no')
           do ist = 1, nst
             write(iunit(is),'(f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
-          enddo
+          end do
           write(iunit(is),'(a)')
         end do
       end do
@@ -929,7 +929,7 @@ contains
       message(3) = trim(message(3)) // trim(str_tmp)
       write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
       message(4) = trim(message(4)) // trim(str_tmp)
-    enddo
+    end do
     do idir = 1, sb%dim
       write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
       message(2) = trim(message(2)) // trim(str_tmp)
@@ -937,7 +937,7 @@ contains
       message(3) = trim(message(3)) // trim(str_tmp)
       write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
       message(4) = trim(message(4)) // trim(str_tmp)
-    enddo
+    end do
     write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)
     message(2) = trim(message(2)) // trim(str_tmp)
     message(3) = trim(message(3)) // trim(str_tmp)

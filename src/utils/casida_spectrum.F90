@@ -112,7 +112,7 @@ program casida_spectrum
   identity = M_ZERO
   do idir = 1, MAX_DIM
     identity(idir, idir) = M_ONE
-  enddo
+  end do
 
   !%Variable CasidaSpectrumRotationMatrix
   !%Type block
@@ -149,7 +149,7 @@ program casida_spectrum
     do iatom = 1, geo%natoms
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
-    enddo
+    end do
     call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated')
     call geometry_end(geo)
   else
@@ -252,7 +252,7 @@ contains
     write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
     do idir = 1, cs%space%dim
       write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // index2axis(idir) // '>'
-    enddo
+    end do
     write(iunit, '(a14)') '<f>'
 
     do istep = 1, nsteps

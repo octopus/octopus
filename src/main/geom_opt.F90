@@ -383,7 +383,7 @@ contains
         else
           exit
         endif
-      enddo
+      end do
 
       call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                         ierr, mesh=sys%gr%mesh)

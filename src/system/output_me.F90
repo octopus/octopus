@@ -276,7 +276,7 @@ contains
           else
             message(1) = trim(message(1)) // ","
           endif
-        enddo
+        end do
         call messages_info(1, iunit)
       end if
 
@@ -284,7 +284,7 @@ contains
       do idir = 1, gr%sb%dim
         write(str_tmp, '(a,a1,a)') '        <p', index2axis(idir), '>'
         message(1) = trim(message(1)) // trim(str_tmp)
-      enddo
+      end do
       write(str_tmp, '(4x,a12,1x)') 'Occupation '
       message(1) = trim(message(1)) // trim(str_tmp)
       call messages_info(1, iunit)
@@ -300,7 +300,7 @@ contains
           do idir = 1, gr%sb%dim
             write(str_tmp, '(f12.6)') momentum(idir, ist, ik)
             message(1) = trim(message(1)) // trim(str_tmp)
-          enddo
+          end do
           write(str_tmp, '(3x,f12.6)') st%occ(ist, ik+is)
           message(1) = trim(message(1)) // trim(str_tmp)
           call messages_info(1, iunit)
@@ -369,7 +369,7 @@ contains
     kend = st%d%kpt%end
     do idir = 1, 3
       angular(idir) = states_eigenvalues_sum(st, ang(st%st_start:st%st_end, kstart:kend, idir))
-    enddo
+    end do
     lsquare = states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, kstart:kend))
 
 #if defined(HAVE_MPI)
@@ -413,7 +413,7 @@ contains
           else
             message(1) = trim(message(1)) // ","
           endif
-        enddo
+        end do
         call messages_info(1, iunit)
       end if
       
@@ -429,7 +429,7 @@ contains
           end do
           lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik+is-1)
           call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik+is-1), st%mpi_grp)
-        enddo
+        end do
       end if
 #endif
       write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &

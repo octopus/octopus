@@ -417,8 +417,8 @@ contains
 
             write(restart_filename,'(a,i6.6,a,i1)') 'lr_hmat1_', iatom, '_', idir
             call restart_rm(cas%restart_dump, restart_filename)
-          enddo
-        enddo
+          end do
+        end do
       endif
     endif
 

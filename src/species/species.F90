@@ -689,7 +689,7 @@ contains
     do nn = 1, min_niwfs
       if(size >= min_niwfs) exit
       size = size + nn**2
-    enddo
+    end do
 
   end function species_closed_shell_size
 
@@ -1146,7 +1146,7 @@ contains
       do ip = 1, np
         call ylmr(x(ip, 1), x(ip, 2), x(ip, 3), l, lm, ylm)
         uv(ip) = uv(ip) * ylm
-      enddo
+      end do
     endif
 
     POP_SUB(species_nl_projector)

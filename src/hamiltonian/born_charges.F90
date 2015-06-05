@@ -68,7 +68,7 @@ contains
     this%sum_ideal(1:dim, 1:dim) = M_ZERO
     do idir = 1, dim
       this%sum_ideal(idir, idir) = -(st%val_charge + st%qtot) ! total charge
-    enddo
+    end do
 
     !%Variable BornChargeSumRuleCorrection
     !%Type logical
@@ -114,7 +114,7 @@ contains
 
     do iatom = 1, geo%natoms
       Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(1:dim, 1:dim, iatom)
-    enddo
+    end do
 
     this%delta(1:dim, 1:dim) = (Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)) / geo%natoms
 
@@ -122,7 +122,7 @@ contains
       do iatom = 1, geo%natoms
         this%charge(1:dim, 1:dim, iatom) = &
           this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim)
-      enddo
+      end do
     endif
 
     POP_SUB(correct_Born_charges)
@@ -160,7 +160,7 @@ contains
       endif
 
       write(iunit,'(a)')
-    enddo
+    end do
 
     if(.not. write_real) then
       write(iunit,'(a)') '# Magnitude and phase'
@@ -175,7 +175,7 @@ contains
         phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
         call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
         write(iunit,'(a)')
-      enddo
+      end do
     endif
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction, per atom'

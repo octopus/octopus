@@ -240,9 +240,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
     call io_close(iunit_e)
   endif
 #endif
@@ -1085,8 +1085,8 @@ contains
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, evec(n1, n2)
-        enddo
-      enddo
+        end do
+      end do
       call io_close(iunit_e)
     endif
 #endif

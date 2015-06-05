@@ -157,8 +157,8 @@ contains
               message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
               call messages_fatal(2)
             endif
-          enddo
-        enddo
+          end do
+        end do
       endif
 
       !%Variable GaugeFieldDynamics

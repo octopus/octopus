@@ -70,12 +70,12 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
     spin_index(ispin) = ispin
-  enddo
+  end do
 
   SAFE_ALLOCATE(diag(1:ndiag))
   do idiag = 1, ndiag
     diag(idiag) = bgw%vxc_diag_nmin + idiag - 1
-  enddo
+  end do
 
   if(noffdiag > 0) then
     ioff = 1
@@ -84,8 +84,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         off1(ioff) = ist
         off2(ioff) = ist2
         ioff = ioff + 1
-      enddo
-    enddo
+      end do
+    end do
   endif
 
   ! in case of hybrids, we should apply exchange operator too here
@@ -105,7 +105,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         endif
-      enddo
+      end do
 
       ! could do only upper or lower triangle here
       do ioff = 1, noffdiag
@@ -118,8 +118,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
           call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         endif
-      enddo
-    enddo
+      end do
+    end do
 
     ! convert to eV
     mtxel(:,:) = M_TWO * P_Ry * mtxel(:,:)
@@ -131,7 +131,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
       if(mpi_grp_is_root(mpi_world)) &
         call write_matrix_elements(iunit_x, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel_x)
     endif
-  enddo
+  end do
 
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
@@ -196,10 +196,10 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
           vmtxel(ikcvs) = X(mf_dotp)(gr%mesh, psi(:), rpsi(:))
 !          write(6,*) ikcvs, ikk, is, ifmax(ik, is) - iv + 1, ifmax(ik, is) + ic, vmtxel(ikcvs)
           ! NB: Casida eps_diff file has these values times sqrt(nspin)
-        enddo
-      enddo
-    enddo
-  enddo
+        end do
+      end do
+    end do
+  end do
 
   if(mpi_grp_is_root(mpi_world)) then
     iunit = io_open(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
@@ -265,9 +265,9 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 !        do iy = 1, cube%rs_n_global(2)
 !          do ix = 1, cube%rs_n_global(1) 
 !            norm = norm + abs(cf%zrs(ix, iy, iz))**2
-!          enddo
-!        enddo
-!      enddo
+!          end do
+!        end do
+!      end do
 !      norm = sqrt(norm * gr%mesh%volume_element)
 !
 !      norm = M_ZERO
@@ -275,9 +275,9 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 !        do iy = 1, cube%fs_n_global(2)
 !          do ix = 1, cube%fs_n_global(1) 
 !            norm = norm + abs(cf%fs(ix, iy, iz))**2
-!          enddo
-!        enddo
-!      enddo
+!          end do
+!        end do
+!      end do
 !      norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
 !    endif
 !    
@@ -294,7 +294,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       else
         field_g(ig, is) = cf%fs(ix, iy, iz) * gr%mesh%volume_element
       endif
-    enddo
+    end do
 
     ! renormalize
     if(is_wfn) then
@@ -305,7 +305,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       endif
     endif
 
-  enddo
+  end do
 
 #ifdef R_TREAL
   SAFE_DEALLOCATE_P(zfield_r)

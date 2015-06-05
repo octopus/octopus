@@ -489,7 +489,7 @@ contains
     
     do iatom = 1, geo%natoms
       geo%atom(iatom)%v(1:geo%space%dim) = ss*geo%atom(iatom)%v(1:geo%space%dim)
-    enddo
+    end do
     
     uk = uk*ss**2
 
@@ -539,7 +539,7 @@ contains
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) + &
           this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
-      enddo
+      end do
       
       call nh_chain(this, geo)
 

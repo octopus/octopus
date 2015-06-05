@@ -65,7 +65,7 @@ contains
       if(parse_block('MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
-        enddo
+        end do
         call parse_block_end(blk)
       else
         to(:) = M_ZERO
@@ -295,7 +295,7 @@ contains
     do ii = 1, 2
       jj = maxloc(abs(tinertia(:,ii)), dim = 1)
       if(tinertia(jj,ii) < M_ZERO) tinertia(:,ii) = -tinertia(:,ii)
-    enddo
+    end do
     x  = tinertia(:,1)
     x2 = tinertia(:,2)
 

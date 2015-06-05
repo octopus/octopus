@@ -41,10 +41,10 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
         do ist = 1, st%nst
           term = term + &
             TOFLOAT(X(mf_dotp)(gr%mesh, st%d%dim, lr%X(dl_psi)(:, :, ist, ik), kdotp_lr(jdir)%X(dl_psi)(:, :, ist, ik)))
-        enddo
+        end do
         infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
-      enddo
-    enddo
+      end do
+    end do
   endif
   
   do jdir = gr%sb%periodic_dim + 1, gr%sb%dim

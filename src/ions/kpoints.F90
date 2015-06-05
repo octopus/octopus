@@ -209,13 +209,13 @@ contains
         do idir = 1, dim
           write(str_tmp,'(i5)') this%nik_axis(idir)
           message(4) = trim(message(4)) // trim(str_tmp)
-        enddo
+        end do
         write(str_tmp,'(6x,a)') 's ='
         message(4) = trim(message(4)) // trim(str_tmp)
         do idir = 1, dim
           write(str_tmp,'(f6.2)') this%shifts(idir)
           message(4) = trim(message(4)) // trim(str_tmp)
-        enddo
+        end do
         call messages_info(4)
 
       end if
@@ -230,7 +230,7 @@ contains
         do idir = 1, dim
           write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
           message(1) = trim(message(1)) // trim(str_tmp)
-        enddo
+        end do
         write(str_tmp,'(a)') "  |"
         message(1) = trim(message(1)) // trim(str_tmp)
         call messages_info(1)
@@ -854,7 +854,7 @@ contains
       index = index2axis(idir)
       write(str_tmp, '(9x,2a)') 'k_', index
       message(1) = trim(message(1)) // trim(str_tmp)
-    enddo
+    end do
     write(str_tmp, '(6x,a)') 'Weight'
     message(1) = trim(message(1)) // trim(str_tmp)
     message(2) = '---------------------------------------------------------'
@@ -865,7 +865,7 @@ contains
       do idir = 1, this%full%dim
         write(str_tmp,'(f12.4)') this%reduced%red_point(idir, ik)
         message(1) = trim(message(1)) // trim(str_tmp)
-      enddo
+      end do
       write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)
       message(1) = trim(message(1)) // trim(str_tmp)
       call messages_info(1, iunit)
@@ -933,7 +933,7 @@ contains
           kpoints_kweight_denominator = denom
           exit
         endif
-      enddo
+      end do
     endif
 
     POP_SUB(kpoints_kweight_denominator)

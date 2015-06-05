@@ -170,7 +170,7 @@ contains
         if(grid_spacing(idir) < M_ZERO) then
           grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/real(gr%sb%image_size(idir), REAL_PRECISION)
         endif
-      enddo
+      end do
     endif
 #endif
 

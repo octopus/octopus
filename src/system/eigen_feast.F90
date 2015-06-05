@@ -209,7 +209,7 @@ contains
     !open(10,file='contour.txt', status='replace')
     !do i=1,feast_fpm(2)
     !  write(10,*) dble(Zne(i)),aimag(Zne(i))
-    !enddo
+    !end do
     !close(10)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -340,7 +340,7 @@ contains
       print *,'Eigenvalues/Max(right/left Residuals)'
       do ist=1, nstates_within_contour
         print *, ist, eigenval(ist),max(resl(ist),resr(ist))
-      enddo
+      end do
     endif
 
     st%eigenval(:, :) = M_ZERO

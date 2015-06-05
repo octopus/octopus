@@ -145,14 +145,14 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
         do idim = 1, sys%st%d%dim
           term = term + zmf_dotp(mesh, sys%st%zpsi(1:mesh%np, idim, ist, ik), &
             lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
-        enddo
-      enddo
+        end do
+      end do
 
       moment = moment + term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
-    enddo
+    end do
 
     dipole(idir) = -moment
-  enddo
+  end do
 
   POP_SUB(zcalc_dipole_periodic)
 

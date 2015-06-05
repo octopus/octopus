@@ -97,7 +97,7 @@ contains
     do ik = 1, sys%st%d%nik
       call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
       occ_states(ik) = n_filled + n_partially_filled + n_half_filled
-    enddo
+    end do
 
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
@@ -154,7 +154,7 @@ contains
         if(any(lowest_missing(1:sys%st%d%dim, ik) <= occ_states(ik))) then
           occ_missing = .true.
         end if
-      enddo
+      end do
 
       if(occ_missing) then
         if(is_orbital_dependent) then

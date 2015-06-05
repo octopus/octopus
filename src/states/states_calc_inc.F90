@@ -1023,9 +1023,9 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
           call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))
           l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1)))
         end if
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(lpsi)

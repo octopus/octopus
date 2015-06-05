@@ -54,7 +54,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
       message(1) = "Cannot calculate kernel derivative. This functional does not have Kxc available."
       call messages_fatal(1)
     endif
-  enddo
+  end do
 
   ! really start
 

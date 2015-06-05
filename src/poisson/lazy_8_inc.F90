@@ -35,7 +35,7 @@ do i=-m,m
    cht(i)=0.d0
    cg(i)=0.d0
    cgt(i)=0.d0
-enddo
+end do
 
 ! The normalization is chosen such that a constant function remains the same constant 
 ! on each level of the transform
@@ -62,7 +62,7 @@ cht( 0)=1.d0
 do i=-m,m-1
    cg(i+1)=cht(-i)*(-1)**(i+1)
    cgt(i+1)=ch(-i)*(-1)**(i+1)
-enddo
+end do
 !!***
 
 !! Local Variables:

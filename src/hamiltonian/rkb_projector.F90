@@ -107,7 +107,7 @@ contains
       else
         rkb_p%ket(:, i, 1, 2) = M_z0
       end if
-    enddo
+    end do
     
     ! The l- and m-dependent prefactors are included in the KB energies
     rkb_p%f(1, 1, 1) = real(l + so_strength*lm + 1, REAL_PRECISION)

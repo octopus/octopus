@@ -1045,7 +1045,7 @@ contains
         do idir = 1, gr%mesh%sb%dim
           write(aux2, '(f9.5)') kick%qvector(idir)
           aux = trim(aux) // trim(aux2)
-        enddo
+        end do
       end if
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)

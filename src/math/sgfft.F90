@@ -3694,15 +3694,15 @@ contains
     do  j=1,n1
       ftrig1(1,j)= btrig1(1,j)
       ftrig1(2,j)=-btrig1(2,j)
-    enddo
+    end do
     do  j=1,n2
       ftrig2(1,j)= btrig2(1,j)
       ftrig2(2,j)=-btrig2(2,j)
-    enddo
+    end do
     do  j=1,n3
       ftrig3(1,j)= btrig3(1,j)
       ftrig3(2,j)=-btrig3(2,j)
-    enddo
+    end do
 
     !Calculating array of phases for HalFFT decoding
     twopion=8.d0*datan(1.0_8)/real(n3,8)
@@ -3742,7 +3742,7 @@ contains
             call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig3,after3(i),now3(i),before3(i),1)
             inzee=3-inzee
-          enddo
+          end do
           !output: I1,i3,J2,(Jp2)
 
           !unpacking FFT in order to restore correct result, 
@@ -3807,7 +3807,7 @@ contains
             call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig1,after1(i),now1(i),before1(i),1)
             inzee=3-inzee
-          enddo
+          end do
 
           !storing the last step into zt array
           i=ic1
@@ -3843,7 +3843,7 @@ contains
             call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig2,after2(i),now2(i),before2(i),1)
             inzee=3-inzee
-          enddo
+          end do
           !output: i1,i2,j3,(jp3)
 
           !Multiply with kernel in fourier space
@@ -3857,7 +3857,7 @@ contains
             call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
               ftrig2,after2(i),now2(i),before2(i),-1)
             inzee=3-inzee
-          enddo
+          end do
 
           !reverse ordering
           !input: i1,I2,j3,(jp3)
@@ -3883,7 +3883,7 @@ contains
             call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
               ftrig1,after1(i),now1(i),before1(i),-1)
             inzee=3-inzee
-          enddo
+          end do
           !output: I2,I1,j3,(jp3)
 
           !reverse ordering
@@ -3935,7 +3935,7 @@ contains
             call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
               ftrig3,after3(i),now3(i),before3(i),-1)
             inzee=3-inzee
-          enddo
+          end do
           !output: I1,I3,J2,(Jp2)
 
           !calculates the Hartree energy locally and rebuild the output array
@@ -4490,7 +4490,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
            call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
                 trig3,after3(i),now3(i),before3(i),1)
            inzee=3-inzee
-        enddo
+        end do
         !output: I1,i3,J2,(Jp2)
 
         !unpacking FFT in order to restore correct result, 
@@ -4545,7 +4545,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
               call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
                    trig1,after1(i),now1(i),before1(i),1)
               inzee=3-inzee
-           enddo
+           end do
            !storing the last step into zt
            i=ic1
            call fftstp(lot,nfft,n1,lzt,n1,zw(1,1,inzee),zt(1,j,1), & 
@@ -4574,7 +4574,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
               call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
                    trig2,after2(i),now2(i),before2(i),1)
               inzee=3-inzee
-           enddo
+           end do
            !storing the last step into output array
            i=ic2
            call fftstp(lot,nfft,n2,nd1,nd2,zw(1,1,inzee),zr(1,j,1,j3), &

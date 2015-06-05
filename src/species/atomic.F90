@@ -602,7 +602,7 @@ contains
       BETA = T*DRDI(IR)*RHO(IR)
       Q = (Y-BETA/CNST(12.0))*QBYY
       V(IR) = M_TWO*T*Q
-    enddo
+    end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  END OF THE NUMEROV ALGORITHM                                               !
@@ -769,7 +769,7 @@ contains
       del=del*M_TWO
       e1=e2-del
 
-    enddo
+    end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -785,7 +785,7 @@ contains
       do i = 2, n
         t=h(i)-e*s(i)
         g(i)=y(i)/(M_ONE-t/CNST(12.))
-      enddo
+      end do
       call nrmlzg(g,s,n)
     endif
     
@@ -838,7 +838,7 @@ contains
         exit
       endif
       y(n)=M_ZERO
-    enddo
+    end do
     
     call bcorgn(e,h,s,l,zdr,y2)
 
@@ -898,7 +898,7 @@ contains
     
     do i=knk,n
       y(i) = y(i)*ratio
-    enddo
+    end do
 
   end subroutine yofe
 
@@ -949,22 +949,22 @@ contains
     nm1 = n - 1
     do i = 2,nm1,2
       norm=norm + g(i)*s(i)*g(i)
-    enddo
+    end do
     norm = norm * M_TWO
     nm2  = n - 2
     do i = 3,nm2,2
       norm=norm + g(i)*s(i)*g(i)
-    enddo
+    end do
     norm = norm * M_TWO
     nm2  = n - 2
     do i = 1,n,nm1
       norm=norm + g(i)*s(i)*g(i)
-    enddo
+    end do
     norm = norm/M_THREE
     srnrm = sqrt(norm)
     do i=1,n
       g(i) = g(i)/srnrm
-    enddo
+    end do
     
     POP_SUB(nrmlzg)
   end subroutine nrmlzg
@@ -1106,7 +1106,7 @@ contains
       t=h(i)-e*s(i)
       g=y(i)/(M_ONE-t/CNST(12.))
       gsg=gsg+g*s(i)*g
-    enddo
+    end do
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1168,7 +1168,7 @@ contains
         knk = i
         exit
       endif
-    enddo
+    end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !

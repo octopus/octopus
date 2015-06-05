@@ -38,7 +38,7 @@ subroutine X(run_sternheimer)()
           if(em_vars%calc_hyperpol .and. use_kdotp) then
             do idir2 = 1, gr%sb%periodic_dim
               kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
-            enddo
+            end do
           endif
         else
           sigma_alt = sigma
@@ -69,7 +69,7 @@ subroutine X(run_sternheimer)()
                      "': Initializing to zero."
                 call messages_warning(1)
               end if
-            enddo
+            end do
           endif
         endif
       end do

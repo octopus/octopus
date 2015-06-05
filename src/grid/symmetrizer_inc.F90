@@ -69,7 +69,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 #ifdef HAVE_MPI
         call vec_allgather(vp, field_global_vector(:, idir), field_vector(:, idir))
 #endif
-      enddo
+      end do
     else
       field_global_vector => field_vector
     end if
@@ -185,7 +185,7 @@ subroutine X(symmetrize_tensor)(symm, tensor)
     tensor_symm(:,:) = tensor_symm(:,:) + &
       matmul(matmul(dble(transpose(symm_op_rotation_matrix(symm%ops(iop)))), tensor(1:3, 1:3)), &
       dble(symm_op_rotation_matrix(symm%ops(iop))))
-  enddo
+  end do
 
   tensor(1:3,1:3) = tensor_symm(1:3,1:3) / nops
 

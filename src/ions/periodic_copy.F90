@@ -97,8 +97,8 @@ contains
         this%icell(idir, jj) = mod(kk, this%nbmax(idir) - this%nbmin(idir) + 1) + this%nbmin(idir)
         if(idir > 1) &
           kk = kk / (this%nbmax(idir) - this%nbmin(idir) + 1)
-      enddo
-    enddo
+      end do
+    end do
 
     POP_SUB(periodic_copy_init)
   end subroutine periodic_copy_init

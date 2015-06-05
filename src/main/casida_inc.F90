@@ -352,22 +352,22 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
 
   do ist = st_start, st_end
     call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
-  enddo
+  end do
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
     call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
-    enddo
+    end do
 
     do jst = ist, st_end
       if(.not. is_saved(ist, jst, ik)) then
         lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
         if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
       endif
-    enddo
-  enddo
+    end do
+  end do
 
   POP_SUB(X(casida_calc_lr_hmat1))
 end subroutine X(casida_calc_lr_hmat1)
@@ -402,8 +402,8 @@ subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) - lr_hmat1(cas%pair(ia)%i, cas%pair(jb)%i, ik)
         if(ia /= jb) cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) - lr_hmat1(cas%pair(jb)%i, cas%pair(ia)%i, ik)
       endif
-    enddo
-  enddo
+    end do
+  end do
 
   POP_SUB(X(casida_lr_hmat2))
 
@@ -451,8 +451,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           is_calcd(ia, jb) = .false.
           is_calcd(jb, ia) = .false.
         endif
-      enddo
-    enddo
+      end do
+    end do
   endif
 
   if(cas%type == CASIDA_PETERSILKA) then
@@ -759,7 +759,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
     cas%X(mat_save) = M_ZERO
     do ia = 1, cas%n_pairs
       cas%X(mat_save)(ia, ia) = cas%w(ia)
-    enddo
+    end do
   endif
   
   SAFE_ALLOCATE(lr_hmat1(1:cas%nst, 1:cas%nst, 1:cas%nik))
@@ -792,7 +792,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
       ! use them to make two-particle matrix elements (as for eigenvalues)
       do ik = 1, cas%nik
         call X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
-      enddo
+      end do
       
       if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
         forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
@@ -812,9 +812,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
       call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
       do ia = 1, cas%n_pairs
         cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   call restart_end(restart_vib)
   
@@ -836,9 +836,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim
           cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
   endif
   
   POP_SUB(X(casida_forces))
@@ -897,7 +897,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
           is_saved(aa, ii, ik) = .true.
           num_saved = num_saved + 1
         endif
-      enddo
+      end do
       write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_filename)
 
     else if(.not. cas%fromScratch) then
@@ -915,7 +915,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   do ik = 1, cas%nik
     all_done = all_done .and. all(is_saved(1:cas%n_occ(ik), 1:cas%n_occ(ik), ik)) &
       .and. all(is_saved(cas%n_occ(ik) + 1:cas%nst, cas%n_occ(ik) + 1:cas%nst, ik))
-  enddo
+  end do
 
   if(all_done) then
     SAFE_DEALLOCATE_A(is_saved)
@@ -936,7 +936,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
     ! unocc-unocc matrix elements
     call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
-  enddo
+  end do
 
   SAFE_DEALLOCATE_A(hvar)
   call pert_end(ionic_pert)
@@ -1016,7 +1016,7 @@ subroutine X(casida_solve)(cas, st)
       do ia = 1, cas%n_pairs
         occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
           / cas%el_per_state
-      enddo
+      end do
     endif
 
     ! complete the matrix
@@ -1112,7 +1112,7 @@ subroutine X(casida_write)(cas, sys)
 #ifdef R_TCOMPLEX
       write(iunit, '(16x)', advance='no')
 #endif
-    enddo
+    end do
     write(iunit, '(1x,a15)') '<f>'
     
     do ia = 1, cas%n_pairs
@@ -1149,7 +1149,7 @@ subroutine X(casida_write)(cas, sys)
         do idim = 1, cas%sb_dim
           write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
             units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
-        enddo
+        end do
         
         ! this stuff should go BEFORE calculation of transition matrix elements!
         ! make the largest component positive and real, to specify the phase
@@ -1200,20 +1200,20 @@ subroutine X(write_implied_occupations)(cas, iunit, ind)
       do ast = cas%n_occ(ik) + 1, cas%nst
         if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
         occ = occ - abs(cas%X(mat)(cas%index(ist, ast, ik), ind))**2
-      enddo
+      end do
       write(iunit, '(f8.6,a)', advance='no') occ, ' | '
-    enddo
+    end do
     do ast = cas%n_occ(ik) + 1, cas%nst
       occ = M_ZERO
       do ist = 1, cas%n_occ(ik)
         if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
         occ = occ + abs(cas%X(mat)(cas%index(ist, ast, ik), ind))**2
-      enddo
+      end do
       write(iunit, '(f8.6)', advance='no') occ
       if(ast < cas%n_occ(ik) + cas%n_unocc(ik)) write(iunit, '(a)', advance='no') ' | '
-    enddo
+    end do
     write(iunit, '(a)')
-  enddo
+  end do
   
   write(iunit, '(a)') '%'
   

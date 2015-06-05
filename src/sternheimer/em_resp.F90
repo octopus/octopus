@@ -236,10 +236,10 @@ contains
             do idir2 = 1, gr%sb%dim
               call lr_init(kdotp_em_lr2(idir, idir2, sigma, ifactor))
               call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh)
-            enddo
-          enddo
-        enddo
-      enddo
+            end do
+          end do
+        end do
+      end do
       call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = .false.)
       call sternheimer_init(sh_kdotp, sys, hm, complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
@@ -254,7 +254,7 @@ contains
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
       call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
-    enddo
+    end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
@@ -315,7 +315,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 1, ifactor))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 2, ifactor))
-                enddo
+                end do
               endif
 
               have_to_calculate = .false.
@@ -335,7 +335,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 2, ifactor))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 1, ifactor))
-                enddo
+                end do
               endif
 
               have_to_calculate = .false.
@@ -358,7 +358,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 1, 1))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 2, 1))
-                enddo
+                end do
               endif
 
               have_to_calculate = .false.
@@ -377,7 +377,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 2, 1))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 1, 1))
-                enddo
+                end do
               endif
 
               have_to_calculate = .false.
@@ -465,7 +465,7 @@ contains
     SAFE_DEALLOCATE_P(em_vars%lr)
     do ifactor = 1, em_vars%nfactor
       call Born_charges_end(em_vars%Born_charges(ifactor))
-    enddo
+    end do
     call states_deallocate_wfns(sys%st)
 
     POP_SUB(em_resp_run)
@@ -875,8 +875,8 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             cross(idir, idir2) = units_from_atomic(units_out%length**2, cross(idir, idir2))
-          enddo
-        enddo
+          end do
+        end do
 
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -888,7 +888,7 @@ contains
         do idir = 1, gr%sb%dim
           cross_sum = cross_sum + cross(idir, idir)
           crossp_sum = crossp_sum + crossp(idir, idir)
-        enddo
+        end do
 
         anisotropy = crossp_sum - M_THIRD * cross_sum**2
             
@@ -899,8 +899,8 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             write(iunit,'(e20.8)', advance = 'no') cross(idir, idir2)
-          enddo
-        enddo
+          end do
+        end do
         write(iunit,'(a)', advance = 'yes')
   
         call io_close(iunit)
@@ -925,7 +925,7 @@ contains
         4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
       do idir = 1, gr%sb%dim
         epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
-      enddo
+      end do
 
       write(iunit, '(a)') '# Real part of dielectric constant'
       call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
@@ -1257,7 +1257,7 @@ contains
         HRS_A = M_ZERO
         do ii = 1, sb%dim
           HRS_A = HRS_A + beta(ii,ii,ii)**2
-        enddo
+        end do
 
         HRS_B = M_ZERO
         HRS_C = M_ZERO
@@ -1267,8 +1267,8 @@ contains
               HRS_B = HRS_B + beta(ii,ii,ii) * (beta(ii,jj,jj) + beta(jj,ii,jj) + beta(jj,jj,ii))
               HRS_C = HRS_C + (beta(ii,ii,jj) + beta(ii,jj,ii) + beta(jj,ii,ii))**2
             endif
-          enddo
-        enddo
+          end do
+        end do
 
         HRS_D = (beta(1,1,2) + beta(1,2,1) + beta(2,1,1)) * (beta(2,3,3) + beta(3,2,3) + beta(3,3,2)) &
               + (beta(2,2,3) + beta(2,3,2) + beta(3,2,2)) * (beta(3,1,1) + beta(1,3,1) + beta(1,1,3)) &
@@ -1297,8 +1297,8 @@ contains
               HRS_C2 = HRS_C2 + beta(jj,ii,ii) * (beta(ii,ii,jj) + beta(ii,jj,ii))
               HRS_C3 = HRS_C3 + beta(jj,ii,ii)**2
             endif
-          enddo
-        enddo
+          end do
+        end do
   
         HRS_D1 = (beta(1,1,2) + beta(1,2,1) + beta(2,1,1)) * (beta(3,2,3) + beta(3,3,2)) &
                + (beta(2,2,3) + beta(2,3,2) + beta(3,2,2)) * (beta(1,3,1) + beta(1,1,3)) &

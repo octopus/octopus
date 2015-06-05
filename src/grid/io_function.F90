@@ -393,7 +393,7 @@ contains
       do idir = 1, mesh%sb%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
           mesh%sb%rlattice(idir2, idir)), idir2 = 1, mesh%sb%dim)
-      enddo
+      end do
 
       write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)
       write(iunit, '(i10, a)') geo%natoms, ' 1'
@@ -409,7 +409,7 @@ contains
         write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, mesh%sb%dim)
       endif
       write(iunit, '()')
-    enddo
+    end do
 
     POP_SUB(write_xsf_geometry)
   end subroutine write_xsf_geometry

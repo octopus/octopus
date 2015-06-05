@@ -672,7 +672,7 @@ contains
         else
           exit
         endif
-      enddo
+      end do
 
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop

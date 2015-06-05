@@ -69,7 +69,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
       det  = berry_phase_det(st, mesh, dir, ik)
       dipole = dipole + aimag(log(det))
-    enddo
+    end do
 
     dipole = -(mesh%sb%lsize(dir) / M_PI) * dipole
 
@@ -98,7 +98,7 @@ contains
     noccst = 0
     do ist = 1, st%nst
       if(st%occ(ist, ik) > M_EPSILON) noccst = ist
-    enddo
+    end do
 
     SAFE_ALLOCATE(matrix(1:noccst, 1:noccst))
 
@@ -155,7 +155,7 @@ contains
         phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_PI/mesh%sb%lsize(idir))*mesh%x(ip, idir))
         ! factor of two removed from exp since actual lattice vector is 2*lsize
       end forall
-    enddo
+    end do
 
     do ist = 1, nst
       call states_get_state(st, mesh, ist, ik, psi)
@@ -170,8 +170,8 @@ contains
           
           matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
         end do
-      enddo !ist2
-    enddo !ist
+      end do !ist2
+    end do !ist
       
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(phase)
@@ -218,8 +218,8 @@ contains
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
             aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
         endif
-      enddo
-    enddo
+      end do
+    end do
 
     POP_SUB(berry_potential)
   end subroutine berry_potential
@@ -240,12 +240,12 @@ contains
     delta = M_ZERO
     do ispin = 1, st%d%nspin
       delta = delta - dmf_dotp(mesh, st%rho(1:mesh%np, ispin), vberry(1:mesh%np, ispin))
-    enddo
+    end do
 
     ! the real energy contribution is -mu.E
     do idir = 1, mesh%sb%periodic_dim
       delta = delta - berry_dipole(st, mesh, idir) * E_field(idir)
-    enddo
+    end do
 
     POP_SUB(berry_energy_correction)
   end function berry_energy_correction

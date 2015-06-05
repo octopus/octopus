@@ -134,7 +134,7 @@ contains
     do jj = 1, ndim
       do kk = 1, ndim
         write(iunit, '(f20.6)', advance='no') units_from_atomic(unit, tensor(jj, kk))
-      enddo
+      end do
       trace = trace + tensor(jj, jj)
       write(iunit, '(a)')
     end do

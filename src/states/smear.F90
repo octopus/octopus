@@ -448,8 +448,8 @@ contains
             term = M_ZERO      
           endif
           entropy = entropy - kweights(ik) * this%el_per_state * term
-        enddo
-      enddo
+        end do
+      end do
     else
       dsmear = max(CNST(1e-14), this%dsmear)
   

@@ -181,8 +181,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !   do i=1,nval
     !      print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
     !      print *, i,j, dot_product(st%X(psi)(1:mesh%np,1,i,1),st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
-    !   enddo
-    !enddo
+    !   end do
+    !end do
     !print *, '=============================='
 
     ! write cube files
@@ -346,8 +346,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       !  do i2=1,scdm%box_size*2+1
       !    do i3=1,scdm%box_size*2+1
       !      write(333,*) real(temp_box(i1,i2,i3))
-      !    enddo
-      !  enddo
+      !    end do
+      !  end do
       !end do
       message(1) = 'SCDM box mapping failed'
       call messages_fatal(1)
@@ -381,9 +381,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !          do ll=1,scdm%box_size*2+1
     !             ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
     !             scdm%st%X(psi)(scdm%box(jj,kk,ll,vv),st%d%dim,vv,scdm%st%d%nik) = scdm%X(psi)(ip,count)
-    !          enddo
-    !       enddo
-    !    enddo
+    !          end do
+    !       end do
+    !    end do
     ! endif
     
   end do
@@ -407,8 +407,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !   do j=1,nval
   !      do i=1,nval
   !         print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
-  !      enddo
-  !   enddo
+  !      end do
+  !   end do
   !   print *, '=============================='
   !   ! and re-orthogonalize-----------------------------------------------------
   !   call X(states_orthogonalization_full)(scdm%st, mesh, 1)
@@ -419,7 +419,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !      count = count +1
   !       do i=1,3
   !          icenter(i) = scdm%center(i,v)/mesh%spacing(i)
-  !       enddo
+  !       end do
   !       ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
   !       scdm%box(:,:,:,count) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
   !                                              icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
@@ -429,9 +429,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !             do l=1,scdm%box_size*2+1
   !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
   !                scdm%X(psi)(ip,count) = scdm%st%X(psi)(scdm%box(j,k,l,count),st%d%dim,count,scdm%st%d%nik)
-  !             enddo
-  !          enddo
-  !       enddo
+  !             end do
+  !          end do
+  !       end do
   !       ! and set to zero outside again
   !       scdm%st%X(psi)(:,st%d%dim,v,scdm%st%d%nik) = 0.
   !       do j=1,scdm%box_size*2+1
@@ -439,18 +439,18 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !             do l=1,scdm%box_size*2+1
   !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
   !                scdm%st%X(psi)(scdm%box(j,k,l,v),st%d%dim,v,scdm%st%d%nik) = scdm%X(psi)(ip,count)
-  !             enddo
-  !          enddo
-  !       enddo
+  !             end do
+  !          end do
+  !       end do
   !       !
-  !    enddo
+  !    end do
   !!--------------------------------------------------------------------------
   !print *, 'orthonrmality in boxes after re-ortho: ================'
   !do j=1,nval
   !   do i=1,nval
   !      print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
-  !   enddo
-  !enddo
+  !   end do
+  !end do
   !print *, '======================================================'
   !endif
   !
@@ -464,9 +464,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !   do i=1,nval
   !      state_global(:) = state_global(:) + &
   !           dot_product(scdm%st%X(psi)(:,1,i,1),st%X(psi)(1:mesh%np,1,j,1))*scdm%st%X(psi)(:,1,i,1)*mesh%volume_element
-  !   enddo
+  !   end do
   !   print *, j, M_ONE - X(mf_nrm2)(mesh, state_global)
-  !enddo
+  !end do
 
   ! set flag to do this only once
   scdm_is_local = .true.
@@ -508,8 +508,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !            endif
   !!          endif
   !         !
-  !      enddo
-  !   enddo
+  !      end do
+  !   end do
   !   !
   !   call messages_print_var_value(stdout,'exx[eV] = ', exx*27.211396132)
   !   SxAFE_DEALLOCATE_A(rho)

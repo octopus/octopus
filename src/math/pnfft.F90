@@ -470,8 +470,8 @@ contains
 !     do j=1,pnfft%local_M
 !       do t=1,3
 !         pnfft%x_lin(t,j) = (pnfft%upper_border(t) - pnfft%lower_border(t)) * rand(0) + pnfft%lower_border(t)
-!       enddo
-!     enddo
+!       end do
+!     end do
 
 
     call pnfft_messages_debug(pnfft)

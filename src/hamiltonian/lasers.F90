@@ -422,7 +422,7 @@ contains
                                 xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
                                 xx(1)*lasers(il)%pol(2) - xx(2)*lasers(il)%pol(1)  /)
             end select
-          enddo
+          end do
           lasers(il)%a = -M_HALF * lasers(il)%a 
 
         end select

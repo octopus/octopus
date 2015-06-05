@@ -543,7 +543,7 @@ contains
             ! the ionic force due to the efield is not included in the forces returned by the SCF run, and so the ionic
             ! contribution to the Born charge must be added by hand here
           endif
-        enddo
+        end do
       endif
 
       !DENSITY AND POLARIZABILITY DENSITY   
@@ -580,7 +580,7 @@ contains
                 write(fname, '(a,i1,4a)') 'fd2_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
-              enddo
+              end do
             endif
 
             if(iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
@@ -595,7 +595,7 @@ contains
                   '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
                   sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
-              enddo
+              end do
             endif
           end do
 

@@ -244,8 +244,8 @@ contains
         copy_occ(1:sys%st%nst) = sys%st%occ(1:sys%st%nst, ik)
         do ist = 1, sys%st%nst
           sys%st%occ(ist, ik) = copy_occ(ind(ist))
-        enddo
-      enddo
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(ind)
       SAFE_DEALLOCATE_A(copy_occ)

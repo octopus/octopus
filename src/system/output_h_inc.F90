@@ -141,7 +141,7 @@
           do idir = 1, der%mesh%sb%dim
             call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), der%mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo, grp = grp)
-          enddo
+          end do
         case(2)
           call dio_function_output(outp%how, dir, 'Bind_z', der%mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo, grp = grp)
         end select

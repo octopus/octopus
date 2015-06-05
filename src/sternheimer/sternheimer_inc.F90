@@ -100,7 +100,7 @@ subroutine X(sternheimer_solve)(                           &
         omega_sigma = -R_CONJ(omega)
       end if
       call X(lr_orth_response)(mesh, st, lr(sigma), omega_sigma)
-    enddo
+    end do
   endif
 
   !this call is required to reset the scf_tol object, whether we want its result or not
@@ -433,9 +433,9 @@ subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thr
 !        lr%X(dl_psi)(:, :, ist2, ik) = lr%X(dl_psi)(:, :, ist2, ik) + &
 !          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) - omega_sigma)
 
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   SAFE_DEALLOCATE_A(psi)
 
@@ -639,7 +639,7 @@ subroutine X(sternheimer_solve_order2)( &
         do idim = 1, st%d%dim
           dl_eig1 = dl_eig1 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar1(:, ispin, isigma))
           dl_eig2 = dl_eig2 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar2(:, ispin, isigma))
-        enddo
+        end do
 
 !        write(message(1),*) 'dl_eig1 ist ', ist, 'ik ', ik, dl_eig1
 !        write(message(2),*) 'dl_eig2 ist ', ist, 'ik ', ik, dl_eig2
@@ -655,9 +655,9 @@ subroutine X(sternheimer_solve_order2)( &
             - (hvar2(1:mesh%np, ispin, isigma) - dl_eig2) * lr1(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik)
         end do
 
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   inhomog(:,:,:,:,:) = inhomog(:,:,:,:,:) * M_HALF
 

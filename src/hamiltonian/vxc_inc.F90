@@ -105,7 +105,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     if(functl(ixc)%family /= XC_FAMILY_NONE .and. iand(functl(ixc)%family, XC_FAMILY_OEP) == 0) then
       ASSERT(iand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
     endif
-  enddo
+  end do
   
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0

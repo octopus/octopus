@@ -233,12 +233,12 @@ contains
       do ii = 1, gr%der%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
         !if (sqrtrho(ii, jj) < CNST(2.5e-6)) sqrtrho(ii, jj) = CNST(2.5e-6)
-      enddo
-    enddo   
+      end do
+    end do   
     
     do jj = 1, nspin
       call dderivatives_lapl(gr%der, sqrtrho(:,jj), laplace(:,jj))
-    enddo
+    end do
     
     do ii = 1, nspin
       !avoid division by zero and set parameters for asymptotics
@@ -253,12 +253,12 @@ contains
           vks(np-jj+1, ii) = aux_hm%ep%vpsl(np-jj+1) + aux_hm%vhartree(np-jj+1)
           asym2 = np - jj + 1
         endif
-      enddo
+      end do
       do jj = asym1+1, asym2-1
         vks(jj, ii) = laplace(jj, ii)/(M_TWO*sqrtrho(jj, ii))
-      enddo
+      end do
       aux_hm%vxc(:,ii) = vks(:,ii) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
-    enddo
+    end do
 
     !ensure correct asymptotic behavior, only for 1D potentials at the moment
     !need to find a way to find all points from where asymptotics should start in 2 and 3D
@@ -267,25 +267,25 @@ contains
         do jj = 1, asym1
           call mesh_r(gr%mesh, jj, rr)
           aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
-        enddo
+        end do
      
         ! calculate constant shift for correct asymptotics and shift accordingly
         call mesh_r(gr%mesh, asym1+1, rr)
         shift  = aux_hm%vxc(asym1+1, ii) + 1.0/sqrt(rr**2 + 1.0)
         do jj = asym1+1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
-        enddo
+        end do
   
         call mesh_r(gr%mesh, asym2-1, rr)
         shift  = aux_hm%vxc(asym2-1, ii) + 1.0/sqrt(rr**2 + 1.0)
         do jj = 1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
-        enddo
+        end do
         do jj = asym2, np
           call mesh_r(gr%mesh, jj, rr)
           aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
-        enddo
-      enddo 
+        end do
+      end do 
     endif !apply asymptotic correction
     
     if(asymptotics == XC_ASYMPTOTICS_NONE) then
@@ -294,19 +294,19 @@ contains
         shift  = aux_hm%vxc(asym1+1, ii)! + aux_hm%ep%vpsl(asym1+1) + aux_hm%vhartree(asym1+1)
         do jj = asym1+1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
-        enddo
+        end do
   
         shift  = aux_hm%vxc(asym2-1, ii)!+ aux_hm%ep%vpsl(asym2-1) + aux_hm%vhartree(asym2-1)
  
         do jj = 1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
-        enddo
-      enddo 
+        end do
+      end do 
     endif  
 
     do ii = 1, nspin
       aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
-    enddo
+    end do
     
     call hamiltonian_update(aux_hm, gr%mesh)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
@@ -427,8 +427,8 @@ contains
           if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
             diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
           endif
-        enddo
-      enddo
+        end do
+      end do
             
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
@@ -442,7 +442,7 @@ contains
       
       do jj = 1, nspin
         aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
-      enddo
+      end do
     end do
 
     !ensure correct asymptotic behavior, only for 1D potentials at the moment
@@ -458,32 +458,32 @@ contains
           if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
             asym2 = np - jj + 1
           endif
-        enddo
+        end do
      
         ! calculate constant shift for correct asymptotics and shift accordingly
         call mesh_r(gr%mesh, asym1+1, rr)
         shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
         do jj = asym1+1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
-        enddo
+        end do
   
         call mesh_r(gr%mesh, asym2-1, rr)
         shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
         do jj = 1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
-        enddo
+        end do
         do jj = asym2, np
           call mesh_r(gr%mesh, jj, rr)
           vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
-        enddo
-      enddo
+        end do
+      end do
     endif
 
     aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
     do jj = 1, nspin
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
-    enddo
+    end do
 
     !calculate final density
 
@@ -535,12 +535,12 @@ contains
 !      write(*,*) 'debug 1'
       do ii = 1, st%d%nspin
         ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vxc_previous_step(:,ii)
-      enddo
+      end do
     else 
       do ii = 1, st%d%nspin
         ks_inversion%aux_hm%vxc(:,ii)  = M_ZERO !hm%ep%vpsl(:)
         ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
-      enddo
+      end do
     end if
     !ks_inversion%aux_hm%ep%vpsl(:)  = M_ZERO ! hm%ep%vpsl(:)
     ks_inversion%aux_hm%ep%vpsl(:)  = hm%ep%vpsl(:)
@@ -561,7 +561,7 @@ contains
     
     do ii = 1, st%d%nspin
       ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(:)
-    enddo
+    end do
 
     vxc = ks_inversion%aux_hm%vxc
     

@@ -63,7 +63,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
       message(1) = "Cannot calculate kernel. This functional does not have fxc available."
       call messages_fatal(1)
     endif
-  enddo
+  end do
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels

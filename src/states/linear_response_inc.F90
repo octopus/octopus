@@ -202,7 +202,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       avg_dl_rho = M_ZERO
       do ispin = 1, st%d%nspin
         avg_dl_rho = avg_dl_rho + X(mf_integrate)(mesh, lr(isigma)%X(dl_rho)(:, ispin))
-      enddo
+      end do
       ef_shift = -TOFLOAT(avg_dl_rho) / dos_ef
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
@@ -211,10 +211,10 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
           do ip = 1, mesh%np
             lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(st%X(psi)(ip, 1, ist, ik))**2 &
               * ef_shift * st%d%kweights(ik) * smear_delta_function(st%smear, xx) * st%smear%el_per_state
-          enddo
-        enddo
-      enddo
-    enddo
+          end do
+        end do
+      end do
+    end do
   endif
       
   POP_SUB(X(lr_build_dl_rho))
@@ -262,7 +262,7 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
     call lalg_copy(mesh%np, plus%X(dl_rho)(:, ik), tmp(:))
     call lalg_copy(mesh%np, minus%X(dl_rho)(:, ik), plus%X(dl_rho)(:, ik))
     call lalg_copy(mesh%np, tmp(:), minus%X(dl_rho)(:, ik))
-  enddo
+  end do
 
   do ik = 1, st%d%nik
     do ist = 1, st%nst

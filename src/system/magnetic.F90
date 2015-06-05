@@ -177,7 +177,7 @@ contains
 
       do idir = 1, max(mesh%sb%dim, 3)
         lmm(idir, ia) = dmf_integrate(mesh, aux(1:mesh%np, idir))
-      enddo
+      end do
 
     end do
 

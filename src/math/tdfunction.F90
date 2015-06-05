@@ -531,7 +531,7 @@ contains
       df = M_TWO * M_PI / (f%final_time-f%init_time)
       do i = 1, f%nfreqs
          wgrid(i) = (i-1)*df
-      enddo
+      end do
     case default
       message(1) = "Illegal mode in tdf_fourier_grid."
       call messages_fatal(1)

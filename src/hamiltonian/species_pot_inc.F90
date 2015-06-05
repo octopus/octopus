@@ -96,7 +96,7 @@
         ! complex spherical harmonics. FIXME: vectorize
         do ip = 1, mesh%np
           call ylmr(xf(ip, 1), xf(ip, 2), xf(ip, 3), ll, mm, ylm(ip))
-        enddo
+        end do
 #else
         ! real spherical harmonics
         call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), ll, mm, ylm(1))
@@ -118,7 +118,7 @@
           lorb = exp(-species_omega(species)*r2/M_TWO)
           do idir = 1, mesh%sb%dim
             lorb(ip) = lorb(ip) * hermite(nn(idir) - 1, x(idir)*sqrt(species_omega(species)))
-          enddo
+          end do
           orb(ip) = orb(ip) + lorb(ip)
         end do
       end if
@@ -186,7 +186,7 @@
           ww = species_zval(species)*submesh%x(ip, 0)/ii
           phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
             exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
-        enddo
+        end do
       endif
 
       SAFE_ALLOCATE(ylm(1:submesh%np))
@@ -195,7 +195,7 @@
       ! complex spherical harmonics. FIXME: vectorize
       do ip = 1, submesh%np
         call ylmr(submesh%x(ip, 1), submesh%x(ip, 2), submesh%x(ip, 3), ll, mm, ylm(ip))
-      enddo
+      end do
 #else
       ! real spherical harmonics
       call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), ll, mm, ylm(1))
@@ -225,7 +225,7 @@
         phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)
         do idir = 1, submesh%mesh%sb%dim
           phi(ip) = phi(ip) * hermite(nn(idir) - 1, submesh%x(ip, idir)*sqrtw)
-        enddo
+        end do
       end do
       
     end if

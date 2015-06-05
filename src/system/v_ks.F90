@@ -880,7 +880,7 @@ contains
             ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + real(ctmp)
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
-        enddo
+        end do
       end if
 
       call profiling_out(prof)

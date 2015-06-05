@@ -154,7 +154,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       write(message(1),'(a,i2)') 'Spacing > box size in direction ', idir
       call messages_fatal(1)
     endif
-  enddo
+  end do
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 

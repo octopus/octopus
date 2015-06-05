@@ -229,7 +229,7 @@ contains
     
       write(iunit, '(2(i8, i6), e25.12)') &
         jatom, jdir, iatom, idir, units_from_atomic(UNITDYNMAT, this%dyn_matrix(jmat, imat))
-    enddo
+    end do
     call io_close(iunit)
 
     POP_SUB(vibrations_out_dyn_matrix_row)
@@ -285,7 +285,7 @@ contains
       if( maxval(this%normal_mode(:, imode)) - abs(minval(this%normal_mode(:, imode))) < -M_EPSILON) then
         this%normal_mode(:, imode) = -this%normal_mode(:, imode)
       endif
-    enddo
+    end do
 
     POP_SUB(vibrations_diag_dyn_matrix)
   end subroutine vibrations_diag_dyn_matrix

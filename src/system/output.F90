@@ -1166,15 +1166,15 @@ contains
           else
             call states_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
           endif
-        enddo
+        end do
         if(states_are_real(st)) then
           call dbgw_write_FS(iunit, dpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         else
           call zbgw_write_FS(iunit, zpsi, field_g, shell_wfn, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         endif
-      enddo
+      end do
       call fourier_shell_end(shell_wfn)
-    enddo
+    end do
 
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
@@ -1219,7 +1219,7 @@ contains
       do itran = 1, symmetries_number(gr%sb%symm)
         mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
         tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
-      enddo
+      end do
       ! some further work on conventions of mtrx and tnp is required!
       
       SAFE_ALLOCATE(ifmin(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
@@ -1244,8 +1244,8 @@ contains
           else
             exit
           endif
-        enddo
-      enddo
+        end do
+      end do
 
       SAFE_ALLOCATE(ngk(1:gr%sb%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
@@ -1253,7 +1253,7 @@ contains
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
         ngk(ik) = shell_wfn%ngvectors
         call fourier_shell_end(shell_wfn)
-      enddo
+      end do
       ngkmax = maxval(ngk)
       
       SAFE_ALLOCATE(atyp(1:geo%natoms))
@@ -1261,7 +1261,7 @@ contains
       do iatom = 1, geo%natoms
         atyp(iatom) = species_index(geo%atom(iatom)%species)
         apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
-      enddo
+      end do
 
       if(any(gr%sb%kpoints%nik_axis(1:3) == 0)) then
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"

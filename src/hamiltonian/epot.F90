@@ -911,7 +911,7 @@ contains
         ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
         do ip = 1, sphere%np
           vpsl(sphere%map(ip)) = vpsl(sphere%map(ip)) + vl(ip)
-        enddo
+        end do
 
         SAFE_DEALLOCATE_A(vl)
         ASSERT(.not.cmplxscl)

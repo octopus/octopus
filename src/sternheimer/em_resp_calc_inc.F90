@@ -298,11 +298,11 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
           zpol(dir1, dir2) = zpol(dir1, dir2) + &
             term * sys%st%d%kweights(ik) * sys%st%occ(ist, ik)
-        enddo
+        end do
 
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
@@ -541,7 +541,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                   do ip = 1, np
                     tmp(ip, idim) = tmp(ip, idim) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
                       * em_lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ik)
-                  enddo
+                  end do
 
                   beta(ii, jj, kk) = beta(ii, jj, kk) &
                     - M_HALF * st%d%kweights(ik) * st%smear%el_per_state &
@@ -569,9 +569,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                         * em_lr(u(1), isigma, w(1))%X(dl_rho)(ip, is1) & 
                         * em_lr(u(2), isigma, w(2))%X(dl_rho)(ip, is2) & 
                         * em_lr(u(3), isigma, w(3))%X(dl_rho)(ip, is3)
-                    enddo
-                  enddo
-                enddo
+                    end do
+                  end do
+                end do
               end do
 
               beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF * X(mf_integrate)(mesh, hpol_density / CNST(6.0))
@@ -696,7 +696,7 @@ contains
                     me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(ist, ist) = &
                       X(mf_dotp)(mesh, st%d%dim, em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, ist, ik), &
                                                  em_lr(jj, isigma,   jfreq)%X(dl_psi)(:, :, ist, ik))
-                  enddo
+                  end do
                 else
                   call states_blockt_mul(mesh, st, st%st_start, st%st_start, &
                     em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
@@ -756,10 +756,10 @@ subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, eta, 
         
         do kdotp_dir = 1, sys%gr%sb%periodic_dim
           call X(lr_orth_response)(sys%gr%mesh, sys%st, kdotp_em_lr(kdotp_dir, em_dir, isigma, ifactor), frequency)
-        enddo
-      enddo
-    enddo
-  enddo
+        end do
+      end do
+    end do
+  end do
 
   POP_SUB(X(post_orthogonalize))
 end subroutine X(post_orthogonalize)
@@ -799,10 +799,10 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
           end forall
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
             (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
-        enddo
+        end do
       end do
     end do
-  enddo
+  end do
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(integrand)

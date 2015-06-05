@@ -64,7 +64,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
         call pert_setup_dir(perturbation, idir1)
         call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
           sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :, idir1))
-      enddo
+      end do
 
       do idir2 = 1, pdim
         do idir1 = 1, pdim
@@ -85,7 +85,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
 !                     X(mf_dotp)(m, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
             orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
             ! mask == .false. means do projection; .true. means do not
-          enddo
+          end do
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
 
@@ -101,10 +101,10 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
           eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) - &
             R_REAL(X(mf_dotp)(mesh, hm%d%dim, sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim)))
 
-        enddo !idir2
-      enddo !idir1
-    enddo !ist
-  enddo !ik
+        end do !idir2
+      end do !idir1
+    end do !ist
+  end do !ik
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
@@ -173,9 +173,9 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
         kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
           sys%st%X(psi)(:, :, ist, ik) * R_CONJ(-mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
 
-      enddo
-    enddo
-  enddo
+      end do
+    end do
+  end do
 
   SAFE_DEALLOCATE_A(pertpsi)
 
@@ -207,9 +207,9 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
         kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = &
           kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
           expectation * sys%st%X(psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
-      enddo
+      end do
     end do
-  enddo
+  end do
 
   SAFE_DEALLOCATE_A(ppsi) 
   POP_SUB(X(kdotp_add_diagonal))

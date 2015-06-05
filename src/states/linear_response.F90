@@ -190,7 +190,7 @@ contains
       else
         call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
       end if
-    enddo
+    end do
 
     do ik = 1, st%d%nik
       do ist = 1, st%nst

@@ -66,19 +66,19 @@ contains
     !first box is inner points
     do jj = 1, ndim
       this%boxdim(1) = this%boxdim(1)*(npoints(jj)-2*enlarge)
-    enddo
+    end do
 
     !all other boxes are boundary points
     
     do ii=2, ndim+1
       do jj=1, ii-2
         this%boxdim(ii)=this%boxdim(ii)*(npoints(jj)-2*enlarge)
-      enddo
+      end do
       this%boxdim(ii)=this%boxdim(ii)*2*enlarge
       do jj=ii, ndim
         this%boxdim(ii)=this%boxdim(ii)*npoints(jj)
-      enddo
-    enddo
+      end do
+    end do
 
     SAFE_DEALLOCATE_A(npoints)
 
@@ -129,7 +129,7 @@ contains
       npoints(ii) = nr(2, ii) - nr(1, ii) + 1
       border(ii) = nr(1, ii) + 2*enlarge
       lowerb(ii) = nr(1, ii)
-    enddo
+    end do
 
     !move coordinates such that inner box is in the upper right corner
     do ii = 1, ndim
@@ -137,7 +137,7 @@ contains
       tempcoord(ii) = tempcoord(ii) + enlarge - nr(1,ii)
       tempcoord(ii) = mod(tempcoord(ii), npoints(ii))
       tempcoord(ii) = tempcoord(ii) + nr(1,ii)  
-    enddo
+    end do
 
     !determine which box we are in
     boxnumb = 1
@@ -146,7 +146,7 @@ contains
         boxnumb = ii + 1
         exit 
       endif 
-    enddo
+    end do
 
     !transform coordinates
     icoord = 0
@@ -156,7 +156,7 @@ contains
       do ii = ndim, 1, -1
         icoord = icoord*npoints(ii)
         icoord = icoord + tempcoord(ii) - border(ii)
-      enddo
+      end do
       icoord = icoord+1
       if(icoord > this%boxdim(1) .or. icoord < 1) then
         message(1) = "hypercube box point outside box"
@@ -166,12 +166,12 @@ contains
       do jj = 1, boxnumb - 2
         npoints(jj) = npoints(jj) - 2*enlarge
         lowerb(jj) = nr(1, jj) + 2*enlarge
-      enddo
+      end do
       npoints(boxnumb-1) = 2*enlarge
       do jj=ndim, 1, -1
         icoord = icoord*npoints(jj)
         icoord = icoord + (tempcoord(jj) - lowerb(jj))
-      enddo
+      end do
       icoord = icoord + 1    
       if(icoord > this%boxdim(boxnumb) .or. icoord < 1) then
         message(1) = "hypercube box point outside box"
@@ -179,7 +179,7 @@ contains
       else
         do jj = 1, boxnumb - 1
           icoord = icoord + this%boxdim(jj)
-        enddo
+        end do
       endif
     endif
 
@@ -208,13 +208,13 @@ contains
       if(icoord > jj) then
         boxnumb = ii + 1
       endif
-    enddo
+    end do
 
     do ii = 1, ndim
       npoints(ii) = nr(2, ii) - nr(1, ii)+1
       border(ii) = nr(1, ii) + 2*enlarge
       lowerb(ii) = nr(1, ii)
-    enddo
+    end do
 
     tempcoord=icoord
 
@@ -226,13 +226,13 @@ contains
         tempcoord = tempcoord - coord(ii)
         tempcoord = tempcoord/npoints(ii)
         coord(ii) = coord(ii) + border(ii)
-      enddo
+      end do
     else
       do ii = 1, boxnumb - 2
         npoints(ii) = npoints(ii) - 2*enlarge
         lowerb(ii) = nr(1,ii) + 2*enlarge
         tempcoord = tempcoord - this%boxdim(ii)
-      enddo
+      end do
       npoints(boxnumb - 1) = 2*enlarge
       tempcoord = tempcoord - this%boxdim(boxnumb-1)
       tempcoord = tempcoord - 1
@@ -241,12 +241,12 @@ contains
         tempcoord = tempcoord - coord(ii)
         tempcoord = tempcoord/npoints(ii)
         coord(ii) = coord(ii) + lowerb(ii)
-      enddo
+      end do
     endif
 
     do ii = 1, ndim
       npoints(ii) = nr(2,ii) - nr(1,ii) + 1
-    enddo
+    end do
 
     !move inner box back to the middle
 
@@ -256,7 +256,7 @@ contains
         coord(ii) = coord(ii) + npoints(ii)
       endif
       coord(ii) = coord(ii) + nr(1,ii)
-    enddo
+    end do
 
   end subroutine hypercube_i_to_x
 

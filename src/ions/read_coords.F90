@@ -304,13 +304,13 @@ contains
         read(iunit, *) ! PRIMVEC
         do jdir = 1, space%dim
           read(iunit, *) ! lattice vectors
-        enddo
+        end do
         read(iunit, *) ! PRIMCOORD istep
         read(iunit, *) gf%n, int_one
         do ia = 1, gf%n
           read(iunit, *) ! atoms
-        enddo
-      enddo
+        end do
+      end do
 
       read(iunit, '(a256)') str
       if(str(1:7) /= 'PRIMVEC') then
@@ -330,7 +330,7 @@ contains
         read(iunit, *) latvec(1:space%dim, jdir)
         gf%lsize(jdir) = M_HALF * units_to_atomic(units_inp%length, latvec(jdir, jdir))
         latvec(jdir, jdir) = M_ZERO
-      enddo
+      end do
       if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
         message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
         call messages_fatal(1)

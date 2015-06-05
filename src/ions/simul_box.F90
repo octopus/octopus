@@ -513,7 +513,7 @@ contains
             box_npts = box_npts + 1
             sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
           endif
-        enddo
+        end do
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
@@ -946,7 +946,7 @@ contains
         write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
           units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
         call messages_info(1, iunit)
-      enddo
+      end do
     end if
 
     if(sb%box_shape == CYLINDER) then
@@ -1140,7 +1140,7 @@ contains
         ! and inside the simulation box?
         do idir = 1, sb%dim
           xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
-        enddo
+        end do
         rr = sqrt(sum(xx(1:sb%dim, ip)**2))
         call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
         in_box(ip) = in_box(ip) .and. (re /= M_ZERO)
@@ -1483,7 +1483,7 @@ contains
         xx(:) = abs(geo%atom(iatom)%x(:) - geo%atom(jatom)%x(:))
         do idir = 1, sb%periodic_dim
           xx(idir) = xx(idir) - M_TWO * sb%lsize(idir) * floor(xx(idir)/(M_TWO * sb%lsize(idir)) + M_HALF)
-        enddo
+        end do
         rmin = min(sqrt(sum(xx**2)), rmin)
       end do
     end do
@@ -1492,7 +1492,7 @@ contains
       ! what if the nearest neighbors are periodic images?
       do idir = 1, sb%periodic_dim
         rmin = min(rmin, abs(sb%lsize(idir)))
-      enddo
+      end do
     endif
 
     POP_SUB(simul_box_min_distance)

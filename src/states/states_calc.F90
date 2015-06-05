@@ -349,7 +349,7 @@ contains
       write(iunit, '(a)', advance='no') '# index  '
       do idir = 1, sb%dim
         write(iunit, '(2a)', advance='no') 'k', index2axis(idir)
-      enddo
+      end do
       write(iunit, '(a)') ' eigenvalue  degeneracy matrix'
 
       do is = 1, st%nst*st%d%nik
@@ -360,11 +360,11 @@ contains
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is))))
         do idir = 1, sb%dim
           write(iunit, '(e24.16)', advance='no') kpoint(idir)
-        enddo
+        end do
         write(iunit, '(e24.16)', advance='no') eigenval_sorted(is)
         do js = 1, st%nst * st%d%nik
           write(iunit, '(i3)') degeneracy_matrix(is, js)
-        enddo
+        end do
       end do
     end if
     if(iunit > 0) call io_close(iunit)

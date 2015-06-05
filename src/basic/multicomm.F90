@@ -402,7 +402,7 @@ contains
         do kk = 1, mc%n_index
           call messages_write(par_types(kk), fmt = '2x,a12,":",1x')
           call messages_write(n_group_max(kk), new_line = .true.)
-        enddo
+        end do
         call messages_info()
       endif
 
@@ -643,7 +643,7 @@ contains
             call messages_info(1, all_nodes = .true.)
           endif
           call MPI_Barrier(mpi_world%comm, mpi_err)
-        enddo
+        end do
       endif
 
 #else

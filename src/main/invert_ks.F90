@@ -81,14 +81,14 @@ contains
     rho = M_ZERO
     do ii = 1, nspin
       rho(:) = rho(:) + target_rho(:,ii)
-    enddo
+    end do
     
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
 
     do ii = 1, nspin
       hm%vhxc(:,ii) = hm%vhartree(:)
-    enddo
+    end do
 
     call hamiltonian_update(hm, sys%gr%mesh)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
@@ -125,8 +125,8 @@ contains
         if (abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
           diffdensity = abs(sys%ks%ks_inversion%aux_st%rho(ii,jj)-target_rho(ii,jj))
         endif
-      enddo
-    enddo
+      end do
+    end do
     write (message(1),'(a,F16.6)') 'Achieved difference in densities wrt target:', &
         diffdensity
     call messages_info(1)

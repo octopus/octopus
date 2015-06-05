@@ -120,7 +120,7 @@ contains
         species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE      .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_FROZEN
       if(any_non_spherical)exit
-    enddo
+    end do
     if(any_non_spherical) then
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1)
@@ -207,7 +207,7 @@ contains
         ! this should be matmul(klattice, geo atom x)
         position(1:dim4syms, iatom) = matmul (klattice, geo%atom(iatom)%x(1:dim4syms)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%species)
-      enddo
+      end do
 
       this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
@@ -219,7 +219,7 @@ contains
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
             ' reduced coords ', position(:, iatom), ' cartesian coords ', geo%atom(iatom)%x(:)
           call messages_info(1)
-        enddo
+        end do
 
         call init_identity()
         SAFE_DEALLOCATE_A(rotation)
@@ -258,7 +258,7 @@ contains
             call messages_info(1)
           endif
         endif
-      enddo
+      end do
       if(.not. found_identity) then
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
         call messages_fatal(1)

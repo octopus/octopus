@@ -86,7 +86,7 @@
                 tg%st%zpsi(:,:, ist, ik))
             end do
           end do
-        enddo
+        end do
       end do
       call parse_block_end(blk)
       call density_calc(tg%st, gr, tg%st%rho)

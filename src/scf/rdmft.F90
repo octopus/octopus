@@ -513,7 +513,7 @@ contains
         do jst = 1, ist
           FO(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
           FO(jst, ist) = FO(ist, jst)
-        enddo
+        end do
       end do
     else
       do ist = 1, st%nst
@@ -529,8 +529,8 @@ contains
             FO(jst, ist) = rdm%scale_f*FO(jst,ist)/abs(FO(jst, ist))
           endif
           FO(ist, jst) = FO(jst, ist)
-        enddo
-      enddo
+        end do
+      end do
     endif
 
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
@@ -603,7 +603,7 @@ contains
     call density_calc(st, gr, rho)
     do ist =1, hm%d%ispin
       rho_tot(:) = rho(:, ist)
-    enddo
+    end do
     call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.) !the Hartree potential
     
     do ist = 1, st%nst
@@ -721,7 +721,7 @@ contains
     do ist = 1, rdm%st%nst
       do jst = 1, rdm%st%nst
         V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
-      enddo
+      end do
     end do
 
     !Calculate exchange contribution
@@ -793,8 +793,8 @@ contains
     do is = 1, nspin_
       do jdm = 1, st%d%dim
         call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
-      enddo
-    enddo
+      end do
+    end do
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
@@ -805,8 +805,8 @@ contains
         rho(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
         rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho, v_ij(:, ist, jst))
         rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
-      enddo
-    enddo
+      end do
+    end do
     
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(rho)

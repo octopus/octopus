@@ -569,7 +569,7 @@ contains
         if(species_is_ps(geo%atom(iatom)%species)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
         endif
-      enddo
+      end do
 
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
         f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)

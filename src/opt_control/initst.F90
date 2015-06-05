@@ -202,7 +202,7 @@ contains
                   psi%zpsi(:,:, is, ik))
               end do
             end do
-          enddo
+          end do
         end do
         call parse_block_end(blk)
       else

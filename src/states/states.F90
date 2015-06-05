@@ -746,7 +746,7 @@ contains
           call messages_warning(1)
           call messages_input_error("Occupations")
         endif
-      enddo
+      end do
 
       ! Now we fill all the "missing" states with the maximum occupation.
       if(st%d%ispin == UNPOLARIZED) then
@@ -1755,7 +1755,7 @@ contains
             call lmpi_gen_allgatherv(st%lnst, lspin, tmp, lspin2, st%mpi_grp)
             do ist = 1, st%nst
               st%spin(idir, ist, ik) = lspin2(ist)
-            enddo
+            end do
           end do
           SAFE_DEALLOCATE_A(lspin)
           SAFE_DEALLOCATE_A(lspin2)

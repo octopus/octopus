@@ -203,7 +203,7 @@ contains
         do idir2 = idir, pdim
           call lr_init(kdotp_vars%lr2(1, idir, idir2))
           call lr_allocate(kdotp_vars%lr2(1, idir, idir2), sys%st, sys%gr%mesh)
-        enddo
+        end do
       endif
 
       ! load wavefunctions
@@ -229,7 +229,7 @@ contains
               message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
               call messages_warning(1)
             end if
-          enddo
+          end do
         endif
       end if
     end do
@@ -301,7 +301,7 @@ contains
               have_restart_rho = .false., have_exact_freq = .true.)
           endif
 
-        enddo
+        end do
         message(1) = ""
         call messages_info(1)
       endif
@@ -331,7 +331,7 @@ contains
       if(calc_2nd_order) then
         do idir2 = idir, pdim
           call lr_dealloc(kdotp_vars%lr2(1, idir, idir2))
-        enddo
+        end do
       endif
     end do
 
@@ -477,20 +477,20 @@ contains
       write(iunit,'(a)',advance='no') '# state    energy       '
       do idir = 1, periodic_dim
         write(iunit,'(3a)',advance='no') 'vg(', trim(index2axis(idir)), ')       '
-      enddo
+      end do
       write(iunit,'(a)')
 
       write(iunit,'(3a)',advance='no')       '#           [', trim(units_abbrev(units_out%energy)), ']     '
       do idir = 1, periodic_dim
         write(iunit,'(3a)',advance='no') '[', trim(units_abbrev(units_out%velocity)), '] '
-      enddo
+      end do
       write(iunit,'(a)')
 
       do ist = 1, st%nst
         write(iunit,'(i5,f12.5,3f12.5)') ist, units_from_atomic(units_out%energy, st%eigenval(ist, ik)), &
           velocity(1:periodic_dim, ist, ik)
-      enddo
-    enddo
+      end do
+    end do
 
     call io_close(iunit)
     POP_SUB(kdotp_write_band_velocity)
@@ -529,7 +529,7 @@ contains
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
-      enddo
+      end do
       
       write(iunit,'(a)')
       write(iunit,'(a)') '# Effective-mass tensors'
@@ -540,10 +540,10 @@ contains
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik), invert = .true.)
         call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
-      enddo
+      end do
 
       call io_close(iunit)
-    enddo
+    end do
 
     POP_SUB(kdotp_write_eff_mass)
   end subroutine kdotp_write_eff_mass
@@ -585,14 +585,14 @@ contains
              units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
            call messages_info(1)
            ist2 = ist2 + 1
-         enddo
+         end do
 
          ist = ist2
-      enddo
+      end do
 
       write(message(1),'()')
       call messages_info(1)
-    enddo
+    end do
 
     message(1) = "Velocities and effective masses are not correct within degenerate subspaces."
     call messages_warning(1)

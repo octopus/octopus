@@ -251,7 +251,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
             'Debug: RMMDIIS Eigensolver - ik', ik, ' ist ', ist, ' iter ', iter, ' res ', sqrt(abs(eigen(ist - minst + 1)))
           call messages_info(1)
-        enddo
+        end do
       end if
 
     end do ! iter
@@ -423,7 +423,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
             'Debug: RMMDIIS MIN Eigensolver - ik', ik, ' ist ', ist, ' iter ', isd, ' res ', sqrt(abs(diff(ist - minst + 1)))
           call messages_info(1)
-        enddo
+        end do
       end if
 
       call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)

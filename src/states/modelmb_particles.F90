@@ -262,7 +262,7 @@ contains
         this%nparticles_per_type(this%particletype(ipart)) + 1
       this%particles_of_type(this%nparticles_per_type(this%particletype(ipart)), &
         this%particletype(ipart)) = ipart
-    enddo
+    end do
     
     this%max_particles_per_type = maxval(this%nparticles_per_type)
     itmp = this%max_particles_per_type

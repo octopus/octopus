@@ -637,9 +637,9 @@ contains
               berry_conv = berry_conv .and. &
                 (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
                 .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
-            enddo
+            end do
             if(berry_conv) exit
-          enddo
+          end do
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0

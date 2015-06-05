@@ -1022,8 +1022,8 @@ contains
     do idir = 1, 3
       do idir2 = 1, 3
         lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
-      enddo
-    enddo
+      end do
+    end do
     
     iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write')
 
@@ -1040,7 +1040,7 @@ contains
     do idir = 1, mesh%sb%dim
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
         lattice_vectors(idir2, idir)), idir2 = 1, 3)
-    enddo
+    end do
 
     do iz = 1, my_n(3)
       do iy = 1, my_n(2)

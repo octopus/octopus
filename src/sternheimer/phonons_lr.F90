@@ -233,7 +233,7 @@ contains
 
     do imat = 1, start_mode - 1
       call vibrations_out_dyn_matrix_row(vib, imat)
-    enddo
+    end do
 
     do imat = start_mode, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
@@ -306,7 +306,7 @@ contains
           message(1) = "Could not write restart information."
           call messages_warning(1)
         end if
-      enddo
+      end do
       write(line(1), *) imat, (vib%infrared(imat, idir), idir = 1, ndim)
       call restart_write(restart_dump, iunit_restart, line, 1, ierr)
       if (ierr /= 0) then
@@ -359,7 +359,7 @@ contains
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
-      enddo
+      end do
     endif
     call restart_end(restart_load)
     call restart_end(restart_dump)
@@ -423,7 +423,7 @@ contains
       write(iunit_ir, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
       do idir = 1, ndim
         write(iunit_ir, '(a14)', advance = 'no') '<' // index2axis(idir) // '> [' // trim(units_abbrev(units_out%length)) // ']'
-      enddo
+      end do
       write(iunit_ir, '(a14)') 'average [' // trim(units_abbrev(units_out%length)) // ']'
 
       do iatom = 1, natoms
@@ -462,7 +462,7 @@ contains
       idir = vibrations_get_dir(vib, imat)
       iatom = vibrations_get_atom(vib, imat)
       born%charge(1:vib%ndim, idir, iatom) = -vib%infrared(imat, 1:vib%ndim)
-    enddo
+    end do
 
     POP_SUB(born_from_infrared)
   end subroutine born_from_infrared
@@ -533,7 +533,7 @@ contains
         iatom = vibrations_get_atom(this, jmat)
         idir  = vibrations_get_dir (this, jmat)
         forces(iatom, idir) = this%normal_mode(jmat, imat)
-      enddo
+      end do
       call write_xsf_geometry(iunit, geo, mesh, forces = forces, index = imat)
     end do
     SAFE_DEALLOCATE_A(forces)
@@ -568,7 +568,7 @@ contains
             write(message(1),'(a,i9,a,i9)') "Corruption of restart data: column ", jmode, " is labeled as ", jmode_read
             call messages_fatal(1)
           endif
-        enddo
+        end do
 
         call restart_read(restart, iunit, line, 1, ierr)
         if(ierr /= 0) exit

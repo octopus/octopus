@@ -269,7 +269,7 @@ subroutine poisson_solve_direct(this, pot, rho)
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
           endif
-        enddo
+        end do
       endif
       tmp = dmf_integrate(this%der%mesh, pvec)
 
