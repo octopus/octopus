@@ -373,15 +373,15 @@ contains
 
     ASSERT(ps%g%nrval > 0)
 
-    SAFE_ALLOCATE( vsr(1:ps%g%nrval))
-    SAFE_ALLOCATE( vlr(1:ps%g%nrval))
-    SAFE_ALLOCATE( nlr(1:ps%g%nrval))
+    SAFE_ALLOCATE(vsr(1:ps%g%nrval))
+    SAFE_ALLOCATE(vlr(1:ps%g%nrval))
+    SAFE_ALLOCATE(nlr(1:ps%g%nrval))
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*sigma_erf)
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
-      if ( ii > 1) then
+      if (ii > 1) then
         vlr(ii)  = -ps%z_val*loct_erf(r/(sigma_erf*sqrt(M_TWO)))/r
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)

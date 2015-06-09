@@ -692,8 +692,8 @@ contains
           call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, ep%Imvpsl, &
             rho_core = st%rho_core, density = density, Imdensity = Imdensity)
         else
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, &
-          rho_core = st%rho_core, density = density)
+          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, &
+            rho_core = st%rho_core, density = density)
         end if
       else
         if(cmplxscl) then
@@ -709,8 +709,10 @@ contains
       call profiling_in(epot_reduce, "EPOT_REDUCE")
 
       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, vpsl, dim = gr%mesh%np)
-      if(associated(st%rho_core)) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
-      if(ep%have_density) call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
+      if(associated(st%rho_core)) &
+        call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
+      if(ep%have_density) &
+        call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
       ASSERT(.not.cmplxscl) ! not implemented
       call profiling_out(epot_reduce)
     end if

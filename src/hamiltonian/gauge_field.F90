@@ -104,7 +104,7 @@ contains
     type(gauge_field_t),     intent(out)   :: this
     type(simul_box_t),       intent(in)    :: sb
 
-    integer :: ii, iop, iop2, ik, default
+    integer :: ii, iop, iop2, ik
     type(block_t) :: blk
 
     PUSH_SUB(gauge_field_init)
