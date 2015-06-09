@@ -118,9 +118,6 @@ module ps_m
                                   !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
     
-    FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
-    FLOAT :: a_erf                !< the a constant in erf(ar)/r
-
     type(spline_t) :: density     !< the atomic density
     
     logical :: is_separated
@@ -362,35 +359,33 @@ contains
 
   end subroutine ps_init
 
+  ! ---------------------------------------------------------
+  !> separate the local potential into (soft) long-ranged and (hard) short-ranged parts
   subroutine ps_separate(ps)
     type(ps_t),        intent(inout) :: ps
 
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
     FLOAT :: r
     integer :: ii
+    FLOAT, parameter :: sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value
     
     PUSH_SUB(ps_separate)
 
-    !separate the local potential into (soft) long-ranged and (hard) short-ranged parts
-    
-    ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
-    ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
-    
     ASSERT(ps%g%nrval > 0)
 
     SAFE_ALLOCATE( vsr(1:ps%g%nrval))
     SAFE_ALLOCATE( vlr(1:ps%g%nrval))
     SAFE_ALLOCATE( nlr(1:ps%g%nrval))
     
-    vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
+    vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*sigma_erf)
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
       if ( ii > 1) then
-        vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
+        vlr(ii)  = -ps%z_val*loct_erf(r/(sigma_erf*sqrt(M_TWO)))/r
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
-      nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
+      nlr(ii) = -ps%z_val*M_ONE/(sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/sigma_erf**2)
     end do
     
     call spline_init(ps%vlr)
@@ -415,6 +410,7 @@ contains
 
     POP_SUB(ps_separate)
   end subroutine ps_separate
+  
   
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
@@ -971,6 +967,7 @@ contains
     POP_SUB(ps_upf_load)
   end subroutine ps_upf_load
 
+  
   ! ---------------------------------------------------------
   subroutine ps_qso_load(ps, ps_qso)
     type(ps_t),     intent(inout) :: ps
@@ -1062,8 +1059,8 @@ contains
   end subroutine ps_qso_load
 
 
+  ! ---------------------------------------------------------
   !> Returns the number of atomic orbitals that can be used for LCAO calculations.
-  !!
   pure integer function ps_niwfs(ps)
     type(ps_t), intent(in) :: ps
 
@@ -1076,8 +1073,9 @@ contains
     end do
 
   end function ps_niwfs
-  ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
   integer function ps_get_type(filename) result(type)
     character(len=*), intent(in) :: filename
 
@@ -1101,16 +1099,16 @@ contains
     POP_SUB(ps_get_type)    
   end function ps_get_type
 
+
   !---------------------------------------
-  
   pure integer function ps_type(ps)
     type(ps_t), intent(in) :: ps
 
     ps_type = ps%flavour
   end function ps_type
 
+  
   !---------------------------------------
-
   pure logical function ps_has_density(ps) result(has_density)
     type(ps_t), intent(in) :: ps
 
@@ -1123,8 +1121,8 @@ contains
 
   end function ps_has_density
 
-  !---------------------------------------
   
+  !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)
     type(ps_t), intent(in) :: ps
 
