@@ -522,8 +522,8 @@ contains
 #if defined(HAVE_MPI)
       integer :: dim_mask(MAX_INDEX)
       integer :: i_strategy, irank
-      integer :: reorder, periodic_mask(MAX_INDEX)
-      integer, allocatable :: periodic_mask_tmp(:)
+      integer :: reorder
+      integer, allocatable :: periodic_mask(:)
       integer :: coords(MAX_INDEX)
       integer :: new_comm
       character(len=6) :: node_type
@@ -537,7 +537,7 @@ contains
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
 #if defined(HAVE_MPI)
-      SAFE_ALLOCATE(periodic_mask_tmp(1:mc%n_index))
+      SAFE_ALLOCATE(periodic_mask(1:mc%n_index))
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
@@ -556,9 +556,8 @@ contains
         if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) &
           periodic_mask(P_STRATEGY_STATES) = 1
 
-        periodic_mask_tmp(1:mc%n_index) = periodic_mask(1:mc%n_index)
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -579,7 +578,7 @@ contains
         call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
 
         reorder = 0
-        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%master_comm, mpi_err)
+        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
 
         call MPI_Comm_free(new_comm, mpi_err)
 
@@ -623,7 +622,7 @@ contains
         mc%st_kpt_comm = base_grp%comm
         mc%dom_st_kpt_comm = base_grp%comm
       end if
-      SAFE_DEALLOCATE_A(periodic_mask_tmp)
+      SAFE_DEALLOCATE_A(periodic_mask)
 
       ! This is temporary debugging information.
       if(in_debug_mode .and. mc%par_strategy /= P_STRATEGY_SERIAL) then

@@ -1878,7 +1878,7 @@ contains
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
     
     if(st%scalapack_compatible) then
-      if(mc%have_slaves) &
+      if(multicomm_have_slaves(mc)) &
         call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)")
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
     else
