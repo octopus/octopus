@@ -121,9 +121,6 @@ module ps_m
     FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
     FLOAT :: a_erf                !< the a constant in erf(ar)/r
 
-    type(spline_t) :: vion        !< the potential that other ions see
-    type(spline_t) :: dvion       !< the potential that other ions see
-
     type(spline_t) :: density     !< the atomic density
     
     logical :: is_separated
@@ -368,7 +365,7 @@ contains
   subroutine ps_separate(ps)
     type(ps_t),        intent(inout) :: ps
 
-    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
+    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
     FLOAT :: r
     integer :: ii
     
@@ -384,7 +381,6 @@ contains
     SAFE_ALLOCATE( vsr(1:ps%g%nrval))
     SAFE_ALLOCATE( vlr(1:ps%g%nrval))
     SAFE_ALLOCATE( nlr(1:ps%g%nrval))
-    SAFE_ALLOCATE(vion(1:ps%g%nrval))
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
@@ -392,7 +388,6 @@ contains
       r = ps%g%rofi(ii)
       if ( ii > 1) then
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
-        vion(ii) = -ps%z_val/r - vlr(ii)
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
       nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
@@ -412,19 +407,9 @@ contains
     call spline_init(ps%vl)
     call spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
     
-    ! The ion-ion interaction
-    vion(1) = vion(2)
-    
-    call spline_init(ps%vion)
-    call spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
-
-    call spline_init(ps%dvion)
-    call spline_der(ps%vion, ps%dvion)
-
     SAFE_DEALLOCATE_A(vsr)
     SAFE_DEALLOCATE_A(vlr)
     SAFE_DEALLOCATE_A(nlr)
-    SAFE_DEALLOCATE_A(vion)
     
     ps%is_separated = .true.
 
@@ -637,8 +622,6 @@ contains
       call spline_end(ps%vlr)
       call spline_end(ps%vlr_sq)
       call spline_end(ps%nlr)
-      call spline_end(ps%vion)
-      call spline_end(ps%dvion)
     end if
 
     call spline_end(ps%kb)
