@@ -61,8 +61,8 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
-    integer           :: ist, jst, ik, ib, idim, inst, inik, id, is, ip, ierr, &
-                         no_states, istype, freeze_orbitals, ncols
+    integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
+                         no_states, istype, freeze_orbitals
     type(block_t)     :: blk
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     type(restart_t) :: restart

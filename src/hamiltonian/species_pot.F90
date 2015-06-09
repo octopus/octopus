@@ -604,6 +604,8 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(species_get_local)
+
+    ASSERT(.not. simul_box_is_periodic(mesh%sb))
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
       select case(species_type(species))
