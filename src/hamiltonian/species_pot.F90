@@ -588,6 +588,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> used when the density is not available, or otherwise the Poisson eqn would be used instead
   subroutine species_get_local(species, mesh, x_atom, vl, Imvl)
     type(species_t), target, intent(in)  :: species
     type(mesh_t),            intent(in)  :: mesh
@@ -605,7 +606,6 @@ contains
 
     PUSH_SUB(species_get_local)
 
-    ASSERT(.not. simul_box_is_periodic(mesh%sb))
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
       select case(species_type(species))
