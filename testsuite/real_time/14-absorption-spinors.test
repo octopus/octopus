@@ -77,8 +77,8 @@ Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.05-spectrum_compressed_sensing.inp
 Precision : 2e-4
 match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.996753
-Precision : 0.02
-match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polarizability (from sum rule)', 8) ; 11.6526365
+Precision : 0.03
+match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polarizability (from sum rule)', 8) ; 11.6627675
 
 #Precision : 1e-7
 
