@@ -180,10 +180,8 @@ for y in $tests; do
     test_name=`echo $y | sed "s|$testsuite/||"`
     ybase=`basename $y .test`
     if [ "${local_run}" == "yes" ]; then
-	bin_directory=`pwd`/../src/main
 	runtest_directory=$testsuite
     else
-	bin_directory=$prefix/bin
 	runtest_directory=$bin_directory
     fi
     if [ -d "${bin_directory}" ]; then
@@ -248,15 +246,15 @@ echo "*****************************"
 echo "  Running octopus testsuite  "
 echo "*****************************"
 echo
-echo " Warning: Running the testsuite can take from several minutes"
+echo " Note: Running the testsuite can take from several minutes"
 echo " to more than two hours."
 echo
 
 if [ -z $OCT_TEST_NJOBS ] ; then
 
     echo
-    echo " The environment variable OCT_TEST_NJOBS is not set, Octopus"
-    echo " will determine automatically the ideal number of jobs:"
+    echo " The environment variable OCT_TEST_NJOBS is not set. Octopus"
+    echo " will determine automatically an appropriate number of jobs:"
     echo
     
     # some Linux
@@ -294,12 +292,13 @@ if [ -z $OCT_TEST_NJOBS ] ; then
 	bin_directory=$prefix/bin
     fi
 
-    if `$bin_directory/octopus -c | grep -q mpi` ; then
+    options=" "`$bin_directory/octopus -c`" "
+    if [[ $options =~ " mpi " ]]; then
 	OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/4))
-	echo "  - This is an MPI run, each job can use up to 4 processors."
+	echo "  - This is an MPI run. Each job can use up to 4 processors."
     fi
 
-    if `$bin_directory/octopus -c | grep -q openmp` ; then
+    if [[ $options =~ " openmp " ]]; then
 	if [ ! -z $OMP_NUM_THREADS ] ; then
 	    OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/$OMP_NUM_THREADS))
 	    echo "  - This is an OpenMP run. OMP_NUM_THREADS is set to $OMP_NUM_THREADS processors per job."
