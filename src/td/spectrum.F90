@@ -106,7 +106,6 @@ module spectrum_m
   FLOAT :: time_step_, energy_step_
   CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:), funcw_(:)
   type(fft_t), save :: fft_handler
-  CMPLX :: vv_(MAX_DIM)
   integer :: is_, ie_, default
 
 contains
