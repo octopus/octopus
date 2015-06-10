@@ -299,7 +299,7 @@ contains
     integer            :: dim, itstep, ik, ist, idim, isp, il, ikp, dir, mpidim
     CMPLX, allocatable :: gpsi(:,:), psi(:)
     CMPLX, allocatable :: wfact(:), gwfact(:,:)
-    FLOAT              :: vp(1:MAX_DIM)
+    FLOAT              :: vp(1:MAX_DIM), vpaux(1:MAX_DIM)
     integer            :: start(1:MAX_DIM), end(1:MAX_DIM), ierr
     FLOAT              :: vec
     integer            :: mpirank, ip
@@ -333,7 +333,9 @@ contains
       ! get current laser field
       vp = M_ZERO
       do il = 1, hm%ep%no_lasers
-        call laser_field(hm%ep%lasers(il), vp(1:dim), iter*dt) 
+        vpaux = M_ZERO
+        call laser_field(hm%ep%lasers(il), vpaux(1:dim), iter*dt) 
+        vp(1:dim) = vp(1:dim) - vpaux(1:dim)
       end do
    
       ! save Volkov phase using the previous time step
