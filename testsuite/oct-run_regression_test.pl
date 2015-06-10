@@ -332,8 +332,6 @@ while ($_ = <TESTSUITE>) {
             die255("Could not find input file '$input_file'.");
           }
       
-	  $command_suffix = $command;
-
 	  # serial or MPI run?
 	  if ( $is_parallel && $np ne "serial") {
             if("$global_np" ne "") {
@@ -352,9 +350,9 @@ while ($_ = <TESTSUITE>) {
 		$specify_np = "-n $np";
 		$my_nslots = "";
 	    }
-	    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command_suffix > out";
+	    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
 	  } else {
-	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
+	      $command_line = "cd $workdir; $aexec $command > out ";
 	  }
 
 	  # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
