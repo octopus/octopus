@@ -113,7 +113,8 @@ module simul_box_m
     FLOAT :: volume_element                      !< the volume element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
-
+    logical :: nonorthogonal
+    
     type(kpoints_t) :: kpoints                   !< the k-points
 
     integer :: dim
@@ -643,22 +644,21 @@ contains
       !% Note: This version of Octopus should support non-orthogonal cells.
       !%End
       sb%rlattice_primitive = M_ZERO
+      sb%nonorthogonal = .false.
       forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
       if (parse_block('LatticeVectors', blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
             call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
-          end do
+            if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
+          enddo
         end do
         call parse_block_end(blk)
 
-        if (abs(sb%rlattice_primitive(1,2)) + abs(sb%rlattice_primitive(2,3)) +abs(sb%rlattice_primitive(1,3)) > 1.d-12) then
-          message(1) = 'Note that non-orthogonal unit cells are not correct yet. They do run, but the results are not ok.'
-          call messages_warning (1)
+        if(sb%nonorthogonal) &
           call messages_experimental('Non-orthogonal unit cells')
-        end if
-
+        
 ! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
         if (parse_is_defined('Lsize')) then
           sb%lsize(:) = M_ZERO
