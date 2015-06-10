@@ -214,12 +214,15 @@ contains
     c_id = val / 1000
     x_id = val - c_id*1000
 
+    ! FIXME: we rarely need this. We should only parse when necessary.
+    
     !%Variable XCKernel
     !%Type integer
     !%Section Hamiltonian::XC
     !%Description
     !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
     !% The options are the same as <tt>XCFunctional</tt>.
+    !% Note: the kernel is only needed for Casida, Sternheimer, or optimal-control calculations.
     !% Defaults:
     !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
     !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
@@ -436,7 +439,6 @@ contains
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
-        
 
     end select
 
