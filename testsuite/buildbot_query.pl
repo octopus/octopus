@@ -60,7 +60,12 @@ if(@ARGV > 0) {
     open(ONEBOX, ">>one_box_per_builder") or die "Cannot open one_box_per_builder.\n";
     print ONEBOX "\n";
     foreach(@ARGV) {
-	print ONEBOX "LOCAL FILENAME: $_\n";
+	if(-e $_) {
+	    print ONEBOX "LOCAL FILENAME: $_\n";
+	} else {
+	    print STDERR "Specified local file '$_' does not exist.\n";
+	    exit(1);
+	}
     }
     close(ONEBOX);
 }
