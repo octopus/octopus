@@ -17,6 +17,8 @@
 !!
 !! $Id$
 
+!> This utility runs in parallel and can be used for post-processing of the results of Output.
+
 #include "global.h"
 
 program oct_convert
@@ -105,13 +107,13 @@ contains
 
     !%Variable ConvertFilename
     !%Type string
-    !%Default density
+    !%Default "density"
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The original filename which is going to be converted in the format
     !% specified in <tt>OutputHow</tt>. It is going to convert various files, it should 
     !% only contain the beginning of the name. For instance, in the case of the restart 
-    !% files it should be one space ' '.
+    !% files, it should be one space ' '.
     !%End
     call parse_variable('ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
