@@ -525,7 +525,7 @@ contains
       integer :: reorder
       integer, allocatable :: periodic_mask(:)
       integer :: coords(MAX_INDEX)
-      integer :: new_comm
+      integer :: new_comm, new_comm_size
       character(len=6) :: node_type
 #endif
 
@@ -576,10 +576,18 @@ contains
         end if
 
         call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
-
+        ASSERT(new_comm /= MPI_COMM_NULL)
+        call MPI_Comm_size(new_comm, new_comm_size, mpi_err)
+        
         reorder = 0
+        if(product(mc%group_sizes(:)) /= new_comm_size) then
+          write(0,*) 'node ', mpi_world%rank, ': mc%group_sizes = ', mc%group_sizes, ' new_comm_size = ', new_comm_size
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+          ASSERT(product(mc%group_sizes(:)) == new_comm_size)
+        endif
         call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
-
+        ASSERT(mc%master_comm /= MPI_COMM_NULL)
+        
         call MPI_Comm_free(new_comm, mpi_err)
 
         call MPI_Comm_rank(mc%master_comm, mc%master_comm_rank, mpi_err)
