@@ -143,19 +143,17 @@ end subroutine pes_mask_output_states
 !!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
 !!\f]
 ! ---------------------------------------------------------
-subroutine pes_mask_create_full_map(mask, st, pesK, wfAk)
+subroutine pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
   type(pes_mask_t), intent(in)  :: mask
   type(states_t),   intent(in)  :: st
+  integer,          intent(in)  :: ik  
   FLOAT, target,    intent(out) :: pesK(:,:,:)
   CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
 
-  integer :: ist, ik, kx, ky, kz, idim
+  integer :: ist, kx, ky, kz, idim
   FLOAT   :: scale
   FLOAT, pointer :: pesKloc(:,:,:)
 
-! #ifdef HAVE_MPI
-!   type(profile_t), save :: reduce_prof
-! #endif
 
   PUSH_SUB(pes_mask_create_full_map)
 
@@ -167,33 +165,33 @@ subroutine pes_mask_create_full_map(mask, st, pesK, wfAk)
     pesKloc => pesK
   end if
 
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
+  do ist = st%st_start, st%st_end
 
-      do kx = 1, mask%ll(1)
-        do ky = 1, mask%ll(2)
-          do kz = 1, mask%ll(3)
+    do kx = 1, mask%ll(1)
+      do ky = 1, mask%ll(2)
+        do kz = 1, mask%ll(3)
 
-            if(present(wfAk))then
-              pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * &
-                sum(abs(mask%k(kx, ky, kz, :, ist, ik) + wfAk(kx,ky,kz,:, ist, ik)  )**2)
-            else
-              pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
-            end if
-            
-          end do
+          if(present(wfAk))then
+            pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * &
+              sum(abs(mask%k(kx, ky, kz, :, ist, ik) + wfAk(kx,ky,kz,:, ist, ik)  )**2)
+          else
+            pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
+          end if
+      
         end do
       end do
-
     end do
+
   end do
 
 
-  if(st%parallel_in_states .or. st%d%kpt%parallel) then
-!     call profiling_in(reduce_prof, "pes_DENSITY_REDUCE")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
-!     call profiling_out(reduce_prof)
-  end if  
+!   if(st%parallel_in_states .or. st%d%kpt%parallel) then
+!     call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
+!   end if
+
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, pesKloc)
+  end if
 
   
   if (mask%cube%parallel_in_domains) then
@@ -232,8 +230,10 @@ subroutine pes_mask_create_full_map(mask, st, pesK, wfAk)
   end if
 
   ! This is needed in order to normalize the Fourier integral 
+  ! since along the periodi dimensions the discrete Fourier transform is 
+  ! exact we need to renormalize only along the non periodic ones
   scale = M_ONE
-  do idim=1, mask%mesh%sb%dim
+  do idim= mask%mesh%sb%periodic_dim + 1, mask%mesh%sb%dim
     scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
   end do
   pesK = pesK *scale 
@@ -1422,29 +1422,45 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
 
   !Create the full momentum-resolved PES matrix
   pesK = M_ZERO
-  if(mask%add_psia) then 
-    call pes_mask_create_full_map(mask, st, pesK, wfAk)
-  else 
-    call pes_mask_create_full_map(mask, st, pesK)
-  end if
-  
-  if(mpi_grp_is_root(mpi_world)) then ! only root node writes the output
-    ! Output the full matrix in binary format for subsequent post-processing 
-    write(fn, '(a,a)') trim(dir), '_map.obf'
-    call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
+  do ik = st%d%kpt%start, st%d%kpt%end
 
-    ! Output the k resolved PES on plane kz=0
-    write(fn, '(a,a)') trim(dir), '_map.z=0'
-    pol = (/M_ZERO, M_ZERO, M_ONE/)
-    call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%ll, mask%mesh%sb%dim, pol = pol, &
+    if(mask%add_psia) then 
+      call pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
+    else 
+      call pes_mask_create_full_map(mask, st, ik, pesK)
+    end if
+    
+    ! only the root node of the domain and state parallelization group writes the output
+    if(mpi_grp_is_root(st%dom_st_mpi_grp)) then 
+      ! Output the full matrix in binary format for subsequent post-processing 
+      if(st%d%nik > 1) then
+        write(fn, '(a,a,i3.3,a)') trim(dir), '_map-k',ik ,'.obf'
+      else
+        write(fn, '(a,a)') trim(dir), '_map.obf'
+      end if
+      call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
+                           pesK, ierr)
+
+      ! Output the k resolved PES on plane kz=0
+      if(st%d%nik > 1) then
+        write(fn, '(a,a,i3.3,a)') trim(dir), '_map-k',ik ,'.z=0'
+      else
+        write(fn, '(a,a)') trim(dir), '_map.z=0'
+      end if
+      pol = (/M_ZERO, M_ZERO, M_ONE/)
+      call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%ll, mask%mesh%sb%dim, pol = pol, &
                                      dir = 3, integrate = INTEGRATE_NONE )
+                                     
 
-    ! Total power spectrum 
-    write(fn, '(a,a)') trim(dir), '_power.sum'
-    call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
-                                      mask%energyMax, mask%energyStep, .false.)
+      if(st%d%nik == 1) then                               
+        ! Total power spectrum 
+        write(fn, '(a,a)') trim(dir), '_power.sum'
+        call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+                                          mask%energyMax, mask%energyStep, .false.)
+      end if
 
-  end if
+    end if
+  end do
 
   if(mask%add_psia) then 
     SAFE_DEALLOCATE_A(wfAk)
