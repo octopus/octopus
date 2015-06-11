@@ -242,6 +242,7 @@ contains
       !%Description
       !% Defines the exchange-correlation kernel. Only LDA kernels are available currently.
       !% The options are the same as <tt>XCFunctional</tt>.
+      !% Note: the kernel is only needed for Casida, Sternheimer, or optimal-control calculations.
       !% Defaults:
       !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
       !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
