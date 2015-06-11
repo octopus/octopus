@@ -248,9 +248,11 @@ while ($_ = <TESTSUITE>) {
 	$command = "$exec_directory/$1";
 
 	# FIXME: should we do this for a dry-run?
-	
+	if( ! -x "$command") {
+	  $command = "$exec_directory/../utils/$1";
+	}	
 	if( ! -x $command) {
-	    die255("Executable '$command' not available.");
+	    die255("Executable '$1' not available.");
         }
 
 	$options_available = `$command -c`;
