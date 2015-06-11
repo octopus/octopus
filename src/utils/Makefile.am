@@ -38,7 +38,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-local_multipoles \
                  oct-conductivity
 
-bin_PROGRAMS = $(EXTRA_PROGRAMS)
+bin_PROGRAMS = @UTILITY_PROGRAMS@
 
 oct_propagation_spectrum_SOURCES = propagation_spectrum.F90
 oct_propagation_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \

@@ -232,6 +232,9 @@ if test x"${DEBUG}" = x"no" ; then
 fi
 AC_SUBST(DEBUG)
 
+UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
+AC_SUBST(UTILITY_PROGRAMS)
+
 AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use;
                           the default is 3 (other values are experimental), must be >= 3],
   [maxdim=$withval], [maxdim=3])
