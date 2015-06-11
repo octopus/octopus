@@ -86,6 +86,7 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
+$opt_f = "";
 getopts("nlvhD:c:f:spm");
 
 # avoid warnings 'used only once: possible typo'
@@ -244,17 +245,16 @@ while ($_ = <TESTSUITE>) {
 	}
 
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
-	$octopus_exe = "$exec_directory/$1";
-	$command = $octopus_exe;
+	$command = "$exec_directory/$1";
 
 	# FIXME: should we do this for a dry-run?
 	
-	if( ! -x $octopus_exe) {
-	  print STDERR "\nWARNING: Skipping test: executable '$octopus_exe' not available.\n\n";
+	if( ! -x $command) {
+	  print STDERR "\nWARNING: Skipping test: executable '$command' not available.\n\n";
 	  skip_exit();
         }
 
-	$options_available = `$octopus_exe -c`;
+	$options_available = `$command -c`;
 	chomp($options_available);
 	if($is_parallel && $options_available !~ "mpi") {
 	    print "Running in serial since executable was not compiled with MPI.\n";
@@ -275,7 +275,7 @@ while ($_ = <TESTSUITE>) {
 			print " for MPI";
 		    }
 		    print ".\n";
-		    print "Executable: $octopus_exe\n";
+		    print "Executable: $command\n";
 		    print "Available options: $options_available\n\n";
 		    skip_exit();
 		}
