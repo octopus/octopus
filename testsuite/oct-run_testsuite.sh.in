@@ -184,23 +184,22 @@ for y in $tests; do
     else
 	runtest_directory=$bin_directory
     fi
-    if [ -d "${bin_directory}" ]; then
-        test_index=$(($test_index + 1))
-	echo Starting test $test_index: $test_name
 
-	if [ "$dry_run" == "yes" ]; then
-	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	         $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
-	fi
-	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	    $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
-	ppid=$!
-	queue $ppid $test_name
+    test_index=$(($test_index + 1))
+    echo Starting test $test_index: $test_name
+
+    if [ "$dry_run" == "yes" ]; then
+	echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
+	     $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+    fi
+    $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+        $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+    ppid=$!
+    queue $ppid $test_name
 	
-	if [ $NUM -ge $OCT_TEST_NJOBS ]
-	then
-	    checkqueue
-	fi
+    if [ $NUM -ge $OCT_TEST_NJOBS ]
+    then
+	checkqueue
     fi
 done
 while [ $NUM -ge 1 ]
@@ -237,7 +236,7 @@ while getopts "hnlp:d:cg:q:" opt ; do
 	c) cleanup="yes";;
 	g) test_groups="$OPTARG";;
 	q) test_groups="$OPTARG"; query="yes";;
-        ?) echo "Error parsing arguments"; exit 1;;
+        ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
 shift $[ OPTIND - 1 ]
@@ -249,6 +248,16 @@ echo
 echo " Note: Running the testsuite can take from several minutes"
 echo " to more than two hours."
 echo
+
+if [ "${local_run}" == "yes" ]; then
+    bin_directory=`pwd`/../src/main
+else
+    bin_directory=$prefix/bin
+fi
+if [ ! -d "${bin_directory}" ]; then
+    echo "Specified binary directory '$bin_directory' does not exist." 1>&2
+    exit 1
+fi
 
 if [ -z $OCT_TEST_NJOBS ] ; then
 
@@ -286,12 +295,6 @@ if [ -z $OCT_TEST_NJOBS ] ; then
 	fi
     fi
     
-    if [ "${local_run}" == "yes" ]; then
-	bin_directory=`pwd`/../src/main
-    else
-	bin_directory=$prefix/bin
-    fi
-
     options=" "`$bin_directory/octopus -c`" "
     if [[ $options =~ " mpi " ]]; then
 	OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/4))
