@@ -399,11 +399,14 @@ contains
     ! Read whatever may be read from the block
     if(row>=0) then
       call read_from_block(blk, row, spec, read_data)
-      call parse_block_end(blk)
     end if
+
+    if(n_spec_block > 0) &
+      call parse_block_end(blk)
 
     ! Find out if the species is in the defaults file.
     write(fname, '(2a)') trim(conf%share), "/PP/defaults"
+
     n_spec_def = max(0, loct_number_of_lines(fname))
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 

@@ -603,6 +603,7 @@ contains
     else 
       call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
       call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
+      call parse_block_end(blk)
     end if
     
     if (sb%box_shape == SPHERE) then
@@ -610,8 +611,6 @@ contains
     else if (sb%box_shape == PARALLELEPIPED) then
       if(mask%mask_R(2) > mesh%sb%lsize(1))  mask%mask_R(2) = mesh%sb%lsize(1) 
     end if    
-    
-    
     
     write(message(1),'(a,es10.3,3a)') & 
       "Input: Mask  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) ),&
