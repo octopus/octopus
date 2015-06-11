@@ -257,7 +257,7 @@ contains
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
 
-    der%zero_bc = (sb%periodic_dim < 3)
+    der%zero_bc = (sb%periodic_dim < der%dim)
     der%periodic_bc = (sb%periodic_dim > 0)
 
     ! find out how many ghost points we need in each dimension
