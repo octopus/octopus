@@ -26,11 +26,6 @@
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
 
-    type(block_t)       :: blk
-    integer :: ist, jst
-    CMPLX, allocatable  :: rotation_matrix(:, :)
-    type(states_t)      :: tmp_st
-
     PUSH_SUB(target_init_gstransformation)
 
     message(1) =  'Info: Using Superposition of States for TargetOperator'
@@ -51,41 +46,15 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    if(parse_isdef(datasets_check('OCTTargetTransformStates')) /= 0) then
-      if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
-        call states_copy(tmp_st, tg%st)
-        call states_deallocate_wfns(tmp_st)
-        call states_look_and_load(restart, tmp_st, gr)
+    call transform_states(tg%st, restart, gr, prefix = "OCTTarget")
 
-        SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
-        rotation_matrix = M_z0
-        do ist = 1, tg%st%nst
-          do jst = 1, parse_block_cols(blk, ist - 1)
-            call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
-          end do
-        end do
-
-        if(states_are_real(tg%st))then
-          call dstates_rotate(gr%mesh, tg%st, tmp_st, real(rotation_matrix, REAL_PRECISION))
-        else
-          call zstates_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
-        endif
-        SAFE_DEALLOCATE_A(rotation_matrix)
-        call states_end(tmp_st)
-        call parse_block_end(blk)
-        call density_calc(tg%st, gr, tg%st%rho)
-      else
-        message(1) = '"OCTTargetTransformStates" has to be specified as block.'
-        call messages_info(1)
-        call input_error('OCTTargetTransformStates')
-      end if
-    else
-      message(1) = 'Error: if "OCTTargetOperator = oct_tg_superposition", then you must'
-      message(2) = 'supply one "OCTTargetTransformStates" block to create the superposition.'
-      call messages_info(2)
-      call input_error('OCTTargetTransformStates')
+    if(parse_isdef(datasets_check('OCTTargetTransformStates')) == 0) then
+      message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
+      message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
+      call messages_fatal(2)
     end if
-
+    call density_calc(tg%st, gr, tg%st%rho)
+    
     POP_SUB(target_init_gstransformation)
   end subroutine target_init_gstransformation
 
