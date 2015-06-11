@@ -89,7 +89,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   integer :: n, i
   FLOAT, allocatable :: c(:)
 
-  PUSH_SUB(X(interpolate_0))
+  ! no push_sub, called too frequently
 
   n = size(xa)
   SAFE_ALLOCATE(c(1:n))
@@ -102,7 +102,6 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   end do
 
   SAFE_DEALLOCATE_A(c)
-  POP_SUB(X(interpolate_0))
 end subroutine X(interpolate_0)
 
 ! ---------------------------------------------------------
