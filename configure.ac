@@ -232,18 +232,6 @@ if test x"${DEBUG}" = x"no" ; then
 fi
 AC_SUBST(DEBUG)
 
-dnl can turn off build of utilities
-AC_ARG_ENABLE(utils, AS_HELP_STRING([--disable-utils], [Build utilities]))
-
-if test x"$enable_utils" != x"no"; then
-  UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
-  msg="+ utilities"
-else
-  UTILITY_PROGRAMS=''
-  msg=""
-fi
-AC_SUBST(UTILITY_PROGRAMS)
-
 AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use;
                           the default is 3 (other values are experimental), must be >= 3],
   [maxdim=$withval], [maxdim=3])
@@ -253,11 +241,6 @@ if test $maxdim -lt 3; then
 fi
 
 AC_DEFINE_UNQUOTED(MAX_DIM, $maxdim, [the maximum dimension of the space])
-
-dnl tell the user what we will be compiling
-echo "**********************************************"
-echo "***   octopus $msg will be generated "
-echo "**********************************************"
 
 dnl ===================================================================
 dnl now we search for libraries
