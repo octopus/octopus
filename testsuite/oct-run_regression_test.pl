@@ -250,8 +250,7 @@ while ($_ = <TESTSUITE>) {
 	# FIXME: should we do this for a dry-run?
 	
 	if( ! -x $command) {
-	  print STDERR "\nWARNING: Skipping test: executable '$command' not available.\n\n";
-	  skip_exit();
+	    die255("Executable '$command' not available.");
         }
 
 	$options_available = `$command -c`;
@@ -297,8 +296,7 @@ while ($_ = <TESTSUITE>) {
 	}
 
 	if( ! -x "$command") {
-	  print STDERR "\nWARNING: Skipping test. Cannot find utility '$1'.\n\n";
-	  skip_exit();
+	    die255("Cannot find utility '$1'.");
 	}
       }
 
@@ -550,6 +548,7 @@ sub run_match_new {
 
   if(!looks_like_number($ref_value)) {
       print STDERR "WARNING: Match command has non-numeric reference value '$value'.\n";
+      return 0;
   }
 
   # at this point, we know that the command was successful, and returned a number.
