@@ -114,11 +114,11 @@ contains
     if(.not. c_associated(handle)) then
       if(present(ierr)) then
         ierr = -1
+        return
       else
-        write(iunit, '(3a)') 'Could not find a variable named ', var, '.'
-        write(iunit, '(a)') 'You should update your variable info.'
+        write(iunit, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+        stop
       end if
-      return
     end if
 
     if(present(ierr)) ierr = 0
@@ -168,7 +168,10 @@ contains
     l = .false.
 
     call varinfo_getvar(var, handle)
-    if(.not. c_associated(handle)) return
+    if(.not. c_associated(handle)) then
+      write(0, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+      stop
+    endif
 
     opt = c_null_ptr
     do
@@ -204,7 +207,10 @@ contains
     logical :: option_found
     
     call varinfo_getvar(var, handle)
-    if(.not. c_associated(handle)) return
+    if(.not. c_associated(handle)) then
+      write(iunit, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+      stop
+    endif
 
     option_found = .false.
     opt = c_null_ptr
@@ -235,6 +241,12 @@ contains
     end if
     ! uncomment to print the description of the options
     !call print_C_string(iunit, desc, pre='  > ')
+
+    if(.not. option_found) then
+      ! we cannot use messages here :-(
+      write(iunit,'(a,i6,2a)') "ERROR: invalid option ", option, " for variable ", trim(var)
+      stop
+    end if
     
   end subroutine varinfo_print_option
 
@@ -277,7 +289,8 @@ contains
 
     if(ierr /= 0) then
       ! we cannot use messages here :-(
-      stop "Error: invalid option"
+      write(0,'(4a)') "ERROR: invalid option ", trim(option), " for variable ", trim(var)
+      stop
     end if
 
   end function varinfo_option
