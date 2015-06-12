@@ -10,7 +10,6 @@ Input      : 06-2D.01-Na_gs.inp
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.21408824
 
 # Na check velocity map 
-Processors : 1
 Input      : 06-2D.02-Na_few_cy.inp
 match ; Momentum grid [val  1] ; LINEFIELD(td.general/PESM_map.z=0, 24012, 1) ; -4.662846239094E-01
 match ; Momentum grid [val  2] ; LINEFIELD(td.general/PESM_map.z=0, 29580, 2) ;  0.000000000000E+00
