@@ -77,7 +77,8 @@ contains
       !%Default 3
       !%Description
       !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
-      !% variable. Note that not all input variables may be available in all cases.
+      !% variable (or more, if configured with <tt>--with-max-dim=4</tt> or higher).
+      !% Note that not all input variables may be available in all cases.
       !%End
       call parse_variable('Dimensions', default_ndim, this%dim)
     end if
