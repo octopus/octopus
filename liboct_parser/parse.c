@@ -229,6 +229,10 @@ int parse_int(const char *name, int def)
     if(!disable_write) {
       fprintf(fout, "%s = %d\n", name, ret);
     }
+    if(fabs(ret - GSL_REAL(ptr->value.c)) > 1e-10) {
+       fprintf(stderr, "Parser error: non-integer value passed for integer variable '%s'.\n", name);
+       exit(1);
+    }
   }else{
     ret = def;
     if(!disable_write) {
@@ -249,6 +253,10 @@ double parse_double(const char *name, double def)
     ret = GSL_REAL(ptr->value.c);
     if(!disable_write) {
       fprintf(fout, "%s = %g\n", name, ret);
+    }
+    if(fabs(GSL_IMAG(ptr->value.c)) > 1e-10) {
+       fprintf(stderr, "Parser error: complex value passed for real variable '%s'.\n", name);
+       exit(1);
     }
   }else{
     ret = def;
@@ -286,7 +294,7 @@ char *parse_string(const char *name, char *def)
   symrec *ptr;
   char *ret;
   
-  ptr = getsym(name);	
+  ptr = getsym(name);
   if(ptr){
     if( ptr->type != S_STR){
       fprintf(stderr, "Parser error: expecting a string for variable '%s'.\n", name);
@@ -345,7 +353,7 @@ int parse_block_cols(const sym_block *blk, int l)
 {
   assert(blk!=NULL);
   if(l < 0 || l >= blk->n){
-     fprintf(stderr, "Parser error: row %i out of range [0,%i] when parsing block '%s'.\n", l, blk->n-1, blk->name);
+    fprintf(stderr, "Parser error: row %i out of range [0,%i] when parsing block '%s'.\n", l, blk->n-1, blk->name);
     exit(1);
   }
   
@@ -358,7 +366,7 @@ static int parse_block_work(const sym_block *blk, int l, int col, parse_result *
   assert(l>=0 && l<blk->n);
 
   if(col < 0 || col >= blk->lines[l].n){
-     fprintf(stderr, "Parser error: column %i out of range [0,%i] when parsing block '%s'.\n", col, blk->lines[l].n-1, blk->name);
+    fprintf(stderr, "Parser error: column %i out of range [0,%i] when parsing block '%s'.\n", col, blk->lines[l].n-1, blk->name);
     exit(1);
   }
   
@@ -373,10 +381,18 @@ int parse_block_int(const sym_block *blk, int l, int col, int *r)
 
   o = parse_block_work(blk, l, col, &pr);
 
-  if(o == 0 && pr.type == PR_CMPLX){
-    *r = ROUND(GSL_REAL(pr.value.c));
-    if(!disable_write) {
-      fprintf(fout, "  %s (%d, %d) = %d\n", blk->name, l, col, *r);
+  if(o == 0) {
+    if(pr.type == PR_CMPLX){
+      *r = ROUND(GSL_REAL(pr.value.c));
+      if(!disable_write) {
+	fprintf(fout, "  %s (%d, %d) = %d\n", blk->name, l, col, *r);
+      }
+      if(fabs(*r - GSL_REAL(pr.value.c)) > 1e-10) {
+	fprintf(stderr, "Parser error: non-integer value passed for integer field in block '%s'.\n", blk->name);
+        exit(1);
+      }
+    } else {
+      o = -1;
     }
   }
 
@@ -391,10 +407,18 @@ int parse_block_double(const sym_block *blk, int l, int col, double *r)
   
   o = parse_block_work(blk, l, col, &pr);
   
-  if(o == 0 && pr.type == PR_CMPLX){
-    *r = GSL_REAL(pr.value.c);
-    if(!disable_write) {
-      fprintf(fout, "  %s (%d, %d) = %g\n", blk->name, l, col, *r);
+  if(o == 0) {
+    if(pr.type == PR_CMPLX){
+      *r = GSL_REAL(pr.value.c);
+      if(!disable_write) {
+        fprintf(fout, "  %s (%d, %d) = %g\n", blk->name, l, col, *r);
+      }
+      if(fabs(GSL_IMAG(pr.value.c)) > 1e-10) {
+        fprintf(stderr, "Parser error: complex value passed for real field in block '%s'.\n", blk->name);
+	exit(1);
+      }
+    } else {
+      o = -1;
     }
   }
   
@@ -408,11 +432,15 @@ int parse_block_complex(const sym_block *blk, int l, int col, gsl_complex *r)
   parse_result pr;
 
   o = parse_block_work(blk, l, col, &pr);
-  
-  if(o == 0 && pr.type == PR_CMPLX){
-    *r = pr.value.c;
-    if(!disable_write) {
-      fprintf(fout, "  %s (%d, %d) = (%g,%g)\n", blk->name, l, col, GSL_REAL(*r), GSL_IMAG(*r));
+
+  if(o == 0) {
+    if(pr.type == PR_CMPLX){
+      *r = pr.value.c;
+      if(!disable_write) {
+        fprintf(fout, "  %s (%d, %d) = (%g,%g)\n", blk->name, l, col, GSL_REAL(*r), GSL_IMAG(*r));
+      }
+    } else {
+      o = -1;
     }
   }
 
@@ -427,10 +455,14 @@ int parse_block_string(const sym_block *blk, int l, int col, char **r)
 
   o = parse_block_work(blk, l, col, &pr);
 
-  if(o == 0 && pr.type == PR_STR){
-    *r = strdup(pr.value.s);
-    if(!disable_write) {
-      fprintf(fout, "  %s (%d, %d) = \"%s\"\n", blk->name, l, col, *r);
+  if(o == 0) {
+    if(pr.type == PR_STR){
+      *r = strdup(pr.value.s);
+      if(!disable_write) {
+        fprintf(fout, "  %s (%d, %d) = \"%s\"\n", blk->name, l, col, *r);
+      }
+    } else {
+      o = -1;
     }
   }
 
