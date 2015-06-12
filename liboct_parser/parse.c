@@ -229,6 +229,10 @@ int parse_int(const char *name, int def)
     if(!disable_write) {
       fprintf(fout, "%s = %d\n", name, ret);
     }
+    if(fabs(GSL_IMAG(ptr->value.c)) > 1e-10) {
+       fprintf(stderr, "Parser error: complex value passed for integer variable '%s'.\n", name);
+       exit(1);
+    }
     if(fabs(ret - GSL_REAL(ptr->value.c)) > 1e-10) {
        fprintf(stderr, "Parser error: non-integer value passed for integer variable '%s'.\n", name);
        exit(1);
@@ -386,6 +390,10 @@ int parse_block_int(const sym_block *blk, int l, int col, int *r)
       *r = ROUND(GSL_REAL(pr.value.c));
       if(!disable_write) {
 	fprintf(fout, "  %s (%d, %d) = %d\n", blk->name, l, col, *r);
+      }
+      if(fabs(GSL_IMAG(pr.value.c)) > 1e-10) {
+        fprintf(stderr, "Parser error: complex value passed for integer field in block '%s'.\n", blk->name);
+	exit(1);
       }
       if(fabs(*r - GSL_REAL(pr.value.c)) > 1e-10) {
 	fprintf(stderr, "Parser error: non-integer value passed for integer field in block '%s'.\n", blk->name);
