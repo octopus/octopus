@@ -201,10 +201,12 @@ contains
 
     type(c_ptr) :: handle, opt, name, desc
     integer :: val
-
+    logical :: option_found
+    
     call varinfo_getvar(var, handle)
     if(.not. c_associated(handle)) return
 
+    option_found = .false.
     opt = c_null_ptr
     do
       call varinfo_getopt(handle, opt)
@@ -213,21 +215,27 @@ contains
       call varinfo_opt_getinfo(opt, name, val, desc)
 
       if(val == option) then
-        write(iunit, '(4a)', advance='no') "Input:", ' [', var, ' = '
-        call print_C_string(iunit, name, advance='no')
-        write(iunit, '(a)', advance='no') ']'
-        if(present(pre)) then
-          write(iunit, '(3a)') ' (', trim(pre), ')'
-        else
-          write(iunit, '(1x)')
-        end if
-        ! uncomment to print the description of the options
-        !call print_C_string(iunit, desc, pre='  > ')
-
-        return
-      end if
+        option_found = .true.
+        exit
+      endif
     end do
 
+    write(iunit, '(4a)', advance='no') "Input:", ' [', var, ' = '
+    
+    if(option_found) then
+      call print_C_string(iunit, name, advance='no')
+    else
+      write(iunit,'(i6,a)', advance='no') option, " (INVALID)"
+    endif
+    write(iunit, '(a)', advance='no') ']'
+    if(present(pre)) then
+      write(iunit, '(3a)') ' (', trim(pre), ')'
+    else
+      write(iunit, '(1x)')
+    end if
+    ! uncomment to print the description of the options
+    !call print_C_string(iunit, desc, pre='  > ')
+    
   end subroutine varinfo_print_option
 
   ! ---------------------------------------------------------

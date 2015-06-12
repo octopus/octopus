@@ -95,7 +95,11 @@ program oct_test
   !% Tests for double-precision real and complex functions.
   !%End
   call parse_variable('TestType', OPTION_ALL, test_type)
-
+  if(test_type < 1 .or. test_type > 5) then
+    message(1) = "Invalid option for TestType."
+    call messages_fatal(1, only_root_writes = .true.)
+  endif
+  
   !%Variable TestRepetitions
   !%Type integer
   !%Default 1
