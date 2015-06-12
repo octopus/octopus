@@ -715,7 +715,7 @@ contains
 #if defined(HAVE_MPI)
       ! Delete communicators.
       do ii = 1, mc%n_index
-        if(.not. multicomm_strategy_is_parallel(mc, ii)) cycle
+        ! initialized even if not parallelized
         call MPI_Comm_free(mc%group_comm(ii), mpi_err)
       end do
       call MPI_Comm_free(mc%dom_st_comm, mpi_err)
