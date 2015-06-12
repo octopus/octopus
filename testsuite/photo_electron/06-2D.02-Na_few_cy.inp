@@ -41,8 +41,7 @@ nC = 2*nUp + nCnst
 tc = 2*pi/omega
 
 totaltime = (nC+1)*tc
-TDMaxSteps = totaltime/TDTimeStep
-
+TDMaxSteps = round(totaltime/TDTimeStep)
 
 %TDExternalFields
   vector_potential | 1 | 0 | 0 | omega | "envelope_function"
@@ -54,4 +53,3 @@ TDMaxSteps = totaltime/TDTimeStep
 
 OutputInterval = 600
 RestartWriteInterval = 600
-

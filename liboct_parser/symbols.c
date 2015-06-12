@@ -161,7 +161,13 @@ static struct init_fntc arith_fncts[] = {
   {"min",    2, (gsl_complex (*)()) &gsl_complex_min_real},
   {"max",    2, (gsl_complex (*)()) &gsl_complex_max_real},
 
-  {"erf",    1, (gsl_complex (*)()) &gsl_complex_erf}, 
+  {"erf",    1, (gsl_complex (*)()) &gsl_complex_erf},
+
+  {"real",    1, (gsl_complex (*)()) &gsl_complex_real},
+  {"imag",    1, (gsl_complex (*)()) &gsl_complex_imag},
+  {"round",   1, (gsl_complex (*)()) &gsl_complex_round},
+  {"floor",   1, (gsl_complex (*)()) &gsl_complex_floor},
+  {"ceiling", 1, (gsl_complex (*)()) &gsl_complex_ceiling},
 
   {0, 0, 0}
 };

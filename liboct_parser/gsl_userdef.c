@@ -150,3 +150,52 @@ gsl_complex gsl_complex_arctan2 (gsl_complex a, gsl_complex b)
   return z;
 }
 
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_real (gsl_complex a)
+{
+  gsl_complex z;
+
+  GSL_SET_COMPLEX (&z, GSL_REAL(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_imag (gsl_complex a)
+{
+  gsl_complex z;
+
+  GSL_SET_COMPLEX (&z, GSL_IMAG(a), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_round (gsl_complex a)
+{
+  gsl_complex z;
+
+  GSL_SET_COMPLEX (&z, trunc(GSL_REAL(a)), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_ceiling (gsl_complex a)
+{
+  gsl_complex z;
+
+  GSL_SET_COMPLEX (&z, ceil(GSL_REAL(a)), 0);
+
+  return z;
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_floor (gsl_complex a)
+{
+  gsl_complex z;
+
+  GSL_SET_COMPLEX (&z, floor(GSL_REAL(a)), 0);
+
+  return z;
+}
