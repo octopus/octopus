@@ -41,8 +41,8 @@ gsl_complex gsl_complex_erf(gsl_complex a);
 /* atan2 function */
 gsl_complex gsl_complex_arctan2 (gsl_complex a, gsl_complex b);
 
-gsl_complex gsl_complex_real (gsl_complex a);
-gsl_complex gsl_complex_imag (gsl_complex a);
+gsl_complex gsl_complex_realpart (gsl_complex a);
+gsl_complex gsl_complex_imagpart (gsl_complex a);
 gsl_complex gsl_complex_round (gsl_complex a);
 gsl_complex gsl_complex_ceiling (gsl_complex a);
 gsl_complex gsl_complex_floor (gsl_complex a);

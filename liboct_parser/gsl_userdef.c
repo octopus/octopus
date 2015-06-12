@@ -151,7 +151,7 @@ gsl_complex gsl_complex_arctan2 (gsl_complex a, gsl_complex b)
 }
 
 /* ------------------------------------------------------ */
-gsl_complex gsl_complex_real (gsl_complex a)
+gsl_complex gsl_complex_realpart (gsl_complex a)
 {
   gsl_complex z;
 
@@ -161,7 +161,7 @@ gsl_complex gsl_complex_real (gsl_complex a)
 }
 
 /* ------------------------------------------------------ */
-gsl_complex gsl_complex_imag (gsl_complex a)
+gsl_complex gsl_complex_imagpart (gsl_complex a)
 {
   gsl_complex z;
 
