@@ -687,6 +687,9 @@ contains
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       call vec_end(mesh%vp)
+      ! this is true if MeshUseTopology = false
+      if(mesh%mpi_grp%comm /= mesh%vp%comm) &
+        call MPI_Comm_free(mesh%vp%comm)
       call partition_end(mesh%inner_partition)
       call partition_end(mesh%bndry_partition)
 #endif
