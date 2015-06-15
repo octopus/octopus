@@ -238,6 +238,9 @@ contains
 
     integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
+    integer :: send_req, received
+    integer, allocatable :: recv_buf(:), recv_req(:)
+    integer, parameter :: FATAL_TAG = 1620299
 
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
@@ -248,6 +251,37 @@ contains
     else
       should_write = .true.
       only_root_writes_ = .false.
+    end if
+
+    ! This is to avoid all nodes reporting an error. The root node
+    ! post a message reception to all nodes, the rest of the nodes
+    ! send a message. If the message is received, the non-root nodes
+    ! know that the root node will report the error, so they don't do
+    ! antyhing.
+
+    if(.not. only_root_writes_) then
+      if(mpi_world%rank == 0) then
+        
+        allocate(recv_buf(1:mpi_world%size - 1))
+        allocate(recv_req(1:mpi_world%size - 1))
+        do ii = 1, mpi_world%size - 1
+#ifdef HAVE_MPI
+          call MPI_Recv_init(recv_buf(ii), 1, MPI_INTEGER, ii, FATAL_TAG, mpi_world%comm, recv_req(ii), mpi_err)
+#endif
+        end do
+        
+      else
+        
+#ifdef HAVE_MPI
+        call MPI_Send_init(1, 1, MPI_INTEGER, 0, FATAL_TAG, mpi_world%comm, send_req, mpi_err)
+#endif
+        !sleep for a second and check
+        call loct_nanosleep(SLEEPYTIME_ALL, 0)
+        call MPI_Test(send_req, received, MPI_STATUS_IGNORE, mpi_err)
+        
+        should_write = .false.
+        
+      end if
     end if
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
