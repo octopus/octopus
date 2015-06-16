@@ -256,8 +256,8 @@ contains
     ! This is to avoid all nodes reporting an error. The root node
     ! post a message reception to all nodes, the rest of the nodes
     ! send a message. If the message is received, the non-root nodes
-    ! know that the root node will report the error, so they don't do
-    ! antyhing.
+    ! know that the root node will report the error, so they do not do
+    ! anything.
 
     if(.not. only_root_writes_) then
       if(mpi_world%rank == 0) then
@@ -277,8 +277,9 @@ contains
 #endif
         !sleep for a second and check
         call loct_nanosleep(SLEEPYTIME_ALL, 0)
+#ifdef HAVE_MPI
         call MPI_Test(send_req, received, MPI_STATUS_IGNORE, mpi_err)
-        
+#endif        
         should_write = .false.
         
       end if
