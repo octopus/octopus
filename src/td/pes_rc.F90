@@ -67,10 +67,6 @@ contains
     integer :: buf
     integer :: rankmin
 
-#if defined(HAVE_MPI)
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-
     PUSH_SUB(PES_rc_init)
 
     message(1) = 'Info: Calculating PES using rc technique.'
@@ -165,8 +161,8 @@ contains
 
     CMPLX, allocatable            :: psi(:,:,:,:), wfact(:,:,:,:)
 
-    integer :: ip, ik, ist, idim, isdim
-    integer :: nst, dim, nik, stst, stend, kptst, kptend
+    integer :: ip, isdim
+    integer :: nst, dim, stst, stend, kptst, kptend
     logical :: contains_ip
 
     PUSH_SUB(PES_rc_calc)

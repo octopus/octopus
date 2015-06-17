@@ -300,7 +300,7 @@ contains
     CMPLX, allocatable :: gpsi(:,:), psi(:)
     CMPLX, allocatable :: wfact(:), gwfact(:,:)
     FLOAT              :: vp(1:MAX_DIM)
-    integer            :: start(1:MAX_DIM), end(1:MAX_DIM), ierr
+    integer            :: ierr
     FLOAT              :: vec
     integer            :: mpirank, ip
 
@@ -432,9 +432,8 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
 
-    integer            :: dim, ik, ist, idim, itstep, ikp, dir, isp
+    integer            :: dim, ist, itstep, dir, isp
     integer            :: start(1:MAX_DIM), end(1:MAX_DIM), startk, endk
-    FLOAT              :: krr
     CMPLX, allocatable :: Jk(:)
     FLOAT              :: etime1, etime2
 
@@ -483,8 +482,8 @@ contains
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 
     integer, allocatable  :: which_surface(:), aux(:)
-    FLOAT                 :: xx(MAX_DIM), rr, dd, dmin
-    integer               :: ip, ierr, idim, isp, dir, start, dim, irank
+    FLOAT                 :: xx(MAX_DIM), dd, dmin
+    integer               :: ip, ierr, idim, isp, dir, start, dim
 
     PUSH_SUB(pes_flux_getsrfc)
 
@@ -601,7 +600,7 @@ contains
     type(simul_box_t),   intent(in)    :: sb
     FLOAT,               intent(in)    :: dt
 
-    integer            :: dim, ikp, ikk, iph, iunit, isp, ith
+    integer            :: dim, ikp, ikk, iph, iunit, ith
     FLOAT              :: phi, theta, kk
     CMPLX, allocatable :: spctrout(:)
 

@@ -669,7 +669,6 @@ contains
     FLOAT, optional,      intent(in)    :: dt
     
     character(len=256) :: filename
-    integer :: iout
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_output)
