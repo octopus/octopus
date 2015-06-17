@@ -237,8 +237,8 @@ contains
     logical, optional, intent(in) :: only_root_writes
 
     integer :: ii, no_lines_
-    logical :: only_root_writes_, should_write
-    integer :: send_req, received
+    logical :: only_root_writes_, should_write, received
+    integer :: send_req
     integer, allocatable :: recv_buf(:), recv_req(:)
     integer, parameter :: FATAL_TAG = 1620299
 
@@ -269,7 +269,9 @@ contains
           call MPI_Recv_init(recv_buf(ii), 1, MPI_INTEGER, ii, FATAL_TAG, mpi_world%comm, recv_req(ii), mpi_err)
 #endif
         end do
-        
+        deallocate(recv_buf)
+        deallocate(recv_req)
+
       else
         
 #ifdef HAVE_MPI
