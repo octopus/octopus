@@ -24,8 +24,8 @@ sg15dir = $(pkgdatadir)/pseudopotentials/sg15
 dist_sg15_DATA =                      \
 	Ag_ONCV_PBE-1.0.upf           \
 	Al_ONCV_PBE-1.0.upf           \
-	Ar_ONCV_PBE-1.0.upf           \
-	As_ONCV_PBE-1.0.upf           \
+	Ar_ONCV_PBE-1.1.upf           \
+	As_ONCV_PBE-1.1.upf           \
 	Au_ONCV_PBE-1.0.upf           \
 	Ba_ONCV_PBE-1.0.upf           \
 	Be_ONCV_PBE-1.0.upf           \
@@ -34,11 +34,11 @@ dist_sg15_DATA =                      \
 	Br_ONCV_PBE-1.0.upf           \
 	Ca_ONCV_PBE-1.0.upf           \
 	Cd_ONCV_PBE-1.0.upf           \
-	Cl_ONCV_PBE-1.0.upf           \
+	Cl_ONCV_PBE-1.1.upf           \
 	C_ONCV_PBE-1.0.upf            \
 	Co_ONCV_PBE-1.0.upf           \
 	Cr_ONCV_PBE-1.0.upf           \
-	Cs_ONCV_PBE-1.0.upf           \
+	Cs_ONCV_PBE-1.1.upf           \
 	Cu_ONCV_PBE-1.0.upf           \
 	Fe_ONCV_PBE-1.0.upf           \
 	F_ONCV_PBE-1.0.upf            \
@@ -48,8 +48,8 @@ dist_sg15_DATA =                      \
 	Hf_ONCV_PBE-1.0.upf           \
 	Hg_ONCV_PBE-1.0.upf           \
 	H_ONCV_PBE-1.0.upf            \
-	In_ONCV_PBE-1.0.upf           \
-	I_ONCV_PBE-1.0.upf            \
+	In_ONCV_PBE-1.1.upf           \
+	I_ONCV_PBE-1.1.upf            \
 	Ir_ONCV_PBE-1.0.upf           \
 	K_ONCV_PBE-1.0.upf            \
 	Kr_ONCV_PBE-1.0.upf           \
@@ -67,27 +67,27 @@ dist_sg15_DATA =                      \
 	Os_ONCV_PBE-1.0.upf           \
 	Pb_ONCV_PBE-1.0.upf           \
 	Pd_ONCV_PBE-1.0.upf           \
-	P_ONCV_PBE-1.0.upf            \
+	P_ONCV_PBE-1.1.upf            \
 	Pt_ONCV_PBE-1.0.upf           \
 	Rb_ONCV_PBE-1.0.upf           \
 	Re_ONCV_PBE-1.0.upf           \
 	Rh_ONCV_PBE-1.0.upf           \
 	Ru_ONCV_PBE-1.0.upf           \
-	Sb_ONCV_PBE-1.0.upf           \
+	Sb_ONCV_PBE-1.1.upf           \
 	Sc_ONCV_PBE-1.0.upf           \
-	Se_ONCV_PBE-1.0.upf           \
-	Si_ONCV_PBE-1.0.upf           \
-	Sn_ONCV_PBE-1.0.upf           \
-	S_ONCV_PBE-1.0.upf            \
+	Se_ONCV_PBE-1.1.upf           \
+	Si_ONCV_PBE-1.1.upf           \
+	Sn_ONCV_PBE-1.1.upf           \
+	S_ONCV_PBE-1.1.upf            \
 	Sr_ONCV_PBE-1.0.upf           \
 	Ta_ONCV_PBE-1.0.upf           \
 	Tc_ONCV_PBE-1.0.upf           \
-	Te_ONCV_PBE-1.0.upf           \
+	Te_ONCV_PBE-1.1.upf           \
 	Ti_ONCV_PBE-1.0.upf           \
 	Tl_ONCV_PBE-1.0.upf           \
 	V_ONCV_PBE-1.0.upf            \
 	W_ONCV_PBE-1.0.upf            \
-	Xe_ONCV_PBE-1.0.upf           \
+	Xe_ONCV_PBE-1.1.upf           \
 	Y_ONCV_PBE-1.0.upf            \
 	Zn_ONCV_PBE-1.0.upf           \
 	Zr_ONCV_PBE-1.0.upf           \
