@@ -134,15 +134,10 @@ contains
   subroutine io_binary_parallel_end(file_handle)
     integer, intent(inout) :: file_handle
 
-    logical :: finalized
-
     PUSH_SUB(io_binary_parallel_end)
 
 #ifdef HAVE_MPI2
-    call MPI_Finalized(finalized, mpi_err)
-    if (.not. finalized) then
       call MPI_File_close(file_handle, mpi_err)
-    end if
 #else
     message(1) = "Internal error: cannot call io_binary parallel routines without MPI2."
     call messages_fatal(1)
