@@ -334,13 +334,12 @@ end subroutine X(mf_random)
 !> This function receives a function f_in defined in a mesh, and returns
 !! the interpolated values of the function over the npoints_in defined
 !! by x_in.
-
 subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, x_out, f_out)
-  integer,              intent(in)  :: ndim, npoints_in, npoints_out
-  R_TYPE, target,       intent(in)  :: f_in(:)    !< (npoints_in)
-  FLOAT,  target,       intent(in)  :: x_in(:, :)
-  FLOAT,                intent(in)  :: x_out(:,:)
-  R_TYPE,               intent(out) :: f_out(:)   !< (npoints_out)
+  integer, intent(in)  :: ndim, npoints_in, npoints_out
+  R_TYPE,  intent(in)  :: f_in(:)    !< (npoints_in)
+  FLOAT,   intent(in)  :: x_in(:, :)
+  FLOAT,   intent(in)  :: x_out(:,:)
+  R_TYPE,  intent(out) :: f_out(:)   !< (npoints_out)
 
   real(8) :: pp(MAX_DIM)
   integer :: ip
