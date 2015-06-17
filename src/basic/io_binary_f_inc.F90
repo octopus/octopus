@@ -205,9 +205,9 @@
           ierr = 999
         end if
       end if
+
+      call io_binary_parallel_end(file_handle)
     end if
-    
-    call io_binary_parallel_end(file_handle)
 
     POP_SUB(X(read_parallel))
   end subroutine X(read_parallel)
