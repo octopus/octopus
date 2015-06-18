@@ -603,7 +603,8 @@ contains
       !% Zero perturbation, for use in testing.
       !%End 
       call parse_integer(datasets_check('EMPerturbationType'), PERTURBATION_ELECTRIC, perturb_type)
-
+      call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
+      
       call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then

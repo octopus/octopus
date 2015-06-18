@@ -195,8 +195,6 @@ contains
 
     PUSH_SUB(pert_info)
 
-    call messages_print_var_option(unit, 'RespPerturbationType', this%pert_type)
-    
     if(this%pert_type == PERTURBATION_KDOTP) then
       if (.not. this%use_nonlocalpps) then
         write(message(1), '(a)') 'Ignoring non-local pseudopotential term.'
