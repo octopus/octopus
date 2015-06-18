@@ -338,8 +338,9 @@ contains
     !%Section System::Species
     !%Description
     !% The pseudopotentials may be composed of a local part, and a linear combination of nonlocal
-    !% operators. These nonlocal projectors have "projector" form, |<i>v</i>&gt;&lt;<i>v</i>| (or, more generally
-    !% speaking, |<i>u</i>&gt;&lt;<i>v</i>|). These projectors are localized in real space -- that is, the function <i>v</i>
+    !% operators. These nonlocal projectors have "projector" form, <math> \left| v \right> \left< v \right| </math>
+    !% (or, more generally speaking, <math> \left| u \right> \left< v \right| </math>).
+    !% These projectors are localized in real space -- that is, the function <math>v</math>
     !% has a finite support around the nucleus. This region where the projectors are localized should
     !% be small or else the computation time required to operate with them will be very large.
     !% 
