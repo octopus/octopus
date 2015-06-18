@@ -124,7 +124,7 @@ contains
     !%Section System
     !%Description
     !% Lists the name of the subsystem, the coordinates and the rotation to apply uppon reading.
-    !% A subsytem can figure multiple times.
+    !% A subsystem can figure multiple times.
     !%
     !% <tt>%SubSystemCoordinates
     !% <br>&nbsp;&nbsp;'name_1' | x | y | z | o_xy | o_xz | o_yz
@@ -178,7 +178,7 @@ contains
     !%Type block
     !%Section System
     !%Description
-    !% Lists the name, the subsytem type, the directory and the optional parameters to be used on the subsystem calculation.
+    !% Lists the name, the subsystem type, the directory and the optional parameters to be used on the subsystem calculation.
     !%
     !% <tt>%SubSystems
     !% <br>&nbsp;&nbsp;'name_1' | frozen | 'directory_1' | nearest
