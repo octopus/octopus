@@ -139,7 +139,7 @@ contains
     !%
     !%End
     call parse_integer(datasets_check('NDimModelmb'), gr%sb%dim, this%ndim)
-    call messages_print_var_option(stdout, "NDimModelmb", this%ndim)
+    call messages_print_var_value(stdout, "NDimModelmb", this%ndim)
     
     !%Variable NParticleModelmb
     !%Type integer
@@ -150,7 +150,7 @@ contains
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%End
     call parse_integer(datasets_check('NParticleModelmb'), 1, this%nparticle)
-    call messages_print_var_option(stdout, "NParticleModelmb", this%nparticle)
+    call messages_print_var_value(stdout, "NParticleModelmb", this%nparticle)
     
     !%Variable NTypeParticleModelmb
     !%Type integer
@@ -160,7 +160,7 @@ contains
     !% Number of different types of particles in modelmb space.
     !%End
     call parse_integer(datasets_check('NTypeParticleModelmb'), 1, this%ntype_of_particle)
-    call messages_print_var_option(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
+    call messages_print_var_value(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
     if (this%ntype_of_particle > this%nparticle) then
       write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be <= Number of modelmb particles ', &
         this%ntype_of_particle, this%nparticle
