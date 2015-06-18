@@ -193,7 +193,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
 
   case("csv")
     if (mesh%sb%box_shape /= PARALLELEPIPED) then
-      message(1) = "Box shape must be parallelepiped when a .csv file is used."
+      message(1) = "Box shape must be parallelepiped or hypercube when a .csv file is used."
       call messages_fatal(1)
     end if 
 
@@ -673,7 +673,6 @@ contains
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
-    write(iunit, mformat, iostat=ierr)
 
 ! here we find the indices for coordinate 0 along all directions apart from d2
 ! and d3, to get a plane. Do the same as for ix, but with all the other
@@ -707,7 +706,7 @@ contains
         ixvect(d3) = iz
         ip = index_from_coords(mesh%idx, ixvect)
 
-        if(ip <= mesh%np_global .and. ip > 0) then
+        if(ip <= np_max .and. ip > 0) then
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
           fu = units_from_atomic(unit, ff(ip))
           write(iunit, mformat, iostat=ierr)  &
@@ -716,7 +715,6 @@ contains
       end do
     end do
 
-    write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
     POP_SUB(X(io_function_output_global).out_plane)

@@ -34,17 +34,17 @@ match ; Axis value 17    ; LINE(static/density.y\=0\,z\=0, 18, 25) ; 6.570932455
 
 #plane output
 Precision : 0.0001
-match ; Plane pos  10 Y  ; LINE(static/density.x\=0, 10, 2)  ; -2.38129743865500
-match ; Plane pos  10 Z  ; LINE(static/density.x\=0, 10, 24) ; -1.05835441718000
-match ; Plane pos  30 Y  ; LINE(static/density.x\=0, 30, 2)  ; -2.11670883436000
-match ; Plane pos  30 Z  ; LINE(static/density.x\=0, 30, 24) ;  1.05835441718000
-match ; Plane pos 295 Y  ; LINE(static/density.x\=0, 295, 2)  ; 1.58753162577000
-match ; Plane pos 295 Z  ; LINE(static/density.x\=0, 295, 24) ; 2.64588604295000E-001
+match ; Plane pos  10 Y  ; LINE(static/density.x\=0,  9, 2)  ; -2.38129743865500
+match ; Plane pos  10 Z  ; LINE(static/density.x\=0,  9, 24) ; -1.05835441718000
+match ; Plane pos  30 Y  ; LINE(static/density.x\=0, 29, 2)  ; -2.11670883436000
+match ; Plane pos  30 Z  ; LINE(static/density.x\=0, 29, 24) ;  1.05835441718000
+match ; Plane pos 295 Y  ; LINE(static/density.x\=0, 294, 2)  ; 1.58753162577000
+match ; Plane pos 295 Z  ; LINE(static/density.x\=0, 294, 24) ; 2.64588604295000E-001
 
 Precision : 0.000000001
-match ; Plane value 10   ; LINE(static/density.x\=0, 10, 47) ; 2.23494456545324E-005
-match ; Plane value 30   ; LINE(static/density.x\=0, 30, 47) ; 1.89763461646455E-004
-match ; Plane value 295  ; LINE(static/density.x\=0, 295, 47) ; 6.06673423715878E-003
+match ; Plane value 10   ; LINE(static/density.x\=0,  9, 47) ; 2.23494456545324E-005
+match ; Plane value 30   ; LINE(static/density.x\=0, 29, 47) ; 1.89763461646455E-004
+match ; Plane value 295  ; LINE(static/density.x\=0, 294, 47) ; 6.06673423715878E-003
 
 
 #xcrysden
