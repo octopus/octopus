@@ -1166,6 +1166,8 @@ contains
     integer :: ii, jj
     FLOAT, parameter :: dx = CNST(0.01)
     
+    ! No PUSH SUB, called too often.
+
     ASSERT(spl%x_limit(2) >= spl%x_limit(1))
 
     jj = int(spl%x_limit(2)/dx) + 1

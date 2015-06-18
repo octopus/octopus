@@ -98,7 +98,7 @@ module epot_m
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
                                                 !< plus the potential from static electric fields
-    FLOAT,             pointer :: Imvpsl(:)     !< cmplxscl: imaginary part of vpsil          
+    FLOAT,             pointer :: Imvpsl(:)     !< cmplxscl: imaginary part of vpsl
     type(projector_t), pointer :: proj(:)       !< non-local projectors
     logical                    :: non_local
     integer                    :: natoms
