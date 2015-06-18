@@ -319,11 +319,12 @@ contains
 
       if((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
          iter == td%max_iter .or. stopping) then ! output
-        call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_output(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
+        call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
         call td_dump(restart_dump, gr, st, hm, td, iter, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write time-dependent restart information."
@@ -519,6 +520,7 @@ contains
       call propagator_run_zero_iter(hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
+        call td_write_output(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
       end if
 
       POP_SUB(td_run.td_run_zero_iter)

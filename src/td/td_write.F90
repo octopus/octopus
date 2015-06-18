@@ -72,7 +72,8 @@ module td_write_m
     td_write_end,   &
     td_write_iter,  &
     td_write_data,  &
-    td_write_kick
+    td_write_kick,  &
+    td_write_output
 
   type td_write_prop_t
     private
@@ -628,6 +629,29 @@ contains
       end do
     end if
 
+    call profiling_out(prof)
+    POP_SUB(td_write_data)
+  end subroutine td_write_data
+
+  ! ---------------------------------------------------------
+  subroutine td_write_output(writ, gr, st, hm, ks, outp, geo, iter, dt)
+    type(td_write_t),     intent(inout) :: writ
+    type(grid_t),         intent(inout) :: gr
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(v_ks_t),         intent(in)    :: ks
+    type(output_t),       intent(in)    :: outp
+    type(geometry_t),     intent(in)    :: geo
+    integer,              intent(in)    :: iter
+    FLOAT, optional,      intent(in)    :: dt
+    
+    character(len=256) :: filename
+    integer :: iout
+    type(profile_t), save :: prof
+
+    PUSH_SUB(td_write_output)
+    call profiling_in(prof, "TD_WRITE_DATA")
+
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
@@ -642,9 +666,8 @@ contains
     end if
  
     call profiling_out(prof)
-    POP_SUB(td_write_data)
-  end subroutine td_write_data
-
+    POP_SUB(td_write_output)
+  end subroutine td_write_output
 
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, gr, st, iter)
