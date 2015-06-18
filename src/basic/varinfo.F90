@@ -113,11 +113,11 @@ contains
     if(.not. c_associated(handle)) then
       if(present(ierr)) then
         ierr = -1
+        return
       else
-        write(iunit, '(3a)') 'Could not find a variable named ', var, '.'
-        write(iunit, '(a)') 'You should update your variable info.'
+        write(iunit, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+        stop
       end if
-      return
     end if
 
     if(present(ierr)) ierr = 0
@@ -167,7 +167,10 @@ contains
     l = .false.
 
     call varinfo_getvar(var, handle)
-    if(.not. c_associated(handle)) return
+    if(.not. c_associated(handle)) then
+      write(0, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+      stop
+    endif
 
     call set_null(opt)
     do
@@ -202,7 +205,10 @@ contains
     integer :: val
 
     call varinfo_getvar(var, handle)
-    if(.not. c_associated(handle)) return
+    if(.not. c_associated(handle)) then
+      write(iunit, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
+      stop
+    endif
 
     call set_null(opt)
     do
@@ -268,7 +274,8 @@ contains
 
     if(ierr /= 0) then
       ! we cannot use messages here :-(
-      stop "Error: invalid option"
+      write(0,'(4a)') "ERROR: invalid option ", trim(option), " for variable ", trim(var)
+      stop
     end if
 
   end function varinfo_option
