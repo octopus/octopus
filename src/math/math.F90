@@ -829,7 +829,7 @@ contains
 
     integer :: ii, kk
 
-    PUSH_SUB(interpolation_coefficients)
+    ! no push_sub, called too frequently
 
     do ii = 1, nn
       cc(ii) = M_ONE
@@ -839,7 +839,6 @@ contains
       end do
     end do
 
-    POP_SUB(interpolation_coefficients)
   end subroutine interpolation_coefficients
 
 
