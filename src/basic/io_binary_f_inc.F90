@@ -204,10 +204,10 @@
           call messages_warning(2)
           ierr = 999
         end if
-      endif
-    endif
-    
-    call io_binary_parallel_end(file_handle)
+      end if
+
+      call io_binary_parallel_end(file_handle)
+    end if
 
     POP_SUB(X(read_parallel))
   end subroutine X(read_parallel)
