@@ -551,8 +551,11 @@ contains
     !%Default 50
     !%Section Execution::IO
     !%Description
-    !% Restart data is written when the iteration number is a multiple of the
-    !% <tt>RestartWriteInterval</tt> variable. (Other output is controlled by <tt>OutputInterval</tt>.)
+    !% Restart data is written when the iteration number is a multiple
+    !% of the <tt>RestartWriteInterval</tt> variable. For
+    !% time-dependent runs this includes the update of the output
+    !% controlled by the <tt>TDOutput</tt> variable. (Other output is
+    !% controlled by <tt>OutputInterval</tt>.)
     !%End
     call parse_integer(datasets_check('RestartWriteInterval'), 50, outp%restart_write_interval)
     if(outp%restart_write_interval <= 0) then
