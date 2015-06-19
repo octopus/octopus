@@ -760,6 +760,10 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 #else
   nreal = nst
 #endif
+  
+  SAFE_ALLOCATE(projs(0:ndim, 1:nst, 1:this%full_projection_size))
+  
+  projs = CNST(0.0)
 
   iprojection = 0
   do imat = 1, this%nprojector_matrices
@@ -767,8 +771,6 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 
     npoints = pmat%npoints
     nprojs = pmat%nprojs
-
-    SAFE_ALLOCATE(projs(0:ndim, 1:nst, 1:nprojs))
 
     if(npoints /= 0) then
 
@@ -808,18 +810,31 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
       ! Now matrix-multiply to calculate the projections. We can do all the matrix multiplications at once
       call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
         psi(0, 1, 1), (ndim + 1)*nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, projs(0, 1, 1), (ndim + 1)*nreal)
+        M_ZERO, projs(0, 1, iprojection + 1), (ndim + 1)*nreal)
       
       call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints)
 
     else
       
-      projs = CNST(0.0)
+      projs(0:ndim, 1:nst, iprojection + 1:iprojection + nprojs) = CNST(0.0)
 
     end if
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, projs)
+    SAFE_DEALLOCATE_A(psi)
+
+    INCR(iprojection, nprojs)
+
+  end do
+
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, projs)
+  
+  iprojection = 0
+  do imat = 1, this%nprojector_matrices
+    pmat => this%projector_matrices(imat)
     
+    npoints = pmat%npoints
+    nprojs = pmat%nprojs
+          
     iatom = this%projector_to_atom(imat)
     
     SAFE_ALLOCATE(ff(1:ndim))
@@ -831,7 +846,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
       do iproj = 1, nprojs
         do idir = 1, ndim
           ff(idir) = ff(idir) - CNST(2.0)*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
-            R_CONJ(projs(0, ii, iproj))*projs(idir, ii, iproj)
+            R_CONJ(projs(0, ii, iprojection + iproj))*projs(idir, ii, iprojection + iproj)
         end do
       end do
     end do
@@ -839,13 +854,14 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
     force(1:ndim, iatom) = force(1:ndim, iatom) + ff(1:ndim)
     
     call profiling_count_operations((R_ADD + 2*R_MUL)*nst*ndim*nprojs)
-
-    SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(projs)
+    
     SAFE_DEALLOCATE_A(ff)
 
     INCR(iprojection, nprojs)
+
   end do
+
+  SAFE_DEALLOCATE_A(projs)
 
   POP_SUB(X(hamiltonian_base_nlocal_force))
   call profiling_out(prof_matelement)
