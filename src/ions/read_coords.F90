@@ -445,41 +445,43 @@ contains
     !%End
 
     ! This is valid only for Coordinates.
-    if(trim(what) == 'Coordinates' .and. parse_block('Reduced'//trim(what), blk) == 0) then
-      call check_duplicated(done)
+    if(trim(what) == 'Coordinates') then
+      if(parse_block('Reduced'//trim(what), blk) == 0) then
+        call check_duplicated(done)
 
-      gf%n = parse_block_n(blk)
+        gf%n = parse_block_n(blk)
 
-      gf%source = READ_COORDS_REDUCED
-      gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
+        gf%source = READ_COORDS_REDUCED
+        gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
 
-      message(1) = "Reading " // trim(what) // " from Reduced" // trim(what) // " block"
-      call messages_info(1)
+        message(1) = "Reading " // trim(what) // " from Reduced" // trim(what) // " block"
+        call messages_info(1)
 
-      SAFE_ALLOCATE(gf%atom(1:gf%n))
+        SAFE_ALLOCATE(gf%atom(1:gf%n))
 
-      do ia = 1, gf%n
-        ncol = parse_block_cols(blk, ia - 1)
-        if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
-          write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
-          call messages_fatal(1)
-        end if
-        call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
-        do jdir = 1, space%dim
-          call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
+        do ia = 1, gf%n
+          ncol = parse_block_cols(blk, ia - 1)
+          if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
+            write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
+            call messages_fatal(1)
+          end if
+          call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
+          do jdir = 1, space%dim
+            call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
+          end do
+          do jdir = space%dim + 1, MAX_DIM
+            gf%atom(ia)%x(jdir) = M_ZERO
+          end do
+          if(ncol == space%dim + 2) then
+            call parse_block_logical(blk, ia - 1, space%dim + 1, gf%atom(ia)%move)
+          else
+            gf%atom(ia)%move = .true.
+          end if
         end do
-        do jdir = space%dim + 1, MAX_DIM
-          gf%atom(ia)%x(jdir) = M_ZERO
-        end do
-        if(ncol == space%dim + 2) then
-          call parse_block_logical(blk, ia - 1, space%dim + 1, gf%atom(ia)%move)
-        else
-          gf%atom(ia)%move = .true.
-        end if
-      end do
 
-      call parse_block_end(blk)
-    end if
+        call parse_block_end(blk)
+      end if
+    endif
 
     if(gf%source /= READ_COORDS_REDUCED) then
       ! adjust units
