@@ -15,7 +15,7 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: fc_command_line.m4 5986 2009-10-26 06:27:57Z dstrubbe $
+## $Id$
 ##
 
 ################################################

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 24-o2-spin.test 13244 2015-02-28 23:19:28Z dstrubbe $
+# $Id$
 
 Test       : Tkatchenko-Scheffler van der Waals correction
 Program    : octopus

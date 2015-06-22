@@ -15,7 +15,7 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: fcflags.m4 4621 2008-10-08 17:21:03Z xavier $
+## $Id$
 ##
 ################################################
 

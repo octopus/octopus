@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 06-restart.01-ground_state.inp 7532 2011-03-03 06:42:10Z dstrubbe $
+# $Id$
 
 CalculationMode = gs
 fromScratch = no
