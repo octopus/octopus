@@ -88,8 +88,13 @@ AC_DEFUN([ACX_GREP_FCCPP],[
 
      echo "$2" > conftest.F90
 
+     # see if the attempt to preprocess raises an error
+     if ! $FCCPP conftest.F90 > /dev/null 2>&1 ; then
+       $4
+     fi
+
      if (eval "$FCCPP conftest.F90") 2>&5 |
-       grep "$1" >/dev/null 2>&1; then :
+       grep -q "$1" 2>&1; then :
        $3
      else
        $4
@@ -122,6 +127,7 @@ ADD_I(h)]),
            # in Fortran this is string concatenation, must not be stripped
 	   # some cpp's (e.g. icc -E -ansi) might actually insert a space between // too which is not acceptable
            ACX_GREP_FCCPP([rout // ine], AC_LANG_PROGRAM([],[
+con // cat
 #define PUSH_SUB(x) x // ine
 PUSH_SUB(rout)]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor mangles C++ style comment])])
