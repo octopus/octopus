@@ -608,13 +608,9 @@ contains
     character(len=*), intent(in) :: varname
     
     if(.not. varinfo_exists(varname)) then
-      write(stderr,*) ''
-      write(stderr,*) '  ////////////////////////////////////////////////////////////////////'
-      write(stderr,*) '  /'
-      write(stderr,*) '  /  Warning: Undocumented variable '//trim(varname)//'.'
-      write(stderr,*) '  /'
-      write(stderr,*) '  ////////////////////////////////////////////////////////////////////'
-      write(stderr,*) ''
+      write(stderr,'(a)') "*** Fatal Internal Error (description follows)"
+      write(stderr,'(a)') 'Attempting to parse undocumented variable '//trim(varname)//'.'
+      call parse_fatal()
     end if
 
   end subroutine parse_check_varinfo
