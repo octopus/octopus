@@ -103,7 +103,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
-
+  ! FIXME: restore openmp
   SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
 
   do ist = 1, psib%nst
@@ -174,7 +174,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       lpsi(1:ns, 1:dim) = M_ZERO
 
-      ! FIXME: restore openmp
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
