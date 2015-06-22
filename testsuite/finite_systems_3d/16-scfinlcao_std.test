@@ -6,7 +6,6 @@ Program    : octopus
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
-
 Input: 16-scfinlcao_std.01-gs.inp
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1390.61789364
@@ -48,10 +47,9 @@ match ; Number polyhedra  ; GREPFIELD(out, 'polyhedra', 2); 836
 match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 2.9732944087543614E-010
 match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 0.29093634145326080
 match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14546817087529512
-# FIXME: surface is incorrect in parallel
-#match ; Polyhedron point 1; LINEFIELD(static/density.scad, 319, 2); -3.469457
-#match ; Polyhedron point 2; LINEFIELD(static/density.scad, 320, 3); -2.951370
-#match ; Polyhedron face   ; LINEFIELD(static/density.scad, 323, 2);  2
+match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.187573
+match ; Polyhedron point 2; LINEFIELD(static/density.scad, 315, 3); -2.362158
+match ; Polyhedron face   ; LINEFIELD(static/density.scad, 319, 2);  2
 
 match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.983
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.946
