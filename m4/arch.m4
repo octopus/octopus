@@ -34,6 +34,7 @@ AC_MSG_RESULT($acx_m128d)])
 
 ################################################################
 # Check whether the hardware accepts SSE2 instructions
+# Note: printf in program is to avoid vector intrinsics being optimized out
 # ----------------------------------
 AC_DEFUN([ACX_SSE2],
 [AC_MSG_CHECKING([whether SSE2 instructions can be used])
@@ -41,6 +42,7 @@ acx_save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS"
 AC_RUN_IFELSE([AC_LANG_PROGRAM([
 #include <emmintrin.h>
+#include <stdio.h>
 ], [
 changequote(,)
 __m128d a __attribute__((aligned(16)));
@@ -100,6 +102,7 @@ AC_MSG_RESULT($acx_m256d)])
 
 ################################################################
 # Check whether the hardware accepts AVX instructions
+# Note: printf in program is to avoid vector intrinsics being optimized out
 # ----------------------------------
 AC_DEFUN([ACX_AVX],
 [AC_MSG_CHECKING([whether AVX instructions can be used])
@@ -107,6 +110,7 @@ acx_save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS"
 AC_RUN_IFELSE([AC_LANG_PROGRAM([
 #include <immintrin.h>
+#include <stdio.h>
 ], [
 changequote(,)
 __m256d a __attribute__((aligned(32)));
