@@ -826,7 +826,11 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 
   end do
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, projs)
+  if(mesh%parallel_in_domains) then
+    call profiling_in(prof_matelement_reduce, "VNLPSI_MAT_ELEM_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, projs)
+    call profiling_out(prof_matelement_reduce)
+  end if
   
   iprojection = 0
   do imat = 1, this%nprojector_matrices
