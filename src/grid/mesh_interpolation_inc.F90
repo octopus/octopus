@@ -19,10 +19,10 @@
 
 
 subroutine X(mesh_interpolation_evaluate)(this, values, position, interpolated_value)
-  type(mesh_interpolation_t), target, intent(in)    :: this
-  R_TYPE,                             intent(in)    :: values(:)
-  FLOAT,                              intent(in)    :: position(:)
-  R_TYPE,                             intent(out)   :: interpolated_value
+  type(mesh_interpolation_t), intent(in)    :: this
+  R_TYPE,                     intent(in)    :: values(:)
+  FLOAT,                      intent(in)    :: position(:)
+  R_TYPE,                     intent(out)   :: interpolated_value
   
   FLOAT, allocatable :: positions(:, :)
   R_TYPE :: interpolated_values(1:1)
