@@ -29,8 +29,61 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM( [
 ], [
 __m128d a __attribute__((aligned(16)));
  ])], 
- [AC_DEFINE(HAVE_M128D, 1, [compiler supports the m128d type]) [acx_m128d=yes]], [acx_m128d=no])
+ [acx_m128d=yes], [acx_m128d=no])
 AC_MSG_RESULT($acx_m128d)])
+
+################################################################
+# Check whether the hardware accepts SSE2 instructions
+# ----------------------------------
+AC_DEFUN([ACX_SSE2],
+[AC_MSG_CHECKING([whether SSE2 instructions can be used])
+acx_save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS"
+AC_RUN_IFELSE([AC_LANG_PROGRAM([
+#include <emmintrin.h>
+], [
+changequote(,)
+__m128d a __attribute__((aligned(16)));
+__m128d b __attribute__((aligned(16)));
+__m128d c __attribute__((aligned(16)));
+double d[4];
+
+a = _mm_add_pd(b, c);
+_mm_storeu_pd(d, a);
+printf("",  *d);
+changequote([, ])
+ ])], 
+ [acx_m128d=yes], [acx_m128d=no], [acx_m128d=yes;echo -n "cross-compiling; assuming... "])
+# assume yes (rather than no as for FMA4 and AVX) since SSE2 is very common, especially when the compiler has m128d
+CFLAGS="$acx_save_CFLAGS"
+AC_MSG_RESULT($acx_m128d)])
+
+################################################################
+# Routine for checking on SSE2 generally
+# ----------------------------------
+AC_DEFUN([ACX_SSE2_WRAPPER],
+[AC_ARG_ENABLE(sse2, AS_HELP_STRING([--enable-sse2], [Enable the use of SSE2 vectorial instructions]),
+	[ac_enable_sse2=${enableval}])
+if test "x$vector" = "xno" ; then
+ ac_enable_sse2=no
+fi
+if test "x$ac_enable_sse2" = "x" ; then
+  ACX_M128D
+  if test "x$acx_m128d" = "xyes" ; then
+    ACX_SSE2
+  fi
+elif test "x$ac_enable_sse2" = "xyes" ; then
+  AC_MSG_NOTICE([SSE2 instruction support enabled])
+  acx_m128d=yes
+else # no
+  AC_MSG_NOTICE([SSE2 instruction support disabled])
+  acx_m128d=no
+fi
+if test "x$acx_m128d" = "xyes" ; then
+  AC_DEFINE(HAVE_M128D, 1, [compiler and hardware support the m128d type and SSE2 instructions])
+  vector=$acx_m128d
+  vector_type="(sse2)"
+fi])
 
 ################################################################
 # Check whether the compiler accepts the __m256d type
@@ -202,11 +255,7 @@ case "${oct_arch}" in
 x86_64)
 
 #SSE2
-ACX_M128D
-if test x"$acx_m128d" = x"yes"; then
-  vector=$acx_m128d
-  vector_type="(sse2)"
-fi
+ACX_SSE2_WRAPPER
 
 #FMA3
 #AC_ARG_ENABLE(fma3, AS_HELP_STRING([--enable-fma3], [Enable the use of FMA3 vectorial instructions (x86_64)]), 
@@ -272,11 +321,7 @@ fi
 ;;
 ##########################################
 x86)
-ACX_M128D
-if test x"$acx_m128d" = x"yes"; then
-  vector=$acx_m128d
-  vector_type="(sse2)"
-fi
+ACX_SSE2_WRAPPER
 ;;
 ##########################################
 powerpc)
