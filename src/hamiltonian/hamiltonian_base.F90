@@ -146,7 +146,7 @@ module hamiltonian_base_m
   
 
   type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
-    prof_matelement, prof_matelement_gather
+    prof_matelement, prof_matelement_gather, prof_matelement_reduce
 
 contains
 
