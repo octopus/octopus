@@ -51,6 +51,9 @@ match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.187573
 match ; Polyhedron point 2; LINEFIELD(static/density.scad, 315, 3); -2.362158
 match ; Polyhedron face   ; LINEFIELD(static/density.scad, 319, 2);  2
 
+match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23240205761690
+match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02500518562190
+
 match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.983
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.946
 match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.023
