@@ -272,10 +272,7 @@ contains
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
-#ifdef HAVE_MPI
-      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-      stop
+      call parse_fatal()
     end if
 
     inquire(file='inp', exist=file_exists)
@@ -284,10 +281,7 @@ contains
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open input file!'
       write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
-#ifdef HAVE_MPI
-      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-      stop
+      call parse_fatal()
     end if
 
     ! initialize the parser
@@ -297,10 +291,7 @@ contains
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Error initializing parser: cannot write to exec/parser.log.'
       write(0,'(a)') 'Do you have write permissions in this directory?'
-#ifdef HAVE_MPI
-      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-      stop
+      call parse_fatal()
     end if
 
     ! read in option definitions
@@ -309,10 +300,7 @@ contains
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
-#ifdef HAVE_MPI
-      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-      stop
+      call parse_fatal()
     end if
 
     ! setup standard input
@@ -322,10 +310,7 @@ contains
       write(0,'(a)') 'Error initializing parser'
       write(0,'(a)') 'Cannot open input file!'
       write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
-#ifdef HAVE_MPI
-      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-      stop
+      call parse_fatal()
     end if
 
 
@@ -606,10 +591,7 @@ contains
           if(m == 0) then
              write(0, '(a)') "*** Fatal Error (description follows)"
              write(0, '(a)') "Attempting to parse a string with array elements larger than 99"
-#ifdef HAVE_MPI
-             if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-             stop
+             call parse_fatal()
           end if
           read(inp_string(i+2:i+1+m),*) n_atom
           read(inp_string(i+3+m:i+3+m),*) coord
@@ -637,6 +619,16 @@ contains
 
   end subroutine parse_check_varinfo
 
+
+  ! ----------------------------------------------------------------------
+  subroutine parse_fatal()
+    
+#ifdef HAVE_MPI
+    if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
+#endif
+    stop
+
+  end subroutine parse_fatal
   
 end module parser_m
 
