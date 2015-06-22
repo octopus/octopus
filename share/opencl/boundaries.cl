@@ -16,7 +16,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id: boundaries.cl 2146 2006-05-23 17:36:00Z xavier $
+ $Id$
 */
 
 #include <cl_global.h>
