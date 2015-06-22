@@ -803,31 +803,31 @@ subroutine output_etsf_io_low_error_handle(error_data)
   PUSH_SUB(output_etsf_io_low_error_handle)
 
   ! Error handling
-  write(0,*) 
-  write(0,*) "    ***"
-  write(0,*) "    *** ETSF I/O ERROR"
-  write(0,*) "    ***"
-  write(0,*) "    *** Backtrace          : ", &
+  write(stderr,*) 
+  write(stderr,*) "    ***"
+  write(stderr,*) "    *** ETSF I/O ERROR"
+  write(stderr,*) "    ***"
+  write(stderr,*) "    *** Backtrace          : ", &
     trim(error_data%backtrace(error_data%backtraceId)), "()"
   do i = error_data%backtraceId - 1, 1, -1
-    write(0,*) "    ***                      ", trim(error_data%backtrace(i)), "()"
+    write(stderr,*) "    ***                      ", trim(error_data%backtrace(i)), "()"
   end do
-  write(0,*) "    *** Action performed   : ", trim(error_data%access_mode_str), &
+  write(stderr,*) "    *** Action performed   : ", trim(error_data%access_mode_str), &
     " ", trim(error_data%target_type_str)
   if (trim(error_data%target_name) /= "") then
-    write(0,*) "    *** Target (name)      : ", trim(error_data%target_name)
+    write(stderr,*) "    *** Target (name)      : ", trim(error_data%target_name)
   end if
   if (error_data%target_id /= 0) then
-    write(0,*) "    *** Target (id)        : ", error_data%target_id
+    write(stderr,*) "    *** Target (id)        : ", error_data%target_id
   end if
   if (trim(error_data%error_message) /= "") then
-    write(0,*) "    *** Error message      : ", trim(error_data%error_message)
+    write(stderr,*) "    *** Error message      : ", trim(error_data%error_message)
   end if
   if (error_data%error_id /= nf90_noerr) then
-    write(0,*) "    *** Error id           : ", error_data%error_id
+    write(stderr,*) "    *** Error id           : ", error_data%error_id
   end if
-  write(0,*) "    ***"
-  write(0,*) 
+  write(stderr,*) "    ***"
+  write(stderr,*) 
 
   POP_SUB(output_etsf_io_low_error_handle)
 

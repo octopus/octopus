@@ -269,18 +269,18 @@ contains
     ! check files are present
     inquire(file=trim(conf%share)//'/variables', exist=file_exists)
     if(.not. file_exists) then
-      write(0,'(a)') '*** Fatal Error (description follows)'
-      write(0,'(a)') 'Error initializing parser'
-      write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a)') 'Error initializing parser'
+      write(stderr,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
       call parse_fatal()
     end if
 
     inquire(file='inp', exist=file_exists)
     if(.not. file_exists) then
-      write(0,'(a)') '*** Fatal Error (description follows)'
-      write(0,'(a)') 'Error initializing parser'
-      write(0,'(a)') 'Cannot open input file!'
-      write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a)') 'Error initializing parser'
+      write(stderr,'(a)') 'Cannot open input file!'
+      write(stderr,'(a)') 'Please provide an input file with name inp in the current workdir'
       call parse_fatal()
     end if
 
@@ -288,28 +288,28 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
     ierr = parse_init('exec/parser.log', mpi_world%rank)
     if(ierr /= 0) then
-      write(0,'(a)') '*** Fatal Error (description follows)'
-      write(0,'(a)') 'Error initializing parser: cannot write to exec/parser.log.'
-      write(0,'(a)') 'Do you have write permissions in this directory?'
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a)') 'Error initializing parser: cannot write to exec/parser.log.'
+      write(stderr,'(a)') 'Do you have write permissions in this directory?'
       call parse_fatal()
     end if
 
     ! read in option definitions
     ierr = parse_input_file(trim(conf%share)//'/variables')
     if(ierr /= 0) then
-      write(0,'(a)') '*** Fatal Error (description follows)'
-      write(0,'(a)') 'Error initializing parser'
-      write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a)') 'Error initializing parser'
+      write(stderr,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
       call parse_fatal()
     end if
 
     ! setup standard input
     ierr = parse_input_file('inp')
     if(ierr /= 0) then 
-      write(0,'(a)') '*** Fatal Error (description follows)' 
-      write(0,'(a)') 'Error initializing parser'
-      write(0,'(a)') 'Cannot open input file!'
-      write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
+      write(stderr,'(a)') '*** Fatal Error (description follows)' 
+      write(stderr,'(a)') 'Error initializing parser'
+      write(stderr,'(a)') 'Cannot open input file!'
+      write(stderr,'(a)') 'Please provide an input file with name inp in the current workdir'
       call parse_fatal()
     end if
 
@@ -589,8 +589,8 @@ contains
           if(inp_string(i+3:i+3) == ",") m = 1
           if(inp_string(i+4:i+4) == ",") m = 2
           if(m == 0) then
-             write(0, '(a)') "*** Fatal Error (description follows)"
-             write(0, '(a)') "Attempting to parse a string with array elements larger than 99"
+             write(stderr, '(a)') "*** Fatal Error (description follows)"
+             write(stderr, '(a)') "Attempting to parse a string with array elements larger than 99"
              call parse_fatal()
           end if
           read(inp_string(i+2:i+1+m),*) n_atom

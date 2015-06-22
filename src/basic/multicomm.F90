@@ -581,7 +581,7 @@ contains
         
         reorder = 0
         if(product(mc%group_sizes(:)) /= new_comm_size) then
-          write(0,*) 'node ', mpi_world%rank, ': mc%group_sizes = ', mc%group_sizes, ' new_comm_size = ', new_comm_size
+          write(stderr,*) 'node ', mpi_world%rank, ': mc%group_sizes = ', mc%group_sizes, ' new_comm_size = ', new_comm_size
           call MPI_Barrier(mpi_world%comm, mpi_err)
           ASSERT(product(mc%group_sizes(:)) == new_comm_size)
         endif
