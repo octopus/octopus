@@ -725,6 +725,7 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
+    FLOAT :: xx(MAX_DIM)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_matlab)
@@ -776,9 +777,11 @@ contains
 
         select case(out_what)
         case(4)
-          out_vec(iy) = mesh%x(ip, d2)      ! meshgrid d2 (this is swapped wrt. 
+          xx(:) = mesh_x_global(mesh, ip)
+          out_vec(iy) = xx(d2)      ! meshgrid d2 (this is swapped wrt. 
         case(5)
-          out_vec(iy) = mesh%x(ip, d3)      ! meshgrid d3  to the filenames)
+          xx(:) = mesh_x_global(mesh, ip)
+          out_vec(iy) = xx(d3)      ! meshgrid d3  to the filenames)
         end select
 
         if (ip < 1 .or. ip > np_max) cycle
@@ -1131,6 +1134,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_openscad)
 
     ASSERT(present(geo))
+    ASSERT(mesh%sb%dim == 3)
 
 #ifdef R_TREAL
     maxff = maxval(ff)
@@ -1340,7 +1344,8 @@ end function X(inside_isolevel)
 
 ! -----------------------------------------------
 
-pure function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
+! FIXME: see if I can be pure again
+function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
   type(mesh_t),    intent(in) :: mesh
   R_TYPE,          intent(in) :: ff(:)
   FLOAT,           intent(in) :: isosurface_value
@@ -1348,7 +1353,7 @@ pure function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) resu
   integer,         intent(in) :: ip2
   FLOAT                       :: pos(1:3)
 
-  FLOAT :: v1, v2
+  FLOAT :: v1, v2, x1(MAX_DIM), x2(MAX_DIM)
   
 #ifdef R_TREAL
   v1 = ff(ip1)
@@ -1356,13 +1361,15 @@ pure function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) resu
 #else
   v1 = abs(ff(ip1))
   v2 = abs(ff(ip2))
-#endif  
-
+#endif
+  x1(:) = mesh_x_global(mesh, ip1)
+  x2(:) = mesh_x_global(mesh, ip2)
+  
   if(abs(v2 - v1) > M_EPSILON) then
-    pos(1:3) = mesh%x(ip1, 1:3) + (isosurface_value - v1)*(mesh%x(ip2, 1:3) - mesh%x(ip1, 1:3))/(v2 - v1)
+    pos(1:3) = x1(1:3) + (isosurface_value - v1)*(x2(1:3) - x1(1:3))/(v2 - v1)
   else
     ! this should never happen, but just to be sure
-    pos(1:3) = CNST(0.5)*(mesh%x(ip1, 1:3) + mesh%x(ip2, 1:3))
+    pos(1:3) = CNST(0.5)*(x1(1:3) + x2(1:3))
   end if
 
 end function X(interpolate_isolevel)
