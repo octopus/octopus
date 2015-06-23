@@ -1344,7 +1344,6 @@ end function X(inside_isolevel)
 
 ! -----------------------------------------------
 
-! FIXME: see if I can be pure again
 function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
   type(mesh_t),    intent(in) :: mesh
   R_TYPE,          intent(in) :: ff(:)
