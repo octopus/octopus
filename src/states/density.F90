@@ -564,10 +564,9 @@ contains
   
     ! fix total charge 
     st%qtot = M_ZERO
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        st%qtot = st%qtot + staux%occ(n+ist, ik)
-      end do
+    ik = st%d%kpt%start
+    do ist = st%st_start, st%st_end
+      st%qtot = st%qtot + staux%occ(n+ist, ik)
     end do
 
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
