@@ -1152,7 +1152,7 @@ contains
     !% It is expressed in <tt>UnitsOutput</tt> for the relevant quantity. For complex fields, the isovalue is
     !% for the magnitude of the field.
     !%End
-    call parse_variable('OpenSCADIsovalue', (maxff + minff) / M_TWO, isosurface_value, unit)
+    call parse_float('OpenSCADIsovalue', (maxff + minff) / M_TWO, isosurface_value, unit)
     write(message(1),*) 'OpenSCAD output at isovalue ', isosurface_value, " ", trim(units_abbrev(unit))
     call messages_info(1)
     
