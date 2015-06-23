@@ -181,7 +181,7 @@ contains
 #endif
 
     do idir = 1, gr%sb%dim
-      if(grid_spacing(idir) < M_ZERO) then
+      if(grid_spacing(idir) < M_EPSILON) then
         if(def_h > M_ZERO .and. def_h < huge(def_h)) then
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
@@ -193,7 +193,7 @@ contains
           message(1) = 'Either:'
           message(2) = "   *) variable 'Spacing' is not defined and"
           message(3) = "      I can't find a suitable default"
-          message(4) = "   *) your input for 'Spacing' is negative"
+          message(4) = "   *) your input for 'Spacing' is negative or zero"
           call messages_fatal(4)
         end if
       end if
