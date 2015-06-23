@@ -19,10 +19,6 @@
 
 #include "global.h"
 
-! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
-! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
-#define UNITDYNMAT units_out%energy / units_out%length**2
-
 module vibrations_m
   use geometry_m
   use global_m
@@ -68,6 +64,7 @@ module vibrations_m
     FLOAT :: total_mass
     character (len=2) :: suffix
     character (len=80) :: filename_dynmat
+    type(unit_t) :: unit_dynmat
   end type vibrations_t
 
 contains
@@ -103,6 +100,10 @@ contains
       call loct_rm(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     end if
+
+    ! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
+    ! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
+    this%unit_dynmat = units_out%energy / units_out%length**2
 
     POP_SUB(vibrations_init)
   end subroutine vibrations_init
@@ -157,8 +158,8 @@ contains
 
     write(message(1),'(a)') 'Info: Symmetrizing dynamical matrix.'
     write(message(2),'(a,es12.6,a,a)') 'Info: Maximum discrepancy from symmetry: ', &
-      units_from_atomic(UNITDYNMAT, maxdiff), &
-      " ", trim(units_abbrev(UNITDYNMAT))
+      units_from_atomic(this%unit_dynmat, maxdiff), &
+      " ", trim(units_abbrev(this%unit_dynmat))
     call messages_info(2)
 
     POP_SUB(vibrations_symmetrize_dyn_matrix)
@@ -228,7 +229,7 @@ contains
       jdir  = vibrations_get_dir (this, jmat)
     
       write(iunit, '(2(i8, i6), e25.12)') &
-        jatom, jdir, iatom, idir, units_from_atomic(UNITDYNMAT, this%dyn_matrix(jmat, imat))
+        jatom, jdir, iatom, idir, units_from_atomic(this%unit_dynmat, this%dyn_matrix(jmat, imat))
     end do
     call io_close(iunit)
 
@@ -247,7 +248,7 @@ contains
 
     iunit = io_open(this%filename_dynmat, action='write') ! start at the beginning
     write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
-      '[' // trim(units_abbrev(UNITDYNMAT)) // ']'
+      '[' // trim(units_abbrev(this%unit_dynmat)) // ']'
     call io_close(iunit)
 
     POP_SUB(vibrations_out_dyn_matrix_header)
