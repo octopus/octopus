@@ -241,6 +241,7 @@ contains
     ! Check if the file exists and has the proper size (only world root)
     if (mpi_world%rank == 0) then
       call get_info_binary(np, type, file_size, err, filename)
+      ASSERT(np == partition%np_global)
     end if
 
 #ifdef HAVE_MPI
@@ -254,7 +255,7 @@ contains
       POP_SUB(partition_load)
       return
     end if
-    ! The size of the file  is not as big as np_global
+    ! The size of the file is not as big as np_global
     if (file_size - 64 /= partition%np_global * FC_INTEGER_SIZE) then
       ierr = ierr + 2
       POP_SUB(partition_load)
@@ -272,6 +273,8 @@ contains
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
 
+    ASSERT(sum(scounts(:)) == partition%np_global)
+
 #ifdef HAVE_MPI2
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call io_binary_read_parallel(filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
@@ -287,7 +290,7 @@ contains
     else
       ! Create a dummy variable for the rest of the processes
       SAFE_ALLOCATE(part_global(1:1))
-      ! Either there are not reading the partition, or there is not
+      ! Either there are not reading the partition, or there is no
       ! partition. So partition 1 has all the points
       part_global = 1
     end if
@@ -311,12 +314,20 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(part_global)
-#endif
+#endif ! HAVE_MPI2
+
+    if(any(partition%part(:) <= 0)) then
+      write(message(1),'(a)') 'Internal error: some elements of partition are <= 0.'
+      write(message(2),*) 'scounts = ', scounts(:)
+      write(message(3),*) 'sdispls = ', sdispls(:)
+      write(message(4),*) 'partition%remainder = ', partition%remainder
+      write(message(5),*) 'partition%np_local = ', partition%np_local
+      call messages_fatal(5)
+    endif
+
     SAFE_DEALLOCATE_A(scounts)
     SAFE_DEALLOCATE_A(sdispls)
 
-    ASSERT(all(partition%part(:) > 0))
-    
     POP_SUB(partition_load)
   end subroutine partition_load
 
