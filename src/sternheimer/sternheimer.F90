@@ -89,8 +89,8 @@ module sternheimer_m
        wfs_tag_sigma,             &
        sternheimer_obsolete_variables, &
        dcalc_hvar,                &
-       zcalc_hvar,				  &
-       dcalc_kvar,                &   
+       zcalc_hvar,                &
+       dcalc_kvar,                &
        zcalc_kvar  
 
   type sternheimer_t
@@ -99,7 +99,7 @@ module sternheimer_m
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
      FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
-	 FLOAT, pointer        :: kxc(:,:,:,:)      !< quadratic change of the XC potential (kxc)
+     FLOAT, pointer        :: kxc(:,:,:,:)      !< quadratic change of the XC potential (kxc)
      FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
      FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
@@ -316,7 +316,7 @@ contains
 
     PUSH_SUB(sternheimer_build_kxc)
 
-	if(this%add_fxc) then
+    if(this%add_fxc) then
       SAFE_ALLOCATE(this%kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
       this%kxc = M_ZERO
 
@@ -324,7 +324,7 @@ contains
       call states_total_density(st, mesh, rho)
       call xc_get_kxc(ks%xc, mesh, rho, st%d%ispin, this%kxc)
       SAFE_DEALLOCATE_A(rho)
-	end if
+    end if
 
     POP_SUB(sternheimer_build_kxc)
 
@@ -335,8 +335,8 @@ contains
     type(sternheimer_t), intent(inout) :: this
     
     if(this%add_fxc) then
-	  SAFE_DEALLOCATE_P(this%kxc)
-	end if
+      SAFE_DEALLOCATE_P(this%kxc)
+    end if
   end subroutine sternheimer_unset_kxc
 
   !-----------------------------------------------------------

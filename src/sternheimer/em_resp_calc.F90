@@ -63,21 +63,21 @@ module em_resp_calc_m
      zcalc_polarizability_finite,      &
      dcalc_polarizability_periodic,    &
      zcalc_polarizability_periodic,    &
-	 dinhomog_B,                       &
-	 zinhomog_B,                       &
-	 dinhomog_BE_tot,                  &
-	 zinhomog_BE_tot,                  &
-	 dinhomog_kB_tot,                  &
-	 zinhomog_kB_tot,                  &
-	 dinhomog_kE_tot,                  &
-	 zinhomog_kE_tot,                  &
-	 dinhomog_k2_tot,                  &
-	 zinhomog_k2_tot,                  &
-	 dlr_calc_magnetization_periodic,  &
-	 zlr_calc_magnetization_periodic,  &
-	 dlr_calc_magneto_optics_finite,   &
-	 zlr_calc_magneto_optics_finite,   &
-	 dlr_calc_magneto_optics_periodic, & 
+     dinhomog_B,                       &
+     zinhomog_B,                       &
+     dinhomog_BE_tot,                  &
+     zinhomog_BE_tot,                  &
+     dinhomog_kB_tot,                  &
+     zinhomog_kB_tot,                  &
+     dinhomog_kE_tot,                  &
+     zinhomog_kE_tot,                  &
+     dinhomog_k2_tot,                  &
+     zinhomog_k2_tot,                  &
+     dlr_calc_magnetization_periodic,  &
+     zlr_calc_magnetization_periodic,  &
+     dlr_calc_magneto_optics_finite,   &
+     zlr_calc_magneto_optics_finite,   &
+     dlr_calc_magneto_optics_periodic, & 
      zlr_calc_magneto_optics_periodic, &
      dlr_calc_susceptibility,          &
      zlr_calc_susceptibility,          &
@@ -244,9 +244,9 @@ contains
 
   character(len=2) pure function index2pert(ipert) result(ch)
     integer, intent(in) :: ipert
-	
-	select case(ipert)
-	  case(1)
+    
+    select case(ipert)
+      case(1)
         ch = 'B'
       case(2)
         ch = 'K2'
@@ -256,7 +256,7 @@ contains
         ch = 'KE'
       case(5)
         ch = 'BE'
-	  case(6)
+      case(6)
         ch = 'E'
     end select
 

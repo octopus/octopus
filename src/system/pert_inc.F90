@@ -190,8 +190,8 @@ contains
     integer :: iatom
 
     PUSH_SUB(X(pert_apply).kdotp)
-	
-	if(this%vel_method /= 1) then
+
+    if(this%vel_method /= 1) then
       SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
       do idim = 1, hm%d%dim
@@ -215,26 +215,26 @@ contains
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
       Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der,f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir)*Hxpsi(ip,idim)
         end do
       end do
 
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np
-		  f_in_copy(ip,idim)=gr%mesh%x(ip,this%dir)*f_in(ip,idim)
-		end do
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
+          f_in_copy(ip,idim)=gr%mesh%x(ip,this%dir)*f_in(ip,idim)
+        end do
         call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
-	  end do
+      end do
       Hxpsi(:,:)=M_ZERO
       call X(hamiltonian_apply)(hm,gr%der, f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - Hxpsi(ip,idim)
         end do
-	  end do
-	  SAFE_DEALLOCATE_A(Hxpsi)
+      end do
+      SAFE_DEALLOCATE_A(Hxpsi)
     end if
   
     POP_SUB(X(pert_apply).kdotp)
@@ -585,7 +585,7 @@ contains
   subroutine kdotp
     integer :: iatom
     R_TYPE, allocatable :: cpsi(:,:)
-	type(pert_t) :: pert_kdotp
+    type(pert_t) :: pert_kdotp
 
     PUSH_SUB(X(pert_apply_order_2).kdotp)
  
@@ -605,34 +605,34 @@ contains
           f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
         end forall
       end if
-      SAFE_DEALLOCATE_A(cpsi)	  
-	else 
-	  SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
-	  cpsi(:,:) = M_ZERO
+      SAFE_DEALLOCATE_A(cpsi)  
+    else 
+      SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
+      cpsi(:,:) = M_ZERO
       call pert_init(pert_kdotp, PERTURBATION_KDOTP, gr, geo)
-	  call pert_setup_dir(pert_kdotp, this%dir)
-	  call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in,cpsi)
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np
+      call pert_setup_dir(pert_kdotp, this%dir)
+      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in,cpsi)
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir2)*cpsi(ip,idim)
         end do
-	  end do
-	
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np 
-		  f_in_copy(ip,idim)=gr%mesh%x(ip,this%dir2)*f_in(ip,idim)
+      end do
+    
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np 
+          f_in_copy(ip,idim)=gr%mesh%x(ip,this%dir2)*f_in(ip,idim)
         end do
-	  end do
+      end do
       cpsi(:,:)=M_ZERO
-	  call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi)
-	  do idim = 1, hm%d%dim
-	    do ip = 1, gr%mesh%np
+      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi)
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - cpsi(ip,idim)
         end do
-	  end do
-	
+      end do
+    
       call pert_end(pert_kdotp)
-	  
+      
       SAFE_DEALLOCATE_A(cpsi) 
     end if
 

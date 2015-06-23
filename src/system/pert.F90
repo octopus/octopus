@@ -105,7 +105,7 @@ module pert_m
     integer            :: dir2
     integer            :: atom1, atom2
     integer            :: gauge
-	integer            :: vel_method
+    integer            :: vel_method
     type(pert_ionic_t) :: ionic
     logical            :: use_nonlocalpps
   end type pert_t
@@ -170,7 +170,7 @@ contains
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
-	  !%Variable KdotPVelMetod
+      !%Variable KdotPVelMetod
       !%Type integer
       !%Default grad_vel
       !%Section Linear Response::KdotP
@@ -183,7 +183,7 @@ contains
       !% This option is recommended for magneto-optics of periodic systems.
       !%End
       call parse_variable('KdotPVelMetod', 0, this%vel_method)
-	end if
+    end if
 
     POP_SUB(pert_init)
   end subroutine pert_init

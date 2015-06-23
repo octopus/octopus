@@ -823,8 +823,7 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 end subroutine X(em_resp_calc_eigenvalues)
 
 ! ---------------------------------------------------------
-!!!  -Pc{V1!dl_dk2>+!dn_dk2><n!V1!l>}, n,l=occ   
-				   
+!!!  -Pc{V1!dl_dk2>+!dn_dk2><n!V1!l>}, n,l=occ      
 subroutine X(inhomog_magnetic_per_component)(sys,hm,idir,& 
   psi_k2,psi_out,factor_tot,factor_k,factor_second)
   
@@ -865,47 +864,47 @@ subroutine X(inhomog_magnetic_per_component)(sys,hm,idir,&
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
 
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-	       sys%st%X(psi)(:,:,ist,ik),f_out)	  
-		   
-		do idim = 1, hm%d%dim
-	      do ip = 1, sys%gr%mesh%np
-		    vel(ip,idim,ist) = factor*f_out(ip,idim)
-		  end do
-		end do
-	  end if
-	end do  
-	
+           sys%st%X(psi)(:,:,ist,ik),f_out)	  
+           
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            vel(ip,idim,ist) = factor*f_out(ip,idim)
+          end do
+        end do
+      end if
+    end do  
+    
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-        sys%st%X(psi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))	
-					
+        sys%st%X(psi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
+
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
 
-	    call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-	       factor_k*psi_k2(:,:,ist,ik),f_out)	  
-		
-	    do idim = 1, hm%d%dim
-	      do ip = 1, sys%gr%mesh%np
+         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
+           factor_k*psi_k2(:,:,ist,ik),f_out)
+        
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
             psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - &
-		       factor_tot*factor*f_out(ip,idim)
-	      end do
-	    end do
-		
-	    do ist_occ = sys%st%st_start, sys%st%st_end
-		  if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then 
+               factor_tot*factor*f_out(ip,idim)
+          end do
+         end do
+        
+        do ist_occ = sys%st%st_start, sys%st%st_end
+          if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then 
 
-		    do idim = 1, hm%d%dim
-			  do ip = 1, sys%gr%mesh%np
+             do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
                 psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - factor_second*factor_tot* &
-			        factor_k*psi_k2(ip,idim,ist_occ,ik)*vel_mat%X(matrix)(ist_occ,ist)
+                    factor_k*psi_k2(ip,idim,ist_occ,ik)*vel_mat%X(matrix)(ist_occ,ist)
               end do
-            end do			
-          end if			
+            end do
+          end if
         end do 
-	  end if
+      end if
     end do 
   end do 
   
@@ -964,40 +963,40 @@ subroutine X(inhomog_magnetic_electric_2nd_order_component)(sys,hm,idir,&
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-	       sys%st%X(psi)(:,:,ist,ik),f_out)	  
-		do idim = 1, hm%d%dim
-	      do ip = 1, sys%gr%mesh%np
-		    vel(ip,idim,ist) = factor*f_out(ip,idim)
-		  end do
-		end do
-	  end if
-	end do  
-	
+           sys%st%X(psi)(:,:,ist,ik),f_out)	  
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            vel(ip,idim,ist) = factor*f_out(ip,idim)
+          end do
+        end do
+      end if
+    end do  
+    
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         factor_e*psi_e(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
 
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         factor_e*psi_e(:,:,:,ik), factor_k*psi_k2(:,:,:,ik), prod_mat%X(matrix))
-		
+
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 	
-	    do ist_occ = sys%st%st_start, sys%st%st_end
-		  if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then 	
-		  	do idim = 1, hm%d%dim
-			  do ip = 1, sys%gr%mesh%np
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 	
+        do ist_occ = sys%st%st_start, sys%st%st_end
+          if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then 	
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
                 psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - factor_tot* &
-			        vel_mat%X(matrix)(ist_occ,ist)*factor_k*psi_k2(ip,idim,ist_occ,ik)
-			    psi_out(ip,idim,ist,ik)= psi_out(ip,idim,ist,ik) + factor_tot* &
-			        prod_mat%X(matrix)(ist_occ,ist)*vel(ip,idim,ist_occ)
-			  end do
-            end do		
+                    vel_mat%X(matrix)(ist_occ,ist)*factor_k*psi_k2(ip,idim,ist_occ,ik)
+                psi_out(ip,idim,ist,ik)= psi_out(ip,idim,ist,ik) + factor_tot* &
+                    prod_mat%X(matrix)(ist_occ,ist)*vel(ip,idim,ist_occ)
+              end do
+            end do
           end if
         end do
       end if
     end do
-  end do	
+  end do
  
   call pert_end(pert_kdotp)
   
@@ -1046,7 +1045,7 @@ subroutine X(inhomog_B)(sh, sys, hm, idir1, idir2, &
   
   psi_out(1:sys%gr%mesh%np, 1:hm%d%dim, sys%st%st_start:sys%st%st_end, &
       sys%st%d%kpt%start:sys%st%d%kpt%end, 1:1) = M_ZERO
-	  
+  
    call X(inhomog_magnetic_per_component)(sys, hm, idir1, & 
      lr_k2(1)%X(dl_psi),psi_out(:,:,:,:,1),factor_plus,factor_k,factor_magn)
    call X(inhomog_magnetic_per_component)(sys, hm, idir2, & 
@@ -1065,7 +1064,7 @@ subroutine X(inhomog_B)(sh, sys, hm, idir1, idir2, &
   
     call lr_dealloc(lr0(1))
   end if
-	
+
   POP_SUB(X(inhomog_B))
 end subroutine X(inhomog_B)
 
@@ -1109,12 +1108,12 @@ subroutine X(inhomog_EB)(sh, sys, hm, nsigma, &
   
   if(sternheimer_add_hartree(sh) .or. sternheimer_add_fxc(sh)) then
     call X(calc_hvar_lr)(sh,sys,hm,nsigma,1,lr_e,lr_b,factor_e,factor_b,psi_out) 
-	if((present(lr_k1)) .and. (present(lr_k2))) then
-	  factor_sum = M_ONE
-	  call X(calc_hvar_lr2)(sh,sys,hm,nsigma,lr_e,lr_k1(1),lr_k2(1),factor_sum,psi_out)
-	  factor_sum = -M_ONE
-	  call X(calc_hvar_lr2)(sh,sys,hm,nsigma,lr_e,lr_k2(1),lr_k1(1),factor_sum,psi_out)
-	end if
+    if((present(lr_k1)) .and. (present(lr_k2))) then
+      factor_sum = M_ONE
+      call X(calc_hvar_lr2)(sh,sys,hm,nsigma,lr_e,lr_k1(1),lr_k2(1),factor_sum,psi_out)
+      factor_sum = -M_ONE
+      call X(calc_hvar_lr2)(sh,sys,hm,nsigma,lr_e,lr_k2(1),lr_k1(1),factor_sum,psi_out)
+    end if
   end if
  
   POP_SUB(X(inhomog_EB))
@@ -1174,24 +1173,24 @@ subroutine X(inhomog_BE)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
     if(nsigma == 2) isigma_alt = swap_sigma(isigma)
     call X(inhomog_magnetic_per_component)(sys, hm, idir1, & 
       lr_ek2(isigma)%X(dl_psi), psi_out(:,:,:,:,isigma), & 
-	  factor_plus, factor_magn, factor_magn)
+      factor_plus, factor_magn, factor_magn)
     call X(inhomog_magnetic_per_component)(sys, hm, idir2, & 
       lr_ek1(isigma)%X(dl_psi), psi_out(:,:,:,:,isigma),  &
-	  factor_minus, factor_magn, factor_magn)
-	
+      factor_minus, factor_magn, factor_magn)
+    
     call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
       idir1, lr_k2(1)%X(dl_psi), lr_e(isigma_alt)%X(dl_psi),  &
-	  psi_out(:,:,:,:,isigma), factor_plus, factor_k, factor_e1)
+      psi_out(:,:,:,:,isigma), factor_plus, factor_k, factor_e1)
     call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
       idir2, lr_k1(1)%X(dl_psi), lr_e(isigma_alt)%X(dl_psi),  &
-	  psi_out(:,:,:,:,isigma), factor_minus, factor_k, factor_e1)
+      psi_out(:,:,:,:,isigma), factor_minus, factor_k, factor_e1)
   
     call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
       idir1, lr_e(isigma)%X(dl_psi), lr_k2(1)%X(dl_psi),  &
-	  psi_out(:,:,:,:,isigma), factor_plus, factor_e2, factor_k0)
+      psi_out(:,:,:,:,isigma), factor_plus, factor_e2, factor_k0)
     call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
       idir2, lr_e(isigma)%X(dl_psi), lr_k1(1)%X(dl_psi),  &
-	  psi_out(:,:,:,:,isigma), factor_minus, factor_e2,factor_k0)
+      psi_out(:,:,:,:,isigma), factor_minus, factor_e2,factor_k0)
   end do
 
   if(sternheimer_add_hartree(sh2) .or. sternheimer_add_fxc(sh2)) then
@@ -1199,7 +1198,7 @@ subroutine X(inhomog_BE)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
     do isigma = 1, nsigma
       call lr_init(lr0(isigma))
       call lr_allocate(lr0(isigma), sys%st, sys%gr%mesh)
-      lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO	
+      lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO
     end do	
 
 #if defined(R_TCOMPLEX)
@@ -1214,30 +1213,30 @@ subroutine X(inhomog_BE)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
   
     call X(calc_rho)(sh2,sys,hm,factor_rho,factor_sum,factor_k0,factor_k,lr_k1(1),lr_k2(1),lr0(1))
     call X(calc_rho)(sh2,sys,hm,factor_sum*factor_rho,factor_sum,factor_k0,factor_k,lr_k2(1),lr_k1(1),lr0(1))
-	
+    
     call X(calc_hvar_lr)(sh2,sys,hm,1,nsigma,lr_b,lr_e,factor1,factor_e2,psi_out) 
     call X(calc_hvar_lr)(sh2,sys,hm,1,nsigma,lr0,lr_e,factor1,factor_e2,psi_out) 
-	
-	if(calc_var) then
-	  call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_e,lr_b,factor_e2,psi_out)
-	  call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_e,lr0,factor_e2,psi_out)
-	  call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_b,lr_e,factor_e2,psi_out)
-	  call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr0,lr_e,factor_e2,psi_out)
-	end if  
-	
-	do isigma=1, nsigma
+    
+    if(calc_var) then
+      call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_e,lr_b,factor_e2,psi_out)
+      call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_e,lr0,factor_e2,psi_out)
+      call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr_b,lr_e,factor_e2,psi_out)
+      call X(calc_kvar_em)(sh2,sys,hm,nsigma,lr0,lr_e,factor_e2,psi_out)
+    end if  
+    
+    do isigma=1, nsigma
       call lr_dealloc(lr0(isigma))
     end do
   end if
  
   if(sternheimer_add_hartree(sh) .or. sternheimer_add_fxc(sh)) then
-	if(calc_var) then
-	
+    if(calc_var) then
+
       do isigma = 1, nsigma
         call lr_init(lr0(isigma))
         call lr_allocate(lr0(isigma), sys%st, sys%gr%mesh)
-        lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO	
-      end do	
+        lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO
+      end do
 
 #if defined(R_TCOMPLEX)
       factor2 = M_ONE
@@ -1247,13 +1246,13 @@ subroutine X(inhomog_BE)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
       factor_rho = M_HALF
 #endif 
       factor1 = M_ONE 
-      factor_sum = -M_ONE		
-	
-	  do isigma=1, nsigma
-        lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO	
-      end do	
+      factor_sum = -M_ONE
+
+      do isigma=1, nsigma
+        lr0(isigma)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO
+      end do
       
-	  call X(calc_rho)(sh,sys,hm,factor_rho,factor_sum,factor1,factor_k0,lr_ek1(1),lr_k2(1),lr0(1)) 
+      call X(calc_rho)(sh,sys,hm,factor_rho,factor_sum,factor1,factor_k0,lr_ek1(1),lr_k2(1),lr0(1)) 
       call X(calc_rho)(sh,sys,hm,factor_sum*factor_rho,factor_sum,factor_k,factor2,lr_k2(1),lr_ek1(nsigma),lr0(1)) 
       call X(calc_rho)(sh,sys,hm,factor_rho,factor_sum,factor_k,factor2,lr_k1(1),lr_ek2(nsigma),lr0(1)) 
       call X(calc_rho)(sh,sys,hm,factor_sum*factor_rho,factor_sum,factor1,factor_k0,lr_ek2(1),lr_k1(1),lr0(1)) 
@@ -1267,17 +1266,17 @@ subroutine X(inhomog_BE)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
         do ip = 1, sys%gr%mesh%np
           do ispin = 1, sys%st%d%nspin
             lr0(nsigma)%X(dl_rho)(ip, ispin) = R_CONJ(lr0(1)%X(dl_rho)(ip, ispin))
-	      end do
-	    end do
-      end if	
-	  
+          end do
+        end do
+      end if
+      
       call X(calc_hvar_psi)(sh,sys,hm,nsigma,lr0,psi_out)
-	  
+      
       do isigma = 1, nsigma
         call lr_dealloc(lr0(isigma))
       end do
-	 
-	end if
+ 
+    end if
   end if
   
   POP_SUB(X(inhomog_BE))
@@ -1312,9 +1311,9 @@ subroutine X(inhomog_KE)(sh, sys, hm, idir, nsigma, &
   do isigma=1, nsigma
     call X(inhomog_magnetic_per_component)(sys, hm, idir, & 
       lr_e(isigma)%X(dl_psi),psi_out(:,:,:,:,isigma), &
-	  factor_plus, factor_e, factor_magn)
+      factor_plus, factor_e, factor_magn)
   end do
-	
+
   POP_SUB(X(inhomog_KE))
 end subroutine X(inhomog_KE)
 
@@ -1356,24 +1355,24 @@ subroutine X(inhomog_K2)(sh, sys, hm, idir1, idir2, &
 
   call X(inhomog_magnetic_per_component)(sys, hm, & 
     idir1, lr_k2(1)%X(dl_psi), psi_out(:,:,:,:,1), &
-	factor_plus, factor_k, factor_magn)
+    factor_plus, factor_k, factor_magn)
   
   call pert_init(pert_kdotp2, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp2,idir1,idir2)
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-	       sys%st%X(psi)(:,:,ist,ik),f_out)	 
-        if(idir1 == idir2) f_out(:,:) = M_HALF*f_out(:,:)			
-	    do idim = 1, hm%d%dim
-		  do ip = 1, sys%gr%mesh%np	
+           sys%st%X(psi)(:,:,ist,ik),f_out)
+        if(idir1 == idir2) f_out(:,:) = M_HALF*f_out(:,:)
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np	
             psi_out(ip,idim,ist,ik,1) = psi_out(ip,idim,ist,ik,1) + &
-		        factor_plus*f_out(ip, idim)
-      	  end do
-	    end do
-      end if	  
+                factor_plus*f_out(ip, idim)
+          end do
+        end do
+      end if 
     end do 
   end do
 
@@ -1405,7 +1404,7 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   R_TYPE, allocatable :: f_out1(:,:,:), f_out2(:,:,:)
   type(matrix_t):: vel_mat1, vel_mat2
   type(pert_t)  :: pert_kdotp2
-	
+
   PUSH_SUB(X(inhomog_KB))
   
   ASSERT(sys%gr%sb%dim .ne. -1)
@@ -1434,67 +1433,67 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   
   call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
    idir, lr_k2(1)%X(dl_psi), lr_k1(1)%X(dl_psi), & 
-	psi_out(:,:,:,:,1), factor_plus, factor_k, factor_k)
+    psi_out(:,:,:,:,1), factor_plus, factor_k, factor_k)
   call X(inhomog_magnetic_electric_2nd_order_component)(sys, hm, & 
     idir, lr_k1(1)%X(dl_psi), lr_k2(1)%X(dl_psi), & 
-	psi_out(:,:,:,:,1), factor_minus, factor_k, factor_k)
+    psi_out(:,:,:,:,1), factor_minus, factor_k, factor_k)
   call X(inhomog_magnetic_per_component)(sys, hm, idir, & 
     lr_b(1)%X(dl_psi),psi_out(:,:,:,:,1), factor, factor, factor_magn)
-	
+
   call pert_init(pert_kdotp2, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp2,idir1,idir2)
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist=sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
+      if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
         call pert_setup_dir(pert_kdotp2,idir,idir1)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik,  &  
-	       lr_k2(1)%X(dl_psi)(:,:,ist,ik),f_out1(:,:,ist))	
-        if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)		   
+           lr_k2(1)%X(dl_psi)(:,:,ist,ik),f_out1(:,:,ist))
+        if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)   
         call pert_setup_dir(pert_kdotp2,idir,idir2)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-	       lr_k1(1)%X(dl_psi)(:,:,ist,ik),f_out2(:,:,ist))	
-        if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO*f_out2(:,:,ist)	
-		
-	    do idim = 1, hm%d%dim
-		  do ip = 1, sys%gr%mesh%np	
+           lr_k1(1)%X(dl_psi)(:,:,ist,ik),f_out2(:,:,ist))
+        if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO*f_out2(:,:,ist)
+
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np	
             psi_out(ip,idim,ist,ik,1) = psi_out(ip,idim,ist,ik,1) + &
-		        factor_k*(factor_plus*f_out1(ip, idim,ist) + factor_minus*f_out2(ip, idim,ist))
-      	  end do
-		end do
-		
+                factor_k*(factor_plus*f_out1(ip, idim,ist) + factor_minus*f_out2(ip, idim,ist))
+          end do
+        end do
+        
         call pert_setup_dir(pert_kdotp2,idir,idir1)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-	       sys%st%X(psi)(:,:,ist,ik),f_out1(:,:,ist))	
-        if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)			   
+           sys%st%X(psi)(:,:,ist,ik),f_out1(:,:,ist))
+        if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)  
         call pert_setup_dir(pert_kdotp2,idir,idir2)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-	       sys%st%X(psi)(:,:,ist,ik),f_out2(:,:,ist))	
-        if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO*f_out2(:,:,ist)	
-	  
-	  end if
-	end do
-	
-	call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+           sys%st%X(psi)(:,:,ist,ik),f_out2(:,:,ist))
+        if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO*f_out2(:,:,ist)
+      
+      end if
+    end do
+    
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         sys%st%X(psi)(:,:,:,ik), f_out1(:,:,:), vel_mat1%X(matrix))
 
-	call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         sys%st%X(psi)(:,:,:,ik), f_out2(:,:,:), vel_mat2%X(matrix))
 
     do ist=sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
-		do ist_occ=sys%st%st_start, sys%st%st_end
-	      if(abs(sys%st%occ(ist_occ,ik)) .gt. M_EPSILON) then  	
+      if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
+        do ist_occ=sys%st%st_start, sys%st%st_end
+          if(abs(sys%st%occ(ist_occ,ik)) .gt. M_EPSILON) then
 
-	        do idim = 1, hm%d%dim
-		      do ip = 1, sys%gr%mesh%np	
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np	
                 psi_out(ip,idim,ist,ik,1) = psi_out(ip,idim,ist,ik,1) + &
-		            factor_k*(factor_plus*lr_k2(1)%X(dl_psi)(ip,idim,ist_occ,ik)*vel_mat1%X(matrix)(ist_occ,ist) + &
-				    factor_minus*lr_k1(1)%X(dl_psi)(ip,idim,ist_occ,ik)*vel_mat2%X(matrix)(ist_occ,ist))
-		      end do		  
-		    end do	
+                    factor_k*(factor_plus*lr_k2(1)%X(dl_psi)(ip,idim,ist_occ,ik)*vel_mat1%X(matrix)(ist_occ,ist) + &
+                    factor_minus*lr_k1(1)%X(dl_psi)(ip,idim,ist_occ,ik)*vel_mat2%X(matrix)(ist_occ,ist))
+              end do  
+            end do
           end if
-        end do	
+        end do
       end if
     end do
   end do
@@ -1526,9 +1525,9 @@ subroutine X(inhomog_kB_tot)(sh, sys, hm, idir, idir1, idir2, &
   type(lr_t),           intent(inout) :: lr_k2(:)   
   R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
     
-  R_TYPE :: factor1, factor2	
+  R_TYPE :: factor1, factor2
   logical :: calc_var
-	
+
   PUSH_SUB(X(inhomog_kB_tot))
   
 #if defined(R_TCOMPLEX)
@@ -1548,8 +1547,8 @@ subroutine X(inhomog_kB_tot)(sh, sys, hm, idir, idir1, idir2, &
  calc_var = .false.
  call X(inhomog_BE)(sh, sh, sys, hm, idir1, idir2, 1, & 
      calc_var, lr_k1, lr_k2, lr_k, &
-	 lr_kk1, lr_kk2, lr_b, factor1, factor2, psi_out)
-	 
+     lr_kk1, lr_kk2, lr_b, factor1, factor2, psi_out)
+
   POP_SUB(X(inhomog_kB_tot))
 end subroutine X(inhomog_kB_tot)
 
@@ -1582,7 +1581,7 @@ subroutine X(inhomog_kE_tot)(sh, sys, hm, idir, nsigma, &
 
  call X(inhomog_EB)(sh, sys, hm, nsigma, &
    lr_kk, lr_e, lr_k, factor_k, psi_out)
-	
+
  call X(inhomog_KE)(sh, sys, hm, idir, nsigma, & 
     lr_e, psi_out)
 
@@ -1611,15 +1610,14 @@ subroutine X(inhomog_k2_tot)(sh, sys, hm, idir1, idir2, &
   
   call X(inhomog_K2)(sh, sys, hm, idir1, idir2, & 
     lr_k1, lr_k2, psi_out)
-		
+
   if(idir1 == idir2) then
     psi_out(:,:,:,:,:) = M_TWO*psi_out(:,:,:,:,:)
   else
     call X(inhomog_K2)(sh, sys, hm, idir2, idir1, & 
       lr_k2, lr_k1, psi_out)
   end if
-	
-		
+
   POP_SUB(X(inhomog_k2_tot))
 end subroutine X(inhomog_k2_tot)
 
@@ -1659,11 +1657,11 @@ subroutine X(inhomog_BE_tot)(sh, sh2, sys, hm, idir1, idir2, nsigma, &
 
   call X(inhomog_EB)(sh2, sys, hm, nsigma, &
     lr_kb, lr_e, lr_b, factor_b, psi_out, lr_k1, lr_k2)
-	 
+     
   calc_var = .true.
   call X(inhomog_BE)(sh2, sh, sys, hm, idir1, idir2, nsigma, & 
-   	calc_var, lr_k1, lr_k2, lr_e, lr_ek1, &
-	lr_ek2, lr_b, factor, factor, psi_out)
+    calc_var, lr_k1, lr_k2, lr_e, lr_ek1, &
+    lr_ek2, lr_b, factor, factor, psi_out)
   
   POP_SUB(X(inhomog_BE_tot))
 end subroutine X(inhomog_BE_tot)
@@ -1688,13 +1686,13 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   FLOAT :: weight
   R_TYPE, allocatable :: gpsi(:,:,:), gdl_e(:,:,:), gdl_k(:,:,:), gdl_b(:,:,:), &
     gdl_ke(:,:,:,:), gdl_be(:,:,:)
-	
+
   integer :: magn_dir(3,2)
   R_TYPE:: factor, factor0, factor1, factor_e
   type(matrix_t), allocatable:: mat_g,  mat_be, mat_eb, &
     mat_kek(:,:), mat_kke(:,:)
   type(pert_t)  :: pert_kdotp
-	  
+ 
 #ifdef HAVE_MPI
   CMPLX :: zpol_temp(1:MAX_DIM,1:MAX_DIM,1:MAX_DIM)
 #endif
@@ -1732,15 +1730,15 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
 
 
   SAFE_ALLOCATE(mat_g%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
-  SAFE_ALLOCATE(mat_eb%X(matrix)(1:sys%st%nst, 1:sys%st%nst))	
+  SAFE_ALLOCATE(mat_eb%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(mat_be%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   do idir1 = 1, ndir
     do idir2 = 1, ndir
       SAFE_ALLOCATE(mat_kek(idir1,idir2)%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
       SAFE_ALLOCATE(mat_kke(idir1,idir2)%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
-	end do
+    end do
   end do
-	  
+      
   magn_dir(1,1) = 2
   magn_dir(1,2) = 3
   magn_dir(2,1) = 3
@@ -1758,113 +1756,113 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
       do ist = 1, sys%st%nst
-	    if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-		  call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-		    sys%st%X(psi)(:,:,ist,ik),gpsi(:,:,ist))
+        if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+          call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+             sys%st%X(psi)(:,:,ist,ik),gpsi(:,:,ist))
           do idir2 = 1, ndir
-	        call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			  lr_k(idir2)%X(dl_psi)(:,:,ist,ik),gdl_k(idir2,:,:))
-	        call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			  lr_b(idir2)%X(dl_psi)(:,:,ist,ik),gdl_b(idir2,:,:))
-		  end do
-          do idir2 = 1, ndir		  
-	        call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			  lr_e(idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_e(:,:,1))
-		    if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			  lr_e(idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_e(:,:,nsigma))
-		    do idir3 = 1, ndir
-	          call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			    lr_ke(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_ke(idir3,:,:,1))
-		      if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			    lr_ke(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_ke(idir3,:,:,nsigma))
-		    end do
-		    do idir3 = 1, ndir
-	          call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			    lr_be(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_be(:,:,1))
-		      if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
-			    lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_be(:,:,nsigma))
-		  
-              do idim = 1, ndim 		
-			    zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight*M_HALF/P_C*&
-			        (X(mf_dotp)(sys%gr%mesh,lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),factor0*gpsi(:,idim,ist))&
-				    + X(mf_dotp)(sys%gr%mesh,factor*gdl_be(:,idim,nsigma),sys%st%X(psi)(:,idim,ist,ik))&
-			        + X(mf_dotp)(sys%gr%mesh,sys%st%X(psi)(:,idim,ist,ik),factor*gdl_be(:,idim,1)) &
-				    + X(mf_dotp)(sys%gr%mesh,factor0*gpsi(:,idim,ist),lr_be(idir3,idir2,1)%X(dl_psi)(:,idim,ist,ik)))
-					
-			    zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight*M_HALF/P_C*factor_e*&
-			       (X(mf_dotp)(sys%gr%mesh,lr_e(idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),factor0*gdl_b(idir3,:,idim)) &
-				    + X(mf_dotp)(sys%gr%mesh,factor*gdl_e(:,idim,nsigma),lr_b(idir3)%X(dl_psi)(:,idim,ist,ik))&
-			        + X(mf_dotp)(sys%gr%mesh,lr_b(idir3)%X(dl_psi)(:,idim,ist,ik),factor*gdl_e(:,idim,1)) &
-				    + X(mf_dotp)(sys%gr%mesh,factor0*gdl_b(idir3,:,idim),lr_e(idir2,1)%X(dl_psi)(:,idim,ist,ik)))	
+            call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+              lr_k(idir2)%X(dl_psi)(:,:,ist,ik),gdl_k(idir2,:,:))
+            call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+              lr_b(idir2)%X(dl_psi)(:,:,ist,ik),gdl_b(idir2,:,:))
+          end do
+          do idir2 = 1, ndir  
+            call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+              lr_e(idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_e(:,:,1))
+            if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+              lr_e(idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_e(:,:,nsigma))
+            do idir3 = 1, ndir
+              call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+                lr_ke(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_ke(idir3,:,:,1))
+              if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+                lr_ke(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_ke(idir3,:,:,nsigma))
+            end do
+            do idir3 = 1, ndir
+              call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+                lr_be(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik),gdl_be(:,:,1))
+              if(nsigma == 2) call X(pert_apply)(pert_kdotp,sys%gr,sys%geo,hm,ik,&
+                lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik),gdl_be(:,:,nsigma))
+          
+              do idim = 1, ndim 
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight*M_HALF/P_C*&
+                    (X(mf_dotp)(sys%gr%mesh,lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),factor0*gpsi(:,idim,ist))&
+                    + X(mf_dotp)(sys%gr%mesh,factor*gdl_be(:,idim,nsigma),sys%st%X(psi)(:,idim,ist,ik))&
+                    + X(mf_dotp)(sys%gr%mesh,sys%st%X(psi)(:,idim,ist,ik),factor*gdl_be(:,idim,1)) &
+                    + X(mf_dotp)(sys%gr%mesh,factor0*gpsi(:,idim,ist),lr_be(idir3,idir2,1)%X(dl_psi)(:,idim,ist,ik)))
+                
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight*M_HALF/P_C*factor_e*&
+                   (X(mf_dotp)(sys%gr%mesh,lr_e(idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),factor0*gdl_b(idir3,:,idim)) &
+                    + X(mf_dotp)(sys%gr%mesh,factor*gdl_e(:,idim,nsigma),lr_b(idir3)%X(dl_psi)(:,idim,ist,ik))&
+                    + X(mf_dotp)(sys%gr%mesh,lr_b(idir3)%X(dl_psi)(:,idim,ist,ik),factor*gdl_e(:,idim,1)) &
+                    + X(mf_dotp)(sys%gr%mesh,factor0*gdl_b(idir3,:,idim),lr_e(idir2,1)%X(dl_psi)(:,idim,ist,ik)))
 
-			    zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) - weight*M_FOURTH/P_C*&
-			        (X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,1),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
-					    factor0*gdl_k(magn_dir(idir3,2),:,idim)) &
-				    + X(mf_dotp)(sys%gr%mesh,factor*gdl_ke(magn_dir(idir3,1),:,idim,nsigma),&
-					    lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik))&
-			        + X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik),&
-					    factor0*gdl_ke(magn_dir(idir3,2),:,idim,1)) &
-				    + X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,1),:,idim),&
-					    -factor0*lr_ke(magn_dir(idir3,2),idir2,1)%X(dl_psi)(:,idim,ist,ik))&		    
-				    - X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,2),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
-					    factor0*gdl_k(magn_dir(idir3,1),:,idim)) &
-				    - X(mf_dotp)(sys%gr%mesh,factor*gdl_ke(magn_dir(idir3,2),:,idim,nsigma),&
-					    lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik))&
-			        - X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik),&
-					    factor0*gdl_ke(magn_dir(idir3,1),:,idim,1))&
-				    - X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,2),:,idim),&
-					   -factor0*lr_ke(magn_dir(idir3,1),idir2,1)%X(dl_psi)(:,idim,ist,ik)))	
-			  end do
-		    end do 
-	      end do
-	    end if
-	  end do
-	  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) - weight*M_FOURTH/P_C*&
+                    (X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,1),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
+                        factor0*gdl_k(magn_dir(idir3,2),:,idim)) &
+                    + X(mf_dotp)(sys%gr%mesh,factor*gdl_ke(magn_dir(idir3,1),:,idim,nsigma),&
+                        lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik))&
+                    + X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik),&
+                        factor0*gdl_ke(magn_dir(idir3,2),:,idim,1)) &
+                    + X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,1),:,idim),&
+                        -factor0*lr_ke(magn_dir(idir3,2),idir2,1)%X(dl_psi)(:,idim,ist,ik))&
+                    - X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,2),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
+                        factor0*gdl_k(magn_dir(idir3,1),:,idim)) &
+                    - X(mf_dotp)(sys%gr%mesh,factor*gdl_ke(magn_dir(idir3,2),:,idim,nsigma),&
+                        lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik))&
+                    - X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik),&
+                        factor0*gdl_ke(magn_dir(idir3,1),:,idim,1))&
+                    - X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,2),:,idim),&
+                       -factor0*lr_ke(magn_dir(idir3,1),idir2,1)%X(dl_psi)(:,idim,ist,ik)))	
+              end do
+            end do 
+          end do
+        end if
+      end do
+      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             sys%st%X(psi)(:,:,:,ik),factor*gpsi(:,:,:),mat_g%X(matrix))
 
       do idir2 = 1, ndir
-        do idir3 = 1, ndir			
-		  do idir4 = 1, ndir   
-	        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        do idir3 = 1, ndir
+          do idir4 = 1, ndir   
+            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
                 factor0*lr_k(idir4)%X(dl_psi)(:,:,:,ik),lr_ke(idir3,idir2,1)%X(dl_psi)(:,:,:,ik),&
-			    mat_kke(idir4,idir3)%X(matrix))
-	        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+                mat_kke(idir4,idir3)%X(matrix))
+            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
                 lr_ke(idir4,idir2,nsigma)%X(dl_psi)(:,:,:,ik),factor0*lr_k(idir3)%X(dl_psi)(:,:,:,ik),&
-			    mat_kek(idir4,idir3)%X(matrix))
-	      end do
-		end do
-        do idir3 = 1, ndir	
+                mat_kek(idir4,idir3)%X(matrix))
+          end do
+        end do
+        do idir3 = 1, ndir
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
               factor1*lr_b(idir3)%X(dl_psi)(:,:,:,ik),lr_e(idir2,1)%X(dl_psi)(:,:,:,ik),&
-			  mat_be%X(matrix))
-	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+              mat_be%X(matrix))
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
               lr_e(idir2,nsigma)%X(dl_psi)(:,:,:,ik),lr_b(idir3)%X(dl_psi)(:,:,:,ik),&
-			  mat_eb%X(matrix))
+              mat_eb%X(matrix))
 
           do ist = sys%st%st_start, sys%st%st_end
-	        if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-	          do ist_occ  = sys%st%st_start, sys%st%st_end
-	            if (abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+            if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+              do ist_occ  = sys%st%st_start, sys%st%st_end
+                if (abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
 
-				  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
-			          - weight/P_C*factor_e*M_HALF*(factor1*mat_g%X(matrix)(ist_occ,ist)&
-					  + R_CONJ(mat_g%X(matrix)(ist,ist_occ)))*(mat_be%X(matrix)(ist,ist_occ)&
-					  + mat_eb%X(matrix)(ist,ist_occ))
-					  		
-				  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
-			          - weight/P_C*M_FOURTH*factor*(factor1*mat_g%X(matrix)(ist_occ,ist)&
-					  + R_CONJ(mat_g%X(matrix)(ist,ist_occ)))*(&
-				        mat_kke(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
-					  - mat_kke(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ)&
-				      + mat_kek(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
-					  - mat_kek(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ))
-					  
-				end if				
+                  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
+                      - weight/P_C*factor_e*M_HALF*(factor1*mat_g%X(matrix)(ist_occ,ist)&
+                      + R_CONJ(mat_g%X(matrix)(ist,ist_occ)))*(mat_be%X(matrix)(ist,ist_occ)&
+                      + mat_eb%X(matrix)(ist,ist_occ))
+
+                  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
+                      - weight/P_C*M_FOURTH*factor*(factor1*mat_g%X(matrix)(ist_occ,ist)&
+                      + R_CONJ(mat_g%X(matrix)(ist,ist_occ)))*(&
+                        mat_kke(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
+                      - mat_kke(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ)&
+                      + mat_kek(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
+                      - mat_kek(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ))
+                    
+                end if
               end do
             end if
-		  end do
+          end do
         end do
-	  end do
+      end do
     end do
   end do
   
@@ -1875,13 +1873,13 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   call pert_end(pert_kdotp)
   
   SAFE_DEALLOCATE_P(mat_g%X(matrix))
-  SAFE_DEALLOCATE_P(mat_eb%X(matrix))	
+  SAFE_DEALLOCATE_P(mat_eb%X(matrix))
   SAFE_DEALLOCATE_P(mat_be%X(matrix))
   do idir2=1, ndir
     do idir3=1, ndir
       SAFE_DEALLOCATE_P(mat_kek(idir2,idir3)%X(matrix))
       SAFE_DEALLOCATE_P(mat_kke(idir2,idir3)%X(matrix))
-	end do
+    end do
   end do
   
   SAFE_DEALLOCATE_A(mat_g)
@@ -1935,23 +1933,23 @@ subroutine X(symmetrize_magneto_optics_tensor)(sys, tensor)
   
   do iop = 1, nops
     rot = symm_op_rotation_matrix(sys%gr%mesh%sb%symm%ops(iop))
-	det = rot(1,1)*rot(2,2)*rot(3,3) + rot(1,2)*rot(2,3)*rot(3,1) + rot(1,3)*rot(2,1)*rot(3,2) &
-	  - rot(1,1)*rot(2,3)*rot(3,2) - rot(1,2)*rot(2,1)*rot(3,3) - rot(1,3)*rot(2,2)*rot(3,1)
-	  
+    det = rot(1,1)*rot(2,2)*rot(3,3) + rot(1,2)*rot(2,3)*rot(3,1) + rot(1,3)*rot(2,1)*rot(3,2) &
+      - rot(1,1)*rot(2,3)*rot(3,2) - rot(1,2)*rot(2,1)*rot(3,3) - rot(1,3)*rot(2,2)*rot(3,1)
+         
     do idir1=1, ndir
       do idir2=1, ndir
         do idir3=1, ndir
-		  i1 = 1*rot(1,idir1) + 2*rot(2,idir1) + 3*rot(3,idir1)
-		  i2 = 1*rot(1,idir2) + 2*rot(2,idir2) + 3*rot(3,idir2)
-		  i3 = 1*rot(1,idir3) + 2*rot(2,idir3) + 3*rot(3,idir3)
-		  		  
-		  tensor_symm(abs(i1),abs(i2),abs(i3)) = tensor_symm(abs(i1),abs(i2),abs(i3)) + &
-		    tensor(idir1,idir2,idir3)*sign(1,i1)*sign(1,i2)*sign(1,i3)*det
-								  
-		end do
-	  end do
-	end do
-  enddo
+          i1 = 1*rot(1,idir1) + 2*rot(2,idir1) + 3*rot(3,idir1)
+          i2 = 1*rot(1,idir2) + 2*rot(2,idir2) + 3*rot(3,idir2)
+          i3 = 1*rot(1,idir3) + 2*rot(2,idir3) + 3*rot(3,idir3)
+          
+          tensor_symm(abs(i1),abs(i2),abs(i3)) = tensor_symm(abs(i1),abs(i2),abs(i3)) + &
+            tensor(idir1,idir2,idir3)*sign(1,i1)*sign(1,i2)*sign(1,i3)*det
+  
+        end do
+      end do
+    end do
+  end do
   tensor(1:3,1:3,1:3) = tensor_symm(1:3,1:3,1:3) / nops
 
   POP_SUB(X(symmetrize_magneto_optics_tensor))
@@ -2026,127 +2024,127 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   do dir1 = 1, sys%gr%sb%dim
     do dir2 = 1, sys%gr%sb%dim
       do dir3 = 1, sys%gr%sb%dim
-		call pert_setup_dir(pert_e1, dir1)
-		call pert_setup_dir(pert_e2, dir2)
-		call pert_setup_dir(pert_m, dir3)
+        call pert_setup_dir(pert_e1, dir1)
+        call pert_setup_dir(pert_e2, dir2)
+        call pert_setup_dir(pert_m, dir3)
         do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-		  ispin = states_dim_get_spin_index(sys%st%d, ik)
+          ispin = states_dim_get_spin_index(sys%st%d, ik)
           weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
           do ist = sys%st%st_start, sys%st%st_end 
-	        if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
               call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik,&
-			    lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), pertpsi_e1(:,:))	
+                lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), pertpsi_e1(:,:))
               call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik,&
-			    lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_e2(:,:))
+                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_e2(:,:))
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
-			    lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_b(:,:))
+                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_b(:,:))
               do idim = 1, hm%d%dim
-		        do ip = 1, sys%gr%mesh%np
-				  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*&
-				    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
-				  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*&
-				    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
-				  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*&
-				    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
-				end do
-			  end do
-			  chi(dir1, dir2, dir3) =chi(dir1, dir2, dir3) + weight*( &
-				  X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
-				    pertpsi_e1(:,:)) &
-				+ X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
-				  pertpsi_e2(:,:)) &
-				+ X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),&
-				  pertpsi_b(:,:)))
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*&
+                    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*&
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*&
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
+                end do
+              end do
+              chi(dir1, dir2, dir3) =chi(dir1, dir2, dir3) + weight*( &
+                  X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                    pertpsi_e1(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                  pertpsi_e2(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),&
+                  pertpsi_b(:,:)))
 
               call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
-			    pertpsi_e1(:,:))	
+                pertpsi_e1(:,:))
               call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
-			    pertpsi_e2(:,:))
+                pertpsi_e2(:,:))
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), &
-			    pertpsi_b(:,:))
+                pertpsi_b(:,:))
               do idim = 1, hm%d%dim
-		        do ip = 1, sys%gr%mesh%np
-				  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*&
-				      lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
-				  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*&
-				      lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
-				  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*&
-				      lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
-				end do
-			  end do
-			  chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight*( &
-				  X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-				     lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),pertpsi_e1(:,:)) &
-				+ X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-				     lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_e2(:,:)) &
-				+ X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-				     lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_b(:,:)))
-			 
-			end if
-		  end do
-		end do
-		if(sternheimer_add_fxc(sh_mo)) then 
-          hpol_density(:) = M_ZERO
-		  call X(calc_kvar_energy)(sh,sys,lr_e1(dir1,nsigma),lr_e(dir2,1),lr_b(dir3,1),hpol_density)
-		  call X(calc_kvar_energy)(sh,sys,lr_e1(dir1,nsigma),lr_b(dir3,1),lr_e(dir2,1),hpol_density)
-		  call X(calc_kvar_energy)(sh,sys,lr_e(dir2,1),lr_e1(dir1,nsigma),lr_b(dir3,1),hpol_density)
-		  call X(calc_kvar_energy)(sh,sys,lr_e(dir2,1),lr_b(dir3,1),lr_e1(dir1,nsigma),hpol_density)
-		  call X(calc_kvar_energy)(sh,sys,lr_b(dir3,1),lr_e1(dir1,nsigma),lr_e(dir2,1),hpol_density)
-		  call X(calc_kvar_energy)(sh,sys,lr_b(dir3,1),lr_e(dir2,1),lr_e1(dir1,nsigma),hpol_density)
-		  
-		  chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + X(mf_integrate)(sys%gr%mesh, hpol_density)	
-		end if
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*&
+                      lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*&
+                      lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*&
+                      lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                end do
+              end do
+              chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight*( &
+                  X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                     lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),pertpsi_e1(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                     lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_e2(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                   lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_b(:,:)))
 
-	    do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+            end if
+          end do
+        end do
+        if(sternheimer_add_fxc(sh_mo)) then 
+          hpol_density(:) = M_ZERO
+          call X(calc_kvar_energy)(sh,sys,lr_e1(dir1,nsigma),lr_e(dir2,1),lr_b(dir3,1),hpol_density)
+          call X(calc_kvar_energy)(sh,sys,lr_e1(dir1,nsigma),lr_b(dir3,1),lr_e(dir2,1),hpol_density)
+          call X(calc_kvar_energy)(sh,sys,lr_e(dir2,1),lr_e1(dir1,nsigma),lr_b(dir3,1),hpol_density)
+          call X(calc_kvar_energy)(sh,sys,lr_e(dir2,1),lr_b(dir3,1),lr_e1(dir1,nsigma),hpol_density)
+          call X(calc_kvar_energy)(sh,sys,lr_b(dir3,1),lr_e1(dir1,nsigma),lr_e(dir2,1),hpol_density)
+          call X(calc_kvar_energy)(sh,sys,lr_b(dir3,1),lr_e(dir2,1),lr_e1(dir1,nsigma),hpol_density)
+          
+          chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + X(mf_integrate)(sys%gr%mesh, hpol_density)
+        end if
+
+        do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
           weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
-		  		  
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+ 
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb2%X(matrix))
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_b(dir3,1)%X(dl_psi)(:,:,:,ik),lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_be2%X(matrix))
-						
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb1%X(matrix))
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_b(dir3,1)%X(dl_psi)(:,:,:,ik),lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_be1%X(matrix))
-			
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_ee1%X(matrix))
- 	      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik),lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_ee2%X(matrix))
          
           do ist = sys%st%st_start, sys%st%st_end
-	        if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-			
-	          call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e1(:,:))	
-	          call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e2(:,:))	
-	          call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_b(:,:))	
-			  do idim = 1, hm%d%dim
-		        do ip = 1, sys%gr%mesh%np
-				  pertpsi_e1(ip,idim)=pertpsi_e1(ip,idim)+hvar_e1(dir1,ip,ispin,1)*sys%st%X(psi)(ip,idim,ist,ik)
-				  pertpsi_e2(ip,idim)=pertpsi_e2(ip,idim)+hvar_e2(dir2,ip,ispin,nsigma)*sys%st%X(psi)(ip,idim,ist,ik)
-				  pertpsi_b(ip,idim)=pertpsi_b(ip,idim)+hvar_b(dir3,ip,ispin,1)*sys%st%X(psi)(ip,idim,ist,ik)
-				end do
-			  end do
+            if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_b(:,:))
+              do idim = 1, hm%d%dim
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim)=pertpsi_e1(ip,idim)+hvar_e1(dir1,ip,ispin,1)*sys%st%X(psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim)=pertpsi_e2(ip,idim)+hvar_e2(dir2,ip,ispin,nsigma)*sys%st%X(psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim)=pertpsi_b(ip,idim)+hvar_b(dir3,ip,ispin,1)*sys%st%X(psi)(ip,idim,ist,ik)
+                end do
+              end do
               do ist_occ = sys%st%st_start, sys%st%st_end
-	            if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
-				
-				  chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight*(&
-					    X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_e1(:,:))&
-						*(prod_eb2%X(matrix)(ist,ist_occ)+prod_be2%X(matrix)(ist,ist_occ))&
-					    + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_e2(:,:))&
-						*(prod_eb1%X(matrix)(ist,ist_occ)+prod_be1%X(matrix)(ist,ist_occ))&
-					    + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_b(:,:))&
-						*(prod_ee1%X(matrix)(ist,ist_occ)+prod_ee2%X(matrix)(ist,ist_occ)))
-	
-				end if
-			  end do
-			end if
-		  end do
-		end do
-	  end do
+                if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+                
+                  chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight*(&
+                      X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_e1(:,:))&
+                    *(prod_eb2%X(matrix)(ist,ist_occ)+prod_be2%X(matrix)(ist,ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_e2(:,:))&
+                    *(prod_eb1%X(matrix)(ist,ist_occ)+prod_be1%X(matrix)(ist,ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,sys%st%X(psi)(:,:,ist_occ,ik),pertpsi_b(:,:))&
+                    *(prod_ee1%X(matrix)(ist,ist_occ)+prod_ee2%X(matrix)(ist,ist_occ)))
+    
+                end if
+              end do
+            end if
+          end do
+        end do
+      end do
     end do
-  end do	
+  end do
   
   chi(:,:,:) = chi(:,:,:)/P_C
   call zsymmetrize_magneto_optics_tensor(sys, chi(:,:,:))
@@ -2231,11 +2229,11 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
   SAFE_ALLOCATE(kk_mat(1:ndir, 1:ndir))
   
   do idir1 = 1, ndir
-	do idir2 = 1, ndir
+    do idir2 = 1, ndir
       SAFE_ALLOCATE(Hk_mat(idir1,idir2)%X(matrix)(sys%st%st_start:sys%st%st_end, sys%st%st_start:sys%st%st_end))
       SAFE_ALLOCATE(kH_mat(idir1,idir2)%X(matrix)(sys%st%st_start:sys%st%st_end, sys%st%st_start:sys%st%st_end))
       SAFE_ALLOCATE(kk_mat(idir1,idir2)%X(matrix)(sys%st%st_start:sys%st%st_end, sys%st%st_start:sys%st%st_end))
-	end do
+    end do
   end do
 
   
@@ -2245,246 +2243,248 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
     weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
     ispin = states_dim_get_spin_index(sys%st%d,ik)
     do ist = sys%st%st_start, sys%st%st_end
-	  if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
 
-	    do idir = 1, ndir
-		  call X(hamiltonian_apply)(hm,sys%gr%der,lr_b(idir)%X(dl_psi)(:,:,ist,ik),Hdl_b(:,:,idir),ist,ik)
-		  call X(hamiltonian_apply)(hm,sys%gr%der,lr_k(idir)%X(dl_psi)(:,:,ist,ik),Hdl_k(:,:,ist,idir),ist,ik)
-	    end do
+        do idir = 1, ndir
+          call X(hamiltonian_apply)(hm,sys%gr%der,lr_b(idir)%X(dl_psi)(:,:,ist,ik),Hdl_b(:,:,idir),ist,ik)
+          call X(hamiltonian_apply)(hm,sys%gr%der,lr_k(idir)%X(dl_psi)(:,:,ist,ik),Hdl_k(:,:,ist,idir),ist,ik)
+        end do
 
-	    do idir1 = 1, ndir
-		  do idir2 = 1, ndir
-		    call X(hamiltonian_apply)(hm,sys%gr%der,lr_kb(idir1,idir2)%X(dl_psi)(:,:,ist,ik),Hdl_kb(:,:,idir1,idir2),ist,ik)
-		    call X(hamiltonian_apply)(hm,sys%gr%der,lr_kk(max(idir1,idir2),min(idir1,idir2))%X(dl_psi)(:,:,ist,ik),&
-			    Hdl_kk(:,:,idir1,idir2),ist,ik)
-		  end do
-	    end do
-	    do idir1 = 1, ndir
-		  do idir2 = 1, ndir
-		    do idim = 1, ndim
+        do idir1 = 1, ndir
+          do idir2 = 1, ndir
+            call X(hamiltonian_apply)(hm,sys%gr%der,lr_kb(idir1,idir2)%X(dl_psi)(:,:,ist,ik),Hdl_kb(:,:,idir1,idir2),ist,ik)
+            call X(hamiltonian_apply)(hm,sys%gr%der,lr_kk(max(idir1,idir2),min(idir1,idir2))%X(dl_psi)(:,:,ist,ik),&
+                Hdl_kk(:,:,idir1,idir2),ist,ik)
+          end do
+        end do
+        do idir1 = 1, ndir
+          do idir2 = 1, ndir
+            do idim = 1, ndim
 
-		      magn(idir1,idir2) = magn(idir1,idir2) + M_HALF*weight/(P_C**2)*(&
-			    X(mf_dotp)(sys%gr%mesh,lr_b(idir2)%X(dl_psi)(:,idim,ist,ik),Hdl_b(:,idim,idir1))&
-			    + X(mf_dotp)(sys%gr%mesh,lr_b(idir1)%X(dl_psi)(:,idim,ist,ik),Hdl_b(:,idim,idir2))&
-				+ X(mf_dotp)(sys%gr%mesh,Hdl_b(:,idim,idir2),lr_b(idir1)%X(dl_psi)(:,idim,ist,ik))&
-				+ X(mf_dotp)(sys%gr%mesh,Hdl_b(:,idim,idir1),lr_b(idir2)%X(dl_psi)(:,idim,ist,ik)))
-	
-		      magn(idir1,idir2) = magn(idir1,idir2) - weight*sys%st%eigenval(ist,ik)/(P_C**2)*(&
-			          X(mf_dotp)(sys%gr%mesh,lr_b(idir2)%X(dl_psi)(:,idim,ist,ik),&
-					    lr_b(idir1)%X(dl_psi)(:,idim,ist,ik))&
-					+ X(mf_dotp)(sys%gr%mesh,lr_b(idir1)%X(dl_psi)(:,idim,ist,ik),&
-					    lr_b(idir2)%X(dl_psi)(:,idim,ist,ik)))		
-			  
-		      magn(idir1,idir2) = magn(idir1,idir2) - M_HALF*factor0/(P_C**2)*weight*sys%st%eigenval(ist,ik)*(&
-					   X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik),&
-					         lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik))&
-					   - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik),&
-					         lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik))&
-					   + X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik),&
-					         lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik))&
-					   - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik),&
-					         lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik))&			 
-					   + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik),&
-					         factor*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik))&
-					   - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik),&
-					         factor*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik))&
-					   + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik),&
-					         factor*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik))&
-					   - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik),&
-					         factor*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik)))	
-			  
-	          magn(idir1,idir2) = magn(idir1,idir2) + M_FOURTH*weight/(P_C**2)*(&
-			      X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik),&
-				    factor0*Hdl_kb(:,idim,magn_dir(idir2,2),idir1))&
-			    - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik),&
-				    factor0*Hdl_kb(:,idim,magn_dir(idir2,1),idir1))&
-			    + X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik),&
-				    factor0*Hdl_kb(:,idim,magn_dir(idir1,2),idir2))&
-			    - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik),&
-				    factor0*Hdl_kb(:,idim,magn_dir(idir1,1),idir2))&   
-				+ X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir2,1)),&
-				    factor0*lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik))&
-				- X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir2,2)),&
-				    factor0*lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik))&
-				+ X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir1,1)),&
-				    factor0*lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik))&
-				- X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir1,2)),&
-				    factor0*lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik))&	          
-			    + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik),&
-				    -Hdl_k(:,idim,ist,magn_dir(idir2,2)))&
-			    - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik),&
-				    -Hdl_k(:,idim,ist,magn_dir(idir2,1)))&
-			    + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik),&
-				    -Hdl_k(:,idim,ist,magn_dir(idir1,2)))&
-			    - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik),&
-				    -Hdl_k(:,idim,ist,magn_dir(idir1,1)))&  
-				+ X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir2,1),idir1),-lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik))&
-				- X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir2,2),idir1),-lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik))&
-				+ X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir1,1),idir2),-lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik))&
-				- X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir1,2),idir2),-lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik)))
-
-		      magn(idir1,idir2) = magn(idir1,idir2) - M_FOURTH*M_HALF*weight/(P_C**2)*(&
-			      X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
-				  Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,2)))&
-			    - X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
-				  Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,2)))&
-			    - X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
-				  Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,1)))&
-			    + X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
-				  Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,1)))&
-				+ X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,1)),&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
-			    - X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,1)),&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
-			    - X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,2)),&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
-			    + X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,2)),&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik)))
-						
-			  magn(idir1,idir2) = magn(idir1,idir2) + M_FOURTH/(P_C**2)*weight*sys%st%eigenval(ist,ik)*(&
-                + X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
-				- X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&	
+              magn(idir1,idir2) = magn(idir1,idir2) + M_HALF*weight/(P_C**2)*(&
+                X(mf_dotp)(sys%gr%mesh,lr_b(idir2)%X(dl_psi)(:,idim,ist,ik),Hdl_b(:,idim,idir1))&
+                + X(mf_dotp)(sys%gr%mesh,lr_b(idir1)%X(dl_psi)(:,idim,ist,ik),Hdl_b(:,idim,idir2))&
+                + X(mf_dotp)(sys%gr%mesh,Hdl_b(:,idim,idir2),lr_b(idir1)%X(dl_psi)(:,idim,ist,ik))&
+                + X(mf_dotp)(sys%gr%mesh,Hdl_b(:,idim,idir1),lr_b(idir2)%X(dl_psi)(:,idim,ist,ik)))
+        
+              magn(idir1,idir2) = magn(idir1,idir2) - weight*sys%st%eigenval(ist,ik)/(P_C**2)*(&
+                      X(mf_dotp)(sys%gr%mesh,lr_b(idir2)%X(dl_psi)(:,idim,ist,ik),&
+                        lr_b(idir1)%X(dl_psi)(:,idim,ist,ik))&
+                    + X(mf_dotp)(sys%gr%mesh,lr_b(idir1)%X(dl_psi)(:,idim,ist,ik),&
+                        lr_b(idir2)%X(dl_psi)(:,idim,ist,ik)))
+  
+              magn(idir1,idir2) = magn(idir1,idir2) - M_HALF*factor0/(P_C**2)*weight*sys%st%eigenval(ist,ik)*(&
+                       X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik),&
+                             lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik))&
+                       - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik),&
+                             lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik))&
+                       + X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik),&
+                             lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik))&
+                       - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik),&
+                             lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik))& 
+                       + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik),&
+                             factor*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik))&
+                       - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik),&
+                             factor*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik))&
+                       + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik),&
+                             factor*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik))&
+                       - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik),&
+                             factor*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik)))
+ 
+              magn(idir1,idir2) = magn(idir1,idir2) + M_FOURTH*weight/(P_C**2)*(&
+                  X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0*Hdl_kb(:,idim,magn_dir(idir2,2),idir1))&
+                - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0*Hdl_kb(:,idim,magn_dir(idir2,1),idir1))&
+                + X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0*Hdl_kb(:,idim,magn_dir(idir1,2),idir2))&
+                - X(mf_dotp)(sys%gr%mesh,factor0*lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0*Hdl_kb(:,idim,magn_dir(idir1,1),idir2))&   
+                + X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir2,1)),&
+                    factor0*lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir2,2)),&
+                    factor0*lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik))&
+                + X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir1,1)),&
+                    factor0*lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,factor0*Hdl_k(:,idim,ist,magn_dir(idir1,2)),&
+                    factor0*lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik))&          
+                + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,1),idir1)%X(dl_psi)(:,idim,ist,ik),&
+                    -Hdl_k(:,idim,ist,magn_dir(idir2,2)))&
+                - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir2,2),idir1)%X(dl_psi)(:,idim,ist,ik),&
+                    -Hdl_k(:,idim,ist,magn_dir(idir2,1)))&
+                + X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,1),idir2)%X(dl_psi)(:,idim,ist,ik),&
+                    -Hdl_k(:,idim,ist,magn_dir(idir1,2)))&
+                - X(mf_dotp)(sys%gr%mesh,lr_kb(magn_dir(idir1,2),idir2)%X(dl_psi)(:,idim,ist,ik),&
+                    -Hdl_k(:,idim,ist,magn_dir(idir1,1)))&  
+                + X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir2,1),idir1),-lr_k(magn_dir(idir2,2))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir2,2),idir1),-lr_k(magn_dir(idir2,1))%X(dl_psi)(:,idim,ist,ik))&
+                + X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir1,1),idir2),-lr_k(magn_dir(idir1,2))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,Hdl_kb(:,idim,magn_dir(idir1,2),idir2),-lr_k(magn_dir(idir1,1))%X(dl_psi)(:,idim,ist,ik))&
+                )
+        
+              magn(idir1,idir2) = magn(idir1,idir2) - M_FOURTH*M_HALF*weight/(P_C**2)*(&
+                X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
+                Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,2)))&
                 - X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
+                Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,2)))&
+                - X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
+                Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,1)))&
                 + X(mf_dotp)(sys%gr%mesh,&
-				  lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
-				  lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik)))							 
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
+                Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,1)))&
+                + X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,1)),&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,1)),&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,1),magn_dir(idir2,2)),&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
+                + X(mf_dotp)(sys%gr%mesh,Hdl_kk(:,idim,magn_dir(idir1,2),magn_dir(idir2,2)),&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
+                )
+
+              magn(idir1,idir2) = magn(idir1,idir2) + M_FOURTH/(P_C**2)*weight*sys%st%eigenval(ist,ik)*(&
+                + X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik),&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,1)),min(magn_dir(idir1,2),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,2)),min(magn_dir(idir1,1),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
+                + X(mf_dotp)(sys%gr%mesh,&
+                lr_kk(max(magn_dir(idir1,1),magn_dir(idir2,1)),min(magn_dir(idir1,1),magn_dir(idir2,1)))%X(dl_psi)(:,idim,ist,ik),&
+                lr_kk(max(magn_dir(idir1,2),magn_dir(idir2,2)),min(magn_dir(idir1,2),magn_dir(idir2,2)))%X(dl_psi)(:,idim,ist,ik))&
+                ) 
             end do
-		  end do
-		end do
-	  end if
+          end do
+        end do
+      end if
     end do
 
-	do idir1 = 1, ndir
-	  do idir2 = 1, ndir
+    do idir1 = 1, ndir
+      do idir2 = 1, ndir
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           lr_k(idir1)%X(dl_psi)(:,:,:,ik), Hdl_k(:,:,:,idir2), kH_mat(idir1,idir2)%X(matrix))
-		
+    
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           Hdl_k(:,:,:,idir1), lr_k(idir2)%X(dl_psi)(:,:,:,ik), Hk_mat(idir1,idir2)%X(matrix))
-	
+    
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           lr_k(idir1)%X(dl_psi)(:,:,:,ik), lr_k(idir2)%X(dl_psi)(:,:,:,ik), kk_mat(idir1,idir2)%X(matrix))
-	  end do
-	end do
-	do idir1 = 1, ndir
-	  do idir2 = 1, ndir
-		dir1=magn_dir(idir1,1)
-		dir2=magn_dir(idir2,1)
-		dir3=magn_dir(idir1,2)
-		dir4=magn_dir(idir2,2)
-			
+      end do
+    end do
+    do idir1 = 1, ndir
+      do idir2 = 1, ndir
+        dir1=magn_dir(idir1,1)
+        dir2=magn_dir(idir2,1)
+        dir3=magn_dir(idir1,2)
+        dir4=magn_dir(idir2,2)
+
         do ist = sys%st%st_start, sys%st%st_end
-	      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-		    do ist_occ  = sys%st%st_start, sys%st%st_end
+          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            do ist_occ  = sys%st%st_start, sys%st%st_end
               if (abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
-		        magn(idir1,idir2) = magn(idir1,idir2)-M_FOURTH*M_HALF/(P_C**2)*weight*(&
-				    kH_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir3,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir3,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir1,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir1,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ))
+                magn(idir1,idir2) = magn(idir1,idir2)-M_FOURTH*M_HALF/(P_C**2)*weight*(&
+                    kH_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir3,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir3,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir1,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir1,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ))
 
-		        magn(idir1,idir2) = magn(idir1,idir2)-M_FOURTH*M_HALF/(P_C**2)*weight*(&
-				    Hk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ))				  
+                magn(idir1,idir2) = magn(idir1,idir2)-M_FOURTH*M_HALF/(P_C**2)*weight*(&
+                    Hk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir2,dir4)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir3,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir1,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir4,dir2)%X(matrix)(ist,ist_occ))
 
-		        magn(idir1,idir2) = magn(idir1,idir2)+M_FOURTH*sys%st%eigenval(ist,ik)/(P_C**2)*weight*(&
-				    kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&				
-				  + kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist))
-						  
-				magn(idir1,idir2) = magn(idir1,idir2)-M_HALF*M_FOURTH/(P_C**2)*weight*(&
-				    kH_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
-				  - kH_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
-				  + kH_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
-				  - Hk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
-				  + Hk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ))
-						 
-				magn(idir1,idir2) = magn(idir1,idir2)-M_HALF*M_FOURTH/(P_C**2)*weight*(&
-				    kH_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
-				  - kH_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&
-				  - kH_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
-				  + kH_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
-				  + Hk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
-				  - Hk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&
-				  - Hk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
-				  + Hk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist))
-		
-						 
-		        magn(idir1,idir2) = magn(idir1,idir2)+M_FOURTH*(&
-				  sys%st%eigenval(ist,ik)+sys%st%eigenval(ist_occ,ik))/(P_C**2)*weight*(&
-					kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)&
-				  - kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)&
-				  + kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir2)%X(matrix)(ist_occ,ist))
+                magn(idir1,idir2) = magn(idir1,idir2)+M_FOURTH*sys%st%eigenval(ist,ik)/(P_C**2)*weight*(&
+                    kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir2,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir4)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir4,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir3,dir2)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir2,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir4)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir4,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir1,dir2)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist))
+  
+                magn(idir1,idir2) = magn(idir1,idir2)-M_HALF*M_FOURTH/(P_C**2)*weight*(&
+                    kH_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
+                  - kH_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
+                  + kH_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)&
+                  - Hk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)*kk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)&
+                  + Hk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)*kk_mat(dir1,dir4)%X(matrix)(ist,ist_occ))
 
-			  end if 
+                magn(idir1,idir2) = magn(idir1,idir2)-M_HALF*M_FOURTH/(P_C**2)*weight*(&
+                    kH_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
+                  - kH_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&
+                  - kH_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
+                  + kH_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist)&
+                  + Hk_mat(dir3,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir1)%X(matrix)(ist_occ,ist)&
+                  - Hk_mat(dir3,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir1)%X(matrix)(ist_occ,ist)&
+                  - Hk_mat(dir1,dir2)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir3)%X(matrix)(ist_occ,ist)&
+                  + Hk_mat(dir1,dir4)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir3)%X(matrix)(ist_occ,ist))
+
+                magn(idir1,idir2) = magn(idir1,idir2)+M_FOURTH*(&
+                  sys%st%eigenval(ist,ik)+sys%st%eigenval(ist_occ,ik))/(P_C**2)*weight*(&
+                    kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir2,dir4)%X(matrix)(ist_occ,ist)&
+                  - kk_mat(dir1,dir3)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir2)%X(matrix)(ist_occ,ist)&
+                  + kk_mat(dir3,dir1)%X(matrix)(ist,ist_occ)*kk_mat(dir4,dir2)%X(matrix)(ist_occ,ist))
+
+              end if 
             end do
-		  end if
-		end do
-	  end do
+          end if
+        end do
+      end do
     end do
   end do
   
   magn(:,:) = -magn(:,:)
   
   do idir1 = 1, ndir
-	do idir2 = 1, ndir
+    do idir2 = 1, ndir
       SAFE_DEALLOCATE_P(Hk_mat(idir1,idir2)%X(matrix))
       SAFE_DEALLOCATE_P(kH_mat(idir1,idir2)%X(matrix))
       SAFE_DEALLOCATE_P(kk_mat(idir1,idir2)%X(matrix))
-	end do
+    end do
   end do
 
   SAFE_DEALLOCATE_A(Hdl_k)
@@ -2534,30 +2534,30 @@ subroutine X(calc_rho)(sh,sys,hm,factor,factor_sum,factor_e,factor_k,lr_e,lr_k,l
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ispin = states_dim_get_spin_index(sys%st%d, ik)
-	
-	call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         factor_k*lr_k%X(dl_psi)(:,:,:,ik), factor_e*lr_e%X(dl_psi)(:,:,:,ik), mat%X(matrix))
 
     do ist  = sys%st%st_start, sys%st%st_end
-	  if (sys%st%occ(ist, ik) .gt. M_EPSILON) then
+      if (sys%st%occ(ist, ik) .gt. M_EPSILON) then
         weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
-	    do idim = 1, hm%d%dim
-	      do ip = 1, sys%gr%mesh%np
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
             lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) + factor*weight*factor_e*lr_e%X(dl_psi)(ip, idim, ist, ik)*&
-		      R_CONJ(factor_k*lr_k%X(dl_psi)(ip, idim, ist, ik))
+              R_CONJ(factor_k*lr_k%X(dl_psi)(ip, idim, ist, ik))
           end do
-	    end do
-	    do ist_occ  = sys%st%st_start, sys%st%st_end
-	      if (sys%st%occ(ist_occ, ik) .gt. M_EPSILON) then	
-		    do idim = 1, hm%d%dim
+        end do
+        do ist_occ  = sys%st%st_start, sys%st%st_end
+          if (sys%st%occ(ist_occ, ik) .gt. M_EPSILON) then	
+            do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) - factor*factor_sum*weight*mat%X(matrix)(ist,ist_occ)*&
-			        sys%st%X(psi)(ip,idim,ist,ik)*R_CONJ(sys%st%X(psi)(ip,idim,ist_occ,ik))
+                    sys%st%X(psi)(ip,idim,ist,ik)*R_CONJ(sys%st%X(psi)(ip,idim,ist_occ,ik))
               end do
-            end do			
-	      endif
-	    end do
-	  end if
+            end do
+          end if
+        end do
+      end if
     end do
   end do
 
@@ -2590,14 +2590,14 @@ subroutine X(calc_hvar_psi)(sh,sys,hm,nsigma,lr,psi_out)
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do isigma = 1, nsigma
           do idim = 1, hm%d%dim
-		    do ip = 1, sys%gr%mesh%np
-	    	  psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+            do ip = 1, sys%gr%mesh%np
+              psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                 - hvar(ip, ispin, isigma)*sys%st%X(psi)(ip,idim,ist,ik)
-		    end do
-		  end do
-	    end do
-	  end if
-	end do
+            end do
+          end do
+        end do
+      end if
+    end do
   end do
   
   SAFE_DEALLOCATE_A(hvar)
@@ -2632,71 +2632,71 @@ subroutine X(calc_hvar_lr)(sh,sys,hm,nsigma1,nsigma2,lr1,lr2,factor1,factor2,psi
   call X(sternheimer_calc_hvar)(sh, sys, lr1, nsigma1, hvar)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ispin = states_dim_get_spin_index(sys%st%d, ik)
-	if(nsigma1 > 1) then 
+    if(nsigma1 > 1) then 
       do isigma = 1, nsigma1
         do ist = sys%st%st_start, sys%st%st_end
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             do idim = 1, hm%d%dim
-		      do ip = 1, sys%gr%mesh%np
-	    	    psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                   - factor1*hvar(ip, ispin, isigma)*factor2*lr2(1)%X(dl_psi)(ip,idim,ist,ik)
-			    psi(ip, idim, ist) = factor1*hvar(ip, ispin, isigma)*sys%st%X(psi)(ip,idim,ist,ik)
-			  end do
-		    end do
-		  end if
-		end do
+                psi(ip, idim, ist) = factor1*hvar(ip, ispin, isigma)*sys%st%X(psi)(ip,idim,ist,ik)
+              end do
+            end do
+          end if
+        end do
 
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
-		
+        
         do ist  = sys%st%st_start, sys%st%st_end
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-		    do ist1  = sys%st%st_start, sys%st%st_end
+            do ist1  = sys%st%st_start, sys%st%st_end
               if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then	
-			    do idim = 1, hm%d%dim
-			      do ip = 1, sys%gr%mesh%np
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
                     psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) + &
-			            mat%X(matrix)(ist1,ist)*factor2*lr2(1)%X(dl_psi)(ip,idim,ist1,ik)
+                        mat%X(matrix)(ist1,ist)*factor2*lr2(1)%X(dl_psi)(ip,idim,ist1,ik)
                   end do
                 end do
-              end if			  
-		    end do
-		  end if
-	    end do
-	  end do
-	else
-	  do isigma = 1, nsigma2
+              end if 
+            end do
+          end if
+        end do
+      end do
+    else
+      do isigma = 1, nsigma2
         do ist = sys%st%st_start, sys%st%st_end
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             do idim = 1, hm%d%dim
-		      do ip = 1, sys%gr%mesh%np
-	    	    psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                   - factor1*hvar(ip, ispin, 1)*factor2*lr2(isigma)%X(dl_psi)(ip,idim,ist,ik)
-			    psi(ip, idim, ist)= factor1*hvar(ip, ispin, 1)*sys%st%X(psi)(ip,idim,ist,ik)
-			  end do
-		    end do
-		  end if
-		end do
+                psi(ip, idim, ist)= factor1*hvar(ip, ispin, 1)*sys%st%X(psi)(ip,idim,ist,ik)
+              end do
+            end do
+          end if
+        end do
        
-	    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
-		
+        
         do ist  = sys%st%st_start, sys%st%st_end
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             do ist1  = sys%st%st_start, sys%st%st_end
               if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
-			    do idim = 1, hm%d%dim
-			      do ip = 1, sys%gr%mesh%np
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
                       psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) + &
-			            mat%X(matrix)(ist1,ist)*factor2*lr2(isigma)%X(dl_psi)(ip,idim,ist1,ik)
+                        mat%X(matrix)(ist1,ist)*factor2*lr2(isigma)%X(dl_psi)(ip,idim,ist1,ik)
                   end do
                 end do
-              end if			  
-		    end do
-		  end if
-	    end do
-	  end do
-	end if
+              end if
+            end do
+          end if
+        end do
+      end do
+    end if
   end do
   
   SAFE_DEALLOCATE_P(mat%X(matrix))
@@ -2748,35 +2748,35 @@ subroutine X(calc_hvar_lr2)(sh,sys,hm,nsigma,lr_e,lr_k1,lr_k2,factor_tot,psi_out
       do ist  = sys%st%st_start, sys%st%st_end
         if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
           do idim = 1, hm%d%dim
-		    do ip = 1, sys%gr%mesh%np
-			  psi(ip, idim, ist)= factor_e*hvar(ip, ispin, isigma)*sys%st%X(psi)(ip,idim,ist,ik)
-			end do
-		  end do
-		 end if
-	  end do
-	  
-	  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            do ip = 1, sys%gr%mesh%np
+              psi(ip, idim, ist)= factor_e*hvar(ip, ispin, isigma)*sys%st%X(psi)(ip,idim,ist,ik)
+            end do
+          end do
+         end if
+      end do
+      
+      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         factor_k*lr_k1%X(dl_psi)(:,:,:,ik), factor_k*lr_k2%X(dl_psi)(:,:,:,ik),prod_mat%X(matrix))
 
-	  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
         factor_k*lr_k1%X(dl_psi)(:,:,:,ik), psi(:,:,:),prod_mat2%X(matrix))
   
       do ist = sys%st%st_start, sys%st%st_end
         if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
           do ist1  = sys%st%st_start, sys%st%st_end
             if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
-			  do idim = 1, hm%d%dim
-			    do ip = 1, sys%gr%mesh%np
+              do idim = 1, hm%d%dim
+                do ip = 1, sys%gr%mesh%np
                   psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma)+ factor_tot*factor*(&
-			          prod_mat%X(matrix)(ist1,ist)*factor_e*hvar(ip,ispin,isigma)*sys%st%X(psi)(ip,idim,ist1,ik) - &
-					  prod_mat2%X(matrix)(ist1,ist)*factor_k*lr_k2%X(dl_psi)(ip,idim,ist1,ik))
+                      prod_mat%X(matrix)(ist1,ist)*factor_e*hvar(ip,ispin,isigma)*sys%st%X(psi)(ip,idim,ist1,ik) - &
+                      prod_mat2%X(matrix)(ist1,ist)*factor_k*lr_k2%X(dl_psi)(ip,idim,ist1,ik))
                 end do
               end do
-            end if			  
-		  end do
-		end if
-	  end do
-	end do
+            end if 
+          end do
+        end if
+      end do
+    end do
   end do
   
   SAFE_DEALLOCATE_P(prod_mat%X(matrix))
@@ -2811,15 +2811,15 @@ subroutine X(calc_kvar_em)(sh,sys,hm,nsigma,lr1,lr2,factor,psi_out)
     do ist = sys%st%st_start, sys%st%st_end
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idim = 1, hm%d%dim
-		  do ip = 1, sys%gr%mesh%np
-		    do isigma = 1, nsigma
-	    	  psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) &
+          do ip = 1, sys%gr%mesh%np
+            do isigma = 1, nsigma
+              psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) &
                 - M_HALF*factor*kvar(ip,ispin,isigma)*sys%st%X(psi)(ip,idim,ist,ik)
-		    end do
-		  end do
-	    end do
-	  end if
-	end do
+            end do
+          end do
+        end do
+      end if
+    end do
   end do
   
   SAFE_DEALLOCATE_A(kvar)
@@ -2846,7 +2846,7 @@ subroutine X(calc_kvar_energy)(sh,sys,lr1,lr2,lr3,hpol_density)
   call X(calc_kvar)(sh,sys,lr1%X(dl_rho),lr2%X(dl_rho),1,kvar)
   do ip = 1, sys%gr%mesh%np
     do is = 1, sys%st%d%nspin
-	  hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1)*lr3%X(dl_rho)(ip,is)
+      hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1)*lr3%X(dl_rho)(ip,is)
     end do
   end do
   
@@ -2900,30 +2900,29 @@ subroutine X(lr_calc_magnetization_periodic)(sys,hm,lr_k,magn)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
     do ist = 1, sys%st%nst
-	  if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-	    do idir = 1, ndir
-		  call X(hamiltonian_apply)(hm,sys%gr%der,lr_k(idir)%X(dl_psi)(:,:,ist,ik),Hdl_psi(:,:,idir),ist,ik)
-	    end do
+      if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+         do idir = 1, ndir
+          call X(hamiltonian_apply)(hm,sys%gr%der,lr_k(idir)%X(dl_psi)(:,:,ist,ik),Hdl_psi(:,:,idir),ist,ik)
+        end do
    
-	    do idir = 1, ndir
-		  idir1 = magn_dir(idir,1)
-	      idir2 = magn_dir(idir,2)
-		  do idim = 1, ndim
-		    magn(idir) = magn(idir) + M_zI*M_HALF*M_HALF*weight/P_C*&
-			   (X(mf_dotp)(sys%gr%mesh,lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik),Hdl_psi(1:np,idim,idir1)) &
-			  - X(mf_dotp)(sys%gr%mesh,lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik),Hdl_psi(1:np,idim,idir2))&
-			  + X(mf_dotp)(sys%gr%mesh,Hdl_psi(1:np,idim,idir2),lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik)) &
-		      - X(mf_dotp)(sys%gr%mesh,Hdl_psi(1:np,idim,idir1),lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik)))
+        do idir = 1, ndir
+          idir1 = magn_dir(idir,1)
+          idir2 = magn_dir(idir,2)
+          do idim = 1, ndim
+            magn(idir) = magn(idir) + M_zI*M_HALF*M_HALF*weight/P_C*&
+               (X(mf_dotp)(sys%gr%mesh,lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik),Hdl_psi(1:np,idim,idir1)) &
+              - X(mf_dotp)(sys%gr%mesh,lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik),Hdl_psi(1:np,idim,idir2))&
+              + X(mf_dotp)(sys%gr%mesh,Hdl_psi(1:np,idim,idir2),lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik)) &
+              - X(mf_dotp)(sys%gr%mesh,Hdl_psi(1:np,idim,idir1),lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik)))
 
-		    magn(idir) = magn(idir) + M_zI*M_HALF*weight*sys%st%eigenval(ist,ik)/P_C*(&
-			    X(mf_dotp)(sys%gr%mesh,lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik),&
-				  lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik))&
-			    - X(mf_dotp)(sys%gr%mesh,lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik),&
-				  lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik)))
-				  
-		  end do
-	    end do
-	  end if
+            magn(idir) = magn(idir) + M_zI*M_HALF*weight*sys%st%eigenval(ist,ik)/P_C*(&
+                X(mf_dotp)(sys%gr%mesh,lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik),&
+                  lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik))&
+                - X(mf_dotp)(sys%gr%mesh,lr_k(idir1)%X(dl_psi)(1:np,idim,ist,ik),&
+                  lr_k(idir2)%X(dl_psi)(1:np,idim,ist,ik))) 
+          end do
+        end do
+      end if
     end do
   end do
 

@@ -543,14 +543,14 @@ subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
     kvar(1:np, ispin, 1) = M_ZERO
  
     !* kxc
-	if(this%add_fxc) then
+    if(this%add_fxc) then
       do ispin2 = 1, sys%st%d%nspin
         do ispin3 = 1, sys%st%d%nspin
           do ip = 1, np
             kvar(ip,ispin,1) = kvar(ip,ispin,1) + this%kxc(ip,ispin,ispin2,ispin3)&
-		      *lr_rho1(ip,ispin2)*lr_rho2(ip,ispin3)
-		  end do
-		end do
+              *lr_rho1(ip,ispin2)*lr_rho2(ip,ispin3)
+          end do
+        end do
       end do
     end if
   end do
