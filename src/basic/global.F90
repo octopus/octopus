@@ -117,6 +117,18 @@ module global_m
   integer,    public :: global_alloc_err
   integer(8), public :: global_sizeof
   
+  ! The code directories should be defined here, and not hard coded in the Fortran files.
+  character(len=*), public, parameter :: GS_DIR = "gs/"
+  character(len=*), public, parameter :: TD_DIR = "td/"
+  character(len=*), public, parameter :: STATIC_DIR = "static/"
+  character(len=*), public, parameter :: EM_RESP_DIR = "em_resp/"
+  character(len=*), public, parameter :: EM_RESP_FD_DIR = "em_resp_fd/"
+  character(len=*), public, parameter :: KDOTP_DIR = "kdotp/"
+  character(len=*), public, parameter :: VIB_MODES_DIR = "vib_modes/"
+  character(len=*), public, parameter :: VDW_DIR = "vdw/"
+  character(len=*), public, parameter :: CASIDA_DIR = "casida/"
+  character(len=*), public, parameter :: OCT_DIR = "opt-control/"
+
   ! End of declaration of public objects.
   ! ---------------------------------------------------------
 
