@@ -105,7 +105,6 @@ module pert_m
     integer            :: dir2
     integer            :: atom1, atom2
     integer            :: gauge
-    integer            :: vel_method
     type(pert_ionic_t) :: ionic
     logical            :: use_nonlocalpps
   end type pert_t
@@ -169,20 +168,6 @@ contains
       !%End
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
-
-      !%Variable KdotPVelMetod
-      !%Type integer
-      !%Default grad_vel
-      !%Section Linear Response::KdotP
-      !%Description
-      !% Method of velocity calculation
-      !%Option grad_vel 0
-      !% -i*(grad + [r,Vnl])
-      !%Option hcom_vel 1
-      !% As a commutator of the position operator and Hamiltonian -i[r,H]. 
-      !% This option is recommended for magneto-optics of periodic systems.
-      !%End
-      call parse_variable('KdotPVelMetod', 0, this%vel_method)
     end if
 
     POP_SUB(pert_init)
