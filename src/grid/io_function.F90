@@ -196,7 +196,8 @@ contains
     !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
     !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
-    !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>.
+    !% Available only in 3D.
+    !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>. (Experimental.)
     !%Option json 524288
     !% Generates output in JSON format.
     !%Option bild 1048576
@@ -253,6 +254,14 @@ contains
       endif
     endif
 
+    if(iand(how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
+      if(sb%dim /= 3) then
+        write(message(1),'(a)') "OutputHow = OpenSCAD only available with Dimensions = 3."
+        call messages_fatal(1)
+      endif
+      call messages_experimental("OutputHow = OpenSCAD")
+    endif
+    
 #if !defined(HAVE_NETCDF)
     if (iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
