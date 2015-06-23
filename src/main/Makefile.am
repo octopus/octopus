@@ -55,6 +55,10 @@ octopus_mpi_LDADD = \
 
 CLEANFILES += octopus oct-test
 
+# debug files from MacOS gcc with -g
+clean-local :
+	rm -rf *.dSYM
+
 depend:
 	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
 
