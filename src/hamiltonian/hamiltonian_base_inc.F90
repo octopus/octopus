@@ -748,7 +748,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 
   if(.not. this%apply_projector_matrices) return
 
-  call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_ELEMENT")
+  call profiling_in(prof_matelement, "VNLPSI_MAT_ELEM")
   PUSH_SUB(X(hamiltonian_base_nlocal_force))
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
@@ -774,7 +774,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 
       SAFE_ALLOCATE(psi(0:ndim, 1:nst, 1:npoints))
       
-      call profiling_in(prof_gather, "PROJ_MAT_ELEM_GATHER")
+      call profiling_in(prof_matelement_gather, "PROJ_MAT_ELEM_GATHER")
 
       ! collect all the points we need in a continuous array
       if(batch_is_packed(psi1b)) then
@@ -803,7 +803,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
         end forall
       end if
 
-      call profiling_out(prof_gather)
+      call profiling_out(prof_matelement_gather)
       
       ! Now matrix-multiply to calculate the projections. We can do all the matrix multiplications at once
       call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
@@ -848,7 +848,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
   end do
 
   POP_SUB(X(hamiltonian_base_nlocal_force))
-  call profiling_out(prof_vnlpsi_start)
+  call profiling_out(prof_matelement)
 end subroutine X(hamiltonian_base_nlocal_force)
 
 !! Local Variables:
