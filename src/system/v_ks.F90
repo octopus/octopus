@@ -525,7 +525,12 @@ contains
     end if
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
-    if(ks%frozen_hxc) then
+    if(ks%frozen_hxc) then      
+      if(ks%calculate_current) then
+        call states_allocate_current(st, ks%gr)
+        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
+      end if      
+
       POP_SUB(v_ks_calc_start)
       return
     end if
