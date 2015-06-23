@@ -93,6 +93,10 @@ contains
       this%total_mass = this%total_mass + species_mass(geo%atom(iatom)%species)
     end do
 
+    ! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
+    ! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
+    this%unit_dynmat = units_out%energy / units_out%length**2
+
     this%suffix = suffix
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
@@ -100,10 +104,6 @@ contains
       call loct_rm(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     end if
-
-    ! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
-    ! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
-    this%unit_dynmat = units_out%energy / units_out%length**2
 
     POP_SUB(vibrations_init)
   end subroutine vibrations_init
