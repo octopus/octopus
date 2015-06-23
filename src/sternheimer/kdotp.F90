@@ -343,6 +343,7 @@ contains
 
     if(calc_2nd_order) then
       call sternheimer_end(sh2)
+      call pert_end(pert2)
       call pert_end(kdotp_vars%perturbation2)
       SAFE_DEALLOCATE_P(kdotp_vars%lr2)
     end if
