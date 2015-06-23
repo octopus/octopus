@@ -609,7 +609,11 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
 
   PUSH_SUB(X(mf_multipoles))
 
-  factor = R_TOPREC(exp(M_zI * optional_default(cmplxscl_th, M_ZERO)))
+  if(abs(optional_default(cmplxscl_th, M_ZERO)) > M_EPSILON) then
+    factor = R_TOPREC(exp(M_zI * cmplxscl_th))
+  else
+    factor = M_ONE
+  endif
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
