@@ -110,6 +110,7 @@ contains
     !% JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
     !%Option oep_full 5
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
+    !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>.
     !%End
     call messages_obsolete_variable('OEP_Level', 'OEPLevel')
     call parse_variable('OEPLevel', XC_OEP_KLI, oep%level)
@@ -134,11 +135,9 @@ contains
         call parse_variable('OEPMixing', M_ONE, oep%mixing)
       end if
 
-     ! this routine is only prepared for finite systems
-      if(st%d%nik > st%d%ispin) then
-        message(1) = "OEP only works for finite systems."
-        call messages_fatal(1)
-      end if
+     ! this routine is only prepared for finite systems. (Why not?)
+      if(st%d%nik > st%d%ispin) &
+        call messages_not_implemented("OEP for periodic systems")
     
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, st%d%nspin)
