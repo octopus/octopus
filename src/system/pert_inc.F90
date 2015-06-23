@@ -192,27 +192,27 @@ contains
     PUSH_SUB(X(pert_apply).kdotp)
 
     if(this%vel_method /= 1) then
-    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
+      SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
-    do idim = 1, hm%d%dim
-      call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), set_bc = .false.)
-      ! set_bc done already separately
-    end do
-
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = grad(ip, this%dir, idim)
-
-    ! i delta_H_k = i (-i*grad + k) . delta_k
-    ! representation on psi is just grad . delta_k
-    ! note that second-order term is left out
-    if(this%use_nonlocalpps) then
-      do iatom = 1, geo%natoms
-        if(species_is_ps(geo%atom(iatom)%species)) then
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, f_out)
-        end if
+      do idim = 1, hm%d%dim
+        call X(derivatives_grad) (gr%der, f_in_copy(:, idim), grad(:, :, idim), set_bc = .false.)
+        ! set_bc done already separately
       end do
-    end if
+
+      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = grad(ip, this%dir, idim)
+
+      ! i delta_H_k = i (-i*grad + k) . delta_k
+      ! representation on psi is just grad . delta_k
+      ! note that second-order term is left out
+      if(this%use_nonlocalpps) then
+        do iatom = 1, geo%natoms
+          if(species_is_ps(geo%atom(iatom)%species)) then
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, f_out)
+          end if
+        end do
+      end if
     
-    SAFE_DEALLOCATE_A(grad)
+      SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
       Hxpsi(:,:) = M_ZERO
@@ -592,21 +592,21 @@ contains
     PUSH_SUB(X(pert_apply_order_2).kdotp)
 
     if(this%vel_method /= 1) then
-    f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
-    SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
-    cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
+      f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
+      SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
+      cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
     
-    if(this%use_nonlocalpps) then
-      do iatom = 1, geo%natoms
-        if(species_is_ps(geo%atom(iatom)%species)) then
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
-        end if
-      end do
+      if(this%use_nonlocalpps) then
+        do iatom = 1, geo%natoms
+          if(species_is_ps(geo%atom(iatom)%species)) then
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
+          end if
+        end do
 
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-        f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
-      end forall
-    end if
+        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
+          f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
+        end forall
+      end if
     else 
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
       cpsi(:,:) = M_ZERO
