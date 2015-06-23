@@ -271,7 +271,8 @@ contains
         SAFE_DEALLOCATE_A(recv_rem_points)
 
         call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
-
+        SAFE_DEALLOCATE_A(send_buffer)
+        
       end if
 #endif
 
