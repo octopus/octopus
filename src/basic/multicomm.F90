@@ -520,10 +520,9 @@ contains
     ! ---------------------------------------------------------
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
-      integer :: dim_mask(MAX_INDEX)
+      logical :: dim_mask(MAX_INDEX)
       integer :: i_strategy
-      integer :: reorder, periodic_mask(MAX_INDEX)
-      integer, allocatable :: periodic_mask_tmp(:)
+      logical :: reorder, periodic_mask(MAX_INDEX)
       integer :: coords(MAX_INDEX)
       integer :: new_comm
 #endif
@@ -536,7 +535,6 @@ contains
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
 #if defined(HAVE_MPI)
-      SAFE_ALLOCATE(periodic_mask_tmp(1:mc%n_index))
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
@@ -545,19 +543,16 @@ contains
         ! that correspond to each level.
 
         ! create the topology
-        periodic_mask = 0
-        reorder = 1
+        periodic_mask = .false.
+        reorder = .true.
 
         ! The domain and states dimensions have to be periodic (2D torus)
         ! in order to circulate matrix blocks.
-        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) &
-          periodic_mask(P_STRATEGY_DOMAINS) = 1
-        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) &
-          periodic_mask(P_STRATEGY_STATES) = 1
+        periodic_mask(P_STRATEGY_DOMAINS) = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
+        periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
-        periodic_mask_tmp(1:mc%n_index) = periodic_mask(1:mc%n_index)
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -577,8 +572,8 @@ contains
 
         call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
 
-        reorder = 0
-        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask_tmp, reorder, mc%master_comm, mpi_err)
+        reorder = .false.
+        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
 
         call MPI_Comm_free(new_comm, mpi_err)
 
@@ -587,29 +582,29 @@ contains
         ! The "lines" of the Cartesian grid.
         ! Initialize all the communicators, even if they are not parallelized
         do i_strategy = 1, mc%n_index
-            dim_mask             = 0
-            dim_mask(i_strategy) = 1
+            dim_mask             = .false.
+            dim_mask(i_strategy) = .true.
             call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
             call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
         end do
 
         ! The domain-state "planes" of the grid (the ones with periodic dimensions).
-        dim_mask                     = 0
-        dim_mask(P_STRATEGY_DOMAINS) = 1
-        dim_mask(P_STRATEGY_STATES)  = 1
+        dim_mask                     = .false.
+        dim_mask(P_STRATEGY_DOMAINS) = .true.
+        dim_mask(P_STRATEGY_STATES)  = .true.
         call MPI_Cart_sub(mc%master_comm, dim_mask, mc%dom_st_comm, mpi_err)
 
         ! The state-kpoints "planes" of the grid
-        dim_mask                     = 0
-        dim_mask(P_STRATEGY_STATES)  = 1
-        dim_mask(P_STRATEGY_KPOINTS) = 1
+        dim_mask                     = .false.
+        dim_mask(P_STRATEGY_STATES)  = .true.
+        dim_mask(P_STRATEGY_KPOINTS) = .true.
         call MPI_Cart_sub(mc%master_comm, dim_mask, mc%st_kpt_comm, mpi_err)
 
         ! The domains-states-kpoints "cubes" of the grid
-        dim_mask                     = 0
-        dim_mask(P_STRATEGY_DOMAINS) = 1
-        dim_mask(P_STRATEGY_STATES)  = 1
-        dim_mask(P_STRATEGY_KPOINTS) = 1
+        dim_mask                     = .false.
+        dim_mask(P_STRATEGY_DOMAINS) = .true.
+        dim_mask(P_STRATEGY_STATES)  = .true.
+        dim_mask(P_STRATEGY_KPOINTS) = .true.
         call MPI_Cart_sub(mc%master_comm, dim_mask, mc%dom_st_kpt_comm, mpi_err)
 
         if(num_slaves > 0) call create_slave_intercommunicators()
@@ -622,7 +617,6 @@ contains
         mc%st_kpt_comm = base_grp%comm
         mc%dom_st_kpt_comm = base_grp%comm
       end if
-      SAFE_DEALLOCATE_A(periodic_mask_tmp)
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
