@@ -20,6 +20,7 @@
 #include "global.h"
 
 module em_resp_calc_m
+  use boundaries_m
   use density_m
   use derivatives_m
   use elf_m
@@ -27,6 +28,7 @@ module em_resp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
+  use lalg_basic_m
   use linear_response_m
   use magnetic_m
   use mesh_m
@@ -37,10 +39,14 @@ module em_resp_calc_m
   use pert_m
   use poisson_m
   use profiling_m
+  use projector_m
+  use species_m
   use states_m
   use states_block_m
   use states_dim_m
   use sternheimer_m
+  use symm_op_m
+  use symmetries_m
   use symmetrizer_m
   use system_m
   use utils_m
@@ -57,8 +63,26 @@ module em_resp_calc_m
      zcalc_polarizability_finite,      &
      dcalc_polarizability_periodic,    &
      zcalc_polarizability_periodic,    &
+	 dinhomog_B,                       &
+	 zinhomog_B,                       &
+	 dinhomog_BE_tot,                  &
+	 zinhomog_BE_tot,                  &
+	 dinhomog_kB_tot,                  &
+	 zinhomog_kB_tot,                  &
+	 dinhomog_kE_tot,                  &
+	 zinhomog_kE_tot,                  &
+	 dinhomog_k2_tot,                  &
+	 zinhomog_k2_tot,                  &
+	 dlr_calc_magnetization_periodic,  &
+	 zlr_calc_magnetization_periodic,  &
+	 dlr_calc_magneto_optics_finite,   &
+	 zlr_calc_magneto_optics_finite,   &
+	 dlr_calc_magneto_optics_periodic, & 
+     zlr_calc_magneto_optics_periodic, &
      dlr_calc_susceptibility,          &
      zlr_calc_susceptibility,          &
+     dlr_calc_susceptibility_periodic, &
+     zlr_calc_susceptibility_periodic, &
      dlr_calc_beta,                    &
      zlr_calc_beta,                    &
      freq2str,                         &
@@ -199,20 +223,45 @@ contains
   
 
 ! ---------------------------------------------------------
-  character(len=100) function em_wfs_tag(idir, ifactor, idir2) result(str)
+  character(len=100) function em_wfs_tag(idir, ifactor, idir2, ipert) result(str)
     integer,           intent(in) :: idir
     integer,           intent(in) :: ifactor
     integer, optional, intent(in) :: idir2
+    integer, optional, intent(in) :: ipert 
 
     PUSH_SUB(em_wfs_tag)
 
     write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
     if(present(idir2)) write(str, '(3a)') trim(str), "_", index2axis(idir2)
+    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert) 
 
     POP_SUB(em_wfs_tag)
 
   end function em_wfs_tag
 
+  
+! ---------------------------------------------------------
+
+  character(len=2) pure function index2pert(ipert) result(ch)
+    integer, intent(in) :: ipert
+	
+	select case(ipert)
+	  case(1)
+        ch = 'B'
+      case(2)
+        ch = 'K2'
+      case(3)
+        ch = 'KB'
+      case(4)
+        ch = 'KE'
+      case(5)
+        ch = 'BE'
+	  case(6)
+        ch = 'E'
+    end select
+
+  end function index2pert
+  
 ! ---------------------------------------------------------
 
 #include "undef.F90"
