@@ -72,9 +72,6 @@ module lalg_adv_m
 
   interface lalg_eigensolve
     module procedure deigensolve, zeigensolve
-#ifdef HAVE_SCALAPACK
-    module procedure deigensolve_scalapack, zeigensolve_scalapack
-#endif
   end interface lalg_eigensolve
 
   !> Note that lalg_determinant and lalg_inverter are just wrappers
@@ -593,16 +590,10 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "lalg_adv_lapack_inc.F90"
-#ifdef HAVE_SCALAPACK
-#include "lalg_adv_scalapack_inc.F90"
-#endif
   
 #include "undef.F90"
 #include "real.F90"
 #include "lalg_adv_lapack_inc.F90"
-#ifdef HAVE_SCALAPACK
-#include "lalg_adv_scalapack_inc.F90"
-#endif
 
 end module lalg_adv_m
 
