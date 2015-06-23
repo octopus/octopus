@@ -61,6 +61,7 @@ line:
 exp: NUM                   { $$ = $1;                           }
 | VAR                      { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
 | VAR '=' exp              { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
+| FNCT                     { sym_wrong_arg($1); }
 | FNCT '(' exp ')'         { if($1->nargs != 1) sym_wrong_arg($1); $$ = (*($1->value.fnctptr))($3);   }
 | FNCT '(' exp ',' exp ')' { if($1->nargs != 2) sym_wrong_arg($1); $$ = (*($1->value.fnctptr))($3, $5); }
 | exp '+' exp              { $$ = gsl_complex_add($1, $3);      }
