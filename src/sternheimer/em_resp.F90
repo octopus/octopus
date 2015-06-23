@@ -710,7 +710,7 @@ contains
 
       PUSH_SUB(em_resp_run.info)
 
-      call pert_info(em_vars%perturbation, stdout)
+      call pert_info(em_vars%perturbation)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
           write(message(1),'(a)') 'Linear-Response First-Order Hyperpolarizabilities'

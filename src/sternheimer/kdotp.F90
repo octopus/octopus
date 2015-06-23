@@ -432,7 +432,7 @@ contains
 
       PUSH_SUB(kdotp_lr_run.info)
 
-      call pert_info(kdotp_vars%perturbation, stdout)
+      call pert_info(kdotp_vars%perturbation)
 
       write(message(1),'(a)') 'k.p perturbation theory'
       call messages_print_stress(stdout, trim(message(1)))

@@ -203,9 +203,8 @@ contains
   end subroutine pert_end
 
   ! --------------------------------------------------------------------
-  subroutine pert_info(this, unit)
+  subroutine pert_info(this)
     type(pert_t), intent(in) :: this
-    integer,      intent(in) :: unit
 
     PUSH_SUB(pert_info)
 
