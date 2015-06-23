@@ -561,12 +561,18 @@ contains
     end do
 
 #endif
+
+    ! Change the smearing method by fixing the occupations to 
+    ! that of the ground-state such that the unfrozen states inherit 
+    ! those values.
+    st%smear%method = SMEAR_FIXED_OCC
   
-    ! fix total charge 
+    ! Set total charge
     st%qtot = M_ZERO
-    ik = st%d%kpt%start
-    do ist = st%st_start, st%st_end
-      st%qtot = st%qtot + staux%occ(n+ist, ik)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        st%qtot = st%qtot + staux%occ(n+ist, ik) * st%d%kweights(ik)
+      end do
     end do
 
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
