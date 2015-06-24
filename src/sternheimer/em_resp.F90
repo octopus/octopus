@@ -1277,7 +1277,7 @@ contains
     
         HRS_E = (beta(1,2,3) + beta(1,3,2) + beta(2,1,3) + beta(2,3,1) + beta(3,1,2) + beta(3,2,1))**2
     
-        HRS_VV = (M_ONE / M_SEVEN)     * HRS_A &
+        HRS_VV = (M_ONE / CNST(7.0))     * HRS_A &
                + (M_TWO / CNST(35.0))  * HRS_B &
                + (M_ONE / CNST(35.0))  * HRS_C &
                + (M_TWO / CNST(105.0)) * HRS_D &

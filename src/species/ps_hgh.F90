@@ -269,20 +269,20 @@ contains
     params%h(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%h(0, 2, 2)
     params%h(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%h(0, 3, 3)
     params%h(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%h(0, 3, 3)
-    params%h(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/M_SEVEN)            * params%h(1, 2, 2)
-    params%h(1, 1, 3) =  M_ONE/M_SIX * sqrt(CNST(35.0)/CNST(11.0))     * params%h(1, 3, 3)
-    params%h(1, 2, 3) = -M_ONE/M_SIX * (CNST(14.0) / sqrt(CNST(11.0))) * params%h(1, 3, 3)
-    params%h(2, 1, 2) = -M_HALF      * sqrt(M_SEVEN/M_NINE)            * params%h(2, 2, 2)
+    params%h(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%h(1, 2, 2)
+    params%h(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%h(1, 3, 3)
+    params%h(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%h(1, 3, 3)
+    params%h(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%h(2, 2, 2)
     params%h(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%h(2, 3, 3)
     params%h(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%h(2, 3, 3)
 
     params%k(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%k(0, 2, 2)
     params%k(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%k(0, 3, 3)
     params%k(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%k(0, 3, 3)
-    params%k(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/M_SEVEN)            * params%k(1, 2, 2)
-    params%k(1, 1, 3) =  M_ONE/M_SIX * sqrt(CNST(35.0)/CNST(11.0))     * params%k(1, 3, 3)
-    params%k(1, 2, 3) = -M_ONE/M_SIX * (CNST(14.0) / sqrt(CNST(11.0))) * params%k(1, 3, 3)
-    params%k(2, 1, 2) = -M_HALF      * sqrt(M_SEVEN/M_NINE)            * params%k(2, 2, 2)
+    params%k(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%k(1, 2, 2)
+    params%k(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%k(1, 3, 3)
+    params%k(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%k(1, 3, 3)
+    params%k(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%k(2, 2, 2)
     params%k(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%k(2, 3, 3)
     params%k(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%k(2, 3, 3)
 
@@ -393,8 +393,8 @@ contains
     g6 = g4*g2
 
     vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) + &
-      sqrt(M_EIGHT*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) * &
-      ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
+      sqrt(CNST(8.0)*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) * &
+      ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - CNST(10.0)*g2 + g4) + &
       p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
     POP_SUB(vlocalg)
@@ -471,17 +471,17 @@ contains
       case(1)
         projectorg = ( M_FOUR*sqrt(M_TWO*p%rc(0)**3)*pif ) / ex
       case(2)
-        projectorg = ( sqrt(M_EIGHT*2*p%rc(0)**3/CNST(15.0))*pif * &
+        projectorg = ( sqrt(CNST(8.0)*2*p%rc(0)**3/CNST(15.0))*pif * &
           (M_THREE - (g*p%rc(0))**2) ) / ex
       case(3)
         projectorg = ( CNST(16.0)*sqrt(M_TWO*p%rc(0)**3/CNST(105.0)) * pif * &
-          (CNST(15.0) - M_TEN*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (M_THREE*ex)
+          (CNST(15.0) - CNST(10.0)*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (M_THREE*ex)
       end select
 
     case(1)
       select case(i)
       case(1)
-        projectorg = ( M_EIGHT*sqrt(p%rc(1)**5/M_THREE)*pif*g ) / ex
+        projectorg = ( CNST(8.0)*sqrt(p%rc(1)**5/M_THREE)*pif*g ) / ex
       case(2)
         projectorg = ( CNST(16.0)*sqrt(p%rc(1)**5/CNST(105.0))* pif * g * &
           ( M_FIVE - (g*p%rc(1))**2 ) ) / ex
@@ -494,10 +494,10 @@ contains
     case(2)
       select case(i)
       case(1)
-        projectorg = ( M_EIGHT * sqrt(M_TWO*p%rc(2)**7/CNST(15.0)) * pif * g**2 ) / ex
+        projectorg = ( CNST(8.0) * sqrt(M_TWO*p%rc(2)**7/CNST(15.0)) * pif * g**2 ) / ex
       case(2)
         projectorg = ( CNST(16.0) * sqrt(M_TWO*p%rc(2)**7/CNST(105.0)) * pif * g**2 * &
-          (M_SEVEN - g**2*p%rc(2)**2) ) / (M_THREE*ex)
+          (CNST(7.0) - g**2*p%rc(2)**2) ) / (M_THREE*ex)
       case(3)
         projectorg = M_ZERO ! ??
       end select

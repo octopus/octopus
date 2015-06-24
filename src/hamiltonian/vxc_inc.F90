@@ -1215,7 +1215,7 @@ subroutine zxc_lda_correlation(mesh, zrho, zvc, zec, theta, polarized)
   SAFE_ALLOCATE(depsdrs(1:mesh%np))
 
   zrhototal(:) = sum(zrho, 2)
-  rootrs(:) = (M_THREE / (CNST(1e-30) + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / M_SIX)
+  rootrs(:) = (M_THREE / (CNST(1e-30) + M_FOUR * M_PI * exp(-mesh%sb%dim * M_zI * theta) * zrhototal(:)))**(M_ONE / CNST(6.0))
   call localstitch(mesh, rootrs, get_root6_branch)
   
   call zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, &
@@ -1481,7 +1481,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
   dimphase = exp(mesh%sb%dim * M_zI * theta)
 
   SAFE_ALLOCATE(rootrs(1:mesh%np))
-  rootrs(:) = (M_THREE / (M_FOUR * M_PI / dimphase * zrho(:, 1)))**(M_ONE / M_SIX)
+  rootrs(:) = (M_THREE / (M_FOUR * M_PI / dimphase * zrho(:, 1)))**(M_ONE / CNST(6.0))
   call localstitch(mesh, rootrs, get_root6_branch)
 
   SAFE_ALLOCATE(gradient(1:mesh%np, mesh%sb%dim))
@@ -1513,7 +1513,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
     
     dFxds2 = mu / xx**2
 
-    dexdrs = dexdrs * Fx + ex * dFxds2 * M_EIGHT * cc * a2(nn) / rs
+    dexdrs = dexdrs * Fx + ex * dFxds2 * CNST(8.0) * cc * a2(nn) / rs
     dexda2 = ex * dFxds2 * cc
     ex = ex * Fx
     
@@ -1543,7 +1543,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
     dAdrs = tmp2 * decdrs(nn)
     dHdA = -At2 * t2 * t2 * (M_TWO + At2) * tmp
     dHdt2 = (M_ONE + M_TWO * At2) * tmp
-    decdrs(nn) = decdrs(nn) + dHdt2 * M_SEVEN * t2 / rs + dHdA * dAdrs
+    decdrs(nn) = decdrs(nn) + dHdt2 * CNST(7.0) * t2 / rs + dHdA * dAdrs
     
     depscdsigma(nn) = dHdt2 * C3 * rs / (zrho(nn, 1) / dimphase) ! zrho ?
   end do

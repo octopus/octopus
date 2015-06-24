@@ -186,9 +186,9 @@ contains
             call force1(geo%atom(iatom)%x(j) - dq, forceks1m, pdot3m)
             call force1(geo%atom(iatom)%x(j) + dq/M_TWO, forceks1p2, pdot3p2)
             call force1(geo%atom(iatom)%x(j) - dq/M_TWO, forceks1m2, pdot3m2)
-            dforceks1 = ((M_FOUR/M_THREE) * (forceks1p2 - forceks1m2) - (M_ONE / M_SIX) * (forceks1p - forceks1m)) / dq
+            dforceks1 = ((M_FOUR/M_THREE) * (forceks1p2 - forceks1m2) - (M_ONE / CNST(6.0)) * (forceks1p - forceks1m)) / dq
             dforce1 = sum(q(iatom, :) * dforceks1(:))
-            dforce2 = ((M_FOUR/M_THREE) * (pdot3p2 - pdot3m2) - (M_ONE / M_SIX) * (pdot3p - pdot3m)) / dq
+            dforce2 = ((M_FOUR/M_THREE) * (pdot3p2 - pdot3m2) - (M_ONE / CNST(6.0)) * (pdot3p - pdot3m)) / dq
             f(iatom, j) = f(iatom, j) - M_TWO * psi%occ(ist, ik) * dforce1 + M_TWO * dforce2
           end do
         end do

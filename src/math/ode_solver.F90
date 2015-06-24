@@ -273,7 +273,7 @@ contains
 
     PUSH_SUB(ode_vr89_coeff)
 
-    SQRT6 = sqrt(M_SIX)
+    SQRT6 = sqrt(CNST(6.0))
 
     os%b = (/ CNST(   103.0) / CNST( 1680.0), &
       CNST(   0.0),                           &

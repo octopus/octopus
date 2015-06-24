@@ -263,7 +263,7 @@ contains
     score = real(energy) + penalizationfactor * aimag(energy)**2
     if (aimag(energy).gt.M_ZERO) then
       ! Pretty arbitrary.  Must work on something more systematic
-      score = score + M_EIGHT * aimag(energy)
+      score = score + CNST(8.0) * aimag(energy)
     end if
     
     POP_SUB(complex_energy_ordering_score)

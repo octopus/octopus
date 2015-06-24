@@ -80,19 +80,19 @@ contains
       fp(1) = -kmax/M_TWO
       fp(2) =  kmax/M_FOUR
     case(2)
-      fp(1) = -M_HALF-M_THREE*kmax/M_EIGHT
+      fp(1) = -M_HALF-M_THREE*kmax/CNST(8.0)
       fp(2) =  kmax/M_FOUR
       fp(3) =  M_ONE/M_FOUR - kmax/CNST(16.0)
     case(3)
-      fp(1) = -M_FIVE/M_SIX - M_FIVE*kmax/CNST(16.0)
+      fp(1) = -M_FIVE/CNST(6.0) - M_FIVE*kmax/CNST(16.0)
       fp(2) =  M_ONE/CNST(12.0) + CNST(15.0)*kmax/CNST(64.0)
       fp(3) =  M_FIVE/CNST(12.0) - M_THREE*kmax/CNST(32.0)
       fp(4) = -M_ONE/CNST(12.0) + kmax/CNST(64.0)
     case(4)
       fp(1) = -CNST(77.0)/CNST(72.0) - CNST(35.0)*kmax/CNST(128.0)
-      fp(2) =  M_EIGHT/CNST(45.0) + M_SEVEN*kmax/CNST(32.0)
-      fp(3) =  CNST(23.0)/CNST(45.0) - M_SEVEN*kmax/CNST(64.0)
-      fp(4) = -M_EIGHT/CNST(45.0) + kmax/CNST(32.0)
+      fp(2) =  CNST(8.0)/CNST(45.0) + CNST(7.0)*kmax/CNST(32.0)
+      fp(3) =  CNST(23.0)/CNST(45.0) - CNST(7.0)*kmax/CNST(64.0)
+      fp(4) = -CNST(8.0)/CNST(45.0) + kmax/CNST(32.0)
       fp(5) =  CNST(17.0)/CNST(720.0) - kmax/CNST(256.0)
     case(5)
       fp(1) = -CNST(449.0)/CNST(360.0) - CNST(63.0)*kmax/CNST(256.0)

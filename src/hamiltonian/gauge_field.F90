@@ -319,7 +319,7 @@ contains
     type(simul_box_t),    intent(in)    :: sb
 
     PUSH_SUB(gauge_field_get_energy)
-    energy = sb%rcell_volume / (M_EIGHT * M_PI * P_c**2) * sum(this%vecpot_vel(1:this%ndim)**2)
+    energy = sb%rcell_volume / (CNST(8.0) * M_PI * P_c**2) * sum(this%vecpot_vel(1:this%ndim)**2)
 
     POP_SUB(gauge_field_get_energy)
   end function gauge_field_get_energy

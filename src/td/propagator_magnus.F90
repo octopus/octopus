@@ -60,8 +60,8 @@ contains
 
     SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
-    atime(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
-    atime(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
+    atime(1) = (M_HALF-sqrt(M_THREE)/CNST(6.0))*dt
+    atime(2) = (M_HALF+sqrt(M_THREE)/CNST(6.0))*dt
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2

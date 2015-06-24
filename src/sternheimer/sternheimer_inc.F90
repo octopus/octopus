@@ -107,7 +107,7 @@ subroutine X(sternheimer_solve)(                           &
   tol = scf_tol_step(this%scf_tol, 0, M_ONE)
   if(have_restart_rho_ .and. present(have_exact_freq)) then
     if(have_exact_freq) then
-      tol = scf_tol_final(this%scf_tol) * M_TEN
+      tol = scf_tol_final(this%scf_tol) * CNST(10.0)
       ! if rho is converged already, then we should try to solve fully for the wavefunctions
     end if
   end if

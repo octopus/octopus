@@ -184,7 +184,7 @@ contains
     if(propagate_chi) call f_chi(time - dt)
     if(ion_dynamics_ions_move(ions)) call f_ions(time - dt)
 
-    call update_state(M_ONE/M_SIX)
+    call update_state(M_ONE/CNST(6.0))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 2.
@@ -252,7 +252,7 @@ contains
     if(propagate_chi) call f_chi(time)
     if(ion_dynamics_ions_move(ions)) call f_ions(time)
 
-    call update_state( M_ONE/M_SIX )
+    call update_state( M_ONE/CNST(6.0) )
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Collect the results.
@@ -674,13 +674,13 @@ contains
 
     PUSH_SUB(td_runge_kutta4)
     
-    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
-    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+    c(1) = M_HALF - sqrt(M_THREE)/CNST(6.0)
+    c(2) = M_HALF + sqrt(M_THREE)/CNST(6.0)
     b(1) = M_HALF
     b(2) = M_HALF
     a(1, 1) = M_FOURTH
-    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
-    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/CNST(6.0)
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/CNST(6.0)
     a(2, 2) = M_FOURTH
 
     st1 = st%st_start
@@ -950,12 +950,12 @@ contains
     SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
 
     a(1, 1) = M_FOURTH
-    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
-    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/CNST(6.0)
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/CNST(6.0)
     a(2, 2) = M_FOURTH
 
-    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
-    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+    c(1) = M_HALF - sqrt(M_THREE)/CNST(6.0)
+    c(2) = M_HALF + sqrt(M_THREE)/CNST(6.0)
 
     zpsi = M_z0
 
@@ -1044,12 +1044,12 @@ contains
     SAFE_ALLOCATE(opzpsi(1:np_part, 1:dim))
 
     a(1, 1) = M_FOURTH
-    a(1, 2) = M_FOURTH - sqrt(M_THREE)/M_SIX
-    a(2, 1) = M_FOURTH + sqrt(M_THREE)/M_SIX
+    a(1, 2) = M_FOURTH - sqrt(M_THREE)/CNST(6.0)
+    a(2, 1) = M_FOURTH + sqrt(M_THREE)/CNST(6.0)
     a(2, 2) = M_FOURTH
 
-    c(1) = M_HALF - sqrt(M_THREE)/M_SIX
-    c(2) = M_HALF + sqrt(M_THREE)/M_SIX
+    c(1) = M_HALF - sqrt(M_THREE)/CNST(6.0)
+    c(2) = M_HALF + sqrt(M_THREE)/CNST(6.0)
 
     zpsi = M_z0
 

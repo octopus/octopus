@@ -88,11 +88,12 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
     else
       tolpower = M_ONE ! more aggresive (larger) values seem to frequently get trouble mid-SCF-loop
       tol = arpack%initial_tolerance * exp(log(tolerance / arpack%initial_tolerance) / &
-        (-M_FIVE * log(M_TEN))**tolpower * log(current_rel_dens_error)**tolpower)
+        (-M_FIVE * log(CNST(10.0)))**tolpower * log(current_rel_dens_error)**tolpower)
      
-      !tol = arpack%initial_tolerance * exp(-log(arpack%initial_tolerance / tolerance) / (M_FIVE * log(M_TEN)**tolpower) &
-      !  * log(current_rel_dens_error)**tolpower)
-      !tol = arpack%initial_tolerance * current_rel_dens_error**(log(arpack%initial_tolerance / tolerance) / (M_FIVE * log(M_TEN)))
+      !tol = arpack%initial_tolerance*exp(-log(arpack%initial_tolerance/tolerance)/(M_FIVE*log(CNST(10.0))**tolpower) &
+      !  *log(current_rel_dens_error)**tolpower)
+      !tol = arpack%initial_tolerance*&
+      !  current_rel_dens_error**(log(arpack%initial_tolerance/tolerance)/(M_FIVE*log(CNST(10.0))))
       tol = min(tol, arpack%initial_tolerance)
       write(message(1), '(a,es10.3)') 'Arpack: Current tolerance', tol
     end if

@@ -361,11 +361,11 @@ contains
     if(li == 2) then
       select case(mi)
       case(-2)
-        ylm = c(4)*M_SIX*Rx*Ry
+        ylm = c(4)*CNST(6.0)*Rx*Ry
         if(present(grylm)) then
-          grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
-          grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
-          grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
+          grylm(1) = (-c(4))*CNST(6.0)*(M_TWO*Rx*Rx*Ry - Ry)/rsize
+          grylm(2) = (-c(4))*CNST(6.0)*(M_TWO*Ry*Rx*Ry - Rx)/rsize
+          grylm(3) = (-c(4))*CNST(6.0)*(M_TWO*Rz*Rx*Ry)/rsize
         end if
       case(-1)
         ylm = (-c(5))*M_THREE*Ry*Rz
@@ -391,9 +391,9 @@ contains
       case(2)
         ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
         if(present(grylm)) then
-          grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
-          grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
-          grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
+          grylm(1) = (-c(8))*CNST(6.0)*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
+          grylm(2) = (-c(8))*CNST(6.0)*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
+          grylm(3) = (-c(8))*CNST(6.0)*(Rx*Rx - Ry*Ry)*Rz/rsize
         end if
       end select
       return

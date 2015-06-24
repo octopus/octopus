@@ -73,11 +73,6 @@ module global_m
   FLOAT, public, parameter :: M_THREE     = CNST(3.0)
   FLOAT, public, parameter :: M_FOUR      = CNST(4.0)
   FLOAT, public, parameter :: M_FIVE      = CNST(5.0)
-  FLOAT, public, parameter :: M_SIX       = CNST(6.0)
-  FLOAT, public, parameter :: M_SEVEN     = CNST(7.0)
-  FLOAT, public, parameter :: M_EIGHT     = CNST(8.0)
-  FLOAT, public, parameter :: M_NINE      = CNST(9.0)
-  FLOAT, public, parameter :: M_TEN       = CNST(10.0)
   FLOAT, public, parameter :: M_HALF      = CNST(0.5)
   FLOAT, public, parameter :: M_THIRD     = M_ONE/M_THREE
   FLOAT, public, parameter :: M_TWOTHIRD  = M_TWO/M_THREE

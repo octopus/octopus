@@ -131,7 +131,7 @@ contains
     SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
 
     select case(gr%sb%dim)
-      case(3); factor = M_THREE / M_FIVE * (M_SIX * M_PI**2)**M_TWOTHIRD
+      case(3); factor = M_THREE / M_FIVE * (CNST(6.0) * M_PI**2)**M_TWOTHIRD
       case(2); factor = M_TWO * M_Pi
     end select
 
@@ -140,7 +140,7 @@ contains
       do ip = 1, gr%mesh%np
         if(rho(ip, 1) >= dmin) then
           select case(gr%sb%dim)
-            case(3); D0 = factor * rho(ip, 1)**(M_EIGHT / M_THREE)
+            case(3); D0 = factor * rho(ip, 1)**(CNST(8.0) / M_THREE)
             case(2); D0 = factor * rho(ip, 1)**3
           end select
           elf(ip, 1) = D0 * D0 / (D0 * D0 + kappa(ip, 1)**2)
@@ -168,7 +168,7 @@ contains
         do is = 1, st%d%spin_channels
           if(rho(ip, is) >= dmin) then
             select case(gr%sb%dim)
-              case(3); D0 = factor * rho(ip, is)**(M_EIGHT/M_THREE)
+              case(3); D0 = factor * rho(ip, is)**(CNST(8.0)/M_THREE)
               case(2); D0 = factor * rho(ip, is)**3
             end select
             elf(ip, is) = D0 * D0 / (D0 * D0 + kappa(ip,is)**2)
@@ -281,7 +281,7 @@ contains
       if(present(de)) de(1:gr%mesh%np, is) = elf(1:gr%mesh%np, is)
 
       ! normalization
-      factor = M_THREE / M_FIVE * (M_SIX * M_PI**2)**M_TWOTHIRD
+      factor = M_THREE / M_FIVE * (CNST(6.0) * M_PI**2)**M_TWOTHIRD
       do ip = 1, gr%mesh%np
         if(abs(rr(ip)) >= dmin) then
           dd = factor * (rr(ip) / sp)**(M_FIVE / M_THREE)

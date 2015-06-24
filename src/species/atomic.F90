@@ -987,7 +987,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     t2=h(2)-e*s(2)
-    d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
+    d2=-((CNST(24.)+CNST(10.0)*t2)/(CNST(12.)-t2))
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  The following section deals with the fact that the independent             !
@@ -1002,11 +1002,11 @@ contains
 
     if(l  <  2) then
       if(l  <=  0) then
-        c0=zdr/M_SIX
+        c0=zdr/CNST(6.0)
         c0=c0/(M_ONE-CNST(0.75)*zdr)
       else
         c0=M_ONE/CNST(12.)
-        c0=(-c0)*M_EIGHT/M_THREE
+        c0=(-c0)*CNST(8.0)/M_THREE
       end if
 
       c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
@@ -1018,11 +1018,11 @@ contains
     
     if(l  <  2) then
       if(l  <=  0) then
-        c0=zdr/M_SIX
+        c0=zdr/CNST(6.0)
         c0=c0/(M_ONE-CNST(0.75)*zdr)
       else
         c0=M_ONE/CNST(12.)
-        c0=(-c0)*M_EIGHT/M_THREE
+        c0=(-c0)*CNST(8.0)/M_THREE
       end if
       c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
       t3=h(3)-e*s(3)
@@ -1057,8 +1057,8 @@ contains
     c2=CNST(24.)*dg/(CNST(12.)-tn)
     dn=-((CNST(24.)+CNST(10.)*tn)/(CNST(12.)-tn))
     
-    c1= (M_ONE-tnm1/M_SIX)/(M_ONE-tnm1/CNST(12.))
-    c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
+    c1= (M_ONE-tnm1/CNST(6.0))/(M_ONE-tnm1/CNST(12.))
+    c3=-((M_ONE-tnp1/CNST(6.0))/(M_ONE-tnp1/CNST(12.)))
     yn=-((M_ONE-c1/c3)/(dn-c2/c3))
     
     POP_SUB(bcrmax)

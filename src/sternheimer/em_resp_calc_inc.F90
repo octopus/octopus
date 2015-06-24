@@ -211,12 +211,12 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     end if
 
     !now the normalization 
-    factor = M_THREE/M_FIVE * (M_SIX * M_PI**2)**M_TWOTHIRD
+    factor = M_THREE/M_FIVE * (CNST(6.0) * M_PI**2)**M_TWOTHIRD
     do ip = 1, gr%mesh%np
 
       if(abs(st%rho(ip, is)) >= dmin) then
-        d0    = factor * rho(ip)**(M_EIGHT / M_THREE)
-        dl_d0 = M_EIGHT/M_THREE * factor * dl_rho(ip) * rho(ip)**(M_FIVE/M_THREE)
+        d0    = factor * rho(ip)**(CNST(8.0) / M_THREE)
+        dl_d0 = CNST(8.0)/M_THREE * factor * dl_rho(ip) * rho(ip)**(M_FIVE/M_THREE)
 
         lr%X(dl_elf)(ip, is) = &
              M_TWO * d0 * dl_d0/(d0**2 + de(ip, is)**2) * (M_ONE - elf(ip,is)) &
