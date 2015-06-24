@@ -206,6 +206,9 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
 
       end do KLI_iteration
 
+      if (.not. all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) &
+        it = it - 1
+      
       write(message(1), '(a,i4,a,es14.6)') &
         "Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
       message(2) = ''
