@@ -106,7 +106,7 @@ program xyzanim
       else
         call io_mkdir('td.general/movie/')
         write(coords_file,'(i7.7)')iter
-        call geometry_write_xyz(geo,'td.general/movie/geo-'//trim(coords_file), append = .false.)
+        call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), append = .false.)
       end if
     end if
   end do
