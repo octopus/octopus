@@ -477,7 +477,9 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
     i_am_root = (mesh%vp%rank == root_)
     if (.not. is_global_) then
       if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS) /= 0) then
+        call messages_not_implemented("OutputHow = boundary_points with domain parallelization")
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global))
+        ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
       else
         SAFE_ALLOCATE(ff_global(1:mesh%np_global))
       end if
@@ -561,8 +563,15 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS) /= 0 .and. ubound(ff, dim = 1) >= mesh%np_part_global) &
-    np_max = mesh%np_part_global
+  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS) /= 0) then
+    if(ubound(ff, dim = 1) >= mesh%np_part_global) then
+      np_max = mesh%np_part_global
+    else
+      write(message(1),'(2a)') trim(fname), ': not outputting boundary points; they are not available'
+      call messages_warning(1)
+      ! FIXME: in this case, one could allocate an array of the larger size and apply boundary conditions
+    endif
+  endif
 
   if(iand(how, C_OUTPUT_HOW_BINARY)     /= 0) call out_binary()
   if(iand(how, C_OUTPUT_HOW_AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0

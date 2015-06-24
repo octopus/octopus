@@ -46,7 +46,4 @@ k=1.0
 %
 
 Output = mmb_den + mmb_wfs + density
-OutputHow = plane_z + axis_x + boundary_points
-
-
-
+OutputHow = plane_z + axis_x
