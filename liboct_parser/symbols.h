@@ -32,17 +32,17 @@ typedef enum{
 /* Data type for links in the chain of symbols. */
 typedef struct symrec{
   char *name;                  /* name of symbol */
-  symrec_type type;            /* type of symbol: either VAR or FNCT */
+  symrec_type type;            /* type of symbol: complex, string, block, or function */
   int def;                     /* has this symbol been defined */
   int used;                    /* this symbol has been used before */
 
-  int nargs;                   /* if type==FNCT contains the number of arguments of the function */
+  int nargs;                   /* if type==S_FNCT contains the number of arguments of the function */
 
   union {
-    gsl_complex c;             /* value of a VAR */
-    char *str;                 /* value of a STRING */
+    gsl_complex c;             /* value of a S_CMPLX */
+    char *str;                 /* value of a S_STR */
     sym_block *block;          /* to store blocks */
-    gsl_complex (*fnctptr)();  /* value of a FNCT */
+    gsl_complex (*fnctptr)();  /* value of a S_FNCT */
   } value;
 
   struct symrec *next;         /* link field */
