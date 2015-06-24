@@ -271,10 +271,8 @@ FCFLAGS
   function cat(str1, str2)
     character(len=*), intent(in) :: str1
     character(len=*), intent(in) :: str2
-    character(len=:), allocatable :: cat
 
-    allocate(character(len=len(str1) + len(str2)) :: cat)
-
+    character(len=len(str1) + len(str2)) :: cat
     cat = str1//str2
     
   end function cat
