@@ -703,7 +703,8 @@ void photoelectron_spectrum_help(){
   printf("                      - 3D\n");
   printf("                         '6' : (px, py, pz). Full momentum-resolved ionization probability.\n");
   printf("                             The output format is controlled by OutputHow in the input file.\n");
-  printf("                             Possible formats include ncdf and vtk. ASCII table if not specified.\n");
+  printf("                             Possible formats include ncdf and vtk (default). \n");
+  printf("                         '7' : ARPES.\n");
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -V, --vec=x,y,z     The polar zenith direction in comma-separated format \n");
   printf("                      (without spaces). Default is the laser polarization. \n");

@@ -136,6 +136,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   POP_SUB(pes_mask_output_states)
 end subroutine pes_mask_output_states
 
+
 ! ---------------------------------------------------------
 !
 !> Calculates the momentum-resolved photoelectron probability
@@ -143,7 +144,7 @@ end subroutine pes_mask_output_states
 !!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
 !!\f]
 ! ---------------------------------------------------------
-subroutine pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
+subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
   type(pes_mask_t), intent(in)  :: mask
   type(states_t),   intent(in)  :: st
   integer,          intent(in)  :: ik  
@@ -155,7 +156,7 @@ subroutine pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
   FLOAT, pointer :: pesKloc(:,:,:)
 
 
-  PUSH_SUB(pes_mask_create_full_map)
+  PUSH_SUB(pes_mask_fullmap)
 
   pesK = M_ZERO
   if (mask%cube%parallel_in_domains) then
@@ -238,8 +239,8 @@ subroutine pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
   end do
   pesK = pesK *scale 
 
-  POP_SUB(pes_mask_create_full_map)
-end subroutine pes_mask_create_full_map
+  POP_SUB(pes_mask_fullmap)
+end subroutine pes_mask_fullmap
 
 ! --------------------------------------------------------
 !
@@ -345,13 +346,14 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb)
+subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
   FLOAT,             intent(in) :: Lk(:,:)
   integer,           intent(in) :: ll(:)  
   integer,           intent(in) :: how
   type(simul_box_t), intent(in) :: sb 
+  FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
   
   integer :: iunit
   integer :: ierr
@@ -392,9 +394,14 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb)
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
-        
-    call dout_cf_vtk(filename, ierr, cf, cube, dk(:),& 
-      sqrt(units_out%energy)**sb%dim)
+    
+    if (present(pmesh)) then          
+      call dout_cf_vts(filename, ierr, cf, cube,& 
+        sqrt(units_out%energy)**sb%dim, pmesh)
+    else 
+      call dout_cf_vtk(filename, ierr, cf, cube, dk(:),& 
+        sqrt(units_out%energy)**sb%dim)
+    end if        
       
   else
     write(message(1), '(a)') 'Writing ASCII format file: '
@@ -1425,9 +1432,9 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   do ik = st%d%kpt%start, st%d%kpt%end
 
     if(mask%add_psia) then 
-      call pes_mask_create_full_map(mask, st, ik, pesK, wfAk)
+      call pes_mask_fullmap(mask, st, ik, pesK, wfAk)
     else 
-      call pes_mask_create_full_map(mask, st, ik, pesK)
+      call pes_mask_fullmap(mask, st, ik, pesK)
     end if
     
     ! only the root node of the domain and state parallelization group writes the output

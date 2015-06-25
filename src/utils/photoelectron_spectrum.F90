@@ -23,6 +23,8 @@ program photoelectron_spectrum
   use command_line_m
   use geometry_m
   use global_m
+  use grid_m
+  use kpoints_m
   use io_binary_m
   use io_function_m
   use io_m
@@ -31,9 +33,12 @@ program photoelectron_spectrum
   use pes_m  
   use pes_mask_m  
   use profiling_m
+  use restart_m
   use simul_box_m
+  use sort_om
   use space_m
   use string_m
+  use states_m
   use unit_m
   use unit_system_m
   use utils_m
@@ -42,24 +47,27 @@ program photoelectron_spectrum
   implicit none
 
   integer              :: ierr, mode, interp, integrate
-
-  integer              :: dim, ll(MAX_DIM), dir, how
-  FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
-  FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2), pvec(3)
+  integer              :: dim, ll(3), lll(3), dir, how, idim
+  FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
+  FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
   FLOAT                :: center(3)
-  FLOAT, pointer       :: Lk(:,:),RR(:)
-  FLOAT, allocatable   :: PESK(:,:,:)
+  FLOAT, pointer       :: Lk(:,:), RR(:)
+  FLOAT, allocatable   :: pesk(:,:,:), pmesh(:,:,:,:)
+  integer, allocatable :: Lp(:,:,:,:,:)
   logical              :: interpol
+  integer              :: ii, i1,i2,i3
   
   type(space_t)     :: space
   type(geometry_t)  :: geo
   type(simul_box_t) :: sb
+  type(states_t)    :: st
+  type(grid_t)      :: gr
+  type(restart_t)   :: restart
   
   character(len=512) :: filename
 
   !Initial values
   ll(:) = 1 
-  mode = 1
   interpol = .true. 
 
   call global_init(is_serial = .true.)
@@ -68,6 +76,18 @@ program photoelectron_spectrum
   
   call io_init()
 
+  !* In order to initialize k-points
+  call unit_system_init()
+  
+  call space_init(space)
+  call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
+  gr%sb = sb
+  !*
+
+!   call grid_init_stage_0(gr, geo, space)
+  call states_init(st, gr, geo)
+  
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -91,6 +111,12 @@ program photoelectron_spectrum
   Emin = M_ZERO
   Emax = M_ZERO
   
+  if(simul_box_is_periodic(sb)) then
+    mode = 7
+!     if(sb%dim == 2 ) mode = 3
+!     if(sb%dim == 3 ) mode = 7
+  end if
+
   
   call get_laser_polarization(pol)
   
@@ -100,18 +126,52 @@ program photoelectron_spectrum
                                      uPhspan, pol, center, pvec, integrate)
   if(interp  ==  0) interpol = .false.
 
-  call pes_mask_read_info("td.general/", dim, Emax, Estep, ll(:), Lk,RR)
+  call messages_print_stress(stdout)
+  call pes_mask_read_info("td.general/", dim, Emax, Estep, ll(:), Lk, RR)
+
 
   write(message(1), '(a)') 'Read PES info file.'
   call messages_info(1)
+  
+  
+  lll(:) = ll(:)
+  if (simul_box_is_periodic(sb)) then
+    call restart_module_init()
+    call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr)
+    if(ierr /= 0) then
+      message(1) = "Unable to read time-dependent restart information."
+      call messages_fatal(1)
+    end if
+    
+    
+    ! NOTE: Only works with automatically generated k-point grids
+    ! (KPOINTS_MONKH_PACK = 3)
+    SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),kpoints_number(sb%kpoints),1:3))
 
+    ! change ll() (old values are stored in lll) to account for the combination 
+    ! of the mask-mesh and the kpoint one
+    ll(1:sb%dim) = ll(1:sb%dim) * sb%kpoints%nik_axis(1:sb%dim)
+
+    SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
+    call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp)  
+  end if
+ 
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
+  
+  if (simul_box_is_periodic(sb)) then
 
-  filename=io_workpath('td.general/PESM_map.obf')
-  call io_binary_read(trim(filename),ll(1)**dim,pesk, ierr) 
-  if(ierr > 0) then
-    message(1) = "Failed to read file "//trim(filename)
-    call messages_fatal(1)
+    call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
+
+    call restart_end(restart)    
+      
+  else
+    !Read directly from the obf file 
+    filename=io_workpath('td.general/PESM_map.obf')
+    call io_binary_read(trim(filename),ll(1)*ll(2)*ll(3),pesk, ierr)
+    if(ierr > 0) then
+      message(1) = "Failed to read file "//trim(filename)
+      call messages_fatal(1)
+    end if
   end if
 
 
@@ -125,6 +185,7 @@ program photoelectron_spectrum
 
 
   call unit_system_init()
+  call messages_print_stress(stdout)
  
   write(message(1),'(a,f10.2,a2,f10.2,a2,f10.2,a1)') &
                    "Zenith axis: (",pol(1),", ",pol(2),", ",pol(3),")"
@@ -135,13 +196,13 @@ program photoelectron_spectrum
   ! these functions are defined in pes_mask_out_inc.F90
   select case(mode)
   case(1) ! Energy-resolved
-    write(message(1), '(a)') 'Compute energy-resolved PES'
+    write(message(1), '(a)') 'Write energy-resolved PES'
     call messages_info(1)
     call pes_mask_output_power_totalM(pesk,'./PES_power.sum', Lk, ll, dim, Emax, Estep, interpol)
  
  
   case(2) ! Angle and energy resolved
-    write(message(1), '(a)') 'Compute angle- and energy-resolved PES'
+    write(message(1), '(a)') 'Write angle- and energy-resolved PES'
     call messages_info(1)
     call pes_mask_output_ar_polar_M(pesk,'./PES_angle_energy.map', Lk, ll, dim, pol, Emax, Estep)
 
@@ -149,9 +210,9 @@ program photoelectron_spectrum
   case(3) ! On a plane
     
     dir = -1
-    if(sum((pvec-(/1 ,0 ,0/))**2)  <= 1E-14  )  dir = 1
-    if(sum((pvec-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
-    if(sum((pvec-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
+    if(sum((pvec-(/1 ,0 ,0/))**2)  <= M_EPSILON  )  dir = 1
+    if(sum((pvec-(/0 ,1 ,0/))**2)  <= M_EPSILON  )  dir = 2
+    if(sum((pvec-(/0 ,0 ,1/))**2)  <= M_EPSILON  )  dir = 3
 
     filename = "PES_velocity.map."//index2axis(dir)//"=0"
 
@@ -160,7 +221,7 @@ program photoelectron_spectrum
         write(message(1), '(a)') 'Unrecognized plane. Use -u to change.'
         call messages_fatal(1)
       else
-        write(message(1), '(a)') 'Compute velocity map on plane: '//index2axis(dir)//" = 0"
+        write(message(1), '(a)') 'Write velocity map on plane: '//index2axis(dir)//" = 0"
         call messages_info(1)
     end if 
     
@@ -173,7 +234,7 @@ program photoelectron_spectrum
     call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate)    
 
   case(4) ! Angle energy resolved on plane 
-    write(message(1), '(a)') 'Compute angle and energy-resolved PES'
+    write(message(1), '(a)') 'Write angle and energy-resolved PES'
     call messages_info(1)
     if(uEstep >  0 .and. uEstep > Estep) then
       Estep = uEstep
@@ -187,7 +248,7 @@ program photoelectron_spectrum
 
 
     write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
-          'Compute PES on a spherical cut at E= ',Emin,", ",Emax, & 
+          'Write PES on a spherical cut at E= ',Emin,", ",Emax, & 
            str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19) 
     call messages_info(1)
 
@@ -197,24 +258,42 @@ program photoelectron_spectrum
      Estep = Emax/size(Lk,1)
     end if
  
-    call pes_mask_output_ar_spherical_cut_M(pesk,'./PES_sphere.map', Lk, ll, dim, pol, Emin, Emax, Estep)       
+    call pes_mask_output_ar_spherical_cut_M(pesk,'./PES_sphere.map', Lk, ll, dim, pol, Emin, Emax, Estep)
 
   case(6) ! Full momentum resolved matrix 
- 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
- 
+  
     call io_function_read_how(sb, how, ignore_error = .true.)
  
-    write(message(1), '(a)') 'Compute full momentum-resolved PES'
+    write(message(1), '(a)') 'Write full momentum-resolved PES'
     call messages_info(1)
 
-    call pes_mask_output_full_mapM(pesk, './PES_fullmap', Lk, ll, how, sb)        
+    if (allocated(pmesh)) then
+      forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:3)
+        pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
+      end forall
+      how = io_function_fill_how("VTK")
+      call pes_mask_output_full_mapM(pesk, './PES_full_velocity_map', Lk, ll, how, sb, pmesh)
+    else
+      call pes_mask_output_full_mapM(pesk, './PES_full_velocity_map', Lk, ll, how, sb) 
+    end if
 
-    call simul_box_end(sb)
-    call geometry_end(geo)
-    call space_end(space)
+    case(7) ! ARPES 
+ 
+      write(message(1), '(a)') 'Write ARPES'
+      call messages_info(1)
+
+      forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:sb%periodic_dim)
+        pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
+      end forall
+
+      forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3))
+        pmesh(i1,i2,i3,sb%dim) = units_from_atomic(units_out%energy, &
+          sign(M_ONE,pmesh(i1,i2,i3,sb%dim)) * sum( pmesh(i1,i2,i3,1:sb%dim)**2 )/M_TWO)
+      end forall
+
+      how = io_function_fill_how("VTK")
+      
+      call pes_mask_output_full_mapM(pesk, './PES_ARPES', Lk, ll, how, sb, pmesh)   
 
   end select
 
@@ -222,12 +301,23 @@ program photoelectron_spectrum
   write(message(1), '(a)') 'Done'
   call messages_info(1)
 
+  call messages_print_stress(stdout)
+
+  call states_end(st)
+
+  call geometry_end(geo)
+  call simul_box_end(sb)
+  call space_end(space)
+
   call io_end()
   call messages_end()
   call global_end()
   
   SAFE_DEALLOCATE_A(pesk)    
-
+  SAFE_DEALLOCATE_A(pmesh)
+  SAFE_DEALLOCATE_A(Lp)
+  SAFE_DEALLOCATE_P(Lk)
+  
   contains
 
     subroutine get_laser_polarization(lPol)
@@ -279,6 +369,163 @@ program photoelectron_spectrum
           write(ch,'(i1)') ivar
       end select
     end function index2var
+
+    !< Generate the momentum-space mesh (p) and the arrays mapping the 
+    !< the mask and the kpoint meshes in p.
+    subroutine pes_mask_pmesh(kpoints, ll, Lk, pmesh, Lp)
+      type(kpoints_t),   intent(in)  :: kpoints 
+      integer,           intent(in)  :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
+      FLOAT,             intent(in)  :: Lk(:,:)           !< Lk(1:maxval(ll),1:dim): the mask-mesh points  
+      FLOAT,             intent(out) :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point 
+                                                          !< in the final mesh in momentum space "p" combining the 
+                                                          !< mask-mesh with kpoints. 
+      integer,           intent(out) :: Lp(:,:,:,:,:)     !< Lp(1:ll(1),1:ll(2),1:ll(3),1:nkpt,1:dim): maps a 
+                                                          !< mask-mesh triplet of indices together with a kpoint 
+                                                          !< index into a triplet on the combined momentum space mesh.
+  
+      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir
+      FLOAT :: kpt(1:3),kval(1:3), dx(1:sb%dim)
+      integer, allocatable :: Lkpt(:,:)
+      
+      integer, allocatable :: idx(:,:)
+      FLOAT, allocatable   :: Lk_(:,:)
+      
+  
+      PUSH_SUB(pes_mask_pmesh)
+
+      SAFE_ALLOCATE(Lkpt(1:kpoints_number(kpoints),1:3))
+      
+      nk = 1  
+      nk(1:sb%dim) = kpoints%nik_axis(1:sb%dim)
+
+      ! Populate Lkpt which maps a kpoint index into an 
+      ! triplet of array indices (1:nk(idir)) on a cube
+      Lkpt(:,:) = 0
+      kpt(:) = M_ZERO
+      dx(1:sb%dim) = M_ONE/(M_TWO*nk(1:sb%dim))
+      do ik = 1, kpoints_number(kpoints)
+        kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.) 
+        Lkpt(ik,1:sb%dim) = (kpt(1:sb%dim)/dx(1:sb%dim) + nk(1:sb%dim))/M_TWO
+!         print *, ik, "Lkpt(ik)= ", Lkpt(ik,:), "-- kpt= ",kpt
+      end do
+      
+!       print *,"----"
+!       print *,"ll(:)", ll(:)
+!       print *,"----"
+      
+      
+      ! We want the results to be sorted on a cube i,j,k
+      ! with the first triplet associated with the smallest positions 
+      SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
+      SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
+      idx(:,:)=1
+      do idir = 1, sb%dim
+        Lk_(:,idir) = Lk(:,idir)
+        call sort(Lk_(1:ll(idir), idir), idx(1:ll(idir), idir)) 
+      end do  
+      
+      
+      ! Generate the p-space mesh and populate Lp
+      do ik = 1, kpoints_number(kpoints)
+        kpt(1:sb%dim) = kpoints_get_point(kpoints, ik) 
+        do i1 = 1, ll(1) 
+          do i2 = 1, ll(2) 
+            do i3 = 1, ll(3) 
+              
+              kval (1:3)= (/Lk_(i1,1),Lk_(i2,2),Lk_(i3,3)/)               
+
+              ip1 = (i1 - 1) * nk(1) + Lkpt(ik,1) + 1
+              ip2 = (i2 - 1) * nk(2) + Lkpt(ik,2) + 1
+              ip3 = (i3 - 1) * nk(3) + Lkpt(ik,3) + 1
+              
+              Lp(idx(i1,1),idx(i2,2),idx(i3,3),ik,1:3) =  (/ip1,ip2,ip3/)
+              
+!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:sb%dim) = ",  Lp(i1,i2,i3,ik,1:3)
+              
+              pmesh(ip1, ip2, ip3, 1:sb%dim) = kval(1:sb%dim) + kpt(1:sb%dim)
+
+            end do 
+          end do 
+        end do 
+      end do
+  
+  
+      SAFE_DEALLOCATE_A(Lkpt)
+      
+      POP_SUB(pes_mask_pmesh)
+    end subroutine pes_mask_pmesh
+
+
+    !< Build the photoemission map form the restart files
+    subroutine pes_mask_map_from_states(restart, st, ll, pesK, Lp)
+      type(restart_t),    intent(in) :: restart
+      type(states_t),     intent(in) :: st
+      integer,            intent(in) :: ll(:)
+      FLOAT, target,     intent(out) :: pesK(:,:,:)
+      integer, optional,  intent(in) :: Lp(:,:,:,:,:)
+      
+      integer :: ik, ist, idim, itot
+      integer :: i1, i2, i3, ip(1:3)
+      CMPLX   :: psik(1:ll(1),1:ll(2),1:ll(3))
+
+      PUSH_SUB(pes_mask_map_from_states)
+  
+      pesK = M_ZERO
+      do ik = 1, st%d%kpt%nglobal
+        do ist = 1, st%nst
+          do idim = 1, st%d%dim
+            itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+            call pes_mask_map_from_state(restart, itot, ll, psik)
+            
+            do i1=1, ll(1)
+              do i2=1, ll(2)
+                do i3=1, ll(3)
+                  ip(1:3) = Lp(i1 , i2, i3, ik, 1:3) 
+                  
+                  pesK(ip(1),ip(2),ip(3)) = pesK(ip(1),ip(2),ip(3)) &
+                    + abs(psik(i1,i2,i3))**2 * st%occ(ist, ik) * st%d%kweights(ik)
+                                          
+                end do
+              end do
+            end do
+            
+          end do
+        end do
+      end do
+
+      POP_SUB(pes_mask_map_from_states)
+    end subroutine pes_mask_map_from_states
+
+
+    subroutine pes_mask_map_from_state(restart, idx, ll, psik)
+      type(restart_t),  intent(in)  :: restart
+      integer,          intent(in)  :: idx
+      integer,          intent(in)  :: ll(:)
+      CMPLX, target,    intent(out) :: psik(:,:,:)
+
+      character(len=80) :: filename, path
+      integer ::  np, err, iunit 
+      character(len=128) :: lines(2)
+  
+      PUSH_SUB(pes_mask_map_from_state)
+
+      psik = M_Z0
+      np = product(ll(:))
+      
+      write(filename,'(i10.10)') idx
+ 
+      path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
+      call io_binary_read(path, np, psik(:,:,:), err)
+      if (err /= 0) then
+        message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
+        call messages_warning(1)
+      end if
+
+      POP_SUB(pes_mask_map_from_state)  
+    end subroutine pes_mask_map_from_state
+    
+
+
 
 end program photoelectron_spectrum
 
