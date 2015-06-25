@@ -167,8 +167,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
-      flags = '-D' // &
-      R_TYPE_CL)
+      flags = '-D' + R_TYPE_CL)
     kernel_ref = octcl_kernel_get_ref(kernel)
 
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
@@ -303,8 +302,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     end if
 
     call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(scal_vec)), &
-      flags = '-D' // &
-      R_TYPE_CL)
+      flags = '-D' + R_TYPE_CL)
   
     kernel_ref = octcl_kernel_get_ref(kernel)
 
@@ -420,8 +418,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     end if
 
     call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), &
-      flags = '-D' // &
-      R_TYPE_CL)
+      flags = '-D' + R_TYPE_CL)
   
     kernel_ref = octcl_kernel_get_ref(kernel)
 

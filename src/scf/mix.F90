@@ -140,8 +140,7 @@ contains
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
     if (smix%scheme == MIX_LINEAR .or. smix%scheme == MIX_BROYDEN) then
-      call parse_variable(trim(prefix)//'Mixing', &
-        CNST(0.3), smix%alpha)
+      call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%alpha)
       if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
     end if
 
