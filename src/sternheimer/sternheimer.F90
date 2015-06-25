@@ -72,6 +72,7 @@ module sternheimer_m
        zsternheimer_solve_order2, &
        sternheimer_add_fxc,       &
        sternheimer_add_hartree,   &
+       sternheimer_build_kxc,     &  
        dsternheimer_calc_hvar,    &
        zsternheimer_calc_hvar,    &
        dsternheimer_set_rhs,      &
@@ -82,12 +83,15 @@ module sternheimer_m
        zsternheimer_set_inhomog,  &
        sternheimer_have_inhomog,  &
        sternheimer_unset_inhomog, &
+       sternheimer_unset_kxc,     & 
        sternheimer_has_converged, &
        swap_sigma,                &
        wfs_tag_sigma,             &
        sternheimer_obsolete_variables, &
        dcalc_hvar,                &
-       zcalc_hvar
+       zcalc_hvar,                &
+       dcalc_kvar,                &
+       zcalc_kvar
 
   type sternheimer_t
      private
@@ -95,6 +99,7 @@ module sternheimer_m
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
      FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
+     FLOAT, pointer        :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
      FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
      FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
@@ -300,6 +305,40 @@ contains
 
   end subroutine sternheimer_build_fxc
 
+
+  !-----------------------------------------------------------
+  subroutine sternheimer_build_kxc(this, mesh, st, ks)
+    type(sternheimer_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_t),      intent(in)    :: st
+    type(v_ks_t),        intent(in)    :: ks
+
+    FLOAT, allocatable :: rho(:, :)
+
+    PUSH_SUB(sternheimer_build_kxc)
+
+    if(this%add_fxc) then
+      SAFE_ALLOCATE(this%kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
+      this%kxc = M_ZERO
+
+      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
+      call states_total_density(st, mesh, rho)
+      call xc_get_kxc(ks%xc, mesh, rho, st%d%ispin, this%kxc)
+      SAFE_DEALLOCATE_A(rho)
+    end if
+
+    POP_SUB(sternheimer_build_kxc)
+
+  end subroutine sternheimer_build_kxc
+ 
+ !---------------------------------------------
+  subroutine sternheimer_unset_kxc(this)
+    type(sternheimer_t), intent(inout) :: this
+    
+    if(this%add_fxc) then
+      SAFE_DEALLOCATE_P(this%kxc)
+    end if
+  end subroutine sternheimer_unset_kxc
 
   !-----------------------------------------------------------
   logical function sternheimer_add_fxc(this) result(rr)

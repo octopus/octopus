@@ -523,6 +523,40 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   POP_SUB(X(calc_hvar))
 end subroutine X(calc_hvar)
 
+!--------------------------------------------------------------
+subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
+  type(sternheimer_t),    intent(inout) :: this
+  type(system_t),         intent(inout) :: sys
+  R_TYPE,                 intent(in)    :: lr_rho1(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
+  R_TYPE,                 intent(in)    :: lr_rho2(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
+  integer,                intent(in)    :: nsigma 
+  R_TYPE,                 intent(out)   :: kvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+
+  integer :: np, ip, ispin, ispin2, ispin3
+
+  PUSH_SUB(X(calc_kvar))
+
+  np = sys%gr%mesh%np
+
+  do ispin = 1, sys%st%d%nspin
+    kvar(1:np, ispin, 1) = M_ZERO
+
+    if(this%add_fxc) then
+      do ispin2 = 1, sys%st%d%nspin
+        do ispin3 = 1, sys%st%d%nspin
+          do ip = 1, np
+            kvar(ip,ispin,1) = kvar(ip,ispin,1) + this%kxc(ip,ispin,ispin2,ispin3)&
+              * lr_rho1(ip,ispin2) * lr_rho2(ip,ispin3)
+          end do
+        end do
+      end do
+    end if
+  end do
+  
+  if (nsigma==2) kvar(1:np,1:sys%st%d%nspin,2) = R_CONJ(kvar(1:np,1:sys%st%d%nspin,1))
+
+  POP_SUB(X(calc_kvar))
+end subroutine X(calc_kvar)
 
 !-----------------------------------------------------------
 subroutine X(sternheimer_set_rhs)(this, rhs)
