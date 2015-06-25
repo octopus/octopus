@@ -78,7 +78,7 @@ module xc_ks_inversion_m
      integer             :: method
      integer             :: level
      integer             :: asymp
-     FLOAT, pointer      :: vxc_previous_step(:,:)
+     FLOAT, pointer      :: vhxc_previous_step(:,:)
      type(states_t)      :: aux_st
      type(hamiltonian_t) :: aux_hm
      type(eigensolver_t) :: eigensolver
@@ -198,6 +198,7 @@ contains
   end subroutine xc_ks_inversion_write_info
 
 
+  ! specific routine for 2 particles - this is analytical, no need for iterative scheme
   ! ---------------------------------------------------------
   subroutine invertks_2part(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
     FLOAT,               intent(in)    :: target_rho(:,:) !< (1:gr%mesh%np, 1:nspin)
@@ -320,6 +321,7 @@ contains
   end subroutine invertks_2part
 
 
+  ! iterative inversion of KS potential from the density
   ! ---------------------------------------------------------
   subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
     type(grid_t),        intent(in)    :: gr
@@ -396,7 +398,11 @@ contains
     counter = 0
     alpha = CNST(0.05)
 
+
     do while(diffdensity > convdensity .and. counter < max_iter)
+      write(message(1),'(a,2E15.4,2I8)') ' KSinversion: diffdensity, convdensity, counter, max_iter ', &
+        diffdensity, convdensity, counter, max_iter
+      call messages_info(1)
       
       counter = counter + 1 
       beta = diffdensity*0.001 !parameter to avoid numerical problems due to small denominator
@@ -534,7 +540,7 @@ contains
     if (present(time) .and. time > M_ZERO) then
 !      write(*,*) 'debug 1'
       do ii = 1, st%d%nspin
-        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vxc_previous_step(:,ii)
+        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vhxc_previous_step(:,ii)
       end do
     else 
       do ii = 1, st%d%nspin
@@ -567,7 +573,7 @@ contains
     
     if (present(time)) then
 !      write(*,*) 'debug 2'
-      ks_inversion%vxc_previous_step = ks_inversion%aux_hm%vhxc
+      ks_inversion%vhxc_previous_step = ks_inversion%aux_hm%vhxc
 !      write(*,*) 'debug 3'
     end if
 
