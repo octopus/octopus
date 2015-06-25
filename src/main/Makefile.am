@@ -50,6 +50,10 @@ noinst_HEADERS = \
 
 CLEANFILES += octopus oct-test octopus_mpi oct-test_mpi octopus_single oct-test_single
 
+# debug files from MacOS gcc with -g
+clean-local :
+	rm -rf *.dSYM
+
 depend:
 	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
 

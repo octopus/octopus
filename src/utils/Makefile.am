@@ -197,6 +197,10 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD                   = $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
+# debug files from MacOS gcc with -g
+clean-local :
+	rm -rf *.dSYM
+
 depend:
 	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES)
 
