@@ -532,7 +532,7 @@ subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: kvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
 
-  integer :: np, ip, ispin, ispin2, ispin3
+  integer :: np, ispin, ispin2, ispin3
 
   PUSH_SUB(X(calc_kvar))
 
@@ -544,10 +544,8 @@ subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
     if(this%add_fxc) then
       do ispin2 = 1, sys%st%d%nspin
         do ispin3 = 1, sys%st%d%nspin
-          do ip = 1, np
-            kvar(ip,ispin,1) = kvar(ip,ispin,1) + this%kxc(ip,ispin,ispin2,ispin3)&
-              * lr_rho1(ip,ispin2) * lr_rho2(ip,ispin3)
-          end do
+          kvar(1:np,ispin,1) = kvar(1:np,ispin,1) + this%kxc(1:np,ispin,ispin2,ispin3)&
+            * lr_rho1(1:np,ispin2) * lr_rho2(1:np,ispin3)
         end do
       end do
     end if

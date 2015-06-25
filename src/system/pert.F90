@@ -170,19 +170,19 @@ contains
       call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
-      !%Variable KdotPVelMetod
+      !%Variable KdotPVelMethod
       !%Type integer
       !%Default grad_vel
       !%Section Linear Response::KdotP
       !%Description
-      !% Method of velocity calculation
+      !% Method of velocity calculation.
       !%Option grad_vel 0
-      !% -i*(grad + [r,Vnl])
+      !% <math>-i \left(\nabla + \left[r, V_{\rm nl} \right] \right)</math>
       !%Option hcom_vel 1
-      !% As a commutator of the position operator and Hamiltonian -i[r,H]. 
+      !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
       !% This option is recommended for magneto-optics of periodic systems.
       !%End
-      call parse_variable('KdotPVelMetod', 0, this%vel_method)
+      call parse_variable('KdotPVelMethod', OPTION_GRAD_VEL, this%vel_method)
     end if
 
     POP_SUB(pert_init)

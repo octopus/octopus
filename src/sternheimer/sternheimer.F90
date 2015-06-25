@@ -335,9 +335,13 @@ contains
   subroutine sternheimer_unset_kxc(this)
     type(sternheimer_t), intent(inout) :: this
     
+    PUSH_SUB(sternheimer_unset_kxc)
+
     if(this%add_fxc) then
       SAFE_DEALLOCATE_P(this%kxc)
     end if
+
+    POP_SUB(sternheimer_unset_kxc)
   end subroutine sternheimer_unset_kxc
 
   !-----------------------------------------------------------
@@ -370,8 +374,12 @@ contains
   subroutine sternheimer_unset_rhs(this)
     type(sternheimer_t), intent(inout) :: this
     
+    PUSH_SUB(sternheimer_unset_rhs)
+
     nullify(this%drhs)
     nullify(this%zrhs)
+
+    POP_SUB(sternheimer_unset_rhs)
   end subroutine sternheimer_unset_rhs
 
   !-----------------------------------------------------------
@@ -384,8 +392,12 @@ contains
   subroutine sternheimer_unset_inhomog(this)
     type(sternheimer_t), intent(inout) :: this
     
+    PUSH_SUB(sternheimer_unset_inhomog)
+
     nullify(this%dinhomog)
     nullify(this%zinhomog)
+
+    POP_SUB(sternheimer_unset_inhomog)
   end subroutine sternheimer_unset_inhomog
 
   !-----------------------------------------------------------
@@ -431,12 +443,15 @@ contains
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
     
+    PUSH_SUB(sternheimer_obsolete_variables)
+
     call messages_obsolete_variable(trim(old_prefix)//'Preorthogonalization', trim(new_prefix)//'Preorthogonalization')
     call messages_obsolete_variable(trim(old_prefix)//'HamiltonianVariation', trim(new_prefix)//'HamiltonianVariation')
 
     call linear_solver_obsolete_variables(old_prefix, new_prefix)
     call scf_tol_obsolete_variables(old_prefix, new_prefix)
 
+    POP_SUB(sternheimer_obsolete_variables)
   end subroutine sternheimer_obsolete_variables
   
 #include "complex.F90"
