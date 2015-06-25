@@ -105,15 +105,19 @@ contains
     !%Option oep_slater 2
     !% Slater approximation.
     !%Option oep_kli 3
-    !% Krieger-Li-Iafrate (KLI) approximation. Ref:
-    !% JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
+    !% Krieger-Li-Iafrate (KLI) approximation. For spinors, the iterative solution is controlled by the variables
+    !% in section <tt>Linear Response::Solver</tt>, and the default for <tt>LRMaximumIter</tt> is set to 50.
+    !% Ref: JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
     !%Option oep_full 5
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
-    !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>.
+    !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>,
+    !% and the iterations for OEP by <tt>Linear Response::SCF in LR calculations</tt> and variable
+    !% <tt>OEPMixing</tt>. Note that default for <tt>LRMaximumIter</tt> is set to 10.
+    !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
     !%End
     call messages_obsolete_variable('OEP_Level', 'OEPLevel')
     call parse_integer(datasets_check('OEPLevel'), XC_OEP_KLI, oep%level)
-    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call input_error('OEP_level')
+    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
