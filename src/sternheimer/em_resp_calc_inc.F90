@@ -1050,6 +1050,238 @@ contains
   
 end subroutine X(lr_calc_magneto_optics_finite)
 
+! ---------------------------------------------------------
+subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
+  lr_e, lr_b, lr_k, lr_ke, lr_be, frequency, zpol)
+  type(system_t),       intent(inout) :: sys 
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: nsigma
+  type(lr_t),           intent(inout) :: lr_e(:,:)
+  type(lr_t),           intent(inout) :: lr_b(:)
+  type(lr_t),           intent(inout) :: lr_k(:)
+  type(lr_t),           intent(inout) :: lr_ke(:,:,:)
+  type(lr_t),           intent(inout) :: lr_be(:,:,:)
+  CMPLX,                intent(in)    :: frequency
+  CMPLX,                intent(inout) :: zpol(:,:,:)
+  
+  integer :: idir1, idir2, idir3, idir4, ist, &
+    ispin, idim, ndim, np, ik, ndir, ist_occ
+  integer :: magn_dir(3,2)
+  FLOAT :: weight
+  R_TYPE, allocatable :: gpsi(:,:,:), gdl_e(:,:,:), gdl_k(:,:,:), gdl_b(:,:,:), &
+    gdl_ke(:,:,:,:), gdl_be(:,:,:)
+  R_TYPE:: factor, factor0, factor1, factor_e
+  type(matrix_t) :: mat_g,  mat_be, mat_eb
+  type(matrix_t), allocatable:: mat_kek(:,:), mat_kke(:,:)
+  type(pert_t)  :: pert_kdotp
+ 
+#ifdef HAVE_MPI
+  CMPLX :: zpol_temp(1:MAX_DIM,1:MAX_DIM,1:MAX_DIM)
+#endif
+  
+#if defined(R_TCOMPLEX)
+  factor = -M_zI
+  factor0 = -M_zI
+  factor1 = M_ONE
+#else
+  factor = -M_ONE
+  factor0 = M_ONE
+  factor1 = -M_ONE
+#endif
+  factor_e = -M_ONE 
+
+  PUSH_SUB(X(lr_calc_magneto_optics_periodic))
+  
+  ASSERT(abs(frequency) .gt. M_EPSILON)
+  
+  np = sys%gr%mesh%np
+  ndir = sys%gr%mesh%sb%dim
+  ndim = sys%st%d%dim
+
+  SAFE_ALLOCATE(gpsi(1:np,1:ndim,1:sys%st%nst))
+  SAFE_ALLOCATE(gdl_e(1:np,1:ndim,1:nsigma))
+  SAFE_ALLOCATE(gdl_k(1:ndir,1:np,1:ndim))
+  SAFE_ALLOCATE(gdl_b(1:ndir,1:np,1:ndim))
+  SAFE_ALLOCATE(gdl_ke(1:ndir,1:np,1:ndim,1:nsigma))
+  SAFE_ALLOCATE(gdl_be(1:np,1:ndim,1:nsigma))
+  SAFE_ALLOCATE(mat_kke(1:ndir,1:ndir))
+  SAFE_ALLOCATE(mat_kek(1:ndir,1:ndir))
+  SAFE_ALLOCATE(mat_g%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(mat_eb%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(mat_be%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  
+  do idir1 = 1, ndir
+    do idir2 = 1, ndir
+      SAFE_ALLOCATE(mat_kek(idir1,idir2)%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+      SAFE_ALLOCATE(mat_kke(idir1,idir2)%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+    end do
+  end do
+      
+  magn_dir(1,1) = 2
+  magn_dir(1,2) = 3
+  magn_dir(2,1) = 3
+  magn_dir(2,2) = 1
+  magn_dir(3,1) = 1
+  magn_dir(3,2) = 2
+
+  zpol(:,:,:) = M_ZERO 
+  gpsi(:,:,:) = M_ZERO
+  
+  call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  
+  do idir1 = 1, ndir
+  call pert_setup_dir(pert_kdotp, idir1)
+    do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+      weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+      do ist = 1, sys%st%nst
+        if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+          call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+            sys%st%X(psi)(:,:,ist,ik), gpsi(:,:,ist))
+          do idir2 = 1, ndir
+            call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+              lr_k(idir2)%X(dl_psi)(:,:,ist,ik), gdl_k(idir2,:,:))
+            call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+              lr_b(idir2)%X(dl_psi)(:,:,ist,ik), gdl_b(idir2,:,:))
+          end do
+          do idir2 = 1, ndir  
+            call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+              lr_e(idir2,1)%X(dl_psi)(:,:,ist,ik), gdl_e(:,:,1))
+            if(nsigma == 2) call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+              lr_e(idir2,nsigma)%X(dl_psi)(:,:,ist,ik), gdl_e(:,:,nsigma))
+            do idir3 = 1, ndir
+              call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+                lr_ke(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik), gdl_ke(idir3,:,:,1))
+              if(nsigma == 2) call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+                lr_ke(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik), gdl_ke(idir3,:,:,nsigma))
+            end do
+            do idir3 = 1, ndir
+              call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+                lr_be(idir3,idir2,1)%X(dl_psi)(:,:,ist,ik), gdl_be(:,:,1))
+              if(nsigma == 2) call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
+                lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,:,ist,ik), gdl_be(:,:,nsigma))
+
+              do idim = 1, ndim 
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C *&
+                  (X(mf_dotp)(sys%gr%mesh, lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,idim,ist,ik), factor0 * gpsi(:,idim,ist))&
+                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_be(:,idim,nsigma), sys%st%X(psi)(:,idim,ist,ik))&
+                  + X(mf_dotp)(sys%gr%mesh, sys%st%X(psi)(:,idim,ist,ik), factor * gdl_be(:,idim,1)) &
+                  + X(mf_dotp)(sys%gr%mesh, factor0 * gpsi(:,idim,ist), lr_be(idir3,idir2,1)%X(dl_psi)(:,idim,ist,ik)))
+                
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C * factor_e * &
+                  (X(mf_dotp)(sys%gr%mesh, lr_e(idir2,nsigma)%X(dl_psi)(:,idim,ist,ik), factor0 * gdl_b(idir3,:,idim)) &
+                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_e(:,idim,nsigma), lr_b(idir3)%X(dl_psi)(:,idim,ist,ik))&
+                  + X(mf_dotp)(sys%gr%mesh, lr_b(idir3)%X(dl_psi)(:,idim,ist,ik), factor * gdl_e(:,idim,1)) &
+                  + X(mf_dotp)(sys%gr%mesh, factor0 * gdl_b(idir3,:,idim), lr_e(idir2,1)%X(dl_psi)(:,idim,ist,ik)))
+
+                zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) - weight * M_FOURTH / P_C * &
+                  (X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,1),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
+                    factor0 * gdl_k(magn_dir(idir3,2),:,idim)) &
+                  + X(mf_dotp)(sys%gr%mesh,factor * gdl_ke(magn_dir(idir3,1),:,idim,nsigma),&
+                    lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik))&
+                  + X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0 * gdl_ke(magn_dir(idir3,2),:,idim,1)) &
+                  + X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,1),:,idim),&
+                    -factor0 * lr_ke(magn_dir(idir3,2),idir2,1)%X(dl_psi)(:,idim,ist,ik))&
+                  - X(mf_dotp)(sys%gr%mesh,lr_ke(magn_dir(idir3,2),idir2,nsigma)%X(dl_psi)(:,idim,ist,ik),&
+                    factor0 * gdl_k(magn_dir(idir3,1),:,idim)) &
+                  - X(mf_dotp)(sys%gr%mesh,factor * gdl_ke(magn_dir(idir3,2),:,idim,nsigma),&
+                    lr_k(magn_dir(idir3,1))%X(dl_psi)(:,idim,ist,ik))&
+                  - X(mf_dotp)(sys%gr%mesh,-lr_k(magn_dir(idir3,2))%X(dl_psi)(:,idim,ist,ik),&
+                    factor0 * gdl_ke(magn_dir(idir3,1),:,idim,1))&
+                  - X(mf_dotp)(sys%gr%mesh,-gdl_k(magn_dir(idir3,2),:,idim),&
+                    -factor0 * lr_ke(magn_dir(idir3,1),idir2,1)%X(dl_psi)(:,idim,ist,ik)))
+              end do
+            end do 
+          end do
+        end if
+      end do
+      call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        sys%st%X(psi)(:,:,:,ik),factor*gpsi(:,:,:),mat_g%X(matrix))
+
+      do idir2 = 1, ndir
+        do idir3 = 1, ndir
+          do idir4 = 1, ndir   
+            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+              factor0 * lr_k(idir4)%X(dl_psi)(:,:,:,ik), lr_ke(idir3,idir2,1)%X(dl_psi)(:,:,:,ik),&
+              mat_kke(idir4,idir3)%X(matrix))
+            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+              lr_ke(idir4,idir2,nsigma)%X(dl_psi)(:,:,:,ik), factor0 * lr_k(idir3)%X(dl_psi)(:,:,:,ik),&
+              mat_kek(idir4,idir3)%X(matrix))
+          end do
+        end do
+        do idir3 = 1, ndir
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            factor1 * lr_b(idir3)%X(dl_psi)(:,:,:,ik), lr_e(idir2,1)%X(dl_psi)(:,:,:,ik),&
+            mat_be%X(matrix))
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_e(idir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_b(idir3)%X(dl_psi)(:,:,:,ik),&
+            mat_eb%X(matrix))
+
+          do ist = 1, sys%st%nst
+            if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+              do ist_occ  = sys%st%st_start, sys%st%st_end
+                if (abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+
+                  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
+                    - weight / P_C * factor_e * M_HALF * (factor1 * mat_g%X(matrix)(ist_occ,ist)&
+                    + R_CONJ(mat_g%X(matrix)(ist,ist_occ))) * (mat_be%X(matrix)(ist,ist_occ)&
+                    + mat_eb%X(matrix)(ist,ist_occ))
+
+                  zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) &
+                    - weight / P_C * M_FOURTH * factor * (factor1 * mat_g%X(matrix)(ist_occ,ist)&
+                    + R_CONJ(mat_g%X(matrix)(ist,ist_occ))) * (&
+                    mat_kke(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
+                    - mat_kke(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ)&
+                    + mat_kek(magn_dir(idir3,2),magn_dir(idir3,1))%X(matrix)(ist,ist_occ)&
+                    - mat_kek(magn_dir(idir3,1),magn_dir(idir3,2))%X(matrix)(ist,ist_occ))
+                end if
+              end do
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+  
+  zpol(:,:,:) = - M_zI / (frequency) * zpol(:,:,:) 
+  call zsymmetrize_magneto_optics_tensor(sys, zpol(:,:,:))
+ 
+ 
+  call pert_end(pert_kdotp)
+  SAFE_DEALLOCATE_P(mat_g%X(matrix))
+  SAFE_DEALLOCATE_P(mat_eb%X(matrix))
+  SAFE_DEALLOCATE_P(mat_be%X(matrix))
+  do idir2 = 1, ndir
+    do idir3 = 1, ndir
+      SAFE_DEALLOCATE_P(mat_kek(idir2,idir3)%X(matrix))
+      SAFE_DEALLOCATE_P(mat_kke(idir2,idir3)%X(matrix))
+    end do
+  end do
+  
+  SAFE_DEALLOCATE_A(mat_kke)
+  SAFE_DEALLOCATE_A(mat_kek)
+  SAFE_DEALLOCATE_A(gpsi)
+  SAFE_DEALLOCATE_A(gdl_e)
+  SAFE_DEALLOCATE_A(gdl_k)
+  SAFE_DEALLOCATE_A(gdl_b)
+  SAFE_DEALLOCATE_A(gdl_ke)
+  SAFE_DEALLOCATE_A(gdl_be)
+
+#ifdef HAVE_MPI
+  if(sys%st%parallel_in_states) then
+    call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**3, MPI_CMPLX, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
+    zpol(1:ndir, 1:ndir, 1:ndir) = zpol_temp(1:ndir, 1:ndir, 1:ndir)
+  endif
+  if(sys%st%d%kpt%parallel) then
+    call MPI_Allreduce(zpol, zpol_temp, MAX_DIM**3, MPI_CMPLX, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
+    zpol(1:ndir, 1:ndir, 1:ndir) = zpol_temp(1:ndir, 1:ndir, 1:ndir)
+  endif
+#endif
+
+  POP_SUB(X(lr_calc_magneto_optics_periodic))
+
+end subroutine X(lr_calc_magneto_optics_periodic)
+
 ! -------------------------------------------------------------------------------
 subroutine X(symmetrize_magneto_optics_tensor)(sys, tensor) 
   type(system_t),       intent(inout) :: sys 

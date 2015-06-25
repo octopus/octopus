@@ -61,6 +61,8 @@ module em_resp_calc_m
      zcalc_polarizability_periodic,    &
      dlr_calc_magneto_optics_finite,   &
      zlr_calc_magneto_optics_finite,   &
+     dlr_calc_magneto_optics_periodic, & 
+     zlr_calc_magneto_optics_periodic, &
      dlr_calc_susceptibility,          &
      zlr_calc_susceptibility,          &
      dlr_calc_beta,                    &
