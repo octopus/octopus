@@ -822,6 +822,279 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
   POP_SUB(X(em_resp_calc_eigenvalues))
 end subroutine X(em_resp_calc_eigenvalues)
 
+! ---------------------------------------------------------
+subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
+  lr_e1, lr_b, chi)
+  type(sternheimer_t),    intent(inout) :: sh, sh_mo
+  type(system_t),         intent(inout) :: sys
+  type(hamiltonian_t),    intent(inout) :: hm
+  integer,                intent(in)    :: nsigma
+  type(lr_t),             intent(inout) :: lr_e(:,:), lr_e1(:,:)
+  type(lr_t),             intent(inout) :: lr_b(:,:)
+  CMPLX,                  intent(out)   :: chi(:,:,:)
+
+  integer :: dir1, dir2, dir3, pert_order, ist, ist_occ
+  integer :: ik, idim, ip, is1, is2, is3, sigma, ispin
+  type(pert_t) :: pert_m, pert_e2, pert_e1
+  R_TYPE, allocatable :: pertpsi_e1(:,:), pertpsi_e2(:,:), pertpsi_b(:,:)
+  FLOAT :: weight
+  R_TYPE, allocatable :: hpol_density(:), hvar_e1(:,:,:,:), hvar_e2(:,:,:,:), hvar_b(:,:,:,:)
+  type(matrix_t) :: prod_eb1, prod_eb2, prod_be1, prod_be2, prod_ee1, prod_ee2 
+    
+  PUSH_SUB(X(lr_calc_magneto_optics_finite))
+
+  SAFE_ALLOCATE(pertpsi_e1(1:sys%gr%mesh%np,1:hm%d%dim))
+  SAFE_ALLOCATE(pertpsi_e2(1:sys%gr%mesh%np,1:hm%d%dim))
+  SAFE_ALLOCATE(pertpsi_b(1:sys%gr%mesh%np,1:hm%d%dim))
+  
+  if(sternheimer_add_fxc(sh)) then 
+    SAFE_ALLOCATE(hpol_density(1:sys%gr%mesh%np))
+  end if
+  
+  SAFE_ALLOCATE(prod_eb1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_eb2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_be1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_be2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_ee1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_ee2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(hvar_e1(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim,1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+
+  chi = M_ZERO
+
+  pertpsi_e1(:,:)= M_ZERO
+  pertpsi_e2(:,:)= M_ZERO
+  pertpsi_b(:,:)= M_ZERO
+  
+  call pert_init(pert_m, PERTURBATION_MAGNETIC, sys%gr, sys%geo)
+  call pert_init(pert_e2, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+  call pert_init(pert_e1, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+  
+  hvar_e2(:,:,:,:) = M_ZERO
+  hvar_e1(:,:,:,:) = M_ZERO
+  hvar_b(:,:,:,:) = M_ZERO
+  
+  do dir1 = 1, sys%gr%sb%dim
+    call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1,:), nsigma, hvar_e2(dir1,:,:,:))
+    call X(sternheimer_calc_hvar)(sh, sys, lr_e1(dir1,:), nsigma, hvar_e1(dir1,:,:,:))
+    call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1,:), 1, hvar_b(dir1,:,:,:))
+  end do
+  
+  do dir1 = 1, sys%gr%sb%dim
+    do dir2 = 1, sys%gr%sb%dim
+      do dir3 = 1, sys%gr%sb%dim
+        call pert_setup_dir(pert_e1, dir1)
+        call pert_setup_dir(pert_e2, dir2)
+        call pert_setup_dir(pert_m, dir3)
+        do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+          ispin = states_dim_get_spin_index(sys%st%d, ik)
+          weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+          do ist = 1, sys%st%nst
+            if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik,&
+                lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik,&
+                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
+                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_b(:,:))
+              do idim = 1, hm%d%dim
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * &
+                    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * &
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * &
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
+                end do
+              end do
+              chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
+                X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                  pertpsi_e1(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                  pertpsi_e2(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),&
+                  pertpsi_b(:,:)))
+
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
+                pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
+                pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), &
+                pertpsi_b(:,:))
+              do idim = 1, hm%d%dim
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * &
+                    lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * &
+                    lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * &
+                    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                end do
+              end do
+              chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
+                X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                  lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),pertpsi_e1(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                  lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_e2(:,:)) &
+                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
+                  lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_b(:,:)))
+            end if
+          end do
+        end do
+        if(sternheimer_add_fxc(sh_mo)) then 
+          hpol_density(:) = M_ZERO
+          call calc_kvar_energy(lr_e1(dir1,nsigma),lr_e(dir2,1),lr_b(dir3,1))
+          call calc_kvar_energy(lr_e1(dir1,nsigma),lr_b(dir3,1),lr_e(dir2,1))
+          call calc_kvar_energy(lr_e(dir2,1),lr_e1(dir1,nsigma),lr_b(dir3,1))
+          call calc_kvar_energy(lr_e(dir2,1),lr_b(dir3,1),lr_e1(dir1,nsigma))
+          call calc_kvar_energy(lr_b(dir3,1),lr_e1(dir1,nsigma),lr_e(dir2,1))
+          call calc_kvar_energy(lr_b(dir3,1),lr_e(dir2,1),lr_e1(dir1,nsigma))
+          chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + &
+            M_ONE/CNST(6.0) * X(mf_integrate)(sys%gr%mesh, hpol_density) ! the coefficient should be checked
+        end if
+
+        do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+          weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+ 
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb2%X(matrix))
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_be2%X(matrix))
+
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb1%X(matrix))
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_be1%X(matrix))
+
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_ee1%X(matrix))
+          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_ee2%X(matrix))
+         
+          do ist = 1, sys%st%nst
+            if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_b(:,:))
+              do idim = 1, hm%d%dim
+                do ip = 1, sys%gr%mesh%np
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * sys%st%X(psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * sys%st%X(psi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * sys%st%X(psi)(ip,idim,ist,ik)
+                end do
+              end do
+              do ist_occ = 1, sys%st%nst
+                if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+                  chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight * (&
+                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_e1(:,:))&
+                    *(prod_eb2%X(matrix)(ist,ist_occ) + prod_be2%X(matrix)(ist,ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_e2(:,:))&
+                    *(prod_eb1%X(matrix)(ist,ist_occ) + prod_be1%X(matrix)(ist,ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_b(:,:))&
+                    *(prod_ee1%X(matrix)(ist,ist_occ) + prod_ee2%X(matrix)(ist,ist_occ)))
+                end if
+              end do
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+  
+  chi(:,:,:) = chi(:,:,:) / P_C
+  call zsymmetrize_magneto_optics_tensor(sys, chi(:,:,:))
+    
+  SAFE_DEALLOCATE_P(prod_eb1%X(matrix))
+  SAFE_DEALLOCATE_P(prod_eb2%X(matrix))
+  SAFE_DEALLOCATE_P(prod_be1%X(matrix))
+  SAFE_DEALLOCATE_P(prod_be2%X(matrix))
+  SAFE_DEALLOCATE_P(prod_ee1%X(matrix))
+  SAFE_DEALLOCATE_P(prod_ee2%X(matrix))
+  
+  SAFE_DEALLOCATE_A(pertpsi_e1)
+  SAFE_DEALLOCATE_A(pertpsi_e2)
+  SAFE_DEALLOCATE_A(pertpsi_b)
+  SAFE_DEALLOCATE_A(hvar_e1)
+  SAFE_DEALLOCATE_A(hvar_e2)
+  SAFE_DEALLOCATE_A(hvar_b)
+  
+  if(sternheimer_add_fxc(sh)) then 
+    SAFE_DEALLOCATE_A(hpol_density)
+  end if
+  POP_SUB(X(lr_calc_magneto_optics_finite))
+
+contains
+  subroutine calc_kvar_energy(lr1, lr2, lr3)
+    type(lr_t),  intent(in) :: lr1, lr2, lr3
+    
+    R_TYPE, allocatable :: kvar(:,:,:) 
+    integer :: is
+    
+    PUSH_SUB(X(lr_calc_magneto_optics_finite).calc_kvar_energy)
+  
+    SAFE_ALLOCATE(kvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+  
+    call X(calc_kvar)(sh_mo, sys, lr1%X(dl_rho), lr2%X(dl_rho), 1, kvar)
+    do ip = 1, sys%gr%mesh%np
+      do is = 1, sys%st%d%nspin
+        hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1) * lr3%X(dl_rho)(ip,is)
+      end do
+    end do
+  
+    SAFE_DEALLOCATE_A(kvar)
+  
+    POP_SUB(X(lr_calc_magneto_optics_finite).calc_kvar_energy)
+  end subroutine calc_kvar_energy
+  
+end subroutine X(lr_calc_magneto_optics_finite)
+
+! -------------------------------------------------------------------------------
+subroutine X(symmetrize_magneto_optics_tensor)(sys, tensor) 
+  type(system_t),       intent(inout) :: sys 
+  R_TYPE,               intent(inout) :: tensor(:,:,:) !< (3, 3, 3)
+  
+  integer :: iop, nops
+  R_TYPE :: tensor_symm(3, 3, 3)
+  integer  :: rot(3, 3)
+  integer :: idir1, idir2, idir3, ndir
+  integer :: i1, i2, i3, det
+  
+  PUSH_SUB(X(symmetrize_magneto_optics_tensor))
+    
+  ndir = sys%gr%mesh%sb%dim
+  
+  ASSERT(ndir == 3)
+  
+  nops = symmetries_number(sys%gr%mesh%sb%symm)
+  
+  tensor_symm(:,:,:) = M_ZERO
+  
+  do iop = 1, nops
+    rot = symm_op_rotation_matrix(sys%gr%mesh%sb%symm%ops(iop))
+    det = rot(1,1) * rot(2,2) * rot(3,3) + rot(1,2) * rot(2,3) * rot(3,1) + rot(1,3) * rot(2,1) * rot(3,2) &
+      - rot(1,1) * rot(2,3) * rot(3,2) - rot(1,2) * rot(2,1) * rot(3,3) - rot(1,3) * rot(2,2) * rot(3,1)
+         
+    do idir1 = 1, ndir
+      do idir2 = 1, ndir
+        do idir3 = 1, ndir
+          i1 = 1 * rot(1,idir1) + 2 * rot(2,idir1) + 3 * rot(3,idir1)
+          i2 = 1 * rot(1,idir2) + 2 * rot(2,idir2) + 3 * rot(3,idir2)
+          i3 = 1 * rot(1,idir3) + 2 * rot(2,idir3) + 3 * rot(3,idir3)
+          
+          tensor_symm(abs(i1),abs(i2),abs(i3)) = tensor_symm(abs(i1),abs(i2),abs(i3)) + &
+            tensor(idir1,idir2,idir3) * sign(1,i1) * sign(1,i2) * sign(1,i3) * det
+        end do
+      end do
+    end do
+  end do
+  tensor(1:3,1:3,1:3) = tensor_symm(1:3,1:3,1:3) / nops
+
+  POP_SUB(X(symmetrize_magneto_optics_tensor))
+end subroutine X(symmetrize_magneto_optics_tensor)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
