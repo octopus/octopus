@@ -61,7 +61,9 @@ module io_function_m
     dio_function_output,          &
     zio_function_output,          &
     dout_cf_vtk,                  &
-    zout_cf_vtk
+    zout_cf_vtk,                  &
+    dout_cf_vts
+    
 
 #if defined(HAVE_NETCDF)
  public ::                        &
@@ -468,6 +470,20 @@ contains
 
     POP_SUB(transpose3)
   end subroutine transpose3
+  
+  !< check endianness
+  !< Logical output: true is the running architecture uses little endian ordering, false otherwise.
+  logical pure function is_little_endian() result(is_little)
+    implicit none
+    integer, parameter:: I4P  = selected_int_kind(9)  
+    integer, parameter:: I1P  = selected_int_kind(2)
+    integer(I1P) :: int1(1:4) !< One byte integer array for casting 4 bytes integer.
+
+    int1 = transfer(1_I4P, int1)
+    is_little = (int1(1) == 1_I1P)
+    return
+  end function is_little_endian
+  
 
 
 #include "undef.F90"
