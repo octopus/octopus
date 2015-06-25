@@ -89,12 +89,12 @@ AC_DEFUN([ACX_GREP_FCCPP],[
      echo "$2" > conftest.F90
 
      # see if the attempt to preprocess raises an error
-     if ! $FCCPP conftest.F90 > /dev/null 2>&1 ; then
+     if ! $FCCPP conftest.F90 > /dev/null 2>&5 ; then
        $4
      fi
 
-     if (eval "$FCCPP conftest.F90") 2>&5 |
-       grep -q "$1" 2>&1; then :
+     if (eval "$FCCPP conftest.F90" 2>&5) |
+       grep -q "$1" 2>&5; then :
        $3
      else
        $4
