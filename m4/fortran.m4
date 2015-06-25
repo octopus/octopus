@@ -111,13 +111,13 @@ AC_DEFUN([ACX_FCCPP],[
            continue
          fi
 
-         for FCCPP in "$FCCPP_base" "$FCCPP_base -ansi"; do
+         for FCCPP in "$FCCPP_base" "$FCCPP_base -C"; do
            AC_MSG_CHECKING([whether $FCCPP is usable for Fortran preprocessing])
 	   acx_fpp_ok=yes
 
       	   ACX_GREP_FCCPP([anything], AC_LANG_PROGRAM([],[anything]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor cannot be run]); break])
-	     # very unlikely that adding -ansi will allow it to be run at all
+	     # very unlikely that adding -C will allow it to be run at all
 
       	   ACX_GREP_FCCPP([hi], AC_LANG_PROGRAM([],[
 #define ADD_I(x) x ## i
@@ -127,9 +127,7 @@ ADD_I(h)]),
            # in Fortran this is string concatenation, must not be stripped
 	   # some cpp's (e.g. icc -E -ansi) might actually insert a space between // too which is not acceptable
            ACX_GREP_FCCPP([rout // ine], AC_LANG_PROGRAM([],[
-con // cat
-#define PUSH_SUB(x) x // ine
-PUSH_SUB(rout)]),
+rout // ine]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor mangles C++ style comment])])
 
 	  if test x"$acx_fpp_ok" = xyes; then
