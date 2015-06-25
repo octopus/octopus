@@ -281,8 +281,8 @@ contains
     !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
     !% (<tt>scalar_potential</tt>). 
     !% The last element is optional and indicates the carrier phase function <math>\phi(t)</math>. 
-    !% It is a time dependent function and as such should be expressed as a formula within 
-    !% quotation marks.
+    !% It is a time dependent function and as such it should match one of the function names given in 
+    !% the first column of the <tt>TDFunctions</tt> block.
     !%
     !% The "other descriptors" depend on which kind of external field has been indicated in 
     !% the first column.
