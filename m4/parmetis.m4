@@ -38,7 +38,7 @@ fi
 
 if test x"$acx_parmetis_ok" != xno; then
   AC_ARG_WITH([parmetis-prefix],
-    [AC_HELP_STRING([--with-parmetis-prefix],
+    [AS_HELP_STRING([--with-parmetis-prefix=DIR],
     [Directory where ParMETIS library was installed])])
 
   case $with_parmetis_prefix in

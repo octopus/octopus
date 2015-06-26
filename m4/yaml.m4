@@ -6,7 +6,7 @@
 AC_DEFUN([ACX_YAML], [
   dnl Yaml input file support
   AC_ARG_WITH([yaml-path],
-              AS_HELP_STRING([--with-yaml-path], [give a path to find libyaml.]),
+              AS_HELP_STRING([--with-yaml-prefix=DIR], [Directory where libYAML was installed.]),
               [ac_path_yaml=$withval])
   AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = auto).]), ac_build_libyaml=$enableval, ac_build_libyaml="auto")
   

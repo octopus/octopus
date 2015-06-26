@@ -31,7 +31,7 @@ else
   AC_REQUIRE([AC_PROG_CC])
 
   AC_ARG_WITH([metis-prefix],
-    [AC_HELP_STRING([--with-metis-prefix],
+    [AS_HELP_STRING([--with-metis-prefix=DIR],
     [Directory where external METIS library was installed (must be single-precision)])])
 
   case $with_metis_prefix in
