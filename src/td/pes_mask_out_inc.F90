@@ -473,7 +473,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
   integer,          intent(in) :: dir
   integer,          intent(in) :: integrate
 
-  integer              :: ii, ix, iy, iunit
+  integer              :: ii, ix, iy, iunit,ldir(2)
   FLOAT                :: KK(3),temp
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
@@ -505,12 +505,22 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
   end do  
   
   
-  if (sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14 .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
+  if (sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
     
-    do ix = 1, ll(1)
-      KK(1) = Lk_(ix, 1)
-      do iy = 1, ll(2)
-        KK(2) = Lk_(iy, 2)
+    select case (dir)
+      case (1)
+        ldir(:) =(/2,3/)
+      case (2)
+        ldir(:) =(/1,3/)
+      case (3)
+        ldir(:) =(/1,2/)
+        
+    end select
+    
+    do ix = 1, ll(ldir(1))
+      KK(1) = Lk_(ix, ldir(1))
+      do iy = 1, ll(ldir(2))
+        KK(2) = Lk_(iy, ldir(2))
       
 
         select case (dir)
@@ -1387,6 +1397,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
+  
+  if (simul_box_is_periodic(mesh%sb)) then
+    ! For periodic systems the results must be obtained using 
+    ! the oct-photoelectron-spectrum routine 
+    POP_SUB(pes_mask_output)
+    return     
+  end if
 
   !Write the output in the td.00iter directories
   dir = file 
@@ -1429,6 +1446,8 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
 
   !Create the full momentum-resolved PES matrix
   pesK = M_ZERO
+  ! This loop over kpoints should not be reached since for periodic systems 
+  ! this part is skipped. I keep this here for the moment just for the debug purposes.
   do ik = st%d%kpt%start, st%d%kpt%end
 
     if(mask%add_psia) then 
@@ -1440,32 +1459,28 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
     ! only the root node of the domain and state parallelization group writes the output
     if(mpi_grp_is_root(st%dom_st_mpi_grp)) then 
       ! Output the full matrix in binary format for subsequent post-processing 
-      if(st%d%nik > 1) then
-        write(fn, '(a,a,i3.3,a)') trim(dir), '_map-k',ik ,'.obf'
-      else
-        write(fn, '(a,a)') trim(dir), '_map.obf'
-      end if
+      if(st%d%nik == 1) then
+      write(fn, '(a,a)') trim(dir), '_map.obf'
       call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
                            pesK, ierr)
+                           
+         
+      ! Total power spectrum 
+      write(fn, '(a,a)') trim(dir), '_power.sum'
+      call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+                                       mask%energyMax, mask%energyStep, .false.)
+      end if
 
-      ! Output the k resolved PES on plane kz=0
+      ! Output the p resolved PES on plane pz=0
       if(st%d%nik > 1) then
-        write(fn, '(a,a,i3.3,a)') trim(dir), '_map-k',ik ,'.z=0'
+        write(fn, '(a,a,i3.3,a)') trim(dir), '_map-k',ik ,'.pz=0'
       else
-        write(fn, '(a,a)') trim(dir), '_map.z=0'
+        write(fn, '(a,a)') trim(dir), '_map.pz=0'
       end if
       pol = (/M_ZERO, M_ZERO, M_ONE/)
       call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%ll, mask%mesh%sb%dim, pol = pol, &
                                      dir = 3, integrate = INTEGRATE_NONE )
                                      
-
-      if(st%d%nik == 1) then                               
-        ! Total power spectrum 
-        write(fn, '(a,a)') trim(dir), '_power.sum'
-        call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
-                                          mask%energyMax, mask%energyStep, .false.)
-      end if
-
     end if
   end do
 

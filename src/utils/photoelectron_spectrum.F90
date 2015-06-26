@@ -135,7 +135,7 @@ program photoelectron_spectrum
   
   
   lll(:) = ll(:)
-  if (simul_box_is_periodic(sb)) then
+!   if (simul_box_is_periodic(sb)) then
     call restart_module_init()
     call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr)
     if(ierr /= 0) then
@@ -143,9 +143,6 @@ program photoelectron_spectrum
       call messages_fatal(1)
     end if
     
-    
-    ! NOTE: Only works with automatically generated k-point grids
-    ! (KPOINTS_MONKH_PACK = 3)
     SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),kpoints_number(sb%kpoints),1:3))
 
     ! change ll() (old values are stored in lll) to account for the combination 
@@ -154,25 +151,33 @@ program photoelectron_spectrum
 
     SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
     call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp)  
-  end if
+!   end if
  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
   
-  if (simul_box_is_periodic(sb)) then
+!   if (simul_box_is_periodic(sb)) then
 
     call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
 
     call restart_end(restart)    
-      
-  else
-    !Read directly from the obf file 
-    filename=io_workpath('td.general/PESM_map.obf')
-    call io_binary_read(trim(filename),ll(1)*ll(2)*ll(3),pesk, ierr)
-    if(ierr > 0) then
-      message(1) = "Failed to read file "//trim(filename)
-      call messages_fatal(1)
-    end if
-  end if
+    
+    if (.not. simul_box_is_periodic(sb) .or. kpoints_number(sb%kpoints) == 1) then
+      ! There is no need to use pmesh we just need to sort Lk in place
+      ! in order to have a coordinate ordering coherent with pesk
+      do idim = 1, sb%dim
+        call sort(Lk(1:ll(idim), idim)) 
+      end do  
+    end if  
+    
+!   else
+!     !Read directly from the obf file
+!     filename=io_workpath('td.general/PESM_map.obf')
+!     call io_binary_read(trim(filename),ll(1)*ll(2)*ll(3),pesk, ierr)
+!     if(ierr > 0) then
+!       message(1) = "Failed to read file "//trim(filename)
+!       call messages_fatal(1)
+!     end if
+!   end if
 
 
   write(message(1), '(a)') 'Read PES restart file.'
@@ -214,7 +219,7 @@ program photoelectron_spectrum
     if(sum((pvec-(/0 ,1 ,0/))**2)  <= M_EPSILON  )  dir = 2
     if(sum((pvec-(/0 ,0 ,1/))**2)  <= M_EPSILON  )  dir = 3
 
-    filename = "PES_velocity.map."//index2axis(dir)//"=0"
+    filename = "PES_velocity.map.p"//index2axis(dir)//"=0"
 
 
     if (dir == -1) then
@@ -400,12 +405,20 @@ program photoelectron_spectrum
 
       ! Populate Lkpt which maps a kpoint index into an 
       ! triplet of array indices (1:nk(idir)) on a cube
-      Lkpt(:,:) = 0
+      ! Only works with automatically generated k-point grids
+      ! (KPOINTS_MONKH_PACK)      
+      Lkpt(:,:) = 1
       kpt(:) = M_ZERO
       dx(1:sb%dim) = M_ONE/(M_TWO*nk(1:sb%dim))
       do ik = 1, kpoints_number(kpoints)
         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.) 
         Lkpt(ik,1:sb%dim) = (kpt(1:sb%dim)/dx(1:sb%dim) + nk(1:sb%dim))/M_TWO
+        do idir = 1, sb%dim
+          if(mod(nk(idir), 2) /= 0) then    
+            Lkpt(ik,idir) = Lkpt(ik,idir) + 1
+          end if
+        end do
+!         Lkpt(ik,sb%periodic_dim+1:sb%dim) = 1
 !         print *, ik, "Lkpt(ik)= ", Lkpt(ik,:), "-- kpt= ",kpt
       end do
       
@@ -434,13 +447,13 @@ program photoelectron_spectrum
               
               kval (1:3)= (/Lk_(i1,1),Lk_(i2,2),Lk_(i3,3)/)               
 
-              ip1 = (i1 - 1) * nk(1) + Lkpt(ik,1) + 1
-              ip2 = (i2 - 1) * nk(2) + Lkpt(ik,2) + 1
-              ip3 = (i3 - 1) * nk(3) + Lkpt(ik,3) + 1
+              ip1 = (i1 - 1) * nk(1) + Lkpt(ik,1) 
+              ip2 = (i2 - 1) * nk(2) + Lkpt(ik,2) 
+              ip3 = (i3 - 1) * nk(3) + Lkpt(ik,3)
               
               Lp(idx(i1,1),idx(i2,2),idx(i3,3),ik,1:3) =  (/ip1,ip2,ip3/)
               
-!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:sb%dim) = ",  Lp(i1,i2,i3,ik,1:3)
+!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:sb%dim) = ",  (/ip1,ip2,ip3/)
               
               pmesh(ip1, ip2, ip3, 1:sb%dim) = kval(1:sb%dim) + kpt(1:sb%dim)
 
