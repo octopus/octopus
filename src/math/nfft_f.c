@@ -125,9 +125,9 @@ void FC_FUNC(oct_nfft_precompute_one_psi_3d, OCT_NFFT_PRECOMPUTE_ONE_PSI_3D)
    for (ii=0;ii< M[0];ii++){
      for (jj=0;jj< M[1];jj++){
        for (kk=0;kk< M[2];kk++){
-         plan->x[3*(M[1]*M[2]*ii + M[1]*jj + kk) + 0] =  X1[ii];
-         plan->x[3*(M[1]*M[2]*ii + M[1]*jj + kk) + 1] =  X2[jj];
-         plan->x[3*(M[1]*M[2]*ii + M[1]*jj + kk) + 2] =  X3[kk];
+         plan->x[3*(M[1]*M[2]*ii + M[2]*jj + kk) + 0] =  X1[ii];
+         plan->x[3*(M[1]*M[2]*ii + M[2]*jj + kk) + 1] =  X2[jj];
+         plan->x[3*(M[1]*M[2]*ii + M[2]*jj + kk) + 2] =  X3[kk];
        }
      }
    }
@@ -158,7 +158,7 @@ void FC_FUNC(zoct_set_f, ZOCT_SET_F)
      plan->f[(ix-1)*M[1] + (iy-1)] = val;
      break;
      case 3:
-       plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[1] + (iz-1)] = val;
+       plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[2] + (iz-1)] = val;
      break;
      }
 
@@ -182,7 +182,7 @@ void FC_FUNC(zoct_get_f, ZOCT_GET_F)
        *val = plan->f[(ix-1)*M[1] + (iy-1)];
      break;
      case 3:
-       *val = plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[1] + (iz-1)];
+       *val = plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[2] + (iz-1)];
      break;
    }
 
@@ -206,7 +206,7 @@ void FC_FUNC(zoct_set_f_hat, ZOCT_SET_F_HAT)
        plan->f_hat[(ix-1)*plan->N[1] + (iy-1)] = val;
      break;
      case 3:
-       plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[1] + (iz-1)] = val;
+       plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[2] + (iz-1)] = val;
      break;
    }
 
@@ -229,7 +229,7 @@ void FC_FUNC(zoct_get_f_hat, ZOCT_GET_F_HAT)
        *val = plan->f_hat[(ix-1)*plan->N[1] + (iy-1)];
      break;
      case 3:
-       *val = plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[1] + (iz-1)];
+       *val = plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[2] + (iz-1)];
      break;
    }
 
@@ -255,7 +255,7 @@ void FC_FUNC(doct_set_f, DOCT_SET_F)
        plan->f[(ix-1)*M[1] + (iy-1)] = val;
      break;
      case 3:
-       plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[1] + (iz-1)] = val;
+       plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[2] + (iz-1)] = val;
      break;
    }
 
@@ -279,7 +279,7 @@ void FC_FUNC(doct_get_f, DOCT_GET_F)
        *val = plan->f[(ix-1)*M[1] + (iy-1)];
      break;
      case 3:
-       *val = plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[1] + (iz-1)];
+       *val = plan->f[(ix-1)*M[1]*M[2] + (iy-1)*M[2] + (iz-1)];
      break;
    }
 
@@ -303,7 +303,7 @@ void FC_FUNC(doct_set_f_hat, DOCT_SET_F_HAT)
        plan->f_hat[(ix-1)*plan->N[1] + (iy-1)] = val;
      break;
      case 3:
-       plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[1] + (iz-1)] = val;
+       plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[2] + (iz-1)] = val;
      break;
    }
 
@@ -326,7 +326,7 @@ void FC_FUNC(doct_get_f_hat, DOCT_GET_F_HAT)
        *val = plan->f_hat[(ix-1)*plan->N[1] + (iy-1)];
      break;
      case 3:
-       *val = plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[1] + (iz-1)];
+       *val = plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[2] + (iz-1)];
      break;
    }
 
