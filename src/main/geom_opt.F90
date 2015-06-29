@@ -26,6 +26,7 @@ module geom_opt_m
   use global_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use lcao_m
   use loct_m
   use parser_m
@@ -33,6 +34,7 @@ module geom_opt_m
   use messages_m
   use minimizer_m
   use mpi_m 
+  use output_m
   use profiling_m
   use restart_m
   use scf_m
@@ -496,7 +498,7 @@ contains
     REAL_DOUBLE, intent(in) :: energy, maxdx, maxdf
     REAL_DOUBLE, intent(in) :: coords(size)
 
-    character(len=256) :: c_geom_iter, title
+    character(len=256) :: c_geom_iter, title, c_forces_iter
     integer :: iunit
 
     PUSH_SUB(write_iter_info)
@@ -506,6 +508,15 @@ contains
     call io_mkdir('geom')
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last')
+
+    if(iand(g_opt%syst%outp%what, OPTION_FORCES) /= 0) then
+    write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
+      if(iand(g_opt%syst%outp%how, C_OUTPUT_HOW_BILD) /= 0) then
+        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh)
+      else
+        call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, write_forces = .true.)
+      end if
+    end if
 
     call from_coords(g_opt, coords)
 
