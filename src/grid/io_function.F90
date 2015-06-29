@@ -54,6 +54,7 @@ module io_function_m
   public ::                       &
     io_function_read_how,         &
     io_function_fill_how,         &
+    write_bild_forces_file,       &
     write_xsf_geometry,           &
     write_xsf_geometry_file,      &
     dio_function_input,           &
@@ -313,6 +314,51 @@ contains
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how
+
+  ! ---------------------------------------------------------
+  subroutine write_bild_forces_file(dir, fname, geo, mesh)
+    character(len=*),   intent(in) :: dir, fname
+    type(geometry_t),   intent(in) :: geo
+    type(mesh_t),       intent(in) :: mesh
+
+    integer :: iunit, iatom, idir
+    FLOAT, allocatable :: forces(:,:), center(:,:)
+    character(len=20) frmt
+
+    if( .not. mpi_grp_is_root(mpi_world)) return
+
+    PUSH_SUB(write_bild_forces_file)
+
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.bild', action='write', position='asis')
+
+    write(frmt,'(a,i0,a)')'(a,2(', mesh%sb%dim,'f16.6,1x))'
+
+    SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(center(1:geo%natoms, 1:mesh%sb%dim))
+    forall(iatom = 1:geo%natoms, idir = 1:mesh%sb%dim)
+      forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
+      center(iatom, idir) = units_from_atomic(units_out%length, geo%atom(iatom)%x(idir))
+    end forall
+    write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
+    write(iunit, *)
+    write(iunit, '(a)')'.color red'
+    write(iunit, *)
+    do iatom = 1, geo%natoms
+      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(geo%atom(iatom)%label), & 
+                         'force:', sqrt(sum(forces(iatom,:)**2)),'['//trim(units_abbrev(units_out%force))//']'
+      write(iunit,fmt=trim(frmt))'.arrow',(center(iatom, idir), idir = 1, mesh%sb%dim), &
+                                 (center(iatom, idir) + forces(iatom, idir), idir = 1, mesh%sb%dim)
+      write(iunit,*)
+    end do
+
+    SAFE_DEALLOCATE_A(forces)
+    SAFE_DEALLOCATE_A(center)
+
+    call io_close(iunit)
+
+    POP_SUB(write_bild_forces_file)
+  end subroutine write_bild_forces_file
 
   ! ---------------------------------------------------------
   subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)

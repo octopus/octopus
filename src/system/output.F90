@@ -619,7 +619,11 @@ contains
     end if
 
     if(iand(outp%what, OPTION_FORCES) /= 0) then
-      call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
+      if(iand(outp%how, C_OUTPUT_HOW_BILD) /= 0) then
+        call write_bild_forces_file(dir, "forces", geo, gr%mesh)
+      else
+        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
+      end if
     end if
 
     if(iand(outp%what, OPTION_MATRIX_ELEMENTS) /= 0) then
