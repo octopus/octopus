@@ -36,6 +36,7 @@ module pes_mask_m
   use io_m
   use kpoints_m
   use lasers_m
+  use loct_m
   use math_m
   use mesh_cube_parallel_map_m
   use mesh_m

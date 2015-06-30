@@ -28,6 +28,7 @@ program photoelectron_spectrum
   use io_binary_m
   use io_function_m
   use io_m
+  use loct_m
   use messages_m
   use parser_m
   use pes_m  
@@ -66,14 +67,23 @@ program photoelectron_spectrum
   
   character(len=512) :: filename
 
-  !Initial values
-  ll(:) = 1 
-  interpol = .true. 
+
+  call getopt_init(ierr)
+  if(ierr /= 0) then
+    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
+    message(2) = "the oct-photoelectron-spectrum command is not available."
+    call messages_fatal(2)
+  end if
+!   ! This first time checks only  if the --help option is present
+!   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
+!                                      uThstep, uThspan, uPhstep, &
+!                                      uPhspan, pol, center, pvec, integrate)
+!
+
 
   call global_init(is_serial = .true.)
   
-  call messages_init()
-  
+  call messages_init()  
   call io_init()
 
   !* In order to initialize k-points
@@ -83,18 +93,13 @@ program photoelectron_spectrum
   call geometry_init(geo, space)
   call simul_box_init(sb, geo, space)
   gr%sb = sb
+  call states_init(st, gr, geo)
   !*
 
-!   call grid_init_stage_0(gr, geo, space)
-  call states_init(st, gr, geo)
-  
 
-  call getopt_init(ierr)
-  if(ierr /= 0) then
-    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
-    message(2) = "the oct-photoelectron-spectrum command is not available."
-    call messages_fatal(2)
-  end if
+  !Initial values
+  ll(:) = 1 
+  interpol = .true. 
 
   !set default values
   mode = 1
@@ -124,6 +129,9 @@ program photoelectron_spectrum
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
                                      uThstep, uThspan, uPhstep, &
                                      uPhspan, pol, center, pvec, integrate)
+                                     
+  call getopt_end()
+                                       
   if(interp  ==  0) interpol = .false.
 
   call messages_print_stress(stdout)
@@ -135,41 +143,36 @@ program photoelectron_spectrum
   
   
   lll(:) = ll(:)
-!   if (simul_box_is_periodic(sb)) then
-    call restart_module_init()
-    call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr)
-    if(ierr /= 0) then
-      message(1) = "Unable to read time-dependent restart information."
-      call messages_fatal(1)
-    end if
-    
-    SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),kpoints_number(sb%kpoints),1:3))
+  call restart_module_init()
+  call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr)
+  if(ierr /= 0) then
+    message(1) = "Unable to read time-dependent restart information."
+    call messages_fatal(1)
+  end if
+  
+  SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),kpoints_number(sb%kpoints),1:3))
 
-    ! change ll() (old values are stored in lll) to account for the combination 
-    ! of the mask-mesh and the kpoint one
-    ll(1:sb%dim) = ll(1:sb%dim) * sb%kpoints%nik_axis(1:sb%dim)
+  ll(1:sb%dim) = ll(1:sb%dim) * sb%kpoints%nik_axis(1:sb%dim)
 
-    SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
-    call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp)  
-!   end if
+  SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
+  call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp)  
  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
   
-!   if (simul_box_is_periodic(sb)) then
 
-    call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
+  call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
 
-    call restart_end(restart)    
+  call restart_end(restart)    
+  
+  if (.not. simul_box_is_periodic(sb) .or. kpoints_number(sb%kpoints) == 1) then
+    ! There is no need to use pmesh we just need to sort Lk in place
+    ! in order to have a coordinate ordering coherent with pesk
+    do idim = 1, sb%dim
+      call sort(Lk(1:ll(idim), idim)) 
+    end do  
+  end if  
     
-    if (.not. simul_box_is_periodic(sb) .or. kpoints_number(sb%kpoints) == 1) then
-      ! There is no need to use pmesh we just need to sort Lk in place
-      ! in order to have a coordinate ordering coherent with pesk
-      do idim = 1, sb%dim
-        call sort(Lk(1:ll(idim), idim)) 
-      end do  
-    end if  
-    
-!   else
+!   if(.false.)
 !     !Read directly from the obf file
 !     filename=io_workpath('td.general/PESM_map.obf')
 !     call io_binary_read(trim(filename),ll(1)*ll(2)*ll(3),pesk, ierr)
@@ -180,7 +183,7 @@ program photoelectron_spectrum
 !   end if
 
 
-  write(message(1), '(a)') 'Read PES restart file.'
+  write(message(1), '(a)') 'Read PES restart files.'
   call messages_info(1)
 
   !! set user values
@@ -196,6 +199,13 @@ program photoelectron_spectrum
                    "Zenith axis: (",pol(1),", ",pol(2),", ",pol(3),")"
   call messages_info(1)
 
+
+  ! Convert the grid units
+  if (allocated(pmesh)) then
+    forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:3)
+      pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
+    end forall
+  end if
 
   ! choose what to calculate
   ! these functions are defined in pes_mask_out_inc.F90
@@ -219,7 +229,7 @@ program photoelectron_spectrum
     if(sum((pvec-(/0 ,1 ,0/))**2)  <= M_EPSILON  )  dir = 2
     if(sum((pvec-(/0 ,0 ,1/))**2)  <= M_EPSILON  )  dir = 3
 
-    filename = "PES_velocity.map.p"//index2axis(dir)//"=0"
+    filename = "PES_velocity_map.p"//index2axis(dir)//"=0"
 
 
     if (dir == -1) then
@@ -233,10 +243,14 @@ program photoelectron_spectrum
     if(integrate /= INTEGRATE_NONE) then
       write(message(1), '(a)') 'Integrate on: '//index2var(integrate)
       call messages_info(1)      
-      filename = "PES_velocity.map.i_"//trim(index2var(integrate))//"."//index2axis(dir)//"=0"
+      filename = "PES_velocity.map.i_"//trim(index2var(integrate))//".p"//index2axis(dir)//"=0"
     end if
     
-    call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate)    
+    if (allocated(pmesh)) then
+      call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate, pmesh)    
+    else    
+      call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate)    
+    end if
 
   case(4) ! Angle energy resolved on plane 
     write(message(1), '(a)') 'Write angle and energy-resolved PES'
@@ -273,9 +287,6 @@ program photoelectron_spectrum
     call messages_info(1)
 
     if (allocated(pmesh)) then
-      forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:3)
-        pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
-      end forall
       how = io_function_fill_how("VTK")
       call pes_mask_output_full_mapM(pesk, './PES_full_velocity_map', Lk, ll, how, sb, pmesh)
     else
@@ -286,10 +297,6 @@ program photoelectron_spectrum
  
       write(message(1), '(a)') 'Write ARPES'
       call messages_info(1)
-
-      forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:sb%periodic_dim)
-        pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
-      end forall
 
       forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3))
         pmesh(i1,i2,i3,sb%dim) = units_from_atomic(units_out%energy, &
@@ -479,10 +486,15 @@ program photoelectron_spectrum
       
       integer :: ik, ist, idim, itot
       integer :: i1, i2, i3, ip(1:3)
+      integer :: idone, ntodo
       CMPLX   :: psik(1:ll(1),1:ll(2),1:ll(3))
 
       PUSH_SUB(pes_mask_map_from_states)
   
+      ntodo = st%d%kpt%nglobal * st%nst * st%d%dim
+      idone = 0 
+      call loct_progress_bar(-1, ntodo)
+      
       pesK = M_ZERO
       do ik = 1, st%d%kpt%nglobal
         do ist = 1, st%nst
@@ -502,9 +514,14 @@ program photoelectron_spectrum
               end do
             end do
             
+            idone = idone +1 
+            call loct_progress_bar(idone, ntodo)
+            
           end do
         end do
       end do
+
+      write(stdout, '(1x)')
 
       POP_SUB(pes_mask_map_from_states)
     end subroutine pes_mask_map_from_states

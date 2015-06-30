@@ -249,13 +249,14 @@ end subroutine pes_mask_fullmap
 !!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
-  FLOAT,          intent(in)    :: pesK(:,:,:)
-  FLOAT,          intent(in)    :: Lk(:,:)
-  integer,        intent(in)    :: ll(:)
-  integer,        intent(in)    :: dim
-  FLOAT, pointer, intent(inout) :: cube_f(:)
-  type(qshep_t),  intent(out)   :: interp
+subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+  FLOAT,           intent(in)    :: pesK(:,:,:)
+  FLOAT,           intent(in)    :: Lk(:,:)
+  integer,         intent(in)    :: ll(:)
+  integer,         intent(in)    :: dim
+  FLOAT, pointer,  intent(inout) :: cube_f(:)
+  type(qshep_t),   intent(out)   :: interp
+  FLOAT, optional, intent(in)   :: pmesh(:,:,:,:)  
   
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
@@ -288,24 +289,42 @@ subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
 
 
   ii=1
-  do ix = 1, ll(1)
-    KK(1) = Lk(ix, 1)
-    do iy = 1, ll(2)
-      KK(2) = Lk(iy, 2)
-      do iz = 1, ll(3)
-        KK(3) = Lk(iz, 3)
+  if (present(pmesh)) then
+    do ix = 1, ll(1)
+      do iy = 1, ll(2)
+        do iz = 1, ll(3)
 
-        cube_f(ii) =  pesK(ix,iy,iz)
+          cube_f(ii) =  pesK(ix,iy,iz)
 
-        kx(ii) = KK(1)
-        ky(ii) = KK(2)
-        kz(ii) = KK(3)
+          kx(ii) = pmesh(ix,iy,iz,1)
+          ky(ii) = pmesh(ix,iy,iz,2)
+          kz(ii) = pmesh(ix,iy,iz,3)
 
-        ii = ii +1
-      end do 
-    end do
-  end do 
-  
+          ii = ii +1
+        end do 
+      end do
+    end do 
+    
+  else
+    
+    do ix = 1, ll(1)
+      KK(1) = Lk(ix, 1)
+      do iy = 1, ll(2)
+        KK(2) = Lk(iy, 2)
+        do iz = 1, ll(3)
+          KK(3) = Lk(iz, 3)
+
+          cube_f(ii) =  pesK(ix,iy,iz)
+
+          kx(ii) = KK(1)
+          ky(ii) = KK(2)
+          kz(ii) = KK(3)
+
+          ii = ii +1
+        end do 
+      end do
+    end do 
+  end if  
 
 
   select case(dim)
@@ -463,7 +482,7 @@ end subroutine pes_mask_output_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, integrate)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, integrate, pmesh)
   FLOAT,            intent(in) :: pesK(:,:,:)
   FLOAT,            intent(in) :: Lk(:,:)
   integer,          intent(in) :: ll(:)
@@ -472,16 +491,19 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
   FLOAT,            intent(in) :: pol(3)
   integer,          intent(in) :: dir
   integer,          intent(in) :: integrate
+  FLOAT, optional,  intent(in) :: pmesh(:,:,:,:)
 
-  integer              :: ii, ix, iy, iunit,ldir(2)
+  integer              :: ii, ix, iy, iunit,ldir(2), icut
   FLOAT                :: KK(3),temp
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
   FLOAT                :: rotation(1:dim,1:dim)
+  logical              :: aligned_axis
 ! integration
   FLOAT                :: K, KKK(3), theta, phi, Dphi, Dk(3)
   integer              :: iph, Nphi
-
+! progress
+  integer              :: idone, ntodo
 
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
@@ -504,8 +526,11 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
     call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
   end do  
   
+  aligned_axis = sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON  .or. &
+                 sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
+                 sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON  
   
-  if (sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
+  if (aligned_axis .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
     
     select case (dir)
       case (1)
@@ -517,35 +542,60 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
         
     end select
     
-    do ix = 1, ll(ldir(1))
-      KK(1) = Lk_(ix, ldir(1))
-      do iy = 1, ll(ldir(2))
-        KK(2) = Lk_(iy, ldir(2))
-      
-
-        select case (dir)
-          case (1)
-            temp = pesK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
     
-          case (2)
-            temp = pesK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
+    if (present(pmesh)) then
+      do ix = 1, ll(ldir(1))
+        do iy = 1, ll(ldir(2))
       
-          case (3)
-            temp = pesK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
-    
-        end select
+          select case (dir)
+            case (1)
+              icut = ll(dir)/2 + 1
+              temp = pesK(icut, ix, iy)    
+              KK(1) = pmesh(icut, ix, iy, ldir(1))
+              KK(2) = pmesh(icut, ix, iy, ldir(2))
+            case (2)
+              icut = ll(dir)/2 + 1
+              temp = pesK(ix, icut, iy)    
+              KK(1) = pmesh(ix, icut, iy, ldir(1))
+              KK(2) = pmesh(ix, icut, iy, ldir(2))
+            case (3)
+              icut = ll(dir)/2 + 1
+              temp = pesK(ix, iy, icut)        
+              KK(1) = pmesh(ix, iy, icut, ldir(1))
+              KK(2) = pmesh(ix, iy, icut, ldir(2))
+          end select
         
-        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                temp
- 
-       
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
+                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
+                  temp
+        end do
+        write(iunit, *)  
       end do
-      write(iunit, *)  
-    
-    end do
-  
+
+    else 
+      do ix = 1, ll(ldir(1))
+        KK(1) = Lk_(ix, ldir(1))
+        do iy = 1, ll(ldir(2))
+          KK(2) = Lk_(iy, ldir(2))
+      
+          select case (dir)
+            case (1)
+              temp = pesK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
+            case (2)
+              temp = pesK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
+            case (3)
+              temp = pesK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))        
+          end select
+        
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
+                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
+                  temp
+        end do
+        write(iunit, *)  
+      end do
+    end if
     
   else 
     ! We set the z-axis along the polarization 
@@ -558,7 +608,11 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
       print *,rotation(3,:)
     end if
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+
+    ntodo = product(ll(1:2))
+    idone = 0 
+    call loct_progress_bar(-1, ntodo)
 
     do ix = 1, ll(1)
      do iy = 1, ll(2)
@@ -566,19 +620,33 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
        !cut 
        select case (dir)
          case (1)
-           KK(1) = M_ZERO         
-           KK(2) = Lk_(ix, 1)
-           KK(3) = Lk_(iy, 2)
-
+           KK(1) = M_ZERO 
+           if (present(pmesh)) then
+             KK(2) = pmesh(ix, 1, 1, 1)
+             KK(3) = pmesh(1, iy, 1, 2)
+           else       
+             KK(2) = Lk_(ix, 1)
+             KK(3) = Lk_(iy, 2)
+           end if
          case (2)
-           KK(1) = Lk_(ix, 1)
            KK(2) = M_ZERO
-           KK(3) = Lk_(iy, 2)
+           if(present(pmesh)) then
+             KK(1) = pmesh(ix,  1, 1, 1)
+             KK(3) = pmesh(1,  iy, 1, 2)
+           else
+             KK(1) = Lk_(ix, 1)
+             KK(3) = Lk_(iy, 2)
+           end if
  
          case (3)
-           KK(1) = Lk_(ix, 1)
-           KK(2) = Lk_(iy, 2)
            KK(3) = M_ZERO
+           if(present(pmesh)) then
+             KK(1) = pmesh(ix,  1, 1, 1)
+             KK(2) = pmesh(1,  iy, 1, 2)
+           else 
+             KK(1) = Lk_(ix, 1)
+             KK(2) = Lk_(iy, 2)
+           end if
 
        end select
 
@@ -638,10 +706,16 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
                units_from_atomic(sqrt(units_out%energy), Lk_(ix, 1)),&
                units_from_atomic(sqrt(units_out%energy), Lk_(iy, 2)),&
                temp
+
   
+       idone = idone +1 
+       call loct_progress_bar(idone, ntodo)
+       
      end do
      write(iunit, *)  
     end do
+
+    write(stdout, '(1x)')
 
 
   end if
