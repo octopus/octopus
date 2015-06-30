@@ -252,7 +252,7 @@ contains
     type(block_t)     :: blk
     integer           :: il, ip, jj, ierr
     character(len=200) :: scalar_pot_expression
-    character(len=200) :: envelope_expression
+    character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0, rr, pot_re, pot_im, xx(MAX_DIM)
 
     PUSH_SUB(laser_init)
@@ -387,9 +387,14 @@ contains
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
-          call parse_block_string(blk, il-1, jj+3, envelope_expression)
+          call parse_block_string(blk, il-1, jj+3, phase_expression)
           call parse_block_end(blk)
-          call tdf_read(lasers(il)%phi, trim(envelope_expression), ierr)
+          call tdf_read(lasers(il)%phi, trim(phase_expression), ierr)
+          if (ierr /= 0) then            
+            write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
+            write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
+            call messages_warning(2)
+          end if
           ierr = parse_block('TDExternalFields', blk)
         else
           call tdf_init(lasers(il)%phi)
