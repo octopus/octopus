@@ -87,7 +87,7 @@ end subroutine X(pert_apply_batch)
 ! --------------------------------------------------------------------------
 !> Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 !! Note that e^ikr phase is applied to f_in, then is removed afterward
-subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
@@ -95,9 +95,10 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:, :)
   R_TYPE,               intent(out)   :: f_out(:, :)
+  logical,    optional, intent(in)    :: set_bc
 
   R_TYPE, allocatable :: f_in_copy(:, :)
-  logical :: apply_kpoint
+  logical :: apply_kpoint, set_bc_
   integer :: ip, idim
 
   PUSH_SUB(X(pert_apply))
@@ -106,12 +107,21 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
 
   ASSERT(this%dir /= -1)
 
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
+    if(set_bc_) then
     do idim = 1, hm%d%dim
       call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
       call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
     end do
+    else
+      do idim = 1, hm%d%dim
+        call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
+      end do 
+    end if
   end if
   ! no derivatives in electric, so ghost points not needed
 
@@ -223,10 +233,9 @@ contains
       end do
 
       do idim = 1, hm%d%dim
-        do ip = 1, gr%mesh%np
-          f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in(ip,idim)
+        do ip = 1, gr%mesh%np_part
+          f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
-        call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
       end do
       Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der, f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
@@ -606,12 +615,17 @@ contains
           f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
         end forall
       end if
+
+      if(this%dir == this%dir2) then
+      ! add delta_ij
+        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in_copy(ip, idim)
+      end if
     else 
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
       cpsi(:,:) = M_ZERO
       call pert_init(pert_kdotp, PERTURBATION_KDOTP, gr, geo)
       call pert_setup_dir(pert_kdotp, this%dir)
-      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in,cpsi)
+      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir2)*cpsi(ip,idim)
@@ -619,12 +633,12 @@ contains
       end do
     
       do idim = 1, hm%d%dim
-        do ip = 1, gr%mesh%np 
-          f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir2)*f_in(ip,idim)
+        do ip = 1, gr%mesh%np_part 
+          f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir2)*f_in_copy(ip,idim)
         end do
       end do
       cpsi(:,:) = M_ZERO
-      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi)
+      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - cpsi(ip,idim)
@@ -634,10 +648,7 @@ contains
       call pert_end(pert_kdotp)
     end if
 
-    if(this%dir == this%dir2) then
-      ! add delta_ij
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in_copy(ip, idim)
-    else
+    if(this%dir /= this%dir2) then
       forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = M_HALF * f_out(ip, idim)
     end if
 
