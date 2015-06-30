@@ -41,8 +41,6 @@ module em_resp_calc_m
   use states_block_m
   use states_dim_m
   use sternheimer_m
-  use symm_op_m
-  use symmetries_m
   use symmetrizer_m
   use system_m
   use utils_m

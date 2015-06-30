@@ -1004,7 +1004,6 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   end do
   
   chi(:,:,:) = chi(:,:,:) / P_C
-  call zsymmetrize_magneto_optics_tensor(sys, chi(:,:,:))
     
   SAFE_DEALLOCATE_P(prod_eb1%X(matrix))
   SAFE_DEALLOCATE_P(prod_eb2%X(matrix))
@@ -1244,9 +1243,9 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   end do
   
   zpol(:,:,:) = - M_zI / (frequency) * zpol(:,:,:) 
-  call zsymmetrize_magneto_optics_tensor(sys, zpol(:,:,:))
+  call zsymmetrize_magneto_optics(sys%gr%mesh%sb%symm, zpol(:,:,:))
  
- 
+
   call pert_end(pert_kdotp)
   SAFE_DEALLOCATE_P(mat_g%X(matrix))
   SAFE_DEALLOCATE_P(mat_eb%X(matrix))
@@ -1281,50 +1280,6 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   POP_SUB(X(lr_calc_magneto_optics_periodic))
 
 end subroutine X(lr_calc_magneto_optics_periodic)
-
-! -------------------------------------------------------------------------------
-subroutine X(symmetrize_magneto_optics_tensor)(sys, tensor) 
-  type(system_t),       intent(inout) :: sys 
-  R_TYPE,               intent(inout) :: tensor(:,:,:) !< (3, 3, 3)
-  
-  integer :: iop, nops
-  R_TYPE :: tensor_symm(3, 3, 3)
-  integer  :: rot(3, 3)
-  integer :: idir1, idir2, idir3, ndir
-  integer :: i1, i2, i3, det
-  
-  PUSH_SUB(X(symmetrize_magneto_optics_tensor))
-    
-  ndir = sys%gr%mesh%sb%dim
-  
-  ASSERT(ndir == 3)
-  
-  nops = symmetries_number(sys%gr%mesh%sb%symm)
-  
-  tensor_symm(:,:,:) = M_ZERO
-  
-  do iop = 1, nops
-    rot = symm_op_rotation_matrix(sys%gr%mesh%sb%symm%ops(iop))
-    det = rot(1,1) * rot(2,2) * rot(3,3) + rot(1,2) * rot(2,3) * rot(3,1) + rot(1,3) * rot(2,1) * rot(3,2) &
-      - rot(1,1) * rot(2,3) * rot(3,2) - rot(1,2) * rot(2,1) * rot(3,3) - rot(1,3) * rot(2,2) * rot(3,1)
-         
-    do idir1 = 1, ndir
-      do idir2 = 1, ndir
-        do idir3 = 1, ndir
-          i1 = 1 * rot(1,idir1) + 2 * rot(2,idir1) + 3 * rot(3,idir1)
-          i2 = 1 * rot(1,idir2) + 2 * rot(2,idir2) + 3 * rot(3,idir2)
-          i3 = 1 * rot(1,idir3) + 2 * rot(2,idir3) + 3 * rot(3,idir3)
-          
-          tensor_symm(abs(i1),abs(i2),abs(i3)) = tensor_symm(abs(i1),abs(i2),abs(i3)) + &
-            tensor(idir1,idir2,idir3) * sign(1,i1) * sign(1,i2) * sign(1,i3) * det
-        end do
-      end do
-    end do
-  end do
-  tensor(1:3,1:3,1:3) = tensor_symm(1:3,1:3,1:3) / nops
-
-  POP_SUB(X(symmetrize_magneto_optics_tensor))
-end subroutine X(symmetrize_magneto_optics_tensor)
 
 ! ---------------------------------------------------------
 ! See papers Shi et. al Phys. Rev. Lett. 99, 197202 (2007)
