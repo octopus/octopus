@@ -612,13 +612,31 @@ contains
         end do
 
         forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-          f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim) - cpsi(ip, idim) * gr%mesh%x(ip, this%dir2)
+          f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim)
         end forall
+
+        cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
+        do idim = 1, hm%d%dim
+          do ip = 1, gr%mesh%np_part
+            f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir2)*f_in_copy(ip,idim)
+          end do
+        end do
+
+        do iatom = 1, geo%natoms
+          if(species_is_ps(geo%atom(iatom)%species)) then
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
+          end if
+        end do
+
+        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
+          f_out(ip, idim) = f_out(ip, idim) - cpsi(ip, idim)
+        end forall
+
       end if
 
       if(this%dir == this%dir2) then
       ! add delta_ij
-        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in_copy(ip, idim)
+        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in(ip, idim)
       end if
     else 
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  

@@ -16,10 +16,10 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 25
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
 Input: 06-h2o_pol_lr.02_kdotp.inp
-match ; Inverse effective mass 1 ; LINEFIELD(kdotp/kpoint_1_1, 11, 3) ; 0.114164
-match ; Inverse effective mass 2 ; LINEFIELD(kdotp/kpoint_1_1, 17, 3) ; -0.093877
-match ; Inverse effective mass 3 ; LINEFIELD(kdotp/kpoint_1_1, 23, 3) ; -0.077344
-match ; Inverse effective mass 4 ; LINEFIELD(kdotp/kpoint_1_1, 29, 3) ; -0.136601
+match ; Inverse effective mass 1 ; LINEFIELD(kdotp/kpoint_1_1, 11, 3) ; 0.001511
+match ; Inverse effective mass 2 ; LINEFIELD(kdotp/kpoint_1_1, 17, 3) ; 0.013426
+match ; Inverse effective mass 3 ; LINEFIELD(kdotp/kpoint_1_1, 23, 3) ; 0.016327
+match ; Inverse effective mass 4 ; LINEFIELD(kdotp/kpoint_1_1, 29, 3) ; 0.019946
 
 Input: 06-h2o_pol_lr.03_emresp.inp
 Precision : 0.001
