@@ -180,7 +180,6 @@ contains
       !% <math>-i \left(\nabla + \left[r, V_{\rm nl} \right] \right)</math>
       !%Option hcom_vel 1
       !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
-      !% This option is recommended for magneto-optics of periodic systems.
       !%End
       call parse_variable('KdotPVelMethod', OPTION_GRAD_VEL, this%vel_method)
     end if
