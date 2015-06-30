@@ -701,7 +701,6 @@ contains
           write(iunit,'(1x)')
           if(dim == 1) write(iunit,'(1x)')
         end do
-        write(iunit,'(1x)')
       end do
       call io_close(iunit)
     end if
