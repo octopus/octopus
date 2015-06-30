@@ -145,25 +145,82 @@ contains
       call parse_block_float(blk, 0, 2, border(3))
       border(1:dim) = int(border(1:dim)/mesh%spacing(1:dim))*mesh%spacing(1:dim)
     end if
+    !%Variable PESSurface
+    !%Type block
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
 
     if(parse_block('PESSurfaceOffset', blk) == 0) then
       call parse_block_float(blk, 0, 0, offset(1))
       call parse_block_float(blk, 0, 1, offset(2))
       call parse_block_float(blk, 0, 2, offset(3))
     end if
+    !%Variable PESSurfaceOffset
+    !%Type block
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
 
     call pes_flux_getsrfc(this, mesh, border, offset)
 
     ! k-mesh in 1D (2 points), 2D (polar coordinates), & 3D (spherical
     ! coordinates)
     call parse_variable('PESSurfaceKmax', M_ONE, kmax)
+    !%Variable PESSurfaceKmax
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceDeltaK', CNST(0.002), this%delk)
+    !%Variable PESSurfaceDeltaK
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfacePhiMin', M_ZERO, this%phimin)
+    !%Variable PESSurfacePhiMin
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfacePhiMax', M_TWO * M_PI, phimax)
+    !%Variable PESSurfacePhiMax
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceDelPhi', CNST((M_TWO * M_PI)/360), this%delphi)
+    !%Variable PESSurfaceDelPhi
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceThetaMin', M_ZERO, this%thetamin)
+    !%Variable PESSurfaceThetaMin
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceThetaMax', M_PI, thetamax)
+    !%Variable PESSurfaceThetaMax
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceDelTheta', CNST(M_PI/180), this%deltheta)
+    !%Variable PESSurfaceDelTheta
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
 
     select case(dim)
     case(1)
@@ -206,7 +263,18 @@ contains
 
     ! other stuff
     call parse_variable('PESSurfaceTDStepsInterval', 1, this%tdstepsinterval)
+    !%Variable PESSurfaceTDStepsInterval
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
+
     call parse_variable('PESSurfaceTDSteps', 1, this%tdsteps)
+    !%Variable PESSurfaceTDSteps
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%End
 
     SAFE_ALLOCATE(this%wf(1:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
