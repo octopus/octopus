@@ -255,7 +255,7 @@ contains
           kk = ikk * this%delk
           ikp = ikp + 1
                        this%kpnt(ikp, 1) = kk * cos(phi) * sin(theta)
-          if(dim == 2) this%kpnt(ikp, 2) = kk * sin(phi) * sin(theta)
+          if(dim >= 2) this%kpnt(ikp, 2) = kk * sin(phi) * sin(theta)
           if(dim == 3) this%kpnt(ikp, 3) = kk * cos(theta)
         end do
       end do
