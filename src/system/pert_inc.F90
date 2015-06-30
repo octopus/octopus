@@ -113,10 +113,10 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
     if(set_bc_) then
-    do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
-      call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
-    end do
+      do idim = 1, hm%d%dim
+        call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
+        call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
+      end do
     else
       do idim = 1, hm%d%dim
         call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
