@@ -453,6 +453,7 @@ contains
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO
       do iatom = 1, g_opt%geo%natoms
+        if(.not.g_opt%geo%atom(iatom)%move) cycle
         objective = objective + sum(g_opt%geo%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
       end do
       objective = sqrt(objective)
@@ -624,6 +625,7 @@ contains
     icoord = 1
     do iatom = 1, gopt%geo%natoms
       if(gopt%fixed_atom == iatom) cycle      
+      if(.not.gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
