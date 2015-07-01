@@ -628,8 +628,12 @@ contains
 
         this%srfcpnt(aux(dir)) = ip
         ! surface normal should point to the inside? Does not make a difference.
-        ! add the surface element !!!
         this%srfcnrml(aux(dir), dir) = sign(1, which_surface(ip))
+        ! add the surface element (of directions orthogonal to the normal vector)
+        do idim = 1, dim
+          this%srfcnrml(aux(dir), dir) = this%srfcnrml(aux(dir), dir) * mesh%spacing(idim)
+        end do 
+        this%srfcnrml(aux(dir), dir) = this%srfcnrml(aux(dir), dir) / mesh%spacing(dir)
       end if
     end do
 
