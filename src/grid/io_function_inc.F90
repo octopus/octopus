@@ -1574,9 +1574,25 @@ end function X(interpolate_isolevel)
 
       call io_binary_write(trim(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
                            ierr, nohead = .true., fendian = is_little_endian())
+                           
+
+ #ifdef R_TCOMPLEX
+
+      iunit = io_open(trim(filename), action='write', position = 'append')
+      write(iunit, '(1a)') ' '
+      write(iunit, '(1a)') 'SCALARS Im double 1'
+      write(iunit, '(1a)') 'LOOKUP_TABLE default'
+      call io_close(iunit)
+
+      call io_binary_write(trim(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
+                           ierr, nohead = .true., fendian = is_little_endian())
+
+ #endif
+                           
     end if 
 
                          
+    call X(cube_function_free_RS)(cube, cf_out)
 
 
     POP_SUB(X(out_cf_vts))
