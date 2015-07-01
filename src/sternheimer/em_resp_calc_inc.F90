@@ -1691,6 +1691,182 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
   POP_SUB(X(lr_calc_susceptibility_periodic))
 end subroutine X(lr_calc_susceptibility_periodic)
 
+! ---------------------------------------------------------
+!  -Pc{V1!dl_dk2>+!dn_dk2><n!V1!l>}, n,l=occ   
+! This subroutine can be used for setting the right-hand side of
+! the Sternheimer equation for magnetic and second-order kdotp 
+! perturbations according to the density matrix formulation.
+subroutine X(inhomog_per_component)(sys, hm, idir, & 
+  psi_k2, psi_out, factor_tot, factor_k, factor_second)
+  type(system_t),       intent(inout) :: sys 
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir
+  R_TYPE,               intent(inout) :: psi_k2(:,:,:,:)    
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:) 
+  R_TYPE,               intent(in)    :: factor_tot, factor_k, factor_second
+  
+  R_TYPE, allocatable :: f_out(:,:), vel(:,:,:)
+  R_TYPE :: factor
+  integer :: ip, ik, ist, idim, ist_occ
+  type(matrix_t):: vel_mat
+  type(pert_t)  :: pert_kdotp
+
+  PUSH_SUB(X(inhomog_per_component))
+  
+  SAFE_ALLOCATE(f_out(1:sys%gr%mesh%np,1:hm%d%dim))
+  SAFE_ALLOCATE(vel(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
+  SAFE_ALLOCATE(vel_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  
+#if defined(R_TCOMPLEX)
+  factor = -M_zI
+#else
+  factor = M_ONE
+#endif
+
+  f_out(:,:) = M_ZERO
+  vel(:,:,:) = M_ZERO
+  
+  call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_setup_dir(pert_kdotp, idir)
+  
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    do ist = 1, sys%st%nst
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
+          sys%st%X(psi)(:,:,ist,ik),f_out) 
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            vel(ip,idim,ist) = factor * f_out(ip,idim)
+          end do
+        end do
+      end if
+    end do  
+    
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+      sys%st%X(psi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
+
+    do ist = 1, sys%st%nst
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+
+        call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
+          factor_k*psi_k2(:,:,ist,ik),f_out)
+        
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - &
+              factor_tot * factor * f_out(ip,idim)
+          end do
+         end do
+
+        do ist_occ = 1, sys%st%nst
+          if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then 
+             do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - factor_second * factor_tot *&
+                  factor_k * psi_k2(ip,idim,ist_occ,ik) * vel_mat%X(matrix)(ist_occ,ist)
+              end do
+            end do
+          end if
+        end do 
+      end if
+    end do 
+  end do 
+  
+  call pert_end(pert_kdotp)
+  SAFE_DEALLOCATE_P(vel_mat%X(matrix))
+ 
+  SAFE_DEALLOCATE_A(f_out)
+  SAFE_DEALLOCATE_A(vel)
+  POP_SUB(X(inhomog_per_component))
+end subroutine X(inhomog_per_component)
+
+!--------------------------------------------------------------------------
+!  -Pc(!dn_dk2><dn_de!V1!l>-V1!m><dm_e!dl_k2>)
+! This subroutine can be used for setting the right-hand side of
+! the Sternheimer equation for second-order magnetic
+! perturbations according to the density matrix formulation.  
+subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, & 
+  psi_k2, psi_e, psi_out, factor_tot, factor_k, factor_e)
+  type(system_t),       intent(inout) :: sys 
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir
+  R_TYPE,               intent(inout) :: psi_k2(:,:,:,:)   
+  R_TYPE,               intent(inout) :: psi_e(:,:,:,:)
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:) 
+  R_TYPE,               intent(in)    :: factor_tot, factor_k, factor_e
+  
+  R_TYPE, allocatable :: f_out(:,:)
+  R_TYPE, allocatable :: vel(:,:,:)
+  R_TYPE :: factor
+  integer :: ip, ik, ist, idim, ist_occ
+  type(matrix_t):: vel_mat, prod_mat
+  type(pert_t)  :: pert_kdotp
+
+  PUSH_SUB(X(inhomog_per_component_2nd_order))
+
+  SAFE_ALLOCATE(f_out(1:sys%gr%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(vel(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
+  SAFE_ALLOCATE(vel_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(prod_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+    
+#if defined(R_TCOMPLEX)
+  factor = -M_zI
+#else
+  factor = M_ONE
+#endif
+
+  vel(:,:,:) = M_ZERO
+  f_out(:,:) = M_ZERO
+  
+  call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_setup_dir(pert_kdotp, idir)
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    do ist = 1, sys%st%nst
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
+          sys%st%X(psi)(:,:,ist,ik),f_out)
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            vel(ip,idim,ist) = factor * f_out(ip,idim)
+          end do
+        end do
+      end if
+    end do  
+
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+      factor_e * psi_e(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
+
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+      factor_e * psi_e(:,:,:,ik), factor_k * psi_k2(:,:,:,ik), prod_mat%X(matrix))
+
+    do ist = 1, sys%st%nst
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        do ist_occ = 1, sys%st%nst
+          if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip,idim,ist,ik) = psi_out(ip,idim,ist,ik) - factor_tot * &
+                  vel_mat%X(matrix)(ist_occ,ist) * factor_k * psi_k2(ip,idim,ist_occ,ik)
+                psi_out(ip,idim,ist,ik)= psi_out(ip,idim,ist,ik) + factor_tot * &
+                  prod_mat%X(matrix)(ist_occ,ist) * vel(ip,idim,ist_occ)
+              end do
+            end do
+          end if
+        end do
+      end if
+    end do
+  end do
+
+  call pert_end(pert_kdotp)
+
+  SAFE_DEALLOCATE_P(vel_mat%X(matrix))
+  SAFE_DEALLOCATE_P(prod_mat%X(matrix))
+  SAFE_DEALLOCATE_A(f_out)
+  SAFE_DEALLOCATE_A(vel)
+  POP_SUB(X(inhomog_per_component_2nd_order))
+end subroutine X(inhomog_per_component_2nd_order)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
