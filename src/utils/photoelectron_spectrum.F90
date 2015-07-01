@@ -55,7 +55,7 @@ program photoelectron_spectrum
   FLOAT, pointer       :: Lk(:,:), RR(:)
   FLOAT, allocatable   :: pesk(:,:,:), pmesh(:,:,:,:)
   integer, allocatable :: Lp(:,:,:,:,:)
-  logical              :: interpol
+  logical              :: interpol, need_pmesh
   integer              :: ii, i1,i2,i3
   
   type(space_t)     :: space
@@ -100,6 +100,7 @@ program photoelectron_spectrum
   !Initial values
   ll(:) = 1 
   interpol = .true. 
+  need_pmesh = (kpoints_number(sb%kpoints) > 1)
 
   !set default values
   mode = 1
@@ -124,6 +125,7 @@ program photoelectron_spectrum
 
   
   call get_laser_polarization(pol)
+  if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/)
   
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
@@ -246,10 +248,10 @@ program photoelectron_spectrum
       filename = "PES_velocity.map.i_"//trim(index2var(integrate))//".p"//index2axis(dir)//"=0"
     end if
     
-    if (allocated(pmesh)) then
-      call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate, pmesh)    
+    if (need_pmesh) then
+      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, pmesh = pmesh)    
     else    
-      call pes_mask_output_full_mapM_cut(pesk, filename, Lk, ll, dim, pol, dir, integrate)    
+      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, Lk = Lk)    
     end if
 
   case(4) ! Angle energy resolved on plane 
@@ -286,11 +288,11 @@ program photoelectron_spectrum
     write(message(1), '(a)') 'Write full momentum-resolved PES'
     call messages_info(1)
 
-    if (allocated(pmesh)) then
+    if (need_pmesh) then
       how = io_function_fill_how("VTK")
-      call pes_mask_output_full_mapM(pesk, './PES_full_velocity_map', Lk, ll, how, sb, pmesh)
+      call pes_mask_output_full_mapM(pesk, './PES_velocity_map', Lk, ll, how, sb, pmesh)
     else
-      call pes_mask_output_full_mapM(pesk, './PES_full_velocity_map', Lk, ll, how, sb) 
+      call pes_mask_output_full_mapM(pesk, './PES_velocity_map', Lk, ll, how, sb) 
     end if
 
     case(7) ! ARPES 
