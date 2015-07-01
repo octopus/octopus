@@ -44,6 +44,7 @@ module io_binary_m
     module procedure dwrite_binary, zwrite_binary, iwrite_binary
     module procedure iwrite_binary2, dwrite_binary2, zwrite_binary2
     module procedure zwrite_binary3, dwrite_binary3, iwrite_binary3
+    module procedure zwrite_binary4, dwrite_binary4, iwrite_binary4
   end interface io_binary_write
   
   interface io_binary_write_parallel
