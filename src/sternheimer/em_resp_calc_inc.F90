@@ -1065,7 +1065,6 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   
   integer :: idir1, idir2, idir3, idir4, ist, &
     ispin, idim, ndim, np, ik, ndir, ist_occ
-  integer :: magn_dir(3,2)
   FLOAT :: weight
   R_TYPE, allocatable :: gpsi(:,:,:), gdl_e(:,:,:), gdl_k(:,:,:), gdl_b(:,:,:), &
     gdl_ke(:,:,:,:), gdl_be(:,:,:)
@@ -1115,13 +1114,6 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
       SAFE_ALLOCATE(mat_kke(idir1,idir2)%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
     end do
   end do
-      
-  magn_dir(1,1) = 2
-  magn_dir(1,2) = 3
-  magn_dir(2,1) = 3
-  magn_dir(2,2) = 1
-  magn_dir(3,1) = 1
-  magn_dir(3,2) = 2
 
   zpol(:,:,:) = M_ZERO 
   gpsi(:,:,:) = M_ZERO
@@ -1291,7 +1283,6 @@ subroutine X(lr_calc_magnetization_periodic)(sys, hm, lr_k, magn)
   CMPLX,                intent(out)   :: magn(:)
 
   integer :: idir1, idir2, idir, ist, idim, ndim, ik, ndir, ip, np
-  integer :: magn_dir(3,2)
   R_TYPE :: factor
   R_TYPE, allocatable :: Hdl_psi(:,:,:)
   FLOAT :: weight
@@ -1308,13 +1299,6 @@ subroutine X(lr_calc_magnetization_periodic)(sys, hm, lr_k, magn)
   factor = M_ONE
 #endif
   
-  magn_dir(1,1) = 2
-  magn_dir(1,2) = 3
-  magn_dir(2,1) = 3
-  magn_dir(2,2) = 1
-  magn_dir(3,1) = 1
-  magn_dir(3,2) = 2
- 
   np = sys%gr%mesh%np
   ndir = sys%gr%mesh%sb%dim
   ndim = sys%st%d%dim
@@ -1384,7 +1368,6 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
 
   integer :: idir1, idir2, idir, ist, ispin, idim, ndim 
   integer :: dir1, dir2, dir3, dir4, np, ik, ist_occ, ndir
-  integer :: magn_dir(3,2)
 
   FLOAT :: weight
   R_TYPE:: factor, factor0
@@ -1407,13 +1390,6 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
   np = sys%gr%mesh%np
   ndir = sys%gr%mesh%sb%dim
   ndim = sys%st%d%dim
-  
-  magn_dir(1,1) = 2
-  magn_dir(1,2) = 3
-  magn_dir(2,1) = 3
-  magn_dir(2,2) = 1
-  magn_dir(3,1) = 1
-  magn_dir(3,2) = 2
   
   PUSH_SUB(X(lr_calc_susceptibility_periodic))
 

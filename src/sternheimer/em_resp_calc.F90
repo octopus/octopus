@@ -70,6 +70,7 @@ module em_resp_calc_m
      dlr_calc_beta,                    &
      zlr_calc_beta,                    &
      freq2str,                         &
+     magn_dir,                         &
      em_wfs_tag,                       &
      em_rho_tag,                       &
      dpost_orthogonalize,              &
@@ -222,6 +223,38 @@ contains
   end function em_wfs_tag
 
 ! ---------------------------------------------------------
+! Provides indices of axes forming the right-hand system 
+! to the given axis (to choose components of the position 
+! and velocity, r_\alpha and V_\beta, for calculation of 
+! the M_\gamma component of the magnetic dipole moment 
+! M_\gamma = e_{\alpha \beta \gamma} r_\alpha V_\beta /2)
+  integer pure function magn_dir(dir, ind) result(dir_out)
+    integer, intent(in) :: dir, ind
+ 
+    select case(dir)
+      case(1)
+        if(ind == 1) then
+          dir_out = 2
+        else
+          dir_out = 3
+        end if
+      case(2)
+        if(ind == 1) then
+          dir_out = 3
+        else
+          dir_out = 1
+        end if
+      case(3)
+        if(ind == 1) then
+          dir_out = 1
+        else
+          dir_out = 2
+        end if
+      case default
+        dir_out = 0
+    end select
+
+  end function magn_dir
 
 #include "undef.F90"
 #include "real.F90"
